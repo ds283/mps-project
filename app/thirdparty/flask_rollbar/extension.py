@@ -36,10 +36,8 @@ from werkzeug.exceptions import Unauthorized, Forbidden, NotFound, BadRequest
 
 
 class Rollbar(object):
-    def __init__(self, app=None,
-                 ignore_exc=[BadRequest, Unauthorized, Forbidden, NotFound],
-                 **kwargs):
-        """ By default, it ignores the following Werkzeug exceptions:
+    def __init__(self, app=None, ignore_exc=[BadRequest, Unauthorized, Forbidden, NotFound], **kwargs):
+        """By default, it ignores the following Werkzeug exceptions:
         BadRequest (400), Unauthorized (401),  Forbidden (403), and
         NotFound(404).
 
@@ -58,11 +56,11 @@ class Rollbar(object):
 
     def init_app(self, app):
         self.app = app
-        app.extensions['rollbar'] = self
-        ignored = [(exc, 'ignored') for exc in self.ignore_exc]
+        app.extensions["rollbar"] = self
+        ignored = [(exc, "ignored") for exc in self.ignore_exc]
         rollbar.init(
-            app.config['ROLLBAR_TOKEN'],
-            environment=app.config.get('ROLLBAR_ENV', 'dev'),
+            app.config["ROLLBAR_TOKEN"],
+            environment=app.config.get("ROLLBAR_ENV", "dev"),
             root=os.path.dirname(os.path.realpath(__file__)),
             allow_logging_basic_config=False,
             exception_level_filters=ignored,

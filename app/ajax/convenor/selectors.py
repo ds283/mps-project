@@ -13,8 +13,7 @@ from flask_security import current_user
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 {% set pclass = student.config.project_class %}
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button"
@@ -129,16 +128,14 @@ _menu = \
 """
 
 # language=jinja2
-_cohort = \
-"""
+_cohort = """
 {{ simple_label(sel.student.programme.label) }}
 {{ simple_label(sel.student.cohort_label) }}
 {{ simple_label(sel.academic_year_label(show_details=True)) }}
 """
 
 # language=jinja2
-_bookmarks = \
-"""
+_bookmarks = """
 {% set count = sel.number_bookmarks %}
 {% if count > 0 %}
     <span class="badge bg-primary">{{ count }}</span>
@@ -151,8 +148,7 @@ _bookmarks = \
 """
 
 # language=jinja2
-_submitted = \
-"""
+_submitted = """
 {% if sel.has_submitted %}
     {% if sel.has_submission_list %}
         <span class="badge bg-success">Yes</span>
@@ -183,8 +179,7 @@ _submitted = \
 """
 
 # language=jinja2
-_confirmations = \
-"""
+_confirmations = """
 {% set pending = sel.number_pending %}
 {% set confirmed = sel.number_confirmed %}
 {% if confirmed > 0 %}<span class="badge bg-success"><i class="fas fa-check"></i> Confirmed {{ confirmed }}</span>{% endif %}
@@ -211,8 +206,7 @@ _confirmations = \
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 {% if sel.has_issues %}
     <i class="fas fa-exclamation-triangle text-danger"></i>
@@ -270,30 +264,20 @@ def selectors_data(students, config):
     # cache selector lifecycle information
     state = config.selector_lifecycle
 
-    is_admin = current_user.has_role('admin') or current_user.has_role('root')
+    is_admin = current_user.has_role("admin") or current_user.has_role("root")
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': {
-                'display': render_template_string(_name, sel=s),
-                'sortstring': s.student.user.last_name + s.student.user.first_name
-             },
-             'cohort': {
-                 'display': render_template_string(_cohort, sel=s, simple_label=simple_label),
-                 'value': s.student.cohort
-             },
-             'bookmarks': {
-                 'display': render_template_string(_bookmarks, sel=s),
-                 'value': s.number_bookmarks
-             },
-             'confirmations': {
-                 'display': render_template_string(_confirmations, sel=s),
-                 'value': s.number_pending + s.number_confirmed
-             },
-             'submitted': render_template_string(_submitted, sel=s, config=config, state=state),
-             'menu': render_template_string(_menu, student=s, config=config, state=state, is_admin=is_admin)}
-        for s in students]
+    data = [
+        {
+            "name": {"display": render_template_string(_name, sel=s), "sortstring": s.student.user.last_name + s.student.user.first_name},
+            "cohort": {"display": render_template_string(_cohort, sel=s, simple_label=simple_label), "value": s.student.cohort},
+            "bookmarks": {"display": render_template_string(_bookmarks, sel=s), "value": s.number_bookmarks},
+            "confirmations": {"display": render_template_string(_confirmations, sel=s), "value": s.number_pending + s.number_confirmed},
+            "submitted": render_template_string(_submitted, sel=s, config=config, state=state),
+            "menu": render_template_string(_menu, student=s, config=config, state=state, is_admin=is_admin),
+        }
+        for s in students
+    ]
 
     return jsonify(data)
-
-

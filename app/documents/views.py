@@ -19,13 +19,24 @@ from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
 from . import documents
-from .forms import UploadReportForm, UploadSubmitterAttachmentFormFactory, EditReportForm, \
-    EditSubmitterAttachmentFormFactory
+from .forms import UploadReportForm, UploadSubmitterAttachmentFormFactory, EditReportForm, EditSubmitterAttachmentFormFactory
 from .utils import is_editable, is_deletable, is_listable, is_uploadable, is_admin
 from ..database import db
-from ..models import SubmissionRecord, SubmittedAsset, GeneratedAsset, SubmissionAttachment, Role, \
-    SubmissionPeriodRecord, ProjectClassConfig, ProjectClass, PeriodAttachment, User, AssetLicense, SubmittingStudent, \
-    validate_nonce
+from ..models import (
+    SubmissionRecord,
+    SubmittedAsset,
+    GeneratedAsset,
+    SubmissionAttachment,
+    Role,
+    SubmissionPeriodRecord,
+    ProjectClassConfig,
+    ProjectClass,
+    PeriodAttachment,
+    User,
+    AssetLicense,
+    SubmittingStudent,
+    validate_nonce,
+)
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.utils import redirect_url
@@ -37,11 +48,11 @@ ATTACHMENT_TYPE_UPLOADED_REPORT = 2
 ATTACHMENT_TYPE_PROCESSED_REPORT = 3
 
 
-@documents.route('/submitter_documents', methods=['GET', 'POST'])
+@documents.route("/submitter_documents", methods=["GET", "POST"])
 @login_required
 def submitter_documents():
-    sub_id = request.args.get('sub_id', None)
-    sid = request.args.get('sid', None)
+    sub_id = request.args.get("sub_id", None)
+    sid = request.args.get("sid", None)
 
     # reject request if neither sub_id nor sid is specified
     if sub_id is None and sid is None:
@@ -65,12 +76,15 @@ def submitter_documents():
     if submitter is not None:
         if record is not None:
             if record.owner.id != submitter.id:
-                flash('Cannot show submitter documents for this combination of student and submission record, '
-                      'because the specified submission record does not belong to the student', 'info')
+                flash(
+                    "Cannot show submitter documents for this combination of student and submission record, "
+                    "because the specified submission record does not belong to the student",
+                    "info",
+                )
                 return redirect(redirect_url())
 
         else:
-            if hasattr(form, 'selector') and form.selector.data is not None:
+            if hasattr(form, "selector") and form.selector.data is not None:
                 record: SubmissionRecord = submitter.get_assignment(period=form.selector.data)
             else:
                 record: SubmissionRecord = submitter.get_assignment()
@@ -88,30 +102,35 @@ def submitter_documents():
 
     # ensure form selector reflects the record that is actually being displayed
     period: SubmissionPeriodRecord = record.period
-    if hasattr(form, 'selector'):
+    if hasattr(form, "selector"):
         form.selector.data = period
 
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
 
-    return render_template('documents/submitter_manager.html', submitter=submitter,
-                           record=record, period=period, url=url, text=text, form=form,
-                           is_editable=partial(is_editable, record, period=period, config=config, message=False),
-                           deletable=is_deletable(record, period=period, config=config, message=False),
-                           report_uploadable=is_uploadable(record, message=False, allow_student=False,
-                                                           allow_faculty=False),
-                           attachment_uploadable=is_uploadable(record, message=False, allow_student=True,
-                                                               allow_faculty=True))
+    return render_template(
+        "documents/submitter_manager.html",
+        submitter=submitter,
+        record=record,
+        period=period,
+        url=url,
+        text=text,
+        form=form,
+        is_editable=partial(is_editable, record, period=period, config=config, message=False),
+        deletable=is_deletable(record, period=period, config=config, message=False),
+        report_uploadable=is_uploadable(record, message=False, allow_student=False, allow_faculty=False),
+        attachment_uploadable=is_uploadable(record, message=False, allow_student=True, allow_faculty=True),
+    )
 
 
-@documents.route('/generate_processed_report/<int:sid>')
+@documents.route("/generate_processed_report/<int:sid>")
 def generate_processed_report(sid):
     # sid is a SubmissionRecord id
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
 
     # nothing to do if no report attached
     if record.report is None:
-        flash('Could not initiate processing of the report for this submitter because no report has been attached.', 'info')
+        flash("Could not initiate processing of the report for this submitter because no report has been attached.", "info")
         return redirect(redirect_url())
 
     # validate user has permission to carry out deletions
@@ -119,17 +138,16 @@ def generate_processed_report(sid):
         return redirect(redirect_url())
 
     if record.processed_report:
-        flash('Could not initiate processing of the report for this submitter because a processed report is already attached', 'info')
+        flash("Could not initiate processing of the report for this submitter because a processed report is already attached", "info")
         return redirect(redirect_url())
 
-    celery = current_app.extensions['celery']
+    celery = current_app.extensions["celery"]
 
-    process = celery.tasks['app.tasks.process_report.process']
-    finalize = celery.tasks['app.tasks.process_report.finalize']
-    error = celery.tasks['app.tasks.process_report.error']
+    process = celery.tasks["app.tasks.process_report.process"]
+    finalize = celery.tasks["app.tasks.process_report.finalize"]
+    error = celery.tasks["app.tasks.process_report.error"]
 
-    work = chain(process.si(record.id),
-                 finalize.si(record.id)).on_error(error.si(record.id, current_user.id))
+    work = chain(process.si(record.id), finalize.si(record.id)).on_error(error.si(record.id, current_user.id))
     work.apply_async()
 
     record.celery_started = True
@@ -139,13 +157,13 @@ def generate_processed_report(sid):
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash('A database error was encountered while initiating processing. Please contact an administrator.', 'error')
+        flash("A database error was encountered while initiating processing. Please contact an administrator.", "error")
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
 
 
-@documents.route('/delete_submitter_report/<int:sid>')
+@documents.route("/delete_submitter_report/<int:sid>")
 @login_required
 def delete_submitter_report(sid):
     # sid is a SubmissionRecord id
@@ -153,30 +171,32 @@ def delete_submitter_report(sid):
 
     # nothing to do if no report attached
     if record.report is None:
-        flash('Could not delete report for this submitter because no report has been attached.', 'info')
+        flash("Could not delete report for this submitter because no report has been attached.", "info")
         return redirect(redirect_url())
 
     # validate user has permission to carry out deletions
     if not is_deletable(record, message=True):
         return redirect(redirect_url())
 
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
 
-    title = 'Delete project report'
-    action_url = url_for('documents.perform_delete_submitter_report', sid=sid, url=url, text=text)
+    title = "Delete project report"
+    action_url = url_for("documents.perform_delete_submitter_report", sid=sid, url=url, text=text)
 
-    message = '<p>Please confirm that you wish to remove the project report for ' \
-              '<i class="fas fa-user-circle"></i> {student} {period}.</p>' \
-              '<p>This action cannot be undone.</p>'.format(student=record.student_identifier['label'],
-                                                            period=record.period.display_name)
-    submit_label = 'Remove report'
+    message = (
+        "<p>Please confirm that you wish to remove the project report for "
+        '<i class="fas fa-user-circle"></i> {student} {period}.</p>'
+        "<p>This action cannot be undone.</p>".format(student=record.student_identifier["label"], period=record.period.display_name)
+    )
+    submit_label = "Remove report"
 
-    return render_template('admin/danger_confirm.html', title=title, panel_title=title, action_url=action_url,
-                           message=message, submit_label=submit_label)
+    return render_template(
+        "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
+    )
 
 
-@documents.route('/perform_delete_submitter_report/<int:sid>')
+@documents.route("/perform_delete_submitter_report/<int:sid>")
 @login_required
 def perform_delete_submitter_report(sid):
     # sid is a SubmissionRecord id
@@ -184,15 +204,15 @@ def perform_delete_submitter_report(sid):
 
     # nothing to do if no report attached
     if record.report is None:
-        flash('Could not delete report for this submitter because no file has been attached.', 'info')
+        flash("Could not delete report for this submitter because no file has been attached.", "info")
         return redirect(redirect_url())
 
     # validate user has permission to carry out deletions
     if not is_deletable(record, message=True):
         return redirect(redirect_url())
 
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
 
     try:
         # set lifetime of uploaded asset to 30 days, after which it will be deleted by the garbage collection.
@@ -224,22 +244,21 @@ def perform_delete_submitter_report(sid):
         db.session.commit()
 
     except SQLAlchemyError as e:
-        flash('Could not remove report from the submission record because of a database error. '
-              'Please contact a system administrator.', 'error')
+        flash("Could not remove report from the submission record because of a database error. Please contact a system administrator.", "error")
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(url_for('documents.submitter_documents', sid=sid, url=url, text=text))
+    return redirect(url_for("documents.submitter_documents", sid=sid, url=url, text=text))
 
 
-@documents.route('/upload_submitter_report/<int:sid>', methods=['GET', 'POST'])
+@documents.route("/upload_submitter_report/<int:sid>", methods=["GET", "POST"])
 @login_required
 def upload_submitter_report(sid):
     # sid is a SubmissionRecord id
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
 
     if record.report is not None:
-        flash('Can not upload a report for this submitter because an existing report is already attached.', 'info')
+        flash("Can not upload a report for this submitter because an existing report is already attached.", "info")
         return redirect(redirect_url())
 
     # check is convenor for the project's class, or has suitable admin/root privileges
@@ -248,27 +267,30 @@ def upload_submitter_report(sid):
     if not is_uploadable(record, message=True, allow_student=False, allow_faculty=False):
         return redirect(redirect_url())
 
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
 
     form = UploadReportForm(request.form)
 
     if form.validate_on_submit():
-        if 'report' in request.files:
-            report_file = request.files['report']
+        if "report" in request.files:
+            report_file = request.files["report"]
 
             # AssetUploadManager will populate most fields later
-            asset = SubmittedAsset(timestamp=datetime.now(),
-                                   uploaded_id=current_user.id,
-                                   expiry=None,
-                                   target_name=form.target_name.data,
-                                   license=form.license.data)
+            asset = SubmittedAsset(
+                timestamp=datetime.now(), uploaded_id=current_user.id, expiry=None, target_name=form.target_name.data, license=form.license.data
+            )
 
-            object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-            with AssetUploadManager(asset, data=report_file.stream.read(), storage=object_store,
-                                    audit_data=f'upload_submitter_report (submission record id #{sid})',
-                                    length=report_file.content_length, mimetype=report_file.content_type,
-                                    validate_nonce=validate_nonce) as upload_mgr:
+            object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+            with AssetUploadManager(
+                asset,
+                data=report_file.stream.read(),
+                storage=object_store,
+                audit_data=f"upload_submitter_report (submission record id #{sid})",
+                length=report_file.content_length,
+                mimetype=report_file.content_type,
+                validate_nonce=validate_nonce,
+            ) as upload_mgr:
                 pass
 
             try:
@@ -276,9 +298,9 @@ def upload_submitter_report(sid):
                 db.session.flush()
             except SQLAlchemyError as e:
                 db.session.rollback()
-                flash('Could not upload report due to a database issue. Please contact an administrator.', 'error')
+                flash("Could not upload report due to a database issue. Please contact an administrator.", "error")
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                return redirect(url_for('documents.submitter_documents', sid=record.sid))
+                return redirect(url_for("documents.submitter_documents", sid=record.sid))
 
             # attach this asset as the uploaded report
             record.report_id = asset.id
@@ -295,7 +317,7 @@ def upload_submitter_report(sid):
                 asset.grant_user(record.owner.student.user)
 
             # set up list of roles that should have access, if they exist
-            asset.grant_roles(['office', 'convenor', 'moderator', 'exam_board', 'external_examiner'])
+            asset.grant_roles(["office", "convenor", "moderator", "exam_board", "external_examiner"])
 
             # remove processed report, if that has not already been done
             if record.processed_report is not None:
@@ -312,61 +334,59 @@ def upload_submitter_report(sid):
                 db.session.commit()
             except SQLAlchemyError as e:
                 db.session.rollback()
-                flash('Could not upload report due to a database issue. Please contact an administrator.', 'error')
+                flash("Could not upload report due to a database issue. Please contact an administrator.", "error")
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             else:
-                flash('Report "{file}" was successfully uploaded.'.format(file=report_file.filename), 'info')
+                flash('Report "{file}" was successfully uploaded.'.format(file=report_file.filename), "info")
 
             # set up asynchronous task to process this report
-            celery = current_app.extensions['celery']
+            celery = current_app.extensions["celery"]
 
-            process = celery.tasks['app.tasks.process_report.process']
-            finalize = celery.tasks['app.tasks.process_report.finalize']
-            error = celery.tasks['app.tasks.process_report.error']
+            process = celery.tasks["app.tasks.process_report.process"]
+            finalize = celery.tasks["app.tasks.process_report.finalize"]
+            error = celery.tasks["app.tasks.process_report.error"]
 
-            work = chain(process.si(record.id),
-                         finalize.si(record.id)).on_error(error.si(record.id, current_user.id))
+            work = chain(process.si(record.id), finalize.si(record.id)).on_error(error.si(record.id, current_user.id))
             work.apply_async()
 
-            return redirect(url_for('documents.submitter_documents', sid=sid, url=url, text=text))
+            return redirect(url_for("documents.submitter_documents", sid=sid, url=url, text=text))
 
     else:
-        if request.method == 'GET':
+        if request.method == "GET":
             # default to 'Exam' license if one is available
-            default_report_license = db.session.query(AssetLicense).filter_by(abbreviation='Exam').first()
+            default_report_license = db.session.query(AssetLicense).filter_by(abbreviation="Exam").first()
             if default_report_license is None:
                 default_report_license = current_user.default_license
 
             form.license.data = default_report_license
 
-    return render_template('documents/upload_report.html', record=record, form=form, url=url, text=text)
+    return render_template("documents/upload_report.html", record=record, form=form, url=url, text=text)
 
 
-@documents.route('/pull_report_from_canvas/<int:rid>')
+@documents.route("/pull_report_from_canvas/<int:rid>")
 @login_required
 def pull_report_from_canvas(rid):
     # rid is a SubmissionRecord id
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(rid)
 
     if record.report is not None:
-        flash('Can not upload a report for this submitter because an existing report is already attached.', 'info')
+        flash("Can not upload a report for this submitter because an existing report is already attached.", "info")
         return redirect(redirect_url())
 
     # check is convenor for the project's class, or has suitable admin/root privileges
     if not is_uploadable(record, message=True, allow_student=False, allow_faculty=False):
         return redirect(redirect_url())
 
-    url = request.args.get('url', None)
+    url = request.args.get("url", None)
 
     # set up asynchronous task to pull this report
-    celery = current_app.extensions['celery']
+    celery = current_app.extensions["celery"]
 
-    process = celery.tasks['app.tasks.canvas.pull_report']
-    finalize = celery.tasks['app.tasks.canvas.pull_report_finalize']
-    error = celery.tasks['app.tasks.canvas.pull_report_error']
+    process = celery.tasks["app.tasks.canvas.pull_report"]
+    finalize = celery.tasks["app.tasks.canvas.pull_report_finalize"]
+    error = celery.tasks["app.tasks.canvas.pull_report_error"]
 
-    work = chain(process.s(record.id, current_user.id),
-                 finalize.s(record.id, current_user.id)).on_error(error.si(record.id, current_user.id))
+    work = chain(process.s(record.id, current_user.id), finalize.s(record.id, current_user.id)).on_error(error.si(record.id, current_user.id))
     work.apply_async()
 
     if url:
@@ -375,8 +395,8 @@ def pull_report_from_canvas(rid):
     return redirect(redirect_url())
 
 
-@documents.route('/pull_all_reports_from_canvas/<int:pid>')
-@roles_accepted('root', 'admin', 'faculty', 'office')
+@documents.route("/pull_all_reports_from_canvas/<int:pid>")
+@roles_accepted("root", "admin", "faculty", "office")
 def pull_all_reports_from_canvas(pid):
     # pid is a SubmissionPeriodRecord id
     period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
@@ -384,31 +404,35 @@ def pull_all_reports_from_canvas(pid):
     config: ProjectClassConfig = period.config
     pclass: ProjectClass = config.project_class
 
-    if not validate_is_convenor(pclass, allow_roles=['office']):
+    if not validate_is_convenor(pclass, allow_roles=["office"]):
         return redirect(redirect_url())
 
     # set up asynchronous task to pull this report
-    celery = current_app.extensions['celery']
+    celery = current_app.extensions["celery"]
 
-    process = celery.tasks['app.tasks.canvas.pull_report']
-    finalize = celery.tasks['app.tasks.canvas.pull_report_finalize']
-    error = celery.tasks['app.tasks.canvas.pull_report_error']
-    summary = celery.tasks['app.tasks.canvas.pull_all_reports_summary']
+    process = celery.tasks["app.tasks.canvas.pull_report"]
+    finalize = celery.tasks["app.tasks.canvas.pull_report_finalize"]
+    error = celery.tasks["app.tasks.canvas.pull_report_error"]
+    summary = celery.tasks["app.tasks.canvas.pull_all_reports_summary"]
 
-    available = period.submissions.join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
-            .filter(and_(SubmissionRecord.report_id == None,
-                         SubmissionRecord.canvas_submission_available == True,
-                         SubmittingStudent.canvas_user_id != None)).all()
+    available = (
+        period.submissions.join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+        .filter(
+            and_(SubmissionRecord.report_id == None, SubmissionRecord.canvas_submission_available == True, SubmittingStudent.canvas_user_id != None)
+        )
+        .all()
+    )
 
-    work = chord([chain(process.s(record.id, None),
-                        finalize.s(record.id, None).on_error(error.si(record.id, current_user.id))) for record in available],
-                 summary.s(current_user.id))
+    work = chord(
+        [chain(process.s(record.id, None), finalize.s(record.id, None).on_error(error.si(record.id, current_user.id))) for record in available],
+        summary.s(current_user.id),
+    )
     work.apply_async()
 
     return redirect(redirect_url())
 
 
-@documents.route('/edit_submitter_report/<int:sid>', methods=['GET', 'POST'])
+@documents.route("/edit_submitter_report/<int:sid>", methods=["GET", "POST"])
 @login_required
 def edit_submitter_report(sid):
     # sid is a SubmissionRecord id
@@ -417,15 +441,15 @@ def edit_submitter_report(sid):
     # get report asset; if none, nothing to do
     asset: SubmittedAsset = record.report
     if asset is None:
-        flash('Could not edit the report for this submission record because it has not yet been attached.', 'info')
+        flash("Could not edit the report for this submission record because it has not yet been attached.", "info")
         return redirect(redirect_url())
 
     # verify current user has privileges to edit the report
     if not is_editable(record, asset=asset, message=True, allow_student=False):
         return redirect(redirect_url())
 
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
 
     form = EditReportForm(obj=asset)
 
@@ -441,19 +465,17 @@ def edit_submitter_report(sid):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash('Could not save changes to this asset record due to a database error. '
-                  'Please contact a system administrator.', 'error')
+            flash("Could not save changes to this asset record due to a database error. Please contact a system administrator.", "error")
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(url_for('documents.submitter_documents', sid=record.id, url=url, text=text))
+        return redirect(url_for("documents.submitter_documents", sid=record.id, url=url, text=text))
 
-    action_url = url_for('documents.edit_submitter_report', sid=record.id, url=url, text=text)
-    return render_template('documents/edit_attachment.html', form=form, record=record,
-                           asset=asset, action_url=action_url)
+    action_url = url_for("documents.edit_submitter_report", sid=record.id, url=url, text=text)
+    return render_template("documents/edit_attachment.html", form=form, record=record, asset=asset, action_url=action_url)
 
 
-@documents.route('/edit_submitter_attachment/<int:aid>', methods=['GET', 'POST'])
+@documents.route("/edit_submitter_attachment/<int:aid>", methods=["GET", "POST"])
 @login_required
 def edit_submitter_attachment(aid):
     # aid is a SubmissionAttachment
@@ -462,8 +484,7 @@ def edit_submitter_attachment(aid):
     # get attached asset
     asset: SubmittedAsset = attachment.attachment
     if asset is None:
-        flash('Could not edit this attachment because of a database error. '
-              'Please contact a system administrator.', 'info')
+        flash("Could not edit this attachment because of a database error. Please contact a system administrator.", "info")
         return redirect(redirect_url())
 
     # extract SubmissionRecord and ensure that current user has sufficient privileges to perform edits
@@ -471,8 +492,8 @@ def edit_submitter_attachment(aid):
     if not is_editable(record, asset=asset, message=True, allow_student=True):
         return redirect(redirect_url())
 
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
 
     has_admin_rights = is_admin(current_user)
     EditSubmitterAttachmentForm = EditSubmitterAttachmentFormFactory(admin=has_admin_rights)
@@ -493,24 +514,30 @@ def edit_submitter_attachment(aid):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash('Could not save changes to this asset record due to a database error. '
-                  'Please contact a system administrator.', 'error')
+            flash("Could not save changes to this asset record due to a database error. Please contact a system administrator.", "error")
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(url_for('documents.submitter_documents', sid=record.id, url=url, text=text))
+        return redirect(url_for("documents.submitter_documents", sid=record.id, url=url, text=text))
 
     else:
-        if request.method == 'GET':
+        if request.method == "GET":
             form.license.data = asset.license
             form.target_name.data = asset.target_name
 
-    action_url = url_for('documents.edit_submitter_attachment', aid=attachment.id, url=url, text=text)
-    return render_template('documents/edit_attachment.html', form=form, record=record, attachment=attachment,
-                           asset=asset, action_url=action_url, has_admin_rights=has_admin_rights)
+    action_url = url_for("documents.edit_submitter_attachment", aid=attachment.id, url=url, text=text)
+    return render_template(
+        "documents/edit_attachment.html",
+        form=form,
+        record=record,
+        attachment=attachment,
+        asset=asset,
+        action_url=action_url,
+        has_admin_rights=has_admin_rights,
+    )
 
 
-@documents.route('/delete_submitter_attachment/<int:aid>')
+@documents.route("/delete_submitter_attachment/<int:aid>")
 @login_required
 def delete_submitter_attachment(aid):
     # aid is a SubmissionAttachment id
@@ -519,16 +546,15 @@ def delete_submitter_attachment(aid):
     # if asset is missing, nothing to do
     asset: SubmittedAsset = attachment.attachment
     if asset is None:
-        flash('Could not delete attachment because of a database error. '
-              'Please contact a system administrator.', 'info')
+        flash("Could not delete attachment because of a database error. Please contact a system administrator.", "info")
         return redirect(redirect_url())
 
     record = attachment.parent
     if record is None:
-        flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
+        flash("Can not delete this attachment because it is not attached to a submitter.", "info")
         return redirect(redirect_url())
 
-    if current_user.has_role('student') and not attachment.publish_to_students:
+    if current_user.has_role("student") and not attachment.publish_to_students:
         # give no indication that this asset actually exists
         abort(404)
 
@@ -536,24 +562,26 @@ def delete_submitter_attachment(aid):
     if not is_deletable(record, message=True):
         return redirect(redirect_url())
 
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
 
-    title = 'Delete project attachment'
-    action_url = url_for('documents.perform_delete_submitter_attachment', aid=aid, sid=record.id, url=url, text=text)
+    title = "Delete project attachment"
+    action_url = url_for("documents.perform_delete_submitter_attachment", aid=aid, sid=record.id, url=url, text=text)
 
     name = asset.target_name if asset.target_name is not None else asset.unique_name
-    message = '<p>Please confirm that you wish to remove the attachment <strong>{name}</strong> for ' \
-              '<i class="fas fa-user-circle"></i> {student} {period}.</p>' \
-              '<p>This action cannot be undone.</p>'.format(name=name, student=record.student_identifier['label'],
-                                                            period=record.period.display_name)
-    submit_label = 'Remove attachment'
+    message = (
+        "<p>Please confirm that you wish to remove the attachment <strong>{name}</strong> for "
+        '<i class="fas fa-user-circle"></i> {student} {period}.</p>'
+        "<p>This action cannot be undone.</p>".format(name=name, student=record.student_identifier["label"], period=record.period.display_name)
+    )
+    submit_label = "Remove attachment"
 
-    return render_template('admin/danger_confirm.html', title=title, panel_title=title, action_url=action_url,
-                           message=message, submit_label=submit_label)
+    return render_template(
+        "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
+    )
 
 
-@documents.route('/perform_delete_submitter_attachment/<int:aid>/<int:sid>')
+@documents.route("/perform_delete_submitter_attachment/<int:aid>/<int:sid>")
 @login_required
 def perform_delete_submitter_attachment(aid, sid):
     # aid is a SubmissionAttachment id
@@ -562,21 +590,20 @@ def perform_delete_submitter_attachment(aid, sid):
     # if asset is missing, nothing to do
     asset = attachment.attachment
     if asset is None:
-        flash('Could not delete attachment because of a database error. '
-              'Please contact a system administrator.', 'info')
+        flash("Could not delete attachment because of a database error. Please contact a system administrator.", "info")
         return redirect(redirect_url())
 
     record = attachment.parent
     if record is None:
-        flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
+        flash("Can not delete this attachment because it is not attached to a submitter.", "info")
         return redirect(redirect_url())
 
     # check user has sufficient privileges to perform the deletion
     if not is_deletable(record, message=True):
         return redirect(redirect_url())
 
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
 
     try:
         # set to delete in 30 days
@@ -589,15 +616,14 @@ def perform_delete_submitter_attachment(aid, sid):
         db.session.commit()
 
     except SQLAlchemyError as e:
-        flash('Could not remove attachment from the submission record because of a database error. '
-              'Please contact a system administrator.', 'error')
+        flash("Could not remove attachment from the submission record because of a database error. Please contact a system administrator.", "error")
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(url_for('documents.submitter_documents', sid=sid, url=url, text=text))
+    return redirect(url_for("documents.submitter_documents", sid=sid, url=url, text=text))
 
 
-@documents.route('/upload_submitter_attachment/<int:sid>', methods=['GET', 'POST'])
+@documents.route("/upload_submitter_attachment/<int:sid>", methods=["GET", "POST"])
 @login_required
 def upload_submitter_attachment(sid):
     # sid is a SubmissionRecord id
@@ -609,44 +635,44 @@ def upload_submitter_attachment(sid):
     if not is_uploadable(record, message=True, allow_student=True, allow_faculty=True):
         return redirect(redirect_url())
 
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
 
     has_admin_rights = is_admin(current_user)
     UploadSubmitterAttachmentForm = UploadSubmitterAttachmentFormFactory(admin=has_admin_rights)
     form = UploadSubmitterAttachmentForm(request.form)
 
     if form.validate_on_submit():
-        if 'attachment' in request.files:
-            attachment_file = request.files['attachment']
+        if "attachment" in request.files:
+            attachment_file = request.files["attachment"]
 
             # AssetUploadManager will populate most fields later
-            asset = SubmittedAsset(timestamp=datetime.now(),
-                                   uploaded_id=current_user.id,
-                                   expiry=None,
-                                   target_name=form.target_name.data,
-                                   license=form.license.data)
+            asset = SubmittedAsset(
+                timestamp=datetime.now(), uploaded_id=current_user.id, expiry=None, target_name=form.target_name.data, license=form.license.data
+            )
 
-            object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-            with AssetUploadManager(asset, data=attachment_file.stream.read(), storage=object_store,
-                                    audit_data=f'upload_submitter_attachment (submission record id #{sid})',
-                                    length=attachment_file.content_length,
-                                    mimetype=attachment_file.content_type,
-                                    validate_nonce=validate_nonce) as upload_mgr:
+            object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+            with AssetUploadManager(
+                asset,
+                data=attachment_file.stream.read(),
+                storage=object_store,
+                audit_data=f"upload_submitter_attachment (submission record id #{sid})",
+                length=attachment_file.content_length,
+                mimetype=attachment_file.content_type,
+                validate_nonce=validate_nonce,
+            ) as upload_mgr:
                 pass
 
             try:
                 db.session.add(asset)
                 db.session.flush()
             except SQLAlchemyError as e:
-                flash('Could not upload attachment due to a database issue. Please contact an administrator.', 'error')
+                flash("Could not upload attachment due to a database issue. Please contact an administrator.", "error")
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                return redirect(url_for('documents.submitter_documents', sid=sid, url=url, text=text))
+                return redirect(url_for("documents.submitter_documents", sid=sid, url=url, text=text))
 
             # generate attachment record
-            attachment = SubmissionAttachment(parent_id=record.id,
-                                              attachment_id=asset.id,
-                                              description=form.description.data)
+            attachment = SubmissionAttachment(parent_id=record.id, attachment_id=asset.id, description=form.description.data)
 
             if has_admin_rights:
                 attachment.type = form.type.data
@@ -659,7 +685,7 @@ def upload_submitter_attachment(sid):
                 attachment.include_supervisor_emails = False
                 attachment.type = SubmissionAttachment.ATTACHMENT_OTHER
 
-                if current_user.has_role('student'):
+                if current_user.has_role("student"):
                     # if uploaded by a student, assume published to students, otherwise not
                     attachment.publish_to_students = True
 
@@ -678,27 +704,24 @@ def upload_submitter_attachment(sid):
                 asset.grant_user(record.owner.student.user)
 
             # set up list of roles that should have access, if they exist
-            asset.grant_roles(['office', 'convenor', 'moderator', 'exam_board', 'external_examiner'])
+            asset.grant_roles(["office", "convenor", "moderator", "exam_board", "external_examiner"])
 
             try:
                 db.session.add(attachment)
                 db.session.commit()
             except SQLAlchemyError as e:
-                flash('Could not upload attachment due to a database issue. '
-                      'Please contact an administrator.', 'error')
+                flash("Could not upload attachment due to a database issue. Please contact an administrator.", "error")
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             else:
-                flash('Attachment "{file}" was successfully uploaded.'.format(file=attachment_file.filename),
-                      'info')
+                flash('Attachment "{file}" was successfully uploaded.'.format(file=attachment_file.filename), "info")
 
-            return redirect(url_for('documents.submitter_documents', sid=sid, url=url, text=text))
+            return redirect(url_for("documents.submitter_documents", sid=sid, url=url, text=text))
 
     else:
-        if request.method == 'GET':
+        if request.method == "GET":
             form.license.data = current_user.default_license
 
-    return render_template('documents/upload_attachment.html', record=record, form=form, url=url, text=text,
-                           has_admin_rights=has_admin_rights)
+    return render_template("documents/upload_attachment.html", record=record, form=form, url=url, text=text, has_admin_rights=has_admin_rights)
 
 
 def _get_attachment_asset(attach_type, attach_id):
@@ -744,7 +767,8 @@ def _get_attachment_asset(attach_type, attach_id):
 
     raise KeyError
 
-@documents.route('/attachment_acl/<int:attach_type>/<int:attach_id>')
+
+@documents.route("/attachment_acl/<int:attach_type>/<int:attach_id>")
 @login_required
 def attachment_acl(attach_type, attach_id):
     try:
@@ -756,29 +780,38 @@ def attachment_acl(attach_type, attach_id):
     if not validate_is_convenor(pclass, message=True):
         return redirect(redirect_url())
 
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
-    pane = request.args.get('pane', None)
-    state_filter = request.args.get('state_filter', None)
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+    pane = request.args.get("pane", None)
+    state_filter = request.args.get("state_filter", None)
 
-    if pane not in ['users', 'roles']:
-        pane = 'users'
+    if pane not in ["users", "roles"]:
+        pane = "users"
 
-    if state_filter is None and session.get('documents_acl_state_filter'):
-        state_filter = session['documents_acl_state_filter']
+    if state_filter is None and session.get("documents_acl_state_filter"):
+        state_filter = session["documents_acl_state_filter"]
 
-    if state_filter not in ['al l', 'access', 'no-access']:
+    if state_filter not in ["al l", "access", "no-access"]:
         # default to showing only users that have access
-        state_filter = 'access'
+        state_filter = "access"
 
     if state_filter is not None:
-        session['documents_acl_state_filter'] = state_filter
+        session["documents_acl_state_filter"] = state_filter
 
-    return render_template('documents/edit_acl.html', asset=asset, pclass_id=pclass.id, url=url, text=text,
-                           type=attach_type, attachment=attachment, pane=pane, state_filter=state_filter)
+    return render_template(
+        "documents/edit_acl.html",
+        asset=asset,
+        pclass_id=pclass.id,
+        url=url,
+        text=text,
+        type=attach_type,
+        attachment=attachment,
+        pane=pane,
+        state_filter=state_filter,
+    )
 
 
-@documents.route('/acl_user_ajax/<int:attach_type>/<int:attach_id>')
+@documents.route("/acl_user_ajax/<int:attach_type>/<int:attach_id>")
 @login_required
 def acl_user_ajax(attach_type, attach_id):
     try:
@@ -790,24 +823,23 @@ def acl_user_ajax(attach_type, attach_id):
     if not validate_is_convenor(pclass, message=True):
         return jsonify({})
 
-    state_filter = request.args.get('state_filter', None)
+    state_filter = request.args.get("state_filter", None)
 
-    if state_filter not in ['all', 'access', 'no-access']:
-        state_filter = 'all'
+    if state_filter not in ["all", "access", "no-access"]:
+        state_filter = "all"
 
     user_list = db.session.query(User).filter_by(active=True).all()
-    role_list = db.session.query(Role).filter(or_(Role.name == 'faculty',
-                                                  or_(Role.name == 'student', Role.name == 'office'))).all()
+    role_list = db.session.query(Role).filter(or_(Role.name == "faculty", or_(Role.name == "student", Role.name == "office"))).all()
 
-    if state_filter == 'access':
+    if state_filter == "access":
         user_list = [u for u in user_list if asset.has_access(u)]
-    elif state_filter == 'no-access':
+    elif state_filter == "no-access":
         user_list = [u for u in user_list if not asset.has_access(u)]
 
     return ajax.documents.acl_user(user_list, role_list, asset, attachment, attach_type)
 
 
-@documents.route('/acl_role_ajax/<int:attach_type>/<int:attach_id>')
+@documents.route("/acl_role_ajax/<int:attach_type>/<int:attach_id>")
 @login_required
 def acl_role_ajax(attach_type, attach_id):
     try:
@@ -819,22 +851,22 @@ def acl_role_ajax(attach_type, attach_id):
     if not validate_is_convenor(pclass, message=True):
         return jsonify({})
 
-    state_filter = request.args.get('state_filter', None)
+    state_filter = request.args.get("state_filter", None)
 
-    if state_filter not in ['all', 'access', 'no-access']:
-        state_filter = 'all'
+    if state_filter not in ["all", "access", "no-access"]:
+        state_filter = "all"
 
     role_list = db.session.query(Role).all()
 
-    if state_filter == 'access':
+    if state_filter == "access":
         role_list = [r for r in role_list if asset.in_role_acl(r)]
-    elif state_filter == 'no-access':
+    elif state_filter == "no-access":
         role_list = [r for r in role_list if not asset.in_role_acl(r)]
 
     return ajax.documents.acl_role(role_list, asset, attachment, attach_type)
 
 
-@documents.route('/add_user_acl/<int:user_id>/<int:attach_type>/<int:attach_id>')
+@documents.route("/add_user_acl/<int:user_id>/<int:attach_type>/<int:attach_id>")
 @login_required
 def add_user_acl(user_id, attach_type, attach_id):
     # user_id identifies a user
@@ -855,13 +887,12 @@ def add_user_acl(user_id, attach_type, attach_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash('Could not grant access to this asset due to a database error. '
-              'Please contact a system administrator', 'error')
+        flash("Could not grant access to this asset due to a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
 
-@documents.route('/remove_user_acl/<int:user_id>/<int:attach_type>/<int:attach_id>')
+@documents.route("/remove_user_acl/<int:user_id>/<int:attach_type>/<int:attach_id>")
 @login_required
 def remove_user_acl(user_id, attach_type, attach_id):
     # user_id identifies a user
@@ -882,13 +913,12 @@ def remove_user_acl(user_id, attach_type, attach_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash('Could not remove access to this asset due to a database error. '
-              'Please contact a system administrator', 'error')
+        flash("Could not remove access to this asset due to a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
 
-@documents.route('/add_role_acl/<int:role_id>/<int:attach_type>/<int:attach_id>')
+@documents.route("/add_role_acl/<int:role_id>/<int:attach_type>/<int:attach_id>")
 @login_required
 def add_role_acl(role_id, attach_type, attach_id):
     # role_id identifies a Role
@@ -909,13 +939,12 @@ def add_role_acl(role_id, attach_type, attach_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash('Could not grant role-based access to this asset due to a database error. '
-              'Please contact a system administrator', 'error')
+        flash("Could not grant role-based access to this asset due to a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
 
-@documents.route('/remove_role_acl/<int:role_id>/<int:attach_type>/<int:attach_id>')
+@documents.route("/remove_role_acl/<int:role_id>/<int:attach_type>/<int:attach_id>")
 @login_required
 def remove_role_acl(role_id, attach_type, attach_id):
     # role_id identifies a Role
@@ -936,13 +965,12 @@ def remove_role_acl(role_id, attach_type, attach_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash('Could not remove role-based access to this asset due to a database error. '
-              'Please contact a system administrator', 'error')
+        flash("Could not remove role-based access to this asset due to a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
 
-@documents.route('/attachment_download_log/<int:attach_type>/<int:attach_id>')
+@documents.route("/attachment_download_log/<int:attach_type>/<int:attach_id>")
 @login_required
 def attachment_download_log(attach_type, attach_id):
     try:
@@ -954,14 +982,15 @@ def attachment_download_log(attach_type, attach_id):
     if not validate_is_convenor(pclass, message=True):
         return redirect(redirect_url())
 
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
 
-    return render_template('documents/download_log.html', asset=asset, pclass_id=pclass.id, url=url, text=text,
-                           type=attach_type, attachment=attachment)
+    return render_template(
+        "documents/download_log.html", asset=asset, pclass_id=pclass.id, url=url, text=text, type=attach_type, attachment=attachment
+    )
 
 
-@documents.route('/download_log_ajax/<int:attach_type>/<int:attach_id>')
+@documents.route("/download_log_ajax/<int:attach_type>/<int:attach_id>")
 @login_required
 def download_log_ajax(attach_type, attach_id):
     try:

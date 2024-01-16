@@ -11,8 +11,7 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a class="text-decoration-none" href="mailto:{{ a.faculty.user.email }}">{{ a.faculty.user.name }}</a>
 <div>
     {% if a.confirmed %}
@@ -40,8 +39,7 @@ _name = \
 
 
 # language=jinja2
-_sessions = \
-"""
+_sessions = """
 {% macro truncate_name(name, maxlength=25) %}
     {%- if name|length > maxlength -%}
         {{ name[0:maxlength] }}...
@@ -132,8 +130,7 @@ _sessions = \
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="float-end">
     <a href="{{ url_for('admin.schedule_attach_assessor', slot_id=slot.id, fac_id=a.faculty_id) }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-plus"></i> Attach</a>
 </div>
@@ -143,11 +140,16 @@ _menu = \
 def assign_assessor_data(assessors, slot, url=None, text=None):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': {'display': render_template_string(_name, a=a, slot=slot),
-                      'sortstring': a.faculty.user.last_name + a.faculty.user.first_name},
-             'sessions': {'display': render_template_string(_sessions, a=a, slots=slots, url=url, text=text,
-                                                            simple_label=simple_label),
-                          'sortvalue': len(slots)},
-             'menu': render_template_string(_menu, a=a, slot=slot)} for a, slots in assessors]
+    data = [
+        {
+            "name": {"display": render_template_string(_name, a=a, slot=slot), "sortstring": a.faculty.user.last_name + a.faculty.user.first_name},
+            "sessions": {
+                "display": render_template_string(_sessions, a=a, slots=slots, url=url, text=text, simple_label=simple_label),
+                "sortvalue": len(slots),
+            },
+            "menu": render_template_string(_menu, a=a, slot=slot),
+        }
+        for a, slots in assessors
+    ]
 
     return jsonify(data)

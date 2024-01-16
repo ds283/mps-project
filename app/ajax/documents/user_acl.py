@@ -11,15 +11,13 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a class="text-decoration-none" href="mailto:{{ u.email }}">{{ u.name }}</a>
 """
 
 
 # language=jinja2
-_role = \
-"""
+_role = """
 {% for role in role_list %}
     {% if u.has_role(role) %}
         {{ simple_label(role.make_label()) }}
@@ -29,8 +27,7 @@ _role = \
 
 
 # language=jinja2
-_access = \
-"""
+_access = """
 {% set in_user_acl = asset.in_user_acl(user) %}
 {% set has_role_access = asset.has_role_access(user) %}
 {% if in_user_acl %}
@@ -48,8 +45,7 @@ _access = \
 
 
 # language=jinja2
-_actions = \
-"""
+_actions = """
 {% set in_user_acl = asset.in_user_acl(user) %}
 <div style="text-align: right;">
     <div class="float-end">
@@ -70,11 +66,14 @@ _actions = \
 def acl_user(user_list, role_list, asset, attachment, type):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': {'display': render_template_string(_name, u=u),
-                      'sortstring': u.last_name + u.first_name},
-             'roles': render_template_string(_role, u=u, role_list=role_list, simple_label=simple_label),
-             'access': render_template_string(_access, user=u, asset=asset),
-             'actions': render_template_string(_actions, user=u, asset=asset, attachment=attachment, type=type)}
-            for u in user_list]
+    data = [
+        {
+            "name": {"display": render_template_string(_name, u=u), "sortstring": u.last_name + u.first_name},
+            "roles": render_template_string(_role, u=u, role_list=role_list, simple_label=simple_label),
+            "access": render_template_string(_access, user=u, asset=asset),
+            "actions": render_template_string(_actions, user=u, asset=asset, attachment=attachment, type=type),
+        }
+        for u in user_list
+    ]
 
     return jsonify(data)

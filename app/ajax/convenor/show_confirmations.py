@@ -14,15 +14,13 @@ from datetime import datetime
 
 
 # language=jinja2
-_student = \
-"""
+_student = """
 <a class="text-decoration-none" href="mailto:{{ req.owner.student.user.email }}">{{ req.owner.student.user.name }}</a>
 """
 
 
 # language=jinja2
-_project = \
-"""
+_project = """
 <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=req.project.id, text='outstanding confirmations', url=url_for('convenor.show_confirmations', id=pclass_id)) }}">
     {{ req.project.name }}
 </a>
@@ -30,15 +28,13 @@ _project = \
 
 
 # language=jinja2
-_supervisor = \
-"""
+_supervisor = """
 <a class="text-decoration-none" href="mailto:{{ req.project.owner.user.email }}">{{ req.project.owner.user.name }}</a>
 """
 
 
 # language=jinja2
-_timestamps = \
-"""
+_timestamps = """
 {% if req.request_timestamp is not none %}
     <span class="badge bg-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
 {% endif %}
@@ -61,8 +57,7 @@ _timestamps = \
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -91,16 +86,25 @@ _menu = \
 </div>
 """
 
-def show_confirmations(outstanding, pclass_id):
 
+def show_confirmations(outstanding, pclass_id):
     now = datetime.now()
 
-    data = [{'name': {'display': render_template_string(_student, req=req),
-                      'sortstring': req.owner.student.user.last_name + req.owner.student.user.first_name},
-             'project': render_template_string(_project, req=req, pclass_id=pclass_id),
-             'supervisor': render_template_string(_supervisor, req=req),
-             'timestamps': {'display': render_template_string(_timestamps, req=req, now=now),
-                            'timestamp': req.request_timestamp.timestamp() if req.request_timestamp is not None else 0},
-             'menu': render_template_string(_menu, req=req)} for req in outstanding]
+    data = [
+        {
+            "name": {
+                "display": render_template_string(_student, req=req),
+                "sortstring": req.owner.student.user.last_name + req.owner.student.user.first_name,
+            },
+            "project": render_template_string(_project, req=req, pclass_id=pclass_id),
+            "supervisor": render_template_string(_supervisor, req=req),
+            "timestamps": {
+                "display": render_template_string(_timestamps, req=req, now=now),
+                "timestamp": req.request_timestamp.timestamp() if req.request_timestamp is not None else 0,
+            },
+            "menu": render_template_string(_menu, req=req),
+        }
+        for req in outstanding
+    ]
 
     return jsonify(data)

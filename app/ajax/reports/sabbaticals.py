@@ -18,15 +18,13 @@ from ...models import EnrollmentRecord
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a class="text-decoration-none" href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
 """
 
 
 # language=jinja2
-_exemptions = \
-"""
+_exemptions = """
 {% macro display(state, sabbatical_state, exempt_state, reenroll, comment) %}
     {% if state == sabbatical_state %}
         <span class="badge bg-info">Sabbatical</span>
@@ -68,8 +66,7 @@ _exemptions = \
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -84,8 +81,7 @@ _menu = \
 
 
 # language=jinja2
-_pclass = \
-"""
+_pclass = """
 {{ simple_label(e.pclass.make_label() }}
 """
 
@@ -93,11 +89,16 @@ _pclass = \
 def sabbaticals(enrolments: List[EnrollmentRecord]):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    is_admin = current_user.has_role('admin') or current_user.has_role('root') or current_user.has_role('manage_users')
+    is_admin = current_user.has_role("admin") or current_user.has_role("root") or current_user.has_role("manage_users")
 
-    data = [{'name': render_template_string(_name, fac=e.owner),
-             'pclass': render_template_string(_pclass, e=e, simple_label=simple_label),
-             'exemptions': render_template_string(_exemptions, rec=e),
-             'menu': render_template_string(_menu, rec=e, is_admin=is_admin)} for e in enrolments]
+    data = [
+        {
+            "name": render_template_string(_name, fac=e.owner),
+            "pclass": render_template_string(_pclass, e=e, simple_label=simple_label),
+            "exemptions": render_template_string(_exemptions, rec=e),
+            "menu": render_template_string(_menu, rec=e, is_admin=is_admin),
+        }
+        for e in enrolments
+    ]
 
     return data

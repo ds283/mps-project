@@ -20,10 +20,9 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 def register_background_tasks(celery):
-
     @celery.task(bind=True)
-    def prune_background_tasks(self, duration=6, interval='weeks'):
-        self.update_state(state='STARTED')
+    def prune_background_tasks(self, duration=6, interval="weeks"):
+        self.update_state(state="STARTED")
 
         # get current date
         now = datetime.now()
@@ -35,10 +34,12 @@ def register_background_tasks(celery):
         limit = now - delta
 
         try:
-            db.session.query(TaskRecord).filter(and_(or_(TaskRecord.status == TaskRecord.SUCCESS,
-                                                         TaskRecord.status == TaskRecord.FAILURE,
-                                                         TaskRecord.status == TaskRecord.TERMINATED),
-                                                     TaskRecord.start_date < limit)).delete()
+            db.session.query(TaskRecord).filter(
+                and_(
+                    or_(TaskRecord.status == TaskRecord.SUCCESS, TaskRecord.status == TaskRecord.FAILURE, TaskRecord.status == TaskRecord.TERMINATED),
+                    TaskRecord.start_date < limit,
+                )
+            ).delete()
             db.session.commit()
 
         except SQLAlchemyError as e:
@@ -46,5 +47,4 @@ def register_background_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception in prune_background_tasks()", exc_info=e)
             raise self.retry()
 
-        self.update_state(state='FINISHED')
-
+        self.update_state(state="FINISHED")

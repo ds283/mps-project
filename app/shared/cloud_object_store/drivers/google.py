@@ -21,19 +21,16 @@ from ..meta import ObjectMeta
 
 
 class GoogleCloudStorageDriver:
-
     def __init__(self, uri: SplitResult, data: Dict):
-        if data is None \
-                or not isinstance(data, dict) \
-                or 'google_service_account' not in data:
-            raise RuntimeError('cloud_object_store: google_service_account credentials must be supplied')
+        if data is None or not isinstance(data, dict) or "google_service_account" not in data:
+            raise RuntimeError("cloud_object_store: google_service_account credentials must be supplied")
 
-        credentials_file = Path(data['google_service_account']).resolve()
+        credentials_file = Path(data["google_service_account"]).resolve()
         with open(credentials_file) as f:
             credentials_data = json.load(f)
 
         credentials = service_account.Credentials.from_service_account_info(info=credentials_data)
-        project_id = credentials_data['project_id']
+        project_id = credentials_data["project_id"]
 
         self._storage: Client = Client(project=project_id, credentials=credentials)
 
@@ -41,7 +38,7 @@ class GoogleCloudStorageDriver:
         self._bucket: Bucket = self._storage.get_bucket(self._bucket_name)
 
     def get_driver_name(self):
-        return 'GoogleCloudStorage'
+        return "GoogleCloudStorage"
 
     def get_bucket_name(self):
         return self._bucket_name

@@ -14,8 +14,7 @@ from flask import render_template_string, jsonify
 from app.models import SubmissionPeriodDefinition
 
 # language=jinja2
-_presentation = \
-"""
+_presentation = """
 {% if p.has_presentation %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Required</span>
     {% if p.collect_presentation_feedback %}
@@ -41,8 +40,7 @@ _presentation = \
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -60,8 +58,7 @@ _menu = \
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 {% if p.name %}
     {{ p.name }}
 {% else %}
@@ -81,12 +78,16 @@ _name = \
 
 
 def periods_data(periods: List[SubmissionPeriodDefinition]):
-
-    data = [{'number': p.period,
-             'name': render_template_string(_name, p=p),
-             'markers': p.number_markers,
-             'moderators': p.number_moderators,
-             'presentation': render_template_string(_presentation, p=p),
-             'menu': render_template_string(_menu, period=p)} for p in periods]
+    data = [
+        {
+            "number": p.period,
+            "name": render_template_string(_name, p=p),
+            "markers": p.number_markers,
+            "moderators": p.number_moderators,
+            "presentation": render_template_string(_presentation, p=p),
+            "menu": render_template_string(_menu, period=p),
+        }
+        for p in periods
+    ]
 
     return jsonify(data)

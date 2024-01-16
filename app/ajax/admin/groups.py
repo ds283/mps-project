@@ -11,8 +11,7 @@
 from flask import render_template_string, get_template_attribute
 
 # language=jinja2
-_groups_menu = \
-"""
+_groups_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -36,8 +35,7 @@ _groups_menu = \
 """
 
 # language=jinja2
-_active = \
-"""
+_active = """
 {% if g.active %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
@@ -46,8 +44,7 @@ _active = \
 """
 
 # language=jinja2
-_colour = \
-"""
+_colour = """
 {% if g.colour %}
     {{ simple_label(g.make_label(g.colour)) }}
 {% else %}
@@ -56,8 +53,7 @@ _colour = \
 """
 
 # language=jinja2
-_website = \
-"""
+_website = """
 {% if g.website %}
     <a class="text-decoration-none small" href="{{ g.website }}">{{ g.website }}</a>
 {% else %}
@@ -69,11 +65,16 @@ _website = \
 def groups_data(groups):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'abbrv': g.abbreviation,
-             'active': render_template_string(_active, g=g),
-             'name': g.name,
-             'colour': render_template_string(_colour, g=g, simple_label=simple_label),
-             'website': render_template_string(_website, g=g),
-             'menu': render_template_string(_groups_menu, group=g)} for g in groups]
+    data = [
+        {
+            "abbrv": g.abbreviation,
+            "active": render_template_string(_active, g=g),
+            "name": g.name,
+            "colour": render_template_string(_colour, g=g, simple_label=simple_label),
+            "website": render_template_string(_website, g=g),
+            "menu": render_template_string(_groups_menu, group=g),
+        }
+        for g in groups
+    ]
 
     return data

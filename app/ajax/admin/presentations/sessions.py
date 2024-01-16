@@ -14,8 +14,7 @@ import calendar
 
 
 # language=jinja2
-_date = \
-"""
+_date = """
 {{ s.date_as_string }}
 {% if s.has_issues %}
     <i class="fas fa-exclamation-triangle text-danger"></i>
@@ -56,8 +55,7 @@ _date = \
 
 
 # language=jinja2
-_rooms = \
-"""
+_rooms = """
 {% for room in s.ordered_rooms %}
     {{ simple_label(room.label) }}
 {% else %}
@@ -67,8 +65,7 @@ _rooms = \
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -97,8 +94,7 @@ _menu = \
 
 
 # language=jinja2
-_availability = \
-"""
+_availability = """
 {% set lifecycle = s.owner.availability_lifecycle %}
 {% if lifecycle <= s.owner.AVAILABILITY_NOT_REQUESTED %}
     <span class="badge bg-secondary">Not yet requested</span>
@@ -138,11 +134,15 @@ _availability = \
 def assessment_sessions_data(sessions):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'date': {'display': render_template_string(_date, s=s),
-                      'timestamp': calendar.timegm(s.date.timetuple())},
-             'session': s.session_type_label,
-             'rooms': render_template_string(_rooms, s=s, simple_label=simple_label),
-             'availability': render_template_string(_availability, s=s),
-             'menu': render_template_string(_menu, s=s)} for s in sessions]
+    data = [
+        {
+            "date": {"display": render_template_string(_date, s=s), "timestamp": calendar.timegm(s.date.timetuple())},
+            "session": s.session_type_label,
+            "rooms": render_template_string(_rooms, s=s, simple_label=simple_label),
+            "availability": render_template_string(_availability, s=s),
+            "menu": render_template_string(_menu, s=s),
+        }
+        for s in sessions
+    ]
 
     return jsonify(data)

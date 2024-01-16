@@ -13,15 +13,23 @@ from sqlalchemy.event import listens_for
 
 from ...cache import cache
 from ...database import db
-from ...models import FacultyData, EnrollmentRecord, SubmissionRecord, ScheduleSlot, LiveProject, ScheduleAttempt, \
-    SubmissionRole, ProjectClassConfig, ProjectClass
+from ...models import (
+    FacultyData,
+    EnrollmentRecord,
+    SubmissionRecord,
+    ScheduleSlot,
+    LiveProject,
+    ScheduleAttempt,
+    SubmissionRole,
+    ProjectClassConfig,
+    ProjectClass,
+)
 from ...shared.sqlalchemy import get_count
 from ...shared.utils import get_current_year
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a class="text-decoration-none" href="mailto:{{ f.user.email }}">{{ f.user.name }}</a>
 {% if overassigned %}
     <i class="fas fa-exclamation-triangle text-danger"></i>
@@ -30,8 +38,7 @@ _name = \
 
 
 # language=jinja2
-_groups = \
-"""
+_groups = """
 {% for g in f.affiliations %}
     {{ simple_label(g.make_label()) }}
 {% else %}
@@ -41,8 +48,7 @@ _groups = \
 
 
 # language=jinja2
-_full_enrollments = \
-"""
+_full_enrollments = """
 {%- macro projects_list(projects) -%}
     {%- for p in projects -%}
         <div>{{ loop.index }}. {{ p.name }}</div>
@@ -180,8 +186,7 @@ _full_enrollments = \
 
 
 # language=jinja2
-_simple_enrollments = \
-"""
+_simple_enrollments = """
 {%- macro projects_list(projects) -%}
     {%- for p in projects -%}
         <div>{{ loop.index }}. {{ p.name }}</div>
@@ -223,8 +228,7 @@ _simple_enrollments = \
 
 
 # language=jinja2
-_full_workload = \
-"""
+_full_workload = """
 {% set ns = namespace(count=0) %}
 {% for record in enrolments %}
     {% if record.pclass_id in wkld %}
@@ -246,15 +250,13 @@ _full_workload = \
 
 
 # language=jinja2
-_simple_workload = \
-"""
+_simple_workload = """
 <span class="text-primary"><strong>{{ tot }} CATS</strong></span>
 """
 
 
 # language=jinja2
-_availability = \
-"""
+_availability = """
 {% if u %}
     <span class="text-danger">Unbounded</span>
     <i class="text-muted fas fa-info-circle" data-bs-toggle="tooltip" title="Unbounded availability" data-bs-html="true" title="<em>Unlimited</em> availability means that one or more projects do not have a limit on the number of students"></i>
@@ -265,8 +267,7 @@ _availability = \
 
 
 # language=jinja2
-_full_allocation = \
-"""
+_full_allocation = """
 {%- macro truncate_name(name, maxlength=25) -%}
     {%- if name|length > maxlength -%}
         {{ name[0:maxlength] }}...
@@ -355,8 +356,7 @@ _full_allocation = \
 
 
 # language=jinja2
-_simple_allocation = \
-"""
+_simple_allocation = """
 {% macro allocation_list(CATS_dict, total) %}
     <div class="mt-1 small text-secondary">
         {{ total }} allocations &rightarrow; {{ CATS_dict.values()|sum }} CATS
@@ -470,38 +470,58 @@ def _element_base(faculty_id, enrolment_template, allocation_template, workload_
     small_swatch = get_template_attribute("swatch.html", "small_swatch")
     medium_swatch = get_template_attribute("swatch.html", "medium_swatch")
 
-    return {'name': {'display': render_template_string(_name, f=f),
-                     'sortstring': f.user.last_name + f.user.first_name},
-            'groups': render_template_string(_groups, f=f, simple_label=simple_label),
-            'enrollments': {'display': render_template_string(enrolment_template, f=f, enrolments=enrolments,
-                                                              configs=configs, medium_swatch=medium_swatch,
-                                                              small_swatch=small_swatch),
-                            'sortvalue': get_count(f.enrollments)},
-            'allocation': {'display': render_template_string(allocation_template, f=f, enrolments=enrolments,
-                                                             CATS_supervising=CATS_supervising,
-                                                             num_supervising=num_supervising,
-                                                             assigned_supervising=assigned_supervising,
-                                                             CATS_marking=CATS_marking,
-                                                             num_marking=num_marking,
-                                                             assigned_marking=assigned_marking,
-                                                             CATS_moderating=CATS_moderating,
-                                                             num_moderating=num_moderating,
-                                                             assigned_moderating=assigned_moderating,
-                                                             CATS_presentations=CATS_presentations,
-                                                             num_presentations=num_presentations,
-                                                             assigned_presentations=assigned_presentations,
-                                                             total_supervising=total_supervising,
-                                                             total_marking=total_marking,
-                                                             total_moderating=total_moderating,
-                                                             total_presentations=total_presentations,
-                                                             medium_swatch=medium_swatch, small_swatch=small_swatch),
-                           'sortvalue': total_allocation},
-            'availability': {'display': render_template_string(_availability, t=availability, u=unbounded),
-                             'sortvalue': 999999 if unbounded else availability},
-            'workload': {'display': render_template_string(workload_template, f=f, enrolments=enrolments,
-                                                           wkld=CATS_workload, tot=total_workload,
-                                                           medium_swatch=medium_swatch, small_swatch=small_swatch),
-                         'sortvalue': total_workload}}
+    return {
+        "name": {"display": render_template_string(_name, f=f), "sortstring": f.user.last_name + f.user.first_name},
+        "groups": render_template_string(_groups, f=f, simple_label=simple_label),
+        "enrollments": {
+            "display": render_template_string(
+                enrolment_template, f=f, enrolments=enrolments, configs=configs, medium_swatch=medium_swatch, small_swatch=small_swatch
+            ),
+            "sortvalue": get_count(f.enrollments),
+        },
+        "allocation": {
+            "display": render_template_string(
+                allocation_template,
+                f=f,
+                enrolments=enrolments,
+                CATS_supervising=CATS_supervising,
+                num_supervising=num_supervising,
+                assigned_supervising=assigned_supervising,
+                CATS_marking=CATS_marking,
+                num_marking=num_marking,
+                assigned_marking=assigned_marking,
+                CATS_moderating=CATS_moderating,
+                num_moderating=num_moderating,
+                assigned_moderating=assigned_moderating,
+                CATS_presentations=CATS_presentations,
+                num_presentations=num_presentations,
+                assigned_presentations=assigned_presentations,
+                total_supervising=total_supervising,
+                total_marking=total_marking,
+                total_moderating=total_moderating,
+                total_presentations=total_presentations,
+                medium_swatch=medium_swatch,
+                small_swatch=small_swatch,
+            ),
+            "sortvalue": total_allocation,
+        },
+        "availability": {
+            "display": render_template_string(_availability, t=availability, u=unbounded),
+            "sortvalue": 999999 if unbounded else availability,
+        },
+        "workload": {
+            "display": render_template_string(
+                workload_template,
+                f=f,
+                enrolments=enrolments,
+                wkld=CATS_workload,
+                tot=total_workload,
+                medium_swatch=medium_swatch,
+                small_swatch=small_swatch,
+            ),
+            "sortvalue": total_workload,
+        },
+    }
 
 
 @cache.memoize()
@@ -527,61 +547,60 @@ def _delete_enrolled_cache_entries(target: ProjectClass):
 
 def _SubmissionRecord_delete_cache(target: SubmissionRecord):
     if not target.retired:
-
         for role in target.roles:
             role: SubmissionRole
             _delete_cache_entry(role.user_id)
 
 
-@listens_for(FacultyData.affiliations, 'append')
+@listens_for(FacultyData.affiliations, "append")
 def _FacultyData_affiliations_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         _delete_cache_entry(target.id)
 
 
-@listens_for(FacultyData.affiliations, 'remove')
+@listens_for(FacultyData.affiliations, "remove")
 def _FacultyData_affiliations_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         _delete_cache_entry(target.id)
 
 
-@listens_for(EnrollmentRecord, 'before_insert')
+@listens_for(EnrollmentRecord, "before_insert")
 def _EnrollmentRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry(target.owner_id)
 
 
-@listens_for(EnrollmentRecord, 'before_update')
+@listens_for(EnrollmentRecord, "before_update")
 def _EnrollmentRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry(target.owner_id)
 
 
-@listens_for(EnrollmentRecord, 'before_delete')
+@listens_for(EnrollmentRecord, "before_delete")
 def _EnrollmentRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry(target.owner_id)
 
 
-@listens_for(SubmissionRecord, 'before_insert')
+@listens_for(SubmissionRecord, "before_insert")
 def _SubmissionRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _SubmissionRecord_delete_cache(target)
 
 
-@listens_for(SubmissionRecord, 'before_update')
+@listens_for(SubmissionRecord, "before_update")
 def _SubmissionRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _SubmissionRecord_delete_cache(target)
 
 
-@listens_for(SubmissionRecord, 'before_delete')
+@listens_for(SubmissionRecord, "before_delete")
 def _SubmissionRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _SubmissionRecord_delete_cache(target)
 
 
-@listens_for(SubmissionRecord.project, 'set', active_history=True)
+@listens_for(SubmissionRecord.project, "set", active_history=True)
 def _SubmissionRecord_project_set_receiver(target, value, oldvalue, initiator):
     with db.session.no_autoflush:
         if isinstance(oldvalue, LiveProject):
@@ -591,31 +610,31 @@ def _SubmissionRecord_project_set_receiver(target, value, oldvalue, initiator):
             _delete_cache_entry(value.owner_id)
 
 
-@listens_for(SubmissionRole, 'before_insert')
+@listens_for(SubmissionRole, "before_insert")
 def _SubmissionRole_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry(target.user_id)
 
 
-@listens_for(SubmissionRole, 'before_update')
+@listens_for(SubmissionRole, "before_update")
 def _SubmissionRole_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry(target.user_id)
 
 
-@listens_for(SubmissionRole, 'before_delete')
+@listens_for(SubmissionRole, "before_delete")
 def _SubmissionRole_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry(target.user_id)
 
 
-@listens_for(ProjectClassConfig, 'before_update')
+@listens_for(ProjectClassConfig, "before_update")
 def _ProjectClassConfig_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_enrolled_cache_entries(target.project_class)
 
 
-@listens_for(ProjectClass, 'before_update')
+@listens_for(ProjectClass, "before_update")
 def _ProjectClass_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_enrolled_cache_entries(target)
@@ -642,13 +661,13 @@ def _ScheduleSlot_assessors_delete_cache(target: ScheduleSlot, value):
             _delete_cache_entry(value.id)
 
 
-@listens_for(ScheduleSlot.assessors, 'append')
+@listens_for(ScheduleSlot.assessors, "append")
 def _ScheduleSlot_assessors_append_handler(target: ScheduleSlot, value, initiator):
     with db.session.no_autoflush:
         _ScheduleSlot_assessors_delete_cache(target, value)
 
 
-@listens_for(ScheduleSlot.assessors, 'remove')
+@listens_for(ScheduleSlot.assessors, "remove")
 def _ScheduleSlot_assessors_remove_handler(target: ScheduleSlot, value, initiator):
     with db.session.no_autoflush:
         _ScheduleSlot_assessors_delete_cache(target, value)

@@ -11,15 +11,13 @@
 from flask import render_template_string, get_template_attribute
 
 # language=jinja2
-_code = \
-"""
+_code = """
 <a class="text-decoration-none" href="{{ url_for('admin.edit_module', id=m.id) }}">{{ m.code }}</span>
 """
 
 
 # language=jinja2
-_status = \
-"""
+_status = """
 {% if m.active %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
     <span class="badge bg-info">First taught {{ m.first_taught }}</span>
@@ -32,8 +30,7 @@ _status = \
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -60,8 +57,7 @@ _menu = \
 
 
 # language=jinja2
-_level = \
-"""
+_level = """
 {{ simple_label(m.level_label) }}
 {{ simple_label(m.semester_label) }}
 """
@@ -70,10 +66,15 @@ _level = \
 def modules_data(modules):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'code': render_template_string(_code, m=m),
-             'name': m.name,
-             'level': render_template_string(_level, m=m, simple_label=simple_label),
-             'status': render_template_string(_status, m=m),
-             'menu': render_template_string(_menu, m=m)} for m in modules]
+    data = [
+        {
+            "code": render_template_string(_code, m=m),
+            "name": m.name,
+            "level": render_template_string(_level, m=m, simple_label=simple_label),
+            "status": render_template_string(_status, m=m),
+            "menu": render_template_string(_menu, m=m),
+        }
+        for m in modules
+    ]
 
     return data

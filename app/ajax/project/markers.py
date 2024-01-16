@@ -11,8 +11,7 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_affiliations = \
-"""
+_affiliations = """
 {% for group in f.affiliations %}
     {{ simple_label(group.make_label()) }}
 {% else %}
@@ -21,8 +20,7 @@ _affiliations = \
 """
 
 # language=jinja2
-_status = \
-"""
+_status = """
 {% if proj.is_assessor(f.id) %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Attached</span>
 {% else %}
@@ -31,8 +29,7 @@ _status = \
 """
 
 # language=jinja2
-_enrollments = \
-"""
+_enrollments = """
 {% set ns = namespace(count=0) %}
 {% for e in f.enrollments %}
     {% if e.pclass.publish and (e.pclass.uses_marker or e.pclass.uses_presentations) %}
@@ -58,8 +55,7 @@ _enrollments = \
 
 
 # language=jinja2
-_attached = \
-"""
+_attached = """
 <span class="badge bg-secondary">{{ f.number_assessor }}</span>
 """
 
@@ -67,15 +63,16 @@ _attached = \
 def build_marker_data(faculty, proj, menu, pclass_id=None, url=None, disable_enrollment_links=False):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': {
-                'display': f.user.name,
-                'sortstring': f.user.last_name + f.user.first_name
-             },
-             'attached': render_template_string(_attached, f=f),
-             'groups': render_template_string(_affiliations, f=f, simple_label=simple_label),
-             'status': render_template_string(_status, f=f, proj=proj),
-             'enrollments': render_template_string(_enrollments, f=f, url=url, disabled=disable_enrollment_links,
-                                                   simple_label=simple_label),
-             'menu': render_template_string(menu, f=f, proj=proj, pclass_id=pclass_id)} for f in faculty]
+    data = [
+        {
+            "name": {"display": f.user.name, "sortstring": f.user.last_name + f.user.first_name},
+            "attached": render_template_string(_attached, f=f),
+            "groups": render_template_string(_affiliations, f=f, simple_label=simple_label),
+            "status": render_template_string(_status, f=f, proj=proj),
+            "enrollments": render_template_string(_enrollments, f=f, url=url, disabled=disable_enrollment_links, simple_label=simple_label),
+            "menu": render_template_string(menu, f=f, proj=proj, pclass_id=pclass_id),
+        }
+        for f in faculty
+    ]
 
     return jsonify(data)

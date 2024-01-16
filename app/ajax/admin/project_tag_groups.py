@@ -12,8 +12,7 @@ from flask import render_template_string
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -43,8 +42,7 @@ _menu = \
 
 
 # language=jinja2
-_active = \
-"""
+_active = """
 {% if g.active %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
@@ -54,8 +52,7 @@ _active = \
 
 
 # language=jinja2
-_include_name = \
-"""
+_include_name = """
 {% if g.add_group %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Yes</span>
 {% else %}
@@ -65,18 +62,23 @@ _include_name = \
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 {{ g.name }}
 {% if g.default %}
     <span class="badge bg-success">Default</span>
 {% endif %}
 """
 
+
 def tag_groups_data(groups):
-    data = [{'name': render_template_string(_name, g=g),
-             'active': render_template_string(_active, g=g),
-             'include': render_template_string(_include_name, g=g),
-             'menu': render_template_string(_menu, group=g)} for g in groups]
+    data = [
+        {
+            "name": render_template_string(_name, g=g),
+            "active": render_template_string(_active, g=g),
+            "include": render_template_string(_include_name, g=g),
+            "menu": render_template_string(_menu, group=g),
+        }
+        for g in groups
+    ]
 
     return data

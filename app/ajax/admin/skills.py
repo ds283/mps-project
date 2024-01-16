@@ -11,8 +11,7 @@
 from flask import render_template_string, get_template_attribute
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -40,8 +39,7 @@ _menu = \
 
 
 # language=jinja2
-_active = \
-"""
+_active = """
 {% if s.active %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
@@ -51,8 +49,7 @@ _active = \
 
 
 # language=jinja2
-_group = \
-"""
+_group = """
 {% if s.group %}
     {{ simple_label(s.group.make_label()) }}
 {% else %}
@@ -64,9 +61,14 @@ _group = \
 def skills_data(skills):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': s.name,
-             'group': render_template_string(_group, s=s),
-             'active': render_template_string(_active, s=s),
-             'menu': render_template_string(_menu, skill=s)} for s in skills]
+    data = [
+        {
+            "name": s.name,
+            "group": render_template_string(_group, s=s),
+            "active": render_template_string(_active, s=s),
+            "menu": render_template_string(_menu, skill=s),
+        }
+        for s in skills
+    ]
 
     return data

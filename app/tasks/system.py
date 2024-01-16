@@ -24,8 +24,8 @@ from ast import literal_eval
 from datetime import datetime
 from dateutil import parser
 
-def register_system_tasks(celery):
 
+def register_system_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def reset_tasks(self, user_id):
         try:
@@ -51,11 +51,10 @@ def register_system_tasks(celery):
 
         raise self.replace(task)
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def reset_background_tasks(self):
         # reset all background tasks
-        self.update_state(state='STARTED')
+        self.update_state(state="STARTED")
 
         try:
             db.session.query(TaskRecord).delete()
@@ -66,13 +65,12 @@ def register_system_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        self.update_state(state='FINISHED')
-
+        self.update_state(state="FINISHED")
 
     @celery.task(bind=True, default_retry_delay=30)
     def reset_notifications(self):
         # reset all notification records
-        self.update_state(state='STARTED')
+        self.update_state(state="STARTED")
 
         try:
             db.session.query(Notification).delete()
@@ -83,8 +81,7 @@ def register_system_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        self.update_state(state='FINISHED')
-
+        self.update_state(state="FINISHED")
 
     @celery.task(bind=True, default_retry_delay=30)
     def reset_matching(self, ident):
@@ -95,7 +92,7 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not read database records'})
+            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
             raise Ignore()
 
         record.finished = True
@@ -111,7 +108,6 @@ def register_system_tasks(celery):
 
         return True
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def reset_scheduling(self, ident):
         try:
@@ -121,7 +117,7 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not read database records'})
+            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
             raise Ignore()
 
         record.finished = True
@@ -137,7 +133,6 @@ def register_system_tasks(celery):
 
         return True
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def reset_batch(self, ident):
         try:
@@ -147,7 +142,7 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not read database records'})
+            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
             raise Ignore()
 
         record.celery_finished = True
@@ -162,7 +157,6 @@ def register_system_tasks(celery):
 
         return True
 
-
     @celery.task(bind=True, default_retry_delay=5)
     def reset_tasks_notify(self, user_id):
         try:
@@ -172,15 +166,14 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not read database records'})
+            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
             raise Ignore()
 
         try:
-            user.post_message('All background tasks have been reset successfully.', 'success', autocommit=True)
+            user.post_message("All background tasks have been reset successfully.", "success", autocommit=True)
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
-
 
     @celery.task(bind=True, default_retry_delay=5)
     def reset_tasks_fail(self, user_id):
@@ -191,16 +184,16 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not read database records'})
+            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
             raise Ignore()
 
         try:
-            user.post_message('An error occurred while attempting to reset background tasks. '
-                              'Please check the appropriate server logs.', 'error', autocommit=True)
+            user.post_message(
+                "An error occurred while attempting to reset background tasks. Please check the appropriate server logs.", "error", autocommit=True
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
-
 
     @celery.task(bind=True, default_retry_delay=30)
     def reset_precompute_times(self, user_id):
@@ -210,11 +203,11 @@ def register_system_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        work = chain(group(reset_precompute_time.si(ident[0]) for ident in users),
-                     reset_precompute_notify.si(user_id)).on_error(reset_precompute_fail.si(user_id))
+        work = chain(group(reset_precompute_time.si(ident[0]) for ident in users), reset_precompute_notify.si(user_id)).on_error(
+            reset_precompute_fail.si(user_id)
+        )
 
         raise self.replace(work)
-
 
     @celery.task(bind=True, default_retry_delay=30)
     def reset_precompute_time(self, ident):
@@ -235,7 +228,6 @@ def register_system_tasks(celery):
 
         return True
 
-
     @celery.task(bind=True, default_retry_delay=5)
     def reset_precompute_notify(self, user_id):
         try:
@@ -245,15 +237,14 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not read database records'})
+            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
             raise Ignore()
 
         try:
-            user.post_message('All user precompute times have been reset successfully.', 'success', autocommit=True)
+            user.post_message("All user precompute times have been reset successfully.", "success", autocommit=True)
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
-
 
     @celery.task(bind=True, default_retry_delay=5)
     def reset_precompute_fail(self, user_id):
@@ -264,40 +255,42 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not read database records'})
+            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
             raise Ignore()
 
         try:
-            user.post_message('An error occurred while attempting to reset user precompute times. '
-                              'Please check the appropriate server logs.', 'error', autocommit=True)
+            user.post_message(
+                "An error occurred while attempting to reset user precompute times. Please check the appropriate server logs.",
+                "error",
+                autocommit=True,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-
-    @celery.task(bind=True, default_retry_delay=5, queue='priority')
+    @celery.task(bind=True, default_retry_delay=5, queue="priority")
     def process_pings(self):
         # use Redis-hosted guard flag to determine whether we're already processing some pings
         # if so, then we exit as quickly as we can; intervening pings will just be dropped, since apparently
         # we don't have capacity to process the
         redis_db = get_redis()
-        processing = bool(redis_db.get('_processing_pings'))
+        processing = bool(redis_db.get("_processing_pings"))
         if processing is True:
             return
 
         # set flag with expiry time of 5 minutes
         # this prevents pings never being processed again if this task fails to reset its value
-        redis_db.set('_processing_pings', 1, ex=300)
+        redis_db.set("_processing_pings", 1, ex=300)
 
-        ping_list = redis_db.hgetall('_pings')
-        redis_db.delete('_pings')     # delete as close as possible to read, to avoid race conditions from other threads/instances
+        ping_list = redis_db.hgetall("_pings")
+        redis_db.delete("_pings")  # delete as close as possible to read, to avoid race conditions from other threads/instances
         task_list = []
 
         for key in ping_list:
             value = ping_list[key]
 
-            user_id = literal_eval(key.decode('utf-8'))
-            data_tuple = literal_eval(value.decode('utf-8'))
+            user_id = literal_eval(key.decode("utf-8"))
+            data_tuple = literal_eval(value.decode("utf-8"))
 
             if not isinstance(user_id, int):
                 print('process_pings: decoded "user_id" is not of type int (value={v}, data_tuple={d})'.format(v=user_id, d=data_tuple))
@@ -313,32 +306,37 @@ def register_system_tasks(celery):
                     since = literal_eval(since)
 
                 if not isinstance(since, int):
-                    print('process_pings: decoded "since" value is not of type int (user_id={v}, since={s}, data_tuple={d})'.format(v=user_id, s=since, d=data_tuple))
+                    print(
+                        'process_pings: decoded "since" value is not of type int (user_id={v}, since={s}, data_tuple={d})'.format(
+                            v=user_id, s=since, d=data_tuple
+                        )
+                    )
                     continue
 
                 iso_timestamp = data_tuple[0]
                 if not isinstance(iso_timestamp, str):
-                    print('process_pings: decoded "iso_timestamp" value is not of type str (user_id={v}, since={s}, data_tuple={d})'.format(v=user_id, s=since, d=data_tuple))
+                    print(
+                        'process_pings: decoded "iso_timestamp" value is not of type str (user_id={v}, since={s}, data_tuple={d})'.format(
+                            v=user_id, s=since, d=data_tuple
+                        )
+                    )
                     continue
 
                 task_list.append((user_id, iso_timestamp, since))
             except IndexError:
                 pass
 
-        tasks = group(handle_ping.si(v[0], v[1], v[2]).set(queue='priority') for v in task_list) \
-                | finalize_pings.si().set(queue='priority')
+        tasks = group(handle_ping.si(v[0], v[1], v[2]).set(queue="priority") for v in task_list) | finalize_pings.si().set(queue="priority")
         self.replace(tasks)
 
-
-    @celery.task(bind=True, default_retry_delay=3, queue='priority')
+    @celery.task(bind=True, default_retry_delay=3, queue="priority")
     def finalize_pings(self):
         redis_db = get_redis()
 
         # delete guard key from Redis
-        redis_db.delete('_processing_pings')
+        redis_db.delete("_processing_pings")
 
-
-    @celery.task(bind=True, default_retry_delay=1, queue='priority')
+    @celery.task(bind=True, default_retry_delay=1, queue="priority")
     def handle_ping(self, user_id, timestamp, since):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
@@ -347,24 +345,20 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not read database record'})
+            self.update_state("FAILURE", meta={"msg": "Could not read database record"})
 
         if not isinstance(timestamp, datetime):
             timestamp = parser.parse(timestamp)
 
         if not isinstance(timestamp, datetime):
-            self.update_state('FAILURE', meta={'msg': 'Could not decode timestamp parameter'})
+            self.update_state("FAILURE", meta={"msg": "Could not decode timestamp parameter"})
             raise Ignore()
 
-        notifications = user.notifications \
-            .filter(Notification.timestamp >= since) \
-            .order_by(Notification.timestamp.asc()).all()
+        notifications = user.notifications.filter(Notification.timestamp >= since).order_by(Notification.timestamp.asc()).all()
 
         # mark any messages or instructions (as opposed to task progress updates) for removal on next page load
         for n in notifications:
-            if n.type == Notification.USER_MESSAGE \
-                    or n.type == Notification.SHOW_HIDE_REQUEST \
-                    or n.type == Notification.REPLACE_TEXT_REQUEST:
+            if n.type == Notification.USER_MESSAGE or n.type == Notification.SHOW_HIDE_REQUEST or n.type == Notification.REPLACE_TEXT_REQUEST:
                 n.remove_on_pageload = True
 
         # determine whether to kick off a background precompute task
@@ -391,7 +385,7 @@ def register_system_tasks(celery):
         if not compute_now:
             delta = timestamp - user.last_precompute
 
-            delay = current_app.config.get('PRECOMPUTE_DELAY')
+            delay = current_app.config.get("PRECOMPUTE_DELAY")
             if delay is None:
                 delay = 1800
 
@@ -400,7 +394,7 @@ def register_system_tasks(celery):
 
         # if we need to re-run a precompute, spawn one
         if compute_now:
-            celery = current_app.extensions['celery']
+            celery = current_app.extensions["celery"]
             precompute_at_login(user, celery, now=timestamp, autocommit=False)
 
         try:

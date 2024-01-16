@@ -12,8 +12,7 @@ from flask import render_template_string, jsonify, url_for
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -33,11 +32,15 @@ _menu = \
 </div>
 """
 
-def outstanding_availability_data(assessors, assessment):
 
-    data = [{'name': {'display': assessor.faculty.user.name,
-                      'sortstring': assessor.faculty.user.last_name + assessor.faculty.user.first_name},
-             'email': '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=assessor.faculty.user.email),
-             'menu': render_template_string(_menu, a=assessment, assessor=assessor)} for assessor in assessors]
+def outstanding_availability_data(assessors, assessment):
+    data = [
+        {
+            "name": {"display": assessor.faculty.user.name, "sortstring": assessor.faculty.user.last_name + assessor.faculty.user.first_name},
+            "email": '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=assessor.faculty.user.email),
+            "menu": render_template_string(_menu, a=assessment, assessor=assessor),
+        }
+        for assessor in assessors
+    ]
 
     return jsonify(data)

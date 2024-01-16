@@ -11,8 +11,7 @@
 from flask import render_template_string, get_template_attribute
 
 # language=jinja2
-_supervisors_menu = \
-"""
+_supervisors_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -37,8 +36,7 @@ _supervisors_menu = \
 
 
 # language=jinja2
-_active = \
-"""
+_active = """
 {% if r.active %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
@@ -48,15 +46,13 @@ _active = \
 
 
 # language=jinja2
-_colour = \
-"""
+_colour = """
 {{ simple_label(r.make_label(r.colour)) }}
 """
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 {{ r.name }} {{ simple_label(r.make_label()) }}
 """
 
@@ -64,9 +60,14 @@ _name = \
 def supervisors_data(roles):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'role': render_template_string(_name, r=r, simple_label=simple_label),
-             'colour': render_template_string(_colour, r=r, simple_label=simple_label),
-             'active': render_template_string(_active, r=r),
-             'menu': render_template_string(_supervisors_menu, role=r)} for r in roles]
+    data = [
+        {
+            "role": render_template_string(_name, r=r, simple_label=simple_label),
+            "colour": render_template_string(_colour, r=r, simple_label=simple_label),
+            "active": render_template_string(_active, r=r),
+            "menu": render_template_string(_supervisors_menu, role=r),
+        }
+        for r in roles
+    ]
 
     return data

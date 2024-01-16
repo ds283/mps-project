@@ -10,6 +10,6 @@
 
 from flask import Blueprint
 
-public_browser = Blueprint('public_browser', __name__)
+public_browser = Blueprint("public_browser", __name__)
 
 from . import views

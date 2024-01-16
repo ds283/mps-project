@@ -14,6 +14,7 @@
 # from object_store import ObjectStore
 
 from app import create_app, db
+
 # from app.models import SubmittedAsset, GeneratedAsset, TemporaryAsset
 # from app.shared.asset_tools import canonical_submitted_asset_filename, canonical_generated_asset_filename, \
 #     canonical_temporary_asset_filename

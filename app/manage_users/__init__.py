@@ -10,6 +10,6 @@
 
 from flask import Blueprint
 
-manage_users = Blueprint('manage_users', __name__)
+manage_users = Blueprint("manage_users", __name__)
 
 from . import views

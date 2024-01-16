@@ -16,8 +16,7 @@ from ...models import StudentData, ProjectClassConfig
 from ...shared.utils import get_current_year
 
 # language=jinja2
-_enroll_action = \
-"""
+_enroll_action = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle table-button" type="button" data-bs-toggle="dropdown">
         Actions
@@ -34,20 +33,17 @@ _enroll_action = \
 """
 
 # language=jinja2
-_cohort = \
-"""
+_cohort = """
 {{ simple_label(s.cohort_label) }}
 """
 
 # language=jinja2
-_programme = \
-"""
+_programme = """
 {{ simple_label(s.programme.label) }}
 """
 
 # language=jinja2
-_academic_year = \
-"""
+_academic_year = """
 {{ simple_label(s.academic_year_label(desired_year=config.year, show_details=True, current_year=current_year)) }}
 """
 
@@ -57,11 +53,15 @@ def enrol_selectors_data(config: ProjectClassConfig, students: List[StudentData]
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': s.user.name,
-             'programme': render_template_string(_programme, s=s, simple_label=simple_label),
-             'cohort': render_template_string(_cohort, s=s, simple_label=simple_label),
-             'current_year': render_template_string(_academic_year, s=s, config=config, current_year=current_year,
-                                                    simple_label=simple_label),
-             'actions': render_template_string(_enroll_action, s=s, config=config)} for s in students]
+    data = [
+        {
+            "name": s.user.name,
+            "programme": render_template_string(_programme, s=s, simple_label=simple_label),
+            "cohort": render_template_string(_cohort, s=s, simple_label=simple_label),
+            "current_year": render_template_string(_academic_year, s=s, config=config, current_year=current_year, simple_label=simple_label),
+            "actions": render_template_string(_enroll_action, s=s, config=config),
+        }
+        for s in students
+    ]
 
     return data

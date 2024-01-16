@@ -12,8 +12,7 @@ from flask import render_template_string, jsonify, url_for
 
 
 # language=jinja2
-_pclass = \
-"""
+_pclass = """
 {% set pclass = config.project_class %}
 {% set style = pclass.make_CSS_style() %}
 <a class="badge text-decoration-none text-nohover-dark bg-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ config.convenor_email }}">{{ pclass.abbreviation }} ({{ config.convenor_name }})</a>
@@ -21,8 +20,7 @@ _pclass = \
 
 
 # language=jinja2
-_submitter_actions = \
-"""
+_submitter_actions = """
 <div class="d-flex flex-row justify-content-end gap-2">
     {% if a.not_attending(s.id) %}
         <a {% if editable %}href="{{ url_for('admin.assessment_attending', a_id=a.id, s_id=s.id) }}"{% endif %} class="btn btn-sm btn-outline-secondary btn-table-block {% if not editable %}disabled{% endif %}">
@@ -48,8 +46,7 @@ _submitter_actions = \
 
 
 # language=jinja2
-_session_actions = \
-"""
+_session_actions = """
 <div class="d-flex flex-row justify-content-end gap-2">
     {% if sess.submitter_available(s.id) %}
         <a class="btn btn-success btn-sm {% if not editable %}disabled{% endif %}"><i class="fas fa-check"></i> Available</a>
@@ -63,8 +60,7 @@ _session_actions = \
 
 
 # language=jinja2
-_global_name = \
-"""
+_global_name = """
 <a class="text-decoration-none" href="mailto:{{ s.submitter.owner.student.user.email }}">{{ s.submitter.owner.student.user.name }}</a>
 {% set constraints = s.number_unavailable %}
 {% if constraints > 0 %}
@@ -74,8 +70,7 @@ _global_name = \
 
 
 # language=jinja2
-_project_name = \
-"""
+_project_name = """
 {% if p is none %}
     <span class="badge bg-secondary">No project assigned</span>
 {% else %}
@@ -93,39 +88,62 @@ _project_name = \
 
 
 def submitter_session_availability_data(assessment, session, talks, editable=False):
-    data = [{'student': {'display': '<a class="text-decoration-none" href="mailto:{email}">{name}</a>'.format(email=s.submitter.owner.student.user.email,
-                                                                                 name=s.submitter.owner.student.user.name),
-                         'sortstring': s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name},
-             'pclass': render_template_string(_pclass, config=s.submitter.owner.config),
-             'project': render_template_string(_project_name, p=s.submitter.project,
-                                               dest_url=url_for('faculty.live_project',
-                                                                pid=s.submitter.project.id,
-                                                                text='session attendee list',
-                                                                url=url_for('admin.submitter_session_availability',
-                                                                            id=session.id))
-                                               if s.submitter.project is not None else None,
-                                               url=url_for('admin.submitter_session_availability', id=session.id),
-                                               text='submitter availability for session'),
-             'menu': render_template_string(_session_actions, s=s.submitter, a=assessment, sess=session,
-                                            editable=editable)} for s in talks]
+    data = [
+        {
+            "student": {
+                "display": '<a class="text-decoration-none" href="mailto:{email}">{name}</a>'.format(
+                    email=s.submitter.owner.student.user.email, name=s.submitter.owner.student.user.name
+                ),
+                "sortstring": s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name,
+            },
+            "pclass": render_template_string(_pclass, config=s.submitter.owner.config),
+            "project": render_template_string(
+                _project_name,
+                p=s.submitter.project,
+                dest_url=url_for(
+                    "faculty.live_project",
+                    pid=s.submitter.project.id,
+                    text="session attendee list",
+                    url=url_for("admin.submitter_session_availability", id=session.id),
+                )
+                if s.submitter.project is not None
+                else None,
+                url=url_for("admin.submitter_session_availability", id=session.id),
+                text="submitter availability for session",
+            ),
+            "menu": render_template_string(_session_actions, s=s.submitter, a=assessment, sess=session, editable=editable),
+        }
+        for s in talks
+    ]
 
     return jsonify(data)
 
 
 def presentation_attendees_data(assessment, talks, editable=False):
-    data = [{'student': {'display': render_template_string(_global_name, s=s, a=assessment),
-                         'sortstring': s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name},
-             'pclass': render_template_string(_pclass, config=s.submitter.owner.config),
-             'project': render_template_string(_project_name, p=s.submitter.project,
-                                               dest_url=url_for('faculty.live_project',
-                                                                pid=s.submitter.project.id,
-                                                                text='submitter management list',
-                                                                url=url_for('admin.assessment_manage_attendees',
-                                                                            id=assessment.id))
-                                               if s.submitter.project is not None else None,
-                                               url=url_for('admin.assessment_manage_attendees', id=assessment.id),
-                                               text='submitter management view'),
-             'menu': render_template_string(_submitter_actions, s=s.submitter, a=assessment,
-                                            editable=editable)} for s in talks]
+    data = [
+        {
+            "student": {
+                "display": render_template_string(_global_name, s=s, a=assessment),
+                "sortstring": s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name,
+            },
+            "pclass": render_template_string(_pclass, config=s.submitter.owner.config),
+            "project": render_template_string(
+                _project_name,
+                p=s.submitter.project,
+                dest_url=url_for(
+                    "faculty.live_project",
+                    pid=s.submitter.project.id,
+                    text="submitter management list",
+                    url=url_for("admin.assessment_manage_attendees", id=assessment.id),
+                )
+                if s.submitter.project is not None
+                else None,
+                url=url_for("admin.assessment_manage_attendees", id=assessment.id),
+                text="submitter management view",
+            ),
+            "menu": render_template_string(_submitter_actions, s=s.submitter, a=assessment, editable=editable),
+        }
+        for s in talks
+    ]
 
     return jsonify(data)

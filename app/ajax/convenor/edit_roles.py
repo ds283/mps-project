@@ -16,15 +16,13 @@ from ...models import SubmissionRole
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a href="mailto:{{ user.email }}">{{ user.name }}</a>
 """
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle table-button" type="button" data-bs-toggle="dropdown">
         Actions
@@ -39,8 +37,7 @@ _menu = \
 
 
 # language=jinja2
-_details = \
-"""
+_details = """
 {% if role.created_by is not none %}
     <div class="small">
         Created by
@@ -75,9 +72,14 @@ _details = \
 
 
 def edit_roles(roles: List[SubmissionRole], return_url=None):
-    data = [{'name': render_template_string(_name, user=r.user),
-             'role': r.role_label,
-             'details': render_template_string(_details, role=r),
-             'menu': render_template_string(_menu, role=r, return_url=return_url)} for r in roles]
+    data = [
+        {
+            "name": render_template_string(_name, user=r.user),
+            "role": r.role_label,
+            "details": render_template_string(_details, role=r),
+            "menu": render_template_string(_menu, role=r, return_url=return_url),
+        }
+        for r in roles
+    ]
 
     return data

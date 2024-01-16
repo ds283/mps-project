@@ -11,8 +11,7 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -43,8 +42,7 @@ _menu = \
 
 
 # language=jinja2
-_active = \
-"""
+_active = """
 {% if r.active %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
@@ -54,8 +52,7 @@ _active = \
 
 
 # language=jinja2
-_info = \
-"""
+_info = """
 <span class="badge bg-primary">Capacity {{ r.capacity }}</span>
 <span class="badge bg-info">Max occupancy {{ r.maximum_occupancy }}</span>
 {% if r.lecture_capture %}
@@ -65,8 +62,7 @@ _info = \
 
 
 # language=jinja2
-_building = \
-"""
+_building = """
 {{ simple_label(r.building.make_label() }}
 """
 
@@ -74,10 +70,15 @@ _building = \
 def rooms_data(rooms):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': r.name,
-             'building': render_template_string(_building, r=r, simple_label=simple_label),
-             'info': render_template_string(_info, r=r),
-             'active': render_template_string(_active, r=r),
-             'menu': render_template_string(_menu, r=r)} for r in rooms]
+    data = [
+        {
+            "name": r.name,
+            "building": render_template_string(_building, r=r, simple_label=simple_label),
+            "info": render_template_string(_info, r=r),
+            "active": render_template_string(_active, r=r),
+            "menu": render_template_string(_menu, r=r),
+        }
+        for r in rooms
+    ]
 
     return jsonify(data)

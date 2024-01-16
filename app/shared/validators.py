@@ -25,9 +25,9 @@ def validate_is_administrator(message=True):
     :return:
     """
 
-    if not current_user.has_role('admin') and not current_user.has_role('root'):
+    if not current_user.has_role("admin") and not current_user.has_role("root"):
         if message:
-            flash('Only administrative users can perform this operation.', 'error')
+            flash("Only administrative users can perform this operation.", "error")
         return False
 
     return True
@@ -40,7 +40,7 @@ def validate_is_convenor(pclass, message=True, allow_roles=None):
     :return: True/False
     """
     # any user with an admin role is OK
-    if current_user.has_role('admin') or current_user.has_role('root'):
+    if current_user.has_role("admin") or current_user.has_role("root"):
         return True
 
     # convenor for this pclass is ok
@@ -54,7 +54,7 @@ def validate_is_convenor(pclass, message=True, allow_roles=None):
                 return True
 
     if message:
-        flash('Convenor actions are available only to project convenors and administrative users.', 'error')
+        flash("Convenor actions are available only to project convenors and administrative users.", "error")
 
     return False
 
@@ -65,11 +65,11 @@ def validate_is_admin_or_convenor(*roles):
     :return:
     """
     # any user with an admin role is ok
-    if current_user.has_role('admin') or current_user.has_role('root'):
+    if current_user.has_role("admin") or current_user.has_role("root"):
         return True
 
     # faculty users who are also convenors are ok
-    if current_user.has_role('faculty') and current_user.faculty_data.is_convenor:
+    if current_user.has_role("faculty") and current_user.faculty_data.is_convenor:
         return True
 
     # otherwise, check whether this user has any role in the supplied list of roles
@@ -77,7 +77,7 @@ def validate_is_admin_or_convenor(*roles):
         if current_user.has_role(role):
             return True
 
-    flash('This operation is available only to administrative users and project convenors.', 'error')
+    flash("This operation is available only to administrative users and project convenors.", "error")
     return False
 
 
@@ -92,7 +92,7 @@ def validate_view_project(project, *roles):
         return True
 
     # admin and root users can always edit everything
-    if current_user.has_role('admin') or current_user.has_role('root'):
+    if current_user.has_role("admin") or current_user.has_role("root"):
         return True
 
     # if the currently logged-in user has any of the specified roles
@@ -105,19 +105,18 @@ def validate_view_project(project, *roles):
         return True
 
     # if the current user has a faculty or office role, allow view
-    if current_user.has_role('faculty') or current_user.has_role('office'):
+    if current_user.has_role("faculty") or current_user.has_role("office"):
         return True
 
     # if current user has an approval role, allow view
-    if current_user.has_role('project_approver'):
+    if current_user.has_role("project_approver"):
         return True
 
     # if current user has an exam-board related role, allow view
-    if current_user.has_role('exam_board') or current_user.has_role('external_examiner') \
-            or current_user.has_role('moderator'):
+    if current_user.has_role("exam_board") or current_user.has_role("external_examiner") or current_user.has_role("moderator"):
         return True
 
-    flash('This project belongs to another user. To view it, you must be a suitable convenor or an administrator.')
+    flash("This project belongs to another user. To view it, you must be a suitable convenor or an administrator.")
     return False
 
 
@@ -132,7 +131,7 @@ def validate_edit_project(project, *roles):
         return True
 
     # admin and root users can always edit everything
-    if current_user.has_role('admin') or current_user.has_role('root'):
+    if current_user.has_role("admin") or current_user.has_role("root"):
         return True
 
     # if the currently logged-in user has any of the specified roles, allow edit
@@ -144,7 +143,7 @@ def validate_edit_project(project, *roles):
     if any([item.is_convenor(current_user.id) for item in project.project_classes]):
         return True
 
-    flash('This project belongs to another user. To edit it, you must be a suitable convenor or an administrator.')
+    flash("This project belongs to another user. To edit it, you must be a suitable convenor or an administrator.")
     return False
 
 
@@ -160,7 +159,7 @@ def validate_edit_description(description, *roles):
         return True
 
     # admin and root users can always edit everything
-    if current_user.has_role('admin') or current_user.has_role('root'):
+    if current_user.has_role("admin") or current_user.has_role("root"):
         return True
 
     # if the currently logged-in user has any of the specified roles, allow edit
@@ -172,7 +171,7 @@ def validate_edit_description(description, *roles):
     if any([item.is_convenor(current_user.id) for item in description.project_classes]):
         return True
 
-    flash('This project description belongs to another user. To edit it, you must be a suitable convenor or an administrator.')
+    flash("This project description belongs to another user. To edit it, you must be a suitable convenor or an administrator.")
     return False
 
 
@@ -183,7 +182,7 @@ def validate_project_open(config):
     :return:
     """
     if config.selector_lifecycle != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-        flash('{name} is not open for student selections.'.format(name=config.name), 'error')
+        flash("{name} is not open for student selections.".format(name=config.name), "error")
         return False
 
     return True
@@ -211,7 +210,7 @@ def validate_is_project_owner(project):
     if project.owner_id == current_user.id:
         return True
 
-    flash('This operation is available only to the project owner.', 'error')
+    flash("This operation is available only to the project owner.", "error")
     return False
 
 
@@ -221,20 +220,20 @@ def validate_match_inspector(record):
     :param record:
     :return:
     """
-    if current_user.has_role('root') or current_user.has_role('admin'):
+    if current_user.has_role("root") or current_user.has_role("admin"):
         return True
 
-    if current_user.has_role('faculty'):
+    if current_user.has_role("faculty"):
         if record.published:
             for pclass in record.available_pclasses:
                 if pclass.is_convenor(current_user.id):
                     return True
 
         else:
-            flash('The match owner has not yet made this match available to project convenors.', 'info')
+            flash("The match owner has not yet made this match available to project convenors.", "info")
             return False
 
-    flash('This operation is available only to administrative users and project convenors.', 'error')
+    flash("This operation is available only to administrative users and project convenors.", "error")
     return False
 
 
@@ -245,13 +244,10 @@ def validate_submission_role(role: SubmissionRole, allow_roles=None):
     :return:
     """
     if role.user_id != current_user.id:
-        flash('This operation is not permitted. Your login credentials do not match those of the provided role.',
-              'error')
+        flash("This operation is not permitted. Your login credentials do not match those of the provided role.", "error")
         return False
 
-    role_map = {'supervisor': SubmissionRole.ROLE_SUPERVISOR,
-                'marker': SubmissionRole.ROLE_MARKER,
-                'moderator': SubmissionRole.ROLE_MODERATOR}
+    role_map = {"supervisor": SubmissionRole.ROLE_SUPERVISOR, "marker": SubmissionRole.ROLE_MARKER, "moderator": SubmissionRole.ROLE_MODERATOR}
 
     for r in allow_roles:
         r = r.lower()
@@ -260,10 +256,14 @@ def validate_submission_role(role: SubmissionRole, allow_roles=None):
             if role.role == role_map[r]:
                 return True
 
-    flash('This operation is not permitted because your role associated with this submission does not confer '
-          'the necessary privileges. If you think this is an error, please contact a system '
-          'administrator', 'warning')
+    flash(
+        "This operation is not permitted because your role associated with this submission does not confer "
+        "the necessary privileges. If you think this is an error, please contact a system "
+        "administrator",
+        "warning",
+    )
     return False
+
 
 def validate_submission_supervisor(record):
     """
@@ -275,7 +275,7 @@ def validate_submission_supervisor(record):
     if record.project.owner_id == current_user.id:
         return True
 
-    flash('Only project supervisors can perform this operation', 'error')
+    flash("Only project supervisors can perform this operation", "error")
     return False
 
 
@@ -288,11 +288,11 @@ def validate_submission_marker(record):
     if record.marker_id == current_user.id:
         return True
 
-    flash('Only markers can perform this operation', 'error')
+    flash("Only markers can perform this operation", "error")
     return False
 
 
-def validate_submission_viewable(record: SubmissionRecord, message: bool=True):
+def validate_submission_viewable(record: SubmissionRecord, message: bool = True):
     """
     Validate that the logged-in user is entitled to view a SubmissionRecord instance, usually because they
     have a role associated with it
@@ -312,7 +312,7 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool=True):
             return True
 
     # project convenors, root/admin users, and users with exam board privileges can always view
-    if current_user.allow_roles(['convenor', 'admin', 'root', 'exam_board', 'external_examiner']):
+    if current_user.allow_roles(["convenor", "admin", "root", "exam_board", "external_examiner"]):
         return True
 
     # if this submission period has a presentation, and the logged-in user is one of the specified
@@ -326,20 +326,24 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool=True):
 
     # if the logged-in user has a supervisor role on one of this student's currently active projects,
     # then they are able to view
-    owner_query = db.session.query(SubmissionRecord.id) \
-        .filter(SubmissionRecord.retired == False) \
-        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
-        .filter(SubmittingStudent.student_id == record.owner.student_id) \
-        .filter(SubmissionRecord.roles.any(and_(SubmissionRole.user_id == current_user.id,
-                                                SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR)))
+    owner_query = (
+        db.session.query(SubmissionRecord.id)
+        .filter(SubmissionRecord.retired == False)
+        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+        .filter(SubmittingStudent.student_id == record.owner.student_id)
+        .filter(SubmissionRecord.roles.any(and_(SubmissionRole.user_id == current_user.id, SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR)))
+    )
 
     if get_count(owner_query) > 0:
         return True
 
     if message:
-        flash('This operation is not permitted. You do not have sufficient privileges to view details '
-              'of the specified submission record. If you think this is an error, please contact '
-              'a system administrator.', 'warning')
+        flash(
+            "This operation is not permitted. You do not have sufficient privileges to view details "
+            "of the specified submission record. If you think this is an error, please contact "
+            "a system administrator.",
+            "warning",
+        )
     return False
 
 
@@ -347,8 +351,8 @@ def validate_using_assessment():
     # check that assessment events are actually required
     data = get_assessment_data()
 
-    if not data['has_assessments']:
-        flash('Presentation assessments are not currently required', 'error')
+    if not data["has_assessments"]:
+        flash("Presentation assessments are not currently required", "error")
         return False
 
     return True
@@ -359,8 +363,7 @@ def validate_assessment(data, current_year=None):
         current_year = get_current_year()
 
     if data.year != current_year:
-        flash('Cannot edit presentation assessment {name} because it does not '
-              'belong to the current year'.format(name=data.name), 'info')
+        flash("Cannot edit presentation assessment {name} because it does not belong to the current year".format(name=data.name), "info")
         return False
 
     return True
@@ -372,20 +375,20 @@ def validate_schedule_inspector(record):
     :param record:
     :return:
     """
-    if current_user.has_role('root') or current_user.has_role('admin'):
+    if current_user.has_role("root") or current_user.has_role("admin"):
         return True
 
-    if current_user.has_role('faculty'):
+    if current_user.has_role("faculty"):
         if record.published:
             for pclass in record.available_pclasses:
                 if pclass.is_convenor(current_user.id):
                     return True
 
         else:
-            flash('The schedule owner has not yet made this match available to project convenors.', 'info')
+            flash("The schedule owner has not yet made this match available to project convenors.", "info")
             return False
 
-    flash('This operation is available only to administrative users and project convenors.', 'error')
+    flash("This operation is available only to administrative users and project convenors.", "error")
     return False
 
 
@@ -398,7 +401,7 @@ def validate_presentation_assessor(record):
     if get_count(record.assessors.filter_by(id=current_user.id)) > 0:
         return True
 
-    flash('Only presentation assessors can provide feedback on a presentation assessment', 'error')
+    flash("Only presentation assessors can provide feedback on a presentation assessment", "error")
     return False
 
 
@@ -410,17 +413,19 @@ def validate_assign_feedback(talk):
     :return:
     """
     if not talk.period.has_presentation:
-        flash('Cannot assign feedback to this submission record because it does not belong to a '
-              'submission period that has presentation assessments.', 'info')
+        flash(
+            "Cannot assign feedback to this submission record because it does not belong to a "
+            "submission period that has presentation assessments.",
+            "info",
+        )
         return False
 
     if not talk.period.has_deployed_schedule:
-        flash('Cannot assign feedback to this submission record because its submission period '
-              'does not yet have a deployed schedule.', 'info')
+        flash("Cannot assign feedback to this submission record because its submission period does not yet have a deployed schedule.", "info")
         return False
 
     if not talk.can_assign_feedback:
-        flash('It is not possible to assign further feedback to this record.', 'error')
+        flash("It is not possible to assign further feedback to this record.", "error")
         return False
 
     return True

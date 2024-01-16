@@ -11,8 +11,7 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_colour = \
-"""
+_colour = """
 {% if r.colour %}
     {{ simple_label(r.make_label(r.colour)) }}
 {% else %}
@@ -21,8 +20,7 @@ _colour = \
 """
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -35,12 +33,18 @@ _menu = \
 </div>
 """
 
+
 def roles_data(roles):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': r.name,
-             'description': r.description,
-             'color': render_template_string(_colour, r=r, simple_label=simple_label),
-             'menu': render_template_string(_menu, role=r)} for r in roles]
+    data = [
+        {
+            "name": r.name,
+            "description": r.description,
+            "color": render_template_string(_colour, r=r, simple_label=simple_label),
+            "menu": render_template_string(_menu, role=r),
+        }
+        for r in roles
+    ]
 
     return jsonify(data)

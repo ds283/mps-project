@@ -17,18 +17,18 @@ import app.shared.cloud_object_store.bucket_types as buckets
 
 
 # APP CONFIGURATION
-APP_NAME = 'mpsprojects'
+APP_NAME = "mpsprojects"
 
 # branding labels
-BRANDING_LABEL = 'MPS projects management'
-BRANDING_LOGIN_LANDING_STRING = 'Welcome to the MPS projects portal'
-BRANDING_PUBLIC_LANDING_STRING = 'Welcome to the MPS public projects list'
+BRANDING_LABEL = "MPS projects management"
+BRANDING_LOGIN_LANDING_STRING = "Welcome to the MPS projects portal"
+BRANDING_PUBLIC_LANDING_STRING = "Welcome to the MPS public projects list"
 
 # public browser
 ENABLE_PUBLIC_BROWSER = True
 
-VIDEO_EXPLAINER_PANOPTO_SERVER = 'sussex.cloud.panopto.eu'
-VIDEO_EXPLAINER_PANOPTO_SESSION = 'c2274660-a8f0-4f71-ba13-acd101735f7b'
+VIDEO_EXPLAINER_PANOPTO_SERVER = "sussex.cloud.panopto.eu"
+VIDEO_EXPLAINER_PANOPTO_SESSION = "c2274660-a8f0-4f71-ba13-acd101735f7b"
 
 # features
 BACKUP_IS_LIVE = True
@@ -49,13 +49,15 @@ OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION = os.environ.get("OBJECT_STORAGE_AUDIT_B
 OBJECT_STORAGE_ENDPOINT_URL = os.environ.get("OBJECT_STORAGE_ENDPOINT_URL")
 OBJECT_STORAGE_REGION = os.environ.get("OBJECT_STORAGE_REGION")
 
-_base_storage_options = {'endpoint_url': OBJECT_STORAGE_ENDPOINT_URL,
-                         'region': OBJECT_STORAGE_REGION,
-                         'compressed': True,
-                         'audit': OBJECT_STORAGE_AUDIT_API,
-                         'audit_database': OBJECT_STORAGE_AUDIT_BACKEND_DATABASE,
-                         'audit_collection': OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION,
-                         'audit_backend': OBJECT_STORAGE_AUDIT_BACKEND_URI}
+_base_storage_options = {
+    "endpoint_url": OBJECT_STORAGE_ENDPOINT_URL,
+    "region": OBJECT_STORAGE_REGION,
+    "compressed": True,
+    "audit": OBJECT_STORAGE_AUDIT_API,
+    "audit_database": OBJECT_STORAGE_AUDIT_BACKEND_DATABASE,
+    "audit_collection": OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION,
+    "audit_backend": OBJECT_STORAGE_AUDIT_BACKEND_URI,
+}
 
 # -- ASSETS BUCKET
 
@@ -68,9 +70,11 @@ OBJECT_STORAGE_ASSETS_ENCRYPT_KEY = os.environ.get("OBJECT_STORAGE_ASSETS_ENCRYP
 _assets_encrypt_key = base64.urlsafe_b64decode(OBJECT_STORAGE_ASSETS_ENCRYPT_KEY)
 
 # create ObjectStore data block for assets bucket
-_assets_storage_options = _base_storage_options | {'access_key': OBJECT_STORAGE_ASSETS_ACCESS_KEY,
-                                                   'secret_key': OBJECT_STORAGE_ASSETS_SECRET_KEY,
-                                                   'encryption_pipeline': ChaCha20_Poly1305(_assets_encrypt_key)}
+_assets_storage_options = _base_storage_options | {
+    "access_key": OBJECT_STORAGE_ASSETS_ACCESS_KEY,
+    "secret_key": OBJECT_STORAGE_ASSETS_SECRET_KEY,
+    "encryption_pipeline": ChaCha20_Poly1305(_assets_encrypt_key),
+}
 
 # create ObjectStore for assets bucket
 OBJECT_STORAGE_ASSETS_URI = os.environ.get("OBJECT_STORAGE_ASSETS_URI")
@@ -86,9 +90,11 @@ OBJECT_STORAGE_BACKUP_SECRET_KEY = os.environ.get("OBJECT_STORAGE_BACKUP_SECRET_
 OBJECT_STORAGE_BACKUP_ENCRYPT_KEY = os.environ.get("OBJECT_STORAGE_BACKUP_ENCRYPT_KEY")
 _backup_encrypt_key = base64.urlsafe_b64decode(OBJECT_STORAGE_BACKUP_ENCRYPT_KEY)
 
-_backup_storage_options = _base_storage_options | {'access_key': OBJECT_STORAGE_BACKUP_ACCESS_KEY,
-                                                   'secret_key': OBJECT_STORAGE_BACKUP_SECRET_KEY,
-                                                   'encryption_pipeline': ChaCha20_Poly1305(_backup_encrypt_key)}
+_backup_storage_options = _base_storage_options | {
+    "access_key": OBJECT_STORAGE_BACKUP_ACCESS_KEY,
+    "secret_key": OBJECT_STORAGE_BACKUP_SECRET_KEY,
+    "encryption_pipeline": ChaCha20_Poly1305(_backup_encrypt_key),
+}
 
 # create ObjectStore for backup bucket
 OBJECT_STORAGE_BACKUP_URI = os.environ.get("OBJECT_STORAGE_BACKUP_URI")
@@ -100,9 +106,11 @@ OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, buckets.BACKUP_BU
 OBJECT_STORAGE_TELEMETRY_ACCESS_KEY = os.environ.get("OBJECT_STORAGE_TELEMETRY_ACCESS_KEY")
 OBJECT_STORAGE_TELEMETRY_SECRET_KEY = os.environ.get("OBJECT_STORAGE_TELEMETRY_SECRET_KEY")
 
-_telemetry_storage_options = _base_storage_options | {'access_key': OBJECT_STORAGE_TELEMETRY_ACCESS_KEY,
-                                                      'secret_key': OBJECT_STORAGE_TELEMETRY_SECRET_KEY,
-                                                      'compressed': False}
+_telemetry_storage_options = _base_storage_options | {
+    "access_key": OBJECT_STORAGE_TELEMETRY_ACCESS_KEY,
+    "secret_key": OBJECT_STORAGE_TELEMETRY_SECRET_KEY,
+    "compressed": False,
+}
 
 # create ObjectStore for telemetry bucket
 OBJECT_STORAGE_TELEMETRY_URI = os.environ.get("OBJECT_STORAGE_TELEMETRY_URI")

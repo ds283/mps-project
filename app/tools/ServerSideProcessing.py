@@ -36,28 +36,27 @@ class ServerSideBase:
         # extract parameters from the request
         try:
             # 'draw' parameter is a serial number
-            self._request_draw = int(request_data['draw'])
+            self._request_draw = int(request_data["draw"])
 
             # first record to return
-            self._request_start = int(request_data['start'])
+            self._request_start = int(request_data["start"])
 
             # number of records to return
-            self._request_length = int(request_data['length'])
+            self._request_length = int(request_data["length"])
 
             # filter to apply
-            self._request_filter = str(request_data['search']['value'])
+            self._request_filter = str(request_data["search"]["value"])
 
             # array of column data supplied by front end
-            self._request_columns = request_data['columns']
+            self._request_columns = request_data["columns"]
 
             # sort order to apply
-            self._request_order = request_data['order']
+            self._request_order = request_data["order"]
 
         # if failed to look up, log an error
         except KeyError:
-
             self._fail = True
-            self._fail_msg = 'The server could not interpret the AJAX payload from the website front-end'
+            self._fail_msg = "The server could not interpret the AJAX payload from the website front-end"
             return
 
         # start with base query
@@ -90,7 +89,7 @@ class ServerSideSQLHandler(ServerSideBase):
         self._data = data
 
         # was a filter supplied? if so, then we should use it to restrict the base query
-        if hasattr(self, '_request_filter') and self._request_filter is not None and len(self._request_filter) > 0:
+        if hasattr(self, "_request_filter") and self._request_filter is not None and len(self._request_filter) > 0:
             # filter_columns will contain a list of SQL conditions, one for each column that can be searched;
             # notice that DataTables mandates that a query is applied against *all* searchable columns
             # https://datatables.net/manual/server-side
@@ -101,16 +100,16 @@ class ServerSideSQLHandler(ServerSideBase):
             # Eventually, we will apply the logical-or of all these filters to the base query.
             for item_data in self._data.values():
                 # is this column searchable?
-                if 'search' in item_data:
+                if "search" in item_data:
                     # extract a column specification; this tells us which column (or possibly collection of columns)
                     # we should be applying the filter to
-                    search_col = item_data['search']
+                    search_col = item_data["search"]
 
                     # build SQLAlchemy expression representing the search criterion; this may eventually
                     # have to be wrapped inside a sub-search for a collection, but we deal with that below
                     collation = None
-                    if 'search_collation' in item_data:
-                        collation = item_data['search_collation']
+                    if "search_collation" in item_data:
+                        collation = item_data["search_collation"]
 
                     if collation:
                         search_expr = collate(search_col, collation).contains(self._request_filter)
@@ -118,8 +117,8 @@ class ServerSideSQLHandler(ServerSideBase):
                         search_expr = search_col.contains(self._request_filter)
 
                     # build filtering expression; check whether we need to search inside a collection
-                    if 'search_collection' in item_data:
-                        collection = item_data['search_collection']
+                    if "search_collection" in item_data:
+                        collection = item_data["search_collection"]
                         filter_expr = collection.any(search_expr)
                     else:
                         filter_expr = search_expr
@@ -139,21 +138,21 @@ class ServerSideSQLHandler(ServerSideBase):
         self._number_filtered_rows = get_count(self._query)
 
         # was an ordering supplied? if so, then we should apply it to the base query
-        if hasattr(self, '_request_order') and self._request_order is not None:
+        if hasattr(self, "_request_order") and self._request_order is not None:
             for item in self._request_order:
                 # col_id is an index into the _request_columns array
-                col_id = int(item['column'])
-                dir = str(item['dir'])
+                col_id = int(item["column"])
+                dir = str(item["dir"])
 
-                col_name = str(self._request_columns[col_id]['data'])
+                col_name = str(self._request_columns[col_id]["data"])
 
                 if col_name in self._data:
                     item_data = self._data[col_name]
 
-                    if 'order' in item_data:
-                        order_col = item_data['order']
+                    if "order" in item_data:
+                        order_col = item_data["order"]
 
-                    if dir == 'asc':
+                    if dir == "asc":
                         if isinstance(order_col, Iterable):
                             self._query = self._query.order_by(*(x.asc() for x in order_col))
                         else:
@@ -170,24 +169,24 @@ class ServerSideSQLHandler(ServerSideBase):
 
         self._query = self._query.offset(self._request_start)
 
-
     def __enter__(self):
         return self
-
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         return
 
-
     def build_payload(self, row_formatter):
         if not self._fail:
-            return jsonify({'draw': self._request_draw,
-                            'recordsTotal': self._number_total_rows,
-                            'recordsFiltered': self._number_filtered_rows,
-                            'data': row_formatter(self._query.all())})
+            return jsonify(
+                {
+                    "draw": self._request_draw,
+                    "recordsTotal": self._number_total_rows,
+                    "recordsFiltered": self._number_filtered_rows,
+                    "data": row_formatter(self._query.all()),
+                }
+            )
         else:
-            return jsonify({'draw': self._request_draw,
-                            'error': self._fail_msg})
+            return jsonify({"draw": self._request_draw, "error": self._fail_msg})
 
 
 def _slow_map_row(row, data):
@@ -197,10 +196,12 @@ def _slow_map_row(row, data):
     :param data:
     :return:
     """
-    mapped_row = {'columns': {col: {property: (getter(row) if callable(getter) else getter)
-                                    for property, getter in fields.items()}
-                              for col, fields in data.items()},
-                  'row': row}
+    mapped_row = {
+        "columns": {
+            col: {property: (getter(row) if callable(getter) else getter) for property, getter in fields.items()} for col, fields in data.items()
+        },
+        "row": row,
+    }
 
     return mapped_row
 
@@ -212,16 +213,16 @@ def _fast_map_row(row):
     :param data:
     :return:
     """
-    return {'row': row}
+    return {"row": row}
 
 
 def _filter_row(row, search_value):
-    columns = row['columns']
+    columns = row["columns"]
 
     # iterate over columns
     for properties in columns.values():
-        if 'search' in properties:
-            value = properties['search']
+        if "search" in properties:
+            value = properties["search"]
 
             # if the searchable value for this row is a list, check whether search_value
             # matches any element in the list
@@ -232,28 +233,28 @@ def _filter_row(row, search_value):
                 continue
 
             elif isinstance(value, Iterable):
-                print(f'search_value={search_value}, values={value}')
+                print(f"search_value={search_value}, values={value}")
                 if any(search_value in x.lower() for x in value):
                     return True
                 continue
 
-            print(f'!! Unexpected search values={value}')
+            print(f"!! Unexpected search values={value}")
 
     return False
 
 
 def _compare_rows(ordering_data, row_A, row_B):
-    row_A_columns = row_A['columns']
-    row_B_columns = row_B['columns']
+    row_A_columns = row_A["columns"]
+    row_B_columns = row_B["columns"]
 
     for col, dir in ordering_data:
-        dir_factor = +1 if dir == 'asc' else -1
+        dir_factor = +1 if dir == "asc" else -1
 
         row_A_col_properties = row_A_columns[col]
         row_B_col_properties = row_B_columns[col]
 
-        row_A_value = row_A_col_properties['order']
-        row_B_value = row_B_col_properties['order']
+        row_A_value = row_A_col_properties["order"]
+        row_B_value = row_B_col_properties["order"]
 
         if isinstance(row_A_value, str) or not isinstance(row_A_value, Iterable):
             row_A_value = [row_A_value]
@@ -311,9 +312,8 @@ class ServerSideInMemoryHandler(ServerSideBase):
 
         # use these to build a list of dictionaries, with members corresponding to the filter/sort
         # values determined by the column data
-        has_filtering = hasattr(self, '_request_filter') and self._request_filter is not None \
-                        and len(self._request_filter) > 0
-        has_ordering = hasattr(self, '_request_order') and self._request_order is not None
+        has_filtering = hasattr(self, "_request_filter") and self._request_filter is not None and len(self._request_filter) > 0
+        has_ordering = hasattr(self, "_request_order") and self._request_order is not None
 
         needs_slow_map = has_ordering or has_filtering
 
@@ -338,16 +338,15 @@ class ServerSideInMemoryHandler(ServerSideBase):
             ordering_data = []
             for item in self._request_order:
                 # col_id is an index into the _request_columns array
-                col_id = int(item['column'])
-                dir = str(item['dir'])
+                col_id = int(item["column"])
+                dir = str(item["dir"])
 
-                col_name = str(self._request_columns[col_id]['data'])
+                col_name = str(self._request_columns[col_id]["data"])
 
                 if col_name in self._data:
                     ordering_data.append((col_name, dir))
 
-            self._ordered_rows = sorted(self._filtered_rows,
-                                        key=functools.cmp_to_key(functools.partial(_compare_rows, ordering_data)))
+            self._ordered_rows = sorted(self._filtered_rows, key=functools.cmp_to_key(functools.partial(_compare_rows, ordering_data)))
 
         else:
             self._ordered_rows = self._filtered_rows
@@ -363,21 +362,21 @@ class ServerSideInMemoryHandler(ServerSideBase):
         else:
             self._ordered_rows = []
 
-
     def __enter__(self):
         return self
-
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         return
 
-
     def build_payload(self, row_formatter):
         if not self._fail:
-            return jsonify({'draw': self._request_draw,
-                            'recordsTotal': self._number_total_rows,
-                            'recordsFiltered': self._number_filtered_rows,
-                            'data': row_formatter(x['row'] for x in self._ordered_rows)})
+            return jsonify(
+                {
+                    "draw": self._request_draw,
+                    "recordsTotal": self._number_total_rows,
+                    "recordsFiltered": self._number_filtered_rows,
+                    "data": row_formatter(x["row"] for x in self._ordered_rows),
+                }
+            )
         else:
-            return jsonify({'draw': self._request_draw,
-                            'error': self._fail_msg})
+            return jsonify({"draw": self._request_draw, "error": self._fail_msg})

@@ -19,8 +19,7 @@ from ...shared.utils import detuple
 
 
 # language=jinja2
-_roles = \
-"""
+_roles = """
 {% for r in user.roles %}
     {{ simple_label(r.make_label()) }}
 {% else %}
@@ -30,8 +29,7 @@ _roles = \
 
 
 # language=jinja2
-_status = \
-"""
+_status = """
 {% if u.login_count is not none %}
     {% set pl = 's' %}{% if u.login_count == 1 %}{% set pl = '' %}{% endif %}
     <span class="badge bg-primary">{{ u.login_count }} login{{ pl }}</span>
@@ -71,15 +69,18 @@ def _element(user_id, current_user_id):
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    return {'name': render_template_string(name, u=u, simple_label=simple_label),
-             'user': u.username,
-             'email': '<a class="text-decoration-none" href="mailto:{m}">{m}</a>'.format(m=u.email),
-             'confirm': u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if u.confirmed_at is not None \
-                        else '<span class="badge bg-warning text-dark">Not confirmed</span>',
-             'active': render_template_string(active, u=u, simple_label=simple_label),
-             'details': render_template_string(_status, u=u),
-             'role': render_template_string(_roles, user=u, simple_label=simple_label),
-             'menu': render_template_string(menu, user=u, cuser=cu, pane='accounts')}
+    return {
+        "name": render_template_string(name, u=u, simple_label=simple_label),
+        "user": u.username,
+        "email": '<a class="text-decoration-none" href="mailto:{m}">{m}</a>'.format(m=u.email),
+        "confirm": u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S")
+        if u.confirmed_at is not None
+        else '<span class="badge bg-warning text-dark">Not confirmed</span>',
+        "active": render_template_string(active, u=u, simple_label=simple_label),
+        "details": render_template_string(_status, u=u),
+        "role": render_template_string(_roles, user=u, simple_label=simple_label),
+        "menu": render_template_string(menu, user=u, cuser=cu, pane="accounts"),
+    }
 
 
 def _process(user_id, current_user_id):
@@ -87,13 +88,13 @@ def _process(user_id, current_user_id):
 
     record = _element(user_id, current_user_id)
 
-    name = record['name']
+    name = record["name"]
     if u.currently_active:
-        name = name.replace('REPACTIVE', '<span class="badge bg-success">ACTIVE</span>', 1)
+        name = name.replace("REPACTIVE", '<span class="badge bg-success">ACTIVE</span>', 1)
     else:
-        name = name.replace('REPACTIVE', '', 1)
+        name = name.replace("REPACTIVE", "", 1)
 
-    record.update({'name': name})
+    record.update({"name": name})
 
     return record
 
@@ -104,31 +105,31 @@ def _delete_cache_entry(user_id):
         cache.delete_memoized(_element, user_id, id[0])
 
 
-@listens_for(User, 'before_insert')
+@listens_for(User, "before_insert")
 def _User_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry(target.id)
 
 
-@listens_for(User, 'before_update')
+@listens_for(User, "before_update")
 def _User_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry(target.id)
 
 
-@listens_for(User, 'before_delete')
+@listens_for(User, "before_delete")
 def _User_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry(target.id)
 
 
-@listens_for(User.roles, 'append')
+@listens_for(User.roles, "append")
 def _User_role_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         _delete_cache_entry(target.id)
 
 
-@listens_for(User.roles, 'remove')
+@listens_for(User.roles, "remove")
 def _User_role_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         _delete_cache_entry(target.id)
@@ -139,7 +140,7 @@ def _delete_cache_entry_role_change(role):
         _delete_cache_entry(user.id)
 
 
-@listens_for(Role, 'before_update')
+@listens_for(Role, "before_update")
 def _Role_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         # this turns out to be an extremely expensive flush, so we want to avoid it
@@ -149,7 +150,7 @@ def _Role_update_handler(mapper, connection, target):
             _delete_cache_entry_role_change(target)
 
 
-@listens_for(Role, 'before_delete')
+@listens_for(Role, "before_delete")
 def _Role_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry_role_change(target)

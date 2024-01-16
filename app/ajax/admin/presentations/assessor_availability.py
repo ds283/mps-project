@@ -11,8 +11,7 @@
 from flask import render_template_string, jsonify
 
 # language=jinja2
-_session_actions = \
-"""
+_session_actions = """
 {% set available = s.faculty_available(f.id) %}
 {% set ifneeded = s.faculty_ifneeded(f.id) %}
 <div style="text-align: right;">
@@ -54,8 +53,7 @@ _session_actions = \
 
 
 # language=jinja2
-_confirmed = \
-"""
+_confirmed = """
 {% if rec.confirmed %}
     <span class="badge bg-primary">Yes</span>
     {% if rec.confirmed_timestamp is not none %}
@@ -68,8 +66,7 @@ _confirmed = \
 
 
 # language=jinja2
-_assessor_actions = \
-"""
+_assessor_actions = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -95,8 +92,7 @@ _assessor_actions = \
 
 
 # language=jinja2
-_comment = \
-"""
+_comment = """
 {% if rec.comment is not none and rec.comment|length > 0 %}
     {{ rec.comment }}
 {% else %}
@@ -106,8 +102,7 @@ _comment = \
 
 
 # language=jinja2
-_availability = \
-"""
+_availability = """
 <span class="badge bg-success">{{ rec.number_available }}</span>
 <span class="badge bg-warning text-dark">{{ rec.number_ifneeded }}</span>
 <span class="badge bg-danger">{{ rec.number_unavailable }}</span>
@@ -115,8 +110,7 @@ _availability = \
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a class="text-decoration-none" href="mailto:{{ rec.faculty.user.email }}">{{ rec.faculty.user.name }}</a>
 {% set has_block = false %}
 {% if rec.assigned_limit is not none %}{% set has_block = true %}{% endif %}
@@ -144,28 +138,37 @@ _name = \
 """
 
 
-
 def assessor_session_availability_data(assessment, session, assessors, editable=False):
-    data = [{'name': {'display': render_template_string(_name, rec=assessor),
-                      'sortstring': assessor.faculty.user.last_name + assessor.faculty.user.first_name},
-             'confirmed': render_template_string(_confirmed, a=assessment, rec=assessor),
-             'comment': render_template_string(_comment, rec=assessor),
-             'availability': {'display': render_template_string(_availability, rec=assessor),
-                              'sortvalue': assessor.number_available},
-             'menu': render_template_string(_session_actions, s=session, f=assessor.faculty,
-                                            editable=editable)} for assessor in assessors]
+    data = [
+        {
+            "name": {
+                "display": render_template_string(_name, rec=assessor),
+                "sortstring": assessor.faculty.user.last_name + assessor.faculty.user.first_name,
+            },
+            "confirmed": render_template_string(_confirmed, a=assessment, rec=assessor),
+            "comment": render_template_string(_comment, rec=assessor),
+            "availability": {"display": render_template_string(_availability, rec=assessor), "sortvalue": assessor.number_available},
+            "menu": render_template_string(_session_actions, s=session, f=assessor.faculty, editable=editable),
+        }
+        for assessor in assessors
+    ]
 
     return jsonify(data)
 
 
 def presentation_assessors_data(assessment, assessors, editable=False):
-    data = [{'name': {'display': render_template_string(_name, rec=assessor),
-                      'sortstring': assessor.faculty.user.last_name + assessor.faculty.user.first_name},
-             'confirmed': render_template_string(_confirmed, a=assessment, rec=assessor),
-             'comment': render_template_string(_comment, rec=assessor),
-             'availability': {'display': render_template_string(_availability, rec=assessor),
-                              'sortvalue': assessor.number_available},
-             'menu': render_template_string(_assessor_actions, a=assessment, f=assessor.faculty,
-                                            editable=editable)} for assessor in assessors]
+    data = [
+        {
+            "name": {
+                "display": render_template_string(_name, rec=assessor),
+                "sortstring": assessor.faculty.user.last_name + assessor.faculty.user.first_name,
+            },
+            "confirmed": render_template_string(_confirmed, a=assessment, rec=assessor),
+            "comment": render_template_string(_comment, rec=assessor),
+            "availability": {"display": render_template_string(_availability, rec=assessor), "sortvalue": assessor.number_available},
+            "menu": render_template_string(_assessor_actions, a=assessment, f=assessor.faculty, editable=editable),
+        }
+        for assessor in assessors
+    ]
 
     return jsonify(data)

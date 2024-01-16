@@ -33,8 +33,7 @@ def get_backup_config():
     if num == 0:
         # no configuration record is present; generate a default and
         # allow exceptions to propagate up to caller (we have no sensible way to handle them here)
-        data: BackupConfiguration = BackupConfiguration(keep_hourly=7, keep_daily=2, limit=None,
-                                                        last_changed=datetime.now())
+        data: BackupConfiguration = BackupConfiguration(keep_hourly=7, keep_daily=2, limit=None, last_changed=datetime.now())
         db.session.add(data)
         db.session.commit()
 
@@ -62,8 +61,9 @@ def set_backup_config(keep_hourly, keep_daily, limit, units):
     if num == 0:
         # no configuration record is present; generate a default and allow exceptions to propagate
         # back up to caller (we have no sensible way to handle them here)
-        data: BackupConfiguration = BackupConfiguration(keep_hourly=keep_hourly, keep_daily=keep_daily,
-                                                        limit=limit, units=units, last_changed=datetime.now())
+        data: BackupConfiguration = BackupConfiguration(
+            keep_hourly=keep_hourly, keep_daily=keep_daily, limit=limit, units=units, last_changed=datetime.now()
+        )
         db.session.add(data)
         db.session.commit()
         return
@@ -119,14 +119,13 @@ def remove_backup(id):
     record = db.session.query(BackupRecord).filter_by(id=id).first()
 
     if record is None:
-        return False, f'database record for backup #{id} could not be found'
+        return False, f"database record for backup #{id} could not be found"
 
     if record.locked:
-        return False, f'backup #{id} is locked and cannot be deleted'
+        return False, f"backup #{id} is locked and cannot be deleted"
 
-    object_store = current_app.config.get('OBJECT_STORAGE_BACKUP')
-    storage = AssetCloudAdapter(record, object_store,
-                                audit_data=f'remove_backup (backup id #{id})', size_attr='archive_size')
+    object_store = current_app.config.get("OBJECT_STORAGE_BACKUP")
+    storage = AssetCloudAdapter(record, object_store, audit_data=f"remove_backup (backup id #{id})", size_attr="archive_size")
 
     # delete database record first; if this succeeds but the storage deletion doesn't, then the stored
     # file will be orphaned and hopefully will be picked up by garbage collection. This is better than the
@@ -138,7 +137,7 @@ def remove_backup(id):
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        return False, 'could not delete database entry for this backup'
+        return False, "could not delete database entry for this backup"
 
     try:
         storage.delete()
@@ -155,16 +154,12 @@ def create_new_backup_labels(form):
     if len(unmatched) > 0:
         now = datetime.now()
         for label in unmatched:
-            new_label = BackupLabel(name=label,
-                                    colour=None,
-                                    creator_id=current_user.id,
-                                    creation_timestamp=now)
+            new_label = BackupLabel(name=label, colour=None, creator_id=current_user.id, creation_timestamp=now)
             try:
                 db.session.add(new_label)
                 matched.append(new_label)
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                flash(f'Could not add newly defined label "{label}" due to a database error. '
-                      f'Please contact a system administrator.', 'error')
+                flash(f'Could not add newly defined label "{label}" due to a database error. ' f"Please contact a system administrator.", "error")
 
     return matched

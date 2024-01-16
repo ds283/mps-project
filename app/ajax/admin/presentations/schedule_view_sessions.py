@@ -13,8 +13,7 @@ from ....models import PresentationSession
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 {{ simple_label(s.session.label) }}
 {% if s.has_issues %}
     <i class="fas fa-exclamation-triangle text-danger"></i>
@@ -23,8 +22,7 @@ _name = \
 
 
 # language=jinja2
-_assessors = \
-"""
+_assessors = """
 {% for assessor in s.assessors %}
     <div>
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
@@ -60,8 +58,7 @@ _assessors = \
 
 
 # language=jinja2
-_talks = \
-"""
+_talks = """
 {% set ns = namespace(count=0) %}
 {% for talk in s.talks %}
     {% set ns.count = ns.count + 1 %}
@@ -117,8 +114,7 @@ _talks = \
 
 
 # language=jinja2
-_room = \
-"""
+_room = """
 {% set style = s.room.building.make_CSS_style() %}
 <div class="dropdown schedule-assign-button">
     <a class="badge text-decoration-none text-nohover-light {% if style is none %}bg-info{% else %}bg-secondary{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
@@ -142,10 +138,17 @@ _room = \
 def schedule_view_sessions(slots, record, url=None, text=None):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'session': {'display': render_template_string(_name, s=s, simple_label=simple_label),
-                         'sortvalue': s.session.date.isoformat()+('-AA' if s.session.session_type == PresentationSession.MORNING_SESSION else '-BB')},
-             'room': render_template_string(_room, s=s),
-             'assessors': render_template_string(_assessors, s=s, rec=record, back_url=url, back_text=text),
-             'talks': render_template_string(_talks, s=s, rec=record, back_url=url, back_text=text)} for s in slots]
+    data = [
+        {
+            "session": {
+                "display": render_template_string(_name, s=s, simple_label=simple_label),
+                "sortvalue": s.session.date.isoformat() + ("-AA" if s.session.session_type == PresentationSession.MORNING_SESSION else "-BB"),
+            },
+            "room": render_template_string(_room, s=s),
+            "assessors": render_template_string(_assessors, s=s, rec=record, back_url=url, back_text=text),
+            "talks": render_template_string(_talks, s=s, rec=record, back_url=url, back_text=text),
+        }
+        for s in slots
+    ]
 
     return jsonify(data)

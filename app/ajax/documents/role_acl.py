@@ -11,8 +11,7 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_access = \
-"""
+_access = """
 {% if asset.in_role_acl(role) %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Role grants access</a>
 {% else %}
@@ -22,8 +21,7 @@ _access = \
 
 
 # language=jinja2
-_actions = \
-"""
+_actions = """
 <div style="text-align: right;">
     <div class="float-end">
         {% if asset.in_role_acl(role) %}
@@ -41,8 +39,7 @@ _actions = \
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 {{ simple_label(r.make_label()) }}
 """
 
@@ -50,9 +47,13 @@ _name = \
 def acl_role(role_list, asset, attachment, type):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': render_template_string(_name, r=r, simple_label=simple_label),
-             'access': render_template_string(_access, asset=asset, role=r),
-             'actions': render_template_string(_actions, asset=asset, role=r, attachment=attachment, type=type)}
-            for r in role_list]
+    data = [
+        {
+            "name": render_template_string(_name, r=r, simple_label=simple_label),
+            "access": render_template_string(_access, asset=asset, role=r),
+            "actions": render_template_string(_actions, asset=asset, role=r, attachment=attachment, type=type),
+        }
+        for r in role_list
+    ]
 
     return jsonify(data)

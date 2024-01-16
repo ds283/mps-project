@@ -26,10 +26,9 @@ _sleep_interval = 5
 
 
 class Entry(ScheduleEntry):
-    model_schedules = ((schedules.crontab, CrontabSchedule, 'crontab'),
-                       (schedules.schedule, IntervalSchedule, 'interval'))
+    model_schedules = ((schedules.crontab, CrontabSchedule, "crontab"), (schedules.schedule, IntervalSchedule, "interval"))
 
-    def  __init__(self, model):
+    def __init__(self, model):
         self.app = current_app._get_current_object()
         self.name = model.name
         self.task = model.task
@@ -54,7 +53,7 @@ class Entry(ScheduleEntry):
 
     def is_due(self):
         if not self.model.enabled:
-            return False, 5.0   # 5 second delay for re-enable.
+            return False, 5.0  # 5 second delay for re-enable.
         return self.schedule.is_due(self.last_run_at)
 
     def _default_now(self):
@@ -65,6 +64,7 @@ class Entry(ScheduleEntry):
         self.model.total_run_count += 1
         db.session.commit()
         return self.__class__(self.model)
+
     next = __next__  # for 2to3
 
     @classmethod
@@ -74,23 +74,22 @@ class Entry(ScheduleEntry):
             if isinstance(schedule, schedule_type):
                 model_schedule = model_type.from_schedule(db.session, schedule)
                 return model_schedule, model_field
-        raise ValueError(
-            'Cannot convert schedule type {0!r} to model'.format(schedule))
+        raise ValueError("Cannot convert schedule type {0!r} to model".format(schedule))
 
     @classmethod
-    def from_entry(cls, name, skip_fields=('relative', 'options'), **entry):
-        options = entry.get('options') or {}
+    def from_entry(cls, name, skip_fields=("relative", "options"), **entry):
+        options = entry.get("options") or {}
         fields = dict(entry)
         for skip_field in skip_fields:
             fields.pop(skip_field, None)
-        schedule = fields.pop('schedule')
+        schedule = fields.pop("schedule")
         model_schedule, model_field = cls.to_model_schedule(schedule)
         fields[model_field] = model_schedule
-        fields['args'] = fields.get('args') or []
-        fields['kwargs'] = fields.get('kwargs') or {}
-        fields['queue'] = options.get('queue')
-        fields['exchange'] = options.get('exchange')
-        fields['routing_key'] = options.get('routing_key')
+        fields["args"] = fields.get("args") or []
+        fields["kwargs"] = fields.get("kwargs") or {}
+        fields["queue"] = options.get("queue")
+        fields["exchange"] = options.get("exchange")
+        fields["routing_key"] = options.get("routing_key")
 
         query = db.session.query(DatabaseSchedulerEntry)
         query = query.filter_by(name=name)
@@ -156,11 +155,11 @@ class DatabaseScheduler(Scheduler):
             try:
                 s[name] = self.Entry.from_entry(name, **entry)
             except Exception as exc:
-                self.logger.exception('update_from_dict')
+                self.logger.exception("update_from_dict")
         self.schedule.update(s)
 
     def tick(self):
-        self.logger.debug('DatabaseScheduler: tick')
+        self.logger.debug("DatabaseScheduler: tick")
         Scheduler.tick(self)
         if self.should_sync():
             self.sync()
@@ -170,23 +169,23 @@ class DatabaseScheduler(Scheduler):
         sync_reason_time = (time.time() - self._last_sync) > self.sync_every
         sync_reason_task_count = self.sync_every_tasks and self._tasks_since_sync >= self.sync_every_tasks
         bool_ = sync_reason_time or sync_reason_task_count
-        self.logger.debug('DatabaseScheduler: should_sync: {0}'.format(bool_))
+        self.logger.debug("DatabaseScheduler: should_sync: {0}".format(bool_))
         return bool_
 
     def sync(self):
         self._last_sync = time.time()
-        self.logger.debug('DatabaseScheduler: sync')
+        self.logger.debug("DatabaseScheduler: sync")
         self._schedule = self._all_as_schedule()
 
     @property
     def schedule(self):
         update = False
         if not self._initial_read:
-            self.logger.debug('DatabaseScheduler: initial read')
+            self.logger.debug("DatabaseScheduler: initial read")
             update = True
             self._initial_read = True
         elif self.schedule_changed():
-            self.logger.info('DatabaseScheduler: Schedule changed.')
+            self.logger.info("DatabaseScheduler: Schedule changed.")
             update = True
 
         if update:

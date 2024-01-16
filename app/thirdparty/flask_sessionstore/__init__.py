@@ -9,13 +9,18 @@
     :license: BSD, see LICENSE for more details.
 """
 
-__version__ = '0.4.5'
+__version__ = "0.4.5"
 
 import os
 
-from .sessions import NullSessionInterface, RedisSessionInterface, \
-    MemcachedSessionInterface, MongoDBSessionInterface, SqlAlchemySessionInterface, \
-    DynamoDBSessionInterface
+from .sessions import (
+    NullSessionInterface,
+    RedisSessionInterface,
+    MemcachedSessionInterface,
+    MongoDBSessionInterface,
+    SqlAlchemySessionInterface,
+    DynamoDBSessionInterface,
+)
 
 
 class Session(object):
@@ -63,55 +68,65 @@ class Session(object):
     @staticmethod
     def _get_interface(app):
         config = app.config.copy()
-        config.setdefault('SESSION_TYPE', 'null')
-        config.setdefault('SESSION_PERMANENT', True)
-        config.setdefault('SESSION_USE_SIGNER', False)
-        config.setdefault('SESSION_KEY_PREFIX', 'session:')
-        config.setdefault('SESSION_REDIS', None)
-        config.setdefault('SESSION_MEMCACHED', None)
-        config.setdefault('SESSION_FILE_DIR',
-                          os.path.join(os.getcwd(), 'flask_sessionstore'))
-        config.setdefault('SESSION_FILE_THRESHOLD', 500)
-        config.setdefault('SESSION_FILE_MODE', 384)
-        config.setdefault('SESSION_MONGODB', None)
-        config.setdefault('SESSION_MONGODB_DB', 'flask_sessionstore')
-        config.setdefault('SESSION_MONGODB_COLLECT', 'sessions')
-        config.setdefault('SESSION_SQLALCHEMY', None)
-        config.setdefault('SESSION_SQLALCHEMY_TABLE', 'sessions')
-        config.setdefault('SESSION_DYNAMODB', None)
-        config.setdefault('SESSION_DYNAMODB_TABLE', 'sessions')
-        config.setdefault('SESSION_DYNAMODB_KEY_ID', None)
-        config.setdefault('SESSION_DYNAMODB_SECRET', None)
-        config.setdefault('SESSION_DYNAMODB_REGION', None)
-        config.setdefault('SESSION_DYNAMODB_ENDPOINT_URL', None)
+        config.setdefault("SESSION_TYPE", "null")
+        config.setdefault("SESSION_PERMANENT", True)
+        config.setdefault("SESSION_USE_SIGNER", False)
+        config.setdefault("SESSION_KEY_PREFIX", "session:")
+        config.setdefault("SESSION_REDIS", None)
+        config.setdefault("SESSION_MEMCACHED", None)
+        config.setdefault("SESSION_FILE_DIR", os.path.join(os.getcwd(), "flask_sessionstore"))
+        config.setdefault("SESSION_FILE_THRESHOLD", 500)
+        config.setdefault("SESSION_FILE_MODE", 384)
+        config.setdefault("SESSION_MONGODB", None)
+        config.setdefault("SESSION_MONGODB_DB", "flask_sessionstore")
+        config.setdefault("SESSION_MONGODB_COLLECT", "sessions")
+        config.setdefault("SESSION_SQLALCHEMY", None)
+        config.setdefault("SESSION_SQLALCHEMY_TABLE", "sessions")
+        config.setdefault("SESSION_DYNAMODB", None)
+        config.setdefault("SESSION_DYNAMODB_TABLE", "sessions")
+        config.setdefault("SESSION_DYNAMODB_KEY_ID", None)
+        config.setdefault("SESSION_DYNAMODB_SECRET", None)
+        config.setdefault("SESSION_DYNAMODB_REGION", None)
+        config.setdefault("SESSION_DYNAMODB_ENDPOINT_URL", None)
 
-        if config['SESSION_TYPE'] == 'redis':
+        if config["SESSION_TYPE"] == "redis":
             session_interface = RedisSessionInterface(
-                config['SESSION_REDIS'], config['SESSION_KEY_PREFIX'],
-                config['SESSION_USE_SIGNER'], config['SESSION_PERMANENT'])
-        elif config['SESSION_TYPE'] == 'memcached':
+                config["SESSION_REDIS"], config["SESSION_KEY_PREFIX"], config["SESSION_USE_SIGNER"], config["SESSION_PERMANENT"]
+            )
+        elif config["SESSION_TYPE"] == "memcached":
             session_interface = MemcachedSessionInterface(
-                config['SESSION_MEMCACHED'], config['SESSION_KEY_PREFIX'],
-                config['SESSION_USE_SIGNER'], config['SESSION_PERMANENT'])
-        elif config['SESSION_TYPE'] == 'mongodb':
+                config["SESSION_MEMCACHED"], config["SESSION_KEY_PREFIX"], config["SESSION_USE_SIGNER"], config["SESSION_PERMANENT"]
+            )
+        elif config["SESSION_TYPE"] == "mongodb":
             session_interface = MongoDBSessionInterface(
-                config['SESSION_MONGODB'], config['SESSION_MONGODB_DB'],
-                config['SESSION_MONGODB_COLLECT'],
-                config['SESSION_KEY_PREFIX'], config['SESSION_USE_SIGNER'],
-                config['SESSION_PERMANENT'])
-        elif config['SESSION_TYPE'] == 'sqlalchemy':
+                config["SESSION_MONGODB"],
+                config["SESSION_MONGODB_DB"],
+                config["SESSION_MONGODB_COLLECT"],
+                config["SESSION_KEY_PREFIX"],
+                config["SESSION_USE_SIGNER"],
+                config["SESSION_PERMANENT"],
+            )
+        elif config["SESSION_TYPE"] == "sqlalchemy":
             session_interface = SqlAlchemySessionInterface(
-                app, config['SESSION_SQLALCHEMY'],
-                config['SESSION_SQLALCHEMY_TABLE'],
-                config['SESSION_KEY_PREFIX'], config['SESSION_USE_SIGNER'],
-                config['SESSION_PERMANENT'])
-        elif config['SESSION_TYPE'] == 'dynamodb':
+                app,
+                config["SESSION_SQLALCHEMY"],
+                config["SESSION_SQLALCHEMY_TABLE"],
+                config["SESSION_KEY_PREFIX"],
+                config["SESSION_USE_SIGNER"],
+                config["SESSION_PERMANENT"],
+            )
+        elif config["SESSION_TYPE"] == "dynamodb":
             session_interface = DynamoDBSessionInterface(
-                config['SESSION_DYNAMODB'], config['SESSION_KEY_PREFIX'],
-                config['SESSION_DYNAMODB_TABLE'], config['SESSION_DYNAMODB_KEY_ID'],
-                config['SESSION_DYNAMODB_SECRET'], config['SESSION_DYNAMODB_REGION'],
-                config['SESSION_DYNAMODB_ENDPOINT_URL'],
-                config['SESSION_USE_SIGNER'], config['SESSION_PERMANENT'])
+                config["SESSION_DYNAMODB"],
+                config["SESSION_KEY_PREFIX"],
+                config["SESSION_DYNAMODB_TABLE"],
+                config["SESSION_DYNAMODB_KEY_ID"],
+                config["SESSION_DYNAMODB_SECRET"],
+                config["SESSION_DYNAMODB_REGION"],
+                config["SESSION_DYNAMODB_ENDPOINT_URL"],
+                config["SESSION_USE_SIGNER"],
+                config["SESSION_PERMANENT"],
+            )
         else:
             session_interface = NullSessionInterface()
 

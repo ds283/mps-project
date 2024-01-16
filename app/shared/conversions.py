@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+
 def is_integer(s):
     """
     Determine whether a supplied quantity 's' can be interpreted as an integer

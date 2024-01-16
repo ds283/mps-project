@@ -10,6 +10,6 @@
 
 from flask import Blueprint
 
-services = Blueprint('services', __name__)
+services = Blueprint("services", __name__)
 
 from . import views

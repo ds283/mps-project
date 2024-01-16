@@ -21,36 +21,26 @@ from ..meta import ObjectMeta
 
 
 class AmazonS3CloudStorageDriver:
-
     def __init__(self, uri: SplitResult, data: Dict):
+        if data is None or not isinstance(data, dict) or "access_key" not in data or "secret_key" not in data:
+            raise RuntimeError("cloud_object_store: access_key and secret_key credentials must be supplied")
 
-        if data is None \
-                or not isinstance(data, dict) \
-                or 'access_key' not in data \
-                or 'secret_key' not in data:
-            raise RuntimeError('cloud_object_store: access_key and secret_key credentials must be supplied')
-
-        self._session = boto3.Session(
-            aws_access_key_id=data['access_key'],
-            aws_secret_access_key=data['secret_key']
-        )
+        self._session = boto3.Session(aws_access_key_id=data["access_key"], aws_secret_access_key=data["secret_key"])
 
         # we need to use an S3 Client rather than an S3 Resource, because a Resource provides
         # no methods to retrieve specific byte ranges, only entire objects.
         # See: https://github.com/boto/boto3/issues/3339, https://github.com/boto/s3transfer/pull/260
-        self._storage: BaseClient = self._session.client('s3',
-                                                         endpoint_url=data.get('endpoint_url', None),
-                                                         region_name=data.get('region', None))
+        self._storage: BaseClient = self._session.client("s3", endpoint_url=data.get("endpoint_url", None), region_name=data.get("region", None))
 
-        if 'endpoint_url' in data:
-            self._endpoint_url = data['endpoint_url']
+        if "endpoint_url" in data:
+            self._endpoint_url = data["endpoint_url"]
         else:
             self._endpoint_url = None
 
         self._bucket_name: str = uri.netloc
 
     def get_driver_name(self):
-        return 'AmazonS3CloudStorage'
+        return "AmazonS3CloudStorage"
 
     def get_bucket_name(self):
         return self._bucket_name
@@ -77,15 +67,15 @@ class AmazonS3CloudStorageDriver:
     def get_range(self, key: Path, start: int, length: int) -> bytes:
         # see get() for the difference between download_fileobj() and get_object()
         try:
-            response = self._storage.get_object(self._bucket_name, Key=str(key),
-                                                Range="bytes {start}-{end}".format(start=start, end=start + length - 1))
+            response = self._storage.get_object(
+                self._bucket_name, Key=str(key), Range="bytes {start}-{end}".format(start=start, end=start + length - 1)
+            )
         except ClientError as e:
             raise FileNotFoundError(str(e))
-        return BytesIO(response['Body'].read()).getvalue()
+        return BytesIO(response["Body"].read()).getvalue()
 
     def put(self, key: Path, data: bytes, mimetype: str = None) -> None:
-        self._storage.upload_fileobj(Fileobj=BytesIO(data), Bucket=self._bucket_name, Key=str(key),
-                                     ExtraArgs={'ContentDisposition': mimetype})
+        self._storage.upload_fileobj(Fileobj=BytesIO(data), Bucket=self._bucket_name, Key=str(key), ExtraArgs={"ContentDisposition": mimetype})
 
     def delete(self, key: Path) -> None:
         try:
@@ -111,19 +101,19 @@ class AmazonS3CloudStorageDriver:
         while True:
             extra_args = {}
             if prefix_str is not None:
-                extra_args['Prefix'] = prefix_str
+                extra_args["Prefix"] = prefix_str
             if continuation_token is not None:
-                extra_args['ContinuationToken'] = continuation_token
+                extra_args["ContinuationToken"] = continuation_token
 
             response = self._storage.list_objects_v2(Bucket=self._bucket_name, **extra_args)
-            contents = response['Contents']
-            data.update({str(obj['Key']): self.head(obj['Key']) for obj in contents})
+            contents = response["Contents"]
+            data.update({str(obj["Key"]): self.head(obj["Key"]) for obj in contents})
 
-            is_truncated = response['IsTruncated']
+            is_truncated = response["IsTruncated"]
             if not is_truncated:
                 break
 
-            continuation_token = response['NextContinuationToken']
+            continuation_token = response["NextContinuationToken"]
 
         return data
 
@@ -138,7 +128,7 @@ class AmazonS3CloudStorageDriver:
 
         data: ObjectMeta = ObjectMeta()
         data.location = key_str
-        data.size = response['ContentLength']
-        data.mimetype = response['ContentType']
+        data.size = response["ContentLength"]
+        data.mimetype = response["ContentType"]
 
         return data

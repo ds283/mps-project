@@ -16,19 +16,19 @@ from datetime import datetime, timedelta
 
 from ..shared.timer import Timer
 
-def register_session_tasks(celery):
 
+def register_session_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def sift_sessions(self):
-        mongo_url = current_app.config['SESSION_MONGO_URL']
-        db_name = current_app.config['SESSION_MONGODB_DB']
-        collection_name = current_app.config['SESSION_MONGODB_COLLECT']
-        key_prefix = current_app.config['SESSION_KEY_PREFIX']
+        mongo_url = current_app.config["SESSION_MONGO_URL"]
+        db_name = current_app.config["SESSION_MONGODB_DB"]
+        collection_name = current_app.config["SESSION_MONGODB_COLLECT"]
+        key_prefix = current_app.config["SESSION_KEY_PREFIX"]
 
         if mongo_url is None:
             raise Ignore()
 
-        print('-- Entering sift_sessions maintenance cycle for MongoDB server-side sessions')
+        print("-- Entering sift_sessions maintenance cycle for MongoDB server-side sessions")
 
         with MongoClient(host=mongo_url) as client:
             db = client[db_name]
@@ -38,18 +38,17 @@ def register_session_tasks(celery):
             # set their expiry to today plus 7 days
             expiry_date = datetime.now() + timedelta(days=7)
             with Timer() as expiry_timer:
-                result = collection.update_many({'expiration': None}, {'$set': {'expiration': expiry_date}}, upsert=False)
-            print('-- identified {matched} sessions without a valid expiry date'.format(matched=result.matched_count))
-            print('-- modified {modified} sessions to expires on {date}'.format(modified=result.modified_count,
-                                                                                date=expiry_date))
-            print('-- elapsed time for query = {s}'.format(s=expiry_timer.interval))
+                result = collection.update_many({"expiration": None}, {"$set": {"expiration": expiry_date}}, upsert=False)
+            print("-- identified {matched} sessions without a valid expiry date".format(matched=result.matched_count))
+            print("-- modified {modified} sessions to expires on {date}".format(modified=result.modified_count, date=expiry_date))
+            print("-- elapsed time for query = {s}".format(s=expiry_timer.interval))
 
             # second, determine whether there are any sessions that are stale and
             # should be removed
             stale_date = datetime.now() - timedelta(days=1)
             with Timer() as stale_timer:
-                result = collection.delete_many({'expiration': {'$lt': stale_date}})
-            print('-- deleted {count} stale sessions'.format(count=result.deleted_count))
-            print('-- elapsed time for query = {s}'.format(s=stale_timer.interval))
+                result = collection.delete_many({"expiration": {"$lt": stale_date}})
+            print("-- deleted {count} stale sessions".format(count=result.deleted_count))
+            print("-- elapsed time for query = {s}".format(s=stale_timer.interval))
 
-        print('-- sift_sessions maintenance cycle complete')
+        print("-- sift_sessions maintenance cycle complete")

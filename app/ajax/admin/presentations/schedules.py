@@ -11,8 +11,7 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_status = \
-"""
+_status = """
 {% if s.finished %}
     <span class="badge bg-primary">Finished</span>
     {% if s.solution_usable %}
@@ -69,8 +68,7 @@ _status = \
 
 
 # language=jinja2
-_timestamp = \
-"""
+_timestamp = """
 Created by
 <a class="text-decoration-none" href="mailto:{{ s.created_by.email }}">{{ s.created_by.name }}</a>
 on
@@ -92,8 +90,7 @@ on
 
 
 # language=jinja2
-_score = \
-"""
+_score = """
 {% if s.solution_usable %}
     <span class="badge bg-success">Score {{ s.score }}</span>
 {% else %}
@@ -103,8 +100,7 @@ _score = \
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <div>
     {% if s.finished and s.solution_usable %}
         <a class="text-decoration-none" href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">{{ s.name }}</a>
@@ -130,8 +126,7 @@ _name = \
 
 
 # language=jinja2
-_info = \
-"""
+_info = """
 <span class="badge bg-info">Assignments &le; {{ s.assessor_assigned_limit }}</span>
 <span class="badge bg-info">Session multiplicity &le; {{ s.assessor_multiplicity_per_session }}</span>
 <span class="badge bg-info">If-needed cost {{ s.if_needed_cost }}</span>
@@ -206,8 +201,7 @@ _info = \
 """
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 {% set valid = s.is_valid %}
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button"
@@ -321,8 +315,7 @@ _menu = \
 
 
 # language=jinja2
-_periods = \
-"""
+_periods = """
 {{ a.name }}
 <p></p>
 {% for period in a.submission_periods %}
@@ -357,15 +350,17 @@ def assessment_schedules_data(schedules, text, url):
     """
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': render_template_string(_name, s=s, text=text, url=url),
-             'status': render_template_string(_status, s=s),
-             'score': {
-                 'display': render_template_string(_score, s=s),
-                 'value': float(s.score) if s.solution_usable and s.score is not None else 0
-             },
-             'timestamp': render_template_string(_timestamp, s=s),
-             'info': render_template_string(_info, s=s),
-             'periods': render_template_string(_periods, a=s.owner, simple_label=simple_label),
-             'menu': render_template_string(_menu, s=s, text=text, url=url)} for s in schedules]
+    data = [
+        {
+            "name": render_template_string(_name, s=s, text=text, url=url),
+            "status": render_template_string(_status, s=s),
+            "score": {"display": render_template_string(_score, s=s), "value": float(s.score) if s.solution_usable and s.score is not None else 0},
+            "timestamp": render_template_string(_timestamp, s=s),
+            "info": render_template_string(_info, s=s),
+            "periods": render_template_string(_periods, a=s.owner, simple_label=simple_label),
+            "menu": render_template_string(_menu, s=s, text=text, url=url),
+        }
+        for s in schedules
+    ]
 
     return jsonify(data)

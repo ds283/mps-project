@@ -22,11 +22,11 @@ from ..shared.conversions import is_integer
 from ..tools import ServerSideSQLHandler
 
 
-@public_browser.route('/browse', methods=['GET', 'POST'])
+@public_browser.route("/browse", methods=["GET", "POST"])
 def browse():
     form = PublicBrowserSelectorForm(request.form)
 
-    pclass_arg = request.args.get('pclass_id')
+    pclass_arg = request.args.get("pclass_id")
     flag, pclass_request = is_integer(pclass_arg)
 
     pclass_id = None
@@ -43,9 +43,9 @@ def browse():
     return render_template("public_browser/browser.html", form=form, pclass_id=pclass_id)
 
 
-@public_browser.route('/browse_ajax', methods=['POST'])
+@public_browser.route("/browse_ajax", methods=["POST"])
 def browse_ajax():
-    pclass_arg = request.args.get('pclass_id')
+    pclass_arg = request.args.get("pclass_id")
     flag, pclass_id = is_integer(pclass_arg)
 
     if not flag:
@@ -53,33 +53,29 @@ def browse_ajax():
 
     # build base query of all active projects that are attached to the specified
     # project class; this is the full set of projects for which we allow browsing
-    base_query = db.session.query(Project) \
-        .filter(and_(Project.active == True,
-                     Project.project_classes.any(ProjectClass.id == pclass_id))) \
-        .join(User, User.id == Project.owner_id, isouter=True) \
-        .filter(or_(Project.generic == True,
-                    User.active == True)) \
+    base_query = (
+        db.session.query(Project)
+        .filter(and_(Project.active == True, Project.project_classes.any(ProjectClass.id == pclass_id)))
+        .join(User, User.id == Project.owner_id, isouter=True)
+        .filter(or_(Project.generic == True, User.active == True))
         .join(ResearchGroup, ResearchGroup.id == Project.group_id, isouter=True)
+    )
 
-    name = {'search': Project.name,
-             'order': Project.name,
-             'search_collation': 'utf8_general_ci'}
-    supervisor = {'search': func.concat(User.first_name, ' ', User.last_name),
-                  'order': [User.last_name, User.first_name],
-                  'search_collation': 'utf8_general_ci'}
-    group = {'search': ResearchGroup.name,
-             'order': ResearchGroup.name,
-             'search_collation': 'utf8_general_ci'}
+    name = {"search": Project.name, "order": Project.name, "search_collation": "utf8_general_ci"}
+    supervisor = {
+        "search": func.concat(User.first_name, " ", User.last_name),
+        "order": [User.last_name, User.first_name],
+        "search_collation": "utf8_general_ci",
+    }
+    group = {"search": ResearchGroup.name, "order": ResearchGroup.name, "search_collation": "utf8_general_ci"}
 
-    columns = {'name': name,
-               'supervisor': supervisor,
-               'group': group}
+    columns = {"name": name, "supervisor": supervisor, "group": group}
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(public_browser_project_list, pclass_id))
 
 
-@public_browser.route('/project/<int:pclass_id>/<int:proj_id>')
+@public_browser.route("/project/<int:pclass_id>/<int:proj_id>")
 def project(pclass_id, proj_id):
     """
     View a specific project
@@ -93,8 +89,7 @@ def project(pclass_id, proj_id):
 
     desc = project.get_description(pclass.id)
 
-    text = 'browse projects view'
-    url = url_for('public_browser.browse', pclass_id=pclass.id)
+    text = "browse projects view"
+    url = url_for("public_browser.browse", pclass_id=pclass.id)
 
-    return render_template("public_browser/project.html", title=project.name, project=project,
-                           desc=desc, text=text, url=url)
+    return render_template("public_browser/project.html", title=project.name, project=project, desc=desc, text=text, url=url)

@@ -14,8 +14,7 @@ from flask import render_template_string, get_template_attribute
 from ...models import BackupRecord
 
 # language=jinja2
-_manage_backups_menu = \
-"""
+_manage_backups_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -44,8 +43,7 @@ _manage_backups_menu = \
 """
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <div>{{ b.date.strftime("%a %d %b %Y %H:%M:%S") }}</div>
 <div class="mt-1 small text-muted">
     {% if b.encryption == 0 %}
@@ -62,8 +60,7 @@ _name = \
 """
 
 # language=jinja2
-_key = \
-"""
+_key = """
 <div class="small">{{ b.unique_name }}</div>
 {% if b.last_validated %}
     <div class="mt-1 small text-muted">
@@ -74,8 +71,7 @@ _key = \
 
 
 # language=jinja2
-_description = \
-"""
+_description = """
 {% if b.description and b.description|length > 0 %}
     <div class="small">{{ b.description }}</div>
 {% else %}
@@ -93,8 +89,7 @@ _description = \
 
 
 # language=jinja2
-_type = \
-"""
+_type = """
 <div class="small">{{ b.type_to_string() }}</div>
 """
 
@@ -102,16 +97,20 @@ _type = \
 def backups_data(backups: List[BackupRecord]):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'date': render_template_string(_name, b=b),
-             'initiated': '<a class="text-decoration-none" '
-                          'href="mailto:{e}">{name}</a>'.format(e=b.owner.email,
-                                                                name=b.owner.name) if b.owner is not None
-                          else '<span class="badge bg-secondary">Nobody</span>',
-             'type': render_template_string(_type, b=b),
-             'description': render_template_string(_description, b=b, simple_label=simple_label),
-             'key': render_template_string(_key, b=b),
-             'db_size': b.readable_db_size,
-             'archive_size': b.readable_archive_size,
-             'menu': render_template_string(_manage_backups_menu, backup=b)} for b in backups]
+    data = [
+        {
+            "date": render_template_string(_name, b=b),
+            "initiated": '<a class="text-decoration-none" ' 'href="mailto:{e}">{name}</a>'.format(e=b.owner.email, name=b.owner.name)
+            if b.owner is not None
+            else '<span class="badge bg-secondary">Nobody</span>',
+            "type": render_template_string(_type, b=b),
+            "description": render_template_string(_description, b=b, simple_label=simple_label),
+            "key": render_template_string(_key, b=b),
+            "db_size": b.readable_db_size,
+            "archive_size": b.readable_archive_size,
+            "menu": render_template_string(_manage_backups_menu, backup=b),
+        }
+        for b in backups
+    ]
 
     return data

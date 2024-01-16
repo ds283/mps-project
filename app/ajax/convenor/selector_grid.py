@@ -11,15 +11,13 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_cohort = \
-"""
+_cohort = """
 {{ simple_label(sel.student.cohort_label) }}
 {{ simple_label(sel.academic_year_label(show_details=True)) }}
 """
 
 # language=jinja2
-_selections = \
-"""
+_selections = """
 {% if sel.has_submitted %}
     {% if sel.has_accepted_offer %}
         {% set offer = sel.accepted_offer %}
@@ -86,8 +84,7 @@ _selections = \
 """
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 <div>
 {% if sel.convert_to_submitter %}
@@ -102,8 +99,7 @@ _name = \
 """
 
 # language=jinja2
-_programme = \
-"""
+_programme = """
 {{ simple_label(s.programme.label) }}
 """
 
@@ -124,18 +120,14 @@ def selector_grid_data(students, config):
 
         return -1
 
-    data = [{'name': {
-                'display': render_template_string(_name, sel=s),
-                'sortstring': s.student.user.last_name + s.student.user.first_name
-             },
-             'programme': render_template_string(_programme, s=s, simple_label=simple_label),
-             'cohort': {
-                 'display': render_template_string(_cohort, sel=s, simple_label=simple_label),
-                 'value': s.student.cohort
-             },
-             'selections': {
-                 'display': render_template_string(_selections, sel=s, config=config),
-                 'sortvalue': sel_count(s)
-             }} for s in students]
+    data = [
+        {
+            "name": {"display": render_template_string(_name, sel=s), "sortstring": s.student.user.last_name + s.student.user.first_name},
+            "programme": render_template_string(_programme, s=s, simple_label=simple_label),
+            "cohort": {"display": render_template_string(_cohort, sel=s, simple_label=simple_label), "value": s.student.cohort},
+            "selections": {"display": render_template_string(_selections, sel=s, config=config), "sortvalue": sel_count(s)},
+        }
+        for s in students
+    ]
 
     return jsonify(data)

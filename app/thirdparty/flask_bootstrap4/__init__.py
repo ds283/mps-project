@@ -13,16 +13,18 @@ try:
 except ImportError:
 
     def is_hidden_field_filter(field):
-        raise RuntimeError('WTForms is not installed.')
+        raise RuntimeError("WTForms is not installed.")
+
 else:
 
     def is_hidden_field_filter(field):
         return isinstance(field, HiddenField)
 
+
 # central definition of used versions
-VERSION_BOOTSTRAP = '4.5.0'
-VERSION_JQUERY = '3.4.1'
-VERSION_POPPER = '1.14.0'
+VERSION_BOOTSTRAP = "4.5.0"
+VERSION_JQUERY = "3.4.1"
+VERSION_POPPER = "1.14.0"
 
 
 def get_table_titles(data, primary_key, primary_key_title):
@@ -34,8 +36,8 @@ def get_table_titles(data, primary_key, primary_key_title):
         return []
     titles = []
     for k in data[0].__table__.columns._data.keys():
-        if not k.startswith('_'):
-            titles.append((k, k.replace('_', ' ').title()))
+        if not k.startswith("_"):
+            titles.append((k, k.replace("_", " ").title()))
     titles[0] = (primary_key, primary_key_title)
     return titles
 
@@ -46,24 +48,23 @@ class Bootstrap(object):
             self.init_app(app)
 
     def init_app(self, app):
-
-        if not hasattr(app, 'extensions'):
+        if not hasattr(app, "extensions"):
             app.extensions = {}
-        app.extensions['bootstrap'] = self
+        app.extensions["bootstrap"] = self
 
-        blueprint = Blueprint('bootstrap', __name__, template_folder='templates',
-                              static_folder='static', static_url_path='/bootstrap' + app.static_url_path)
+        blueprint = Blueprint(
+            "bootstrap", __name__, template_folder="templates", static_folder="static", static_url_path="/bootstrap" + app.static_url_path
+        )
         app.register_blueprint(blueprint)
 
-        app.jinja_env.globals['bootstrap'] = self
-        app.jinja_env.globals['bootstrap_is_hidden_field'] = \
-            is_hidden_field_filter
-        app.jinja_env.globals['get_table_titles'] = get_table_titles
-        app.jinja_env.add_extension('jinja2.ext.do')
+        app.jinja_env.globals["bootstrap"] = self
+        app.jinja_env.globals["bootstrap_is_hidden_field"] = is_hidden_field_filter
+        app.jinja_env.globals["get_table_titles"] = get_table_titles
+        app.jinja_env.add_extension("jinja2.ext.do")
         # default settings
-        app.config.setdefault('BOOTSTRAP_SERVE_LOCAL', False)
-        app.config.setdefault('BOOTSTRAP_BTN_STYLE', 'secondary')
-        app.config.setdefault('BOOTSTRAP_BTN_SIZE', 'md')
+        app.config.setdefault("BOOTSTRAP_SERVE_LOCAL", False)
+        app.config.setdefault("BOOTSTRAP_BTN_STYLE", "secondary")
+        app.config.setdefault("BOOTSTRAP_BTN_SIZE", "md")
 
     @staticmethod
     def load_css(version=VERSION_BOOTSTRAP):
@@ -74,21 +75,19 @@ class Bootstrap(object):
         :param version: The version of Bootstrap.
         """
 
-        css_filename = 'bootstrap.min.css'
-        serve_local = current_app.config['BOOTSTRAP_SERVE_LOCAL']
+        css_filename = "bootstrap.min.css"
+        serve_local = current_app.config["BOOTSTRAP_SERVE_LOCAL"]
 
         if serve_local:
-            href = url_for('bootstrap.static',
-                           filename='css/%s/%s' % ('default', css_filename))
+            href = url_for("bootstrap.static", filename="css/%s/%s" % ("default", css_filename))
             css = '<link rel="stylesheet" href="%s" type="text/css">' % href
         else:
-            href = 'https://cdn.jsdelivr.net/npm/bootstrap@%s/dist/css/%s' % (version, css_filename)
+            href = "https://cdn.jsdelivr.net/npm/bootstrap@%s/dist/css/%s" % (version, css_filename)
             css = '<link rel="stylesheet" href="%s" type="text/css">' % href
         return Markup(css)
 
     @staticmethod
-    def load_js(version=VERSION_BOOTSTRAP, jquery_version=VERSION_JQUERY,
-                popper_version=VERSION_POPPER, with_jquery=True, with_popper=True):
+    def load_js(version=VERSION_BOOTSTRAP, jquery_version=VERSION_JQUERY, popper_version=VERSION_POPPER, with_jquery=True, with_popper=True):
         """Load Bootstrap and related library's js resources with given version.
 
         .. versionadded:: 0.1.0
@@ -99,35 +98,35 @@ class Bootstrap(object):
         :param with_jquery: Include jQuery or not.
         :param with_popper: Include Popper.js or not.
         """
-        js_filename = 'bootstrap.min.js'
-        jquery_filename = 'jquery.min.js'
-        popper_filename = 'popper.min.js'
+        js_filename = "bootstrap.min.js"
+        jquery_filename = "jquery.min.js"
+        popper_filename = "popper.min.js"
 
-        serve_local = current_app.config['BOOTSTRAP_SERVE_LOCAL']
+        serve_local = current_app.config["BOOTSTRAP_SERVE_LOCAL"]
 
         if serve_local:
-            js = '<script src="%s"></script>' % url_for('bootstrap.static', filename='js/' + js_filename)
+            js = '<script src="%s"></script>' % url_for("bootstrap.static", filename="js/" + js_filename)
         else:
-            js = '<script src="https://cdn.jsdelivr.net/npm/bootstrap@%s/dist/js/%s">' \
-                 '</script>' % (version, js_filename)
+            js = '<script src="https://cdn.jsdelivr.net/npm/bootstrap@%s/dist/js/%s">' "</script>" % (version, js_filename)
 
         if with_jquery:
             if serve_local:
-                jquery = '<script src="%s"></script>' % url_for('bootstrap.static', filename=jquery_filename)
+                jquery = '<script src="%s"></script>' % url_for("bootstrap.static", filename=jquery_filename)
             else:
-                jquery = '<script src="https://cdn.jsdelivr.net/npm/jquery@%s/dist/%s">' \
-                 '</script>' % (jquery_version, jquery_filename)
+                jquery = '<script src="https://cdn.jsdelivr.net/npm/jquery@%s/dist/%s">' "</script>" % (jquery_version, jquery_filename)
         else:
-            jquery = ''
+            jquery = ""
 
         if with_popper:
             if serve_local:
-                popper = '<script src="%s"></script>' % url_for('bootstrap.static', filename=popper_filename)
+                popper = '<script src="%s"></script>' % url_for("bootstrap.static", filename=popper_filename)
             else:
-                popper = '<script src="https://cdn.jsdelivr.net/npm/popper.js@%s/dist/umd/%s">' \
-                     '</script>' % (popper_version, popper_filename)
+                popper = '<script src="https://cdn.jsdelivr.net/npm/popper.js@%s/dist/umd/%s">' "</script>" % (popper_version, popper_filename)
         else:
-            popper = ''
-        return Markup('''%s
+            popper = ""
+        return Markup(
+            """%s
     %s
-    %s''' % (jquery, popper, js))
+    %s"""
+            % (jquery, popper, js)
+        )

@@ -12,8 +12,7 @@ from flask import render_template_string
 
 
 # language=jinja2
-_email_log_menu = \
-"""
+_email_log_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -31,8 +30,7 @@ _email_log_menu = \
 
 
 # language=jinja2
-_names = \
-"""
+_names = """
 {% for user in e.recipients %}
     <div>
         <a href="mailto:{{ user.email }}" {% if user.last_email %}data-bs-toggle="tooltip" title="Last notification at {{ user.last_email.strftime("%a %d %b %Y %H:%M:%S") }}"{% endif %}>{{ user.name }}</a>
@@ -44,8 +42,7 @@ _names = \
 
 
 # language=jinja2
-_addresses = \
-"""
+_addresses = """
 {% for user in e.recipients %}
     <div>
         <a class="text-decoration-none" href="mailto:{{ user.email }}">{{ user.email }}</a>
@@ -56,17 +53,21 @@ _addresses = \
 """
 
 # language=jinja2
-_subject = \
-"""
+_subject = """
 <a class="text-decoration-none" href="{{ url_for('admin.display_email', id=e.id) }}">{{ e.subject }}</a>
 """
 
 
 def email_log_data(emails):
-    data = [{'recipient': render_template_string(_names, e=e),
-             'address': render_template_string(_addresses, e=e),
-             'date': e.send_date.strftime("%a %d %b %Y %H:%M:%S"),
-             'subject': render_template_string(_subject, e=e),
-             'menu': render_template_string(_email_log_menu, e=e)} for e in emails]
+    data = [
+        {
+            "recipient": render_template_string(_names, e=e),
+            "address": render_template_string(_addresses, e=e),
+            "date": e.send_date.strftime("%a %d %b %Y %H:%M:%S"),
+            "subject": render_template_string(_subject, e=e),
+            "menu": render_template_string(_email_log_menu, e=e),
+        }
+        for e in emails
+    ]
 
     return data

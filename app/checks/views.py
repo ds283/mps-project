@@ -22,6 +22,7 @@ def liveness():
     """
     pass
 
+
 def readiness():
     """
     Check if the program can connect to a SQL database.

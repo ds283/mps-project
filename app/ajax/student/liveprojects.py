@@ -16,8 +16,7 @@ from ...database import db
 from ...models import ConfirmRequest, SelectingStudent, LiveProject, Bookmark, ProjectClassConfig
 
 # language=jinja2
-_meeting = \
-"""
+_meeting = """
 {% if not project.generic and project.owner is not none %}    
     {% if project.meeting_reqd == project.MEETING_REQUIRED %}
         {% if sel %}
@@ -41,8 +40,7 @@ _meeting = \
 
 
 # language=jinja2
-_status = \
-"""
+_status = """
 {% if sel %}
     {% if project.is_available(sel) %}
         <span class="badge bg-success"><i class="fas fa-check"></i> Available for selection</span>
@@ -63,8 +61,7 @@ _status = \
 """
 
 # language=jinja2
-_bookmarks = \
-"""
+_bookmarks = """
 {% if sel %}
     {% if sel.is_project_bookmarked(project) %}
         <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
@@ -83,8 +80,7 @@ _bookmarks = \
 """
 
 # language=jinja2
-_selector_menu = \
-"""
+_selector_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button"
             data-bs-toggle="dropdown">
@@ -130,8 +126,7 @@ _selector_menu = \
 
 
 # language=jinja2
-_submitter_menu = \
-"""
+_submitter_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button"
             data-bs-toggle="dropdown">
@@ -147,8 +142,7 @@ _submitter_menu = \
 
 
 # language=jinja2
-_project_prefer = \
-"""
+_project_prefer = """
 {% for programme in project.programmes %}
     {% if programme.active %}
         {{ simple_label(programme.label) }}
@@ -157,8 +151,7 @@ _project_prefer = \
 """
 
 # language=jinja2
-_project_skills = \
-"""
+_project_skills = """
 {% for skill in skills %}
     {% if skill.is_active %}
         {% if skill.group is none %}
@@ -175,8 +168,7 @@ _project_skills = \
 
 
 # language=jinja2
-_project_group = \
-"""
+_project_group = """
 {% set ns = namespace(affiliation=false) %}
 {% if project.group and config.advertise_research_group %}
     {% set group = project.group %}
@@ -197,15 +189,13 @@ _project_group = \
 
 
 # language=jinja2
-_not_live = \
-"""
+_not_live = """
 <span class="badge bg-secondary">Not live</span>
 """
 
 
 # langauge=jinja2
-_owner = \
-"""
+_owner = """
 {% if project.generic %}
     <span class="badge bg-info">Generic</span>
 {% else %}
@@ -227,20 +217,22 @@ def _selector_element(sel_id, project_id, is_live):
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    base = {'name': '<a class="text-decoration-none" '
-                    'href="{url}">{name}</a>'.format(name=p.name,
-                                                     url=url_for('student.selector_view_project', sid=sel.id,
-                                                                 pid=p.id)),
-            'supervisor': render_template_string(_owner, project=p),
-            'group': render_template_string(_project_group, sel=sel, project=p, config=config, simple_label=simple_label),
-            'skills': render_template_string(_project_skills, sel=sel, skills=p.ordered_skills, simple_label=simple_label),
-            'prefer': render_template_string(_project_prefer, project=p, simple_label=simple_label),
-            'menu': render_template_string(_selector_menu, sel=sel, project=p, is_live=is_live, config=config)}
+    base = {
+        "name": '<a class="text-decoration-none" '
+        'href="{url}">{name}</a>'.format(name=p.name, url=url_for("student.selector_view_project", sid=sel.id, pid=p.id)),
+        "supervisor": render_template_string(_owner, project=p),
+        "group": render_template_string(_project_group, sel=sel, project=p, config=config, simple_label=simple_label),
+        "skills": render_template_string(_project_skills, sel=sel, skills=p.ordered_skills, simple_label=simple_label),
+        "prefer": render_template_string(_project_prefer, project=p, simple_label=simple_label),
+        "menu": render_template_string(_selector_menu, sel=sel, project=p, is_live=is_live, config=config),
+    }
 
     if is_live:
-        extra_fields = {'meeting': render_template_string(_meeting, sel=sel, project=p),
-                        'availability': render_template_string(_status, sel=sel, project=p),
-                        'bookmarks': render_template_string(_bookmarks, sel=sel, project=p)}
+        extra_fields = {
+            "meeting": render_template_string(_meeting, sel=sel, project=p),
+            "availability": render_template_string(_status, sel=sel, project=p),
+            "bookmarks": render_template_string(_bookmarks, sel=sel, project=p),
+        }
         base.update(extra_fields)
 
     return base
@@ -254,13 +246,16 @@ def _submitter_element(sub_id, project_id):
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    return {'name': '<a class="text-decoration-none" href="{url}">{name}</a>' \
-                .format(name=p.name, url=url_for('student.submitter_view_project', sid=sub_id, pid=p.id)),
-            'supervisor': render_template_string(_owner, project=p),
-            'group': render_template_string(_project_group, sel=None, project=p, config=config, simple_label=simple_label),
-            'skills': render_template_string(_project_skills, sel=None, skills=p.ordered_skills, simple_label=simple_label),
-            'prefer': render_template_string(_project_prefer, project=p, simple_label=simple_label),
-            'menu': render_template_string(_submitter_menu, sub_id=sub_id, project=p)}
+    return {
+        "name": '<a class="text-decoration-none" href="{url}">{name}</a>'.format(
+            name=p.name, url=url_for("student.submitter_view_project", sid=sub_id, pid=p.id)
+        ),
+        "supervisor": render_template_string(_owner, project=p),
+        "group": render_template_string(_project_group, sel=None, project=p, config=config, simple_label=simple_label),
+        "skills": render_template_string(_project_skills, sel=None, skills=p.ordered_skills, simple_label=simple_label),
+        "prefer": render_template_string(_project_prefer, project=p, simple_label=simple_label),
+        "menu": render_template_string(_submitter_menu, sub_id=sub_id, project=p),
+    }
 
 
 def _delete_browsing_cache(owner_id, project_id):
@@ -268,37 +263,37 @@ def _delete_browsing_cache(owner_id, project_id):
     cache.delete_memoized(_selector_element, owner_id, project_id, False)
 
 
-@listens_for(ConfirmRequest, 'before_insert')
+@listens_for(ConfirmRequest, "before_insert")
 def _ConfirmRequest_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_browsing_cache(target.owner_id, target.project_id)
 
 
-@listens_for(ConfirmRequest, 'before_update')
+@listens_for(ConfirmRequest, "before_update")
 def _ConfirmRequest_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_browsing_cache(target.owner_id, target.project_id)
 
 
-@listens_for(ConfirmRequest, 'before_delete')
+@listens_for(ConfirmRequest, "before_delete")
 def _ConfirmRequest_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_browsing_cache(target.owner_id, target.project_id)
 
 
-@listens_for(Bookmark, 'before_update')
+@listens_for(Bookmark, "before_update")
 def _Bookmark_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_browsing_cache(target.owner_id, target.liveproject_id)
 
 
-@listens_for(Bookmark, 'before_insert')
+@listens_for(Bookmark, "before_insert")
 def _Bookmark_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_browsing_cache(target.owner_id, target.liveproject_id)
 
 
-@listens_for(Bookmark, 'before_delete')
+@listens_for(Bookmark, "before_delete")
 def _Bookmark_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_browsing_cache(target.owner_id, target.liveproject_id)

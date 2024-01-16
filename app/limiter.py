@@ -19,4 +19,4 @@ limiter = Limiter(key_func=get_remote_address)
 @limiter.request_filter
 def ip_whitelist():
     # whitelist internal Sussex IPs
-    return request.remote_addr.startswith('139.184.')
+    return request.remote_addr.startswith("139.184.")

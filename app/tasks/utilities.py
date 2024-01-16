@@ -18,7 +18,6 @@ from ..models import User
 
 
 def register_utility_tasks(celery):
-
     @celery.task(bind=True, default_retry_delay=30)
     def email_notification(self, sent_data, user_id, message, priority):
         try:
@@ -28,15 +27,15 @@ def register_utility_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load User record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load User record from database"})
             raise Ignore()
 
         if not isinstance(sent_data, list):
             sent_data = [sent_data]
 
         num_sent = sum([n for n in sent_data if n is not None])
-        plural = 's'
+        plural = "s"
         if num_sent == 1:
-            plural = ''
+            plural = ""
 
         user.post_message(message.format(n=num_sent, pl=plural), priority, autocommit=True)

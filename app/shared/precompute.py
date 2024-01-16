@@ -19,25 +19,24 @@ from datetime import datetime
 
 
 def precompute_at_login(user, celery, now=None, autocommit=False):
-    if user.has_role('student'):
+    if user.has_role("student"):
         # students need to cache the list of available LiveProjects
-        lp = celery.tasks['app.tasks.precompute.student_liveprojects']
+        lp = celery.tasks["app.tasks.precompute.student_liveprojects"]
         lp.apply_async(args=(user.id,))
 
-    if user.has_role('admin') or user.has_role('root'):
+    if user.has_role("admin") or user.has_role("root"):
         # admin or root users are able to manage users, so we need to cache
-        user_accounts = celery.tasks['app.tasks.precompute.user_account_data']
-        faculty_accounts = celery.tasks['app.tasks.precompute.user_faculty_data']
-        student_accounts = celery.tasks['app.tasks.precompute.user_student_data']
+        user_accounts = celery.tasks["app.tasks.precompute.user_account_data"]
+        faculty_accounts = celery.tasks["app.tasks.precompute.user_faculty_data"]
+        student_accounts = celery.tasks["app.tasks.precompute.user_student_data"]
 
         # these users can also have edits made to user accounts bounced back to them
-        user_corrections = celery.tasks['app.tasks.precompute.user_corrections']
+        user_corrections = celery.tasks["app.tasks.precompute.user_corrections"]
 
-        task = group(user_accounts.si(user.id), faculty_accounts.si(user.id), student_accounts.si(user.id),
-                     user_corrections.si(user.id))
+        task = group(user_accounts.si(user.id), faculty_accounts.si(user.id), student_accounts.si(user.id), user_corrections.si(user.id))
         task.apply_async()
 
-    if user.has_role('faculty'):
+    if user.has_role("faculty"):
         # Faculty need to precompute the list of projects for which they are in the assessor pool.
         # These can be tagged with 'New comments' labels on a user-by-user basis.
         # However, the 'new comments' labels are injected by substitution *after* caching,
@@ -45,7 +44,7 @@ def precompute_at_login(user, celery, now=None, autocommit=False):
         # TODO: compute faculty project libraries? they tend to be quite small ...
         precompute_faculty_projects(celery)
 
-    if user.has_role('project_approver'):
+    if user.has_role("project_approver"):
         # users on the project approvals team need to generate table lines for projects in the
         # approvals queue, and projects in the rejected set.
         # Both of these can be tagged with 'New comments' labels on a user-by-user basis.
@@ -53,12 +52,12 @@ def precompute_at_login(user, celery, now=None, autocommit=False):
         # so we don't need to run these precompute jobs on a per-user basis
         precompute_for_project_approver(celery)
 
-    if user.has_role('reports'):
+    if user.has_role("reports"):
         # 'reports' roles can access workload reports, which do not depend on who is viewing them.
         # we don't cache these on a per-user basis, but rather globally for everyone
         precompute_for_reports(celery)
 
-    if user.has_role('user_approver'):
+    if user.has_role("user_approver"):
         # likewise, 'user_approver' roles need tables for all the students to approve, but these are
         # shared between everyone on the user approvals team. So we cache them globally for everyone
         precompute_for_user_approver(celery)
@@ -90,9 +89,9 @@ def _check_if_compute(db, key):
 
     delta = datetime.now() - last_dt
 
-    delay = current_app.config.get('PRECOMPUTE_DELAY')
+    delay = current_app.config.get("PRECOMPUTE_DELAY")
     if delay is None:
-        delay = 1800            # default to 30 minutes
+        delay = 1800  # default to 30 minutes
 
     return delta.seconds > delay
 
@@ -100,51 +99,51 @@ def _check_if_compute(db, key):
 def precompute_for_reports(celery):
     db = get_redis()
 
-    if not _check_if_compute(db, 'PRECOMPUTE_LAST_REPORTS'):
+    if not _check_if_compute(db, "PRECOMPUTE_LAST_REPORTS"):
         return
 
-    exc = celery.tasks['app.tasks.precompute.reporting']
+    exc = celery.tasks["app.tasks.precompute.reporting"]
     exc.apply_async()
 
-    db.set('PRECOMPUTE_LAST_REPORTS', datetime.now().timestamp())
+    db.set("PRECOMPUTE_LAST_REPORTS", datetime.now().timestamp())
 
 
 def precompute_for_user_approver(celery):
     db = get_redis()
 
-    if not _check_if_compute(db, 'PRECOMPUTE_LAST_USER_APPROVER'):
+    if not _check_if_compute(db, "PRECOMPUTE_LAST_USER_APPROVER"):
         return
 
-    ua = celery.tasks['app.tasks.precompute.user_approvals']
+    ua = celery.tasks["app.tasks.precompute.user_approvals"]
     ua.apply_async()
 
-    db.set('PRECOMPUTE_LAST_USER_APPROVER', datetime.now().timestamp())
+    db.set("PRECOMPUTE_LAST_USER_APPROVER", datetime.now().timestamp())
 
 
 def precompute_faculty_projects(celery):
     db = get_redis()
 
-    if not _check_if_compute(db, 'PRECOMPUTE_LAST_FACULTY_PROJECTS'):
+    if not _check_if_compute(db, "PRECOMPUTE_LAST_FACULTY_PROJECTS"):
         return
 
     # only precompute assessor data if we haven't recently computed the same data for reporting purposes
-    if _check_if_compute(db, 'PRECOMPUTE_LAST_REPORTS'):
-        fac = celery.tasks['app.tasks.precompute.assessor_data']
+    if _check_if_compute(db, "PRECOMPUTE_LAST_REPORTS"):
+        fac = celery.tasks["app.tasks.precompute.assessor_data"]
         fac.apply_async(args=(None,))
 
-    db.set('PRECOMPUTE_LAST_FACULTY_PROJECTS', datetime.now().timestamp())
+    db.set("PRECOMPUTE_LAST_FACULTY_PROJECTS", datetime.now().timestamp())
 
 
 def precompute_for_project_approver(celery):
     db = get_redis()
 
-    if not _check_if_compute(db, 'PRECOMPUTE_LAST_PROJECT_APPROVER'):
+    if not _check_if_compute(db, "PRECOMPUTE_LAST_PROJECT_APPROVER"):
         return
 
-    approvals = celery.tasks['app.tasks.precompute.project_approval']
-    rejections = celery.tasks['app.tasks.precompute.project_rejected']
+    approvals = celery.tasks["app.tasks.precompute.project_approval"]
+    rejections = celery.tasks["app.tasks.precompute.project_rejected"]
 
     task = group(approvals.si(None), rejections.si(None))
     task.apply_async()
 
-    db.set('PRECOMPUTE_LAST_PROJECT_APPROVER', datetime.now().timestamp())
+    db.set("PRECOMPUTE_LAST_PROJECT_APPROVER", datetime.now().timestamp())

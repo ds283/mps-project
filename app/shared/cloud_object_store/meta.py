@@ -10,7 +10,6 @@
 
 
 class ObjectMeta:
-
     def __init__(self):
         self.size = None
         self.location = None

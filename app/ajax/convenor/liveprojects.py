@@ -14,8 +14,7 @@ from ...models import ProjectClassConfig
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text='live projects list', url=url_for('convenor.liveprojects', id=config.pclass_id)) }}">{{ project.name }}</a>
 {% if project.hidden %}
     <div>
@@ -26,8 +25,7 @@ _name = \
 
 
 # language=jinja2
-_owner = \
-"""
+_owner = """
 {% if project.generic %}
     <span class="badge bg-info">Generic</span>
 {% else %}
@@ -41,8 +39,7 @@ _owner = \
 
 
 # language=jinja2
-_affiliation = \
-"""
+_affiliation = """
 {% set ns = namespace(affiliation=false) %}
 {% if project.group %}
     {{ simple_label(project.group.make_label()) }}
@@ -59,8 +56,7 @@ _affiliation = \
 
 
 # language=jinja2
-_bookmarks = \
-"""
+_bookmarks = """
 {% set bookmarks = project.number_bookmarks %}
 {% if bookmarks > 0 %}
     <span class="badge bg-info">{{ bookmarks }}</span>
@@ -73,8 +69,7 @@ _bookmarks = \
 """
 
 # language=jinja2
-_selections = \
-"""
+_selections = """
 {% set selections = project.number_selections %}
 <div>
     {% if selections > 0 %}
@@ -97,8 +92,7 @@ _selections = \
 """
 
 # language=jinja2
-_confirmations = \
-"""
+_confirmations = """
 {% set pending = project.number_pending %}
 {% set confirmed = project.number_confirmed %}
 <div>
@@ -126,8 +120,7 @@ _confirmations = \
 """
 
 # language=jinja2
-_popularity = \
-"""
+_popularity = """
 {% set R = project.popularity_rank(live=require_live) %}
 {% if R is not none %}
     {% set rank, total = R %}
@@ -145,8 +138,7 @@ _popularity = \
 """
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle table-button" type="button" data-bs-toggle="dropdown">
         Actions
@@ -242,18 +234,23 @@ _menu = \
 
 def liveprojects_data(projects, config: ProjectClassConfig, url=None, text=None):
     lifecycle = config.selector_lifecycle
-    require_live = (lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN)
+    require_live = lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
 
     simple_label = get_template_attribute("labels.html", "simple_label")
     truncate = get_template_attribute("macros.html", "truncate")
 
-    data = [{'name': render_template_string(_name, project=p, config=config),
-             'owner': render_template_string(_owner, project=p),
-             'group': render_template_string(_affiliation, project=p, simple_label=simple_label, truncate=truncate),
-             'bookmarks': render_template_string(_bookmarks, project=p),
-             'selections': render_template_string(_selections, project=p),
-             'confirmations': render_template_string(_confirmations, project=p),
-             'popularity': render_template_string(_popularity, project=p, require_live=require_live, url=url, text=text),
-             'menu': render_template_string(_menu, project=p, config=config, url=url, text=text)} for p in projects]
+    data = [
+        {
+            "name": render_template_string(_name, project=p, config=config),
+            "owner": render_template_string(_owner, project=p),
+            "group": render_template_string(_affiliation, project=p, simple_label=simple_label, truncate=truncate),
+            "bookmarks": render_template_string(_bookmarks, project=p),
+            "selections": render_template_string(_selections, project=p),
+            "confirmations": render_template_string(_confirmations, project=p),
+            "popularity": render_template_string(_popularity, project=p, require_live=require_live, url=url, text=text),
+            "menu": render_template_string(_menu, project=p, config=config, url=url, text=text),
+        }
+        for p in projects
+    ]
 
     return data

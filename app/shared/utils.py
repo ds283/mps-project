@@ -23,10 +23,29 @@ from .conversions import is_integer
 from .sqlalchemy import get_count
 from ..cache import cache
 from ..database import db
-from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
-    EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, FilterRecord, StudentData, \
-    MatchingAttempt, ProjectDescription, WorkflowMixin, DegreeProgramme, DegreeType, ConvenorTask, \
-    ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask
+from ..models import (
+    MainConfig,
+    ProjectClass,
+    ProjectClassConfig,
+    User,
+    FacultyData,
+    Project,
+    EnrollmentRecord,
+    ResearchGroup,
+    SelectingStudent,
+    SubmittingStudent,
+    FilterRecord,
+    StudentData,
+    MatchingAttempt,
+    ProjectDescription,
+    WorkflowMixin,
+    DegreeProgramme,
+    DegreeType,
+    ConvenorTask,
+    ConvenorSelectorTask,
+    ConvenorSubmitterTask,
+    ConvenorGenericTask,
+)
 from ..models import project_assessors
 
 
@@ -39,17 +58,17 @@ def get_current_year():
 
 
 def home_dashboard_url():
-    if current_user.has_role('faculty'):
-        return url_for('faculty.dashboard')
+    if current_user.has_role("faculty"):
+        return url_for("faculty.dashboard")
 
-    elif current_user.has_role('student'):
-        return url_for('student.dashboard')
+    elif current_user.has_role("student"):
+        return url_for("student.dashboard")
 
-    elif current_user.has_role('office'):
-        return url_for('office.dashboard')
+    elif current_user.has_role("office"):
+        return url_for("office.dashboard")
 
     else:
-        return '#'
+        return "#"
 
 
 def home_dashboard():
@@ -58,15 +77,17 @@ def home_dashboard():
     if url is not None:
         return redirect(url)
 
-    flash('Your role could not be identified. Please contact the system administrator.')
-    return redirect(url_for('auth.logged_out'))
+    flash("Your role could not be identified. Please contact the system administrator.")
+    return redirect(url_for("auth.logged_out"))
 
 
 def redirect_url(default=None):
-    return request.args.get('next') or \
-           (request.referrer if (request.referrer is not None and '/login' not in request.referrer) else None) or \
-           (url_for(default) if default is not None else None) or \
-           home_dashboard()
+    return (
+        request.args.get("next")
+        or (request.referrer if (request.referrer is not None and "/login" not in request.referrer) else None)
+        or (url_for(default) if default is not None else None)
+        or home_dashboard()
+    )
 
 
 def get_rollover_data(configs=None, current_year=None):
@@ -94,16 +115,17 @@ def get_rollover_data(configs=None, current_year=None):
 
             # we can initiate rollover if just one project class is ready
             # this doesn't affect the other types
-            if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER and \
-                    config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+            if (
+                config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER
+                and config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+            ):
                 rollover_ready = True
 
     # if no published classes at all, allow rollover
     if not rollover_ready and not has_published_classes:
         rollover_ready = True
 
-    return {'rollover_ready': rollover_ready,
-            'rollover_in_progress': rollover_in_progress}
+    return {"rollover_ready": rollover_ready, "rollover_in_progress": rollover_in_progress}
 
 
 def get_schedule_message_data(configs=None):
@@ -127,29 +149,41 @@ def get_schedule_message_data(configs=None):
                     if schedule.owner.is_feedback_open:
                         if schedule.owner.has_errors:
                             if schedule.event_name not in error_events:
-                                messages.append(('error', 'Event "{event}" and deployed schedule "{name}" for project class '
-                                                 '"{pclass}" contain validation errors. Please attend to these as soon '
-                                                 'as possible.'.format(name=schedule.name, event=schedule.event_name,
-                                                                       pclass=config.project_class.name)))
+                                messages.append(
+                                    (
+                                        "error",
+                                        'Event "{event}" and deployed schedule "{name}" for project class '
+                                        '"{pclass}" contain validation errors. Please attend to these as soon '
+                                        "as possible.".format(name=schedule.name, event=schedule.event_name, pclass=config.project_class.name),
+                                    )
+                                )
                                 error_events.add(schedule.event_name)
 
                         elif schedule.has_errors:
                             if schedule.name not in error_schedules:
-                                messages.append(('error', 'Deployed schedule "{name}" for event "{event}" and project class "{pclass}" '
-                                                 'contains validation errors. Please attend to these as soon as '
-                                                 'possible.'.format(name=schedule.name, event=schedule.event_name,
-                                                                    pclass=config.project_class.name)))
+                                messages.append(
+                                    (
+                                        "error",
+                                        'Deployed schedule "{name}" for event "{event}" and project class "{pclass}" '
+                                        "contains validation errors. Please attend to these as soon as "
+                                        "possible.".format(name=schedule.name, event=schedule.event_name, pclass=config.project_class.name),
+                                    )
+                                )
                                 error_schedules.add(schedule.name)
 
                         elif schedule.has_warnings:
                             if schedule.name not in error_schedules:
-                                messages.append(('warning', 'Deployed schedule "{name}" for event "{event}" and project class '
-                                                 '"{pclass}" contains validation'
-                                                 ' warnings.'.format(name=schedule.name, event=schedule.event_name,
-                                                                     pclass=config.project_class.name)))
+                                messages.append(
+                                    (
+                                        "warning",
+                                        'Deployed schedule "{name}" for event "{event}" and project class '
+                                        '"{pclass}" contains validation'
+                                        " warnings.".format(name=schedule.name, event=schedule.event_name, pclass=config.project_class.name),
+                                    )
+                                )
                                 error_schedules.add(schedule.name)
 
-    return {'messages': messages}
+    return {"messages": messages}
 
 
 def get_matching_data(configs=None):
@@ -166,7 +200,7 @@ def get_matching_data(configs=None):
         if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
             matching_ready = True
 
-    return {'matching_ready': matching_ready}
+    return {"matching_ready": matching_ready}
 
 
 def get_assessment_data(configs=None):
@@ -180,7 +214,7 @@ def get_assessment_data(configs=None):
         if config.uses_presentations:
             presentation_assessments = True
 
-    return {'has_assessments': presentation_assessments}
+    return {"has_assessments": presentation_assessments}
 
 
 def get_global_context_data():
@@ -206,86 +240,96 @@ def get_pclass_config_data(configs=None):
         # compute capacity data for this project class
         data = get_capacity_data(config.project_class)
 
-        capacity = data['capacity']
-        capacity_bounded = data['capacity_bounded']
+        capacity = data["capacity"]
+        capacity_bounded = data["capacity_bounded"]
 
-        if capacity < 1.15*config.number_selectors:
+        if capacity < 1.15 * config.number_selectors:
             config_warning = True
 
-        config_list.append({'config': config,
-                            'capacity': capacity,
-                            'is_bounded': capacity_bounded})
+        config_list.append({"config": config, "capacity": capacity, "is_bounded": capacity_bounded})
 
-    return {'config_list': config_list,
-            'config_warning': config_warning}
+    return {"config_list": config_list, "config_warning": config_warning}
 
 
 def get_approval_queue_data():
     total = 0
     data = {}
 
-    if current_user.has_role('user_approver') or current_user.has_role('root') or current_user.has_role('manage_users'):
+    if current_user.has_role("user_approver") or current_user.has_role("root") or current_user.has_role("manage_users"):
         user_data = _get_user_approvals_data()
         data.update(user_data)
 
-        if current_user.has_role('user_approver'):
-            total += user_data['approval_user_queued']
+        if current_user.has_role("user_approver"):
+            total += user_data["approval_user_queued"]
 
-        if current_user.has_role('root') or current_user.has_role('manage_users'):
-            total += user_data['approval_user_rejected']
+        if current_user.has_role("root") or current_user.has_role("manage_users"):
+            total += user_data["approval_user_rejected"]
 
-    if current_user.has_role('project_approver') or current_user.has_role('root'):
+    if current_user.has_role("project_approver") or current_user.has_role("root"):
         project_data = _get_project_approvals_data()
         data.update(project_data)
 
         for v in project_data.values():
             total += v
 
-    data['total'] = total
+    data["total"] = total
 
     return data
 
 
 def _get_user_approvals_data():
-    to_approve = get_count(db.session.query(StudentData). \
-                           filter(StudentData.workflow_state == StudentData.WORKFLOW_APPROVAL_QUEUED,
-                                  or_(and_(StudentData.last_edit_id == None, StudentData.creator_id != current_user.id),
-                                      and_(StudentData.last_edit_id != None, StudentData.last_edit_id != current_user.id))))
+    to_approve = get_count(
+        db.session.query(StudentData).filter(
+            StudentData.workflow_state == StudentData.WORKFLOW_APPROVAL_QUEUED,
+            or_(
+                and_(StudentData.last_edit_id == None, StudentData.creator_id != current_user.id),
+                and_(StudentData.last_edit_id != None, StudentData.last_edit_id != current_user.id),
+            ),
+        )
+    )
 
-    to_correct = get_count(db.session.query(StudentData). \
-                           filter(StudentData.workflow_state == StudentData.WORKFLOW_APPROVAL_REJECTED,
-                                  or_(and_(StudentData.last_edit_id == None, StudentData.creator_id == current_user.id),
-                                      and_(StudentData.last_edit_id != None, StudentData.last_edit_id == current_user.id))))
+    to_correct = get_count(
+        db.session.query(StudentData).filter(
+            StudentData.workflow_state == StudentData.WORKFLOW_APPROVAL_REJECTED,
+            or_(
+                and_(StudentData.last_edit_id == None, StudentData.creator_id == current_user.id),
+                and_(StudentData.last_edit_id != None, StudentData.last_edit_id == current_user.id),
+            ),
+        )
+    )
 
-    return {'approval_user_queued': to_approve,
-            'approval_user_rejected': to_correct}
+    return {"approval_user_queued": to_approve, "approval_user_rejected": to_correct}
 
 
 def _get_project_approvals_data():
     data = build_project_approval_queues()
 
-    queued = data.get('queued')
-    rejected = data.get('rejected')
+    queued = data.get("queued")
+    rejected = data.get("rejected")
 
-    return {'approval_project_queued': len(queued) if isinstance(queued, list) else 0,
-            'approval_project_rejected': len(rejected) if isinstance(rejected, list) else 0}
+    return {
+        "approval_project_queued": len(queued) if isinstance(queued, list) else 0,
+        "approval_project_rejected": len(rejected) if isinstance(rejected, list) else 0,
+    }
 
 
 def build_project_approval_queues():
     # want to count number of ProjectDescriptions that are associated with project classes that are in the
     # confirmation phase.
     # We ignore descriptions that have already been validated, or which belong to inactive projects
-    descriptions = db.session.query(ProjectDescription) \
-        .join(Project, Project.id == ProjectDescription.parent_id) \
-        .join(FacultyData, FacultyData.id == Project.owner_id, isouter=True) \
-        .join(User, User.id == FacultyData.id, isouter=True) \
-        .filter(ProjectDescription.confirmed,
-                ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED,
-                Project.active == True,
-                or_(Project.generic == True,
-                    and_(Project.generic == False,
-                         FacultyData.id != None,
-                         User.active == True))).all()
+    descriptions = (
+        db.session.query(ProjectDescription)
+        .join(Project, Project.id == ProjectDescription.parent_id)
+        .join(FacultyData, FacultyData.id == Project.owner_id, isouter=True)
+        .join(User, User.id == FacultyData.id, isouter=True)
+        .filter(
+            ProjectDescription.confirmed,
+            ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED,
+            Project.active == True,
+            or_(Project.generic == True, and_(Project.generic == False, FacultyData.id != None, User.active == True)),
+        )
+        .all()
+    )
 
     queued = []
     rejected = []
@@ -297,8 +341,7 @@ def build_project_approval_queues():
             elif desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
                 rejected.append(desc.id)
 
-    return {'queued': queued,
-            'rejected': rejected}
+    return {"queued": queued, "rejected": rejected}
 
 
 @cache.memoize()
@@ -339,7 +382,7 @@ def allow_approval_for_project(desc_id):
         # ensure pcl is also in list of project classes for parent project
         if pcl in desc.parent.project_classes:
             # check user is root or in approvals team for this project class
-            in_team = current_user.has_role('root') or get_count(pcl.approvals_team.filter_by(id=current_user.id)) > 0
+            in_team = current_user.has_role("root") or get_count(pcl.approvals_team.filter_by(id=current_user.id)) > 0
             if not in_team:
                 continue
 
@@ -370,36 +413,35 @@ def allow_approval_for_project(desc_id):
     return False
 
 
-
 def _approvals_ProjectDescription_delete_cache(desc):
     cache.delete_memoized(allow_approval_for_project, desc.id)
 
 
-@listens_for(ProjectDescription, 'before_insert')
+@listens_for(ProjectDescription, "before_insert")
 def _approvals_ProjectDescription_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _approvals_ProjectDescription_delete_cache(target)
 
 
-@listens_for(ProjectDescription, 'before_update')
+@listens_for(ProjectDescription, "before_update")
 def _approvals_ProjectDescription_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _approvals_ProjectDescription_delete_cache(target)
 
 
-@listens_for(ProjectDescription, 'before_delete')
+@listens_for(ProjectDescription, "before_delete")
 def _approvals_ProjectDescription_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _approvals_ProjectDescription_delete_cache(target)
 
 
-@listens_for(ProjectDescription.project_classes, 'append')
+@listens_for(ProjectDescription.project_classes, "append")
 def _approvals_ProjectDescription_project_classes_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         _approvals_ProjectDescription_delete_cache(target)
 
 
-@listens_for(ProjectDescription.project_classes, 'remove')
+@listens_for(ProjectDescription.project_classes, "remove")
 def _approvals_ProjectDescription_project_classes_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         _approvals_ProjectDescription_delete_cache(target)
@@ -410,25 +452,25 @@ def _approvals_delete_ProjectClass_cache(project):
         cache.delete_memoized(allow_approval_for_project, d.id)
 
 
-@listens_for(ProjectClass, 'before_insert')
+@listens_for(ProjectClass, "before_insert")
 def _approvals_ProjectClass_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _approvals_delete_ProjectClass_cache(target)
 
 
-@listens_for(ProjectClass, 'before_update')
+@listens_for(ProjectClass, "before_update")
 def _approvals_ProjectClass_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _approvals_delete_ProjectClass_cache(target)
 
 
-@listens_for(ProjectClass, 'before_delete')
+@listens_for(ProjectClass, "before_delete")
 def _approvals_ProjectClass_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _approvals_delete_ProjectClass_cache(target)
 
 
-@listens_for(ProjectClassConfig, 'before_insert')
+@listens_for(ProjectClassConfig, "before_insert")
 def _approvals_ProjectClassConfig_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         if target.project_class is not None:
@@ -439,62 +481,62 @@ def _approvals_ProjectClassConfig_insert_handler(mapper, connection, target):
                 _approvals_delete_ProjectClass_cache(pclass)
 
 
-@listens_for(ProjectClassConfig, 'before_update')
+@listens_for(ProjectClassConfig, "before_update")
 def _approvals_ProjectClassConfig_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _approvals_delete_ProjectClass_cache(target.project_class)
 
 
-@listens_for(ProjectClassConfig, 'before_delete')
+@listens_for(ProjectClassConfig, "before_delete")
 def _approvals_ProjectClassConfig_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _approvals_delete_ProjectClass_cache(target.project_class)
 
 
-@listens_for(ProjectClassConfig.confirmation_required, 'append')
+@listens_for(ProjectClassConfig.confirmation_required, "append")
 def _approvals_ProjectClassConfig_confirmation_required_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         _approvals_delete_ProjectClass_cache(target.project_class)
 
 
-@listens_for(ProjectClassConfig.confirmation_required, 'remove')
+@listens_for(ProjectClassConfig.confirmation_required, "remove")
 def _approvals_ProjectClassConfig_confirmation_required_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         _approvals_delete_ProjectClass_cache(target.project_class)
 
 
 def _approvals_delete_EnrollmentRecord_cache(record):
-    descriptions = db.session.query(ProjectDescription) \
-        .join(Project, Project.id == ProjectDescription.parent_id) \
-        .filter(Project.owner_id == record.owner_id,
-                ProjectDescription.project_classes.any(id=record.pclass_id)).all()
+    descriptions = (
+        db.session.query(ProjectDescription)
+        .join(Project, Project.id == ProjectDescription.parent_id)
+        .filter(Project.owner_id == record.owner_id, ProjectDescription.project_classes.any(id=record.pclass_id))
+        .all()
+    )
 
     for d in descriptions:
         cache.delete_memoized(allow_approval_for_project, d.id)
 
 
-@listens_for(EnrollmentRecord, 'before_insert')
+@listens_for(EnrollmentRecord, "before_insert")
 def _approvals_EnrollmentRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _approvals_delete_EnrollmentRecord_cache(target)
 
 
-@listens_for(EnrollmentRecord, 'before_update')
+@listens_for(EnrollmentRecord, "before_update")
 def _approvals_EnrollmentRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _approvals_delete_EnrollmentRecord_cache(target)
 
 
-@listens_for(EnrollmentRecord, 'before_delete')
+@listens_for(EnrollmentRecord, "before_delete")
 def _approvals_EnrollmentRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _approvals_delete_EnrollmentRecord_cache(target)
 
 
 def _get_pclass_list():
-    return db.session.query(ProjectClass) \
-        .filter_by(active=True) \
-        .order_by(ProjectClass.name.asc()).all()
+    return db.session.query(ProjectClass).filter_by(active=True).order_by(ProjectClass.name.asc()).all()
 
 
 def _get_pclass_config_list(pcs=None):
@@ -534,10 +576,7 @@ def get_root_dashboard_data():
     session_collection = current_app.session_interface.store
     sessions = session_collection.count_documents({})
 
-    data = {'warning': (config_data['config_warning']
-                        or rollover_data['rollover_ready']),
-            'current_year': current_year,
-            'number_sessions': sessions}
+    data = {"warning": (config_data["config_warning"] or rollover_data["rollover_ready"]), "current_year": current_year, "number_sessions": sessions}
 
     data.update(rollover_data)
     data.update(message_data)
@@ -553,54 +592,60 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     :param config:
     :return:
     """
-    all_fac_query = db.session.query(User) \
-        .filter_by(active=True) \
-        .join(FacultyData, FacultyData.id == User.id)
+    all_fac_query = db.session.query(User).filter_by(active=True).join(FacultyData, FacultyData.id == User.id)
 
     all_fac_count = get_count(all_fac_query)
     enrolled_fac_count = get_count(all_fac_query.filter(FacultyData.enrollments.any(pclass_id=pclass.id)))
 
-    attached_projects = db.session.query(Project) \
-        .filter(Project.active == True,
-                Project.project_classes.any(id=pclass.id)) \
-        .join(User, User.id == Project.owner_id, isouter=True) \
-        .join(FacultyData, FacultyData.id == User.id, isouter=True) \
-        .join(EnrollmentRecord, EnrollmentRecord.owner_id == Project.owner_id, isouter=True) \
-        .filter(or_(Project.generic == True,
-                    and_(Project.generic == False,
-                         EnrollmentRecord.pclass_id == pclass.id,
-                         EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
-                         FacultyData.id != None,
-                         User.active == True)))
+    attached_projects = (
+        db.session.query(Project)
+        .filter(Project.active == True, Project.project_classes.any(id=pclass.id))
+        .join(User, User.id == Project.owner_id, isouter=True)
+        .join(FacultyData, FacultyData.id == User.id, isouter=True)
+        .join(EnrollmentRecord, EnrollmentRecord.owner_id == Project.owner_id, isouter=True)
+        .filter(
+            or_(
+                Project.generic == True,
+                and_(
+                    Project.generic == False,
+                    EnrollmentRecord.pclass_id == pclass.id,
+                    EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                    FacultyData.id != None,
+                    User.active == True,
+                ),
+            )
+        )
+    )
     proj_count = get_count(attached_projects)
 
     sel_count = get_count(config.selecting_students.filter_by(retired=False))
     sub_count = get_count(config.submitting_students.filter_by(retired=False))
     live_count = get_count(config.live_projects)
 
-    todos = build_convenor_tasks_query(config, status_filter='available', due_date_order=True)
+    todos = build_convenor_tasks_query(config, status_filter="available", due_date_order=True)
     todo_count = get_count(todos)
 
-    return {'faculty': enrolled_fac_count,
-            'total_faculty': all_fac_count,
-            'live_projects': live_count,
-            'attached_projects': proj_count,
-            'selectors': sel_count,
-            'submitters': sub_count,
-            'todo_count': todo_count}
+    return {
+        "faculty": enrolled_fac_count,
+        "total_faculty": all_fac_count,
+        "live_projects": live_count,
+        "attached_projects": proj_count,
+        "selectors": sel_count,
+        "submitters": sub_count,
+        "todo_count": todo_count,
+    }
 
 
 def get_convenor_todo_data(config: ProjectClassConfig, task_limit=10):
     # get list of available tasks (not available != all, even excluding dropped and completed tasks)
-    tks = build_convenor_tasks_query(config, status_filter='available', due_date_order=True)
+    tks = build_convenor_tasks_query(config, status_filter="available", due_date_order=True)
 
     top_tks = tks.limit(task_limit).all()
 
-    return {'top_to_dos': top_tks}
+    return {"top_to_dos": top_tks}
 
 
-def build_convenor_tasks_query(config: ProjectClassConfig, status_filter='all', blocking_filter='all',
-                               due_date_order=True):
+def build_convenor_tasks_query(config: ProjectClassConfig, status_filter="all", blocking_filter="all", due_date_order=True):
     """
     Return a query that extracts convenor tasks for a particular config instance
     :param blocking_filter:
@@ -611,28 +656,25 @@ def build_convenor_tasks_query(config: ProjectClassConfig, status_filter='all', 
     """
 
     # subquery to get list of current selectors
-    selectors = db.session.query(SelectingStudent.id) \
-        .filter(~SelectingStudent.retired,
-                SelectingStudent.config_id == config.id).subquery()
+    selectors = db.session.query(SelectingStudent.id).filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).subquery()
 
     # subquery to get list of current submitters
-    submitters = db.session.query(SubmittingStudent.id) \
-        .filter(~SubmittingStudent.retired,
-                SubmittingStudent.config_id == config.id).subquery()
+    submitters = db.session.query(SubmittingStudent.id).filter(~SubmittingStudent.retired, SubmittingStudent.config_id == config.id).subquery()
 
     # find selector tasks that are linked to one of our current selectors
-    sel_tks = db.session.query(ConvenorSelectorTask.id) \
-        .select_from(selectors) \
-        .join(ConvenorSelectorTask, ConvenorSelectorTask.owner_id == selectors.c.id)
+    sel_tks = (
+        db.session.query(ConvenorSelectorTask.id).select_from(selectors).join(ConvenorSelectorTask, ConvenorSelectorTask.owner_id == selectors.c.id)
+    )
 
     # find submitter tasks that are linked to one of our current submitters
-    sub_tks = db.session.query(ConvenorSubmitterTask.id) \
-        .select_from(submitters) \
+    sub_tks = (
+        db.session.query(ConvenorSubmitterTask.id)
+        .select_from(submitters)
         .join(ConvenorSubmitterTask, ConvenorSubmitterTask.owner_id == submitters.c.id)
+    )
 
     # find ids of tasks linked ot this project class config
-    task_tks = db.session.query(ConvenorGenericTask.id) \
-        .filter(ConvenorGenericTask.owner_id == config.id)
+    task_tks = db.session.query(ConvenorGenericTask.id).filter(ConvenorGenericTask.owner_id == config.id)
 
     # join these lists to produce a single list of tasks associated with our current selectors or submitters
     task_ids = sel_tks.union(sub_tks).union(task_tks).subquery()
@@ -642,33 +684,37 @@ def build_convenor_tasks_query(config: ProjectClassConfig, status_filter='all', 
     # object from the query.union.union construct; if we have just query.union then specifying a column
     # label works, but with a double union the columns end up with anonymous names. That means we have
     # to select by position.
-    convenor_task = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask,
-                                                    ConvenorGenericTask])
-    tks = db.session.query(convenor_task) \
-        .join(task_ids, convenor_task.id == tuple(task_ids.c)[0])
+    convenor_task = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask])
+    tks = db.session.query(convenor_task).join(task_ids, convenor_task.id == tuple(task_ids.c)[0])
 
     # if only searching for available tasks, skip those that are complete or dropped.
     # also skip tasks with a defer date that has not yet passed, unless they are blocking
-    if status_filter == 'default':
+    if status_filter == "default":
         tks = tks.filter(and_(~convenor_task.complete, ~convenor_task.dropped))
-    elif status_filter == 'completed':
+    elif status_filter == "completed":
         tks = tks.filter(~convenor_task.dropped)
-    elif status_filter == 'overdue':
-        tks = tks.filter(and_(~convenor_task.complete, ~convenor_task.dropped,
-                              and_(convenor_task.due_date != None,
-                                   convenor_task.due_date < func.curdate())))
-    elif status_filter == 'available':
-        tks = tks.filter(and_(~convenor_task.complete, ~convenor_task.dropped,
-                              or_(convenor_task.defer_date == None,
-                                  convenor_task.blocking,
-                                  and_(convenor_task.defer_date != None,
-                                       convenor_task.defer_date <= func.curdate()))))
-    elif status_filter == 'dropped':
+    elif status_filter == "overdue":
+        tks = tks.filter(
+            and_(~convenor_task.complete, ~convenor_task.dropped, and_(convenor_task.due_date != None, convenor_task.due_date < func.curdate()))
+        )
+    elif status_filter == "available":
+        tks = tks.filter(
+            and_(
+                ~convenor_task.complete,
+                ~convenor_task.dropped,
+                or_(
+                    convenor_task.defer_date == None,
+                    convenor_task.blocking,
+                    and_(convenor_task.defer_date != None, convenor_task.defer_date <= func.curdate()),
+                ),
+            )
+        )
+    elif status_filter == "dropped":
         tks = tks.filter(convenor_task.dropped)
 
-    if blocking_filter == 'blocking':
+    if blocking_filter == "blocking":
         tks = tks.filter(convenor_task.blocking)
-    elif blocking_filter == 'not-blocking':
+    elif blocking_filter == "not-blocking":
         tks = tks.filter(~convenor_task.blocking)
 
     # if required, order by due date
@@ -684,19 +730,25 @@ def build_convenor_tasks_query(config: ProjectClassConfig, status_filter='all', 
 def _compute_group_capacity_data(pclass_id, group_id):
     # filter all 'attached' projects that are tagged with this research group, belonging to active faculty
     # who are normally enrolled
-    ps = db.session.query(Project) \
-        .filter(Project.active == True,
-                Project.project_classes.any(id=pclass_id),
-                Project.group_id == group_id) \
-        .join(User, User.id == Project.owner_id, isouter=True) \
-        .join(FacultyData, FacultyData.id == Project.owner_id, isouter=True) \
-        .join(EnrollmentRecord, EnrollmentRecord.owner_id == Project.owner_id, isouter=True) \
-        .filter(or_(Project.generic == True,
-                    and_(Project.generic == False,
-                         EnrollmentRecord.pclass_id == pclass_id,
-                         EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
-                         FacultyData.id != None,
-                         User.active == True)))
+    ps = (
+        db.session.query(Project)
+        .filter(Project.active == True, Project.project_classes.any(id=pclass_id), Project.group_id == group_id)
+        .join(User, User.id == Project.owner_id, isouter=True)
+        .join(FacultyData, FacultyData.id == Project.owner_id, isouter=True)
+        .join(EnrollmentRecord, EnrollmentRecord.owner_id == Project.owner_id, isouter=True)
+        .filter(
+            or_(
+                Project.generic == True,
+                and_(
+                    Project.generic == False,
+                    EnrollmentRecord.pclass_id == pclass_id,
+                    EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                    FacultyData.id != None,
+                    User.active == True,
+                ),
+            )
+        )
+    )
 
     # set of faculty members offering projects
     faculty_offering = set()
@@ -743,48 +795,56 @@ def _compute_group_capacity_data(pclass_id, group_id):
                     approved += 1
 
     # get number of enrolled faculty belonging to this research group
-    faculty_enrolled = get_count(db.session.query(EnrollmentRecord.id) \
-                                 .filter(EnrollmentRecord.pclass_id == pclass_id) \
-                                 .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id) \
-                                 .join(User, User.id == EnrollmentRecord.owner_id) \
-                                 .filter(FacultyData.affiliations.any(id=group_id),
-                                         User.active == True))
+    faculty_enrolled = get_count(
+        db.session.query(EnrollmentRecord.id)
+        .filter(EnrollmentRecord.pclass_id == pclass_id)
+        .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id)
+        .join(User, User.id == EnrollmentRecord.owner_id)
+        .filter(FacultyData.affiliations.any(id=group_id), User.active == True)
+    )
 
     # get total number of faculty belonging to this research group
-    faculty_in_group = get_count(db.session.query(FacultyData.id) \
-                                 .join(User, User.id == FacultyData.id) \
-                                 .filter(FacultyData.affiliations.any(id=group_id),
-                                         User.active == True))
+    faculty_in_group = get_count(
+        db.session.query(FacultyData.id).join(User, User.id == FacultyData.id).filter(FacultyData.affiliations.any(id=group_id), User.active == True)
+    )
 
-    return {'projects': projects,
-            'pending': pending,
-            'queued': queued,
-            'rejected': rejected,
-            'approved': approved,
-            'faculty_offering': len(faculty_offering),
-            'faculty_enrolled': faculty_enrolled,
-            'faculty_in_group': faculty_in_group,
-            'capacity': capacity,
-            'capacity_bounded': capacity_bounded}
+    return {
+        "projects": projects,
+        "pending": pending,
+        "queued": queued,
+        "rejected": rejected,
+        "approved": approved,
+        "faculty_offering": len(faculty_offering),
+        "faculty_enrolled": faculty_enrolled,
+        "faculty_in_group": faculty_in_group,
+        "capacity": capacity,
+        "capacity_bounded": capacity_bounded,
+    }
 
 
 @cache.memoize()
 def _compute_group_approvals_data(pclass_id, group_id):
     # filter all 'attached' projects that are tagged with this research group, belonging to active faculty
     # who are normally enrolled
-    ps = db.session.query(Project) \
-        .filter(Project.active == True,
-                Project.project_classes.any(id=pclass_id),
-                Project.group_id == group_id) \
-        .join(User, User.id == Project.owner_id, isouter=True) \
-        .join(FacultyData, FacultyData.id == Project.owner_id, isouter=True) \
-        .join(EnrollmentRecord, EnrollmentRecord.owner_id == Project.owner_id, isouter=True) \
-        .filter(or_(Project.generic == True,
-                    and_(Project.generic == False,
-                         EnrollmentRecord.pclass_id == pclass_id,
-                         EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
-                         FacultyData.id != None,
-                         User.active == True)))
+    ps = (
+        db.session.query(Project)
+        .filter(Project.active == True, Project.project_classes.any(id=pclass_id), Project.group_id == group_id)
+        .join(User, User.id == Project.owner_id, isouter=True)
+        .join(FacultyData, FacultyData.id == Project.owner_id, isouter=True)
+        .join(EnrollmentRecord, EnrollmentRecord.owner_id == Project.owner_id, isouter=True)
+        .filter(
+            or_(
+                Project.generic == True,
+                and_(
+                    Project.generic == False,
+                    EnrollmentRecord.pclass_id == pclass_id,
+                    EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                    FacultyData.id != None,
+                    User.active == True,
+                ),
+            )
+        )
+    )
 
     # number of offerable projects in different approval workflow states
     projects = 0
@@ -811,11 +871,7 @@ def _compute_group_approvals_data(pclass_id, group_id):
                 elif desc.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED:
                     approved += 1
 
-    return {'projects': projects,
-            'pending': pending,
-            'queued': queued,
-            'rejected': rejected,
-            'approved': approved}
+    return {"projects": projects, "pending": pending, "queued": queued, "rejected": rejected, "approved": approved}
 
 
 def _capacity_delete_ProjectDescription_cache(desc):
@@ -828,19 +884,19 @@ def _capacity_delete_ProjectDescription_cache(desc):
             cache.delete_memoized(_compute_group_approvals_data)
 
 
-@listens_for(ProjectDescription, 'before_insert')
+@listens_for(ProjectDescription, "before_insert")
 def _capacity_ProjectDescription_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _capacity_delete_ProjectDescription_cache(target)
 
 
-@listens_for(ProjectDescription, 'before_update')
+@listens_for(ProjectDescription, "before_update")
 def _capacity_ProjectDescription_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _capacity_delete_ProjectDescription_cache(target)
 
 
-@listens_for(ProjectDescription, 'before_delete')
+@listens_for(ProjectDescription, "before_delete")
 def _capacity_ProjectDescription_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _capacity_delete_ProjectDescription_cache(target)
@@ -852,19 +908,19 @@ def _capacity_delete_Project_cache(project):
         cache.delete_memoized(_compute_group_approvals_data, pcl.id, project.group_id)
 
 
-@listens_for(Project, 'before_insert')
+@listens_for(Project, "before_insert")
 def _capacity_Project_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _capacity_delete_Project_cache(target)
 
 
-@listens_for(Project, 'before_update')
+@listens_for(Project, "before_update")
 def _capacity_Project_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _capacity_delete_Project_cache(target)
 
 
-@listens_for(Project, 'before_delete')
+@listens_for(Project, "before_delete")
 def _capacity_Project_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _capacity_delete_Project_cache(target)
@@ -884,19 +940,19 @@ def _capacity_delete_EnrollmentRecord_cache(record):
         cache.delete_memoized(_compute_group_approvals_data, record.pclass_id, gp.id)
 
 
-@listens_for(EnrollmentRecord, 'before_insert')
+@listens_for(EnrollmentRecord, "before_insert")
 def _capacity_EnrollmentRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _capacity_delete_EnrollmentRecord_cache(target)
 
 
-@listens_for(EnrollmentRecord, 'before_update')
+@listens_for(EnrollmentRecord, "before_update")
 def _capacity_EnrollmentRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _capacity_delete_EnrollmentRecord_cache(target)
 
 
-@listens_for(EnrollmentRecord, 'before_delete')
+@listens_for(EnrollmentRecord, "before_delete")
 def _capacity_EnrollmentRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _capacity_delete_EnrollmentRecord_cache(target)
@@ -911,13 +967,13 @@ def _capacity_delete_FacultyData_affiliation_cache(target, value):
         cache.delete_memoized(_compute_group_approvals_data, pcl.id, value.id)
 
 
-@listens_for(FacultyData.affiliations, 'append')
+@listens_for(FacultyData.affiliations, "append")
 def _capacity_FacultyData_affiliations_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         _capacity_delete_FacultyData_affiliation_cache(target, value)
 
 
-@listens_for(FacultyData.affiliations, 'remove')
+@listens_for(FacultyData.affiliations, "remove")
 def _capacity_FacultyData_affiliations_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         _capacity_delete_FacultyData_affiliation_cache(target, value)
@@ -932,19 +988,19 @@ def _capacity_delete_FacultyData_cache(fac_data):
             cache.delete_memoized(_compute_group_approvals_data, pcl.id, gp.id)
 
 
-@listens_for(FacultyData, 'before_insert')
+@listens_for(FacultyData, "before_insert")
 def _capacity_FacultyData_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _capacity_delete_FacultyData_cache(target)
 
 
-@listens_for(FacultyData, 'before_update')
+@listens_for(FacultyData, "before_update")
 def _capacity_FacultyData_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _capacity_delete_FacultyData_cache(target)
 
 
-@listens_for(FacultyData, 'before_delete')
+@listens_for(FacultyData, "before_delete")
 def _capacity_FacultyData_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _capacity_delete_FacultyData_cache(target)
@@ -966,33 +1022,28 @@ def get_convenor_approval_data(pclass: ProjectClass):
         group_data = _compute_group_approvals_data(pclass.id, group.id)
 
         # update totals
-        projects += group_data['projects']
-        pending += group_data['pending']
-        queued += group_data['queued']
-        rejected += group_data['rejected']
-        approved += group_data['approved']
+        projects += group_data["projects"]
+        pending += group_data["pending"]
+        queued += group_data["queued"]
+        rejected += group_data["rejected"]
+        approved += group_data["approved"]
 
         # store data for this research group
-        data.append({'label': group.make_label(group.name), 'data': group_data})
+        data.append({"label": group.make_label(group.name), "data": group_data})
 
     # add projects that are not attached to any group
     no_group_data = _compute_group_approvals_data(pclass.id, None)
 
-    projects += no_group_data['projects']
-    pending += no_group_data['pending']
-    queued += no_group_data['queued']
-    rejected += no_group_data['rejected']
-    approved += no_group_data['approved']
+    projects += no_group_data["projects"]
+    pending += no_group_data["pending"]
+    queued += no_group_data["queued"]
+    rejected += no_group_data["rejected"]
+    approved += no_group_data["approved"]
 
     # store data for this research group
-    data.append({'label': 'Unaffiliated', 'data': no_group_data})
+    data.append({"label": "Unaffiliated", "data": no_group_data})
 
-    return {'data': data,
-            'projects': projects,
-            'pending': pending,
-            'queued': queued,
-            'rejected': rejected,
-            'approved': approved}
+    return {"data": data, "projects": projects, "pending": pending, "queued": queued, "rejected": rejected, "approved": approved}
 
 
 def get_capacity_data(pclass: ProjectClass):
@@ -1011,32 +1062,28 @@ def get_capacity_data(pclass: ProjectClass):
         group_data = _compute_group_capacity_data(pclass.id, group.id)
 
         # update totals
-        projects += group_data['projects']
+        projects += group_data["projects"]
 
-        faculty_offering += group_data['faculty_offering']
-        capacity += group_data['capacity']
-        capacity_bounded = capacity_bounded and group_data['capacity_bounded']
+        faculty_offering += group_data["faculty_offering"]
+        capacity += group_data["capacity"]
+        capacity_bounded = capacity_bounded and group_data["capacity_bounded"]
 
         # store data for this research group
-        data.append({'label': group.make_label(group.name), 'data': group_data})
+        data.append({"label": group.make_label(group.name), "data": group_data})
 
     # add projects that are not attached to any group
     no_group_data = _compute_group_capacity_data(pclass.id, None)
 
     # update totals
-    projects += no_group_data['projects']
+    projects += no_group_data["projects"]
 
-    faculty_offering += no_group_data['faculty_offering']
-    capacity += no_group_data['capacity']
-    capacity_bounded = capacity_bounded and no_group_data['capacity_bounded']
+    faculty_offering += no_group_data["faculty_offering"]
+    capacity += no_group_data["capacity"]
+    capacity_bounded = capacity_bounded and no_group_data["capacity_bounded"]
 
-    data.append({'label': 'Unaffiliated', 'data': no_group_data})
+    data.append({"label": "Unaffiliated", "data": no_group_data})
 
-    return {'data': data,
-            'projects': projects,
-            'faculty_offering': faculty_offering,
-            'capacity': capacity,
-            'capacity_bounded': capacity_bounded}
+    return {"data": data, "projects": projects, "faculty_offering": faculty_offering, "capacity": capacity, "capacity_bounded": capacity_bounded}
 
 
 def get_matching_dashboard_data(year):
@@ -1055,31 +1102,31 @@ def build_assessor_query(proj, state_filter, pclass_filter, group_filter):
     """
 
     # build base query -- either all users, or attached users, or not attached faculty
-    if state_filter == 'attached':
+    if state_filter == "attached":
         # build list of all active faculty users who are attached
-        sq = db.session.query(project_assessors.c.faculty_id) \
-            .filter(project_assessors.c.project_id == proj.id).subquery()
+        sq = db.session.query(project_assessors.c.faculty_id).filter(project_assessors.c.project_id == proj.id).subquery()
 
-        query = db.session.query(FacultyData) \
-            .join(sq, sq.c.faculty_id == FacultyData.id) \
-            .join(User, User.id == FacultyData.id) \
+        query = (
+            db.session.query(FacultyData)
+            .join(sq, sq.c.faculty_id == FacultyData.id)
+            .join(User, User.id == FacultyData.id)
             .filter(User.active == True, User.id != proj.owner_id)
+        )
 
-    elif state_filter == 'not-attached':
+    elif state_filter == "not-attached":
         # build list of all active faculty users who are not attached
         attached_query = proj.assessors.subquery()
 
-        query = db.session.query(FacultyData) \
-            .join(User, User.id == FacultyData.id) \
-            .join(attached_query, attached_query.c.id == FacultyData.id, isouter=True) \
-            .filter(attached_query.c.id == None,
-                    User.active == True, User.id != proj.owner_id)
+        query = (
+            db.session.query(FacultyData)
+            .join(User, User.id == FacultyData.id)
+            .join(attached_query, attached_query.c.id == FacultyData.id, isouter=True)
+            .filter(attached_query.c.id == None, User.active == True, User.id != proj.owner_id)
+        )
 
     else:
         # build list of all active faculty
-        query = db.session.query(FacultyData) \
-            .join(User, User.id == FacultyData.id) \
-            .filter(User.active == True, User.id != proj.owner_id)
+        query = db.session.query(FacultyData).join(User, User.id == FacultyData.id).filter(User.active == True, User.id != proj.owner_id)
 
     # add filters for research group, if a filter is applied
     flag, value = is_integer(group_filter)
@@ -1116,8 +1163,7 @@ def get_convenor_filter_record(config) -> FilterRecord:
     record = config.filters.filter_by(user_id=current_user.id).first()
 
     if record is None:
-        record = FilterRecord(user_id=current_user.id,
-                              config_id=config.id)
+        record = FilterRecord(user_id=current_user.id, config_id=config.id)
         db.session.add(record)
         db.session.commit()
 
@@ -1131,7 +1177,7 @@ def detuple(x):
     return x
 
 
-def build_enrol_selector_candidates(config: ProjectClassConfig, disable_programme_filter: bool=False):
+def build_enrol_selector_candidates(config: ProjectClassConfig, disable_programme_filter: bool = False):
     """
     Build a query that returns possible candidates for manual enrolment as selectors
     :param disable_programme_filter:
@@ -1142,7 +1188,7 @@ def build_enrol_selector_candidates(config: ProjectClassConfig, disable_programm
     return _build_generic_enroll_candidate(config, year_offset, SelectingStudent, disable_programme_filter=disable_programme_filter)
 
 
-def build_enrol_submitter_candidates(config: ProjectClassConfig, disable_programme_filter: bool=False):
+def build_enrol_submitter_candidates(config: ProjectClassConfig, disable_programme_filter: bool = False):
     """
     Build a query that returns possible candidate for manual enrolment as submitters
     :param config:
@@ -1151,8 +1197,7 @@ def build_enrol_submitter_candidates(config: ProjectClassConfig, disable_program
     return _build_generic_enroll_candidate(config, 0, SubmittingStudent, disable_programme_filter=disable_programme_filter)
 
 
-def _build_generic_enroll_candidate(config: ProjectClassConfig, year_offset: int, StudentRecordType,
-                                    disable_programme_filter: bool=False):
+def _build_generic_enroll_candidate(config: ProjectClassConfig, year_offset: int, StudentRecordType, disable_programme_filter: bool = False):
     """
     Build a query that returns missing candidates for manual enrolment
     :param disable_programme_filter:
@@ -1184,28 +1229,28 @@ def _build_generic_enroll_candidate(config: ProjectClassConfig, year_offset: int
     candidate_students = _build_candidates(allowed_programmes, config.student_level, first_year, last_year)
 
     # build a list of existing selecting students associated with this ProjectClassConfig instance
-    existing_students = db.session.query(StudentRecordType.student_id) \
-        .filter(StudentRecordType.config_id == config.id,
-                ~StudentRecordType.retired)
+    existing_students = db.session.query(StudentRecordType.student_id).filter(StudentRecordType.config_id == config.id, ~StudentRecordType.retired)
 
     existing_students = existing_students.subquery()
 
     # find students in candidates who are not also in selectors
     # StudentData model in this expression references the query candidate_students, which selects a list of
     # StudentData instances
-    missing_students = candidate_students \
-        .join(existing_students, existing_students.c.student_id == StudentData.id, isouter=True) \
-        .filter(existing_students.c.student_id == None)
+    missing_students = candidate_students.join(existing_students, existing_students.c.student_id == StudentData.id, isouter=True).filter(
+        existing_students.c.student_id == None
+    )
 
     return missing_students
 
 
 def _build_candidates(allowed_programmes, student_level: int, first_year: int, last_year: int):
-    candidates = db.session.query(StudentData) \
-        .join(User, StudentData.id == User.id) \
-        .filter(User.active == True) \
-        .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
+    candidates = (
+        db.session.query(StudentData)
+        .join(User, StudentData.id == User.id)
+        .filter(User.active == True)
+        .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
+    )
 
     # if allowed programmes are specified, filter the candidates according to this allowed set (which should all
     # be at a consistent level, e.g. UG, PGT, PGR)
@@ -1217,10 +1262,13 @@ def _build_candidates(allowed_programmes, student_level: int, first_year: int, l
         candidates = candidates.filter(DegreeType.level == student_level)
 
     # restrict to candidates who have not graduated, and who fall between the allowed years from enrolment
-    candidates = candidates.filter(or_(StudentData.academic_year == None,
-                                       StudentData.academic_year <= DegreeType.duration,
-                                       and_(StudentData.academic_year >= first_year,
-                                            StudentData.academic_year <= last_year)))
+    candidates = candidates.filter(
+        or_(
+            StudentData.academic_year == None,
+            StudentData.academic_year <= DegreeType.duration,
+            and_(StudentData.academic_year >= first_year, StudentData.academic_year <= last_year),
+        )
+    )
 
     return candidates
 
@@ -1245,9 +1293,8 @@ def build_submitters_data(config, cohort_filter, prog_filter, state_filter, year
     prog_flag, prog_value = is_integer(prog_filter)
     year_flag, year_value = is_integer(year_filter)
 
-    if cohort_flag or prog_flag or state_filter == 'twd':
-        submitters = submitters \
-            .join(StudentData, StudentData.id == SubmittingStudent.student_id)
+    if cohort_flag or prog_flag or state_filter == "twd":
+        submitters = submitters.join(StudentData, StudentData.id == SubmittingStudent.student_id)
 
     if cohort_flag:
         submitters = submitters.filter(StudentData.cohort == cohort_value)
@@ -1255,27 +1302,27 @@ def build_submitters_data(config, cohort_filter, prog_filter, state_filter, year
     if prog_flag:
         submitters = submitters.filter(StudentData.programme_id == prog_value)
 
-    if state_filter == 'published':
+    if state_filter == "published":
         submitters = submitters.filter(SubmittingStudent.published == True)
         data = submitters.all()
-    elif state_filter == 'unpublished':
+    elif state_filter == "unpublished":
         submitters = submitters.filter(SubmittingStudent.published == False)
         data = submitters.all()
-    elif state_filter == 'late-feedback':
+    elif state_filter == "late-feedback":
         data = [x for x in submitters.all() if x.has_late_feedback]
-    elif state_filter == 'no-late-feedback':
+    elif state_filter == "no-late-feedback":
         data = [x for x in submitters.all() if not x.has_late_feedback]
-    elif state_filter == 'not-started':
+    elif state_filter == "not-started":
         data = [x for x in submitters.all() if x.has_not_started_flags]
-    elif state_filter == 'report':
+    elif state_filter == "report":
         data = [x for x in submitters.all() if x.has_report]
-    elif state_filter == 'no-report':
+    elif state_filter == "no-report":
         data = [x for x in submitters.all() if not x.has_report]
-    elif state_filter == 'attachments':
+    elif state_filter == "attachments":
         data = [x for x in submitters.all() if x.has_attachments]
-    elif state_filter == 'no-attachments':
+    elif state_filter == "no-attachments":
         data = [x for x in submitters.all() if not x.has_attachments]
-    elif state_filter == 'twd':
+    elif state_filter == "twd":
         submitters = submitters.filter(StudentData.intermitting == True)
         data = submitters.all()
     else:
@@ -1285,4 +1332,3 @@ def build_submitters_data(config, cohort_filter, prog_filter, state_filter, year
         data = [s for s in data if (s.academic_year is None or s.academic_year == year_value)]
 
     return data
-

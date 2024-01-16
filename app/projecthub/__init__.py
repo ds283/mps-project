@@ -11,6 +11,6 @@
 
 from flask import Blueprint
 
-projecthub = Blueprint('projecthub', __name__)
+projecthub = Blueprint("projecthub", __name__)
 
 from . import views

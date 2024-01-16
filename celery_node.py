@@ -11,5 +11,5 @@
 from app import create_app
 
 app = create_app()
-celery = app.extensions['celery']
+celery = app.extensions["celery"]
 app.app_context().push()

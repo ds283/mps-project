@@ -11,8 +11,7 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_name = \
-"""
+_name = """
 {% set state = a.availability_lifecycle %}
 {% if state >= a.AVAILABILITY_CLOSED %}
     <a class="text-decoration-none" href="{{ url_for('admin.assessment_schedules', id=a.id) }}">{{ a.name }}</a>
@@ -58,8 +57,7 @@ _name = \
 
 
 # language=jinja2
-_periods = \
-"""
+_periods = """
 {% for period in a.submission_periods %}
     <div style="display: inline-block;">
         {{ simple_label(eriod.label) }}
@@ -85,8 +83,7 @@ _periods = \
 
 
 # language=jinja2
-_sessions = \
-"""
+_sessions = """
 {% set sessions = a.ordered_sessions.all() %}
 {% for session in sessions %}
     {% if a.requested_availability %}
@@ -138,8 +135,7 @@ _sessions = \
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 {% set requested_availability = a.requested_availability %}
 {% set skipped_availability = a.skip_availability %}
 {% set availability_closed = a.availability_closed %}
@@ -195,9 +191,14 @@ _menu = \
 def presentation_assessments_data(assessments):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': render_template_string(_name, a=a),
-             'periods': render_template_string(_periods, a=a, simple_label=simple_label),
-             'sessions': render_template_string(_sessions, a=a,simple_label=simple_label),
-             'menu': render_template_string(_menu, a=a)} for a in assessments]
+    data = [
+        {
+            "name": render_template_string(_name, a=a),
+            "periods": render_template_string(_periods, a=a, simple_label=simple_label),
+            "sessions": render_template_string(_sessions, a=a, simple_label=simple_label),
+            "menu": render_template_string(_menu, a=a),
+        }
+        for a in assessments
+    ]
 
     return jsonify(data)

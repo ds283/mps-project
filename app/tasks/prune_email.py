@@ -20,10 +20,9 @@ from datetime import datetime, timedelta
 
 
 def register_prune_email(celery):
-
     @celery.task(bind=True)
-    def prune_email_log(self, duration=52, interval='weeks'):
-        self.update_state(state='STARTED')
+    def prune_email_log(self, duration=52, interval="weeks"):
+        self.update_state(state="STARTED")
 
         # get current date
         now = datetime.now()
@@ -43,12 +42,11 @@ def register_prune_email(celery):
             current_app.logger.exception("SQLAlchemyError exception in prune_email_log()", exc_info=e)
             raise self.retry()
 
-        self.update_state(state='FINISHED')
-
+        self.update_state(state="FINISHED")
 
     @celery.task(bind=True)
     def delete_all_email(self):
-        self.update_state(state='STARTED')
+        self.update_state(state="STARTED")
 
         try:
             db.session.query(EmailLog).delete()
@@ -59,4 +57,4 @@ def register_prune_email(celery):
             current_app.logger.exception("SQLAlchemyError exception in delete_all_email()", exc_info=e)
             raise self.retry()
 
-        self.update_state(state='FINISHED')
+        self.update_state(state="FINISHED")

@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-title = \
-"""
+title = """
 {% set project = r.parent %}
 {% set pclass = r.project_classes.first() %}
 {% set disabled = (pclass is none) %}
@@ -28,8 +27,7 @@ title = \
 """
 
 
-owner = \
-"""
+owner = """
 {% if p.generic %}
     <span class="badge bg-secondary">Generic</span>
 {% else %}
@@ -43,8 +41,7 @@ owner = \
 """
 
 
-pclasses = \
-"""
+pclasses = """
 {% set ns = namespace(count=0) %}
 {% if r.default is not none %}
     <span class="badge bg-success">Default</span>

@@ -11,16 +11,14 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_programmes = \
-"""
+_programmes = """
 {% for programme in pcl.programmes %}
     {{ simple_label(programme.short_label) }}
 {% endfor %}
 """
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -76,8 +74,7 @@ _menu = \
 """
 
 # language=jinja2
-_options = \
-"""
+_options = """
 {% if p.colour and p.colour is not none %}
   {{ simple_label(p.make_label(p.colour)) }}
 {% else %}
@@ -119,8 +116,7 @@ _options = \
 """
 
 # language=jinja2
-_workload = \
-"""
+_workload = """
 {% if p.uses_supervisor %}
     <span class="badge bg-primary">S {{ p.CATS_supervision }}</span>
 {% endif %}
@@ -136,8 +132,7 @@ _workload = \
 """
 
 # language=jinja2
-_popularity = \
-"""
+_popularity = """
 {% set hourly_pl = 's' %}
 {% if p.keep_hourly_popularity == 1 %}{% set hourly_pl = '' %}{% endif %}
 {% set daily_pl = 's' %}
@@ -147,8 +142,7 @@ _popularity = \
 """
 
 # language=jinja2
-_personnel = \
-"""
+_personnel = """
 <div class="personnel-container">
     {% if p.coconvenors.first() %}
         <div>Convenors</div>
@@ -178,8 +172,7 @@ _personnel = \
 """
 
 # language=jinja2
-_submissions = \
-"""
+_submissions = """
 <span class="badge bg-primary">{{ p.submissions }}/yr</span>
 {% if p.uses_marker %}
     <span class="badge bg-info">Marked</span>
@@ -198,8 +191,7 @@ _submissions = \
 
 
 # language=jinja2
-_timing = \
-"""
+_timing = """
 {% if p.start_year is not none %}
     <span class="badge bg-primary">Join Y{{ p.start_year }}</span>
 {% else %}
@@ -231,8 +223,7 @@ _timing = \
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 {{ p.name }} {{ simple_label(p.make_label(p.abbreviation)) }}
 <span class="badge {% if p.student_level >= p.LEVEL_UG and p.student_level <= p.LEVEL_PGR %}bg-secondary{% else %}bg-danger{% endif %}">
     {{ p._level_text(p.student_level) }}
@@ -260,14 +251,19 @@ _name = \
 def pclasses_data(pclasses):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': render_template_string(_name, p=p, simple_label=simple_label),
-             'options': render_template_string(_options, p=p, simple_label=simple_label),
-             'timing': render_template_string(_timing, p=p),
-             'cats': render_template_string(_workload, p=p),
-             'submissions': render_template_string(_submissions, p=p),
-             'popularity': render_template_string(_popularity, p=p),
-             'personnel': render_template_string(_personnel, p=p),
-             'programmes': render_template_string(_programmes, pcl=p, simple_label=simple_label),
-             'menu': render_template_string(_menu, pcl=p)} for p in pclasses]
+    data = [
+        {
+            "name": render_template_string(_name, p=p, simple_label=simple_label),
+            "options": render_template_string(_options, p=p, simple_label=simple_label),
+            "timing": render_template_string(_timing, p=p),
+            "cats": render_template_string(_workload, p=p),
+            "submissions": render_template_string(_submissions, p=p),
+            "popularity": render_template_string(_popularity, p=p),
+            "personnel": render_template_string(_personnel, p=p),
+            "programmes": render_template_string(_programmes, pcl=p, simple_label=simple_label),
+            "menu": render_template_string(_menu, pcl=p),
+        }
+        for p in pclasses
+    ]
 
     return jsonify(data)

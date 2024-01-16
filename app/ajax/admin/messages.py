@@ -12,8 +12,7 @@ from flask import render_template_string, jsonify, url_for
 
 
 # language=jinja2
-_messages_pclasses = \
-"""
+_messages_pclasses = """
 {% for pclass in message.project_classes %}
     <span class="badge bg-info">{{ pclass.name }}</span>
 {% else %}
@@ -22,8 +21,7 @@ _messages_pclasses = \
 """
 
 # language=jinja2
-_messages_menu = \
-"""
+_messages_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -57,19 +55,21 @@ _messages_menu = \
 
 
 def messages_data(messages):
-    data = [{'poster': m.user.name,
-             'email': '<a class="text-decoration-none" href="{email}">{email}</a>'.format(email=m.user.email),
-             'date': {
-                 'display': m.issue_date.strftime("%a %d %b %Y %H:%M:%S"),
-                 'timestamp': m.issue_date.timestamp()
-             },
-             'students': 'Yes' if m.show_students else 'No',
-             'faculty': 'Yes' if m.show_faculty else 'No',
-             'login': 'Yes' if m.show_login else 'No',
-             'pclass': render_template_string(_messages_pclasses, message=m),
-             'title': '<a class="text-decoration-none" href="{url}">{msg}</a>'.format(msg=m.title,
-                                                         url=url_for('admin.edit_message', id=m.id))
-                 if m.title is not None and len(m.title) > 0 else '<span class="badge bg-secondary">No title</span>',
-             'menu': render_template_string(_messages_menu, message=m)} for m in messages]
+    data = [
+        {
+            "poster": m.user.name,
+            "email": '<a class="text-decoration-none" href="{email}">{email}</a>'.format(email=m.user.email),
+            "date": {"display": m.issue_date.strftime("%a %d %b %Y %H:%M:%S"), "timestamp": m.issue_date.timestamp()},
+            "students": "Yes" if m.show_students else "No",
+            "faculty": "Yes" if m.show_faculty else "No",
+            "login": "Yes" if m.show_login else "No",
+            "pclass": render_template_string(_messages_pclasses, message=m),
+            "title": '<a class="text-decoration-none" href="{url}">{msg}</a>'.format(msg=m.title, url=url_for("admin.edit_message", id=m.id))
+            if m.title is not None and len(m.title) > 0
+            else '<span class="badge bg-secondary">No title</span>',
+            "menu": render_template_string(_messages_menu, message=m),
+        }
+        for m in messages
+    ]
 
     return jsonify(data)

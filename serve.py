@@ -21,13 +21,14 @@ def has_table(inspector, table_name):
         return False
 
     # if table exists, but has no entries, then we should also fail
-    out = db.session.execute(text(f'SELECT COUNT(*) FROM {table_name};')).first()
+    out = db.session.execute(text(f"SELECT COUNT(*) FROM {table_name};")).first()
     count = out[0]
 
     if count == 0:
         return False
 
     return True
+
 
 app = create_app()
 
@@ -36,7 +37,7 @@ with app.app_context():
     inspector = inspect(engine)
 
     # first inspect the main table; if this is empty then we assume that they database should be repopulated
-    if not has_table(inspector, 'main_config'):
+    if not has_table(inspector, "main_config"):
         # commit session to release any table locks; otherwise, if we are restoring from a mysqldump
         # dump file which isues DROP TABLE statements, these will block against the table lock
         db.session.commit()

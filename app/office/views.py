@@ -20,31 +20,31 @@ from .forms import OfficeSettingsForm
 from ..shared.utils import home_dashboard, get_root_dashboard_data, get_approval_queue_data
 
 
-@office.route('/dashboard')
-@roles_required('office')
+@office.route("/dashboard")
+@roles_required("office")
 def dashboard():
     """
     Render dashboard for an office user
     :return:
     """
-    pane = request.args.get('pane', None)
-    if pane is None and session.get('office_dashboard_pane'):
-        pane = session['office_dashboard_pane']
+    pane = request.args.get("pane", None)
+    if pane is None and session.get("office_dashboard_pane"):
+        pane = session["office_dashboard_pane"]
 
-    if pane != 'overview' and pane != 'approve':
-        pane = 'overview'
+    if pane != "overview" and pane != "approve":
+        pane = "overview"
 
     if pane is not None:
-        session['office_dashboard_pane'] = pane
+        session["office_dashboard_pane"] = pane
 
     root_data = get_root_dashboard_data()
     approvals_data = get_approval_queue_data()
 
-    return render_template('office/dashboard.html', root_data=root_data, approvals_data=approvals_data, pane=pane)
+    return render_template("office/dashboard.html", root_data=root_data, approvals_data=approvals_data, pane=pane)
 
 
-@office.route('/settings', methods=['GET', 'POST'])
-@roles_required('office')
+@office.route("/settings", methods=["GET", "POST"])
+@roles_required("office")
 def settings():
     """
     Edit settings for an office user
@@ -61,9 +61,9 @@ def settings():
         user.group_summaries = form.group_summaries.data
         user.summary_frequency = form.summary_frequency.data
 
-        flash('All changes saved', 'success')
+        flash("All changes saved", "success")
         db.session.commit()
 
         return home_dashboard()
 
-    return render_template('office/settings.html', settings_form=form, user=user)
+    return render_template("office/settings.html", settings_form=form, user=user)

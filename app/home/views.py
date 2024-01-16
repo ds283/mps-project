@@ -14,7 +14,8 @@ from . import home
 
 from ..shared.utils import home_dashboard
 
-@home.route('/')
+
+@home.route("/")
 @login_required
 def homepage():
     """

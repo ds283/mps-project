@@ -14,15 +14,13 @@ from ....database import db
 from ....models import MatchingRecord
 
 # language=jinja2
-_student = \
-"""
+_student = """
 <a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 """
 
 
 # language=jinja2
-_cohort = \
-"""
+_cohort = """
 {{ simple_label(sel.student.programme.short_label) }}
 {{ simple_label(sel.academic_year_label(show_details=True)) }}
 {{ simple_label(sel.student.cohort_label) }}
@@ -30,8 +28,7 @@ _cohort = \
 
 
 # language=jinja2
-_records = \
-"""
+_records = """
 {% if r.project_id != c.project_id %}
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style()|safe %}
@@ -50,16 +47,14 @@ _records = \
 
 
 # language=jinja2
-_delta = \
-"""
+_delta = """
 <span class="badge {% if r.hi_ranked %}bg-success{% elif r.lo_ranked %}bg-warning text-dark{% else %}bg-info{% endif %}">{{ r.rank }}</span>
 <span class="badge bg-primary">&delta; = {{ r.delta }}</span>
 """
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button"
             data-bs-toggle="dropdown">
@@ -80,17 +75,20 @@ _menu = \
 def compare_match_data(records):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'student': {
-                'display': render_template_string(_student, sel=l.selector),
-                'sortvalue': l.selector.student.user.last_name + l.selector.student.user.first_name
-             },
-             'cohort': render_template_string(_cohort, sel=l.selector, simple_label=simple_label),
-             'record1': render_template_string(_records, r=l, c=r),
-             'delta1': {'display': render_template_string(_delta, r=l),
-                        'sortvalue': l.delta},
-             'record2': render_template_string(_records, r=r, c=l),
-             'delta2': {'display': render_template_string(_delta, r=r),
-                        'sortvalue': r.delta},
-             'menu': render_template_string(_menu, l=l, r=r)} for l, r in records]
+    data = [
+        {
+            "student": {
+                "display": render_template_string(_student, sel=l.selector),
+                "sortvalue": l.selector.student.user.last_name + l.selector.student.user.first_name,
+            },
+            "cohort": render_template_string(_cohort, sel=l.selector, simple_label=simple_label),
+            "record1": render_template_string(_records, r=l, c=r),
+            "delta1": {"display": render_template_string(_delta, r=l), "sortvalue": l.delta},
+            "record2": render_template_string(_records, r=r, c=l),
+            "delta2": {"display": render_template_string(_delta, r=r), "sortvalue": r.delta},
+            "menu": render_template_string(_menu, l=l, r=r),
+        }
+        for l, r in records
+    ]
 
     return jsonify(data)

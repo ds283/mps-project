@@ -14,8 +14,7 @@ from ...models import SubmissionPeriodRecord
 
 
 # language=jinja2
-_group = \
-"""
+_group = """
 {% for rec in assignments %}
     <div>{{ rec.owner.student.user.name }}</div>
 {% endfor %}
@@ -23,30 +22,31 @@ _group = \
 
 
 def teaching_group_by_faculty(data, config, show_period):
-    data = [{'faculty': {'display': f.user.name,
-                         'sortvalue': f.user.last_name + f.user.first_name},
-             'group': render_template_string(_group,
-                                             assignments=f.supervisor_assignments(config_id=config.id,
-                                                                                  period=show_period).all())}
-            for f in data]
+    data = [
+        {
+            "faculty": {"display": f.user.name, "sortvalue": f.user.last_name + f.user.first_name},
+            "group": render_template_string(_group, assignments=f.supervisor_assignments(config_id=config.id, period=show_period).all()),
+        }
+        for f in data
+    ]
 
     return jsonify(data)
 
 
 def _supervisor_data(rec):
     if rec.project is None:
-        return {'display': None,
-                'sortvalue': None}
+        return {"display": None, "sortvalue": None}
 
-    return {'display': rec.project.owner.user.name,
-            'sortvalue': rec.project.owner.user.last_name + rec.project.owner.user.first_name}
+    return {"display": rec.project.owner.user.name, "sortvalue": rec.project.owner.user.last_name + rec.project.owner.user.first_name}
 
 
 def teaching_group_by_student(data, config, show_period):
-    data = [{'student': {'display': s.student.user.name,
-                         'sortvalue': s.student.user.last_name + s.student.user.first_name},
-             'supervisor': _supervisor_data(s.get_assignment(show_period))}
-            for s in data]
+    data = [
+        {
+            "student": {"display": s.student.user.name, "sortvalue": s.student.user.last_name + s.student.user.first_name},
+            "supervisor": _supervisor_data(s.get_assignment(show_period)),
+        }
+        for s in data
+    ]
 
     return jsonify(data)
-

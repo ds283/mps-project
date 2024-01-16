@@ -22,14 +22,12 @@ from urllib import parse
 
 
 # language=jinja2
-_actions = \
-"""
+_actions = """
 <a href="{{ url_for('manage_users.edit_student', id=s.id, url=url_for('user_approver.correct', url=url, text=text)) }}" class="btn btn-sm btn-secondary">Edit record...</a>
 """
 
 # language=jinja2
-_rejected = \
-"""
+_rejected = """
 {% if s.validated_by is not none %}
     <a class="text-decoration-none" href="mailto:{{ s.validated_by.email }}">{{ s.validated_by.name }}</a>
     {% if s.validated_timestamp is not none %}
@@ -42,11 +40,9 @@ _rejected = \
 
 
 # language=jinja2
-_academic_year = \
-"""
+_academic_year = """
 {{ simple_label(r.academic_year_label(show_details=True)) }}
 """
-
 
 
 @cache.memoize()
@@ -55,48 +51,49 @@ def _element(record_id):
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    return {'name': {'display': r.user.name,
-                      'sortstring': r.user.last_name + r.user.first_name},
-             'email': r.user.email,
-             'exam_number': r.exam_number,
-             'registration_number': r.registration_number,
-             'programme': r.programme.full_name,
-             'year': render_template_string(_academic_year, r=r, simple_label=simple_label),
-             'rejected_by': render_template_string(_rejected, s=r),
-             'menu': render_template_string(_actions, s=r, url='REPURL', text='REPTEXT')}
+    return {
+        "name": {"display": r.user.name, "sortstring": r.user.last_name + r.user.first_name},
+        "email": r.user.email,
+        "exam_number": r.exam_number,
+        "registration_number": r.registration_number,
+        "programme": r.programme.full_name,
+        "year": render_template_string(_academic_year, r=r, simple_label=simple_label),
+        "rejected_by": render_template_string(_rejected, s=r),
+        "menu": render_template_string(_actions, s=r, url="REPURL", text="REPTEXT"),
+    }
 
 
-@listens_for(StudentData, 'before_insert')
+@listens_for(StudentData, "before_insert")
 def _StudentData_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_element, target.id)
 
 
-@listens_for(StudentData, 'before_update')
+@listens_for(StudentData, "before_update")
 def _StudentData_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_element, target.id)
 
 
-@listens_for(StudentData, 'before_delete')
+@listens_for(StudentData, "before_delete")
 def _StudentData_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_element, target.id)
 
 
-def correction_data(record_ids, url='', text=''):
-    bleach = current_app.extensions['bleach']
+def correction_data(record_ids, url="", text=""):
+    bleach = current_app.extensions["bleach"]
 
     def urlencode(s):
-        s = s.encode('utf8')
+        s = s.encode("utf8")
         s = parse.quote_plus(s)
         return bleach.clean(s)
 
-    url_enc = urlencode(url) if url is not None else ''
-    text_enc = urlencode(text) if text is not None else ''
+    url_enc = urlencode(url) if url is not None else ""
+    text_enc = urlencode(text) if text is not None else ""
 
     def update(d):
-        d.update({'menu': d['menu'].replace('REPURL', url_enc, 1).replace('REPTEXT', text_enc, 1)})
+        d.update({"menu": d["menu"].replace("REPURL", url_enc, 1).replace("REPTEXT", text_enc, 1)})
         return d
 
     data = [update(_element(r_id)) for r_id in record_ids]

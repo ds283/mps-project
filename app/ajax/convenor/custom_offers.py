@@ -11,8 +11,7 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_student = \
-"""
+_student = """
 <a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 <div>
     {% if sel.has_submitted %}
@@ -25,8 +24,7 @@ _student = \
 
 
 # language=jinja2
-_project = \
-"""
+_project = """
 <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=proj.id, url=url_for('convenor.selector_custom_offers', sel_id=sel.id), text='selector custom offers') }}">
     {{ proj.name }}
 </a>
@@ -34,8 +32,7 @@ _project = \
 
 
 # language=jinja2
-_owner = \
-"""
+_owner = """
 {% if not project.generic and project.owner is not none %}
     <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
     {% if project.group %}{{ simple_label(project.group.make_label()) }}{% endif %}
@@ -46,8 +43,7 @@ _owner = \
 
 
 # language=jinja2
-_status = \
-"""
+_status = """
 {% set status = offer.status %}
 {% if status == offer.OFFERED %}
     <span class="badge bg-primary">Offered</span>
@@ -61,8 +57,7 @@ _status = \
 """
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle table-button" type="button" data-bs-toggle="dropdown">
         Actions
@@ -95,8 +90,7 @@ _menu = \
 
 
 # language=jinja2
-_selector_offers = \
-"""
+_selector_offers = """
 {% for offer in record.custom_offers_accepted %}
     <span class="badge bg-success">Accepted: {{ offer.liveproject.name }} ({{offer.liveproject.owner.user.last_name }})</span>
 {% endfor %}
@@ -110,8 +104,7 @@ _selector_offers = \
 
 
 # language=jinja2
-_project_offers = \
-"""
+_project_offers = """
 {% for offer in record.custom_offers_accepted %}
     <span class="badge bg-success">Accepted: {{ offer.selector.student.user.name }}</span>
 {% endfor %}
@@ -125,8 +118,7 @@ _project_offers = \
 
 
 # language=jinja2
-_sel_actions = \
-"""
+_sel_actions = """
 <div class="float-end">
     <a href="{{ url_for('convenor.create_new_offer', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.selector_custom_offers', sel_id=sel.id)) }}"
        class="btn btn-sm btn-secondary">
@@ -137,8 +129,7 @@ _sel_actions = \
 
 
 # language=jinja2
-_proj_actions = \
-"""
+_proj_actions = """
 <div class="float-end">
     <a href="{{ url_for('convenor.create_new_offer', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.project_custom_offers', proj_id=project.id)) }}"
        class="btn btn-sm btn-secondary">
@@ -149,20 +140,21 @@ _proj_actions = \
 
 
 def project_offer_data(items):
-    data = [{'student': {
-                 'display': render_template_string(_student, sel=item.selector),
-                 'sortvalue': item.selector.student.user.last_name + item.selector.student.user.first_name
-             },
-             'timestamp': {
-                 'display': item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S"),
-                 'timestamp': item.creation_timestamp.timestamp()
-             },
-             'status': {
-                 'display': render_template_string(_status, offer=item),
-                 'sortvalue': '{x}_{y}'.format(x=item.status,
-                                               y=item.last_edit_timestamp.timestamp() if item.last_edit_timestamp is not None else 0)
-             },
-             'menu': render_template_string(_menu, offer=item)} for item in items]
+    data = [
+        {
+            "student": {
+                "display": render_template_string(_student, sel=item.selector),
+                "sortvalue": item.selector.student.user.last_name + item.selector.student.user.first_name,
+            },
+            "timestamp": {"display": item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S"), "timestamp": item.creation_timestamp.timestamp()},
+            "status": {
+                "display": render_template_string(_status, offer=item),
+                "sortvalue": "{x}_{y}".format(x=item.status, y=item.last_edit_timestamp.timestamp() if item.last_edit_timestamp is not None else 0),
+            },
+            "menu": render_template_string(_menu, offer=item),
+        }
+        for item in items
+    ]
 
     return jsonify(data)
 
@@ -170,33 +162,37 @@ def project_offer_data(items):
 def student_offer_data(items):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'project': render_template_string(_project, sel=item.selector, proj=item.liveproject),
-             'owner': {
-                 'display': render_template_string(_owner, project=item.liveproject, simple_label=simple_label),
-                 'sortvalue': 'Generic' if item.liveproject.generic or item.liveproject.owner is None else \
-                     item.liveproject.owner.user.last_name + item.liveproject.owner.user.first_name
-             },
-             'timestamp': {
-                 'display': item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S"),
-                 'timestamp': item.creation_timestamp.timestamp()
-             },
-             'status': {
-                 'display': render_template_string(_status, offer=item),
-                 'sortvalue': '{x}_{y}'.format(x=item.status,
-                                               y=item.last_edit_timestamp.timestamp() if item.last_edit_timestamp is not None else 0)
-             },
-             'menu': render_template_string(_menu, offer=item)} for item in items]
+    data = [
+        {
+            "project": render_template_string(_project, sel=item.selector, proj=item.liveproject),
+            "owner": {
+                "display": render_template_string(_owner, project=item.liveproject, simple_label=simple_label),
+                "sortvalue": "Generic"
+                if item.liveproject.generic or item.liveproject.owner is None
+                else item.liveproject.owner.user.last_name + item.liveproject.owner.user.first_name,
+            },
+            "timestamp": {"display": item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S"), "timestamp": item.creation_timestamp.timestamp()},
+            "status": {
+                "display": render_template_string(_status, offer=item),
+                "sortvalue": "{x}_{y}".format(x=item.status, y=item.last_edit_timestamp.timestamp() if item.last_edit_timestamp is not None else 0),
+            },
+            "menu": render_template_string(_menu, offer=item),
+        }
+        for item in items
+    ]
 
     return jsonify(data)
 
 
 def project_offer_selectors(selectors, project):
-    data = [{'student': {
-                 'display': render_template_string(_student, sel=sel),
-                 'sortvalue': sel.student.user.last_name + sel.student.user.first_name
-            },
-            'offers': render_template_string(_selector_offers, record=sel),
-            'actions': render_template_string(_proj_actions, sel=sel, project=project)} for sel in selectors]
+    data = [
+        {
+            "student": {"display": render_template_string(_student, sel=sel), "sortvalue": sel.student.user.last_name + sel.student.user.first_name},
+            "offers": render_template_string(_selector_offers, record=sel),
+            "actions": render_template_string(_proj_actions, sel=sel, project=project),
+        }
+        for sel in selectors
+    ]
 
     return jsonify(data)
 
@@ -204,13 +200,17 @@ def project_offer_selectors(selectors, project):
 def student_offer_projects(projects, sel):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'project': render_template_string(_project, sel=sel, proj=project),
-             'owner': {
-                 'display': render_template_string(_owner, project=project, simple_label=simple_label),
-                 'sortvalue': 'Generic' if project.generic or project.owner is None else \
-                     project.owner.user.last_name + project.owner.user.first_name
-             },
-             'offers': render_template_string(_project_offers, record=project),
-             'actions': render_template_string(_sel_actions, sel=sel, project=project)} for project in projects]
+    data = [
+        {
+            "project": render_template_string(_project, sel=sel, proj=project),
+            "owner": {
+                "display": render_template_string(_owner, project=project, simple_label=simple_label),
+                "sortvalue": "Generic" if project.generic or project.owner is None else project.owner.user.last_name + project.owner.user.first_name,
+            },
+            "offers": render_template_string(_project_offers, record=project),
+            "actions": render_template_string(_sel_actions, sel=sel, project=project),
+        }
+        for project in projects
+    ]
 
     return jsonify(data)

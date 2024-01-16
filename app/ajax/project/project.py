@@ -16,12 +16,21 @@ from sqlalchemy.event import listens_for
 
 from ...cache import cache
 from ...database import db
-from ...models import Project, EnrollmentRecord, ResearchGroup, SkillGroup, TransferableSkill, DegreeProgramme, \
-    DegreeType, ProjectDescription, User, ProjectClassConfig
+from ...models import (
+    Project,
+    EnrollmentRecord,
+    ResearchGroup,
+    SkillGroup,
+    TransferableSkill,
+    DegreeProgramme,
+    DegreeType,
+    ProjectDescription,
+    User,
+    ProjectClassConfig,
+)
 
 # language=jinja2
-_project_name = \
-"""
+_project_name = """
 {% if project.active %}
     REPERRORSYMBOL
 {% endif %}
@@ -49,8 +58,7 @@ _project_name = \
 
 
 # language=jinja2
-_project_name_labels = \
-"""
+_project_name_labels = """
 <div>
     {% for pclass in project.project_classes %}
         {% if pclass.active %}
@@ -65,8 +73,7 @@ _project_name_labels = \
 
 
 # language=jinja2
-_error_block = \
-"""
+_error_block = """
 <div class="mt-1">
     {{ error_block_popover(errors, warnings) }}
 </div>
@@ -74,8 +81,7 @@ _error_block = \
 
 
 # language=jinja2
-_owner = \
-"""
+_owner = """
 {% if project.generic %}
     <span class="badge bg-info">Generic</span>
 {% else %}
@@ -89,8 +95,7 @@ _owner = \
 
 
 # language=jinja2
-_project_status = \
-"""
+_project_status = """
 {% if not project.active %}
     <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Project inactive</span>
 {% else %}
@@ -106,8 +111,7 @@ _project_status = \
 
 
 # language=jinja2
-_project_pclasses = \
-"""
+_project_pclasses = """
 {% for pclass in project.project_classes %}
     {% set style = pclass.make_CSS_style() %}
     <a class="badge text-decoration-none text-nohover-dark bg-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
@@ -116,8 +120,7 @@ _project_pclasses = \
 
 
 # language=jinja2
-_project_meetingreqd = \
-"""
+_project_meetingreqd = """
 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
     <span class="badge bg-danger">Required</span>
 {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
@@ -131,8 +134,7 @@ _project_meetingreqd = \
 
 
 # language=jinja2
-_project_prefer = \
-"""
+_project_prefer = """
 {% for programme in project.ordered_programmes %}
     {% if programme.active %}
         {{ simple_label(programme.short_label) }}
@@ -142,8 +144,7 @@ _project_prefer = \
 
 
 # language=jinja2
-_project_skills = \
-"""
+_project_skills = """
 {% for skill in skills %}
     {% if skill.is_active %}
       {{ simple_label(skill.short_label) }}
@@ -153,8 +154,7 @@ _project_skills = \
 
 
 # language=jinja2
-_affiliation = \
-"""
+_affiliation = """
 {% set ns = namespace(affiliation=false) %}
 {% if project.group %}
     {{ simple_label(project.group.make_label()) }}
@@ -171,8 +171,7 @@ _affiliation = \
 
 
 # language=jinja2
-_faculty_menu = \
-"""
+_faculty_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -227,8 +226,7 @@ _faculty_menu = \
 
 
 # language=jinja2
-_convenor_menu = \
-"""
+_convenor_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -296,8 +294,7 @@ _convenor_menu = \
 
 
 # language=jinja2
-_unofferable_menu = \
-"""
+_unofferable_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -343,8 +340,7 @@ _unofferable_menu = \
 
 
 # language=jinja2
-_attach_button = \
-"""
+_attach_button = """
 <a href="{{ url_for('convenor.manual_attach_project', id=project.id, configid=config_id) }}" class="btn btn-success btn-sm">
     <i class="fas fa-plus"></i> Attach
 </a>
@@ -352,21 +348,21 @@ _attach_button = \
 
 
 # language=jinja2
-_attach_other_button = \
-"""
+_attach_other_button = """
 <a href="{{ url_for('convenor.manual_attach_other_project', id=desc.id, configid=config_id) }}" class="btn btn-success btn-sm">
     <i class="fas fa-plus"></i> Attach
 </a>
 """
 
 
-
-_menus = {'convenor': _convenor_menu,
-          'faculty': _faculty_menu,
-          'unofferable': _unofferable_menu,
-          'attach': _attach_button,
-          'attach_other': _attach_other_button,
-          None: ''}
+_menus = {
+    "convenor": _convenor_menu,
+    "faculty": _faculty_menu,
+    "unofferable": _unofferable_menu,
+    "attach": _attach_button,
+    "attach_other": _attach_other_button,
+    None: "",
+}
 
 
 _config_proxy = 999999999
@@ -394,31 +390,38 @@ def _element(project_id, desc_id, menu_template, in_selector, in_submitter, sele
     simple_label = get_template_attribute("labels.html", "simple_label")
     truncate = get_template_attribute("macros.html", "truncate")
 
-    return {'name': render_template_string(_project_name, project=p, desc=d, text='REPTEXT', url='REPURL'),
-             'owner': render_template_string(_owner, project=p),
-             'status': render_template_string(_project_status, project=p),
-             'pclasses': render_template_string(_project_pclasses, project=p),
-             'meeting': render_template_string(_project_meetingreqd, project=p),
-             'group': render_template_string(_affiliation, project=p, simple_label=simple_label, truncate=truncate),
-             'prefer': render_template_string(_project_prefer, project=p, simple_label=simple_label),
-             'skills': render_template_string(_project_skills, skills=p.ordered_skills, simple_label=simple_label),
-             'menu': render_template_string(menu_string, project=p, desc=d,
-                                            config_id=_config_proxy, pclass_id=_pclass_proxy,
-                                            in_selector=in_selector, in_submitter=in_submitter,
-                                            select_in_previous_cycle=select_in_previous_cycle,
-                                            text='REPTEXT', url='REPURL')}
+    return {
+        "name": render_template_string(_project_name, project=p, desc=d, text="REPTEXT", url="REPURL"),
+        "owner": render_template_string(_owner, project=p),
+        "status": render_template_string(_project_status, project=p),
+        "pclasses": render_template_string(_project_pclasses, project=p),
+        "meeting": render_template_string(_project_meetingreqd, project=p),
+        "group": render_template_string(_affiliation, project=p, simple_label=simple_label, truncate=truncate),
+        "prefer": render_template_string(_project_prefer, project=p, simple_label=simple_label),
+        "skills": render_template_string(_project_skills, skills=p.ordered_skills, simple_label=simple_label),
+        "menu": render_template_string(
+            menu_string,
+            project=p,
+            desc=d,
+            config_id=_config_proxy,
+            pclass_id=_pclass_proxy,
+            in_selector=in_selector,
+            in_submitter=in_submitter,
+            select_in_previous_cycle=select_in_previous_cycle,
+            text="REPTEXT",
+            url="REPURL",
+        ),
+    }
 
 
-def _process(project_id, config, current_user_id, menu_template, name_labels, text_enc, url_enc,
-             show_approvals, show_errors, desc_id=None):
+def _process(project_id, config, current_user_id, menu_template, name_labels, text_enc, url_enc, show_approvals, show_errors, desc_id=None):
     p: Project = db.session.query(Project).filter_by(id=project_id).one()
     d: Optional[ProjectDescription] = None
     if desc_id is not None:
         d = db.session.query(ProjectDescription).filter_by(id=desc_id).one()
 
     if config is not None and not p.generic and p.owner is not None:
-        e = db.session.query(EnrollmentRecord).filter_by(owner_id=current_user_id,
-                                                         pclass_id=config.pclass_id).first()
+        e = db.session.query(EnrollmentRecord).filter_by(owner_id=current_user_id, pclass_id=config.pclass_id).first()
     else:
         e = None
 
@@ -428,44 +431,55 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
     in_submitter = (p.submitter_live_counterpart(config.id) is not None) if config is not None else False
 
     # _element is cached
-    record = _element(project_id, desc_id, menu_template, in_selector, in_submitter,
-                      config.select_in_previous_cycle if config is not None else True)
+    record = _element(project_id, desc_id, menu_template, in_selector, in_submitter, config.select_in_previous_cycle if config is not None else True)
 
     # need to replace text and url in 'name' field
     # need to replace text, url, config_id and pclass_id in 'menu' field
     # need to replace supervisor status in 'status' field
     # need to replace new comment notification in 'name' field
-    name = record['name']
-    status = record['status']
-    menu = record['menu']
+    name = record["name"]
+    status = record["status"]
+    menu = record["menu"]
 
-    name = name.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
+    name = name.replace("REPTEXT", text_enc, 1).replace("REPURL", url_enc, 1)
 
     if name_labels:
-        name = name.replace('REPNAMELABELS', _name_labels(project_id), 1)
+        name = name.replace("REPNAMELABELS", _name_labels(project_id), 1)
     else:
-        name = name.replace('REPNAMELABELS', '', 1)
+        name = name.replace("REPNAMELABELS", "", 1)
 
     if is_running:
-        name = name.replace('REPISRUNNING', '<span class="badge bg-success" data-bs-toggle="tooltip" title="One or '
-                                            'more students are submitters for this project in the current '
-                                            'cycle">RUNNING</span>', 1)
+        name = name.replace(
+            "REPISRUNNING",
+            '<span class="badge bg-success" data-bs-toggle="tooltip" title="One or '
+            "more students are submitters for this project in the current "
+            'cycle">RUNNING</span>',
+            1,
+        )
     else:
-        name = name.replace('REPISRUNNING', '', 1)
+        name = name.replace("REPISRUNNING", "", 1)
 
     if in_selector:
-        name = name.replace('REPSELECTING', '<span class="badge bg-primary" data-bs-toggle="tooltip" title="A '
-                                            'version of this project is live for students who are selecting in the '
-                                            'current cycle">SELECTING</span>', 1)
+        name = name.replace(
+            "REPSELECTING",
+            '<span class="badge bg-primary" data-bs-toggle="tooltip" title="A '
+            "version of this project is live for students who are selecting in the "
+            'current cycle">SELECTING</span>',
+            1,
+        )
     else:
-        name = name.replace('REPSELECTING', '', 1)
+        name = name.replace("REPSELECTING", "", 1)
 
     if in_submitter:
-        name = name.replace('REPSUBMITTING', '<span class="badge bg-primary" data-bs-toggle="tooltip" title="A '
-                                             'version of this project is live and can be assigned for students '
-                                             'who are submitting in the current cycle">SUBMITTING</span>', 1)
+        name = name.replace(
+            "REPSUBMITTING",
+            '<span class="badge bg-primary" data-bs-toggle="tooltip" title="A '
+            "version of this project is live and can be assigned for students "
+            'who are submitting in the current cycle">SUBMITTING</span>',
+            1,
+        )
     else:
-        name = name.replace('REPSUBMITTING', '', 1)
+        name = name.replace("REPSUBMITTING", "", 1)
 
     status = replace_enrollment_text(e, status)
     name = replace_error_block(p, d, show_errors, name)
@@ -473,35 +487,35 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
     status = replace_approval_tags(p, show_approvals, config, status)
     menu = replace_menu_anchor(text_enc, url_enc, config, menu)
 
-    record.update({'name': name, 'status': status, 'menu': menu})
+    record.update({"name": name, "status": status, "menu": menu})
     return record
 
 
 def replace_error_block(p: Project, d: ProjectDescription, show_errors: bool, name: str):
-    block = ''
-    symbol = ''
+    block = ""
+    symbol = ""
 
     error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
     error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
 
     if show_errors:
         if d is not None and d.has_issues:
-            block = render_template_string(_error_block, errors=d.errors, warnings=d.warnings,
-                                           error_block_inline=error_block_inline,
-                                           error_block_popover=error_block_popover)
+            block = render_template_string(
+                _error_block, errors=d.errors, warnings=d.warnings, error_block_inline=error_block_inline, error_block_popover=error_block_popover
+            )
             symbol = '<i class="fas fa-exclamation-triangle text-danger"></i>'
         elif p is not None and p.has_issues:
-            block = render_template_string(_error_block, errors=p.errors, warnings=p.warnings,
-                                           error_block_inline=error_block_inline,
-                                           error_block_popover=error_block_popover)
+            block = render_template_string(
+                _error_block, errors=p.errors, warnings=p.warnings, error_block_inline=error_block_inline, error_block_popover=error_block_popover
+            )
             symbol = '<i class="fas fa-exclamation-triangle text-danger"></i>'
 
-    name = name.replace('REPERRORBLOCK', block, 1).replace('REPERRORSYMBOL', symbol, 1)
+    name = name.replace("REPERRORBLOCK", block, 1).replace("REPERRORSYMBOL", symbol, 1)
     return name
 
 
 def replace_menu_anchor(text_enc: str, url_enc: str, config: ProjectClassConfig, menu: str):
-    menu = menu.replace('REPTEXT', text_enc, 2).replace('REPURL', url_enc, 2)
+    menu = menu.replace("REPTEXT", text_enc, 2).replace("REPURL", url_enc, 2)
 
     if config is not None:
         menu = menu.replace(_config_proxy_str, str(config.id), 1).replace(_pclass_proxy_str, str(config.pclass_id), 8)
@@ -510,7 +524,7 @@ def replace_menu_anchor(text_enc: str, url_enc: str, config: ProjectClassConfig,
 
 
 def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClassConfig, status: str):
-    repapprove = ''
+    repapprove = ""
 
     # if the project is not active, there is no need to do anything with its approval tag;
     # just replace it by nothing. You can't approve an inactive project.
@@ -518,7 +532,6 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
     published = p.project_classes.filter_by(publish=True).first() is not None
     if show_approvals:
         if p.active and published:
-
             # if no config supplied, we don't know which project class we are looking at and therefore which
             # description is relevant. So we must describe the project as a whole
             if config is None:
@@ -533,7 +546,7 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                 elif state == Project.SOME_DESCRIPTIONS_UNCONFIRMED:
                     repapprove = '<span class="badge bg-secondary">Approval: Unconfirmed</span>'
                 elif state == Project.APPROVALS_NOT_ACTIVE:
-                    repapprove = ''
+                    repapprove = ""
                 elif state == Project.APPROVALS_NOT_OFFERABLE:
                     repapprove = '<span class="badge bg-danger">Approval: Not offerable</span>'
                 else:
@@ -554,7 +567,9 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                                                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                                                     <a class="dropdown-item d-flex gap-2" href="{url}"><i class="fas fa-check fa-fw"></i> Confirm</a>
                                                 </div>
-                                            </div>""".format(url=url_for('convenor.confirm_description', config_id=config.id, did=desc.id))
+                                            </div>""".format(
+                                url=url_for("convenor.confirm_description", config_id=config.id, did=desc.id)
+                            )
                         else:
                             repapprove = '<span class="badge bg-secondary">Approval: Not confirmed</span>'
                     else:
@@ -568,39 +583,38 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
                             repapprove = '<span class="badge bg-danger">Unknown approval state</span>'
 
                         if desc.validated_by:
-                            repapprove += ' <span class="badge bg-info">Signed-off: ' + desc.validated_by.name + '</span>'
+                            repapprove += ' <span class="badge bg-info">Signed-off: ' + desc.validated_by.name + "</span>"
                             if desc.validated_timestamp:
-                                repapprove += ' <span class="badge bg-info">' + desc.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") + '</span>'
+                                repapprove += ' <span class="badge bg-info">' + desc.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") + "</span>"
         else:
             repapprove = '<span class="badge bg-secondary"><i class="fas fa-ban"></i> Can\'t approve</span>'
 
-    status = status.replace('REPAPPROVAL', repapprove, 1)
+    status = status.replace("REPAPPROVAL", repapprove, 1)
     return status
 
 
 def replace_comment_notification(current_user_id, name, p):
-    repcomments = ''
+    repcomments = ""
 
     if current_user_id is not None:
         u = db.session.query(User).filter_by(id=current_user_id).one()
         if p.has_new_comments(u):
             repcomments = '<span class="badge bg-warning text-dark">New comments</span>'
 
-    name = name.replace('REPNEWCOMMENTS', repcomments, 1)
+    name = name.replace("REPNEWCOMMENTS", repcomments, 1)
     return name
 
 
 def replace_enrollment_text(e, status):
-    repenroll = ''
+    repenroll = ""
 
     if e is not None:
         simple_label = get_template_attribute("labels.html", "simple_label")
 
         label_data = e.supervisor_label
-        repenroll = render_template_string('{{ simple_label(data) }}', data=label_data,
-                                           simple_label=simple_label)
+        repenroll = render_template_string("{{ simple_label(data) }}", data=label_data, simple_label=simple_label)
 
-    status = status.replace('REPENROLLMENT', repenroll, 1)
+    status = status.replace("REPENROLLMENT", repenroll, 1)
     return status
 
 
@@ -612,91 +626,91 @@ def _invalidate_cache(project_id: int):
     cache.delete_memoized(_name_labels, project_id)
 
 
-@listens_for(Project, 'before_update')
+@listens_for(Project, "before_update")
 def _Project_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _invalidate_cache(target.id)
 
 
-@listens_for(Project, 'before_insert')
+@listens_for(Project, "before_insert")
 def _Project_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _invalidate_cache(target.id)
 
 
-@listens_for(Project, 'before_delete')
+@listens_for(Project, "before_delete")
 def _Project_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _invalidate_cache(target.id)
 
 
-@listens_for(Project.project_classes, 'append')
+@listens_for(Project.project_classes, "append")
 def _Project_project_classes_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         _invalidate_cache(target.id)
 
 
-@listens_for(Project.project_classes, 'remove')
+@listens_for(Project.project_classes, "remove")
 def _Project_project_classes_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         _invalidate_cache(target.id)
 
 
-@listens_for(Project.skills, 'append')
+@listens_for(Project.skills, "append")
 def _Project_skills_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         _invalidate_cache(target.id)
 
 
-@listens_for(Project.skills, 'remove')
+@listens_for(Project.skills, "remove")
 def _Project_skills_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         _invalidate_cache(target.id)
 
 
-@listens_for(Project.programmes, 'append')
+@listens_for(Project.programmes, "append")
 def _Project_programmes_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         _invalidate_cache(target.id)
 
 
-@listens_for(Project.programmes, 'remove')
+@listens_for(Project.programmes, "remove")
 def _Project_programmes_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         _invalidate_cache(target.id)
 
 
-@listens_for(Project.assessors, 'append')
+@listens_for(Project.assessors, "append")
 def _Project_assessors_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         _invalidate_cache(target.id)
 
 
-@listens_for(Project.assessors, 'remove')
+@listens_for(Project.assessors, "remove")
 def _Project_assessors_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         _invalidate_cache(target.id)
 
 
-@listens_for(ProjectDescription, 'before_insert')
+@listens_for(ProjectDescription, "before_insert")
 def _ProjectDescription_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _invalidate_cache(target.parent_id)
 
 
-@listens_for(ProjectDescription, 'before_update')
+@listens_for(ProjectDescription, "before_update")
 def _ProjectDescription_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _invalidate_cache(target.parent_id)
 
 
-@listens_for(ProjectDescription, 'before_delete')
+@listens_for(ProjectDescription, "before_delete")
 def _ProjectDescription_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _invalidate_cache(target.parent_id)
 
 
-@listens_for(EnrollmentRecord, 'before_update')
+@listens_for(EnrollmentRecord, "before_update")
 def _EnrollmentRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         p_ids = db.session.query(Project.id).filter_by(owner_id=target.owner_id).all()
@@ -704,7 +718,7 @@ def _EnrollmentRecord_update_handler(mapper, connection, target):
             _invalidate_cache(p_id)
 
 
-@listens_for(EnrollmentRecord, 'before_insert')
+@listens_for(EnrollmentRecord, "before_insert")
 def _EnrollmentRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         p_ids = db.session.query(Project.id).filter_by(owner_id=target.owner_id).all()
@@ -712,7 +726,7 @@ def _EnrollmentRecord_insert_handler(mapper, connection, target):
             _invalidate_cache(p_id)
 
 
-@listens_for(EnrollmentRecord, 'before_delete')
+@listens_for(EnrollmentRecord, "before_delete")
 def _EnrollmentRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         p_ids = db.session.query(Project.id).filter_by(owner_id=target.owner_id).all()
@@ -720,35 +734,35 @@ def _EnrollmentRecord_delete_handler(mapper, connection, target):
             _invalidate_cache(p_id)
 
 
-@listens_for(ResearchGroup, 'before_update')
+@listens_for(ResearchGroup, "before_update")
 def _ResearchGroup_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         for project in target.projects:
             _invalidate_cache(project.id)
 
 
-@listens_for(ResearchGroup, 'before_delete')
+@listens_for(ResearchGroup, "before_delete")
 def _ResearchGroup_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         for project in target.projects:
             _invalidate_cache(project.id)
 
 
-@listens_for(TransferableSkill, 'before_update')
+@listens_for(TransferableSkill, "before_update")
 def _TransferableSkill_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         for project in target.projects:
             _invalidate_cache(project.id)
 
 
-@listens_for(TransferableSkill, 'before_delete')
+@listens_for(TransferableSkill, "before_delete")
 def _TransferableSkill_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         for project in target.projects:
             _invalidate_cache(project.id)
 
 
-@listens_for(SkillGroup, 'before_update')
+@listens_for(SkillGroup, "before_update")
 def _SkillGroup_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         p_ids = set()
@@ -760,7 +774,7 @@ def _SkillGroup_update_handler(mapper, connection, target):
             _invalidate_cache(p_id)
 
 
-@listens_for(SkillGroup, 'before_delete')
+@listens_for(SkillGroup, "before_delete")
 def _SkillGroup_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         p_ids = set()
@@ -772,21 +786,21 @@ def _SkillGroup_delete_handler(mapper, connection, target):
             _invalidate_cache(p_id)
 
 
-@listens_for(DegreeProgramme, 'before_update')
+@listens_for(DegreeProgramme, "before_update")
 def _DegreeProgramme_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         for project in target.projects:
             _invalidate_cache(project.id)
 
 
-@listens_for(DegreeProgramme, 'before_delete')
+@listens_for(DegreeProgramme, "before_delete")
 def _DegreeProgramme_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         for project in target.projects:
             _invalidate_cache(project.id)
 
 
-@listens_for(DegreeType, 'before_update')
+@listens_for(DegreeType, "before_update")
 def _DegreeType_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         p_ids = set()
@@ -798,7 +812,7 @@ def _DegreeType_update_handler(mapper, connection, target):
             _invalidate_cache(p_id)
 
 
-@listens_for(DegreeType, 'before_delete')
+@listens_for(DegreeType, "before_delete")
 def _DegreeType_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         p_ids = set()
@@ -811,35 +825,55 @@ def _DegreeType_delete_handler(mapper, connection, target):
 
 
 # projects argument could be a list of Project or LiveProject instances
-def build_data(projects,
-               config: ProjectClassConfig=None, current_user_id: int=None,
-               menu_template: str=None, name_labels: bool=False,
-               text: str=None, url: str=None,
-               show_approvals: bool=False, show_errors: bool=True):
-    bleach = current_app.extensions['bleach']
+def build_data(
+    projects,
+    config: ProjectClassConfig = None,
+    current_user_id: int = None,
+    menu_template: str = None,
+    name_labels: bool = False,
+    text: str = None,
+    url: str = None,
+    show_approvals: bool = False,
+    show_errors: bool = True,
+):
+    bleach = current_app.extensions["bleach"]
 
     def urlencode(s):
-        s = s.encode('utf8')
+        s = s.encode("utf8")
         s = parse.quote_plus(s)
         return bleach.clean(s)
 
-    url_enc = urlencode(url) if url is not None else ''
-    text_enc = urlencode(text) if text is not None else ''
+    url_enc = urlencode(url) if url is not None else ""
+    text_enc = urlencode(text) if text is not None else ""
 
     if not isinstance(projects, list):
-        raise TypeError('Expected projects argument to be a list')
+        raise TypeError("Expected projects argument to be a list")
 
     if len(projects) == 0:
         return []
 
     p = projects[0]
     if isinstance(p, dict):
-        data = [_process(p['project_id'], config, current_user_id, menu_template, name_labels, text_enc, url_enc, show_approvals,
-                         show_errors, desc_id=p['desc_id']) for p in projects]
+        data = [
+            _process(
+                p["project_id"],
+                config,
+                current_user_id,
+                menu_template,
+                name_labels,
+                text_enc,
+                url_enc,
+                show_approvals,
+                show_errors,
+                desc_id=p["desc_id"],
+            )
+            for p in projects
+        ]
     elif isinstance(p, int):
-        data = [_process(p_id, config, current_user_id, menu_template, name_labels, text_enc, url_enc, show_approvals,
-                         show_errors) for p_id in projects]
+        data = [
+            _process(p_id, config, current_user_id, menu_template, name_labels, text_enc, url_enc, show_approvals, show_errors) for p_id in projects
+        ]
     else:
-        raise TypeError('Expected projects list to be of type int or dict')
+        raise TypeError("Expected projects list to be of type int or dict")
 
     return data

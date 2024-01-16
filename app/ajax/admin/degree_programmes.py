@@ -11,8 +11,7 @@
 from flask import render_template_string, get_template_attribute
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -50,8 +49,7 @@ _menu = \
 
 
 # language=jinja2
-_active = \
-"""
+_active = """
 {% if p.active %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
@@ -61,8 +59,7 @@ _active = \
 
 
 # language=jinja2
-_show_type = \
-"""
+_show_type = """
 {% if p.show_type %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Yes</span>
 {% else %}
@@ -72,8 +69,7 @@ _show_type = \
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 {{ p.name }} {{ simple_label(p.short_label) }}
 {% if p.foundation_year %}
     <span class="badge bg-info">Foundation year</span>
@@ -95,8 +91,7 @@ _name = \
 
 
 # language=jinja2
-_type = \
-"""
+_type = """
 {{ simple_label(t.make_label(show_type=true)) }}
 """
 
@@ -104,11 +99,16 @@ _type = \
 def degree_programmes_data(levels, programmes):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': render_template_string(_name, p=p, levels=levels, simple_label=simple_label),
-             'type': render_template_string(_type, t=p.degree_type, simple_label=simple_label),
-             'show_type': render_template_string(_show_type, p=p),
-             'course_code': p.course_code,
-             'active': render_template_string(_active, p=p),
-             'menu': render_template_string(_menu, programme=p)} for p in programmes]
+    data = [
+        {
+            "name": render_template_string(_name, p=p, levels=levels, simple_label=simple_label),
+            "type": render_template_string(_type, t=p.degree_type, simple_label=simple_label),
+            "show_type": render_template_string(_show_type, p=p),
+            "course_code": p.course_code,
+            "active": render_template_string(_active, p=p),
+            "menu": render_template_string(_menu, programme=p),
+        }
+        for p in programmes
+    ]
 
     return data

@@ -16,9 +16,7 @@ from ...models import ProjectClassConfig
 
 
 def SelectSubmissionRecordFormFactory(config: ProjectClassConfig, is_admin: bool):
-
     class SelectSubmissionRecordForm(Form, PeriodSelectorMixinFactory(config, is_admin)):
-
         pass
 
     return SelectSubmissionRecordForm

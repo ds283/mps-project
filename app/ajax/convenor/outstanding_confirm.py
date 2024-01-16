@@ -11,8 +11,7 @@
 from flask import jsonify, render_template_string, get_template_attribute
 
 # language=jinja2
-_projects = \
-"""
+_projects = """
 {% for p in config.project_confirmations_outstanding(f) %}
     {% set offerable = p.is_offerable %}
     <div class="outstanding-confirm-group">
@@ -80,8 +79,7 @@ _projects = \
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -99,8 +97,7 @@ _menu = \
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a class="text-decoration-none" href="mailto:{{ u.email }}">{{ u.name }}</a>
 <div>
     {% if config.no_explicit_confirm(f) %}
@@ -122,12 +119,19 @@ _name = \
 def outstanding_confirm_data(config, url=None, text=None):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': {'display': render_template_string(_name, u=f.user, f=f, config=config,
-                                                        pclass=config.project_class, simple_label=simple_label),
-                      'sortstring': f.user.last_name + f.user.first_name},
-             'email': '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=f.user.email),
-             'projects': render_template_string(_projects, f=f, config=config, pclass=config.project_class,
-                                                url=url, text=text, simple_label=simple_label),
-             'menu': render_template_string(_menu, config=config, f=f)} for f in config.faculty_waiting_confirmation]
+    data = [
+        {
+            "name": {
+                "display": render_template_string(_name, u=f.user, f=f, config=config, pclass=config.project_class, simple_label=simple_label),
+                "sortstring": f.user.last_name + f.user.first_name,
+            },
+            "email": '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=f.user.email),
+            "projects": render_template_string(
+                _projects, f=f, config=config, pclass=config.project_class, url=url, text=text, simple_label=simple_label
+            ),
+            "menu": render_template_string(_menu, config=config, f=f),
+        }
+        for f in config.faculty_waiting_confirmation
+    ]
 
     return jsonify(data)

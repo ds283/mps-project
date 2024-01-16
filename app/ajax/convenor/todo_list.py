@@ -16,8 +16,7 @@ from ...models import ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGener
 
 
 # language=jinja2
-_student_task = \
-"""
+_student_task = """
 <div><strong>{{ tk.description }}</strong></div>
 <div>
     <i class="fas fa-user-circle"></i>
@@ -40,8 +39,7 @@ _student_task = \
 
 
 # language=jinja2
-_project_task = \
-"""
+_project_task = """
 <div><strong>{{ tk.description }}</strong></div>
 <div>
     <span class="badge bg-secondary">Project</span>
@@ -62,8 +60,7 @@ _project_task = \
 
 
 # language=jinja2
-_status = \
-"""
+_status = """
 {% if tk.dropped %}
     <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Dropped</span>
 {% elif tk.complete %}
@@ -79,8 +76,7 @@ _status = \
 
 
 # language=jinja2
-_student_menu = \
-"""
+_student_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -108,8 +104,7 @@ _student_menu = \
 
 
 # language=jinja2
-_project_menu = \
-"""
+_project_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -138,26 +133,26 @@ _project_menu = \
 
 def _map(t, pclass_id):
     if isinstance(t, ConvenorSelectorTask) or isinstance(t, ConvenorSubmitterTask):
-        task_type = t.__mapper_args__['polymorphic_identity']
+        task_type = t.__mapper_args__["polymorphic_identity"]
 
-        return {'task': render_template_string(_student_task, tk=t, type=task_type, return_url=url_for('convenor.todo_list', id=pclass_id)),
-                'due_date': t.due_date.strftime("%a %d %b %Y %H:%M") if t.due_date is not None else '<span class="badge bg-secondary">None</span>',
-                'defer_date': t.defer_date.strftime("%a %d %b %Y %H:%M") if t.defer_date is not None else '<span class="badge bg-secondary">None</span>',
-                'status': render_template_string(_status, available=t.is_available, overdue=t.is_overdue, tk=t),
-                'menu': render_template_string(_student_menu, tk=t, return_url=url_for('convenor.todo_list', id=pclass_id))}
+        return {
+            "task": render_template_string(_student_task, tk=t, type=task_type, return_url=url_for("convenor.todo_list", id=pclass_id)),
+            "due_date": t.due_date.strftime("%a %d %b %Y %H:%M") if t.due_date is not None else '<span class="badge bg-secondary">None</span>',
+            "defer_date": t.defer_date.strftime("%a %d %b %Y %H:%M") if t.defer_date is not None else '<span class="badge bg-secondary">None</span>',
+            "status": render_template_string(_status, available=t.is_available, overdue=t.is_overdue, tk=t),
+            "menu": render_template_string(_student_menu, tk=t, return_url=url_for("convenor.todo_list", id=pclass_id)),
+        }
 
     if isinstance(t, ConvenorGenericTask):
-        return {'task': render_template_string(_project_task, tk=t, return_url=url_for('convenor.todo_list', id=pclass_id)),
-                'due_date': t.due_date.strftime("%a %d %b %Y %H:%M") if t.due_date is not None else '<span class="badge bg-secondary">None</span>',
-                'defer_date': t.defer_date.strftime("%a %d %b %Y %H:%M") if t.defer_date is not None else '<span class="badge bg-secondary">None</span>',
-                'status': render_template_string(_status, available=t.is_available, overdue=t.is_overdue, tk=t),
-                'menu': render_template_string(_project_menu, tk=t, return_url=url_for('convenor.todo_list', id=pclass_id))}
+        return {
+            "task": render_template_string(_project_task, tk=t, return_url=url_for("convenor.todo_list", id=pclass_id)),
+            "due_date": t.due_date.strftime("%a %d %b %Y %H:%M") if t.due_date is not None else '<span class="badge bg-secondary">None</span>',
+            "defer_date": t.defer_date.strftime("%a %d %b %Y %H:%M") if t.defer_date is not None else '<span class="badge bg-secondary">None</span>',
+            "status": render_template_string(_status, available=t.is_available, overdue=t.is_overdue, tk=t),
+            "menu": render_template_string(_project_menu, tk=t, return_url=url_for("convenor.todo_list", id=pclass_id)),
+        }
 
-    return {'task': 'Unknown',
-            'due_date': None,
-            'defer_date': None,
-            'status': 'Unknown',
-            'menu': None}
+    return {"task": "Unknown", "due_date": None, "defer_date": None, "status": "Unknown", "menu": None}
 
 
 def todo_list_data(pclass_id, tasks: List):

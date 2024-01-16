@@ -20,10 +20,9 @@ from ..shared.sqlalchemy import get_count
 
 
 def register_assessor_tasks(celery):
-
     @celery.task(bind=True, default_retry_delay=30)
     def projects(self, enroll_id, pclass_id, user_id):
-        self.update_state(state='STARTED', meta={'msg': 'Looking for database records'})
+        self.update_state(state="STARTED", meta={"msg": "Looking for database records"})
 
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
@@ -32,7 +31,7 @@ def register_assessor_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load EnrollmentRecord record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load EnrollmentRecord record from database"})
             raise Ignore()
 
         try:
@@ -42,17 +41,18 @@ def register_assessor_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load User record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load User record from database"})
             raise Ignore()
 
         faculty = record.owner
 
-        if record.marker_state != EnrollmentRecord.MARKER_ENROLLED \
-                and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
-            user.post_message('Cannot attach {name} as an assessor for projects in class "{pclass}" because they '
-                              'do not have an appropriate enrolment.'.format(name=faculty.user.name,
-                                                                             pclass=record.pclass.name), 'error',
-                              autocommit=True)
+        if record.marker_state != EnrollmentRecord.MARKER_ENROLLED and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
+            user.post_message(
+                'Cannot attach {name} as an assessor for projects in class "{pclass}" because they '
+                "do not have an appropriate enrolment.".format(name=faculty.user.name, pclass=record.pclass.name),
+                "error",
+                autocommit=True,
+            )
             raise Ignore()
 
         projects = db.session.query(Project).filter(Project.project_classes.any(id=pclass_id)).all()
@@ -64,11 +64,11 @@ def register_assessor_tasks(celery):
                 count += 1
 
         if count > 0:
-            user.post_message('Attached {name} as an assessor for {n} library projects.'.format(name=faculty.user.name,
-                                                                                                n=count), 'info')
+            user.post_message("Attached {name} as an assessor for {n} library projects.".format(name=faculty.user.name, n=count), "info")
         else:
-            user.post_message('{name} has already been attached as an assessor to all library projects in this '
-                              'class.'.format(name=faculty.user.name), 'info')
+            user.post_message(
+                "{name} has already been attached as an assessor to all library projects in this class.".format(name=faculty.user.name), "info"
+            )
 
         try:
             db.session.commit()
@@ -76,10 +76,9 @@ def register_assessor_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def live_projects(self, enroll_id, pclass_id, current_year, user_id):
-        self.update_state(state='STARTED', meta={'msg': 'Looking for database records'})
+        self.update_state(state="STARTED", meta={"msg": "Looking for database records"})
 
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
@@ -88,7 +87,7 @@ def register_assessor_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load EnrollmentRecord record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load EnrollmentRecord record from database"})
             raise Ignore()
 
         try:
@@ -98,23 +97,26 @@ def register_assessor_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load User record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load User record from database"})
             raise Ignore()
 
         faculty = record.owner
 
-        if record.marker_state != EnrollmentRecord.MARKER_ENROLLED \
-                and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
-            user.post_message('Cannot attach {name} as an assessor for projects in class "{pclass}" because they '
-                              'do not have an appropriate enrolment.'.format(name=faculty.user.name,
-                                                                             pclass=record.pclass.name), 'error',
-                              autocommit=True)
+        if record.marker_state != EnrollmentRecord.MARKER_ENROLLED and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
+            user.post_message(
+                'Cannot attach {name} as an assessor for projects in class "{pclass}" because they '
+                "do not have an appropriate enrolment.".format(name=faculty.user.name, pclass=record.pclass.name),
+                "error",
+                autocommit=True,
+            )
             raise Ignore()
 
-        projects = db.session.query(LiveProject) \
-            .join(ProjectClassConfig, ProjectClassConfig.id == LiveProject.config_id) \
-            .filter(ProjectClassConfig.year == current_year - 1,
-                    ProjectClassConfig.pclass_id == pclass_id).all()
+        projects = (
+            db.session.query(LiveProject)
+            .join(ProjectClassConfig, ProjectClassConfig.id == LiveProject.config_id)
+            .filter(ProjectClassConfig.year == current_year - 1, ProjectClassConfig.pclass_id == pclass_id)
+            .all()
+        )
 
         count = 0
         for p in projects:
@@ -123,11 +125,11 @@ def register_assessor_tasks(celery):
                 count += 1
 
         if count > 0:
-            user.post_message('Attached {name} as an assessor for {n} live projects.'.format(name=faculty.user.name,
-                                                                                             n=count), 'info')
+            user.post_message("Attached {name} as an assessor for {n} live projects.".format(name=faculty.user.name, n=count), "info")
         else:
-            user.post_message('{name} has already been attached as an assessor to all live projects in this '
-                              'class.'.format(name=faculty.user.name), 'info')
+            user.post_message(
+                "{name} has already been attached as an assessor to all live projects in this class.".format(name=faculty.user.name), "info"
+            )
 
         try:
             db.session.commit()

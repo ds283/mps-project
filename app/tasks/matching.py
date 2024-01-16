@@ -26,10 +26,29 @@ from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import MatchingAttempt, TaskRecord, LiveProject, SelectingStudent, \
-    User, EnrollmentRecord, MatchingRecord, SelectionRecord, ProjectClass, GeneratedAsset, MatchingEnumeration, \
-    TemporaryAsset, FacultyData, ProjectClassConfig, SubmissionRecord, SubmissionPeriodRecord, MatchingRole, \
-    SubmissionPeriodDefinition, SubmittingStudent, SubmissionRole, validate_nonce
+from ..models import (
+    MatchingAttempt,
+    TaskRecord,
+    LiveProject,
+    SelectingStudent,
+    User,
+    EnrollmentRecord,
+    MatchingRecord,
+    SelectionRecord,
+    ProjectClass,
+    GeneratedAsset,
+    MatchingEnumeration,
+    TemporaryAsset,
+    FacultyData,
+    ProjectClassConfig,
+    SubmissionRecord,
+    SubmissionPeriodRecord,
+    MatchingRole,
+    SubmissionPeriodDefinition,
+    SubmittingStudent,
+    SubmissionRole,
+    validate_nonce,
+)
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
@@ -45,24 +64,21 @@ UNBOUNDED_SUPERVISING_CAPACITY = 100
 UNBOUNDED_MARKING_CAPACITY = 100
 
 
-_match_success = \
-"""
+_match_success = """
 <div><strong>Matching task {{ name }} has completed successfully.</strong></div>
 <div class="mt-2">This page does not auto-update.
 Please click <a href="{{ url_for('admin.manage_matching') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the matching list.</div>
 """
 
 
-_match_failure = \
-"""
+_match_failure = """
 <div><strong>Matching task {{ name }} did not complete successfully.</strong></div>
 <div class="mt-2">This page does not auto-update.
 Please click <a href="{{ url_for('admin.manage_matching') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the matching list.</div>
 """
 
 
-_match_offline_ready = \
-"""
+_match_offline_ready = """
 <div><strong>The files necessary to perform offline matching for task {{ name }} have now been generated.</strong></div>
 <div class="mt-2">These files have been emailed to you, but you can also download them from the matching list.</div>
 <div class="mt-2">This page does not auto-update.
@@ -79,7 +95,7 @@ def _find_mean_project_CATS(configs):
             CATS_total += config.CATS_supervision
             number += 1
 
-    return float(CATS_total)/number
+    return float(CATS_total) / number
 
 
 def _min(a, b):
@@ -96,60 +112,56 @@ def _min(a, b):
 
 
 def _pulp_dicts(
-        name,
-        indices=None,  # required param. enforced within function for backwards compatibility
-        lowBound=None,
-        upBound=None,
-        cat=pulp.const.LpContinuous,
-        indexStart=[],
-        indexs=None,
-    ):
-        """
-        Re-implementation of pulp.LpVariable.dicts to use list comprehension rather than a for loop, which
-        is absurdly slow for large index sets
+    name,
+    indices=None,  # required param. enforced within function for backwards compatibility
+    lowBound=None,
+    upBound=None,
+    cat=pulp.const.LpContinuous,
+    indexStart=[],
+    indexs=None,
+):
+    """
+    Re-implementation of pulp.LpVariable.dicts to use list comprehension rather than a for loop, which
+    is absurdly slow for large index sets
 
-        :param name: The prefix to the name of each LP variable created
-        :param indices: A list of strings of the keys to the dictionary of LP
-            variables, and the main part of the variable name itself
-        :param lowBound: The lower bound on these variables' range. Default is
-            negative infinity
-        :param upBound: The upper bound on these variables' range. Default is
-            positive infinity
-        :param cat: The category these variables are in, Integer or
-            Continuous(default)
-        :param indexs: (deprecated) Replaced with `indices` parameter
+    :param name: The prefix to the name of each LP variable created
+    :param indices: A list of strings of the keys to the dictionary of LP
+        variables, and the main part of the variable name itself
+    :param lowBound: The lower bound on these variables' range. Default is
+        negative infinity
+    :param upBound: The upper bound on these variables' range. Default is
+        positive infinity
+    :param cat: The category these variables are in, Integer or
+        Continuous(default)
+    :param indexs: (deprecated) Replaced with `indices` parameter
 
-        :return: A dictionary of :py:class:`LpVariable`
-        """
+    :return: A dictionary of :py:class:`LpVariable`
+    """
 
-        # Backwards compatiblity with deprecation Warning for indexs
-        if indices is not None and indexs is not None:
-            raise TypeError(
-                "Both 'indices' and 'indexs' provided to LpVariable.dicts.  Use one only, preferably 'indices'."
-            )
-        elif indices is not None:
-            pass
-        elif indexs is not None:
-            indices = indexs
-        else:
-            raise TypeError(
-                "LpVariable.dicts missing both 'indices' and deprecated 'indexs' arguments."
-            )
+    # Backwards compatiblity with deprecation Warning for indexs
+    if indices is not None and indexs is not None:
+        raise TypeError("Both 'indices' and 'indexs' provided to LpVariable.dicts.  Use one only, preferably 'indices'.")
+    elif indices is not None:
+        pass
+    elif indexs is not None:
+        indices = indexs
+    else:
+        raise TypeError("LpVariable.dicts missing both 'indices' and deprecated 'indexs' arguments.")
 
-        if not isinstance(indices, tuple):
-            indices = (indices,)
-        if "%" not in name:
-            name += "_%s" * len(indices)
+    if not isinstance(indices, tuple):
+        indices = (indices,)
+    if "%" not in name:
+        name += "_%s" * len(indices)
 
-        index = indices[0]
-        indices = indices[1:]
+    index = indices[0]
+    indices = indices[1:]
 
-        if len(indices) == 0:
-            d = {i: pulp.LpVariable(name % tuple(indexStart + [str(i)]), lowBound, upBound, cat) for i in index}
-        else:
-            d = {i: _pulp_dicts(name, indices, lowBound, upBound, cat, indexStart + [i]) for i in index}
+    if len(indices) == 0:
+        d = {i: pulp.LpVariable(name % tuple(indexStart + [str(i)]), lowBound, upBound, cat) for i in index}
+    else:
+        d = {i: _pulp_dicts(name, indices, lowBound, upBound, cat, indexStart + [i]) for i in index}
 
-        return d
+    return d
 
 
 def _enumerate_selectors(record, configs, read_serialized=False):
@@ -176,12 +188,14 @@ def _enumerate_selectors_serialized(record):
 
     selector_dict = {}
 
-    record_data = db.session.query(MatchingEnumeration) \
-        .filter_by(category=MatchingEnumeration.SELECTOR, matching_id=record.id).subquery()
-    records = db.session.query(record_data.c.enumeration, SelectingStudent) \
-        .select_from(SelectingStudent) \
-        .join(record_data, record_data.c.key == SelectingStudent.id) \
-        .order_by(record_data.c.enumeration.asc()).all()
+    record_data = db.session.query(MatchingEnumeration).filter_by(category=MatchingEnumeration.SELECTOR, matching_id=record.id).subquery()
+    records = (
+        db.session.query(record_data.c.enumeration, SelectingStudent)
+        .select_from(SelectingStudent)
+        .join(record_data, record_data.c.key == SelectingStudent.id)
+        .order_by(record_data.c.enumeration.asc())
+        .all()
+    )
 
     for n, sel in records:
         n: int
@@ -195,7 +209,7 @@ def _enumerate_selectors_serialized(record):
 
         selector_dict[n] = sel
 
-    return n+1, sel_to_number, number_to_sel, multiplicity, selector_dict
+    return n + 1, sel_to_number, number_to_sel, multiplicity, selector_dict
 
 
 def _enumerate_selectors_primary(configs, include_only_submitted=False):
@@ -226,11 +240,12 @@ def _enumerate_selectors_primary(configs, include_only_submitted=False):
         enroll_any_year = config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ALL_YEARS
         carryover = config.supervisor_carryover
 
-        selectors = db.session.query(SelectingStudent) \
-            .filter_by(retired=False, config_id=config.id, convert_to_submitter=True).all()
+        selectors = db.session.query(SelectingStudent).filter_by(retired=False, config_id=config.id, convert_to_submitter=True).all()
 
-        print(' :: length of raw selectors list for "{name}" '
-              '(config_id={y}) = {n}'.format(name=config.project_class.name, y=config.id, n=len(selectors)))
+        print(
+            ' :: length of raw selectors list for "{name}" '
+            "(config_id={y}) = {n}".format(name=config.project_class.name, y=config.id, n=len(selectors))
+        )
 
         for sel in selectors:
             sel: SelectingStudent
@@ -248,9 +263,10 @@ def _enumerate_selectors_primary(configs, include_only_submitted=False):
 
                 else:
                     if sel.academic_year is not None and not sel.has_graduated:
-                        if opt_in_type and \
-                                ((enroll_previous_year and sel.academic_year == config.start_year - (1 if config.select_in_previous_cycle else 0)) or
-                                 (enroll_any_year and config.start_year <= sel.academic_year < config.start_year + config.extent)):
+                        if opt_in_type and (
+                            (enroll_previous_year and sel.academic_year == config.start_year - (1 if config.select_in_previous_cycle else 0))
+                            or (enroll_any_year and config.start_year <= sel.academic_year < config.start_year + config.extent)
+                        ):
                             # interpret failure to submit as lack of interest; no need to generate a match
                             attach = False
 
@@ -312,15 +328,17 @@ def _enumerate_liveprojects_serialized(record):
 
     capacity = {}
 
-    project_dict = {}           # mapping from enumerated number to LiveProject instance
-    project_group_dict = {}     # mapping from config.id to list of LiveProject.ids associated with it
+    project_dict = {}  # mapping from enumerated number to LiveProject instance
+    project_group_dict = {}  # mapping from config.id to list of LiveProject.ids associated with it
 
-    record_data = db.session.query(MatchingEnumeration) \
-        .filter_by(category=MatchingEnumeration.LIVEPROJECT, matching_id=record.id).subquery()
-    records = db.session.query(record_data.c.enumeration, LiveProject) \
-        .select_from(LiveProject) \
-        .join(record_data, record_data.c.key == LiveProject.id) \
-        .order_by(record_data.c.enumeration.asc()).all()
+    record_data = db.session.query(MatchingEnumeration).filter_by(category=MatchingEnumeration.LIVEPROJECT, matching_id=record.id).subquery()
+    records = (
+        db.session.query(record_data.c.enumeration, LiveProject)
+        .select_from(LiveProject)
+        .join(record_data, record_data.c.key == LiveProject.id)
+        .order_by(record_data.c.enumeration.asc())
+        .all()
+    )
 
     for n, lp in records:
         n: int
@@ -338,15 +356,13 @@ def _enumerate_liveprojects_serialized(record):
         CATS_supervisor[n] = sup if sup is not None else FALLBACK_DEFAULT_SUPERVISOR_CATS
         CATS_marker[n] = mk if mk is not None else FALLBACK_DEFAULT_MARKER_CATS
 
-        capacity[n] = lp.capacity if (lp.enforce_capacity and
-                                      lp.capacity is not None and lp.capacity > 0) else UNBOUNDED_SUPERVISING_CAPACITY
+        capacity[n] = lp.capacity if (lp.enforce_capacity and lp.capacity is not None and lp.capacity > 0) else UNBOUNDED_SUPERVISING_CAPACITY
 
         project_dict[n] = lp
 
         # UPDATE MODERATE CATS
 
-    group_data = db.session.query(MatchingEnumeration) \
-        .filter_by(category=MatchingEnumeration.LIVEPROJECT_GROUP, matching_id=record.id).all()
+    group_data = db.session.query(MatchingEnumeration).filter_by(category=MatchingEnumeration.LIVEPROJECT_GROUP, matching_id=record.id).all()
 
     for record in group_data:
         record: MatchingEnumeration
@@ -356,7 +372,7 @@ def _enumerate_liveprojects_serialized(record):
 
         project_group_dict[record.key].append(record.enumeration)
 
-    return n+1, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict, project_group_dict
+    return n + 1, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict, project_group_dict
 
 
 def _enumerate_liveprojects_primary(configs):
@@ -369,24 +385,34 @@ def _enumerate_liveprojects_primary(configs):
 
     capacity = {}
 
-    project_dict = {}           # mapping from enumerated number to LiveProject instance
-    project_group_dict = {}     # mapping from config.id to list of LiveProject.ids associated with it
+    project_dict = {}  # mapping from enumerated number to LiveProject instance
+    project_group_dict = {}  # mapping from config.id to list of LiveProject.ids associated with it
 
     for config in configs:
         # get LiveProject instances that belong to this config instance and are associated with
         # a supervisor who is still enrolled
         # (e.g. enrolment status may have changed since the projects went live)
-        projects = db.session.query(LiveProject).filter_by(config_id=config.id) \
-            .join(ProjectClassConfig, ProjectClassConfig.id == LiveProject.config_id) \
-            .join(User, User.id == LiveProject.owner_id, isouter=True) \
-            .join(FacultyData, FacultyData.id == LiveProject.owner_id, isouter=True) \
-            .join(EnrollmentRecord, EnrollmentRecord.owner_id == LiveProject.owner_id, isouter=True) \
-            .filter(or_(LiveProject.generic == True,
-                        and_(LiveProject.generic == False,
-                             User.active == True,
-                             FacultyData.id != None,
-                             EnrollmentRecord.pclass_id == ProjectClassConfig.pclass_id,
-                             EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED))).all()
+        projects = (
+            db.session.query(LiveProject)
+            .filter_by(config_id=config.id)
+            .join(ProjectClassConfig, ProjectClassConfig.id == LiveProject.config_id)
+            .join(User, User.id == LiveProject.owner_id, isouter=True)
+            .join(FacultyData, FacultyData.id == LiveProject.owner_id, isouter=True)
+            .join(EnrollmentRecord, EnrollmentRecord.owner_id == LiveProject.owner_id, isouter=True)
+            .filter(
+                or_(
+                    LiveProject.generic == True,
+                    and_(
+                        LiveProject.generic == False,
+                        User.active == True,
+                        FacultyData.id != None,
+                        EnrollmentRecord.pclass_id == ProjectClassConfig.pclass_id,
+                        EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
+                    ),
+                )
+            )
+            .all()
+        )
 
         project_group_dict[config.id] = []
 
@@ -401,8 +427,9 @@ def _enumerate_liveprojects_primary(configs):
             CATS_supervisor[number] = sup if sup is not None else FALLBACK_DEFAULT_SUPERVISOR_CATS
             CATS_marker[number] = mk if mk is not None else FALLBACK_DEFAULT_MARKER_CATS
 
-            capacity[number] = item.capacity if (item.enforce_capacity and
-                                                 item.capacity is not None and item.capacity > 0) else UNBOUNDED_SUPERVISING_CAPACITY
+            capacity[number] = (
+                item.capacity if (item.enforce_capacity and item.capacity is not None and item.capacity > 0) else UNBOUNDED_SUPERVISING_CAPACITY
+            )
 
             project_dict[number] = item
             project_group_dict[config.id].append(number)
@@ -430,18 +457,20 @@ def _enumerate_supervising_faculty_serialized(record):
     fac_to_number = {}
     number_to_fac = {}
 
-    limit = {}                  # map from faculty number to global supervision CATS limit
-    config_limits = {}          # map from config.id to (map from faculty number to local supervision CATS limit)
+    limit = {}  # map from faculty number to global supervision CATS limit
+    config_limits = {}  # map from config.id to (map from faculty number to local supervision CATS limit)
 
     fac_dict = {}
 
     # stored ids and primary keys refer to FacultyData instances, not EnrollmentRecord instances
-    record_data = db.session.query(MatchingEnumeration) \
-        .filter_by(category=MatchingEnumeration.SUPERVISOR, matching_id=record.id).subquery()
-    records = db.session.query(record_data.c.enumeration, FacultyData) \
-        .select_from(FacultyData) \
-        .join(record_data, record_data.c.key == FacultyData.id) \
-        .order_by(record_data.c.enumeration.asc()).all()
+    record_data = db.session.query(MatchingEnumeration).filter_by(category=MatchingEnumeration.SUPERVISOR, matching_id=record.id).subquery()
+    records = (
+        db.session.query(record_data.c.enumeration, FacultyData)
+        .select_from(FacultyData)
+        .join(record_data, record_data.c.key == FacultyData.id)
+        .order_by(record_data.c.enumeration.asc())
+        .all()
+    )
 
     for n, fac in records:
         n: int
@@ -455,8 +484,7 @@ def _enumerate_supervising_faculty_serialized(record):
 
         fac_dict[n] = fac
 
-    limit_data = db.session.query(MatchingEnumeration) \
-        .filter_by(category=MatchingEnumeration.SUPERVISOR_LIMITS, matching_id=record.id).all()
+    limit_data = db.session.query(MatchingEnumeration).filter_by(category=MatchingEnumeration.SUPERVISOR_LIMITS, matching_id=record.id).all()
 
     for record in limit_data:
         record: MatchingEnumeration
@@ -470,7 +498,7 @@ def _enumerate_supervising_faculty_serialized(record):
 
         config_limits[config_id][fac_number] = limit
 
-    return n+1, fac_to_number, number_to_fac, limit, fac_dict, config_limits
+    return n + 1, fac_to_number, number_to_fac, limit, fac_dict, config_limits
 
 
 def _enumerate_supervising_faculty_primary(configs):
@@ -478,17 +506,20 @@ def _enumerate_supervising_faculty_primary(configs):
     fac_to_number = {}
     number_to_fac = {}
 
-    limit = {}                  # map from faculty number to global supervision CATS limit
-    config_limits = {}          # map from config.id to (map from faculty number to local supervision CATS limit)
+    limit = {}  # map from faculty number to global supervision CATS limit
+    config_limits = {}  # map from config.id to (map from faculty number to local supervision CATS limit)
 
     fac_dict = {}
 
     for config in configs:
         # get EnrollmentRecord instances for this project class
-        records = db.session.query(EnrollmentRecord) \
-            .filter_by(pclass_id=config.pclass_id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED) \
-            .join(User, User.id == EnrollmentRecord.owner_id) \
-            .filter(User.active).all()
+        records = (
+            db.session.query(EnrollmentRecord)
+            .filter_by(pclass_id=config.pclass_id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED)
+            .join(User, User.id == EnrollmentRecord.owner_id)
+            .filter(User.active)
+            .all()
+        )
 
         config_limits[config.id] = {}
 
@@ -532,18 +563,20 @@ def _enumerate_marking_faculty_serialized(record):
     fac_to_number = {}
     number_to_fac = {}
 
-    limit = {}                  # map from faculty number to global marking CATS limit
-    config_limits = {}          # map from config.id to (map from faculty number to local marking CATS limit)
+    limit = {}  # map from faculty number to global marking CATS limit
+    config_limits = {}  # map from config.id to (map from faculty number to local marking CATS limit)
 
     fac_dict = {}
 
     # stored ids and primary keys refer to FacultyData instances, not EnrollmentRecord instances
-    record_data = db.session.query(MatchingEnumeration) \
-        .filter_by(category=MatchingEnumeration.MARKER, matching_id=record.id).subquery()
-    records = db.session.query(record_data.c.enumeration, FacultyData) \
-        .select_from(FacultyData) \
-        .join(record_data, record_data.c.key == FacultyData.id) \
-        .order_by(record_data.c.enumeration.asc()).all()
+    record_data = db.session.query(MatchingEnumeration).filter_by(category=MatchingEnumeration.MARKER, matching_id=record.id).subquery()
+    records = (
+        db.session.query(record_data.c.enumeration, FacultyData)
+        .select_from(FacultyData)
+        .join(record_data, record_data.c.key == FacultyData.id)
+        .order_by(record_data.c.enumeration.asc())
+        .all()
+    )
 
     for n, fac in records:
         n: int
@@ -557,8 +590,7 @@ def _enumerate_marking_faculty_serialized(record):
 
         fac_dict[n] = fac
 
-    limit_data = db.session.query(MatchingEnumeration) \
-        .filter_by(category=MatchingEnumeration.MARKER_LIMITS, matching_id=record.id).all()
+    limit_data = db.session.query(MatchingEnumeration).filter_by(category=MatchingEnumeration.MARKER_LIMITS, matching_id=record.id).all()
 
     for record in limit_data:
         record: MatchingEnumeration
@@ -572,7 +604,7 @@ def _enumerate_marking_faculty_serialized(record):
 
         config_limits[config_id][fac_number] = limit
 
-    return n+1, fac_to_number, number_to_fac, limit, fac_dict, config_limits
+    return n + 1, fac_to_number, number_to_fac, limit, fac_dict, config_limits
 
 
 def _enumerate_marking_faculty_primary(configs):
@@ -580,17 +612,20 @@ def _enumerate_marking_faculty_primary(configs):
     fac_to_number = {}
     number_to_fac = {}
 
-    limit = {}                  # map from faculty number to global marking CATS limit
-    config_limits = {}          # map from config.id to (map from faculty number to local marking CATS limit)
+    limit = {}  # map from faculty number to global marking CATS limit
+    config_limits = {}  # map from config.id to (map from faculty number to local marking CATS limit)
 
     fac_dict = {}
 
     for config in configs:
         # get EnrollmentRecord instances for this project class
-        records = db.session.query(EnrollmentRecord) \
-            .filter_by(pclass_id=config.pclass_id, marker_state=EnrollmentRecord.MARKER_ENROLLED) \
-            .join(User, User.id == EnrollmentRecord.owner_id) \
-            .filter(User.active).all()
+        records = (
+            db.session.query(EnrollmentRecord)
+            .filter_by(pclass_id=config.pclass_id, marker_state=EnrollmentRecord.MARKER_ENROLLED)
+            .join(User, User.id == EnrollmentRecord.owner_id)
+            .filter(User.active)
+            .all()
+        )
 
         config_limits[config.id] = {}
 
@@ -630,9 +665,9 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
     :return:
     """
 
-    R = {}          # R is ranking matrix. Accounts for Forbid hints.
-    W = {}          # W is weights matrix. Accounts for encourage & discourage hints, programme bias and bookmark bias
-    cstr = set()    # cstr is a set of (student, project) pairs that will be converted into Require hints
+    R = {}  # R is ranking matrix. Accounts for Forbid hints.
+    W = {}  # W is weights matrix. Accounts for encourage & discourage hints, programme bias and bookmark bias
+    cstr = set()  # cstr is a set of (student, project) pairs that will be converted into Require hints
 
     ignore_programme_prefs = record.ignore_programme_prefs
     programme_bias = float(record.programme_bias) if record.programme_bias is not None else 1.0
@@ -662,8 +697,10 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
                 ranks[project.id] = 1
                 require.add(project.id)
             else:
-                raise RuntimeError('Could not assign custom offer to selector "{name}" because target LiveProject '
-                                   'does not exist'.format(name=sel.student.user.name))
+                raise RuntimeError(
+                    'Could not assign custom offer to selector "{name}" because target LiveProject '
+                    "does not exist".format(name=sel.student.user.name)
+                )
 
         elif sel.has_submission_list:
             valid_projects = 0
@@ -685,11 +722,13 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
                             w *= encourage_bias
                         elif hint == SelectionRecord.SELECTION_HINT_DISCOURAGE:
                             w *= discourage_bias
-                        elif hint == SelectionRecord.SELECTION_HINT_ENCOURAGE_STRONG \
-                                or (require_to_encourage and hint == SelectionRecord.SELECTION_HINT_REQUIRE):
+                        elif hint == SelectionRecord.SELECTION_HINT_ENCOURAGE_STRONG or (
+                            require_to_encourage and hint == SelectionRecord.SELECTION_HINT_REQUIRE
+                        ):
                             w *= strong_encourage_bias
-                        elif hint == SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG \
-                                or (forbid_to_discourage and hint == SelectionRecord.SELECTION_HINT_FORBID):
+                        elif hint == SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG or (
+                            forbid_to_discourage and hint == SelectionRecord.SELECTION_HINT_FORBID
+                        ):
                             w *= strong_discourage_bias
 
                     weights[item.liveproject_id] = w
@@ -698,8 +737,10 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
                         require.add(item.liveproject_id)
 
             if valid_projects == 0:
-                raise RuntimeError('Could not build rank matrix for selector "{name}" because no LiveProjects '
-                                   'on their preference list exist'.format(name=sel.student.user.name))
+                raise RuntimeError(
+                    'Could not build rank matrix for selector "{name}" because no LiveProjects '
+                    "on their preference list exist".format(name=sel.student.user.name)
+                )
 
         else:
             # no ranking data, so rank all LiveProjects in the right project class equal to 1
@@ -772,17 +813,18 @@ def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict,
                 elif count == 0:
                     M[idx] = 0
                 else:
-                    errmsg = 'Inconsistent number of second markers in match to LiveProject: ' \
-                             'fac={fname}, proj={pname}, matches={c}, ' \
-                             'LiveProject.id={lpid}, ' \
-                             'FacultyData.id={fid}'.format(fname=fac.user.name, pname=proj.name, c=count,
-                                                           lpid=proj.id, fid=fac.id)
+                    errmsg = (
+                        "Inconsistent number of second markers in match to LiveProject: "
+                        "fac={fname}, proj={pname}, matches={c}, "
+                        "LiveProject.id={lpid}, "
+                        "FacultyData.id={fid}".format(fname=fac.user.name, pname=proj.name, c=count, lpid=proj.id, fid=fac.id)
+                    )
 
-                    print('!! {msg}'.format(msg=errmsg))
-                    print('!! LiveProject Assessor List')
+                    print("!! {msg}".format(msg=errmsg))
+                    print("!! LiveProject Assessor List")
                     for f in proj.assessor_list:
                         f: FacultyData
-                        print('!! - {name} id={fid}'.format(name=f.user.name, fid=f.id))
+                        print("!! - {name} id={fid}".format(name=f.user.name, fid=f.id))
 
                     raise RuntimeError(errmsg)
 
@@ -818,7 +860,6 @@ def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict,
 
         marker_valence[j] = markers_needed
 
-
     return M, marker_valence
 
 
@@ -852,17 +893,18 @@ def _build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dic
                 elif count == 0:
                     P[idx] = 0
                 else:
-                    errmsg = 'Inconsistent number of possible supervisors for group project in match to LiveProject: ' \
-                             'fac={fname}, proj={pname}, matches={c}, ' \
-                             'LiveProject.id={lpid}, ' \
-                             'FacultyData.id={fid}'.format(fname=fac.user.name, pname=proj.name, c=count,
-                                                           lpid=proj.id, fid=fac.id)
+                    errmsg = (
+                        "Inconsistent number of possible supervisors for group project in match to LiveProject: "
+                        "fac={fname}, proj={pname}, matches={c}, "
+                        "LiveProject.id={lpid}, "
+                        "FacultyData.id={fid}".format(fname=fac.user.name, pname=proj.name, c=count, lpid=proj.id, fid=fac.id)
+                    )
 
-                    print('!! {msg}'.format(msg=errmsg))
-                    print('!! LiveProject Assessor List')
+                    print("!! {msg}".format(msg=errmsg))
+                    print("!! LiveProject Assessor List")
                     for f in proj.assessor_list:
                         f: FacultyData
-                        print('!! - {name} id={fid}'.format(name=f.user.name, fid=f.id))
+                        print("!! - {name} id={fid}".format(name=f.user.name, fid=f.id))
 
                     raise RuntimeError(errmsg)
 
@@ -908,8 +950,7 @@ def _enumerate_missing_markers(self, config, task_id, user: User):
     number_markers = 0
     number_submitters = 0
 
-    progress_update(task_id, TaskRecord.RUNNING, 10, "Enumerating submission records with missing records...",
-                    autocommit=True)
+    progress_update(task_id, TaskRecord.RUNNING, 10, "Enumerating submission records with missing records...", autocommit=True)
 
     # loop through all submissions in all periods to capture all those with missing markers
     for period in config.periods:
@@ -939,12 +980,19 @@ def _enumerate_missing_markers(self, config, task_id, user: User):
             # currently enrolled as active markers
             assessors = sub.project.assessor_list
             if len(assessors) == 0:
-                progress_update(task_id, TaskRecord.FAILURE, 100, 'Failed because LiveProject "{name}" has no '
-                                                                  'active assessors'.format(name=sub.project.name),
-                                autocommit=True)
-                user.post_message('Failed to populate markers because LiveProject "{name}" has no active '
-                                  'assessors.'.format(name=sub.project.name), 'error', autocommit=True)
-                self.update_state('FAILURE', meta={'msg': 'LiveProject did not have active assessors'})
+                progress_update(
+                    task_id,
+                    TaskRecord.FAILURE,
+                    100,
+                    'Failed because LiveProject "{name}" has no ' "active assessors".format(name=sub.project.name),
+                    autocommit=True,
+                )
+                user.post_message(
+                    'Failed to populate markers because LiveProject "{name}" has no active ' "assessors.".format(name=sub.project.name),
+                    "error",
+                    autocommit=True,
+                )
+                self.update_state("FAILURE", meta={"msg": "LiveProject did not have active assessors"})
                 raise Ignore()
 
             for marker in assessors:
@@ -969,11 +1017,41 @@ def _floatify(item):
     return float(item)
 
 
-def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_S, has_base_match, force_base,
-                         CATS_supervisor, CATS_marker, capacity, sup_limits, sup_pclass_limits, mark_limits,
-                         mark_pclass_limits, multiplicity, number_lp, number_mark, number_sel, number_sup, record,
-                         sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers, mark_only_numbers,
-                         sup_and_mark_numbers, mean_CATS_per_project):
+def _create_PuLP_problem(
+    R,
+    M,
+    marker_valence,
+    W,
+    P,
+    cstr,
+    base_X,
+    base_Y,
+    base_S,
+    has_base_match,
+    force_base,
+    CATS_supervisor,
+    CATS_marker,
+    capacity,
+    sup_limits,
+    sup_pclass_limits,
+    mark_limits,
+    mark_pclass_limits,
+    multiplicity,
+    number_lp,
+    number_mark,
+    number_sel,
+    number_sup,
+    record,
+    sel_dict,
+    sup_dict,
+    mark_dict,
+    lp_dict,
+    lp_group_dict,
+    sup_only_numbers,
+    mark_only_numbers,
+    sup_and_mark_numbers,
+    mean_CATS_per_project,
+):
     """
     Generate a PuLP problem to find an optimal assignment of projects+markers to students
     :param marker_valence:
@@ -994,13 +1072,11 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
     # generate PuLP problem
     prob: pulp.LpProblem = pulp.LpProblem(record.name, pulp.LpMaximize)
 
-
     # SELECTOR DECISION VARIABLES
 
     progress_update(record.celery_id, TaskRecord.RUNNING, 22, "Creating decision variables...", autocommit=True)
 
     with Timer() as variable_timer:
-
         # generate decision variables for project assignment matrix
         # the indices are (selector, project) and the entries of the matrix are either 0 or 1,
         # 0 = selector not assigned to project
@@ -1008,7 +1084,7 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
 
         with Timer() as X_timer:
             X = _pulp_dicts("X", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
-        print(' ** created X[i,j] matrix ({num} elements) in time {t}'.format(t=X_timer.interval, num=len(X)))
+        print(" ** created X[i,j] matrix ({num} elements) in time {t}".format(t=X_timer.interval, num=len(X)))
 
         # SUPERVISOR DECISION VARIABLES
 
@@ -1019,22 +1095,21 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # value = number of times assigned to this project. Can't be negative.
         with Timer() as S_timer:
             S = _pulp_dicts("S", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpInteger, lowBound=0)
-        print(' ** created S[k,j] ({num} elements) matrix in time {t}'.format(t=S_timer.interval, num=len(S)))
+        print(" ** created S[k,j] ({num} elements) matrix in time {t}".format(t=S_timer.interval, num=len(S)))
 
         # SUMMARY DECISION VARIABLES FOR SUPERVISORS
 
         # boolean version of S indicating whether a supervisor has any assignments to a particular project
         with Timer() as ss_timer:
             ss = _pulp_dicts("ss", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpBinary)
-        print(' ** created ss[k,j] ({num} elements) matrix in time {t}'.format(t=ss_timer.interval, num=len(ss)))
+        print(" ** created ss[k,j] ({num} elements) matrix in time {t}".format(t=ss_timer.interval, num=len(ss)))
 
         # generate auxiliary variables that track whether a given supervisor has any projects assigned or not
         # 0 = none assigned
         # 1 = at least one assigned (obtained by biasing the optimizer to produce this from the objective function)
         with Timer() as Z_timer:
             Z = _pulp_dicts("Z", range(number_sup), cat=pulp.LpBinary)
-        print(' ** created Z[k] ({num} elements) matrix in time {t}'.format(t=Z_timer.interval, num=len(Z)))
-
+        print(" ** created Z[k] ({num} elements) matrix in time {t}".format(t=Z_timer.interval, num=len(Z)))
 
         # MARKER DECISION VARIABLES
 
@@ -1048,9 +1123,8 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # 0 = marker not assigned to this selector/project pair
         # 1 = marker assigned to this selector/project pair
         with Timer() as Y_timer:
-            Y = _pulp_dicts("Y", itertools.product(range(number_mark), range(number_lp), range(number_sel)),
-                            cat=pulp.LpBinary)
-        print(' ** created Y[i,j,l] ({num} elements) matrix in time {t}'.format(t=Y_timer.interval, num=len(Y)))
+            Y = _pulp_dicts("Y", itertools.product(range(number_mark), range(number_lp), range(number_sel)), cat=pulp.LpBinary)
+        print(" ** created Y[i,j,l] ({num} elements) matrix in time {t}".format(t=Y_timer.interval, num=len(Y)))
 
         # SUMMARY DECISION VARIABLES FOR MARKERS
 
@@ -1060,20 +1134,18 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # Instead, we need some auxiliary variables to let us write expressions more economically.
         # First, Ysel[i, j] slices Y[i,j,l] by summing over selectors l at fixed i,j
         with Timer() as Ysel_timer:
-            Ysel = _pulp_dicts("Ysel", itertools.product(range(number_mark), range(number_lp)),
-                               cat=pulp.LpInteger, lowBound=0)
-        print(' ** created Ysel[i,j] ({num} elements) matrix in time {t}'.format(t=Ysel_timer.interval, num=len(Ysel)))
+            Ysel = _pulp_dicts("Ysel", itertools.product(range(number_mark), range(number_lp)), cat=pulp.LpInteger, lowBound=0)
+        print(" ** created Ysel[i,j] ({num} elements) matrix in time {t}".format(t=Ysel_timer.interval, num=len(Ysel)))
 
         # Then, Ymark[l, j] slices Y[i,j,l] by summing over markers i at fixed j, l
         with Timer() as Ymark_timer:
-            Ymark = _pulp_dicts("Ymark", itertools.product(range(number_sel), range(number_lp)),
-                                cat=pulp.LpInteger, lowBound=0)
-        print(' ** created Ymark[l,j] ({num} elements) matrix in time {t}'.format(t=Ymark_timer.interval, num=len(Ymark)))
+            Ymark = _pulp_dicts("Ymark", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpInteger, lowBound=0)
+        print(" ** created Ymark[l,j] ({num} elements) matrix in time {t}".format(t=Ymark_timer.interval, num=len(Ymark)))
 
         # boolean version of Y indicating whether a marker has any assignments to a particular project
         with Timer() as yy_timer:
             yy = _pulp_dicts("yy", itertools.product(range(number_mark), range(number_lp)), cat=pulp.LpBinary)
-        print(' ** created yy[i,j] ({num} elements) matrix in time {t}'.format(t=yy_timer.interval, num=len(yy)))
+        print(" ** created yy[i,j] ({num} elements) matrix in time {t}".format(t=yy_timer.interval, num=len(yy)))
 
         # to implement workload balancing we use pairs of continuous variables that relax
         # to the maximum and minimum workload for each faculty group:
@@ -1109,18 +1181,16 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         sup_elastic_CATS = _pulp_dicts("A", range(number_sup), cat=pulp.LpContinuous, lowBound=0)
         mark_elastic_CATS = _pulp_dicts("B", range(number_mark), cat=pulp.LpContinuous, lowBound=0)
 
-    print(' -- created decision variables in time {t}'.format(t=variable_timer.interval))
-
+    print(" -- created decision variables in time {t}".format(t=variable_timer.interval))
 
     # OBJECTIVE FUNCTION
 
     progress_update(record.celery_id, TaskRecord.RUNNING, 23, "Building objective function for optimization...", autocommit=True)
 
     with Timer() as obj_timer:
-
         # tension top and bottom workloads in each group against each other
         group_levelling = (supMax - supMin) + (markMax - markMin) + (supMarkMax - supMarkMin)
-        global_levelling = (globalMax - globalMin)
+        global_levelling = globalMax - globalMin
 
         # apart from attempting to balance workloads, there is no need to add a reward for marker assignments;
         # these only need to satisfy the constraints, and any one solution is as good as another
@@ -1139,32 +1209,31 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # we subtract off a penalty for all 'elastic' variables with a high coefficient, to discourage violation
         # of CATS limits except where really necessary; notice that these elastic variables are measured in
         # units of CATS, not projects, so the coefficents really are large
-        elastic_CATS_penalty = abs(CATS_violation_penalty) * \
-                               (sum(sup_elastic_CATS[i] for i in range(number_sup))
-                                + sum(mark_elastic_CATS[i] for i in range(number_mark)))
+        elastic_CATS_penalty = abs(CATS_violation_penalty) * (
+            sum(sup_elastic_CATS[i] for i in range(number_sup)) + sum(mark_elastic_CATS[i] for i in range(number_mark))
+        )
 
         # we also impose a penalty for every supervisor who does not have any project assignments
-        no_assignment_penalty = 2.0 * abs(no_assignment_penalty) * sum(1-Z[i] for i in range(number_sup))
+        no_assignment_penalty = 2.0 * abs(no_assignment_penalty) * sum(1 - Z[i] for i in range(number_sup))
 
-        prob += _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, number_mark, base_X, base_Y, base_S,
-                                      has_base_match, base_bias) \
-                - group_levelling_term \
-                - global_levelling_term \
-                - marking_bias \
-                - no_assignment_penalty \
-                - supervising_bias \
-                - elastic_CATS_penalty, \
-                "objective"
+        prob += (
+            _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, number_mark, base_X, base_Y, base_S, has_base_match, base_bias)
+            - group_levelling_term
+            - global_levelling_term
+            - marking_bias
+            - no_assignment_penalty
+            - supervising_bias
+            - elastic_CATS_penalty,
+            "objective",
+        )
 
-    print(' -- created objective function in time {t}'.format(t=obj_timer.interval))
-
+    print(" -- created objective function in time {t}".format(t=obj_timer.interval))
 
     # STUDENT RANKING
 
     progress_update(record.celery_id, TaskRecord.RUNNING, 26, "Setting up student ranking constraints...", autocommit=True)
 
     with Timer() as sel_timer:
-
         # selectors can only be assigned to projects that they have ranked
         # (unless no ranking data was available, in which case all elements of R were set to 1)
         for l in range(number_sel):
@@ -1175,16 +1244,14 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                 proj: LiveProject = lp_dict[j]
 
                 if proj.generic or proj.owner is None:
-                    tag = 'generic'
+                    tag = "generic"
                 else:
                     user_owner: User = proj.owner.user
-                    tag = '{first}{last}'.format(first=user_owner.first_name, last=user_owner.last_name)
+                    tag = "{first}{last}".format(first=user_owner.first_name, last=user_owner.last_name)
 
-                prob += X[(l, j)] <= R[(l, j)], \
-                        '_C{first}{last}_rank_SC{scfg}_C{cfg}_{tag}_P{num}' \
-                            .format(first=user.first_name, last=user.last_name, scfg=sel.config_id,
-                                    cfg=proj.config_id, num=proj.number, tag=tag)
-
+                prob += X[(l, j)] <= R[(l, j)], "_C{first}{last}_rank_SC{scfg}_C{cfg}_{tag}_P{num}".format(
+                    first=user.first_name, last=user.last_name, scfg=sel.config_id, cfg=proj.config_id, num=proj.number, tag=tag
+                )
 
         # Enforce desired multiplicity (= total number of projects to be assigned) for each selector
         # typically this is one project per submission period
@@ -1192,9 +1259,9 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
             sel: SelectingStudent = sel_dict[l]
             user: User = sel.student.user
 
-            prob += sum(X[(l, j)] for j in range(number_lp)) == multiplicity[l], \
-                    '_C{first}{last}_SC{scfg}_assign'.format(first=user.first_name, last=user.last_name, scfg=sel.config_id)
-
+            prob += sum(X[(l, j)] for j in range(number_lp)) == multiplicity[l], "_C{first}{last}_SC{scfg}_assign".format(
+                first=user.first_name, last=user.last_name, scfg=sel.config_id
+            )
 
         # Add constraints for any matches marked 'require' by a convenor
         for idx in cstr:
@@ -1205,11 +1272,9 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
             user: User = sel.student.user
 
             # impose 'force' constraints, where we require a student to be allocated a particular project
-            prob += X[idx] == 1, \
-                    '_C{first}{last}_SC{scfg}_force_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
-                                                                          scfg=sel.config_id, cfg=proj.config_id,
-                                                                          num=proj.number)
-
+            prob += X[idx] == 1, "_C{first}{last}_SC{scfg}_force_C{cfg}_P{num}".format(
+                first=user.first_name, last=user.last_name, scfg=sel.config_id, cfg=proj.config_id, num=proj.number
+            )
 
         # Implement any "force" constraints from base match
         if force_base:
@@ -1221,20 +1286,17 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                 proj: LiveProject = lp_dict[j]
                 user: User = sel.student.user
 
-                prob += X[idx] == 1, \
-                        '_C{first}{last}_SC{scfg}_base_proj_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
-                                                                                  scfg=sel.config_id, cfg=proj.config_id,
-                                                                                  num=proj.number)
+                prob += X[idx] == 1, "_C{first}{last}_SC{scfg}_base_proj_C{cfg}_P{num}".format(
+                    first=user.first_name, last=user.last_name, scfg=sel.config_id, cfg=proj.config_id, num=proj.number
+                )
 
-    print(' -- created selector ranking constraints in time {t}'.format(t=sel_timer.interval))
-
+    print(" -- created selector ranking constraints in time {t}".format(t=sel_timer.interval))
 
     # SUPERVISOR ASSIGNMENTS
 
     progress_update(record.celery_id, TaskRecord.RUNNING, 35, "Setting up supervisor assignment constraints...", autocommit=True)
 
     with Timer() as sup_timer:
-
         # Supervisors can only be assigned to projects that they supervise, or to group/generic projects
         # for which they are in the supervisor pool
         for k in range(number_sup):
@@ -1246,10 +1308,9 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
 
                 # enforce maximum capacity for each project; each supervisor should have no more assignments than
                 # the specified project capacity
-                prob += S[(k, j)] <= capacity[j] * P[(k, j)], \
-                        '_CS{first}{last}_C{cfg}_P{num}_supv_capacity'.format(first=user.first_name, last=user.last_name,
-                                                                              cfg=proj.config_id, num=proj.number)
-
+                prob += S[(k, j)] <= capacity[j] * P[(k, j)], "_CS{first}{last}_C{cfg}_P{num}_supv_capacity".format(
+                    first=user.first_name, last=user.last_name, cfg=proj.config_id, num=proj.number
+                )
 
         # ss[k,j] should be zero if supervisor k has no assignments to project j, and otherwise 1
         for k in range(number_sup):
@@ -1260,18 +1321,17 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                 proj: LiveProject = lp_dict[j]
 
                 # force ss[k,j] to be zero if S[k,j] is zero
-                prob += ss[(k, j)] <= S[(k, j)], \
-                        '_Css{first}{last}_C{cfg}_P{num}_supv_assigned_upperb'.format(first=user.first_name, last=user.last_name,
-                                                                                      cfg=proj.config_id, num=proj.number)
+                prob += ss[(k, j)] <= S[(k, j)], "_Css{first}{last}_C{cfg}_P{num}_supv_assigned_upperb".format(
+                    first=user.first_name, last=user.last_name, cfg=proj.config_id, num=proj.number
+                )
 
                 # force ss[k,j] to be 1 if S[k,j] is not zero. There doesn't seem to be a really elegant, clean
                 # way to do this in mixed integer linear programming. We assume that S[k,j] never gets as large as
                 # UNBOUNDED_SUPERVISING_CAPACITY, and then S[k,j]/UNBOUNDED_SUPERVISING_CAPACITY will be less than unity but greater than
                 # zero whenver S[k,j] is not zero
-                prob += UNBOUNDED_SUPERVISING_CAPACITY * ss[(k, j)] >= S[(k, j)], \
-                        '_Css{first}{last}_C{cfg}_P{num}_supv_assigned_lowerb'.format(first=user.first_name, last=user.last_name,
-                                                                                      cfg=proj.config_id, num=proj.number)
-
+                prob += UNBOUNDED_SUPERVISING_CAPACITY * ss[(k, j)] >= S[(k, j)], "_Css{first}{last}_C{cfg}_P{num}_supv_assigned_lowerb".format(
+                    first=user.first_name, last=user.last_name, cfg=proj.config_id, num=proj.number
+                )
 
         # If supervisors are being used, a supervisor should be assigned for each project that has been assigned
         for j in range(number_lp):
@@ -1285,18 +1345,15 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                 uses_supervisor = config.uses_supervisor
 
             if uses_supervisor:
-
                 # force that total number of assigned supervisors matches total number of assigned students;
                 # (each S[k,j] can be > 1, meaning that the same supervisor is assigned to > 1 students)
-                prob += sum(S[(k, j)] * P[(k, j)] for k in range(number_sup)) == \
-                          sum(X[(i, j)] for i in range(number_sel)), \
-                        '_CS_C{cfg}_P{num}_supv_parity'.format(cfg=proj.config_id, num=proj.number)
+                prob += sum(S[(k, j)] * P[(k, j)] for k in range(number_sup)) == sum(
+                    X[(i, j)] for i in range(number_sel)
+                ), "_CS_C{cfg}_P{num}_supv_parity".format(cfg=proj.config_id, num=proj.number)
 
             else:
                 # enforce no supervisors assigned to this project
-                prob += sum(S[(k, j)] for k in range(number_sup)) == 0, \
-                        '_CS_C{cfg}_P{num}_nosupv'.format(cfg=proj.config_id, num=proj.number)
-
+                prob += sum(S[(k, j)] for k in range(number_sup)) == 0, "_CS_C{cfg}_P{num}_nosupv".format(cfg=proj.config_id, num=proj.number)
 
         # Prevent supervisors from being assigned to more than a fixed number of projects.
         # There are separate constraints for group projects and projects of any type
@@ -1316,17 +1373,14 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
 
             group_limit = record.max_different_group_projects
             if group_limit is not None and group_limit > 0:
-                prob += group_projects <= group_limit, \
-                        '_C{first}{last}_group_limit'.format(first=user.first_name, last=user.last_name)
+                prob += group_projects <= group_limit, "_C{first}{last}_group_limit".format(first=user.first_name, last=user.last_name)
 
             all_limit = record.max_different_all_projects
             if all_limit is not None and all_limit > 0:
                 if group_limit is not None and group_limit > all_limit:
                     all_limit = group_limit
 
-                prob += all_projects <= all_limit, \
-                        '_C{first}{last}_all_limit'.format(first=user.first_name, last=user.last_name)
-
+                prob += all_projects <= all_limit, "_C{first}{last}_all_limit".format(first=user.first_name, last=user.last_name)
 
         # Z[k] should be constrained to be 0 if supervisor k is not assigned to any projects
         for k in range(number_sup):
@@ -1334,26 +1388,23 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
             user: User = sup.user
 
             # force Z[k] to be zero if no projects are assigned to supervisor k
-            prob += Z[k] <= sum(S[(k, j)] for j in range(number_lp)), \
-                    '_CZ{first}{last}_upperb'.format(first=user.first_name, last=user.last_name)
+            prob += Z[k] <= sum(S[(k, j)] for j in range(number_lp)), "_CZ{first}{last}_upperb".format(first=user.first_name, last=user.last_name)
 
             # force Z[k] to be 1 if any project is assigned to supervisor k
             for j in range(number_lp):
                 proj: LiveProject = lp_dict[j]
 
-                prob += Z[k] >= ss[(k, j)], \
-                        '_CZ{first}{last}_C{cfg}_P{num}_lowerb'.format(first=user.first_name, last=user.last_name,
-                                                                       cfg=proj.config_id, num=proj.number)
+                prob += Z[k] >= ss[(k, j)], "_CZ{first}{last}_C{cfg}_P{num}_lowerb".format(
+                    first=user.first_name, last=user.last_name, cfg=proj.config_id, num=proj.number
+                )
 
-    print(' -- created supervisor constraints in time {t}'.format(t=sup_timer.interval))
-
+    print(" -- created supervisor constraints in time {t}".format(t=sup_timer.interval))
 
     ## MARKER ASSIGNMENTS
 
     progress_update(record.celery_id, TaskRecord.RUNNING, 40, "Setting up marker assignment constraints...", autocommit=True)
 
     with Timer() as mark_timer:
-
         # Markers can only be assigned projects for which they are in the assessor pool
         for i in range(number_mark):
             mark: FacultyData = mark_dict[i]
@@ -1364,10 +1415,9 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
 
                 # recall M[(i,j)] is the allowed multiplicity (i.e. maximum number of times marker i can be assigned
                 # to mark a report from project j)
-                prob += sum(Y[(i, j, l)] for l in range(number_sel)) <= M[(i, j)], \
-                    '_CM{first}{last}_C{cfg}_P{num}_mark_capacity'.format(first=user.first_name, last=user.last_name,
-                                                                          cfg=proj.config_id, num=proj.number)
-
+                prob += sum(Y[(i, j, l)] for l in range(number_sel)) <= M[(i, j)], "_CM{first}{last}_C{cfg}_P{num}_mark_capacity".format(
+                    first=user.first_name, last=user.last_name, cfg=proj.config_id, num=proj.number
+                )
 
         # Ysel[i,j] should slice Y[i,j,l] by summing over selectors l at fixed i and j
         for i in range(number_mark):
@@ -1377,10 +1427,9 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
             for j in range(number_lp):
                 proj: LiveProject = lp_dict[j]
 
-                prob += Ysel[(i, j)] == sum(Y[(i, j, l)] for l in range(number_sel)), \
-                        '_CYsel{first}{last}_C{cfg}_P{num}'.format(first=user.first_name, last=user.last_name,
-                                                                   cfg=proj.config_id, num=proj.number)
-
+                prob += Ysel[(i, j)] == sum(Y[(i, j, l)] for l in range(number_sel)), "_CYsel{first}{last}_C{cfg}_P{num}".format(
+                    first=user.first_name, last=user.last_name, cfg=proj.config_id, num=proj.number
+                )
 
         # Ymark[l,j] should slice Y[i,j,l] by summing over markers i at fixed j and l
         for l in range(number_sel):
@@ -1390,9 +1439,9 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
             for j in range(number_lp):
                 proj: LiveProject = lp_dict[j]
 
-                prob += Ymark[(l, j)] == sum(Y[(i, j, l)] for i in range(number_mark)), \
-                        '_CYmark_sel{sel}_C{cfg}_P{num}'.format(sel=user.id, cfg=proj.config_id, num=proj.number)
-
+                prob += Ymark[(l, j)] == sum(Y[(i, j, l)] for i in range(number_mark)), "_CYmark_sel{sel}_C{cfg}_P{num}".format(
+                    sel=user.id, cfg=proj.config_id, num=proj.number
+                )
 
         # yy[i,j] should be zero if marker i has no assignments to project j, and otherwise 1
         for i in range(number_mark):
@@ -1403,17 +1452,16 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                 proj: LiveProject = lp_dict[j]
 
                 # force yy[i,j] to be zero if Y[i,j,l] is zero for all selector l
-                prob += yy[(i, j)] <= Ysel[(i, j)], \
-                    '_Cyy{first}{last}_C{cfg}_P{num}_mark_assigned_upperb'.format(first=user.first_name, last=user.last_name,
-                                                                                  cfg=proj.config_id, num=proj.number)
+                prob += yy[(i, j)] <= Ysel[(i, j)], "_Cyy{first}{last}_C{cfg}_P{num}_mark_assigned_upperb".format(
+                    first=user.first_name, last=user.last_name, cfg=proj.config_id, num=proj.number
+                )
 
                 # force yy[i,j] to be 1 if Y[i,j,l] is not zero for any selector l
                 # as above, there is no clean way to enforce this, so we use the UNBOUNDED_MARKING_CAPACITY
                 # dodge with UNBOUNDED_MARKING_CAPACITY set to a suitable large value
-                prob += UNBOUNDED_MARKING_CAPACITY * yy[(i, j)] >= Ysel[(i, j)], \
-                        '_Cyy{first}{last}_C{cfg}_P{num}_mark_assigned_lowerb'.format(first=user.first_name, last=user.last_name,
-                                                                                      cfg=proj.config_id, num=proj.number)
-
+                prob += UNBOUNDED_MARKING_CAPACITY * yy[(i, j)] >= Ysel[(i, j)], "_Cyy{first}{last}_C{cfg}_P{num}_mark_assigned_lowerb".format(
+                    first=user.first_name, last=user.last_name, cfg=proj.config_id, num=proj.number
+                )
 
         # If markers are being used, number of students assigned to each project must match the required
         # number of markers assigned to each project; otherwise, number of markers should be zero.
@@ -1434,15 +1482,13 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                     sel: SelectingStudent = sel_dict[l]
                     sel_user: User = sel.student.user
 
-                    prob += marker_valence[j] * X[(l, j)] == Ymark[(l, j)], \
-                            '_CY_sel{sel}_C{cfg}_P{num}_mark_parity'.format(sel=sel_user.id, cfg=proj.config_id,
-                                                                            num=proj.number)
+                    prob += marker_valence[j] * X[(l, j)] == Ymark[(l, j)], "_CY_sel{sel}_C{cfg}_P{num}_mark_parity".format(
+                        sel=sel_user.id, cfg=proj.config_id, num=proj.number
+                    )
 
             else:
                 # enforce no markers assigned to this project
-                prob += sum(Ysel[(i, j)] for i in range(number_mark)) == 0, \
-                        '_CY_C{cfg}_P{num}_nomark'.format(cfg=proj.config_id, num=proj.number)
-
+                prob += sum(Ysel[(i, j)] for i in range(number_mark)) == 0, "_CY_C{cfg}_P{num}_nomark".format(cfg=proj.config_id, num=proj.number)
 
         # No supervisor should be assigned to mark their own project, and vice versa
         for i in range(number_mark):
@@ -1458,11 +1504,9 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                     for j in range(number_lp):
                         proj: LiveProject = lp_dict[j]
 
-                        prob += ss[(k, j)] + yy[(i, j)] <= 1, \
-                            '_C{first}{last}_C{cfg}_P{num}_supv_mark_disjoint' \
-                                .format(first=sup_user.first_name, last=sup_user.last_name, cfg=proj.config_id,
-                                        num=proj.number)
-
+                        prob += ss[(k, j)] + yy[(i, j)] <= 1, "_C{first}{last}_C{cfg}_P{num}_supv_mark_disjoint".format(
+                            first=sup_user.first_name, last=sup_user.last_name, cfg=proj.config_id, num=proj.number
+                        )
 
         # Implement any "force" constraints from base match, if one is in use
         if force_base:
@@ -1478,10 +1522,9 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                 mark_user: User = mark.user
                 sel_user: User = sel.student.user
 
-                prob += Y[idx] == base_Y[idx], \
-                    '_C{first}{last}_sel{sel}_SC{scfg}_base_mark_C{cfg}_P{num}' \
-                        .format(first=mark_user.first_name, last=mark_user.last_name, sel=sel_user.id, scfg=sel.config_id,
-                                cfg=proj.config_id, num=proj.number)
+                prob += Y[idx] == base_Y[idx], "_C{first}{last}_sel{sel}_SC{scfg}_base_mark_C{cfg}_P{num}".format(
+                    first=mark_user.first_name, last=mark_user.last_name, sel=sel_user.id, scfg=sel.config_id, cfg=proj.config_id, num=proj.number
+                )
 
             for idx in base_S.keys():
                 k = idx[0]
@@ -1491,20 +1534,17 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                 proj: LiveProject = lp_dict[j]
                 user: User = supv.user
 
-                prob += S[idx] == base_S[idx], \
-                    '_C{first}{last}_SC{scfg}_base_supv_C{cfg}_P{num}' \
-                        .format(first=user.first_name, last=user.last_name, scfg=sel.config_id, cfg=proj.config_id,
-                                num=proj.number)
+                prob += S[idx] == base_S[idx], "_C{first}{last}_SC{scfg}_base_supv_C{cfg}_P{num}".format(
+                    first=user.first_name, last=user.last_name, scfg=sel.config_id, cfg=proj.config_id, num=proj.number
+                )
 
-    print(' -- created marker constraints in time {t}'.format(t=mark_timer.interval))
-
+    print(" -- created marker constraints in time {t}".format(t=mark_timer.interval))
 
     # WORKLOAD LIMITS
 
     progress_update(record.celery_id, TaskRecord.RUNNING, 45, "Setting up per-faculty workload constraints...", autocommit=True)
 
     with Timer() as fac_work_timer:
-
         # CATS assigned to each supervisor must be within bounds
         for k in range(number_sup):
             sup: FacultyData = sup_dict[k]
@@ -1519,12 +1559,14 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
 
             existing_CATS = _compute_existing_sup_CATS(record, sup)
             if existing_CATS > lim:
-                raise RuntimeError('Inconsistent matching problem: existing supervisory CATS load {n} for faculty '
-                                   '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=user.name))
+                raise RuntimeError(
+                    "Inconsistent matching problem: existing supervisory CATS load {n} for faculty "
+                    '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=user.name)
+                )
 
-            prob += existing_CATS + sum(S[(k, j)] * CATS_supervisor[j]
-                                        for j in range(number_lp)) <= lim + sup_elastic_CATS[k], \
-                    '_C{first}{last}_supv_CATS'.format(first=user.first_name, last=user.last_name)
+            prob += existing_CATS + sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) <= lim + sup_elastic_CATS[
+                k
+            ], "_C{first}{last}_supv_CATS".format(first=user.first_name, last=user.last_name)
 
             # enforce ad-hoc per-project-class supervisor limits
             for config_id in sup_pclass_limits:
@@ -1532,9 +1574,9 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                 projects = lp_group_dict.get(config_id, None)
 
                 if k in fac_limits and projects is not None:
-                    prob += sum(S[(k, j)] * CATS_supervisor[j] for j in projects) <= fac_limits[k], \
-                            '_C{first}{last}_supv_CATS_config_{cfg}'.format(first=user.first_name, last=user.last_name,
-                                                                            cfg=config_id)
+                    prob += sum(S[(k, j)] * CATS_supervisor[j] for j in projects) <= fac_limits[k], "_C{first}{last}_supv_CATS_config_{cfg}".format(
+                        first=user.first_name, last=user.last_name, cfg=config_id
+                    )
 
         # CATS assigned to each marker must be within bounds
         for i in range(number_mark):
@@ -1550,12 +1592,14 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
 
             existing_CATS = _compute_existing_mark_CATS(record, mark)
             if existing_CATS > lim:
-                raise RuntimeError('Inconsistent matching problem: existing marking CATS load {n} for faculty '
-                                   '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=mark.user.name))
+                raise RuntimeError(
+                    "Inconsistent matching problem: existing marking CATS load {n} for faculty "
+                    '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=mark.user.name)
+                )
 
-            prob += existing_CATS + sum(CATS_marker[j] * Ysel[(i, j)]
-                                        for j in range(number_lp)) <= lim + mark_elastic_CATS[i], \
-                    '_C{first}{last}_mark_CATS'.format(first=user.first_name, last=user.last_name)
+            prob += existing_CATS + sum(CATS_marker[j] * Ysel[(i, j)] for j in range(number_lp)) <= lim + mark_elastic_CATS[
+                i
+            ], "_C{first}{last}_mark_CATS".format(first=user.first_name, last=user.last_name)
 
             # enforce ad-hoc per-project-class marking limits
             for config_id in mark_pclass_limits:
@@ -1563,19 +1607,17 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
                 projects = lp_group_dict.get(config_id, None)
 
                 if i in fac_limits and projects is not None:
-                    prob += sum(CATS_marker[j] * Ysel[(i, j)] for j in projects) <= fac_limits[i], \
-                            '_C{first}{last}_mark_CATS_config_C{cfg}'.format(first=user.first_name, last=user.last_name,
-                                                                             cfg=config_id)
+                    prob += sum(CATS_marker[j] * Ysel[(i, j)] for j in projects) <= fac_limits[i], "_C{first}{last}_mark_CATS_config_C{cfg}".format(
+                        first=user.first_name, last=user.last_name, cfg=config_id
+                    )
 
-    print(' -- created faculty workload constraints in time {t}'.format(t=fac_work_timer.interval))
-
+    print(" -- created faculty workload constraints in time {t}".format(t=fac_work_timer.interval))
 
     # WORKLOAD LEVELLING
 
     progress_update(record.celery_id, TaskRecord.RUNNING, 48, "Setting up global workload levelling objectives...", autocommit=True)
 
     with Timer() as level_timer:
-
         global_trivial = True
 
         # supMin and supMax should bracket the CATS workload of faculty who supervise only
@@ -1609,10 +1651,14 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         # supMarkMin and supMarkMAx should bracket the CATS workload of faculty who both supervise and mark
         if len(sup_and_mark_numbers) > 0:
             for k, i in sup_and_mark_numbers:
-                prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) \
-                        + sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= supMarkMax
-                prob += sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) \
-                        + sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp)) >= supMarkMin
+                prob += (
+                    sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) + sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp))
+                    <= supMarkMax
+                )
+                prob += (
+                    sum(S[(k, j)] * CATS_supervisor[j] for j in range(number_lp)) + sum(Ysel[(i, j)] * CATS_marker[j] for j in range(number_lp))
+                    >= supMarkMin
+                )
 
             prob += globalMin <= supMarkMin
             prob += globalMax >= supMarkMax
@@ -1643,13 +1689,12 @@ def _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_
         else:
             prob += maxMarking == 0
 
-    print(' -- created workload levelling objectives in time {t}'.format(t=level_timer.interval))
+    print(" -- created workload levelling objectives in time {t}".format(t=level_timer.interval))
 
     return prob, X, Y, S
 
 
-def _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, number_mark, base_X, base_Y, base_S,
-                          has_base_match, base_bias):
+def _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, number_mark, base_X, base_Y, base_S, has_base_match, base_bias):
     # generate score function, used as a component of the maximization objective
     objective = 0
 
@@ -1657,16 +1702,16 @@ def _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, numb
 
     if len(base_X) > 0 or len(base_Y) > 0 or len(base_S) > 0:
         if base_bias is None:
-            raise RuntimeError('base_bias = None in _build_score_function')
+            raise RuntimeError("base_bias = None in _build_score_function")
         else:
             fbase_bias = float(base_bias)
-            print('-- using base bias of {f}'.format(f=fbase_bias))
+            print("-- using base bias of {f}".format(f=fbase_bias))
 
     # reward the solution for assigning students to highly ranked projects:
     for i in range(number_sel):
         base_match_exists = i in has_base_match
         if base_match_exists:
-            print('-- using base match data for selector {n}'.format(n=i))
+            print("-- using base match data for selector {n}".format(n=i))
 
         for j in range(number_lp):
             idx = (i, j)
@@ -1677,10 +1722,10 @@ def _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, numb
 
                 if idx in base_X:
                     # an assignment to this project *was* already in the base, so bias it to be present here
-                    objective += fbase_bias*X[idx]
+                    objective += fbase_bias * X[idx]
                 else:
                     # an assignment to this project was *not* already in the base, so bias it to be absent here
-                    objective += fbase_bias*(1-X[idx])
+                    objective += fbase_bias * (1 - X[idx])
             else:
                 # no assignment for selector i was present in the base
 
@@ -1698,10 +1743,10 @@ def _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, numb
                     if idx in base_Y:
                         # bias Y assignment towards the multiplicity found in the base
                         m = base_Y[idx]
-                        objective += fbase_bias*(Y[idx] - int(m))
+                        objective += fbase_bias * (Y[idx] - int(m))
                     else:
                         # bias Y assignment towards Y = 0
-                        objective += fbase_bias*(1-Y[idx])
+                        objective += fbase_bias * (1 - Y[idx])
 
     # bias towards any supervising choices from base match
     if len(base_S) > 0:
@@ -1712,17 +1757,34 @@ def _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, numb
                 if idx in base_S:
                     # bias S assignment towards the multiplicity found in the base
                     m = base_S[idx]
-                    objective += fbase_bias*(S[idx] - int(m))
+                    objective += fbase_bias * (S[idx] - int(m))
                 else:
                     # bias Y assignment towards S=0
-                    objective += fbase_bias*(1-S[idx])
+                    objective += fbase_bias * (1 - S[idx])
 
     return objective
 
 
-def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to_sel, number_lp, number_to_lp,
-                         number_sup, number_to_sup, number_mark, number_to_mark, multiplicity, sel_dict, sup_dict,
-                         mark_dict, lp_dict, mean_CATS_per_project):
+def _store_PuLP_solution(
+    X,
+    Y,
+    S,
+    record: MatchingAttempt,
+    number_sel,
+    number_to_sel,
+    number_lp,
+    number_to_lp,
+    number_sup,
+    number_to_sup,
+    number_mark,
+    number_to_mark,
+    multiplicity,
+    sel_dict,
+    sup_dict,
+    mark_dict,
+    lp_dict,
+    mean_CATS_per_project,
+):
     """
     Store a matching satisfying all the constraints of the pulp problem
     :param number_to_sup:
@@ -1753,7 +1815,7 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
             if item not in record.projects:
                 record.projects.append(item)
 
-    print(' ** updated MatchingAttempt configuration data in time {t}'.format(t=config_timer.interval))
+    print(" ** updated MatchingAttempt configuration data in time {t}".format(t=config_timer.interval))
 
     record.mean_CATS_per_project = mean_CATS_per_project
 
@@ -1763,7 +1825,7 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
         for j in range(number_lp):
             proj_id = number_to_lp[j]
             if proj_id in supervisors:
-                raise RuntimeError('PuLP solution has inconsistent supervisor assignment')
+                raise RuntimeError("PuLP solution has inconsistent supervisor assignment")
 
             assigned = {}
 
@@ -1776,7 +1838,7 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
 
             supervisors[proj_id] = assigned
 
-    print(' ** parsed supervisor decision variables in time {t}'.format(t=sup_timer.interval))
+    print(" ** parsed supervisor decision variables in time {t}".format(t=sup_timer.interval))
 
     # generate dictionary of marker assignments; we map each project id to a list of available markers
     markers = {}
@@ -1785,14 +1847,14 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
         for j in range(number_lp):
             proj_id = number_to_lp[j]
             if proj_id in markers:
-                raise RuntimeError('Marker entry already exists when storing PuLP marker assignment')
+                raise RuntimeError("Marker entry already exists when storing PuLP marker assignment")
 
             assigned = {}
 
             for l in range(number_sel):
                 sel_id = number_to_sel[l]
                 if sel_id in assigned:
-                    raise RuntimeError('Selector entry already exists when storing PuLP marker assignment')
+                    raise RuntimeError("Selector entry already exists when storing PuLP marker assignment")
 
                 sel_marker = set()
 
@@ -1807,18 +1869,18 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
 
             markers[proj_id] = assigned
 
-    print(' ** parsed marker decision variables in time {t}'.format(t=mark_timer.interval))
+    print(" ** parsed marker decision variables in time {t}".format(t=mark_timer.interval))
 
     # loop through all selectors that participated in the matching, generating matching records for each one
     for i in range(number_sel):
         if i not in sel_dict:
-            raise RuntimeError('PuLP solution references unexpected SelectingStudent instance')
+            raise RuntimeError("PuLP solution references unexpected SelectingStudent instance")
 
         sel_id: int = number_to_sel[i]
 
         sel: SelectingStudent = sel_dict[i]
         if sel.id != sel_id:
-            raise RuntimeError('Inconsistent selector lookup when storing PuLP solution')
+            raise RuntimeError("Inconsistent selector lookup when storing PuLP solution")
 
         # find the submission periods and marker valences that are needed for this selector
         config: ProjectClassConfig = sel.config
@@ -1845,7 +1907,7 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
                 periods[pd.submission_period] = pd.number_markers
 
         if len(periods) != multiplicity[i]:
-            raise RuntimeError('Number of submission periods does not match expected selector multiplicity')
+            raise RuntimeError("Number of submission periods does not match expected selector multiplicity")
 
         # generate list of project assignments for this selector
         assigned = []
@@ -1856,44 +1918,44 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
                 assigned.append(j)
 
         if len(assigned) != multiplicity[i]:
-            raise RuntimeError('Number of selector assignments in PuLP solution does not match expected '
-                               'selector multiplicity')
+            raise RuntimeError("Number of selector assignments in PuLP solution does not match expected selector multiplicity")
 
         while len(assigned) > 0:
             # pop a project assignment from the back of the stack
             proj_number: int = assigned.pop()
 
             if proj_number not in lp_dict:
-                raise RuntimeError('PuLP solution references unexpected LiveProject instance')
+                raise RuntimeError("PuLP solution references unexpected LiveProject instance")
 
             proj_id: int = number_to_lp[proj_number]
 
             project: LiveProject = lp_dict[proj_number]
             if proj_id != project.id:
-                raise RuntimeError('Inconsistent project lookup when storing PuLP solution')
+                raise RuntimeError("Inconsistent project lookup when storing PuLP solution")
 
             # calculate selector's rank of the assigned project
             # (this lets us work out the quality of the fit from the student's perspective)
             rk = sel.project_rank(proj_id)
             if sel.has_submitted and rk is None:
-                raise RuntimeError('PuLP solution assigns unranked project to selector')
+                raise RuntimeError("PuLP solution assigns unranked project to selector")
 
             # decide which submission period to assign this project to
             if len(periods) == 0:
-                raise RuntimeError('Period list is unexpectedly empty when storing PuLP solution')
+                raise RuntimeError("Period list is unexpectedly empty when storing PuLP solution")
             period_list = sorted(list(periods))
             this_period = period_list[0]
             markers_needed = periods.pop(this_period)
 
-            data = MatchingRecord(matching_id=record.id,
-                                  selector_id=number_to_sel[i],
-                                  project_id=proj_id,
-                                  original_project_id=proj_id,
-                                  submission_period=this_period,
-                                  rank=rk)
+            data = MatchingRecord(
+                matching_id=record.id,
+                selector_id=number_to_sel[i],
+                project_id=proj_id,
+                original_project_id=proj_id,
+                submission_period=this_period,
+                rank=rk,
+            )
             db.session.add(data)
             db.session.flush()
-
 
             # ASSIGN ROLES (IF USED)
 
@@ -1901,7 +1963,7 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
             if uses_supervisor:
                 # get supervisor assignment for this project
                 if proj_id not in supervisors:
-                    raise RuntimeError('PuLP solution error: supervisor stack unexpectedly empty or missing')
+                    raise RuntimeError("PuLP solution error: supervisor stack unexpectedly empty or missing")
 
                 supervisor_list = supervisors[proj_id]
                 supervisor = None
@@ -1921,11 +1983,12 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
                             supervisor_list[key] = value
 
                     else:
-                        raise RuntimeError('PuLP solution error: supervisor count has decreased to zero, but '
-                                           'supervisor has not been removed from queue')
+                        raise RuntimeError(
+                            "PuLP solution error: supervisor count has decreased to zero, but supervisor has not been removed from queue"
+                        )
 
                 if supervisor is None:
-                    raise RuntimeError('PuLP solution error: supervisor stack unexpectedly empty or missing')
+                    raise RuntimeError("PuLP solution error: supervisor stack unexpectedly empty or missing")
 
                 # generate supervisor role record
                 role_supv = MatchingRole(user_id=supervisor, role=MatchingRole.ROLE_SUPERVISOR)
@@ -1939,20 +2002,19 @@ def _store_PuLP_solution(X, Y, S, record: MatchingAttempt, number_sel, number_to
             if uses_marker:
                 # get a set of marker assignments for this project
                 if proj_id not in markers:
-                    raise RuntimeError('PuLP solution error: marker stack unexpectedly empty or missing')
+                    raise RuntimeError("PuLP solution error: marker stack unexpectedly empty or missing")
 
                 selector_list = markers[proj_id]
                 marker_set = selector_list[sel_id]
 
                 if len(marker_set) < markers_needed:
-                    raise RuntimeError('Number of marker assignments in PuLP solution does not match expected '
-                                       'marker valence')
+                    raise RuntimeError("Number of marker assignments in PuLP solution does not match expected marker valence")
 
                 while markers_needed > 0 and len(marker_set) > 0:
                     marker = marker_set.pop()
 
                     if marker is None:
-                        raise RuntimeError('PuLP solution error: marker stack unexpected empty or missing')
+                        raise RuntimeError("PuLP solution error: marker stack unexpected empty or missing")
 
                     # generate marker role record
                     role_mark = MatchingRole(user_id=marker, role=MatchingRole.ROLE_MARKER)
@@ -1987,29 +2049,24 @@ def _create_marker_PuLP_problem(mark_dict, submit_dict, mark_CATS_dict, config):
     # track maximum number of marking assignments for any individual faculty member
     max_assigned = pulp.LpVariable("max_assigned", lowBound=0, cat=pulp.LpContinuous)
 
-
     # OBJECTIVE FUNCTION
 
     # maximization problem is to assign everyone while keeping difference between max and min CATS
     # small, and keeping max_assigned small
-    prob += 10.0*(max_CATS - min_CATS) + 5.0*max_assigned
+    prob += 10.0 * (max_CATS - min_CATS) + 5.0 * max_assigned
 
     for i in range(number_markers):
         # max_CATS and min_CATS should bracket the CATS workload of all faculty
-        prob += mark_CATS_dict[i] \
-                + CATS_per_assignment * sum(Y[(i, j)] for j in range(number_submitters)) <= max_CATS
-        prob += mark_CATS_dict[i] \
-                + CATS_per_assignment * sum(Y[(i, j)] for j in range(number_submitters)) >= min_CATS
+        prob += mark_CATS_dict[i] + CATS_per_assignment * sum(Y[(i, j)] for j in range(number_submitters)) <= max_CATS
+        prob += mark_CATS_dict[i] + CATS_per_assignment * sum(Y[(i, j)] for j in range(number_submitters)) >= min_CATS
 
         # max_assigned should relax to total assigned
         prob += sum(Y[(i, j)] for j in range(number_submitters)) <= max_assigned
-
 
     # CONSTRAINT: EXACTLY ONE MARKER ASSIGNED PER SUBMITTER
 
     for j in range(number_submitters):
         prob += sum(Y[(i, j)] for i in range(number_markers)) == 1
-
 
     # CONSTRAINT: MARKERS CAN ONLY BE ASSIGNED TO PROJECTS FOR WHICH THEY ARE IN THE ASSESSOR POOL
 
@@ -2034,38 +2091,36 @@ def _initialize(self, record, read_serialized=False):
         # get list of project classes participating in automatic assignment
         configs = record.config_members.all()
         mean_CATS_per_project = _find_mean_project_CATS(configs)
-        print(' -- {n} ProjectClassConfig instances participate in this matching'.format(n=len(configs)))
+        print(" -- {n} ProjectClassConfig instances participate in this matching".format(n=len(configs)))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 6, "Enumerating selector records...", autocommit=True)
 
         # get lists of selectors and liveprojects, together with auxiliary data such as
         # multiplicities (for selectors) and CATS assignments (for projects)
         with Timer() as sel_timer:
-            number_sel, sel_to_number, number_to_sel, multiplicity, \
-                sel_dict = _enumerate_selectors(record, configs, read_serialized=read_serialized)
-        print(' -- enumerated {n} selectors in time {s}'.format(n=number_sel, s=sel_timer.interval))
+            number_sel, sel_to_number, number_to_sel, multiplicity, sel_dict = _enumerate_selectors(record, configs, read_serialized=read_serialized)
+        print(" -- enumerated {n} selectors in time {s}".format(n=number_sel, s=sel_timer.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 8, "Enumerating LiveProject records...", autocommit=True)
 
         with Timer() as lp_timer:
-            number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, \
-                lp_dict, lp_group_dict = _enumerate_liveprojects(record, configs, read_serialized=read_serialized)
-        print(' -- enumerated {n} LiveProjects in time {s}'.format(n=number_lp, s=lp_timer.interval))
+            number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, lp_dict, lp_group_dict = _enumerate_liveprojects(
+                record, configs, read_serialized=read_serialized
+            )
+        print(" -- enumerated {n} LiveProjects in time {s}".format(n=number_lp, s=lp_timer.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 10, "Enumerating supervising faculty...", autocommit=True)
 
         # get supervising faculty and marking faculty lists
         with Timer() as sup_timer:
-            number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict, sup_pclass_limits = \
-                _enumerate_supervising_faculty(record, configs)
-        print(' -- enumerated {n} supervising faculty in time {s}'.format(n=number_sup, s=sup_timer.interval))
+            number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict, sup_pclass_limits = _enumerate_supervising_faculty(record, configs)
+        print(" -- enumerated {n} supervising faculty in time {s}".format(n=number_sup, s=sup_timer.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 12, "Enumerating marking faculty...", autocommit=True)
 
         with Timer() as mark_timer:
-            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict, mark_pclass_limits = \
-                _enumerate_marking_faculty(record, configs)
-        print(' -- enumerated {n} marking faculty in time {s}'.format(n=number_mark, s=mark_timer.interval))
+            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict, mark_pclass_limits = _enumerate_marking_faculty(record, configs)
+        print(" -- enumerated {n} marking faculty in time {s}".format(n=number_mark, s=mark_timer.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 14, "Partioning faculty roles...", autocommit=True)
 
@@ -2082,17 +2137,17 @@ def _initialize(self, record, read_serialized=False):
             sup_only_numbers = {sup_to_number[x] for x in sup_only}
             mark_only_numbers = {mark_to_number[x] for x in mark_only}
             sup_and_mark_numbers = {(sup_to_number[x], mark_to_number[x]) for x in sup_and_mark}
-        print(' -- partitioned faculty in time {s}'.format(s=partition_timer.interval))
-        print('    :: {n} faculty are supervising only'.format(n=len(sup_only_numbers)))
-        print('    :: {n} faculty are marking only'.format(n=len(mark_only_numbers)))
-        print('    :: {n} faculty are supervising and marking'.format(n=len(sup_and_mark_numbers)))
+        print(" -- partitioned faculty in time {s}".format(s=partition_timer.interval))
+        print("    :: {n} faculty are supervising only".format(n=len(sup_only_numbers)))
+        print("    :: {n} faculty are marking only".format(n=len(mark_only_numbers)))
+        print("    :: {n} faculty are supervising and marking".format(n=len(sup_and_mark_numbers)))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 16, "Building student ranking matrix...", autocommit=True)
 
         # build student ranking matrix
         with Timer() as rank_timer:
             R, W, cstr = _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict, record)
-        print(' -- built student ranking matrix in time {s}'.format(s=rank_timer.interval))
+        print(" -- built student ranking matrix in time {s}".format(s=rank_timer.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 18, "Building marker compatibility matrix...", autocommit=True)
 
@@ -2100,28 +2155,56 @@ def _initialize(self, record, read_serialized=False):
         with Timer() as mark_matrix_timer:
             mm = record.max_marking_multiplicity
             M, marker_valence = _build_marking_matrix(number_mark, mark_dict, number_lp, lp_dict, mm if mm >= 1 else 1)
-        print(' -- built marking compatibility matrix in time {s}'.format(s=mark_matrix_timer.interval))
+        print(" -- built marking compatibility matrix in time {s}".format(s=mark_matrix_timer.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 19, "Building project-to-supervisor mapping matrix...", autocommit=True)
 
         with Timer() as sup_mapping_timer:
             # build project-to-supervisor mapping
             P = _build_project_supervisor_matrix(number_lp, lp_dict, number_sup, sup_dict)
-        print(' -- built project-to-supervisor mapping matrix in time {s}'.format(s=sup_mapping_timer.interval))
+        print(" -- built project-to-supervisor mapping matrix in time {s}".format(s=sup_mapping_timer.interval))
 
     except SQLAlchemyError as e:
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         raise self.retry()
 
-    return number_sel, number_lp, number_sup, number_mark, \
-           sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
-           number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
-           sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
-           sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
-           sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits,\
-           multiplicity, capacity, \
-           mean_CATS_per_project, CATS_supervisor, CATS_marker, \
-           R, W, cstr, M, marker_valence, P
+    return (
+        number_sel,
+        number_lp,
+        number_sup,
+        number_mark,
+        sel_to_number,
+        lp_to_number,
+        sup_to_number,
+        mark_to_number,
+        number_to_sel,
+        number_to_lp,
+        number_to_sup,
+        number_to_mark,
+        sel_dict,
+        lp_dict,
+        lp_group_dict,
+        sup_dict,
+        mark_dict,
+        sup_only_numbers,
+        mark_only_numbers,
+        sup_and_mark_numbers,
+        sup_limits,
+        sup_pclass_limits,
+        mark_limits,
+        mark_pclass_limits,
+        multiplicity,
+        capacity,
+        mean_CATS_per_project,
+        CATS_supervisor,
+        CATS_marker,
+        R,
+        W,
+        cstr,
+        M,
+        marker_valence,
+        P,
+    )
 
 
 def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_number):
@@ -2133,7 +2216,7 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
     base: MatchingAttempt = record.base
 
     if record.base is None:
-        print(f'-- no base in use for this match (record.base_id = {record.base_id})')
+        print(f"-- no base in use for this match (record.base_id = {record.base_id})")
         return base_X, base_Y, base_S, has_base_match
 
     for record in base.records:
@@ -2141,7 +2224,7 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
 
         if record.selector_id not in sel_to_number:
             # this does not have to be an error; we just take it to indicate that no base match exists
-            print(f'Missing SelectingStudent when reconstructing X map (SelectingStudent.id = {record.selector_id})')
+            print(f"Missing SelectingStudent when reconstructing X map (SelectingStudent.id = {record.selector_id})")
             continue
 
         # get our selector number for the allocated selector
@@ -2154,16 +2237,17 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
             # this does not have to be an error; we just take it to indicate that no base match exists
             # (e.g. this can happen if a supervisor has been marked as on sabbatical since the original match
             # was done; then their LiveProject instances don't get enumerated)
-            print(f'Missing LiveProject when reconstructing X map (LiveProject.id = {record.project_id})')
+            print(f"Missing LiveProject when reconstructing X map (LiveProject.id = {record.project_id})")
             continue
 
         # get our project number for the allocated project
         proj_number = lp_to_number[record.project_id]
 
         base_X.add((sel_number, proj_number))
-        print('>> registered base match between selector {sel_n} (={sel_name}) and project {proj_n} '
-              '(={proj_name})'.format(sel_n=sel_number, proj_n=proj_number, sel_name=sel_user.name,
-                                      proj_name=record.project.name))
+        print(
+            ">> registered base match between selector {sel_n} (={sel_name}) and project {proj_n} "
+            "(={proj_name})".format(sel_n=sel_number, proj_n=proj_number, sel_name=sel_user.name, proj_name=record.project.name)
+        )
         has_base_match.add(sel_number)
 
         for role in record.roles:
@@ -2171,7 +2255,7 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
 
             if role.role == MatchingRole.ROLE_SUPERVISOR:
                 if role.user_id not in sup_to_number:
-                    print(f'Missing supervisor when reconstructing S map (User.id = {role.user_id})')
+                    print(f"Missing supervisor when reconstructing S map (User.id = {role.user_id})")
                     continue
 
                 supv_number = sup_to_number[role.user_id]
@@ -2182,39 +2266,68 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
                 else:
                     base_S[key] = 1
 
-                print('>> registered base match between supervisor {sup_n} (={sup_name}) and project {proj_n} '
-                      '(={proj_name})'.format(sup_n=supv_number, proj_n=proj_number,
-                                              sup_name=role.user.name, proj_name=record.project.name))
+                print(
+                    ">> registered base match between supervisor {sup_n} (={sup_name}) and project {proj_n} "
+                    "(={proj_name})".format(sup_n=supv_number, proj_n=proj_number, sup_name=role.user.name, proj_name=record.project.name)
+                )
 
             elif role.role == MatchingRole.ROLE_MARKER:
                 if role.user_id not in mark_to_number:
-                    print(f'Missing marker when reconstructing Y map (User.id = {role.user_id})')
+                    print(f"Missing marker when reconstructing Y map (User.id = {role.user_id})")
                     continue
 
                 mark_number = mark_to_number[role.user_id]
 
                 key = (mark_number, proj_number, sel_number)
                 if key in base_Y:
-                    raise RuntimeError('Duplicate value of boolean Y[marker,project,selector]')
+                    raise RuntimeError("Duplicate value of boolean Y[marker,project,selector]")
                 else:
                     base_Y[key] = 1
 
-                print('>> registered base match between marker {mark_n} (={mark_name}), selector {sel_n} (={sel_name}) '
-                      'and project {proj_n} '
-                      '(={proj_name})'.format(mark_n=mark_number, proj_n=proj_number, sel_name=sel_user.name,
-                                              sel_n=sel_number, mark_name=role.user.name,
-                                              proj_name=record.project.name))
+                print(
+                    ">> registered base match between marker {mark_n} (={mark_name}), selector {sel_n} (={sel_name}) "
+                    "and project {proj_n} "
+                    "(={proj_name})".format(
+                        mark_n=mark_number,
+                        proj_n=proj_number,
+                        sel_name=sel_user.name,
+                        sel_n=sel_number,
+                        mark_name=role.user.name,
+                        proj_name=record.project.name,
+                    )
+                )
 
     return base_X, base_Y, base_S, has_base_match
 
 
-def _execute_live(self, record, prob, X, Y, S, W, R, create_time, number_sel, number_to_sel, number_lp, number_to_lp,
-                  number_sup, number_to_sup, number_mark, number_to_mark, sel_dict, lp_dict, sup_dict, mark_dict,
-                  multiplicity, mean_CATS_per_project):
-    print('Solving PuLP problem for project matching')
+def _execute_live(
+    self,
+    record,
+    prob,
+    X,
+    Y,
+    S,
+    W,
+    R,
+    create_time,
+    number_sel,
+    number_to_sel,
+    number_lp,
+    number_to_lp,
+    number_sup,
+    number_to_sup,
+    number_mark,
+    number_to_mark,
+    sel_dict,
+    lp_dict,
+    sup_dict,
+    mark_dict,
+    multiplicity,
+    mean_CATS_per_project,
+):
+    print("Solving PuLP problem for project matching")
 
-    progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...",
-                    autocommit=True)
+    progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...", autocommit=True)
 
     with Timer() as solve_time:
         record.awaiting_upload = False
@@ -2234,24 +2347,67 @@ def _execute_live(self, record, prob, X, Y, S, W, R, create_time, number_sel, nu
         else:
             status = prob.solve()
 
-    return _process_PuLP_solution(self, record, status, solve_time, X, Y, S, W, R, create_time, number_sel,
-                                  number_to_sel, number_lp, number_to_lp, number_sup, number_to_sup, number_mark,
-                                  number_to_mark, multiplicity, sel_dict, sup_dict, mark_dict, lp_dict,
-                                  mean_CATS_per_project)
+    return _process_PuLP_solution(
+        self,
+        record,
+        status,
+        solve_time,
+        X,
+        Y,
+        S,
+        W,
+        R,
+        create_time,
+        number_sel,
+        number_to_sel,
+        number_lp,
+        number_to_lp,
+        number_sup,
+        number_to_sup,
+        number_mark,
+        number_to_mark,
+        multiplicity,
+        sel_dict,
+        sup_dict,
+        mark_dict,
+        lp_dict,
+        mean_CATS_per_project,
+    )
 
 
-def _execute_from_solution(self, file, record, prob, X, Y, S, W, R, create_time, number_sel, number_to_sel, number_lp,
-                           number_to_lp, number_sup, number_to_sup, number_mark, number_to_mark, sel_dict, lp_dict,
-                           sup_dict, mark_dict, multiplicity, mean_CATS_per_project):
+def _execute_from_solution(
+    self,
+    file,
+    record,
+    prob,
+    X,
+    Y,
+    S,
+    W,
+    R,
+    create_time,
+    number_sel,
+    number_to_sel,
+    number_lp,
+    number_to_lp,
+    number_sup,
+    number_to_sup,
+    number_mark,
+    number_to_mark,
+    sel_dict,
+    lp_dict,
+    sup_dict,
+    mark_dict,
+    multiplicity,
+    mean_CATS_per_project,
+):
     print('Processing PuLP solution from "{name}"'.format(name=file))
 
     if not path.exists(file):
-        progress_update(record.celery_id, TaskRecord.FAILURE, 100, "Could not locate uploaded solution file",
-                        autocommit=True)
+        progress_update(record.celery_id, TaskRecord.FAILURE, 100, "Could not locate uploaded solution file", autocommit=True)
         raise Ignore
 
-    progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Processing uploaded solution file...",
-                    autocommit=True)
+    progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Processing uploaded solution file...", autocommit=True)
 
     # TODO: catch pulp.pulp_apis.PulpSolverError: Unknown status returned by CPLEX
     #  and handle it gracefully (or fix it on the fly)
@@ -2278,8 +2434,7 @@ def _execute_from_solution(self, file, record, prob, X, Y, S, W, R, create_time,
             solver = pulp_apis.SCIP_CMD()
             status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
         else:
-            progress_update(record.celery_id, TaskRecord.FAILURE, 100, "Unknown solver",
-                            autocommit=True)
+            progress_update(record.celery_id, TaskRecord.FAILURE, 100, "Unknown solver", autocommit=True)
             raise Ignore()
 
         if status != pulp.LpStatusInfeasible:
@@ -2292,28 +2447,49 @@ def _execute_from_solution(self, file, record, prob, X, Y, S, W, R, create_time,
         prob.restoreObjective(wasNone, dummyVar)
         prob.solver = solver
 
-    return _process_PuLP_solution(self, record, status, solve_time, X, Y, S, W, R, create_time, number_sel,
-                                  number_to_sel, number_lp, number_to_lp, number_sup, number_to_sup, number_mark,
-                                  number_to_mark, multiplicity, sel_dict, sup_dict, mark_dict, lp_dict,
-                                  mean_CATS_per_project)
+    return _process_PuLP_solution(
+        self,
+        record,
+        status,
+        solve_time,
+        X,
+        Y,
+        S,
+        W,
+        R,
+        create_time,
+        number_sel,
+        number_to_sel,
+        number_lp,
+        number_to_lp,
+        number_sup,
+        number_to_sup,
+        number_mark,
+        number_to_mark,
+        multiplicity,
+        sel_dict,
+        sup_dict,
+        mark_dict,
+        lp_dict,
+        mean_CATS_per_project,
+    )
 
 
 def _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user: User):
-    print('Solving PuLP problem to populate markers')
+    print("Solving PuLP problem to populate markers")
 
-    progress_update(task_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...",
-                    autocommit=True)
+    progress_update(task_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...", autocommit=True)
 
     with Timer() as solve_time:
         status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=True, maxSeconds=3600, fracGap=0.25))
 
-    print('-- solved PuLP problem in time {t}'.format(t=solve_time.interval))
+    print("-- solved PuLP problem in time {t}".format(t=solve_time.interval))
 
     progress_update(task_id, TaskRecord.RUNNING, 70, "Processing PuLP solution...", autocommit=True)
 
     state = pulp.LpStatus[status]
 
-    if state == 'Optimal':
+    if state == "Optimal":
         try:
             number_markers = len(mark_dict)
             number_submitters = len(submit_dict)
@@ -2333,35 +2509,58 @@ def _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user: User
                         break
 
             db.session.commit()
-            user.post_message("Populated {num} missing marker assignments".format(num=number_populated), 'success',
-                              autocommit=True)
+            user.post_message("Populated {num} missing marker assignments".format(num=number_populated), "success", autocommit=True)
 
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            user.post_message("Could not populate markers because, although the optimization task succeeded "
-                              "there was a failure while storing the solution.", 'error', autocommit=True)
+            user.post_message(
+                "Could not populate markers because, although the optimization task succeeded there was a failure while storing the solution.",
+                "error",
+                autocommit=True,
+            )
 
     else:
-        user.post_message("Could not populate markers because the optimization task failed",
-                          'error', autocommit=True)
+        user.post_message("Could not populate markers because the optimization task failed", "error", autocommit=True)
 
-    progress_update(task_id, TaskRecord.SUCCESS, 100, 'Matching task complete', autocommit=True)
+    progress_update(task_id, TaskRecord.SUCCESS, 100, "Matching task complete", autocommit=True)
 
 
-def _process_PuLP_solution(self, record, output, solve_time, X, Y, S, W, R, create_time, number_sel, number_to_sel,
-                           number_lp, number_to_lp, number_sup, number_to_sup, number_mark, number_to_mark,
-                           multiplicity, sel_dict, sup_dict, mark_dict, lp_dict, mean_CATS_per_project):
+def _process_PuLP_solution(
+    self,
+    record,
+    output,
+    solve_time,
+    X,
+    Y,
+    S,
+    W,
+    R,
+    create_time,
+    number_sel,
+    number_to_sel,
+    number_lp,
+    number_to_lp,
+    number_sup,
+    number_to_sup,
+    number_mark,
+    number_to_mark,
+    multiplicity,
+    sel_dict,
+    sup_dict,
+    mark_dict,
+    lp_dict,
+    mean_CATS_per_project,
+):
     state = pulp.LpStatus[output]
 
-    if state == 'Optimal':
+    if state == "Optimal":
         record.outcome = MatchingAttempt.OUTCOME_OPTIMAL
 
         # we don't just read the objective function out directly, because we don't want to include
         # contributions from the levelling and slack terms.
         # We don't account for biasing terms coming from a base match.
-        score = _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, number_mark,
-                                      set(), {}, set(), set(), 1.0)
+        score = _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, number_mark, set(), {}, set(), set(), 1.0)
         record.score = pulp.value(score)
 
         record.construct_time = create_time.interval
@@ -2371,9 +2570,26 @@ def _process_PuLP_solution(self, record, output, solve_time, X, Y, S, W, R, crea
 
         try:
             # note _store_PuLP_solution does not do a commit by itself
-            _store_PuLP_solution(X, Y, S, record, number_sel, number_to_sel, number_lp, number_to_lp, number_sup,
-                                 number_to_sup, number_mark, number_to_mark, multiplicity, sel_dict, sup_dict,
-                                 mark_dict, lp_dict, mean_CATS_per_project)
+            _store_PuLP_solution(
+                X,
+                Y,
+                S,
+                record,
+                number_sel,
+                number_to_sel,
+                number_lp,
+                number_to_lp,
+                number_sup,
+                number_to_sup,
+                number_mark,
+                number_to_mark,
+                multiplicity,
+                sel_dict,
+                sup_dict,
+                mark_dict,
+                lp_dict,
+                mean_CATS_per_project,
+            )
             db.session.commit()
 
         except SQLAlchemyError as e:
@@ -2381,19 +2597,19 @@ def _process_PuLP_solution(self, record, output, solve_time, X, Y, S, W, R, crea
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-    elif state == 'Not Solved':
+    elif state == "Not Solved":
         record.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
-    elif state == 'Infeasible':
+    elif state == "Infeasible":
         record.outcome = MatchingAttempt.OUTCOME_INFEASIBLE
-    elif state == 'Unbounded':
+    elif state == "Unbounded":
         record.outcome = MatchingAttempt.OUTCOME_UNBOUNDED
-    elif state == 'Undefined':
+    elif state == "Undefined":
         record.outcome = MatchingAttempt.OUTCOME_UNDEFINED
     else:
-        raise RuntimeError('Unknown PuLP outcome')
+        raise RuntimeError("Unknown PuLP outcome")
 
     try:
-        progress_update(record.celery_id, TaskRecord.SUCCESS, 100, 'Matching task complete', autocommit=False)
+        progress_update(record.celery_id, TaskRecord.SUCCESS, 100, "Matching task complete", autocommit=False)
 
         record.finished = True
         record.celery_finished = True
@@ -2408,30 +2624,32 @@ def _process_PuLP_solution(self, record, output, solve_time, X, Y, S, W, R, crea
 
 
 def _send_offline_email(celery, record: MatchingAttempt, user, lp_asset: GeneratedAsset, mps_asset: GeneratedAsset):
-    send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+    send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
 
-    msg = EmailMultiAlternatives(subject='Files for offline matching of {name} are now ready'.format(name=record.name),
-                                 from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                 reply_to=[current_app.config['MAIL_REPLY_TO']],
-                                 to=[user.email])
+    msg = EmailMultiAlternatives(
+        subject="Files for offline matching of {name} are now ready".format(name=record.name),
+        from_email=current_app.config["MAIL_DEFAULT_SENDER"],
+        reply_to=[current_app.config["MAIL_REPLY_TO"]],
+        to=[user.email],
+    )
 
-    msg.body = render_template('email/matching/generated.txt', name=record.name, user=user)
+    msg.body = render_template("email/matching/generated.txt", name=record.name, user=user)
 
     # TODO: will be problems when generated LP/MPS files are too large; should instead send a download link
-    object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-    lp_storage: AssetCloudAdapter = AssetCloudAdapter(lp_asset, object_store, audit_data='matching._send_offline_email #1')
-    mps_storage: AssetCloudAdapter = AssetCloudAdapter(mps_asset, object_store, audit_data='matching._send_offline_email #2')
+    object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+    lp_storage: AssetCloudAdapter = AssetCloudAdapter(lp_asset, object_store, audit_data="matching._send_offline_email #1")
+    mps_storage: AssetCloudAdapter = AssetCloudAdapter(mps_asset, object_store, audit_data="matching._send_offline_email #2")
 
-    msg.attach(filename=str('schedule.lp'), mimetype=lp_asset.mimetype, content=lp_storage.get())
-    msg.attach(filename=str('schedule.mps'), mimetype=mps_asset.mimetype, content=mps_storage.get())
+    msg.attach(filename=str("schedule.lp"), mimetype=lp_asset.mimetype, content=lp_storage.get())
+    msg.attach(filename=str("schedule.mps"), mimetype=mps_asset.mimetype, content=mps_storage.get())
 
     # register a new task in the database
-    task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.to)))
+    task_id = register_task(msg.subject, description="Email to {r}".format(r=", ".join(msg.to)))
     send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
 
 def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
-    scratch_folder = Path(current_app.config.get('SCRATCH_FOLDER'))
+    scratch_folder = Path(current_app.config.get("SCRATCH_FOLDER"))
 
     lp_name = str(uuid4())
     mps_name = str(uuid4())
@@ -2444,22 +2662,24 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
 
     now = datetime.now()
 
-    object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+    object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
 
     def make_asset(name, source_path: Path, target_name: str):
         # AssetUploadManager will populate most fields later
-        asset = GeneratedAsset(timestamp=now,
-                               expiry=None,
-                               target_name=target_name,
-                               parent_asset_id=None,
-                               license_id=None)
+        asset = GeneratedAsset(timestamp=now, expiry=None, target_name=target_name, parent_asset_id=None, license_id=None)
 
         size = source_path.stat().st_size
 
-        with open(source_path, 'rb') as f:
-            with AssetUploadManager(asset, data=BytesIO(f.read()), storage=object_store,
-                                    audit_data=f'matching._write_LP_MPS_files (matching attempt #{record.id})',
-                                    length=size, mimetype='text/plain', validate_nonce=validate_nonce) as upload_mgr:
+        with open(source_path, "rb") as f:
+            with AssetUploadManager(
+                asset,
+                data=BytesIO(f.read()),
+                storage=object_store,
+                audit_data=f"matching._write_LP_MPS_files (matching attempt #{record.id})",
+                length=size,
+                mimetype="text/plain",
+                validate_nonce=validate_nonce,
+            ) as upload_mgr:
                 pass
 
         asset.grant_user(user)
@@ -2467,8 +2687,8 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
 
         return asset
 
-    lp_asset = make_asset(lp_name, lp_path, 'matching.lp')
-    mps_asset = make_asset(mps_name, mps_path, 'matching.mps')
+    lp_asset = make_asset(lp_name, lp_path, "matching.lp")
+    mps_asset = make_asset(mps_name, mps_path, "matching.mps")
 
     # delete unneded temporary files
     lp_path.unlink()
@@ -2488,14 +2708,12 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
     return lp_asset, mps_asset
 
 
-def _store_enumeration_details(record, number_to_sel, number_to_lp, number_to_sup, number_to_mark, lp_group_dict,
-                               sup_pclass_limits, mark_pclass_limits):
+def _store_enumeration_details(
+    record, number_to_sel, number_to_lp, number_to_sup, number_to_mark, lp_group_dict, sup_pclass_limits, mark_pclass_limits
+):
     def write_out(label, block):
         for number in block:
-            data = MatchingEnumeration(matching_id=record.id,
-                                       enumeration=number,
-                                       key=block[number],
-                                       category=label)
+            data = MatchingEnumeration(matching_id=record.id, enumeration=number, key=block[number], category=label)
             db.session.add(data)
 
     write_out(MatchingEnumeration.SELECTOR, number_to_sel)
@@ -2507,10 +2725,7 @@ def _store_enumeration_details(record, number_to_sel, number_to_lp, number_to_su
         lps = lp_group_dict[config_id]
 
         for lp_id in lps:
-            data = MatchingEnumeration(matching_id=record.id,
-                                       enumeration=lp_id,
-                                       key=config_id,
-                                       category=MatchingEnumeration.LIVEPROJECT_GROUP)
+            data = MatchingEnumeration(matching_id=record.id, enumeration=lp_id, key=config_id, category=MatchingEnumeration.LIVEPROJECT_GROUP)
             db.session.add(data)
 
     def write_limits(label, limit_dict):
@@ -2518,11 +2733,7 @@ def _store_enumeration_details(record, number_to_sel, number_to_lp, number_to_su
             limits = limit_dict[config_id]
 
             for fac_number in limits:
-                data = MatchingEnumeration(matching_id=record.id,
-                                           enumeration=fac_number,
-                                           key=config_id,
-                                           key2=limits[fac_number],
-                                           category=label)
+                data = MatchingEnumeration(matching_id=record.id, enumeration=fac_number, key=config_id, key2=limits[fac_number], category=label)
                 db.session.add(data)
 
     write_limits(MatchingEnumeration.SUPERVISOR_LIMITS, sup_pclass_limits)
@@ -2533,11 +2744,9 @@ def _store_enumeration_details(record, number_to_sel, number_to_lp, number_to_su
 
 
 def register_matching_tasks(celery):
-
     @celery.task(bind=True, default_retry_delay=30)
     def create_match(self, id):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up MatchingAttempt record for id={id}'.format(id=id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up MatchingAttempt record for id={id}".format(id=id)})
 
         try:
             record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).first()
@@ -2546,55 +2755,129 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
             raise Ignore()
 
         with Timer() as create_time:
-            number_sel, number_lp, number_sup, number_mark, \
-            sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
-            number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
-            sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
-            sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
-            sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits, \
-            multiplicity, capacity, \
-            mean_CATS_per_project, CATS_supervisor, CATS_marker, \
-            R, W, cstr, M, marker_valence, P = _initialize(self, record)
+            (
+                number_sel,
+                number_lp,
+                number_sup,
+                number_mark,
+                sel_to_number,
+                lp_to_number,
+                sup_to_number,
+                mark_to_number,
+                number_to_sel,
+                number_to_lp,
+                number_to_sup,
+                number_to_mark,
+                sel_dict,
+                lp_dict,
+                lp_group_dict,
+                sup_dict,
+                mark_dict,
+                sup_only_numbers,
+                mark_only_numbers,
+                sup_and_mark_numbers,
+                sup_limits,
+                sup_pclass_limits,
+                mark_limits,
+                mark_pclass_limits,
+                multiplicity,
+                capacity,
+                mean_CATS_per_project,
+                CATS_supervisor,
+                CATS_marker,
+                R,
+                W,
+                cstr,
+                M,
+                marker_valence,
+                P,
+            ) = _initialize(self, record)
 
-            base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number,
-                                                                     mark_to_number)
+            base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_number)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
-                            autocommit=True)
+            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
-            prob, X, Y, S = _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_S,
-                                                 has_base_match, record.force_base, CATS_supervisor, CATS_marker,
-                                                 capacity, sup_limits, sup_pclass_limits, mark_limits,
-                                                 mark_pclass_limits, multiplicity, number_lp, number_mark, number_sel,
-                                                 number_sup, record, sel_dict, sup_dict, mark_dict, lp_dict,
-                                                 lp_group_dict, sup_only_numbers, mark_only_numbers,
-                                                 sup_and_mark_numbers, mean_CATS_per_project)
+            prob, X, Y, S = _create_PuLP_problem(
+                R,
+                M,
+                marker_valence,
+                W,
+                P,
+                cstr,
+                base_X,
+                base_Y,
+                base_S,
+                has_base_match,
+                record.force_base,
+                CATS_supervisor,
+                CATS_marker,
+                capacity,
+                sup_limits,
+                sup_pclass_limits,
+                mark_limits,
+                mark_pclass_limits,
+                multiplicity,
+                number_lp,
+                number_mark,
+                number_sel,
+                number_sup,
+                record,
+                sel_dict,
+                sup_dict,
+                mark_dict,
+                lp_dict,
+                lp_group_dict,
+                sup_only_numbers,
+                mark_only_numbers,
+                sup_and_mark_numbers,
+                mean_CATS_per_project,
+            )
 
-        print(' -- creation complete in time {t}'.format(t=create_time.interval))
+        print(" -- creation complete in time {t}".format(t=create_time.interval))
 
-        score = _execute_live(self, record, prob, X, Y, S, W, R, create_time, number_sel, number_to_sel, number_lp,
-                              number_to_lp, number_sup, number_to_sup, number_mark, number_to_mark, sel_dict, lp_dict,
-                              sup_dict, mark_dict, multiplicity, mean_CATS_per_project)
+        score = _execute_live(
+            self,
+            record,
+            prob,
+            X,
+            Y,
+            S,
+            W,
+            R,
+            create_time,
+            number_sel,
+            number_to_sel,
+            number_lp,
+            number_to_lp,
+            number_sup,
+            number_to_sup,
+            number_mark,
+            number_to_mark,
+            sel_dict,
+            lp_dict,
+            sup_dict,
+            mark_dict,
+            multiplicity,
+            mean_CATS_per_project,
+        )
 
         if record.created_by is not None:
             if record.is_valid:
                 msg = render_template_string(_match_success, name=record.name)
-                record.created_by.post_message(msg, 'success', autocommit=True)
+                record.created_by.post_message(msg, "success", autocommit=True)
             else:
                 msg = render_template_string(_match_failure, name=record.name)
-                record.created_by.post_message(msg, 'error', autocommit=True)
+                record.created_by.post_message(msg, "error", autocommit=True)
 
         return score
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def offline_match(self, matching_id, user_id):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up MatchingAttempt record for id={id}'.format(id=matching_id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up MatchingAttempt record for id={id}".format(id=matching_id)})
 
         try:
             user: User = db.session.query(User).filter_by(id=user_id).first()
@@ -2604,39 +2887,93 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load owning User record'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load owning User record"})
             raise Ignore()
 
         if record is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
             raise Ignore()
 
         with Timer() as create_time:
-            number_sel, number_lp, number_sup, number_mark, \
-            sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
-            number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
-            sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
-            sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
-            sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits, \
-            multiplicity, capacity, \
-            mean_CATS_per_project, CATS_supervisor, CATS_marker, \
-            R, W, cstr, M, marker_valence, P = _initialize(self, record)
+            (
+                number_sel,
+                number_lp,
+                number_sup,
+                number_mark,
+                sel_to_number,
+                lp_to_number,
+                sup_to_number,
+                mark_to_number,
+                number_to_sel,
+                number_to_lp,
+                number_to_sup,
+                number_to_mark,
+                sel_dict,
+                lp_dict,
+                lp_group_dict,
+                sup_dict,
+                mark_dict,
+                sup_only_numbers,
+                mark_only_numbers,
+                sup_and_mark_numbers,
+                sup_limits,
+                sup_pclass_limits,
+                mark_limits,
+                mark_pclass_limits,
+                multiplicity,
+                capacity,
+                mean_CATS_per_project,
+                CATS_supervisor,
+                CATS_marker,
+                R,
+                W,
+                cstr,
+                M,
+                marker_valence,
+                P,
+            ) = _initialize(self, record)
 
-            base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number,
-                                                                     mark_to_number)
+            base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_number)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
-                            autocommit=True)
+            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
-            prob, X, Y, S = _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_S,
-                                                 has_base_match, record.force_base, CATS_supervisor, CATS_marker,
-                                                 capacity, sup_limits, sup_pclass_limits, mark_limits,
-                                                 mark_pclass_limits, multiplicity, number_lp, number_mark, number_sel,
-                                                 number_sup, record, sel_dict, sup_dict, mark_dict, lp_dict,
-                                                 lp_group_dict, sup_only_numbers, mark_only_numbers,
-                                                 sup_and_mark_numbers, mean_CATS_per_project)
+            prob, X, Y, S = _create_PuLP_problem(
+                R,
+                M,
+                marker_valence,
+                W,
+                P,
+                cstr,
+                base_X,
+                base_Y,
+                base_S,
+                has_base_match,
+                record.force_base,
+                CATS_supervisor,
+                CATS_marker,
+                capacity,
+                sup_limits,
+                sup_pclass_limits,
+                mark_limits,
+                mark_pclass_limits,
+                multiplicity,
+                number_lp,
+                number_mark,
+                number_sel,
+                number_sup,
+                record,
+                sel_dict,
+                sup_dict,
+                mark_dict,
+                lp_dict,
+                lp_group_dict,
+                sup_only_numbers,
+                mark_only_numbers,
+                sup_and_mark_numbers,
+                mean_CATS_per_project,
+            )
 
-        print(' -- creation complete in time {t}'.format(t=create_time.interval))
+        print(" -- creation complete in time {t}".format(t=create_time.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP and .MPS files...", autocommit=True)
 
@@ -2648,27 +2985,24 @@ def register_matching_tasks(celery):
 
         _send_offline_email(celery, record, user, lp_asset, mps_asset)
 
-        progress_update(record.celery_id, TaskRecord.RUNNING, 80,
-                        'Storing matching details for later processing...', autocommit=True)
+        progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Storing matching details for later processing...", autocommit=True)
 
         try:
-            _store_enumeration_details(record, number_to_sel, number_to_lp, number_to_sup, number_to_mark,
-                                       lp_group_dict, sup_pclass_limits, mark_pclass_limits)
+            _store_enumeration_details(
+                record, number_to_sel, number_to_lp, number_to_sup, number_to_mark, lp_group_dict, sup_pclass_limits, mark_pclass_limits
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        progress_update(record.celery_id, TaskRecord.SUCCESS, 100,
-                        'File generation for offline project matching now complete', autocommit=True)
+        progress_update(record.celery_id, TaskRecord.SUCCESS, 100, "File generation for offline project matching now complete", autocommit=True)
 
         msg = render_template_string(_match_offline_ready, name=record.name)
-        user.post_message(msg, 'info', autocommit=True)
-
+        user.post_message(msg, "info", autocommit=True)
 
     @celery.task(bind=True, default_retry_delay=30)
     def process_offline_solution(self, matching_id, asset_id, user_id):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up TemporaryAsset record for id={id}'.format(id=asset_id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up TemporaryAsset record for id={id}".format(id=asset_id)})
 
         try:
             user: User = db.session.query(User).filter_by(id=user_id).first()
@@ -2679,68 +3013,142 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load owning User record'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load owning User record"})
             raise Ignore()
 
         if asset is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load TemporaryAsset record'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load TemporaryAsset record"})
             raise Ignore()
 
         if record is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
             raise Ignore()
 
-        object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
-        storage = AssetCloudAdapter(asset, object_store, audit_data=f'matching.process_offline_solution(matching id #{matching_id})')
+        object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+        storage = AssetCloudAdapter(asset, object_store, audit_data=f"matching.process_offline_solution(matching id #{matching_id})")
 
         with storage.download_to_scratch() as scratch_path:
             with Timer() as create_time:
-                number_sel, number_lp, number_sup, number_mark, \
-                sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
-                number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
-                sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
-                sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
-                sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits, \
-                multiplicity, capacity, \
-                mean_CATS_per_project, CATS_supervisor, CATS_marker, \
-                R, W, cstr, M, marker_valence, P = _initialize(self, record, read_serialized=True)
+                (
+                    number_sel,
+                    number_lp,
+                    number_sup,
+                    number_mark,
+                    sel_to_number,
+                    lp_to_number,
+                    sup_to_number,
+                    mark_to_number,
+                    number_to_sel,
+                    number_to_lp,
+                    number_to_sup,
+                    number_to_mark,
+                    sel_dict,
+                    lp_dict,
+                    lp_group_dict,
+                    sup_dict,
+                    mark_dict,
+                    sup_only_numbers,
+                    mark_only_numbers,
+                    sup_and_mark_numbers,
+                    sup_limits,
+                    sup_pclass_limits,
+                    mark_limits,
+                    mark_pclass_limits,
+                    multiplicity,
+                    capacity,
+                    mean_CATS_per_project,
+                    CATS_supervisor,
+                    CATS_marker,
+                    R,
+                    W,
+                    cstr,
+                    M,
+                    marker_valence,
+                    P,
+                ) = _initialize(self, record, read_serialized=True)
 
-                base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number,
-                                                                         mark_to_number)
+                base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_number)
 
-                progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
-                                autocommit=True)
+                progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
-                prob, X, Y, S = _create_PuLP_problem(R, M, marker_valence, W, P, cstr, base_X, base_Y, base_S,
-                                                     has_base_match, record.force_base, CATS_supervisor, CATS_marker,
-                                                     capacity, sup_limits, sup_pclass_limits, mark_limits,
-                                                     mark_pclass_limits, multiplicity, number_lp, number_mark, number_sel,
-                                                     number_sup, record, sel_dict, sup_dict, mark_dict, lp_dict,
-                                                     lp_group_dict, sup_only_numbers, mark_only_numbers,
-                                                     sup_and_mark_numbers, mean_CATS_per_project)
+                prob, X, Y, S = _create_PuLP_problem(
+                    R,
+                    M,
+                    marker_valence,
+                    W,
+                    P,
+                    cstr,
+                    base_X,
+                    base_Y,
+                    base_S,
+                    has_base_match,
+                    record.force_base,
+                    CATS_supervisor,
+                    CATS_marker,
+                    capacity,
+                    sup_limits,
+                    sup_pclass_limits,
+                    mark_limits,
+                    mark_pclass_limits,
+                    multiplicity,
+                    number_lp,
+                    number_mark,
+                    number_sel,
+                    number_sup,
+                    record,
+                    sel_dict,
+                    sup_dict,
+                    mark_dict,
+                    lp_dict,
+                    lp_group_dict,
+                    sup_only_numbers,
+                    mark_only_numbers,
+                    sup_and_mark_numbers,
+                    mean_CATS_per_project,
+                )
 
-            print(' -- creation complete in time {t}'.format(t=create_time.interval))
+            print(" -- creation complete in time {t}".format(t=create_time.interval))
 
-            soln = _execute_from_solution(self, scratch_path.path, record, prob, X, Y, S,
-                                          W, R, create_time, number_sel, number_to_sel, number_lp, number_to_lp, number_sup,
-                                          number_to_sup, number_mark, number_to_mark, sel_dict, lp_dict, sup_dict,
-                                          mark_dict, multiplicity, mean_CATS_per_project)
+            soln = _execute_from_solution(
+                self,
+                scratch_path.path,
+                record,
+                prob,
+                X,
+                Y,
+                S,
+                W,
+                R,
+                create_time,
+                number_sel,
+                number_to_sel,
+                number_lp,
+                number_to_lp,
+                number_sup,
+                number_to_sup,
+                number_mark,
+                number_to_mark,
+                sel_dict,
+                lp_dict,
+                sup_dict,
+                mark_dict,
+                multiplicity,
+                mean_CATS_per_project,
+            )
 
             if record.created_by is not None:
                 if record.is_valid:
                     msg = render_template_string(_match_success, name=record.name)
-                    record.created_by.post_message(msg, 'success', autocommit=True)
+                    record.created_by.post_message(msg, "success", autocommit=True)
                 else:
                     msg = render_template_string(_match_failure, name=record.name)
-                    record.created_by.post_message(msg, 'error', autocommit=True)
+                    record.created_by.post_message(msg, "error", autocommit=True)
 
             return soln
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def populate_markers(self, config_id, user_id, task_id):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up ProjectClassConfig record for id={id}'.format(id=config_id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up ProjectClassConfig record for id={id}".format(id=config_id)})
 
         try:
             config = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
@@ -2750,31 +3158,27 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load ProjectClassConfig record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load ProjectClassConfig record from database"})
             raise Ignore()
 
         if user is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load User record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load User record from database"})
             raise Ignore()
 
         with Timer() as create_time:
-            mark_dict, inverse_mark_dict, submit_dict, inverse_submit_dict, mark_CATS_dict = \
-                _enumerate_missing_markers(self, config, task_id, user)
+            mark_dict, inverse_mark_dict, submit_dict, inverse_submit_dict, mark_CATS_dict = _enumerate_missing_markers(self, config, task_id, user)
 
-            progress_update(task_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...",
-                            autocommit=True)
+            progress_update(task_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
             prob, Y = _create_marker_PuLP_problem(mark_dict, submit_dict, mark_CATS_dict, config)
 
-        print(' -- creation complete in time {t}'.format(t=create_time.interval))
+        print(" -- creation complete in time {t}".format(t=create_time.interval))
 
         return _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user)
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def remove_markers(self, config_id, user_id, task_id):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up ProjectClassConfig record for id={id}'.format(id=config_id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up ProjectClassConfig record for id={id}".format(id=config_id)})
 
         try:
             config = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
@@ -2784,15 +3188,14 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load ProjectClassConfig record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load ProjectClassConfig record from database"})
             raise Ignore()
 
         if user is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load User record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load User record from database"})
             raise Ignore()
 
-        progress_update(task_id, TaskRecord.RUNNING, 20, "Sorting SubmittingStudent records...",
-                        autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 20, "Sorting SubmittingStudent records...", autocommit=True)
 
         for period in config.periods:
             period: SubmissionPeriodRecord
@@ -2807,8 +3210,7 @@ def register_matching_tasks(celery):
                 sub.marker = None
 
         try:
-            progress_update(task_id, TaskRecord.SUCCESS, 100, "Finishing remove markers task...",
-                            autocommit=False)
+            progress_update(task_id, TaskRecord.SUCCESS, 100, "Finishing remove markers task...", autocommit=False)
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -2817,11 +3219,9 @@ def register_matching_tasks(celery):
 
         return None
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def revert_record(self, id):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up MatchingRecord record for id={id}'.format(id=id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up MatchingRecord record for id={id}".format(id=id)})
 
         try:
             record = db.session.query(MatchingRecord).filter_by(id=id).first()
@@ -2830,7 +3230,7 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingRecord record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load MatchingRecord record from database"})
             raise Ignore()
 
         try:
@@ -2846,11 +3246,9 @@ def register_matching_tasks(celery):
 
         return None
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def revert_finalize(self, id):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up MatchingAttempt record for id={id}'.format(id=id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up MatchingAttempt record for id={id}".format(id=id)})
 
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=id).first()
@@ -2859,7 +3257,7 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
             raise Ignore
 
         try:
@@ -2874,11 +3272,9 @@ def register_matching_tasks(celery):
 
         return None
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def revert(self, id):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up MatchingAttempt record for id={id}'.format(id=id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up MatchingAttempt record for id={id}".format(id=id)})
 
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=id).first()
@@ -2887,7 +3283,7 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
             raise Ignore
 
         wg = group(revert_record.si(r.id) for r in record.records.all())
@@ -2895,11 +3291,9 @@ def register_matching_tasks(celery):
 
         seq.apply_async()
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def duplicate(self, id, new_name, current_id):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up MatchingAttempt record for id={id}'.format(id=id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up MatchingAttempt record for id={id}".format(id=id)})
 
         try:
             old_record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).first()
@@ -2908,7 +3302,7 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if old_record is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
             raise Ignore
 
         # encapsulate the whole duplication process in a single transaction, so the process is as close to
@@ -2916,114 +3310,119 @@ def register_matching_tasks(celery):
 
         try:
             # generate a new MatchingRecord
-            new_record = MatchingAttempt(year=old_record.year,
-                                         base_id=old_record.base_id,
-                                         base_bias=old_record.base_bias,
-                                         force_base=old_record.force_base,
-                                         name=new_name,
-                                         config_members=old_record.config_members,
-                                         published=False,
-                                         selected=False,
-                                         celery_id=None,
-                                         finished=old_record.finished,
-                                         celery_finished=True,
-                                         awaiting_upload=old_record.awaiting_upload,
-                                         outcome=old_record.outcome,
-                                         solver=old_record.solver,
-                                         construct_time=old_record.construct_time,
-                                         compute_time=old_record.compute_time,
-                                         include_only_submitted=old_record.include_only_submitted,
-                                         ignore_per_faculty_limits=old_record.ignore_per_faculty_limits,
-                                         ignore_programme_prefs=old_record.ignore_programme_prefs,
-                                         years_memory=old_record.years_memory,
-                                         supervising_limit=old_record.supervising_limit,
-                                         marking_limit=old_record.marking_limit,
-                                         max_marking_multiplicity=old_record.max_marking_multiplicity,
-                                         max_different_group_projects=old_record.max_different_group_projects,
-                                         max_different_all_projects=old_record.max_different_all_projects,
-                                         use_hints=old_record.use_hints,
-                                         require_to_encourage=old_record.require_to_encourage,
-                                         forbid_to_discourage=old_record.forbid_to_discourage,
-                                         encourage_bias=old_record.encourage_bias,
-                                         discourage_bias=old_record.discourage_bias,
-                                         strong_encourage_bias=old_record.strong_encourage_bias,
-                                         strong_discourage_bias=old_record.strong_discourage_bias,
-                                         bookmark_bias=old_record.bookmark_bias,
-                                         levelling_bias=old_record.levelling_bias,
-                                         supervising_pressure=old_record.supervising_pressure,
-                                         marking_pressure=old_record.marking_pressure,
-                                         CATS_violation_penalty=old_record.CATS_violation_penalty,
-                                         no_assignment_penalty=old_record.no_assignment_penalty,
-                                         intra_group_tension=old_record.intra_group_tension,
-                                         programme_bias=old_record.programme_bias,
-                                         include_matches=old_record.include_matches,
-                                         score=old_record.current_score,
-                                         # note that current score becomes original score
-                                         supervisors=old_record.supervisors,
-                                         markers=old_record.markers,
-                                         projects=old_record.projects,
-                                         mean_CATS_per_project=old_record.mean_CATS_per_project,
-                                         creator_id=current_id,
-                                         creation_timestamp=datetime.now(),
-                                         last_edit_id=None,
-                                         last_edit_timestamp=None,
-                                         lp_file_id=None,
-                                         mps_file_id=None)
+            new_record = MatchingAttempt(
+                year=old_record.year,
+                base_id=old_record.base_id,
+                base_bias=old_record.base_bias,
+                force_base=old_record.force_base,
+                name=new_name,
+                config_members=old_record.config_members,
+                published=False,
+                selected=False,
+                celery_id=None,
+                finished=old_record.finished,
+                celery_finished=True,
+                awaiting_upload=old_record.awaiting_upload,
+                outcome=old_record.outcome,
+                solver=old_record.solver,
+                construct_time=old_record.construct_time,
+                compute_time=old_record.compute_time,
+                include_only_submitted=old_record.include_only_submitted,
+                ignore_per_faculty_limits=old_record.ignore_per_faculty_limits,
+                ignore_programme_prefs=old_record.ignore_programme_prefs,
+                years_memory=old_record.years_memory,
+                supervising_limit=old_record.supervising_limit,
+                marking_limit=old_record.marking_limit,
+                max_marking_multiplicity=old_record.max_marking_multiplicity,
+                max_different_group_projects=old_record.max_different_group_projects,
+                max_different_all_projects=old_record.max_different_all_projects,
+                use_hints=old_record.use_hints,
+                require_to_encourage=old_record.require_to_encourage,
+                forbid_to_discourage=old_record.forbid_to_discourage,
+                encourage_bias=old_record.encourage_bias,
+                discourage_bias=old_record.discourage_bias,
+                strong_encourage_bias=old_record.strong_encourage_bias,
+                strong_discourage_bias=old_record.strong_discourage_bias,
+                bookmark_bias=old_record.bookmark_bias,
+                levelling_bias=old_record.levelling_bias,
+                supervising_pressure=old_record.supervising_pressure,
+                marking_pressure=old_record.marking_pressure,
+                CATS_violation_penalty=old_record.CATS_violation_penalty,
+                no_assignment_penalty=old_record.no_assignment_penalty,
+                intra_group_tension=old_record.intra_group_tension,
+                programme_bias=old_record.programme_bias,
+                include_matches=old_record.include_matches,
+                score=old_record.current_score,
+                # note that current score becomes original score
+                supervisors=old_record.supervisors,
+                markers=old_record.markers,
+                projects=old_record.projects,
+                mean_CATS_per_project=old_record.mean_CATS_per_project,
+                creator_id=current_id,
+                creation_timestamp=datetime.now(),
+                last_edit_id=None,
+                last_edit_timestamp=None,
+                lp_file_id=None,
+                mps_file_id=None,
+            )
 
             db.session.add(new_record)
             db.session.flush()
 
             # duplicate all matching records
             for item in old_record.records:
-                rec = MatchingRecord(matching_id=new_record.id,
-                                     selector_id=item.selector_id,
-                                     submission_period=item.submission_period,
-                                     project_id=item.project_id,
-                                     original_project_id=item.project_id,
-                                     rank=item.rank,
-                                     marker_id=item.marker_id,
-                                     original_marker_id=item.marker_id)
+                rec = MatchingRecord(
+                    matching_id=new_record.id,
+                    selector_id=item.selector_id,
+                    submission_period=item.submission_period,
+                    project_id=item.project_id,
+                    original_project_id=item.project_id,
+                    rank=item.rank,
+                    marker_id=item.marker_id,
+                    original_marker_id=item.marker_id,
+                )
                 db.session.add(rec)
 
             # duplicate all enumerations
             if new_record.awaiting_upload:
                 for item in old_record.enumerations:
-                    en = MatchingEnumeration(category=item.category,
-                                             enumeration=item.enumeration,
-                                             key=item.key,
-                                             key2=item.key2,
-                                             matching_id=new_record.id)
+                    en = MatchingEnumeration(
+                        category=item.category, enumeration=item.enumeration, key=item.key, key2=item.key2, matching_id=new_record.id
+                    )
                     db.session.add(en)
 
                 now = datetime.now()
 
-                object_store = current_app.config.get('OBJECT_STORAGE_ASSETS')
+                object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+
                 def copy_asset(old_asset):
-                    old_storage = AssetCloudAdapter(old_asset, object_store, audit_data=f'matching.duplicate.copy_asset (matching id #{id})')
+                    old_storage = AssetCloudAdapter(old_asset, object_store, audit_data=f"matching.duplicate.copy_asset (matching id #{id})")
                     new_key, put_result = old_storage.duplicate(validate_nonce=validate_nonce)
 
                     new_base64_nonce = None
-                    if 'nonce' in put_result:
-                        new_base64_nonce = base64.urlsafe_b64encode(put_result['nonce']).decode('ascii')
+                    if "nonce" in put_result:
+                        new_base64_nonce = base64.urlsafe_b64encode(put_result["nonce"]).decode("ascii")
 
                     # must duplicate all fields, including those usually managed by AssetUploadManager
-                    new_asset = GeneratedAsset(timestamp=now,
-                                               expiry=None,
-                                               unique_name=new_key,
-                                               filesize=old_asset.filesize,
-                                               mimetype=old_asset.mimetype,
-                                               target_name=old_asset.target_name,
-                                               parent_asset_id=old_asset.parent_asset_id,
-                                               license_id=old_asset.license_id,
-                                               lost=False,
-                                               unattached=False,
-                                               bucket=old_asset.bucket,
-                                               comment=old_asset.comment,
-                                               encryption=object_store.encrypted,
-                                               encrypted_size=put_result.get('encrypted_size', None),
-                                               nonce=new_base64_nonce,
-                                               compressed=object_store.compressed,
-                                               compressed_size=put_result.get('compressed_size', None))
+                    new_asset = GeneratedAsset(
+                        timestamp=now,
+                        expiry=None,
+                        unique_name=new_key,
+                        filesize=old_asset.filesize,
+                        mimetype=old_asset.mimetype,
+                        target_name=old_asset.target_name,
+                        parent_asset_id=old_asset.parent_asset_id,
+                        license_id=old_asset.license_id,
+                        lost=False,
+                        unattached=False,
+                        bucket=old_asset.bucket,
+                        comment=old_asset.comment,
+                        encryption=object_store.encrypted,
+                        encrypted_size=put_result.get("encrypted_size", None),
+                        nonce=new_base64_nonce,
+                        compressed=object_store.compressed,
+                        compressed_size=put_result.get("compressed_size", None),
+                    )
 
                     # TODO: find a way to perform a deep copy without exposing implementation details
                     new_asset.access_control_list = old_asset.access_control_list
@@ -3047,11 +3446,9 @@ def register_matching_tasks(celery):
 
         return None
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def populate_submitters(self, match_id, config_id, user_id, task_id):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up database configuration records'})
+        self.update_state(state="STARTED", meta={"msg": "Looking up database configuration records"})
 
         progress_update(task_id, TaskRecord.RUNNING, 5, "Loading database records...", autocommit=True)
 
@@ -3064,19 +3461,21 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load owning User record'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load owning User record"})
             raise Ignore()
 
         if config is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load ProjectClassConfig record'})
-            user.post_message('Populate selectors task failed due to a database error. '
-                              'Please contact a system administrator.', 'error', autocommit=True)
+            self.update_state(state="FAILURE", meta={"msg": "Could not load ProjectClassConfig record"})
+            user.post_message(
+                "Populate selectors task failed due to a database error. Please contact a system administrator.", "error", autocommit=True
+            )
             raise Ignore()
 
         if record is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
-            user.post_message('Populate selectors task failed due to a database error. '
-                              'Please contact a system administrator.', 'error', autocommit=True)
+            self.update_state(state="FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
+            user.post_message(
+                "Populate selectors task failed due to a database error. Please contact a system administrator.", "error", autocommit=True
+            )
             raise Ignore()
 
         progress_update(task_id, TaskRecord.RUNNING, 10, "Inspecting match configuration...", autocommit=True)
@@ -3084,103 +3483,119 @@ def register_matching_tasks(celery):
         year = get_current_year()
 
         if record.year != year:
-            self.update_state(state='FAILURE', meta={'msg': 'MatchingAttempt is not for current year'})
+            self.update_state(state="FAILURE", meta={"msg": "MatchingAttempt is not for current year"})
             progress_update(task_id, TaskRecord.FAILURE, 100, "Match is not for the current year", autocommit=False)
-            user.post_message('Submitters could not be populated because the selected matching is not for the '
-                              'current academic year (current year={cyr}, '
-                              'match year={myr}'.format(cyr=year, myr=record.year), 'error', autocommit=True)
+            user.post_message(
+                "Submitters could not be populated because the selected matching is not for the "
+                "current academic year (current year={cyr}, "
+                "match year={myr}".format(cyr=year, myr=record.year),
+                "error",
+                autocommit=True,
+            )
             raise Ignore()
 
         if config.year != record.year:
-            self.update_state(state='FAILURE', meta={'msg': 'ProjectClassConfig does not belong to same year as '
-                                                     'MatchingAttempt'})
-            progress_update(task_id, TaskRecord.FAILURE, 100, "Project configuration and matching were for different "
-                                                              "years", autocommit=False)
-            user.post_message('Submitters could not be populated because the selected matching does not belong '
-                              'to the same academic year as the current project configuration (selected matching '
-                              'year={myr}, current configuration '
-                              'year={cyr}'.format(myr=record.year, cyr=config.year), 'error', autocommit=True)
+            self.update_state(state="FAILURE", meta={"msg": "ProjectClassConfig does not belong to same year as MatchingAttempt"})
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Project configuration and matching were for different years", autocommit=False)
+            user.post_message(
+                "Submitters could not be populated because the selected matching does not belong "
+                "to the same academic year as the current project configuration (selected matching "
+                "year={myr}, current configuration "
+                "year={cyr}".format(myr=record.year, cyr=config.year),
+                "error",
+                autocommit=True,
+            )
             raise Ignore()
 
         if config.select_in_previous_cycle:
-            self.update_state(state='FAILURE', Meta='ProjectClassConfig does not have select_in_previous_cycle')
-            progress_update(task_id, TaskRecord.FAILURE, 100, "ProjectClassConfig does not have "
-                                                              "select_in_previous_cycle", autocommit=False)
-            user.post_message('Submitters could not be populated because this project type is not '
-                              'configured to use selection in the same cycle as submission', 'error',
-                              autocommit=True)
+            self.update_state(state="FAILURE", Meta="ProjectClassConfig does not have select_in_previous_cycle")
+            progress_update(task_id, TaskRecord.FAILURE, 100, "ProjectClassConfig does not have select_in_previous_cycle", autocommit=False)
+            user.post_message(
+                "Submitters could not be populated because this project type is not configured to use selection in the same cycle as submission",
+                "error",
+                autocommit=True,
+            )
             raise Ignore()
 
         if not record.finished:
             if record.awaiting_upload:
-                self.update_state(state='FAILURE', meta={'msg': 'MatchingAttempt still awaiting manual upload'})
-                progress_update(task_id, TaskRecord.FAILURE, 100, "Match is still awaiting manual upload",
-                                autocommit=False)
-                user.post_message('Submitters could not be populated because the selecting matching is still '
-                                  'awaiting manual upload of a solution.', 'error', autocommit=True)
+                self.update_state(state="FAILURE", meta={"msg": "MatchingAttempt still awaiting manual upload"})
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Match is still awaiting manual upload", autocommit=False)
+                user.post_message(
+                    "Submitters could not be populated because the selecting matching is still awaiting manual upload of a solution.",
+                    "error",
+                    autocommit=True,
+                )
             else:
-                self.update_state(state='FAILURE', meta={'msg': 'Matching optimization has not yet terminated'})
-                progress_update(task_id, TaskRecord.FAILURE, 100, "Matching optimization has not yet terminated",
-                                autocommit=False)
-                user.post_message('Submitters could not be populated because the matching optimization has '
-                                  'not yet terminated.', 'error', autocommit=True)
+                self.update_state(state="FAILURE", meta={"msg": "Matching optimization has not yet terminated"})
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Matching optimization has not yet terminated", autocommit=False)
+                user.post_message(
+                    "Submitters could not be populated because the matching optimization has not yet terminated.", "error", autocommit=True
+                )
             raise Ignore()
 
         if not record.solution_usable:
-            self.update_state(state='FAILURE', meta={'msg': 'MatchingAttempt solution is not usable'})
+            self.update_state(state="FAILURE", meta={"msg": "MatchingAttempt solution is not usable"})
             progress_update(task_id, TaskRecord.FAILURE, 100, "Matching solution is not usable", autocommit=False)
-            user.post_message('Submitters could not be populated because the selecting matching solution is '
-                              'not usable.', 'error', autocommit=True)
+            user.post_message("Submitters could not be populated because the selecting matching solution is not usable.", "error", autocommit=True)
             raise Ignore()
 
         if not record.published:
-            self.update_state(state='FAILURE', meta={'msg': 'MatchingAttempt has not been published'})
-            progress_update(task_id, TaskRecord.FAILURE, 100, "Matching has not yet been published to convenors",
-                            autocommit=True)
-            user.post_message('Submitters could not be populated because the selecting matching has not yet '
-                              'been published to convenors. Please publish the match before attempting '
-                              'to generate selectors.', 'error', autocommit=True)
+            self.update_state(state="FAILURE", meta={"msg": "MatchingAttempt has not been published"})
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Matching has not yet been published to convenors", autocommit=True)
+            user.post_message(
+                "Submitters could not be populated because the selecting matching has not yet "
+                "been published to convenors. Please publish the match before attempting "
+                "to generate selectors.",
+                "error",
+                autocommit=True,
+            )
             raise Ignore()
 
         # pull out MatchingRecord instances that belong to this MatchingAttempt, and which correspond to
         # the specified ProjectClass(Config)
-        match_records = record.records.join(SelectingStudent, SelectingStudent.id == MatchingRecord.selector_id) \
-            .filter(SelectingStudent.config_id == config_id).all()
+        match_records = (
+            record.records.join(SelectingStudent, SelectingStudent.id == MatchingRecord.selector_id)
+            .filter(SelectingStudent.config_id == config_id)
+            .all()
+        )
 
-        populate_tasks = group(convert_record_to_submitter.s(match_id, config_id, user_id, r.id)
-                               for r in match_records)
+        populate_tasks = group(convert_record_to_submitter.s(match_id, config_id, user_id, r.id) for r in match_records)
 
         if len(populate_tasks) > 0:
             work = populate_initial_msg.si(task_id) | populate_tasks | populate_final_msg.s(task_id)
             return self.replace(work)
 
         progress_update(task_id, TaskRecord.SUCCESS, 100, "Completed with no work to perform", autocommit=False)
-        user.post_message('The populate task completed successfully, but no matching records '
-                          'corresponded to this project class configuration, and therefore '
-                          'no submitter records have been populated.', 'info', autocommit=True)
-
+        user.post_message(
+            "The populate task completed successfully, but no matching records "
+            "corresponded to this project class configuration, and therefore "
+            "no submitter records have been populated.",
+            "info",
+            autocommit=True,
+        )
 
     @celery.task(bind=True)
     def populate_initial_msg(self, task_id):
-        progress_update(task_id, TaskRecord.RUNNING, 20, "Inspecting matching records to populate submitters...",
-                        autocommit=True)
-
+        progress_update(task_id, TaskRecord.RUNNING, 20, "Inspecting matching records to populate submitters...", autocommit=True)
 
     @celery.task(bind=True)
     def populate_final_msg(self, _result_data, task_id):
         filtered_data = [x for x in _result_data if x is not None]
         imported = sum(filtered_data)
-        progress_update(task_id, TaskRecord.SUCCESS, 100,
-                        "Populate submitters now complete. {n} submitter record{pl} imported from the "
-                        "match".format(n=imported, pl='s were' if imported != 1 else ' was'),
-                        autocommit=True)
-
+        progress_update(
+            task_id,
+            TaskRecord.SUCCESS,
+            100,
+            "Populate submitters now complete. {n} submitter record{pl} imported from the "
+            "match".format(n=imported, pl="s were" if imported != 1 else " was"),
+            autocommit=True,
+        )
 
     @celery.task(bind=True)
     def convert_record_to_submitter(self, _result_data, match_id, config_id, user_id, data_id):
         # read database records
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up database configuration records'})
+        self.update_state(state="STARTED", meta={"msg": "Looking up database configuration records"})
 
         try:
             record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=match_id).first()
@@ -3192,24 +3607,24 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load owning User record'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load owning User record"})
             raise Ignore()
 
         if config is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load ProjectClassConfig record'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load ProjectClassConfig record"})
             raise Ignore()
 
         if record is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingAttempt record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
             raise Ignore()
 
         if data is None:
-            self.update_state(state='FAILURE', meta={'msg': 'Could not load MatchingRecord record from database'})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load MatchingRecord record from database"})
             raise Ignore()
 
         needs_commit = False
 
-        self.update_state(state='STARTED', meta={'msg': 'Populating SubmittingStudent record...'})
+        self.update_state(state="STARTED", meta={"msg": "Populating SubmittingStudent record..."})
 
         # first, determine whether there is an existing SubmittingStudent instance associated with this student
         sel: SelectingStudent = data.selector
@@ -3219,11 +3634,7 @@ def register_matching_tasks(celery):
         # multiple application
         if sub is None:
             try:
-                new_sub = SubmittingStudent(config_id=config_id,
-                                            student_id=sel.student_id,
-                                            selector_id=sel.id,
-                                            published=False,
-                                            retired=False)
+                new_sub = SubmittingStudent(config_id=config_id, student_id=sel.student_id, selector_id=sel.id, published=False, retired=False)
                 db.session.add(new_sub)
                 needs_commit = True
 
@@ -3245,29 +3656,31 @@ def register_matching_tasks(celery):
         if sr is None:
             try:
                 pd: SubmissionPeriodRecord = config.get_period(data.submission_period)
-                new_sr = SubmissionRecord(period_id=pd.id,
-                                          retired=False,
-                                          owner_id=sub.id,
-                                          project_id=data.project_id,
-                                          selection_config_id=config.id,
-                                          matching_record_id=data.id,
-                                          use_project_hub=None,
-                                          report_id=None,
-                                          processed_report_id=None,
-                                          celery_started=None,
-                                          celery_finished=None,
-                                          timestamp=None,
-                                          report_exemplar=False,
-                                          canvas_submission_available=None,
-                                          turnitin_outcome=None,
-                                          turnitin_score=None,
-                                          turnitin_web_overlap=None,
-                                          turnitin_publication_overlap=None,
-                                          turnitin_student_overlap=None,
-                                          student_engaged=False,
-                                          student_feedback=None,
-                                          student_feedback_submitted=False,
-                                          student_feedback_timestamp=None)
+                new_sr = SubmissionRecord(
+                    period_id=pd.id,
+                    retired=False,
+                    owner_id=sub.id,
+                    project_id=data.project_id,
+                    selection_config_id=config.id,
+                    matching_record_id=data.id,
+                    use_project_hub=None,
+                    report_id=None,
+                    processed_report_id=None,
+                    celery_started=None,
+                    celery_finished=None,
+                    timestamp=None,
+                    report_exemplar=False,
+                    canvas_submission_available=None,
+                    turnitin_outcome=None,
+                    turnitin_score=None,
+                    turnitin_web_overlap=None,
+                    turnitin_publication_overlap=None,
+                    turnitin_student_overlap=None,
+                    student_engaged=False,
+                    student_feedback=None,
+                    student_feedback_submitted=False,
+                    student_feedback_timestamp=None,
+                )
 
                 db.session.add(new_sr)
                 needs_commit = True
@@ -3276,22 +3689,24 @@ def register_matching_tasks(celery):
 
                 for role in data.roles:
                     role: MatchingRole
-                    new_role = SubmissionRole(submission_id=new_sr.id,
-                                              user_id=role.user_id,
-                                              role=role.role,
-                                              marking_email=False,
-                                              positive_feedback=None,
-                                              improvements_feedback=None,
-                                              submitted_feedback=False,
-                                              feedback_timestamp=None,
-                                              acknowledge_student=False,
-                                              response=None,
-                                              submitted_response=False,
-                                              response_timestamp=None,
-                                              creator_id=None,
-                                              creation_timestamp=now,
-                                              last_edit_id=None,
-                                              last_edit_timestamp=None)
+                    new_role = SubmissionRole(
+                        submission_id=new_sr.id,
+                        user_id=role.user_id,
+                        role=role.role,
+                        marking_email=False,
+                        positive_feedback=None,
+                        improvements_feedback=None,
+                        submitted_feedback=False,
+                        feedback_timestamp=None,
+                        acknowledge_student=False,
+                        response=None,
+                        submitted_response=False,
+                        response_timestamp=None,
+                        creator_id=None,
+                        creation_timestamp=now,
+                        last_edit_id=None,
+                        last_edit_timestamp=None,
+                    )
 
                     db.session.add(new_role)
 

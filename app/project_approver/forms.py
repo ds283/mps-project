@@ -17,9 +17,8 @@ from functools import partial
 
 
 class EditCommentForm(Form):
+    comment = TextAreaField("Edit your comment", render_kw={"rows": 5})
 
-    comment = TextAreaField('Edit your comment', render_kw={"rows": 5})
+    limit_visibility = BooleanField("Limit visibility to approvals team")
 
-    limit_visibility = BooleanField('Limit visibility to approvals team')
-
-    submit = SubmitField('Save changes')
+    submit = SubmitField("Save changes")

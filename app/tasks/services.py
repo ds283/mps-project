@@ -22,7 +22,6 @@ from ..task_queue import register_task
 
 
 def register_services_tasks(celery):
-
     @celery.task(bind=True, default_retry_delay=30)
     def send_distribution_list(self, list_ids, notify_addresses, subject, body, reply_to, user_id):
         work = group(send_user_record.s(x, subject, body, reply_to) for x in list_ids)
@@ -35,7 +34,6 @@ def register_services_tasks(celery):
 
         raise self.replace(work)
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def send_user_record(self, user_id, subject, body, reply_to):
         try:
@@ -45,31 +43,28 @@ def register_services_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load database records'})
-            raise KeyError("User record corresponding to distribution list id={num} "
-                           "is missing".format(num=user_id))
+            self.update_state("FAILURE", meta={"msg": "Could not load database records"})
+            raise KeyError("User record corresponding to distribution list id={num} is missing".format(num=user_id))
 
-        body_text = render_template_string(body, name=record.name, first_name=record.first_name,
-                                           last_name=record.last_name)
+        body_text = render_template_string(body, name=record.name, first_name=record.first_name, last_name=record.last_name)
 
         if isinstance(reply_to, str):
             reply_to = [reply_to]
 
-        msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=reply_to,
-                                     to=[formataddr((record.name, record.email))],
-                                     subject=subject,
-                                     body=render_template('email/services/send_email.txt', body=body_text))
+        msg = EmailMultiAlternatives(
+            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
+            reply_to=reply_to,
+            to=[formataddr((record.name, record.email))],
+            subject=subject,
+            body=render_template("email/services/send_email.txt", body=body_text),
+        )
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send direct email to '
-                                                         '{name} ({email})'.format(name=record.name,
-                                                                                   email=record.email))
+        task_id = register_task(msg.subject, description="Send direct email to {name} ({email})".format(name=record.name, email=record.email))
 
         # queue Celery task to send the email
-        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
-
 
     @celery.task(bind=True, default_retry_delay=30)
     def send_notify(self, prior_result, pair, subject, body, reply_to):
@@ -78,19 +73,20 @@ def register_services_tasks(celery):
         if isinstance(reply_to, str):
             reply_to = [reply_to]
 
-        msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=reply_to,
-                                     to=[to_addr],
-                                     subject=subject,
-                                     body=render_template('email/services/cc_email.txt', body=body))
+        msg = EmailMultiAlternatives(
+            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
+            reply_to=reply_to,
+            to=[to_addr],
+            subject=subject,
+            body=render_template("email/services/cc_email.txt", body=body),
+        )
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send copy of direct email to {addr}'.format(addr=pair[1]))
+        task_id = register_task(msg.subject, description="Send copy of direct email to {addr}".format(addr=pair[1]))
 
         # queue Celery task to send the email
-        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
-
 
     @celery.task(bind=True, default_retry_delay=30)
     def send_email_list(self, to_addresses, notify_addresses, subject, body, reply_to, user_id):
@@ -104,7 +100,6 @@ def register_services_tasks(celery):
 
         raise self.replace(work)
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def send_email_addr(self, pair, subject, body, reply_to):
         to_addr = formataddr(pair)
@@ -112,19 +107,20 @@ def register_services_tasks(celery):
         if isinstance(reply_to, str):
             reply_to = list[reply_to]
 
-        msg = EmailMultiAlternatives(from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                     reply_to=reply_to,
-                                     to=[to_addr],
-                                     subject=subject,
-                                     body=render_template('email/services/send_email.txt', body=body))
+        msg = EmailMultiAlternatives(
+            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
+            reply_to=reply_to,
+            to=[to_addr],
+            subject=subject,
+            body=render_template("email/services/send_email.txt", body=body),
+        )
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send direct email to {addr}'.format(addr=pair[1]))
+        task_id = register_task(msg.subject, description="Send direct email to {addr}".format(addr=pair[1]))
 
         # queue Celery task to send the email
-        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
-
 
     @celery.task(bind=True, default_retry_delay=5)
     def email_success(self, prior_result, subject, user_id):
@@ -135,14 +131,12 @@ def register_services_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load database records'})
+            self.update_state("FAILURE", meta={"msg": "Could not load database records"})
             raise Ignore()
 
-        record.post_message('Email with subject "{subj}" successfully sent to all recipients'.format(subj=subject),
-                            'success', autocommit=True)
+        record.post_message('Email with subject "{subj}" successfully sent to all recipients'.format(subj=subject), "success", autocommit=True)
 
         return True
-
 
     @celery.task(bind=True, default_retry_delay=5)
     def email_failure(self, subject, user_id):
@@ -153,13 +147,16 @@ def register_services_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load database records'})
+            self.update_state("FAILURE", meta={"msg": "Could not load database records"})
             raise Ignore()
 
-        record.post_message('An error occurred and your email with subject "{subj}" was not sent '
-                            'to all recipients. Please check the email log to determine which instances were '
-                            'sent correctly. You may wish to consult with a system '
-                            'administrator.'.format(subj=subject),
-                            'error', autocommit=True)
+        record.post_message(
+            'An error occurred and your email with subject "{subj}" was not sent '
+            "to all recipients. Please check the email log to determine which instances were "
+            "sent correctly. You may wish to consult with a system "
+            "administrator.".format(subj=subject),
+            "error",
+            autocommit=True,
+        )
 
         return True

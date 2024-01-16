@@ -14,21 +14,22 @@ from wtforms.validators import InputRequired, Optional
 
 
 def SendEmailFormFactory(use_recipients=True):
-
     class SendEmailForm(Form):
-
         # recipients field if it is being used; if not, the form page will generate a
         # "clear recipients" button
         if use_recipients:
-            recipient = StringField("To", validators=[InputRequired()],
-                                    description='Enter a list of comma-separated email addresses for the recipients')
+            recipient = StringField(
+                "To", validators=[InputRequired()], description="Enter a list of comma-separated email addresses for the recipients"
+            )
         else:
-            clear_recipients = SubmitField('Clear recipients')
+            clear_recipients = SubmitField("Clear recipients")
 
         # notify field
-        notify_addrs = StringField("Also notify", validators=[Optional()],
-                                   description='Enter a list of comma-separated email addresses who will be '
-                                               'sent copies of the email.')
+        notify_addrs = StringField(
+            "Also notify",
+            validators=[Optional()],
+            description="Enter a list of comma-separated email addresses who will be sent copies of the email.",
+        )
 
         # subject field
         subject = StringField("Subject", validators=[InputRequired()])
@@ -37,6 +38,6 @@ def SendEmailFormFactory(use_recipients=True):
         body = TextAreaField("", render_kw={"rows": 10}, validators=[InputRequired()])
 
         # send button
-        send = SubmitField('Send')
+        send = SubmitField("Send")
 
     return SendEmailForm

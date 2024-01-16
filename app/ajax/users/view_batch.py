@@ -19,8 +19,7 @@ from sqlalchemy.event import listens_for
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <div>
     {{ item.first_name }} {{ item.last_name }}
     {% if item.registration_number is not none %}
@@ -60,8 +59,7 @@ _name = \
 
 
 # language=jinja2
-_programme = \
-"""
+_programme = """
 {% if p is not none %}
     {{ simple_label(p.make_label()) }}
 {% else %}
@@ -71,8 +69,7 @@ _programme = \
 
 
 # language=jinja2
-_cohort = \
-"""
+_cohort = """
 <div>
     {{ item.cohort }}
     {{ simple_label(item.academic_year_label()) }}
@@ -88,8 +85,7 @@ _cohort = \
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -121,44 +117,46 @@ def _element(item_id):
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    return {'name': render_template_string(_name, item=item),
-            'user': item.user_id,
-            'email': item.email,
-            'cohort': render_template_string(_cohort, item=item, simple_label=simple_label),
-            'programme': render_template_string(_programme, p=item.programme, simple_label=simple_label),
-            'menu': render_template_string(_menu, item=item)}
+    return {
+        "name": render_template_string(_name, item=item),
+        "user": item.user_id,
+        "email": item.email,
+        "cohort": render_template_string(_cohort, item=item, simple_label=simple_label),
+        "programme": render_template_string(_programme, p=item.programme, simple_label=simple_label),
+        "menu": render_template_string(_menu, item=item),
+    }
 
 
 def _delete_StudentBatchItem_cache(item_id):
     cache.delete_memoized(_element, item_id)
 
 
-@listens_for(StudentBatchItem, 'before_insert')
+@listens_for(StudentBatchItem, "before_insert")
 def _StudentBatchItem_insert_handler(mapping, connection, target):
     with db.session.no_autoflush:
         _delete_StudentBatchItem_cache(target.id)
 
 
-@listens_for(StudentBatchItem, 'before_update')
+@listens_for(StudentBatchItem, "before_update")
 def _StudentBatchItem_update_handler(mapping, connection, target):
     with db.session.no_autoflush:
         _delete_StudentBatchItem_cache(target.id)
 
 
-@listens_for(StudentBatchItem, 'before_delete')
+@listens_for(StudentBatchItem, "before_delete")
 def _StudentBatchItem_delete_handler(mapping, connection, target):
     with db.session.no_autoflush:
         _delete_StudentBatchItem_cache(target.id)
 
 
-@listens_for(StudentBatch, 'before_update')
+@listens_for(StudentBatch, "before_update")
 def _StudentBatch_update_handler(mapping, connection, target):
     with db.session.no_autoflush:
         for rec in target.items:
             _delete_StudentBatchItem_cache(rec.id)
 
 
-@listens_for(User, 'before_update')
+@listens_for(User, "before_update")
 def _User_update_handler(mapping, connection, target):
     with db.session.no_autoflush:
         if target.student_data is not None:
@@ -166,7 +164,7 @@ def _User_update_handler(mapping, connection, target):
                 _delete_StudentBatchItem_cache(rec.id)
 
 
-@listens_for(StudentData, 'before_update')
+@listens_for(StudentData, "before_update")
 def _StudentData_update_handler(mapping, connection, target):
     with db.session.no_autoflush:
         for rec in target.counterparts:

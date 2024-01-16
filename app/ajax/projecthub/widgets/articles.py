@@ -15,20 +15,17 @@ from flask import render_template_string
 from ....models import FormattedArticle
 
 
-_title = \
-"""
+_title = """
 <a class="text-decoration-none" href="{{ url_for('projecthub.show_formatted_article', aid=a.id, url=url, text=text) }}">{{ a.title }}</a>
 """
 
 
-_author = \
-"""
+_author = """
 <i class="fas fa-user-circle"></i> <a class="text-decoration-none" href="mailto:{{ a.created_by.email }}">{{ a.created_by.name }}</a>
 """
 
 
-_published = \
-"""
+_published = """
 {% if a.publication_timestamp %}
     {{ a.publication_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
 {% else %}
@@ -38,8 +35,13 @@ _published = \
 
 
 def articles(url: str, text: str, articles: List[FormattedArticle]):
-    data = [{'title': render_template_string(_title, a=a, url=url, text=text),
-             'published': render_template_string(_published, a=a),
-             'author': render_template_string(_author, a=a)} for a in articles]
+    data = [
+        {
+            "title": render_template_string(_title, a=a, url=url, text=text),
+            "published": render_template_string(_published, a=a),
+            "author": render_template_string(_author, a=a),
+        }
+        for a in articles
+    ]
 
     return data

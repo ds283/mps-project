@@ -14,8 +14,7 @@ from app import db
 from app.models import SelectingStudent, StudentData, EmailLog, User
 
 # language=jinja2
-_student = \
-"""
+_student = """
 {% set config = sel.config %}
 <div>
     <a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
@@ -135,8 +134,7 @@ _student = \
 
 
 # language=jinja2
-_pclass = \
-"""
+_pclass = """
 {% set config = sel.config %}
 {% set swatch_colour = config.project_class.make_CSS_style() %}
 <div class="d-flex flex-row justify-content-start align-items-center gap-2">
@@ -151,8 +149,7 @@ _pclass = \
 
 
 # language=jinja2
-_details = \
-"""
+_details = """
 <div class="text-primary small">
     {{ unformatted_label(sel.student.programme.short_label, tag='div') }}
 </div>
@@ -164,8 +161,7 @@ _details = \
 
 
 # language=jinja2
-_project = \
-"""
+_project = """
 {% macro truncate_name(name, maxlength=25) %}
     {%- if name|length > maxlength -%}
         {{ name[0:maxlength] }}...
@@ -287,8 +283,7 @@ _project = \
 
 
 # language=jinja2
-_marker = \
-"""
+_marker = """
 {% macro marker_tag(r, show_period) %}
     {% set markers = r.marker_roles %}
     {% for marker in markers %}
@@ -323,8 +318,7 @@ _marker = \
 
 
 # language=jinja2
-_rank = \
-"""
+_rank = """
 {% if recs|length == 1 %}
     {% set r = recs[0] %}
     <span class="badge {% if r.hi_ranked %}bg-success{% elif r.lo_ranked %}bg-warning text-dark{% else %}bg-info{% endif %}">{{ r.rank }}</span>
@@ -339,8 +333,7 @@ _rank = \
 
 
 # language=jinja2
-_scores = \
-"""
+_scores = """
 {% if recs|length == 1 %}
     {% set r = recs[0] %}
     <span class="badge bg-primary">{{ r.current_score|round(precision=2) }}</span>
@@ -363,21 +356,31 @@ def student_view_data(selector_data, attempt_id, text=None, url=None):
     def get_emails(s: SelectingStudent):
         data: StudentData = s.student
 
-        emails = db.session.query(EmailLog).filter(EmailLog.recipients.any(User.id == data.id)) \
-            .order_by(EmailLog.send_date.desc()) \
-            .limit(7).all()
+        emails = db.session.query(EmailLog).filter(EmailLog.recipients.any(User.id == data.id)).order_by(EmailLog.send_date.desc()).limit(7).all()
 
         return emails
 
-    data = [{'student': render_template_string(_student, sel=r[0].selector, attempt_id=attempt_id,
-                                               emails=get_emails(r[0].selector),
-                                               valid=all([not rc.has_issues for rc in r]), text=text, url=url,
-                                               small_swatch=small_swatch, medium_swatch=medium_swatch),
-             'pclass': render_template_string(_pclass, sel=r[0].selector, small_swatch=small_swatch),
-             'details': render_template_string(_details, sel=r[0].selector, unformatted_label=unformatted_label),
-             'project': render_template_string(_project, recs=r),
-             'marker': render_template_string(_marker, recs=r),
-             'rank': render_template_string(_rank, recs=r, delta=delta),
-             'scores': render_template_string(_scores, recs=r, total_score=score)} for r, delta, score in selector_data]
+    data = [
+        {
+            "student": render_template_string(
+                _student,
+                sel=r[0].selector,
+                attempt_id=attempt_id,
+                emails=get_emails(r[0].selector),
+                valid=all([not rc.has_issues for rc in r]),
+                text=text,
+                url=url,
+                small_swatch=small_swatch,
+                medium_swatch=medium_swatch,
+            ),
+            "pclass": render_template_string(_pclass, sel=r[0].selector, small_swatch=small_swatch),
+            "details": render_template_string(_details, sel=r[0].selector, unformatted_label=unformatted_label),
+            "project": render_template_string(_project, recs=r),
+            "marker": render_template_string(_marker, recs=r),
+            "rank": render_template_string(_rank, recs=r, delta=delta),
+            "scores": render_template_string(_scores, recs=r, total_score=score),
+        }
+        for r, delta, score in selector_data
+    ]
 
     return data

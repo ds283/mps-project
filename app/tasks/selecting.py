@@ -36,24 +36,21 @@ def _reassign_liveprojects(item_list, dest_config):
 
 
 def register_selecting_tasks(celery):
-
     @celery.task(bind=True, default_retry_delay=30)
     def remove_new(self, config_id, faculty_id):
         if isinstance(config_id, str):
             config_id = int(config_id)
 
         try:
-            lps = db.session.query(LiveProject) \
-                .filter(LiveProject.config_id == config_id,
-                        LiveProject.owner_id == faculty_id).all()
+            lps = db.session.query(LiveProject).filter(LiveProject.config_id == config_id, LiveProject.owner_id == faculty_id).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         for lp in lps:
-            unseen_confirmations = lp.confirmation_requests \
-                .filter(ConfirmRequest.state == ConfirmRequest.REQUESTED,
-                        ConfirmRequest.viewed != True).all()
+            unseen_confirmations = lp.confirmation_requests.filter(
+                ConfirmRequest.state == ConfirmRequest.REQUESTED, ConfirmRequest.viewed != True
+            ).all()
 
             for confirm in unseen_confirmations:
                 confirm.viewed = True
@@ -64,7 +61,6 @@ def register_selecting_tasks(celery):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
-
 
     @celery.task(bind=True, default_retry_delay=10)
     def move_selector(self, sel_id, dest_id, user_id):
@@ -78,16 +74,15 @@ def register_selecting_tasks(celery):
             raise self.retry()
 
         if sel is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load SelectingStudent id={id} from database'.format(od=sel_id)})
+            self.update_state("FAILURE", meta={"msg": "Could not load SelectingStudent id={id} from database".format(od=sel_id)})
             raise Ignore()
 
         if dest_config is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load ProjectClassConfig id={id} from '
-                                               'database'.format(id=dest_id)})
+            self.update_state("FAILURE", meta={"msg": "Could not load ProjectClassConfig id={id} from database".format(id=dest_id)})
             raise Ignore()
 
         if user is None:
-            self.update_date('FAILURE', meta={'msg': 'Could not load User id={id} from database'.format(id=user_id)})
+            self.update_date("FAILURE", meta={"msg": "Could not load User id={id} from database".format(id=user_id)})
             raise Ignore()
 
         # # detach any matches of which this selector is a part; they won't make sense after the move
@@ -111,6 +106,8 @@ def register_selecting_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        user.post_message('Selector "{name}" has been moved to project class "{pcl}".'.format(name=sel.student.user.name,
-                                                                                              pcl=dest_config.name),
-                          'success', autocommit=True)
+        user.post_message(
+            'Selector "{name}" has been moved to project class "{pcl}".'.format(name=sel.student.user.name, pcl=dest_config.name),
+            "success",
+            autocommit=True,
+        )

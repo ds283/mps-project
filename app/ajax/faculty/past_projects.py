@@ -11,8 +11,7 @@
 from flask import render_template_string, jsonify, url_for, get_template_attribute
 
 # language=jinja2
-_project_menu = \
-"""
+_project_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -26,8 +25,7 @@ _project_menu = \
 """
 
 # language=jinja2
-_pclass = \
-"""
+_pclass = """
 {% set style = config.project_class.make_CSS_style() %}
 <a class="badge text-decoration-none text-nohover-dark bg-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ config.convenor_email }}">
     {{ config.project_class.abbreviation }} ({{ config.convenor_name }})
@@ -36,8 +34,7 @@ _pclass = \
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 {% from "faculty/macros.html" import project_metadata %}
 <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=p.id, text='offered projects view', url=url_for('faculty.past_projects')) }}">
     {{ p.name }}
@@ -49,8 +46,7 @@ _name = \
 
 
 # language=jinja2
-_affiliation = \
-"""
+_affiliation = """
 {% set ns = namespace(affiliation=false) %}
 {% if project.group %}
     {{ simple_label(project.group.make_label()) }}
@@ -67,8 +63,7 @@ _affiliation = \
 
 
 # language=jinja2
-_metadata = \
-"""
+_metadata = """
 {% from "faculty/macros.html" import project_selection_data, project_rank_data %}
 <div>
     {{ project_selection_data(p) }}
@@ -83,12 +78,17 @@ def pastproject_data(projects):
     simple_label = get_template_attribute("labels.html", "simple_label")
     truncate = get_template_attribute("macros.html", "truncate")
 
-    data = [{'year': '{c}'.format(c=p.config.year),
-             'name': render_template_string(_name, p=p),
-             'pclass': render_template_string(_pclass, config=p.config),
-             'group': render_template_string(_affiliation, project=p, simple_label=simple_label, truncate=truncate),
-             'metadata': render_template_string(_metadata, p=p),
-             'students': 'Not yet implemented',
-             'menu': render_template_string(_project_menu, project=p)} for p in projects]
+    data = [
+        {
+            "year": "{c}".format(c=p.config.year),
+            "name": render_template_string(_name, p=p),
+            "pclass": render_template_string(_pclass, config=p.config),
+            "group": render_template_string(_affiliation, project=p, simple_label=simple_label, truncate=truncate),
+            "metadata": render_template_string(_metadata, p=p),
+            "students": "Not yet implemented",
+            "menu": render_template_string(_project_menu, project=p),
+        }
+        for p in projects
+    ]
 
     return jsonify(data)

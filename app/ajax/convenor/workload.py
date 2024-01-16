@@ -13,8 +13,7 @@ from flask import render_template_string
 from ...models import ProjectClassConfig, User, FacultyData
 
 # language=jinja2
-_supervising = \
-"""
+_supervising = """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
         {# <span class="badge bg-secondary">{{ label }} not yet required</span> #}
@@ -109,8 +108,7 @@ _supervising = \
 
 
 # language=jinja2
-_assessing = \
-"""
+_assessing = """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
         {# <span class="badge bg-secondary">{{ label }} not yet required</span> #}
@@ -165,8 +163,7 @@ _assessing = \
 
 
 # language=jinja2
-_presentations = \
-"""
+_presentations = """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_REQUIRED or state == obj.FEEDBACK_NOT_YET %}
         {# empty #}
@@ -219,8 +216,7 @@ _presentations = \
 
 
 # language=jinja2
-_workload = \
-"""
+_workload = """
 <span class="badge bg-secondary">
     {% if config.uses_supervisor %}
         S {{ CATS_sup }}
@@ -255,14 +251,17 @@ def faculty_workload_data(config: ProjectClassConfig, faculty):
         moderating = fd.moderator_assignments(config_id=config.id).all()
         presentations = fd.presentation_assignments(config_id=config.id).all()
 
-        data.append({'name': '<a class="text-decoration-none" '
-                             'href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
-                     'supervising': render_template_string(_supervising, f=fd, config=config, recs=projects),
-                     'marking': render_template_string(_assessing, f=fd, config=config, recs=marking),
-                     'moderating': render_template_string(_assessing, f=fd, config=config, recs=moderating),
-                     'presentations': render_template_string(_presentations, f=fd, config=config, slots=presentations),
-                     'workload': render_template_string(_workload, CATS_sup=CATS_sup, CATS_mark=CATS_mark,
-                                                        CATS_moderate=CATS_moderate, CATS_pres=CATS_pres,
-                                                        f=fd, config=config)})
+        data.append(
+            {
+                "name": '<a class="text-decoration-none" ' 'href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
+                "supervising": render_template_string(_supervising, f=fd, config=config, recs=projects),
+                "marking": render_template_string(_assessing, f=fd, config=config, recs=marking),
+                "moderating": render_template_string(_assessing, f=fd, config=config, recs=moderating),
+                "presentations": render_template_string(_presentations, f=fd, config=config, slots=presentations),
+                "workload": render_template_string(
+                    _workload, CATS_sup=CATS_sup, CATS_mark=CATS_mark, CATS_moderate=CATS_moderate, CATS_pres=CATS_pres, f=fd, config=config
+                ),
+            }
+        )
 
     return data

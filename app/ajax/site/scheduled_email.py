@@ -15,15 +15,13 @@ from ...models import EmailNotification
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a class="text-decoration-none" href="{{ user.email }}">{{ user.name }}</a>
 """
 
 
 # language=jinja2
-_type = \
-"""
+_type = """
 {{ simple_label(e.event_label) }}
 {% if e.held %}
     <span class="badge bg-warning text-dark">HELD</span>
@@ -32,8 +30,7 @@ _type = \
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -59,10 +56,15 @@ _menu = \
 def scheduled_email(notifications: List[EmailNotification]):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'recipient': render_template_string(_name, user=e.owner),
-             'timestamp': e.timestamp.strftime("%a %d %b %Y %H:%M:%S"),
-             'type': render_template_string(_type, e=e, simple_label=simple_label),
-             'details': str(e),
-             'menu': render_template_string(_menu, e=e)} for e in notifications]
+    data = [
+        {
+            "recipient": render_template_string(_name, user=e.owner),
+            "timestamp": e.timestamp.strftime("%a %d %b %Y %H:%M:%S"),
+            "type": render_template_string(_type, e=e, simple_label=simple_label),
+            "details": str(e),
+            "menu": render_template_string(_menu, e=e),
+        }
+        for e in notifications
+    ]
 
     return data

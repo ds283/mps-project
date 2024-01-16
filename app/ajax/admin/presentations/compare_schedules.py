@@ -11,8 +11,7 @@
 from flask import jsonify, render_template_string, get_template_attribute
 
 # language=jinja2
-_source = \
-"""
+_source = """
 {% macro slot_id(slot) %}
     {{ simple_label(slot.session.label) }}
     {{ simple_label(slot.room.label) }} 
@@ -62,8 +61,7 @@ _source = \
 
 
 # language=jinja2
-_target = \
-"""
+_target = """
 {% macro slot_id(slot) %}
     {{ simple_label(slot.session.label) }}
     {{ simple_label(slot.room.label) }}
@@ -112,8 +110,7 @@ _target = \
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button"
             data-bs-toggle="dropdown">
@@ -134,10 +131,13 @@ _menu = \
 def compare_schedule_data(pairs, source_id, target_id):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'source': {'display': render_template_string(_source, op=op, s=s, t=t, simple_label=simple_label),
-                        'sortvalue': op},
-             'target': {'display': render_template_string(_target, op=op, s=s, t=t, simple_label=simple_label),
-                        'sortvalue': op},
-             'menu': render_template_string(_menu, op=op, s=s, t=t, sid=source_id, tid=target_id)} for op, s, t in pairs]
+    data = [
+        {
+            "source": {"display": render_template_string(_source, op=op, s=s, t=t, simple_label=simple_label), "sortvalue": op},
+            "target": {"display": render_template_string(_target, op=op, s=s, t=t, simple_label=simple_label), "sortvalue": op},
+            "menu": render_template_string(_menu, op=op, s=s, t=t, sid=source_id, tid=target_id),
+        }
+        for op, s, t in pairs
+    ]
 
     return jsonify(data)

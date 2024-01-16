@@ -89,9 +89,7 @@ def load_libraries():
     regex = re.compile("^([\\w]+)=(?:'|\")?(.*?)(?:'|\")?$")
     with open(filepath) as os_release:
         info = {
-            regex.match(line.strip()).group(1): re.sub(
-                r'\\([$"\'\\`])', r"\1", regex.match(line.strip()).group(2)
-            )
+            regex.match(line.strip()).group(1): re.sub(r'\\([$"\'\\`])', r"\1", regex.match(line.strip()).group(2))
             for line in os_release
             if regex.match(line.strip())
         }

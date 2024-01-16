@@ -44,7 +44,6 @@ class Bleach(object):
     """
 
     def __init__(self, app=None):
-
         if app is not None:
             self.init_app(app)
 
@@ -62,33 +61,27 @@ class Bleach(object):
 
         self.app = app
 
-        if not hasattr(self.app, 'extensions'):
+        if not hasattr(self.app, "extensions"):
             self.app.extensions = {}
 
-        self.app.config.setdefault('BLEACH_ALLOWED_TAGS',
-                                   bleach.ALLOWED_TAGS)
-        self.app.config.setdefault('BLEACH_ALLOWED_ATTRIBUTES',
-                                   bleach.ALLOWED_ATTRIBUTES)
-        self.app.config.setdefault('BLEACH_ALLOWED_PROTOCOLS',
-                                   bleach.ALLOWED_PROTOCOLS)
-        self.app.config.setdefault('BLEACH_STRIP_MARKUP', False)
-        self.app.config.setdefault('BLEACH_STRIP_COMMENTS', True)
-        self.app.config.setdefault('BLEACH_AUTO_LINKIFY', False)
-        self.app.config.setdefault('BLEACH_CLEAN_BEFORE_LINKIFY', False)
-        self.app.config.setdefault('BLEACH_LINKIFY_SKIP_PRE', False)
-        self.app.config.setdefault('BLEACH_LINKIFY_PARSE_EMAIL', False)
+        self.app.config.setdefault("BLEACH_ALLOWED_TAGS", bleach.ALLOWED_TAGS)
+        self.app.config.setdefault("BLEACH_ALLOWED_ATTRIBUTES", bleach.ALLOWED_ATTRIBUTES)
+        self.app.config.setdefault("BLEACH_ALLOWED_PROTOCOLS", bleach.ALLOWED_PROTOCOLS)
+        self.app.config.setdefault("BLEACH_STRIP_MARKUP", False)
+        self.app.config.setdefault("BLEACH_STRIP_COMMENTS", True)
+        self.app.config.setdefault("BLEACH_AUTO_LINKIFY", False)
+        self.app.config.setdefault("BLEACH_CLEAN_BEFORE_LINKIFY", False)
+        self.app.config.setdefault("BLEACH_LINKIFY_SKIP_PRE", False)
+        self.app.config.setdefault("BLEACH_LINKIFY_PARSE_EMAIL", False)
 
-        self.app.extensions['bleach'] = self
-        self.app.add_template_filter(self.__build_clean_filter(),
-                                     name='bclean')
-        self.app.add_template_filter(self.__build_linkify_filter(),
-                                     name='blinkify')
+        self.app.extensions["bleach"] = self
+        self.app.add_template_filter(self.__build_clean_filter(), name="bclean")
+        self.app.add_template_filter(self.__build_linkify_filter(), name="blinkify")
 
     def __call__(self, stream):
-
         cleaned = self.clean(stream)
 
-        if self.app.config['BLEACH_AUTO_LINKIFY']:
+        if self.app.config["BLEACH_AUTO_LINKIFY"]:
             cleaned = self.linkify(cleaned)
 
         return cleaned
@@ -96,26 +89,27 @@ class Bleach(object):
     def __build_clean_filter(self):
         def bleach_filter(stream):
             return Markup(self(stream))
+
         return bleach_filter
 
     def __build_linkify_filter(self):
         def linkify_filter(stream):
-            if self.app.config['BLEACH_CLEAN_BEFORE_LINKIFY']:
+            if self.app.config["BLEACH_CLEAN_BEFORE_LINKIFY"]:
                 stream = self.clean(stream)
 
             return Markup(self.linkify(stream))
+
         return linkify_filter
 
     def clean(self, stream):
-        return bleach.clean(stream,
-                            tags=self.app.config['BLEACH_ALLOWED_TAGS'],
-                            attributes=self.app.config['BLEACH_ALLOWED_ATTRIBUTES'],
-                            protocols=self.app.config['BLEACH_ALLOWED_PROTOCOLS'],
-                            strip=self.app.config['BLEACH_STRIP_MARKUP'],
-                            strip_comments=self.app.config['BLEACH_STRIP_COMMENTS']
-                            )
+        return bleach.clean(
+            stream,
+            tags=self.app.config["BLEACH_ALLOWED_TAGS"],
+            attributes=self.app.config["BLEACH_ALLOWED_ATTRIBUTES"],
+            protocols=self.app.config["BLEACH_ALLOWED_PROTOCOLS"],
+            strip=self.app.config["BLEACH_STRIP_MARKUP"],
+            strip_comments=self.app.config["BLEACH_STRIP_COMMENTS"],
+        )
 
     def linkify(self, stream):
-        return bleach.linkify(stream,
-                              parse_email=self.app.config['BLEACH_LINKIFY_PARSE_EMAIL']
-                              )
+        return bleach.linkify(stream, parse_email=self.app.config["BLEACH_LINKIFY_PARSE_EMAIL"])

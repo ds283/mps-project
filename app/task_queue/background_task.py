@@ -32,31 +32,32 @@ def register_task(name, owner=None, description=None):
     # generate unique ID for this task
     uuid = str(uuid4())
 
-    data = TaskRecord(id=uuid,
-                      name=name,
-                      owner_id=owner.id if owner is not None else None,
-                      description=description,
-                      start_date=datetime.now(),
-                      status=TaskRecord.PENDING,
-                      progress=None,
-                      message=None)
+    data = TaskRecord(
+        id=uuid,
+        name=name,
+        owner_id=owner.id if owner is not None else None,
+        description=description,
+        start_date=datetime.now(),
+        status=TaskRecord.PENDING,
+        progress=None,
+        message=None,
+    )
 
     try:
         db.session.add(data)
         db.session.flush()
 
         if data.owner is not None:
-            data.owner.post_task_update(data.id, {'task': data.name, 'state': TaskRecord.PENDING,
-                                                   'progress': 0, 'message': 'Awaiting scheduling...'},
-                                        autocommit=False)
+            data.owner.post_task_update(
+                data.id, {"task": data.name, "state": TaskRecord.PENDING, "progress": 0, "message": "Awaiting scheduling..."}, autocommit=False
+            )
 
         db.session.commit()
 
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash('Could not register new task due to a database error. '
-              'Please contact a system administrator', 'error')
+        flash("Could not register new task due to a database error. Please contact a system administrator", "error")
 
         return None
 
@@ -64,7 +65,6 @@ def register_task(name, owner=None, description=None):
 
 
 def progress_update(task_id, state, progress, message, autocommit=False):
-
     data = TaskRecord.query.filter_by(id=task_id).first()
 
     if data is not None:
@@ -76,14 +76,15 @@ def progress_update(task_id, state, progress, message, autocommit=False):
         # push a notification to owning user, if there is one
         if data.owner is not None:
             remove_on_load = False
-            if data.status == TaskRecord.SUCCESS \
-                    or data.status == TaskRecord.FAILURE \
-                    or data.status == TaskRecord.TERMINATED:
+            if data.status == TaskRecord.SUCCESS or data.status == TaskRecord.FAILURE or data.status == TaskRecord.TERMINATED:
                 remove_on_load = True
 
-            data.owner.post_task_update(data.id, {'task': data.name, 'state': state,
-                                                   'progress': progress, 'message': message},
-                                        remove_on_load=remove_on_load, autocommit=False)
+            data.owner.post_task_update(
+                data.id,
+                {"task": data.name, "state": state, "progress": progress, "message": message},
+                remove_on_load=remove_on_load,
+                autocommit=False,
+            )
 
         # commit all changes
         if autocommit:

@@ -30,7 +30,7 @@ def clone_model(model, **kwargs):
     model_class = model.__class__
 
     # get tuple containing model class and its possible superclasses
-    if hasattr(model_class, '__mro__'):
+    if hasattr(model_class, "__mro__"):
         class_list = model_class.__mro__
     else:
         class_list = model_class.mro()
@@ -40,7 +40,7 @@ def clone_model(model, **kwargs):
     # loop through possible classes; for those that have a table attribute, unpack any fields corresponding
     # to columns of the table, except those that are tagged as primary key columns
     for c in class_list:
-        if hasattr(c, '__table__'):
+        if hasattr(c, "__table__"):
             table = c.__table__
             non_pk_columns = [k for k in table.columns.keys() if k not in table.primary_key]
             data = data | {c: getattr(model, c) for c in non_pk_columns}

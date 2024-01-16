@@ -14,9 +14,8 @@ from app.shared.cloud_object_store import ObjectStore
 import app.shared.cloud_object_store.bucket_types as buckets
 
 # Google Cloud Storage service account
-OBJECT_STORAGE_SERVICE_ACCOUNT_FILE = os.environ.get('OBJECT_STORAGE_SERVICE_ACCOUNT_FILE')
-_storage_options = {'google_service_account': OBJECT_STORAGE_SERVICE_ACCOUNT_FILE,
-                    'compressed': False}
+OBJECT_STORAGE_SERVICE_ACCOUNT_FILE = os.environ.get("OBJECT_STORAGE_SERVICE_ACCOUNT_FILE")
+_storage_options = {"google_service_account": OBJECT_STORAGE_SERVICE_ACCOUNT_FILE, "compressed": False}
 
 INITDB_BUCKET_URI = os.environ.get("INITDB_STORAGE_BUCKET_URI")
 INITDB_BUCKET = ObjectStore(INITDB_BUCKET_URI, buckets.INITDB_BUCKET, _storage_options)

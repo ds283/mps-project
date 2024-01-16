@@ -10,8 +10,7 @@
 
 
 # language=jinja2
-name = \
-"""
+name = """
 <a class="text-decoration-none" href="mailto:{{ u.email }}">{{ u.name }}</a>
 <div>
     {{ 'REPACTIVE'|safe }}
@@ -59,8 +58,7 @@ name = \
 
 
 # language=jinja2
-menu = \
-"""
+menu = """
 {% set user_is_student  = user.has_role('student') %}
 {% set user_is_faculty  = user.has_role('faculty') %}
 {% set user_is_admin    = user.has_role('admin') %}
@@ -152,25 +150,21 @@ menu = \
 """
 
 # language=jinja2
-active = \
-"""
+active = """
 {{ simple_label(u.active_label) }}
 """
 
 # language=jinja2
-cohort = \
-"""
+cohort = """
 {{ simple_label(s.cohort_label) }}
 """
 
 # language=jinja2
-programme = \
-"""
+programme = """
 {{ simple_label(s.programme.label) }}
 """
 
 # language=jinja2
-academic_year = \
-"""
+academic_year = """
 {{ simple_label(s.academic_year_label(show_details=True)) }}
 """

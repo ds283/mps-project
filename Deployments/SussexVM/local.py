@@ -17,12 +17,12 @@ from app.shared.cloud_object_store.encryption.chacha20_poly1305 import ChaCha20_
 
 
 # APP CONFIGURATION
-APP_NAME = 'mpsprojects'
+APP_NAME = "mpsprojects"
 
 # branding labels
-BRANDING_LABEL = 'MPS projects management'
-BRANDING_LOGIN_LANDING_STRING = 'Welcome to the MPS projects portal'
-BRANDING_PUBLIC_LANDING_STRING = 'Welcome to the MPS public projects list'
+BRANDING_LABEL = "MPS projects management"
+BRANDING_LOGIN_LANDING_STRING = "Welcome to the MPS projects portal"
+BRANDING_PUBLIC_LANDING_STRING = "Welcome to the MPS public projects list"
 
 # public browser
 ENABLE_PUBLIC_BROWSER = True
@@ -34,7 +34,7 @@ EMAIL_IS_LIVE = True
 
 # FLASK
 
-PREFERRED_URL_SCHEME = 'https'
+PREFERRED_URL_SCHEME = "https"
 
 
 # CLOUD API AUDIT
@@ -49,15 +49,17 @@ OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION = os.environ.get("OBJECT_STORAGE_AUDIT_B
 # OBJECT BUCKETS
 
 # Google Cloud Storage service account
-OBJECT_STORAGE_SERVICE_ACCOUNT_FILE = os.environ.get('OBJECT_STORAGE_SERVICE_ACCOUNT_FILE')
+OBJECT_STORAGE_SERVICE_ACCOUNT_FILE = os.environ.get("OBJECT_STORAGE_SERVICE_ACCOUNT_FILE")
 
 # default storage options, inherited by all buckets
-_storage_options = {'google_service_account': OBJECT_STORAGE_SERVICE_ACCOUNT_FILE,
-                    'compressed': True,
-                    'audit': OBJECT_STORAGE_AUDIT_API,
-                    'audit_database': OBJECT_STORAGE_AUDIT_BACKEND_DATABASE,
-                    'audit_collection': OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION,
-                    'audit_backend': OBJECT_STORAGE_AUDIT_BACKEND_URI}
+_storage_options = {
+    "google_service_account": OBJECT_STORAGE_SERVICE_ACCOUNT_FILE,
+    "compressed": True,
+    "audit": OBJECT_STORAGE_AUDIT_API,
+    "audit_database": OBJECT_STORAGE_AUDIT_BACKEND_DATABASE,
+    "audit_collection": OBJECT_STORAGE_AUDIT_BACKEND_COLLECTION,
+    "audit_backend": OBJECT_STORAGE_AUDIT_BACKEND_URI,
+}
 
 # -- ASSETS BUCKET
 
@@ -67,7 +69,7 @@ OBJECT_STORAGE_ASSETS_URI = os.environ.get("OBJECT_STORAGE_ASSETS_URI")
 OBJECT_STORAGE_ASSETS_ENCRYPT_KEY = os.environ.get("OBJECT_STORAGE_ASSETS_ENCRYPT_KEY")
 _assets_encrypt_key = base64.urlsafe_b64decode(OBJECT_STORAGE_ASSETS_ENCRYPT_KEY)
 
-_assets_storage_options = _storage_options | {'encryption_pipeline': ChaCha20_Poly1305(_assets_encrypt_key)}
+_assets_storage_options = _storage_options | {"encryption_pipeline": ChaCha20_Poly1305(_assets_encrypt_key)}
 
 OBJECT_STORAGE_ASSETS = ObjectStore(OBJECT_STORAGE_ASSETS_URI, buckets.ASSETS_BUCKET, _assets_storage_options)
 
@@ -79,7 +81,7 @@ OBJECT_STORAGE_BACKUP_URI = os.environ.get("OBJECT_STORAGE_BACKUP_URI")
 OBJECT_STORAGE_BACKUP_ENCRYPT_KEY = os.environ.get("OBJECT_STORAGE_BACKUP_ENCRYPT_KEY")
 _backup_encrypt_key = base64.urlsafe_b64decode(OBJECT_STORAGE_BACKUP_ENCRYPT_KEY)
 
-_backup_storage_options = _storage_options | {'encryption_pipeline': ChaCha20_Poly1305(_backup_encrypt_key)}
+_backup_storage_options = _storage_options | {"encryption_pipeline": ChaCha20_Poly1305(_backup_encrypt_key)}
 
 OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, buckets.BACKUP_BUCKET, _backup_storage_options)
 
@@ -87,6 +89,6 @@ OBJECT_STORAGE_BACKUP = ObjectStore(OBJECT_STORAGE_BACKUP_URI, buckets.BACKUP_BU
 
 OBJECT_STORAGE_TELEMETRY_URI = os.environ.get("OBJECT_STORAGE_TELEMETRY_URI")
 
-_telemetry_storage_options = _storage_options | {'compressed': False}
+_telemetry_storage_options = _storage_options | {"compressed": False}
 
 OBJECT_STORAGE_TELEMETRY = ObjectStore(OBJECT_STORAGE_TELEMETRY_URI, buckets.TELEMETRY_BUCKET, _telemetry_storage_options)

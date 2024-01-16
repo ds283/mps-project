@@ -11,8 +11,7 @@
 from flask import render_template_string, get_template_attribute
 
 # language=jinja2
-_types_menu = \
-"""
+_types_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -37,8 +36,7 @@ _types_menu = \
 
 
 # language=jinja2
-_active = \
-"""
+_active = """
 {% if t.active %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
@@ -48,23 +46,20 @@ _active = \
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 {{ t.name }} {{ simple_label(t.make_label()) }}
 """
 
 
 # language=jinja2
-_duration = \
-"""
+_duration = """
 {% set pl = 's' %}{% if t.duration == 1 %}{% set pl = '' %}{% endif %}
 {{ t.duration }} year{{ pl }}
 """
 
 
 # language=jinja2
-_colour = \
-"""
+_colour = """
 {{ simple_label(t.make_label(t.colour)) }}
 """
 
@@ -72,11 +67,16 @@ _colour = \
 def degree_types_data(types):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': render_template_string(_name, t=t, simple_label=simple_label),
-             'level': t._level_text(t.level),
-             'duration': render_template_string(_duration, t=t),
-             'active': render_template_string(_active, t=t),
-             'colour': render_template_string(_colour, t=t, simple_label=simple_label),
-             'menu': render_template_string(_types_menu, type=t)} for t in types]
+    data = [
+        {
+            "name": render_template_string(_name, t=t, simple_label=simple_label),
+            "level": t._level_text(t.level),
+            "duration": render_template_string(_duration, t=t),
+            "active": render_template_string(_active, t=t),
+            "colour": render_template_string(_colour, t=t, simple_label=simple_label),
+            "menu": render_template_string(_types_menu, type=t),
+        }
+        for t in types
+    ]
 
     return data

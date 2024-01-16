@@ -13,8 +13,7 @@ from ...models import ProjectClassConfig
 
 
 # language=jinja2
-_cohort = \
-"""
+_cohort = """
 {{ simple_label(sub.student.programme.short_label) }}
 {{ simple_label(sub.student.cohort_label) }}
 {{ simple_label(sub.academic_year_label(show_details=True)) }}
@@ -22,8 +21,7 @@ _cohort = \
 
 
 # language=jinja2
-_periods = \
-"""
+_periods = """
 {% macro feedback_state_tag(obj, state=none) %}
     {% if state is none %}{% set state = obj.feedback_state %}{% endif %}
     {% if state == obj.FEEDBACK_NOT_YET %}
@@ -233,8 +231,7 @@ _periods = \
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 {% set config = sub.config %}
 {% set pclass = config.project_class %}
 {% set period = config.current_period %}
@@ -309,8 +306,7 @@ _menu = \
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 {% set config = sub.config %}
 {% set pclass = config.project_class %}
 {% set student = sub.student %}
@@ -370,16 +366,17 @@ def submitters_data(students, config, show_name, show_number, sort_number):
     error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': {
-                'display': render_template_string(_name, sub=s, show_name=show_name, show_number=show_number,
-                                                  error_block_inline=error_block_inline),
-                'sortvalue': s.student.exam_number if sort_number else s.student.user.last_name + s.student.user.first_name
-             },
-             'cohort': {
-                 'display': render_template_string(_cohort, sub=s, simple_label=simple_label),
-                 'value': s.student.cohort
-             },
-             'periods': render_template_string(_periods, sub=s, config=config, error_block_popover=error_block_popover),
-             'menu': render_template_string(_menu, sub=s, allow_delete=allow_delete)} for s in students]
+    data = [
+        {
+            "name": {
+                "display": render_template_string(_name, sub=s, show_name=show_name, show_number=show_number, error_block_inline=error_block_inline),
+                "sortvalue": s.student.exam_number if sort_number else s.student.user.last_name + s.student.user.first_name,
+            },
+            "cohort": {"display": render_template_string(_cohort, sub=s, simple_label=simple_label), "value": s.student.cohort},
+            "periods": render_template_string(_periods, sub=s, config=config, error_block_popover=error_block_popover),
+            "menu": render_template_string(_menu, sub=s, allow_delete=allow_delete),
+        }
+        for s in students
+    ]
 
     return jsonify(data)

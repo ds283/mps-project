@@ -26,12 +26,14 @@ def _element(user_id, current_user_id):
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    return {'name': render_template_string(name, u=u, simple_label=simple_label),
-             'active': render_template_string(active, u=u, simple_label=simple_label),
-             'programme': render_template_string(programme, s=s, simple_label=simple_label),
-             'cohort': render_template_string(cohort, s=s, simple_label=simple_label),
-             'acadyear': render_template_string(academic_year, s=s, simple_label=simple_label),
-             'menu': render_template_string(menu, user=u, cuser=cu, pane='students')}
+    return {
+        "name": render_template_string(name, u=u, simple_label=simple_label),
+        "active": render_template_string(active, u=u, simple_label=simple_label),
+        "programme": render_template_string(programme, s=s, simple_label=simple_label),
+        "cohort": render_template_string(cohort, s=s, simple_label=simple_label),
+        "acadyear": render_template_string(academic_year, s=s, simple_label=simple_label),
+        "menu": render_template_string(menu, user=u, cuser=cu, pane="students"),
+    }
 
 
 def _process(user_id, current_user_id):
@@ -39,18 +41,18 @@ def _process(user_id, current_user_id):
 
     record = _element(user_id, current_user_id)
 
-    name = record['name']
+    name = record["name"]
     if u.currently_active:
-        name = name.replace('REPACTIVE', '<span class="badge bg-success">ACTIVE</span>', 1)
+        name = name.replace("REPACTIVE", '<span class="badge bg-success">ACTIVE</span>', 1)
     else:
-        name = name.replace('REPACTIVE', '', 1)
+        name = name.replace("REPACTIVE", "", 1)
 
-    record.update({'name': name})
+    record.update({"name": name})
 
     return record
 
 
-@listens_for(User, 'before_insert')
+@listens_for(User, "before_insert")
 def _User_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         ids = db.session.query(User.id).filter_by(active=True).all()
@@ -58,7 +60,7 @@ def _User_insert_handler(mapper, connection, target):
             cache.delete_memoized(_element, target.id, id[0])
 
 
-@listens_for(User, 'before_update')
+@listens_for(User, "before_update")
 def _User_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         if db.object_session(target).is_modified(target, include_collections=False):
@@ -67,7 +69,7 @@ def _User_update_handler(mapper, connection, target):
                 cache.delete_memoized(_element, target.id, id[0])
 
 
-@listens_for(User, 'before_delete')
+@listens_for(User, "before_delete")
 def _User_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         ids = db.session.query(User.id).filter_by(active=True).all()
@@ -75,7 +77,7 @@ def _User_delete_handler(mapper, connection, target):
             cache.delete_memoized(_element, target.id, id[0])
 
 
-@listens_for(StudentData, 'before_insert')
+@listens_for(StudentData, "before_insert")
 def _StudentData_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         ids = db.session.query(User.id).filter_by(active=True).all()
@@ -83,7 +85,7 @@ def _StudentData_insert_handler(mapper, connection, target):
             cache.delete_memoized(_element, target.id, id[0])
 
 
-@listens_for(StudentData, 'before_update')
+@listens_for(StudentData, "before_update")
 def _StudentData_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         if db.object_session(target).is_modified(target, include_collections=False):
@@ -92,7 +94,7 @@ def _StudentData_update_handler(mapper, connection, target):
                 cache.delete_memoized(_element, target.id, id[0])
 
 
-@listens_for(StudentData, 'before_delete')
+@listens_for(StudentData, "before_delete")
 def _StudentData_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         ids = db.session.query(User.id).filter_by(active=True).all()

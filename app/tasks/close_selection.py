@@ -14,8 +14,7 @@ from flask_mailman import EmailMultiAlternatives
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import TaskRecord, ProjectClassConfig, User, BackupRecord, SelectingStudent, \
-    SelectionRecord
+from ..models import TaskRecord, ProjectClassConfig, User, BackupRecord, SelectingStudent, SelectionRecord
 
 from ..task_queue import progress_update, register_task
 
@@ -25,10 +24,9 @@ from datetime import datetime
 
 
 def register_close_selection_tasks(celery):
-
     @celery.task(bind=True)
     def pclass_close(self, task_id, config_id, convenor_id, notify_convenor):
-        progress_update(task_id, TaskRecord.RUNNING, 0, 'Preparing to close...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 0, "Preparing to close...", autocommit=True)
 
         # get database records for this project class
         try:
@@ -40,12 +38,12 @@ def register_close_selection_tasks(celery):
 
         if config is None or convenor is None:
             if config is None:
-                self.update_state('FAILURE', meta={'msg': 'Could not load ProjectClassConfig record from database'})
+                self.update_state("FAILURE", meta={"msg": "Could not load ProjectClassConfig record from database"})
             if convenor is None:
-                self.update_state('FAILURE', meta={'msg': 'Could not load convenor User record from database'})
+                self.update_state("FAILURE", meta={"msg": "Could not load convenor User record from database"})
 
-            print('config: {x}'.format(x=config))
-            print('convenor: {x}').format(x=convenor)
+            print("config: {x}".format(x=config))
+            print("convenor: {x}").format(x=convenor)
             return close_fail.apply_async(args=(task_id, convenor_id))
 
         if not config.project_class.publish:
@@ -57,31 +55,33 @@ def register_close_selection_tasks(celery):
         selectors_group = group(selector_close.si(sel.id) for sel in config.selecting_students)
 
         # get backup task from Celery instance
-        celery = current_app.extensions['celery']
-        backup = celery.tasks['app.tasks.backup.backup']
+        celery = current_app.extensions["celery"]
+        backup = celery.tasks["app.tasks.backup.backup"]
 
-        seq = chain(close_initialize.si(task_id),
-                    backup.si(convenor_id, type=BackupRecord.PROJECT_CLOSE_FALLBACK, tag='close',
-                              description='Rollback snapshot for '
-                                          '{proj} close {yr}'.format(proj=config.name, yr=year)))
+        seq = chain(
+            close_initialize.si(task_id),
+            backup.si(
+                convenor_id,
+                type=BackupRecord.PROJECT_CLOSE_FALLBACK,
+                tag="close",
+                description="Rollback snapshot for {proj} close {yr}".format(proj=config.name, yr=year),
+            ),
+        )
 
         if len(selectors_group) > 0:
             seq = seq | selectors_group
 
-        seq = (seq | close_finalize.si(task_id, config_id, convenor_id, notify_convenor)) \
-            .on_error(close_fail.si(task_id, convenor_id))
+        seq = (seq | close_finalize.si(task_id, config_id, convenor_id, notify_convenor)).on_error(close_fail.si(task_id, convenor_id))
 
         raise self.replace(seq)
 
-
     @celery.task()
     def close_initialize(task_id):
-        progress_update(task_id, TaskRecord.RUNNING, 5, 'Building closure snapshot...', autocommit=True)
-
+        progress_update(task_id, TaskRecord.RUNNING, 5, "Building closure snapshot...", autocommit=True)
 
     @celery.task(bind=True)
     def close_finalize(self, task_id, config_id, convenor_id, notify_convenor):
-        progress_update(task_id, TaskRecord.SUCCESS, 100, 'Closure of selection complete', autocommit=False)
+        progress_update(task_id, TaskRecord.SUCCESS, 100, "Closure of selection complete", autocommit=False)
 
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
@@ -97,9 +97,12 @@ def register_close_selection_tasks(celery):
 
         if convenor is not None:
             # send direct message to user announcing that we have been successful
-            convenor.post_message('Closure of selections for "{proj}" {yra}-{yrb} is now '
-                                  'complete'.format(proj=config.name, yra=config.submit_year_a, yrb=config.submit_year_b),
-                                  'success', autocommit=False)
+            convenor.post_message(
+                'Closure of selections for "{proj}" {yra}-{yrb} is now '
+                "complete".format(proj=config.name, yra=config.submit_year_a, yrb=config.submit_year_b),
+                "success",
+                autocommit=False,
+            )
 
         try:
             db.session.commit()
@@ -119,26 +122,25 @@ def register_close_selection_tasks(celery):
             for user in config.project_class.office_contacts:
                 recipients.add(user.email)
 
-            msg = EmailMultiAlternatives(subject='[mpsprojects] "{name}": student selections now '
-                                                 'closed'.format(name=config.project_class.name),
-                                         from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                                         reply_to=[current_app.config['MAIL_REPLY_TO']],
-                                         to=list(recipients))
+            msg = EmailMultiAlternatives(
+                subject='[mpsprojects] "{name}": student selections now ' "closed".format(name=config.project_class.name),
+                from_email=current_app.config["MAIL_DEFAULT_SENDER"],
+                reply_to=[current_app.config["MAIL_REPLY_TO"]],
+                to=list(recipients),
+            )
 
             data = config.selector_data
-            msg.body = render_template('email/close_selection/convenor.txt', pclass=config.project_class, config=config,
-                                       data=data)
+            msg.body = render_template("email/close_selection/convenor.txt", pclass=config.project_class, config=config, data=data)
 
             # register a new task in the database
-            task_id = register_task(msg.subject, description='Send convenor email notification')
+            task_id = register_task(msg.subject, description="Send convenor email notification")
 
-            send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+            send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
             send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
-
 
     @celery.task(bind=True)
     def close_fail(self, task_id, convenor_id):
-        progress_update(task_id, TaskRecord.FAILURE, 100, 'Encountered error while closing selections', autocommit=True)
+        progress_update(task_id, TaskRecord.FAILURE, 100, "Encountered error while closing selections", autocommit=True)
 
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
@@ -147,11 +149,9 @@ def register_close_selection_tasks(celery):
             raise self.retry()
 
         if convenor is not None:
-            convenor.post_message('Close selections failed. Please contact a system administrator', 'error',
-                                  autocommit=False)
+            convenor.post_message("Close selections failed. Please contact a system administrator", "error", autocommit=False)
 
         db.session.commit()
-
 
     @celery.task(bind=True)
     def selector_close(self, sel_id):
@@ -174,11 +174,13 @@ def register_close_selection_tasks(celery):
 
 def convert_bookmarks(sel):
     for item in sel.ordered_bookmarks.limit(sel.number_choices):
-        data = SelectionRecord(owner_id=item.owner_id,
-                               liveproject_id=item.liveproject_id,
-                               rank=item.rank,
-                               converted_from_bookmark=True,
-                               hint=SelectionRecord.SELECTION_HINT_NEUTRAL)
+        data = SelectionRecord(
+            owner_id=item.owner_id,
+            liveproject_id=item.liveproject_id,
+            rank=item.rank,
+            converted_from_bookmark=True,
+            hint=SelectionRecord.SELECTION_HINT_NEUTRAL,
+        )
         db.session.add(data)
 
     sel.submission_time = datetime.now()

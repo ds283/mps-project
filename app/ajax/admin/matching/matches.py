@@ -11,8 +11,7 @@
 from flask import jsonify, render_template_string, get_template_attribute
 
 # language=jinja2
-_status = \
-"""
+_status = """
 {% if m.finished %}
     <span class="badge bg-primary">Finished</span>
     {% if m.solution_usable %}
@@ -67,8 +66,7 @@ _status = \
 """
 
 # language=jinja2
-_info = \
-"""
+_info = """
 <span class="badge bg-info">Supervisor <i class="fas fa-less-than-equal"></i> {{ m.supervising_limit }} CATS</span>
 <span class="badge bg-info">Marker <i class="fas fa-less-than-equal"></i> {{ m.marking_limit }} CATS</span>
 <span class="badge bg-info">Marker multiplicity <i class="fas fa-less-than-equal"></i> {{ m.max_marking_multiplicity }}</span>
@@ -226,8 +224,7 @@ _info = \
 
 
 # language=jinja2
-_score = \
-"""
+_score = """
 {% if m.solution_usable %}
     <span class="badge bg-success">Score {{ m.score }} original</span>
     {% set score = m.current_score %}
@@ -248,8 +245,7 @@ _score = \
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button"
             data-bs-toggle="dropdown">
@@ -360,8 +356,7 @@ _menu = \
 
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <div>
     {% if m.finished and m.solution_usable %}
         <a class="text-decoration-none" href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}"><strong>{{ m.name }}</strong></a>
@@ -418,14 +413,15 @@ def matches_data(matches, config=None, text=None, url=None, is_root=False):
     number = len(matches)
     allow_compare = number > 1
 
-    data = [{'name': render_template_string(_name, m=m, text=text, url=url, simple_label=simple_label),
-             'status': render_template_string(_status, m=m),
-             'score': {
-                 'display': render_template_string(_score, m=m),
-                 'value': float(m.score) if m.solution_usable and m.score is not None else 0
-             },
-             'info': render_template_string(_info, m=m),
-             'menu': render_template_string(_menu, m=m, text=text, url=url, compare=allow_compare,
-                                            is_root=is_root, config=config)} for m in matches]
+    data = [
+        {
+            "name": render_template_string(_name, m=m, text=text, url=url, simple_label=simple_label),
+            "status": render_template_string(_status, m=m),
+            "score": {"display": render_template_string(_score, m=m), "value": float(m.score) if m.solution_usable and m.score is not None else 0},
+            "info": render_template_string(_info, m=m),
+            "menu": render_template_string(_menu, m=m, text=text, url=url, compare=allow_compare, is_root=is_root, config=config),
+        }
+        for m in matches
+    ]
 
     return jsonify(data)

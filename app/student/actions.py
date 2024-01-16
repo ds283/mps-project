@@ -23,11 +23,13 @@ def store_selection(sel: SelectingStudent, converted=False, no_submit_IP=False):
 
     # iterate through bookmarks, converting them to a selection set
     for bookmark in sel.ordered_bookmarks.limit(sel.number_choices):
-        rec = SelectionRecord(owner_id=sel.id,
-                              liveproject_id=bookmark.liveproject_id,
-                              rank=bookmark.rank,
-                              converted_from_bookmark=converted,
-                              hint=SelectionRecord.SELECTION_HINT_NEUTRAL)
+        rec = SelectionRecord(
+            owner_id=sel.id,
+            liveproject_id=bookmark.liveproject_id,
+            rank=bookmark.rank,
+            converted_from_bookmark=converted,
+            hint=SelectionRecord.SELECTION_HINT_NEUTRAL,
+        )
         sel.selections.append(rec)
 
     sel.submission_time = datetime.now()

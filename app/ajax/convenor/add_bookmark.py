@@ -11,8 +11,7 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_project = \
-"""
+_project = """
 <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=proj.id, url=url_for('convenor.selector_bookmarks', id=sel.id), text='selector bookmarks') }}">
     {{ proj.name }}
 </a>
@@ -20,8 +19,7 @@ _project = \
 
 
 # language=jinja2
-_owner = \
-"""
+_owner = """
 {% if not project.generic and project.owner is not none %}
     <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
     {% if project.group %}{{ simple_label(project.group.make_label()) }}{% endif %}
@@ -32,8 +30,7 @@ _owner = \
 
 
 # language=jinja2
-_actions = \
-"""
+_actions = """
 <div class="float-end">
     <a href="{{ url_for('convenor.create_student_bookmark', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.selector_bookmarks', id=sel.id)) }}"
        class="btn btn-sm btn-secondary">
@@ -46,11 +43,18 @@ _actions = \
 def add_student_bookmark(projects, sel):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'project': render_template_string(_project, sel=sel, proj=project),
-             'owner': {
-                 'display': render_template_string(_owner, project=project, simple_label=simple_label),
-                 'sortvalue': project.owner.user.last_name + project.owner.user.first_name if not project.generic and project.owner is not None else 'Generic'
-             },
-             'actions': render_template_string(_actions, sel=sel, project=project)} for project in projects]
+    data = [
+        {
+            "project": render_template_string(_project, sel=sel, proj=project),
+            "owner": {
+                "display": render_template_string(_owner, project=project, simple_label=simple_label),
+                "sortvalue": project.owner.user.last_name + project.owner.user.first_name
+                if not project.generic and project.owner is not None
+                else "Generic",
+            },
+            "actions": render_template_string(_actions, sel=sel, project=project),
+        }
+        for project in projects
+    ]
 
     return jsonify(data)

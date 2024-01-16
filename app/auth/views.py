@@ -19,23 +19,25 @@ from ..models import User
 from . import auth
 
 
-@auth.route('/logout')
+@auth.route("/logout")
 def logout():
     """
     Log out the current user
     """
 
-    prev_id = session.pop('previous_login', None)
+    prev_id = session.pop("previous_login", None)
 
     if prev_id is not None and isinstance(prev_id, int):
         try:
             user = db.session.query(User).filter_by(id=prev_id).one()
 
-            current_app.logger.info('{real} reverted to viewing the site as themselves (previously viewing as '
-                                    'alternative user {fake})'.format(real=user.name, fake=current_user.name))
+            current_app.logger.info(
+                "{real} reverted to viewing the site as themselves (previously viewing as "
+                "alternative user {fake})".format(real=user.name, fake=current_user.name)
+            )
 
             login_user(user)
-            return redirect(url_for('manage_users.edit_users'))
+            return redirect(url_for("manage_users.edit_users"))
         except NoResultFound:
             pass
         except MultipleResultsFound:
@@ -43,10 +45,10 @@ def logout():
 
     logout_user()
     flash("You have been logged out")
-    return redirect(url_for('security.login'))
+    return redirect(url_for("security.login"))
 
 
-@auth.route('/logged_out')
+@auth.route("/logged_out")
 def logged_out():
     """
     Inform the user that an unrecoverable error has occurred, and they have been logged out.
@@ -55,4 +57,4 @@ def logged_out():
     """
 
     logout_user()
-    return render_template('auth/error_logout.html')
+    return render_template("auth/error_logout.html")

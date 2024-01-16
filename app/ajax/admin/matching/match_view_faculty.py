@@ -14,8 +14,7 @@ from flask import jsonify, render_template_string
 from ....models import MatchingAttempt, MatchingRecord
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a class="text-decoration-none" href="mailto:{{ f.user.email }}">{{ f.user.name }}</a>
 {% if overassigned %}
     <i class="fas fa-exclamation-triangle text-danger"></i>
@@ -88,8 +87,7 @@ _name = \
 
 
 # language=jinja2
-_projects = \
-"""
+_projects = """
 {% macro truncate_name(name, maxlength=25) %}
     {%- if name|length > maxlength -%}
         {{ name[0:maxlength] }}...
@@ -177,8 +175,7 @@ _projects = \
 
 
 # language=jinja2
-_marking = \
-"""
+_marking = """
 {% macro truncate_name(name, maxlength=25) %}
     {%- if name|length > maxlength -%}
         {{ name[0:maxlength] }}...
@@ -229,8 +226,7 @@ _marking = \
 
 
 # language=jinja2
-_workload = \
-"""
+_workload = """
 <span class="badge {% if sup_overassigned %}bg-danger{% else %}bg-info{% endif %}">S {{ sup }}</span>
 <span class="badge {% if mark_overassigned %}bg-danger{% else %}bg-secondary{% endif %}">M {{ mark }}</span>
 <span class="badge {% if sup_overassigned or mark_overassigned %}bg-danger{% else %}bg-primary{% endif %}">T {{ tot }}</span>
@@ -254,21 +250,21 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, ty
 
         # check for CATS overassignment
         payload = match_attempt.is_supervisor_overassigned(f, include_matches=show_includes, pclass_id=pclass_filter)
-        sup_overassigned = payload.get('flag', False)
-        CATS_sup = payload.get('CATS_total', None)
-        included_sup = payload.get('included', {})
-        sup_msg = payload.get('error_message', None)
+        sup_overassigned = payload.get("flag", False)
+        CATS_sup = payload.get("CATS_total", None)
+        included_sup = payload.get("included", {})
+        sup_msg = payload.get("error_message", None)
 
         payload = match_attempt.is_marker_overassigned(f, include_matches=show_includes, pclass_id=pclass_filter)
-        mark_overassigned = payload.get('flag', False)
-        CATS_mark = payload.get('CATS_total', None)
-        included_mark = payload.get('included', {})
-        mark_msg = payload.get('error_message', None)
+        mark_overassigned = payload.get("flag", False)
+        CATS_mark = payload.get("CATS_total", None)
+        included_mark = payload.get("included", {})
+        mark_msg = payload.get("error_message", None)
 
         if sup_overassigned:
-            sup_errors['sup_over'] = sup_msg
+            sup_errors["sup_over"] = sup_msg
         if mark_overassigned:
-            mark_errors['mark_over'] = mark_msg
+            mark_errors["mark_over"] = mark_msg
         overassigned = sup_overassigned or mark_overassigned
 
         if show_includes:
@@ -279,19 +275,19 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, ty
 
         if pclass_filter is not None:
             payload = match_attempt.is_supervisor_overassigned(f, include_matches=show_includes)
-            _sup_overassigned = payload.get('flag', False)
-            _CATS_sup = payload.get('CATS_total', None)
-            _sup_msg = payload.get('error_message', None)
+            _sup_overassigned = payload.get("flag", False)
+            _CATS_sup = payload.get("CATS_total", None)
+            _sup_msg = payload.get("error_message", None)
 
             payload = match_attempt.is_marker_overassigned(f, include_matches=show_includes)
-            _mark_overassigned = payload.get('flag', False)
-            _CATS_mark = payload.get('CATS_total', None)
-            _mark_msg = payload.get('error_message', None)
+            _mark_overassigned = payload.get("flag", False)
+            _CATS_mark = payload.get("CATS_total", None)
+            _mark_msg = payload.get("error_message", None)
 
             if _sup_overassigned:
-                sup_errors['sup_over_full'] = _sup_msg
+                sup_errors["sup_over_full"] = _sup_msg
             if _mark_overassigned:
-                mark_errors['mark_over_full'] = _mark_msg
+                mark_errors["mark_over_full"] = _mark_msg
             overassigned = overassigned or _sup_overassigned or _mark_overassigned
 
         included_workload = {}
@@ -304,25 +300,29 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, ty
 
         filter_list = []
 
-        if type_filter == 'ordinary':
+        if type_filter == "ordinary":
+
             def filt(r: MatchingRecord):
                 return not r.project.generic
 
             filter_list.append(filt)
 
-        elif type_filter == 'generic':
+        elif type_filter == "generic":
+
             def filt(r: MatchingRecord):
                 return r.project.generic
 
             filter_list.append(filt)
 
-        if hint_filter == 'satisfied':
+        if hint_filter == "satisfied":
+
             def filt(r: MatchingRecord):
                 return len(r.hint_status[0]) > 0
 
             filter_list.append(filt)
 
-        elif hint_filter == 'violated':
+        elif hint_filter == "violated":
+
             def filt(r: MatchingRecord):
                 return len(r.hint_status[1]) > 0
 
@@ -346,14 +346,16 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, ty
             sup, mark, mod = match_attempt.get_faculty_CATS(f, pclass_id=config.pclass_id)
 
             if rec.CATS_supervision is not None and sup > rec.CATS_supervision:
-                sup_errors[('custom_sup', f.id)] = 'Assignment to {name} violates custom supervising CATS ' \
-                                                   'limit {n}'.format(name=f.user.name, n=rec.CATS_supervision)
+                sup_errors[("custom_sup", f.id)] = "Assignment to {name} violates custom supervising CATS limit {n}".format(
+                    name=f.user.name, n=rec.CATS_supervision
+                )
                 overassigned = True
                 sup_overassigned = True
 
             if rec.CATS_marking is not None and mark > rec.CATS_marking:
-                mark_errors[('custom_mark', f.id)] = 'Assignment to {name} violates custom marking CATS ' \
-                                                     'limit {n}'.format(name=f.user.name, n=rec.CATS_marking)
+                mark_errors[("custom_mark", f.id)] = "Assignment to {name} violates custom marking CATS limit {n}".format(
+                    name=f.user.name, n=rec.CATS_marking
+                )
                 overassigned = True
                 mark_overassigned = True
 
@@ -362,25 +364,39 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, ty
         sup_err_msgs = sup_errors.values()
         mark_err_msgs = mark_errors.values()
 
-        data.append({'name': {'display': render_template_string(_name, f=f, overassigned=overassigned,
-                                                                match=match_attempt, enrollments=enrollments,
-                                                                pclass_filter=pclass_filter),
-                              'sortvalue': f.user.last_name + f.user.first_name},
-                     'projects': {'display': render_template_string(_projects, recs=supv_records,
-                                                                    pclass_filter=pclass_filter, err_msgs=sup_err_msgs),
-                                  'sortvalue': len(supv_records)},
-                     'marking': {'display': render_template_string(_marking, recs=mark_records,
-                                                                   pclass_filter=pclass_filter, err_msgs=mark_err_msgs),
-                                 'sortvalue': len(mark_records)},
-                     'workload': {'display': render_template_string(_workload, m=match_attempt,
-                                                                    sup=this_sup, mark=this_mark,
-                                                                    tot=this_sup + this_mark,
-                                                                    sup_overassigned=sup_overassigned,
-                                                                    mark_overassigned=mark_overassigned,
-                                                                    included_sup=included_sup,
-                                                                    included_mark=included_mark,
-                                                                    included_workload=included_workload,
-                                                                    total_CATS_value=CATS_sup + CATS_mark),
-                                  'sortvalue': CATS_sup + CATS_mark}})
+        data.append(
+            {
+                "name": {
+                    "display": render_template_string(
+                        _name, f=f, overassigned=overassigned, match=match_attempt, enrollments=enrollments, pclass_filter=pclass_filter
+                    ),
+                    "sortvalue": f.user.last_name + f.user.first_name,
+                },
+                "projects": {
+                    "display": render_template_string(_projects, recs=supv_records, pclass_filter=pclass_filter, err_msgs=sup_err_msgs),
+                    "sortvalue": len(supv_records),
+                },
+                "marking": {
+                    "display": render_template_string(_marking, recs=mark_records, pclass_filter=pclass_filter, err_msgs=mark_err_msgs),
+                    "sortvalue": len(mark_records),
+                },
+                "workload": {
+                    "display": render_template_string(
+                        _workload,
+                        m=match_attempt,
+                        sup=this_sup,
+                        mark=this_mark,
+                        tot=this_sup + this_mark,
+                        sup_overassigned=sup_overassigned,
+                        mark_overassigned=mark_overassigned,
+                        included_sup=included_sup,
+                        included_mark=included_mark,
+                        included_workload=included_workload,
+                        total_CATS_value=CATS_sup + CATS_mark,
+                    ),
+                    "sortvalue": CATS_sup + CATS_mark,
+                },
+            }
+        )
 
     return jsonify(data)

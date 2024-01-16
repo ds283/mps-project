@@ -10,6 +10,6 @@
 
 from flask import Blueprint
 
-project_approver = Blueprint('project_approver', __name__)
+project_approver = Blueprint("project_approver", __name__)
 
 from . import views

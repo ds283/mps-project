@@ -11,8 +11,7 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a class="text-decoration-none" href="mailto:{{ a.faculty.user.email }}">{{ a.faculty.user.name }}</a>
 <div>
     {% if a.confirmed %}
@@ -31,8 +30,7 @@ _name = \
 
 
 # language=jinja2
-_sessions = \
-"""
+_sessions = """
 {% for slot in slots %}
     <div style="display: inline-block; margin-bottom:2px; margin-right:2px;">
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
@@ -74,23 +72,26 @@ _sessions = \
 
 
 # language=jinja2
-_availability = \
-"""
+_availability = """
 <span class="badge bg-success">{{ a.number_available }}</span>
 <span class="badge bg-warning text-dark">{{ a.number_ifneeded }}</span>
 <span class="badge bg-danger">{{ a.number_unavailable }}</span>
 """
 
 
-
 def schedule_view_faculty(assessors, record, url=None, text=None):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': {'display': render_template_string(_name, a=a),
-                      'sortstring': a.faculty.user.last_name + a.faculty.user.first_name},
-             'sessions': {'display': render_template_string(_sessions, a=a, slots=slots, rec=record,
-                                                            back_url=url, back_text=text, simple_label=simple_label),
-                          'sortvalue': len(slots)},
-             'availability': render_template_string(_availability, a=a)} for a, slots in assessors]
+    data = [
+        {
+            "name": {"display": render_template_string(_name, a=a), "sortstring": a.faculty.user.last_name + a.faculty.user.first_name},
+            "sessions": {
+                "display": render_template_string(_sessions, a=a, slots=slots, rec=record, back_url=url, back_text=text, simple_label=simple_label),
+                "sortvalue": len(slots),
+            },
+            "availability": render_template_string(_availability, a=a),
+        }
+        for a, slots in assessors
+    ]
 
     return jsonify(data)

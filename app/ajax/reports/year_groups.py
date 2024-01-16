@@ -12,8 +12,7 @@
 from flask import render_template_string, get_template_attribute
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a class="text-decoration-none" href="mailto:{{ s.user.email }}">{{ s.user.name }}</a>
 {% if s.intermitting %}
     <span class="badge bg-warning text-dark">TWD</span>
@@ -24,8 +23,7 @@ _name = \
 
 
 # language=jinja2
-_selecting = \
-"""
+_selecting = """
 {% for sel in s.ordered_selecting %}
     {% if not sel.retired %}
         {{ simple_label(sel.config.project_class.make_label()) }}
@@ -35,8 +33,7 @@ _selecting = \
 
 
 # language=jinja2
-_submitting = \
-"""
+_submitting = """
 {% for sub in s.ordered_submitting %}
     {% if not sub.retired %}
         {{ simple_label(sub.config.project_class.make_label()) }}
@@ -45,18 +42,22 @@ _submitting = \
 """
 
 # language=jinja2
-_programme = \
-"""
+_programme = """
 {{ simple_label(s.programme.label) }}
 """
+
 
 def year_groups(students):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': render_template_string(_name, s=s, simple_label=simple_label),
-             'programme': render_template_string(_programme, s=s, simple_label=simple_label),
-             'selecting': render_template_string(_selecting, s=s, simple_label=simple_label),
-             'submitting': render_template_string(_submitting, s=s, simple_label=simple_label)}
-            for s in students]
+    data = [
+        {
+            "name": render_template_string(_name, s=s, simple_label=simple_label),
+            "programme": render_template_string(_programme, s=s, simple_label=simple_label),
+            "selecting": render_template_string(_selecting, s=s, simple_label=simple_label),
+            "submitting": render_template_string(_submitting, s=s, simple_label=simple_label),
+        }
+        for s in students
+    ]
 
     return data

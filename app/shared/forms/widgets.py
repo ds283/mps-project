@@ -12,25 +12,20 @@ from wtforms_alchemy import GroupedQuerySelectMultipleField, QuerySelectMultiple
 
 
 class GroupedTagSelectField(GroupedQuerySelectMultipleField):
-    def __init__(self,
-                 label=None,
-                 validators=None,
-                 query_factory=None,
-                 get_pk=None,
-                 get_label=None,
-                 get_group=None,
-                 blank_text='',
-                 default=None,
-                 **kwargs):
-        super().__init__(label=label,
-                         validators=validators,
-                         query_factory=query_factory,
-                         get_pk=get_pk,
-                         get_label=get_label,
-                         get_group=get_group,
-                         blank_text=blank_text,
-                         default=default,
-                         **kwargs)
+    def __init__(
+        self, label=None, validators=None, query_factory=None, get_pk=None, get_label=None, get_group=None, blank_text="", default=None, **kwargs
+    ):
+        super().__init__(
+            label=label,
+            validators=validators,
+            query_factory=query_factory,
+            get_pk=get_pk,
+            get_label=get_label,
+            get_group=get_group,
+            blank_text=blank_text,
+            default=default,
+            **kwargs
+        )
 
     @property
     def data(self):
@@ -79,34 +74,21 @@ class GroupedTagSelectField(GroupedQuerySelectMultipleField):
         matched = data[0]
 
         for value, label in self.concrete_choices:
-            yield (
-                value,
-                label,
-                (
-                    self.coerce,
-                    [self.get_pk(obj) for obj in matched or []]
-                )
-            )
+            yield (value, label, (self.coerce, [self.get_pk(obj) for obj in matched or []]))
 
 
 class BasicTagSelectField(QuerySelectMultipleField):
-    def __init__(self,
-                 label=None,
-                 validators=None,
-                 query_factory=None,
-                 get_pk=None,
-                 get_label=None,
-                 blank_text='',
-                 default=None,
-                 **kwargs):
-        super().__init__(label=label,
-                         validators=validators,
-                         query_factory=query_factory,
-                         get_pk=get_pk,
-                         get_label=get_label,
-                         blank_text=blank_text,
-                         default=default,
-                         **kwargs)
+    def __init__(self, label=None, validators=None, query_factory=None, get_pk=None, get_label=None, blank_text="", default=None, **kwargs):
+        super().__init__(
+            label=label,
+            validators=validators,
+            query_factory=query_factory,
+            get_pk=get_pk,
+            get_label=get_label,
+            blank_text=blank_text,
+            default=default,
+            **kwargs
+        )
 
     @property
     def data(self):

@@ -14,20 +14,20 @@ from wtforms import SubmitField, TextAreaField
 from ..shared.forms.mixins import SaveChangesMixin, EmailSettingsMixin, DefaultLicenseMixin
 
 
-class StudentFeedbackMixin():
+class StudentFeedbackMixin:
+    feedback = TextAreaField(
+        "Enter feedback for your supervisor",
+        render_kw={"rows": 5},
+        description="Your feedback can be structured using Markdown, or use LaTeX formatting "
+        "and mathematical markup. Preview by looking on your feedback page.",
+    )
 
-    feedback = TextAreaField('Enter feedback for your supervisor', render_kw={'rows': 5},
-                             description='Your feedback can be structured using Markdown, or use LaTeX formatting '
-                                         'and mathematical markup. Preview by looking on your feedback page.')
-
-    save_changes = SubmitField('Save changes')
+    save_changes = SubmitField("Save changes")
 
 
 class StudentFeedbackForm(Form, StudentFeedbackMixin):
-
     pass
 
 
 class StudentSettingsForm(Form, EmailSettingsMixin, SaveChangesMixin, DefaultLicenseMixin):
-
     pass

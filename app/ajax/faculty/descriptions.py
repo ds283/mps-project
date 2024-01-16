@@ -11,8 +11,7 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_pclasses = \
-"""
+_pclasses = """
 {% set ns = namespace(count=0) %}
 {% if d.default is not none %}
     <span class="badge bg-success">Default</span>
@@ -37,8 +36,7 @@ _pclasses = \
 
 
 # language=jinja2
-_team = \
-"""
+_team = """
 {% for sup in d.team %}
     {{ simple_label(sup.make_label(sup.name)) }}
 {% else %}
@@ -65,14 +63,25 @@ def descriptions_data(descs, label, menu, pclass_id=None, create=None, config=No
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'label': render_template_string(label, d=d, desc_pclass_id=_get_pclass(d),
-                                             pclass_id=pclass_id, create=create, config=config,
-                                             desc_validator=desc_validator, error_block_inline=error_block_inline,
-                                             error_block_popover=error_block_popover),
-             'pclasses': render_template_string(_pclasses, d=d),
-             'team': render_template_string(_team, d=d, simple_label=simple_label),
-             'capacity': d.capacity,
-             'menu': render_template_string(menu, d=d, pclass_id=pclass_id, create=create,
-                                            desc_validator=desc_validator)} for d in descs]
+    data = [
+        {
+            "label": render_template_string(
+                label,
+                d=d,
+                desc_pclass_id=_get_pclass(d),
+                pclass_id=pclass_id,
+                create=create,
+                config=config,
+                desc_validator=desc_validator,
+                error_block_inline=error_block_inline,
+                error_block_popover=error_block_popover,
+            ),
+            "pclasses": render_template_string(_pclasses, d=d),
+            "team": render_template_string(_team, d=d, simple_label=simple_label),
+            "capacity": d.capacity,
+            "menu": render_template_string(menu, d=d, pclass_id=pclass_id, create=create, desc_validator=desc_validator),
+        }
+        for d in descs
+    ]
 
     return jsonify(data)

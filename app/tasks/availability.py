@@ -17,8 +17,17 @@ from flask import current_app, render_template
 from flask_mailman import EmailMultiAlternatives
 
 from ..database import db
-from ..models import User, PresentationAssessment, TaskRecord, FacultyData, EnrollmentRecord, PresentationSession, \
-    AssessorAttendanceData, SubmitterAttendanceData, SubmissionRecord
+from ..models import (
+    User,
+    PresentationAssessment,
+    TaskRecord,
+    FacultyData,
+    EnrollmentRecord,
+    PresentationSession,
+    AssessorAttendanceData,
+    SubmitterAttendanceData,
+    SubmissionRecord,
+)
 from ..task_queue import progress_update, register_task
 from ..shared.sqlalchemy import get_count
 
@@ -27,11 +36,9 @@ from dateutil import parser
 
 
 def register_availability_tasks(celery):
-
     @celery.task(bind=True, default_retry_delay=30)
     def initialize(self, data_id, user_id, celery_id, deadline, skip_availability):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up PresentationAssessment record for id={id}'.format(id=data_id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up PresentationAssessment record for id={id}".format(id=data_id)})
 
         if not skip_availability:
             if isinstance(deadline, str):
@@ -49,7 +56,7 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if assessment is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load PresentationAssessment record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load PresentationAssessment record from database"})
             progress_update(celery_id, TaskRecord.FAILURE, 100, "Database error", autocommit=True)
             raise Ignore()
 
@@ -62,10 +69,14 @@ def register_availability_tasks(celery):
         # Notice that we use everyone who is suitably enrolled, *not* just faculty who are in the union of
         # the assessor lists for all attached projects.
         for period in assessment.submission_periods:
-            assessors = period.assessors_list \
-                .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
-                .filter(EnrollmentRecord.pclass_id == period.config.pclass_id,
-                        EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED).all()
+            assessors = (
+                period.assessors_list.join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id)
+                .filter(
+                    EnrollmentRecord.pclass_id == period.config.pclass_id,
+                    EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED,
+                )
+                .all()
+            )
 
             for assessor in assessors:
                 if assessor.user.active and assessor.id not in assessor_ids:
@@ -75,7 +86,6 @@ def register_availability_tasks(celery):
             assessor_tasks = group(attach_assessment_assessor.s(data_id, a_id) | assessor_email_sink.s() for a_id in assessor_ids)
         else:
             assessor_tasks = group(attach_assessment_assessor.s(data_id, a_id) | issue_assessor_email.s(deadline) for a_id in assessor_ids)
-
 
         # SECOND task is to build list of submitters for each submission period included in this assessment,
         # and merge into talk_ids
@@ -90,21 +100,21 @@ def register_availability_tasks(celery):
         task_chain = availability_finalize_msg.si(celery_id, data_id, user_id, deadline, skip_availability)
 
         if len(submitter_tasks) > 0:
-            task_chain = attach_submitter_pre_msg.si(celery_id) | submitter_tasks | \
-                         attach_submitter_post_msg.s(celery_id) | task_chain
+            task_chain = attach_submitter_pre_msg.si(celery_id) | submitter_tasks | attach_submitter_post_msg.s(celery_id) | task_chain
 
         if len(assessor_tasks) > 0:
-            task_chain = attach_assessor_pre_msg.si(celery_id) | assessor_tasks | \
-                         attach_assessor_post_msg.s(celery_id, user_id, skip_availability) | task_chain
+            task_chain = (
+                attach_assessor_pre_msg.si(celery_id)
+                | assessor_tasks
+                | attach_assessor_post_msg.s(celery_id, user_id, skip_availability)
+                | task_chain
+            )
 
         return self.replace(task_chain)
 
-
     @celery.task()
     def attach_assessor_pre_msg(task_id):
-        progress_update(task_id, TaskRecord.RUNNING, 20, "Attaching database records for faculty assessors ...",
-                        autocommit=True)
-
+        progress_update(task_id, TaskRecord.RUNNING, 20, "Attaching database records for faculty assessors ...", autocommit=True)
 
     @celery.task(bind=True)
     def attach_assessor_post_msg(self, results, task_id, user_id, skip_availability):
@@ -113,12 +123,12 @@ def register_availability_tasks(celery):
         elif isinstance(results, list):
             num_issued = sum(results)
         else:
-            self.update_state('FAILURE', meta={'msg': 'Unexpected result type forwarded in attaching assessor records'})
-            raise RuntimeError('Unexpected result type forwarded in attaching assessor records')
+            self.update_state("FAILURE", meta={"msg": "Unexpected result type forwarded in attaching assessor records"})
+            raise RuntimeError("Unexpected result type forwarded in attaching assessor records")
 
-        progress_update(task_id, TaskRecord.RUNNING, 40,
-                        'Attached {n} faculty records'.format(n=num_issued, pl='' if num_issued == 1 else 's'),
-                        autocommit=True)
+        progress_update(
+            task_id, TaskRecord.RUNNING, 40, "Attached {n} faculty records".format(n=num_issued, pl="" if num_issued == 1 else "s"), autocommit=True
+        )
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
@@ -127,17 +137,13 @@ def register_availability_tasks(celery):
             raise Ignore()
 
         if not skip_availability and user is not None:
-            user.post_message('{n} availability request{pl} issued'.format(n=num_issued, pl='' if num_issued == 1 else 's'),
-                              'info', autocommit=True)
+            user.post_message("{n} availability request{pl} issued".format(n=num_issued, pl="" if num_issued == 1 else "s"), "info", autocommit=True)
 
         return num_issued
 
-
     @celery.task()
     def attach_submitter_pre_msg(task_id):
-        progress_update(task_id, TaskRecord.RUNNING, 60, "Attaching database records for submitters ...",
-                        autocommit=True)
-
+        progress_update(task_id, TaskRecord.RUNNING, 60, "Attaching database records for submitters ...", autocommit=True)
 
     @celery.task(bind=True)
     def attach_submitter_post_msg(self, results, task_id):
@@ -146,14 +152,17 @@ def register_availability_tasks(celery):
         elif isinstance(results, list):
             num_attached = sum(results)
         else:
-            self.update_state('FAILURE', meta={'msg': 'Unexpected result type forwarded in attaching assessor records'})
-            raise RuntimeError('Unexpected result type forwarded in attaching assessor records')
+            self.update_state("FAILURE", meta={"msg": "Unexpected result type forwarded in attaching assessor records"})
+            raise RuntimeError("Unexpected result type forwarded in attaching assessor records")
 
-        progress_update(task_id, TaskRecord.RUNNING, 40,
-                        'Attached {n} submitter records'.format(n=num_attached, pl='' if num_attached == 1 else 's'),
-                        autocommit=True)
+        progress_update(
+            task_id,
+            TaskRecord.RUNNING,
+            40,
+            "Attached {n} submitter records".format(n=num_attached, pl="" if num_attached == 1 else "s"),
+            autocommit=True,
+        )
         return num_attached
-
 
     @celery.task(bind=True)
     def availability_finalize_msg(self, task_id, data_id, user_id, deadline, skip_availability):
@@ -167,7 +176,7 @@ def register_availability_tasks(celery):
         else:
             deadline = None
 
-        progress_update(task_id, TaskRecord.SUCCESS, 100, 'Assessor and submitter records attached', autocommit=False)
+        progress_update(task_id, TaskRecord.SUCCESS, 100, "Assessor and submitter records attached", autocommit=False)
 
         try:
             assessment: PresentationAssessment = db.session.query(PresentationAssessment).filter_by(id=data_id).first()
@@ -176,7 +185,7 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if assessment is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load PresentationAssessment record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load PresentationAssessment record from database"})
             raise Ignore()
 
         try:
@@ -204,7 +213,6 @@ def register_availability_tasks(celery):
 
         return True
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def attach_assessment_assessor(self, _result_data, data_id, assessor_id):
         try:
@@ -215,34 +223,35 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if data is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load PresentationAssessment record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load PresentationAssessment record from database"})
             raise Ignore()
 
         if fd is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load FacultyData record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load FacultyData record from database"})
             raise Ignore()
 
         if not fd.user.active:
             raise Ignore()
 
         # search for an existing record with this assessment id and assessor id, to avoid entering duplicates
-        a_record = db.session.query(AssessorAttendanceData) \
-            .filter_by(assessment_id=data.id, faculty_id=assessor_id).first()
+        a_record = db.session.query(AssessorAttendanceData).filter_by(assessment_id=data.id, faculty_id=assessor_id).first()
 
         if a_record is not None:
             return a_record.id
 
         try:
-            a_record = AssessorAttendanceData(assessment_id=data.id,
-                                              faculty_id=assessor_id,
-                                              comment=None,
-                                              confirmed=False,
-                                              confirmed_timestamp=None,
-                                              assigned_limit=None,
-                                              request_email_sent=False,
-                                              request_timestamp=None,
-                                              reminder_email_sent=False,
-                                              last_reminder_timestamp=None)
+            a_record = AssessorAttendanceData(
+                assessment_id=data.id,
+                faculty_id=assessor_id,
+                comment=None,
+                confirmed=False,
+                confirmed_timestamp=None,
+                assigned_limit=None,
+                request_email_sent=False,
+                request_timestamp=None,
+                reminder_email_sent=False,
+                last_reminder_timestamp=None,
+            )
 
             # assume available for all sessions by default
             # (this is especially helpful when availability collection is being skipped)
@@ -260,11 +269,9 @@ def register_availability_tasks(celery):
         # return ID of new assessor attendance record
         return a_record.id
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def assessor_email_sink(self, a_record_id):
         return 1
-
 
     @celery.task(bind=True, default_retry_delay=30)
     def issue_assessor_email(self, a_record_id, deadline):
@@ -281,7 +288,7 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if a_record is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load AssessorAttendanceData record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load AssessorAttendanceData record from database"})
             raise Ignore()
 
         # avoid sending duplicate emails
@@ -297,22 +304,23 @@ def register_availability_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         msg = EmailMultiAlternatives(
-            subject='Availability request for event {name}'.format(name=a_record.assessment.name),
-            from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-            reply_to=[current_app.config['MAIL_REPLY_TO']],
-            to=[a_record.faculty.user.email])
+            subject="Availability request for event {name}".format(name=a_record.assessment.name),
+            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
+            reply_to=[current_app.config["MAIL_REPLY_TO"]],
+            to=[a_record.faculty.user.email],
+        )
 
-        msg.body = render_template('email/scheduling/availability_request.txt', event=a_record.assessment,
-                                   deadline=deadline, user=a_record.faculty.user)
+        msg.body = render_template(
+            "email/scheduling/availability_request.txt", event=a_record.assessment, deadline=deadline, user=a_record.faculty.user
+        )
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send availability request email to {r}'.format(r=', '.join(msg.to)))
+        task_id = register_task(msg.subject, description="Send availability request email to {r}".format(r=", ".join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1
-
 
     @celery.task(bind=True, default_retry_delay=30)
     def attach_assessment_submitter(self, _result_data, data_id, submitter_id):
@@ -324,27 +332,24 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if data is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load PresentationAssessment record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load PresentationAssessment record from database"})
             raise Ignore()
 
         if sd is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load SubmissionRecord record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load SubmissionRecord record from database"})
             raise Ignore()
 
         if not sd.owner.student.user.active:
             raise Ignore()
 
         # search for existing record with this assessment_id and submitted_id, to avoid adding duplicates
-        s_record = db.session.query(SubmitterAttendanceData) \
-            .filter_by(assessment_id=data.id, submitter_id=submitter_id).first()
+        s_record = db.session.query(SubmitterAttendanceData).filter_by(assessment_id=data.id, submitter_id=submitter_id).first()
 
         if s_record is not None:
             return s_record.id
 
         try:
-            s_record = SubmitterAttendanceData(assessment_id=data.id,
-                                               submitter_id=submitter_id,
-                                               attending=True)
+            s_record = SubmitterAttendanceData(assessment_id=data.id, submitter_id=submitter_id, attending=True)
 
             # assume available for all sessions by default
             for session in data.sessions:
@@ -361,11 +366,9 @@ def register_availability_tasks(celery):
         # return ID of new submitters record
         return s_record.id
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def adjust(self, record_id, current_year):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up EnrollmentRecord for id={id}'.format(id=record_id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up EnrollmentRecord for id={id}".format(id=record_id)})
 
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=record_id).first()
@@ -374,7 +377,7 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load EnrollmentRecord record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load EnrollmentRecord record from database"})
             return
 
         if record.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED:
@@ -384,11 +387,9 @@ def register_availability_tasks(celery):
 
         return None
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def adjust_enroll(self, record_id, current_year):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up EnrollmentRecord for id={id}'.format(id=record_id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up EnrollmentRecord for id={id}".format(id=record_id)})
 
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=record_id).first()
@@ -397,26 +398,32 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load EnrollmentRecord record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load EnrollmentRecord record from database"})
             return Ignore()
 
         # find all assessments that are actively searching for availability
-        assessments = db.session.query(PresentationAssessment) \
-            .filter(and_(PresentationAssessment.year == current_year,
-                         or_(PresentationAssessment.requested_availability == True,
-                             PresentationAssessment.skip_availability),
-                         PresentationAssessment.availability_closed == False)).all()
+        assessments = (
+            db.session.query(PresentationAssessment)
+            .filter(
+                and_(
+                    PresentationAssessment.year == current_year,
+                    or_(PresentationAssessment.requested_availability == True, PresentationAssessment.skip_availability),
+                    PresentationAssessment.availability_closed == False,
+                )
+            )
+            .all()
+        )
 
         for assessment in assessments:
             eligible_assessor = False
 
             # determine whether this faculty member is eligible for inclusion in this assessment
             for period in assessment.submission_periods:
-                assessors = period.assessors_list \
-                    .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
-                    .filter(EnrollmentRecord.pclass_id == period.config.pclass_id,
-                            EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED,
-                            EnrollmentRecord.owner_id == record.owner_id)
+                assessors = period.assessors_list.join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id).filter(
+                    EnrollmentRecord.pclass_id == period.config.pclass_id,
+                    EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED,
+                    EnrollmentRecord.owner_id == record.owner_id,
+                )
 
                 count = get_count(assessors)
                 if count > 0:
@@ -424,27 +431,30 @@ def register_availability_tasks(celery):
                     break
 
             if eligible_assessor:
-                print('Determined that {name} is an eligible assessor for assessment '
-                      '"{ass_name}"'.format(name=record.owner.user.name,
-                                            ass_name=assessment.name))
+                print(
+                    "Determined that {name} is an eligible assessor for assessment "
+                    '"{ass_name}"'.format(name=record.owner.user.name, ass_name=assessment.name)
+                )
             else:
-                print('Determined that {name} is not an eligible assessor for assessment '
-                      '"{ass_name}"'.format(name=record.owner.user.name,
-                                            ass_name=assessment.name))
+                print(
+                    "Determined that {name} is not an eligible assessor for assessment "
+                    '"{ass_name}"'.format(name=record.owner.user.name, ass_name=assessment.name)
+                )
 
             # if eligible but not included, fix
             if eligible_assessor and get_count(assessment.assessor_list.filter_by(faculty_id=record.owner_id)) == 0:
-                print('-- Assessor {name} is eligible but has no attendance record; generating a new '
-                      'one'.format(name=record.owner.user.name))
-                new_record = AssessorAttendanceData(assessment_id=assessment.id,
-                                                    faculty_id=record.owner_id,
-                                                    comment=None,
-                                                    confirmed=False,
-                                                    assigned_limit=None,
-                                                    request_email_sent=False,
-                                                    request_timestamp=None,
-                                                    reminder_email_sent=False,
-                                                    last_reminder_timestamp=None)
+                print("-- Assessor {name} is eligible but has no attendance record; generating a new one".format(name=record.owner.user.name))
+                new_record = AssessorAttendanceData(
+                    assessment_id=assessment.id,
+                    faculty_id=record.owner_id,
+                    comment=None,
+                    confirmed=False,
+                    assigned_limit=None,
+                    request_email_sent=False,
+                    request_timestamp=None,
+                    reminder_email_sent=False,
+                    last_reminder_timestamp=None,
+                )
 
                 for session in assessment.sessions:
                     new_record.available.append(session)
@@ -457,11 +467,9 @@ def register_availability_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def adjust_unenroll(self, record_id, current_year):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up EnrollmentRecord for id={id}'.format(id=record_id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up EnrollmentRecord for id={id}".format(id=record_id)})
 
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=record_id).first()
@@ -470,26 +478,32 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load EnrollmentRecord record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load EnrollmentRecord record from database"})
             raise Ignore()
 
         # find all assessments that are actively searching for availability
-        assessments = db.session.query(PresentationAssessment) \
-            .filter(and_(PresentationAssessment.year == current_year,
-                         or_(PresentationAssessment.requested_availability == True,
-                             PresentationAssessment.skip_availability),
-                         PresentationAssessment.availability_closed == False)).all()
+        assessments = (
+            db.session.query(PresentationAssessment)
+            .filter(
+                and_(
+                    PresentationAssessment.year == current_year,
+                    or_(PresentationAssessment.requested_availability == True, PresentationAssessment.skip_availability),
+                    PresentationAssessment.availability_closed == False,
+                )
+            )
+            .all()
+        )
 
         for assessment in assessments:
             eligible_assessor = False
 
             # determine whether this faculty member is eligible for inclusion in this assessment
             for period in assessment.submission_periods:
-                assessors = period.assessors_list \
-                    .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
-                    .filter(EnrollmentRecord.pclass_id == period.config.pclass_id,
-                            EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED,
-                            EnrollmentRecord.owner_id == record.owner_id)
+                assessors = period.assessors_list.join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id).filter(
+                    EnrollmentRecord.pclass_id == period.config.pclass_id,
+                    EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED,
+                    EnrollmentRecord.owner_id == record.owner_id,
+                )
 
                 count = get_count(assessors)
                 if count > 0:
@@ -507,11 +521,9 @@ def register_availability_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def session_added(self, sess_id, assessment_id):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up PresentationAssessment record for id={id}'.format(id=assessment_id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up PresentationAssessment record for id={id}".format(id=assessment_id)})
 
         try:
             data: PresentationAssessment = db.session.query(PresentationAssessment).filter_by(id=assessment_id).first()
@@ -520,11 +532,10 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if data is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load PresentationAssessment record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load PresentationAssessment record from database"})
             raise Ignore()
 
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up PresentationSession record for id={id}'.format(id=sess_id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up PresentationSession record for id={id}".format(id=sess_id)})
 
         try:
             session = db.session.query(PresentationSession).filter_by(id=sess_id).first()
@@ -533,7 +544,7 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if session is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load PresentationSession record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load PresentationSession record from database"})
             return
 
         for assessor in data.assessor_list:
@@ -559,11 +570,9 @@ def register_availability_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-
     @celery.task(bind=True, default_retry_delay=30)
     def reminder_email(self, assessment_id, user_id):
-        self.update_state(state='STARTED',
-                          meta={'msg': 'Looking up PresentationAssessment record for id={id}'.format(id=assessment_id)})
+        self.update_state(state="STARTED", meta={"msg": "Looking up PresentationAssessment record for id={id}".format(id=assessment_id)})
 
         try:
             data: PresentationAssessment = db.session.query(PresentationAssessment).filter_by(id=assessment_id).first()
@@ -572,20 +581,29 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if data is None:
-            self.update_state('FAILURE', meta={'msg': 'Could not load PresentationAssessment record from database'})
+            self.update_state("FAILURE", meta={"msg": "Could not load PresentationAssessment record from database"})
             raise Ignore()
 
-        notify = celery.tasks['app.tasks.utilities.email_notification']
+        notify = celery.tasks["app.tasks.utilities.email_notification"]
 
         if data.skip_availability:
-            self.update_state('FAILURE', meta={'msg': 'Availability collection has been skipped for this PresentationAssessment'})
-            raise self.replace(notify.si(0, user_id, 'Reminder emails cannot be sent because availability collection '
-                                                     'has been skipped for this assessment', 'warning'))
+            self.update_state("FAILURE", meta={"msg": "Availability collection has been skipped for this PresentationAssessment"})
+            raise self.replace(
+                notify.si(
+                    0, user_id, "Reminder emails cannot be sent because availability collection has been skipped for this assessment", "warning"
+                )
+            )
 
         if data.availability_closed:
-            self.update_state('FAILURE', meta={'msg': 'Availability collection has been closed for this PresentationAssessment'})
-            raise self.replace(notify.si(0, user_id, 'Reminder emails cannot be sent because availability collection '
-                                                     'has already been closed for this assessment', 'warning'))
+            self.update_state("FAILURE", meta={"msg": "Availability collection has been closed for this PresentationAssessment"})
+            raise self.replace(
+                notify.si(
+                    0,
+                    user_id,
+                    "Reminder emails cannot be sent because availability collection has already been closed for this assessment",
+                    "warning",
+                )
+            )
 
         recipients = set()
 
@@ -593,11 +611,11 @@ def register_availability_tasks(celery):
             if not assessor.confirmed:
                 recipients.add(assessor.id)
 
-        tasks = chain(group(send_reminder_email.si(r) for r in recipients if r is not None),
-                      notify.s(user_id, '{n} email notification{pl} issued', 'info'))
+        tasks = chain(
+            group(send_reminder_email.si(r) for r in recipients if r is not None), notify.s(user_id, "{n} email notification{pl} issued", "info")
+        )
 
         raise self.replace(tasks)
-
 
     @celery.task(bind=True, default_retry_delay=30)
     def send_reminder_email(self, assessor_id):
@@ -608,17 +626,17 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if assessor is None:
-            self.update_status('FAILURE', meta={'msg': 'Could not load AssessorAttendanceData record from database'})
+            self.update_status("FAILURE", meta={"msg": "Could not load AssessorAttendanceData record from database"})
             raise Ignore()
 
         assessment: PresentationAssessment = assessor.assessment
 
         if assessment.skip_availability:
-            self.update_status('FAILURE', meta={'msg': 'Ignoring because availability collection has been skipped for this assessment'})
+            self.update_status("FAILURE", meta={"msg": "Ignoring because availability collection has been skipped for this assessment"})
             raise Ignore()
 
         if assessment.availability_closed:
-            self.update_status('FAILURE', meta={'msg': 'Ignoring because availability collection has already been closed for this assessment'})
+            self.update_status("FAILURE", meta={"msg": "Ignoring because availability collection has already been closed for this assessment"})
             raise Ignore()
 
         try:
@@ -630,18 +648,18 @@ def register_availability_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         msg = EmailMultiAlternatives(
-            subject='Reminder: availability for event {name}'.format(name=assessor.assessment.name),
-            from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-            reply_to=[current_app.config['MAIL_REPLY_TO']],
-            to=[assessor.faculty.user.email])
+            subject="Reminder: availability for event {name}".format(name=assessor.assessment.name),
+            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
+            reply_to=[current_app.config["MAIL_REPLY_TO"]],
+            to=[assessor.faculty.user.email],
+        )
 
-        msg.body = render_template('email/scheduling/availability_reminder.txt', event=assessor.assessment,
-                                   user=assessor.faculty.user)
+        msg.body = render_template("email/scheduling/availability_reminder.txt", event=assessor.assessment, user=assessor.faculty.user)
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send availability reminder email to {r}'.format(r=', '.join(msg.to)))
+        task_id = register_task(msg.subject, description="Send availability reminder email to {r}".format(r=", ".join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1

@@ -16,8 +16,21 @@ from flask import render_template, redirect, url_for, flash, request, session
 from flask_security import login_required, roles_required, roles_accepted, current_user
 
 from ..database import db
-from ..models import User, FacultyData, ResearchGroup, SkillGroup, ProjectClass, ProjectClassConfig, \
-    Project, LiveProject, StudentData, DegreeProgramme, DegreeType, EnrollmentRecord, ProjectDescription
+from ..models import (
+    User,
+    FacultyData,
+    ResearchGroup,
+    SkillGroup,
+    ProjectClass,
+    ProjectClassConfig,
+    Project,
+    LiveProject,
+    StudentData,
+    DegreeProgramme,
+    DegreeType,
+    EnrollmentRecord,
+    ProjectDescription,
+)
 
 from ..shared.conversions import is_integer
 from ..shared.projects import project_list_SQL_handler
@@ -37,50 +50,48 @@ from bokeh.embed import components
 from . import reports
 
 
-@reports.route('/workload')
-@roles_accepted('admin', 'root', 'reports')
+@reports.route("/workload")
+@roles_accepted("admin", "root", "reports")
 def workload():
     """
     Basic workload report
     :return:
     """
-    group_filter = request.args.get('group_filter')
-    detail = request.args.get('detail')
+    group_filter = request.args.get("group_filter")
+    detail = request.args.get("detail")
 
     # if no group filter supplied, check if one is stored in session
-    if group_filter is None and session.get('reports_workload_group_filter'):
-        group_filter = session['reports_workload_group_filter']
+    if group_filter is None and session.get("reports_workload_group_filter"):
+        group_filter = session["reports_workload_group_filter"]
 
     # write group filter into session if it is not empty
     if group_filter is not None:
-        session['reports_workload_group_filter'] = group_filter
+        session["reports_workload_group_filter"] = group_filter
 
     # if no detail level supplied, check if one is stored in session
-    if detail is None and session.get('reports_workload_detail'):
-        detail = session['reports_workload_detail']
+    if detail is None and session.get("reports_workload_detail"):
+        detail = session["reports_workload_detail"]
 
     # write detail level into session if it is not empty
     if detail is not None:
-        session['reports_workload_detail'] = detail
+        session["reports_workload_detail"] = detail
 
     groups = db.session.query(ResearchGroup).filter_by(active=True).all()
 
-    return render_template('reports/workload.html', groups=groups, group_filter=group_filter, detail=detail)
+    return render_template("reports/workload.html", groups=groups, group_filter=group_filter, detail=detail)
 
 
-@reports.route('/workload_ajax')
-@roles_accepted('admin', 'root', 'reports')
+@reports.route("/workload_ajax")
+@roles_accepted("admin", "root", "reports")
 def workload_ajax():
     """
     AJAX data point for workload report
     :return:
     """
-    group_filter = request.args.get('group_filter')
-    detail = request.args.get('detail')
+    group_filter = request.args.get("group_filter")
+    detail = request.args.get("detail")
 
-    fac_query = db.session.query(FacultyData.id) \
-        .join(User, User.id == FacultyData.id) \
-        .filter(User.active)
+    fac_query = db.session.query(FacultyData.id).join(User, User.id == FacultyData.id).filter(User.active)
 
     flag, group_value = is_integer(group_filter)
     if flag:
@@ -88,130 +99,137 @@ def workload_ajax():
 
     faculty_ids = [f[0] for f in fac_query.all()]
 
-    return ajax.reports.workload_data(faculty_ids, detail=='simple')
+    return ajax.reports.workload_data(faculty_ids, detail == "simple")
 
 
-@reports.route('/all_projects')
-@roles_accepted('admin', 'root', 'reports')
+@reports.route("/all_projects")
+@roles_accepted("admin", "root", "reports")
 def all_projects():
-    pclass_filter = request.args.get('pclass_filter')
+    pclass_filter = request.args.get("pclass_filter")
 
     # if no pclass filter supplied, check if one is stored in session
-    if pclass_filter is None and session.get('reports_projects_pclass_filter'):
-        pclass_filter = session['reports_projects_pclass_filter']
+    if pclass_filter is None and session.get("reports_projects_pclass_filter"):
+        pclass_filter = session["reports_projects_pclass_filter"]
 
     # write pclass filter into session if it is not empty
     if pclass_filter is not None:
-        session['reports_projects_pclass_filter'] = pclass_filter
+        session["reports_projects_pclass_filter"] = pclass_filter
 
-    valid_filter = request.args.get('valid_filter')
+    valid_filter = request.args.get("valid_filter")
 
-    if valid_filter is None and session.get('reports_projects_valid_filter'):
-        valid_filter = session['reports_projects_valid_filter']
+    if valid_filter is None and session.get("reports_projects_valid_filter"):
+        valid_filter = session["reports_projects_valid_filter"]
 
     if valid_filter is not None:
-        session['reports_projects_valid_filter'] = valid_filter
+        session["reports_projects_valid_filter"] = valid_filter
 
-    state_filter = request.args.get('state_filter')
+    state_filter = request.args.get("state_filter")
 
-    if state_filter is None and session.get('reports_projects_state_filter'):
-        state_filter = session['reports_projects_state_filter']
+    if state_filter is None and session.get("reports_projects_state_filter"):
+        state_filter = session["reports_projects_state_filter"]
 
     if state_filter is not None:
-        session['reports_projects_state_filter'] = state_filter
+        session["reports_projects_state_filter"] = state_filter
 
-    active_filter = request.args.get('active_filter')
+    active_filter = request.args.get("active_filter")
 
-    if active_filter is None and session.get('reports_projects_active_filter'):
-        active_filter = session['reports_projects_active_filter']
+    if active_filter is None and session.get("reports_projects_active_filter"):
+        active_filter = session["reports_projects_active_filter"]
 
     if active_filter is not None:
-        session['reports_projects_active_filter'] = active_filter
+        session["reports_projects_active_filter"] = active_filter
 
     groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
     pclasses = ProjectClass.query.order_by(ProjectClass.name.asc()).all()
 
-    return render_template('reports/all_projects.html', groups=groups, pclasses=pclasses, pclass_filter=pclass_filter,
-                           valid_filter=valid_filter, state_filter=state_filter, active_filter=active_filter)
+    return render_template(
+        "reports/all_projects.html",
+        groups=groups,
+        pclasses=pclasses,
+        pclass_filter=pclass_filter,
+        valid_filter=valid_filter,
+        state_filter=state_filter,
+        active_filter=active_filter,
+    )
 
 
-@reports.route('/all_projects_ajax', methods=['POST'])
-@roles_accepted('admin', 'root', 'reports')
+@reports.route("/all_projects_ajax", methods=["POST"])
+@roles_accepted("admin", "root", "reports")
 def all_projects_ajax():
     """
     AJAX endpoint for All Projects report
     :return:
     """
-    pclass_filter = request.args.get('pclass_filter')
-    valid_filter = request.args.get('valid_filter')
-    state_filter = request.args.get('state_filter')
-    active_filter = request.args.get('active_filter')
+    pclass_filter = request.args.get("pclass_filter")
+    valid_filter = request.args.get("valid_filter")
+    state_filter = request.args.get("state_filter")
+    active_filter = request.args.get("active_filter")
 
     flag, pclass_value = is_integer(pclass_filter)
 
-    base_query = db.session.query(Project) \
-        .join(User, User.id == Project.owner_id, isouter=True) \
-        .filter(or_(Project.generic == True,
-                    User.active == True))
+    base_query = (
+        db.session.query(Project).join(User, User.id == Project.owner_id, isouter=True).filter(or_(Project.generic == True, User.active == True))
+    )
 
     if flag:
         base_query = base_query.filter(Project.project_classes.any(id=pclass_value))
 
-    if state_filter == 'active':
+    if state_filter == "active":
         base_query = base_query.filter(Project.project_classes.any(active=True))
-    elif state_filter == 'inactive':
+    elif state_filter == "inactive":
         base_query = base_query.filter(Project.project_classes.any(active=False))
-    elif state_filter == 'published':
+    elif state_filter == "published":
         base_query = base_query.filter(Project.project_classes.any(publish=True))
-    elif state_filter == 'unpublished':
+    elif state_filter == "unpublished":
         base_query = base_query.filter(Project.project_classes.any(publish=False))
 
-    if active_filter == 'active':
+    if active_filter == "active":
         base_query = base_query.filter(Project.active == True)
-    elif active_filter == 'inactive':
+    elif active_filter == "inactive":
         base_query = base_query.filter(Project.active == False)
 
-    if valid_filter == 'valid':
+    if valid_filter == "valid":
         base_query = base_query.filter(Project.descriptions.all_(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_VALIDATED))
-    elif valid_filter == 'not-valid':
-        base_query = base_query.filter(and_(Project.descriptions.any(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED),
-                                            Project.get_description.all(ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_REJECTED)))
-    elif valid_filter == 'reject':
+    elif valid_filter == "not-valid":
+        base_query = base_query.filter(
+            and_(
+                Project.descriptions.any(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED),
+                Project.get_description.all(ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_REJECTED),
+            )
+        )
+    elif valid_filter == "reject":
         base_query = base_query.filter(Project.descriptions.any(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED))
-    elif valid_filter == 'pending':
-        base_query = base_query.filter(Project.descriptions.any(ProjectDescription.requires_confirmation == True,
-                                                                ProjectDescription.confirmed == False))
+    elif valid_filter == "pending":
+        base_query = base_query.filter(
+            Project.descriptions.any(ProjectDescription.requires_confirmation == True, ProjectDescription.confirmed == False)
+        )
 
-    return project_list_SQL_handler(request, base_query,
-                                    current_user_id=current_user.id, name_labels=True,
-                                    show_approvals=True, show_errors=True)
-
-
-_analyse_labels = {'popularity': ('Popularity rank', 'Popularity score'),
-                   'views': ('Page views rank', 'Page views'),
-                   'bookmarks': ('Bookmarks rank', 'Bookmarks'),
-                   'selections': ('Selections rank', 'Selections')}
-
-_analyse_colours = {'popularity': 'blue',
-                    'views': 'red',
-                    'bookmarks': 'green',
-                    'selections': 'cornflowerblue'}
+    return project_list_SQL_handler(request, base_query, current_user_id=current_user.id, name_labels=True, show_approvals=True, show_errors=True)
 
 
-@reports.route('/liveproject_popularity/<int:proj_id>')
-@roles_accepted('faculty', 'admin', 'root', 'reports')
+_analyse_labels = {
+    "popularity": ("Popularity rank", "Popularity score"),
+    "views": ("Page views rank", "Page views"),
+    "bookmarks": ("Bookmarks rank", "Bookmarks"),
+    "selections": ("Selections rank", "Selections"),
+}
+
+_analyse_colours = {"popularity": "blue", "views": "red", "bookmarks": "green", "selections": "cornflowerblue"}
+
+
+@reports.route("/liveproject_popularity/<int:proj_id>")
+@roles_accepted("faculty", "admin", "root", "reports")
 def liveproject_analytics(proj_id):
     project: LiveProject = LiveProject.query.get_or_404(proj_id)
     config: ProjectClassConfig = project.config
 
     sel_lifecycle = config.selector_lifecycle
-    require_live = (sel_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN)
+    require_live = sel_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
 
     authorized = False
 
     # LiveProject owner is always authorized to view, as is root and admin users and anyone with a reports role
-    if current_user.has_role('root') or current_user.has_role('admin') \
-            or current_user.has_role('reports') or project.owner_id == current_user.id:
+    if current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("reports") or project.owner_id == current_user.id:
         authorized = True
 
     # if current user is convenor for the project class, then they are authorized
@@ -219,40 +237,39 @@ def liveproject_analytics(proj_id):
         authorized = True
 
     if not authorized:
-        flash('You are not authorized to view the analytics page for the project "{proj}"'.format(proj=project.name),
-              'info')
+        flash('You are not authorized to view the analytics page for the project "{proj}"'.format(proj=project.name), "info")
         return redirect(redirect_url())
 
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
 
     if url is None:
         url = redirect_url()
 
     if text is None and url is not None:
-        text = 'previous page'
+        text = "previous page"
 
-    pane = request.args.get('pane', 'popularity')
+    pane = request.args.get("pane", "popularity")
 
-    if pane == 'views':
+    if pane == "views":
         rank_dates, rank_values = project.views_rank_history
         ranks = [x[0] for x in rank_values]
 
         score_dates, scores = project.views_history
 
-    elif pane == 'bookmarks':
+    elif pane == "bookmarks":
         rank_dates, rank_values = project.bookmarks_rank_history
         ranks = [x[0] for x in rank_values]
 
         score_dates, scores = project.bookmarks_history
 
-    elif pane == 'selections':
+    elif pane == "selections":
         rank_dates, rank_values = project.selections_rank_history
         ranks = [x[0] for x in rank_values]
 
         score_dates, scores = project.selections_history
 
-    else: # analyse == 'popularity':
+    else:  # analyse == 'popularity':
         rank_dates, rank_values = project.popularity_rank_history
         ranks = [x[0] for x in rank_values]
 
@@ -274,21 +291,29 @@ def liveproject_analytics(proj_id):
     if len(scores) > 0:
         score_div, score_script = _build_score_plot(score_dates, scores, labels[1], colour)
 
-    return render_template('reports/liveproject_analytics/graph.html', project=project,
-                           config=config, require_live=require_live, text=text, url=url,
-                           pane=pane, rank_script=rank_script, rank_div=rank_div,
-                           score_script=score_script, score_div=score_div)
+    return render_template(
+        "reports/liveproject_analytics/graph.html",
+        project=project,
+        config=config,
+        require_live=require_live,
+        text=text,
+        url=url,
+        pane=pane,
+        rank_script=rank_script,
+        rank_div=rank_div,
+        score_script=score_script,
+        score_div=score_div,
+    )
 
 
 def _build_score_plot(pop_score_dates, pop_scores, title, colour):
-    plot = figure(title=title,
-                  x_axis_label='Date', x_axis_type='datetime', width=800, height=300)
-    plot.sizing_mode = 'scale_width'
+    plot = figure(title=title, x_axis_label="Date", x_axis_type="datetime", width=800, height=300)
+    plot.sizing_mode = "scale_width"
     plot.line(pop_score_dates, pop_scores, legend_label=title.lower(), line_color=colour, line_width=2)
     plot.toolbar.logo = None
     plot.border_fill_color = None
-    plot.background_fill_color = 'lightgrey'
-    plot.legend.location = 'bottom_right'
+    plot.background_fill_color = "lightgrey"
+    plot.legend.location = "bottom_right"
 
     script, div = components(plot)
 
@@ -298,14 +323,13 @@ def _build_score_plot(pop_score_dates, pop_scores, title, colour):
 def _build_rank_plot(pop_rank_dates, pop_ranks, total, title, colour):
     y_range = Range1d(total, -5)
 
-    plot = figure(title=title,
-                  x_axis_label='Date', x_axis_type='datetime', width=800, height=300)
-    plot.sizing_mode = 'scale_width'
+    plot = figure(title=title, x_axis_label="Date", x_axis_type="datetime", width=800, height=300)
+    plot.sizing_mode = "scale_width"
     plot.line(pop_rank_dates, pop_ranks, legend_label=title.lower(), line_color=colour, line_width=2)
     plot.toolbar.logo = None
     plot.border_fill_color = None
-    plot.background_fill_color = 'lightgrey'
-    plot.legend.location = 'bottom_right'
+    plot.background_fill_color = "lightgrey"
+    plot.legend.location = "bottom_right"
     plot.y_range = y_range
 
     script, div = components(plot)
@@ -313,125 +337,138 @@ def _build_rank_plot(pop_rank_dates, pop_ranks, total, title, colour):
     return div, script
 
 
-@reports.route('/year_groups')
-@roles_accepted('admin', 'root', 'reports')
+@reports.route("/year_groups")
+@roles_accepted("admin", "root", "reports")
 def year_groups():
-    year_filter = request.args.get('year_filter')
-    cohort_filter = request.args.get('cohort_filter')
-    prog_filter = request.args.get('prog_filter')
-    type_filter = request.args.get('type_filter')
+    year_filter = request.args.get("year_filter")
+    cohort_filter = request.args.get("cohort_filter")
+    prog_filter = request.args.get("prog_filter")
+    type_filter = request.args.get("type_filter")
 
-    if year_filter is None and session.get('reports_year_group_filter'):
-        year_filter = session['reports_year_group_filter']
+    if year_filter is None and session.get("reports_year_group_filter"):
+        year_filter = session["reports_year_group_filter"]
 
-    if year_filter is not None and year_filter not in ['all', '1', '2', '3', '4', 'twd']:
-        year_filter = 'all'
+    if year_filter is not None and year_filter not in ["all", "1", "2", "3", "4", "twd"]:
+        year_filter = "all"
 
     if year_filter is not None:
-        session['reports_year_group_filter'] = year_filter
+        session["reports_year_group_filter"] = year_filter
 
     prog_query = db.session.query(StudentData.programme_id).distinct().subquery()
-    programmes = db.session.query(DegreeProgramme) \
-        .join(prog_query, prog_query.c.programme_id == DegreeProgramme.id) \
-        .filter(DegreeProgramme.active == True) \
-        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
-        .order_by(DegreeType.name.asc(),
-                  DegreeProgramme.name.asc()).all()
+    programmes = (
+        db.session.query(DegreeProgramme)
+        .join(prog_query, prog_query.c.programme_id == DegreeProgramme.id)
+        .filter(DegreeProgramme.active == True)
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
+        .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
+        .all()
+    )
 
-    type_query = db.session.query(DegreeProgramme.type_id) \
-        .select_from(DegreeProgramme).distinct().subquery()
-    types = db.session.query(DegreeType) \
-        .join(type_query, type_query.c.type_id == DegreeType.id) \
-        .filter(DegreeType.active == True) \
-        .order_by(DegreeType.name.asc()).all()
+    type_query = db.session.query(DegreeProgramme.type_id).select_from(DegreeProgramme).distinct().subquery()
+    types = (
+        db.session.query(DegreeType)
+        .join(type_query, type_query.c.type_id == DegreeType.id)
+        .filter(DegreeType.active == True)
+        .order_by(DegreeType.name.asc())
+        .all()
+    )
 
     prog_ids = set(p.id for p in programmes)
     type_ids = set(t.id for t in types)
 
-    cohort_data = db.session.query(StudentData.cohort) \
-        .join(User, User.id == StudentData.id) \
-        .filter(User.active == True).distinct().all()
+    cohort_data = db.session.query(StudentData.cohort).join(User, User.id == StudentData.id).filter(User.active == True).distinct().all()
     cohorts = [c[0] for c in cohort_data]
 
-    if cohort_filter is None and session.get('reports_year_group_cohort_filter'):
-        cohort_filter = session['reports_year_group_cohort_filter']
+    if cohort_filter is None and session.get("reports_year_group_cohort_filter"):
+        cohort_filter = session["reports_year_group_cohort_filter"]
 
-    if isinstance(cohort_filter, str) and cohort_filter != 'all' and int(cohort_filter) not in cohorts:
-        cohort_filter = 'all'
+    if isinstance(cohort_filter, str) and cohort_filter != "all" and int(cohort_filter) not in cohorts:
+        cohort_filter = "all"
 
     if cohort_filter is not None:
-        session['reports_year_group_cohort_filter'] = cohort_filter
+        session["reports_year_group_cohort_filter"] = cohort_filter
 
-    if prog_filter is None and session.get('reports_year_group_prog_filter'):
-        prog_filter = session['reports_year_group_prog_filter']
+    if prog_filter is None and session.get("reports_year_group_prog_filter"):
+        prog_filter = session["reports_year_group_prog_filter"]
 
-    if isinstance(prog_filter, str) and prog_filter != 'all' and int(prog_filter) not in prog_ids:
-        prog_filter = 'all'
+    if isinstance(prog_filter, str) and prog_filter != "all" and int(prog_filter) not in prog_ids:
+        prog_filter = "all"
 
-    if type_filter is None and session.get('reports_year_group_type_filter'):
-        type_filter = session['reports_year_group_type_filter']
+    if type_filter is None and session.get("reports_year_group_type_filter"):
+        type_filter = session["reports_year_group_type_filter"]
 
-    if isinstance(type_filter, str) and type_filter != 'all' and int(type_filter) not in type_ids:
-        type_filter = 'all'
+    if isinstance(type_filter, str) and type_filter != "all" and int(type_filter) not in type_ids:
+        type_filter = "all"
 
     if type_filter is not None:
-        session['reports_year_group_type_filter'] = type_filter
+        session["reports_year_group_type_filter"] = type_filter
 
-        if type_filter != 'all' and prog_filter is not None:
-            prog_filter = 'all'
+        if type_filter != "all" and prog_filter is not None:
+            prog_filter = "all"
 
     if prog_filter is not None:
-        session['reports_year_group_prog_filter'] = prog_filter
+        session["reports_year_group_prog_filter"] = prog_filter
 
-    return render_template('reports/year_groups.html', year_filter=year_filter, prog_filter=prog_filter,
-                           type_filter=type_filter, cohort_filter=cohort_filter, programmes=programmes,
-                           cohorts=cohorts, types=types)
+    return render_template(
+        "reports/year_groups.html",
+        year_filter=year_filter,
+        prog_filter=prog_filter,
+        type_filter=type_filter,
+        cohort_filter=cohort_filter,
+        programmes=programmes,
+        cohorts=cohorts,
+        types=types,
+    )
 
 
-@reports.route('/year_groups_ajax', methods=['POST'])
-@roles_accepted('admin', 'root', 'reports')
+@reports.route("/year_groups_ajax", methods=["POST"])
+@roles_accepted("admin", "root", "reports")
 def year_groups_ajax():
-    year_filter = request.args.get('year_filter')
-    cohort_filter = request.args.get('cohort_filter')
-    prog_filter = request.args.get('prog_filter')
-    type_filter = request.args.get('type_filter')
+    year_filter = request.args.get("year_filter")
+    cohort_filter = request.args.get("cohort_filter")
+    prog_filter = request.args.get("prog_filter")
+    type_filter = request.args.get("type_filter")
 
-    if year_filter not in ['all', '1', '2', '3', '4', 'twd']:
-        year_filter = 'all'
+    if year_filter not in ["all", "1", "2", "3", "4", "twd"]:
+        year_filter = "all"
 
     flag, value = is_integer(year_filter)
 
-    if year_filter == 'twd':
-        base_query = db.session.query(StudentData) \
-            .join(User, User.id == StudentData.id) \
-            .filter(User.active, StudentData.intermitting) \
-            .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
+    if year_filter == "twd":
+        base_query = (
+            db.session.query(StudentData)
+            .join(User, User.id == StudentData.id)
+            .filter(User.active, StudentData.intermitting)
+            .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
             .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
+        )
 
-    elif year_filter == 'all' or not flag:
-        base_query = db.session.query(StudentData) \
-            .join(User, User.id == StudentData.id) \
-            .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
-            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
-            .filter(and_(User.active,
-                         StudentData.academic_year <= DegreeType.duration))
+    elif year_filter == "all" or not flag:
+        base_query = (
+            db.session.query(StudentData)
+            .join(User, User.id == StudentData.id)
+            .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
+            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
+            .filter(and_(User.active, StudentData.academic_year <= DegreeType.duration))
+        )
 
     else:
-        base_query = db.session.query(StudentData) \
-            .join(User, User.id == StudentData.id) \
-            .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
-            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
-            .filter(and_(User.active,
-                         StudentData.academic_year <= DegreeType.duration,
-                         StudentData.academic_year == value))
+        base_query = (
+            db.session.query(StudentData)
+            .join(User, User.id == StudentData.id)
+            .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
+            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
+            .filter(and_(User.active, StudentData.academic_year <= DegreeType.duration, StudentData.academic_year == value))
+        )
 
-    name = {'search': func.concat(User.first_name, ' ', User.last_name),
-            'order': [User.last_name, User.first_name],
-            'search_collation': 'utf8_general_ci'}
-    programme = {'order': DegreeProgramme.name}
+    name = {
+        "search": func.concat(User.first_name, " ", User.last_name),
+        "order": [User.last_name, User.first_name],
+        "search_collation": "utf8_general_ci",
+    }
+    programme = {"order": DegreeProgramme.name}
 
-    columns = {'name': name,
-               'programme': programme}
+    columns = {"name": name, "programme": programme}
 
     if cohort_filter is not None:
         flag, value = is_integer(cohort_filter)
@@ -455,70 +492,82 @@ def year_groups_ajax():
         return handler.build_payload(ajax.reports.year_groups)
 
 
-@reports.route('/sabbaticals')
-@roles_accepted('admin', 'root', 'reports')
+@reports.route("/sabbaticals")
+@roles_accepted("admin", "root", "reports")
 def sabbaticals():
-    pclass_filter = request.args.get('pclass_filter')
+    pclass_filter = request.args.get("pclass_filter")
 
-    if pclass_filter is None and session.get('reports_sabbatical_pclass_filter'):
-        pclass_filter = session['reports_sabbatical_pclass_filter']
+    if pclass_filter is None and session.get("reports_sabbatical_pclass_filter"):
+        pclass_filter = session["reports_sabbatical_pclass_filter"]
 
     pclasses: List[ProjectClass] = db.session.query(ProjectClass).filter(ProjectClass.active).all()
     pclass_ids: Set[int] = set(p.id for p in pclasses)
 
-    if pclass_filter is not None and pclass_filter != 'all':
+    if pclass_filter is not None and pclass_filter != "all":
         flag, value = is_integer(pclass_filter)
 
         if flag:
             if value not in pclass_ids:
-                pclass_filter = 'all'
+                pclass_filter = "all"
         else:
-            pclass_filter = 'all'
+            pclass_filter = "all"
 
     if pclass_filter is not None:
-        session['reports_sabbatical_pclass_filter'] = pclass_filter
+        session["reports_sabbatical_pclass_filter"] = pclass_filter
 
-    return render_template('reports/sabbaticals.html', pclasses=pclasses, pclass_filter=pclass_filter)
+    return render_template("reports/sabbaticals.html", pclasses=pclasses, pclass_filter=pclass_filter)
 
 
-@reports.route('/sabbaticals_ajax', methods=['POST'])
-@roles_accepted('admin', 'root', 'reports')
+@reports.route("/sabbaticals_ajax", methods=["POST"])
+@roles_accepted("admin", "root", "reports")
 def sabbaticals_ajax():
-    pclass_filter = request.args.get('pclass_filter')
+    pclass_filter = request.args.get("pclass_filter")
 
-    base_query = db.session.query(EnrollmentRecord) \
-        .join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id) \
-        .filter(or_(and_(ProjectClass.uses_supervisor,
-                         EnrollmentRecord.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED),
-                    and_(ProjectClass.uses_marker,
-                         EnrollmentRecord.marker_state != EnrollmentRecord.MARKER_ENROLLED),
-                    and_(ProjectClass.uses_moderator,
-                         EnrollmentRecord.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED),
-                    and_(ProjectClass.uses_presentations,
-                         EnrollmentRecord.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED))) \
-        .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id) \
-        .join(User, User.id == FacultyData.id) \
+    base_query = (
+        db.session.query(EnrollmentRecord)
+        .join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id)
+        .filter(
+            or_(
+                and_(ProjectClass.uses_supervisor, EnrollmentRecord.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED),
+                and_(ProjectClass.uses_marker, EnrollmentRecord.marker_state != EnrollmentRecord.MARKER_ENROLLED),
+                and_(ProjectClass.uses_moderator, EnrollmentRecord.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED),
+                and_(ProjectClass.uses_presentations, EnrollmentRecord.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED),
+            )
+        )
+        .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id)
+        .join(User, User.id == FacultyData.id)
         .filter(User.active)
+    )
 
-    if pclass_filter != 'all':
+    if pclass_filter != "all":
         flag, value = is_integer(pclass_filter)
 
         if flag:
             base_query = base_query.filter(EnrollmentRecord.pclass_id == value)
 
-    name = {'search': func.concat(User.first_name + ' ' + User.last_name),
-            'order': [User.last_name, User.first_name],
-            'search_collation': 'utf8_general_ci'}
-    pclass = {'order': ProjectClass.name}
-    exemptions = {'search': func.concat(EnrollmentRecord.supervisor_comment, EnrollmentRecord.marker_comment,
-                                        EnrollmentRecord.moderator_comment, EnrollmentRecord.presentations_comment),
-                  'order': [EnrollmentRecord.supervisor_reenroll, EnrollmentRecord.marker_reenroll,
-                            EnrollmentRecord.moderator_reenroll, EnrollmentRecord.presentations_reenroll],\
-                  'search_collation': 'utf8_general_ci'}
+    name = {
+        "search": func.concat(User.first_name + " " + User.last_name),
+        "order": [User.last_name, User.first_name],
+        "search_collation": "utf8_general_ci",
+    }
+    pclass = {"order": ProjectClass.name}
+    exemptions = {
+        "search": func.concat(
+            EnrollmentRecord.supervisor_comment,
+            EnrollmentRecord.marker_comment,
+            EnrollmentRecord.moderator_comment,
+            EnrollmentRecord.presentations_comment,
+        ),
+        "order": [
+            EnrollmentRecord.supervisor_reenroll,
+            EnrollmentRecord.marker_reenroll,
+            EnrollmentRecord.moderator_reenroll,
+            EnrollmentRecord.presentations_reenroll,
+        ],
+        "search_collation": "utf8_general_ci",
+    }
 
-    columns = {'name': name,
-               'pclass': pclass,
-               'exemptions': exemptions}
+    columns = {"name": name, "pclass": pclass, "exemptions": exemptions}
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.reports.sabbaticals)

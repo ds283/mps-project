@@ -15,9 +15,8 @@ from flask import current_app
 
 
 class ScratchFileManager:
-
     def __init__(self, suffix=None):
-        folder = Path(current_app.config.get('SCRATCH_FOLDER'))
+        folder = Path(current_app.config.get("SCRATCH_FOLDER"))
         name = str(uuid4())
         self._path = folder / name
 
@@ -29,6 +28,7 @@ class ScratchFileManager:
 
     def __exit__(self, type, value, traceback):
         self._path.unlink(missing_ok=True)
+
     @property
     def path(self) -> Path:
         return self._path

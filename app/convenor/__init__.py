@@ -11,6 +11,6 @@
 
 from flask import Blueprint
 
-convenor = Blueprint('convenor', __name__)
+convenor = Blueprint("convenor", __name__)
 
 from . import views

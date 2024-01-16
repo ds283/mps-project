@@ -13,7 +13,6 @@ from colour import Color
 
 
 def get_text_colour(bg_colour):
-
     # assume bg_colour is string instance
     bg = Color(bg_colour)
 
@@ -21,6 +20,6 @@ def get_text_colour(bg_colour):
     a = 1 - (0.299 * bg.red + 0.587 * bg.green + 0.114 * bg.blue)
 
     if a < 0.5:
-        return Color(rgb=(0,0,0)).hex_l
+        return Color(rgb=(0, 0, 0)).hex_l
 
-    return Color(rgb=(1,1,1)).hex_l
+    return Color(rgb=(1, 1, 1)).hex_l

@@ -10,6 +10,6 @@
 
 from flask import Blueprint
 
-documents = Blueprint('documents', __name__)
+documents = Blueprint("documents", __name__)
 
 from . import views

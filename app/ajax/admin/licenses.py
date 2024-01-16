@@ -11,8 +11,7 @@
 from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <div>
     <strong>{{ l.name }}</strong>
 </div>
@@ -26,8 +25,7 @@ _name = \
 
 
 # language=jinja2
-_properties = \
-"""
+_properties = """
 {% if l.url is not none %}
     <div>
         <a class="text-decoration-none" href="{{ l.url }}">{{ l.url }}</a>
@@ -61,8 +59,7 @@ _properties = \
 
 
 # language=jinja2
-_active = \
-"""
+_active = """
 {% if l.active %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
 {% else %}
@@ -72,8 +69,7 @@ _active = \
 
 
 # language=jinja2
-_menu = \
-"""
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -100,10 +96,15 @@ _menu = \
 def licenses_data(licenses):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': render_template_string(_name, l=l, simple_label=simple_label),
-             'active': render_template_string(_active, l=l),
-             'description': l.description,
-             'properties': render_template_string(_properties, l=l),
-             'menu': render_template_string(_menu, l=l)} for l in licenses]
+    data = [
+        {
+            "name": render_template_string(_name, l=l, simple_label=simple_label),
+            "active": render_template_string(_active, l=l),
+            "description": l.description,
+            "properties": render_template_string(_properties, l=l),
+            "menu": render_template_string(_menu, l=l),
+        }
+        for l in licenses
+    ]
 
     return jsonify(data)

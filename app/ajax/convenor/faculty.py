@@ -15,8 +15,7 @@ from app.models import ProjectClass, ProjectClassConfig, User, FacultyData
 
 
 # language=jinja2
-_faculty_menu = \
-"""
+_faculty_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button"
             data-bs-toggle="dropdown">
@@ -44,8 +43,7 @@ _faculty_menu = \
 """
 
 # language=jinja2
-_golive = \
-"""
+_golive = """
 {% if config.require_confirm %}
     {% if config.requests_issued %}
         {% if config.is_confirmation_required(userdata) %}
@@ -75,22 +73,19 @@ _golive = \
 """
 
 # language=jinja2
-_projects = \
-"""
+_projects = """
 {{ simple_label(d.projects_offered_label(pclass)) }}
 {{ simple_label(d.projects_unofferable_label) }}
 {{ simple_label(d.assessor_label) }}
 """
 
 # language=jinja2
-_name = \
-"""
+_name = """
 <a class="text-decoration-none" href="mailto:{{ u.email }}">{{ u.name }}</a>
 """
 
 # language=jinja2
-_enrollments = \
-"""
+_enrollments = """
 {% set f = d.get_enrollment_record(pclass_id) %}
 {% if f is not none %}
     {{ simple_label(f.enrolled_labels) }}
@@ -125,12 +120,17 @@ _enrollments = \
 def faculty_data(pclass: ProjectClass, config: ProjectClassConfig, row_list: List[Tuple[User, FacultyData]]):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [{'name': render_template_string(_name, u=u, d=d, pclass_id=pclass.id),
-             'email': '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=u.email),
-             'user': u.username,
-             'enrolled': render_template_string(_enrollments, d=d, pclass_id=pclass.id, simple_label=simple_label),
-             'projects': render_template_string(_projects, d=d, pclass=pclass, simple_label=simple_label),
-             'golive': render_template_string(_golive, config=config, pclass=pclass, user=u, userdata=d),
-             'menu': render_template_string(_faculty_menu, pclass=pclass, user=u, userdata=d)} for u, d in row_list]
+    data = [
+        {
+            "name": render_template_string(_name, u=u, d=d, pclass_id=pclass.id),
+            "email": '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=u.email),
+            "user": u.username,
+            "enrolled": render_template_string(_enrollments, d=d, pclass_id=pclass.id, simple_label=simple_label),
+            "projects": render_template_string(_projects, d=d, pclass=pclass, simple_label=simple_label),
+            "golive": render_template_string(_golive, config=config, pclass=pclass, user=u, userdata=d),
+            "menu": render_template_string(_faculty_menu, pclass=pclass, user=u, userdata=d),
+        }
+        for u, d in row_list
+    ]
 
     return data

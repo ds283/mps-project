@@ -32,14 +32,13 @@ from sqlalchemy_utils import EncryptedType
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine, AesGcmEngine
 from url_normalize import url_normalize
 
+import app.shared.cloud_object_store.bucket_types as buckets
+import app.shared.cloud_object_store.encryption_types as encryptions
 from .cache import cache
 from .database import db
 from .shared.colours import get_text_colour
 from .shared.formatters import format_size, format_time, format_readable_time
 from .shared.sqlalchemy import get_count
-
-import app.shared.cloud_object_store.bucket_types as buckets
-import app.shared.cloud_object_store.encryption_types as encryptions
 
 # length of database string for typical fields, if used
 DEFAULT_STRING_LENGTH = 255
@@ -6760,10 +6759,10 @@ class SupervisionEvent(db.Model, EditingMetadataMixin, SupervisionEventTypesMixi
 
     # responsible event owner, usually the responsible supervisor, but does not have to be
     owner_id = db.Column(db.Integer(), db.ForeignKey("submission_roles.id"))
-    owner = db.relationship("SubmissionRole", foreign_keys=[owner_id], uselist=False, backref=db.backref("events", lazy="dynamic"))
+    owner = db.relationship("SubmissionRole", foreign_keys=[owner_id], uselist=False, backref=db.backref("events_owner", lazy="dynamic"))
 
     # other attending members of the supervision team
-    team = db.relationship("SubmissionRole", secondary=event_roles_table, lazy="dynamic", backref=db.backref("events", lazy="dynamic"))
+    team = db.relationship("SubmissionRole", secondary=event_roles_table, lazy="dynamic", backref=db.backref("events_team", lazy="dynamic"))
 
     # event type identifier, drawn from SupervisionEventTypesMixing
     event_types = [
@@ -6783,10 +6782,10 @@ class SupervisionEvent(db.Model, EditingMetadataMixin, SupervisionEventTypesMixi
     attendance = db.Column(db.Integer(), default=None, nullable=True)
 
     # emails associated with this event
-    email_log = db.relationship("EmailLog", secondary=event_email_table, lazy="dynamic", backref=db.backref("events", lazy="dynamic"))
+    email_log = db.relationship("EmailLog", secondary=event_email_table, lazy="dynamic")
 
     # reminder emails (specifically) associated with this event
-    reminder_log = db.relationship("EmailLog", secondary=event_reminder_table, lazy="dynamic", backref=db.backref("events", lazy="dynamic"))
+    reminder_log = db.relationship("EmailLog", secondary=event_reminder_table, lazy="dynamic")
 
 
 class EnrollmentRecord(db.Model, EditingMetadataMixin):

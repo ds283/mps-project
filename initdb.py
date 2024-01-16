@@ -86,7 +86,7 @@ def populate_table_if_empty(app, inspector, bucket: ObjectStore, table: str, sql
 
         with ScratchFileManager(suffix='.sql') as scratch_path:
             with open(scratch_path.path, 'wb') as f:
-                data: bytes = bucket.get(str(sql_script))
+                data: bytes = bucket.get(str(sql_script), audit_data='populate_table_if_empty')
                 f.write(data)
 
             sql_script_populate(app, scratch_path.path)
@@ -103,7 +103,7 @@ def tarfile_populate(app, bucket: ObjectStore, tarfile: Path):
 
     with ScratchFileManager(suffix=full_suffix) as scratch_path:
         with open(scratch_path.path, 'wb') as f:
-            data: bytes = bucket.get(str(tarfile))
+            data: bytes = bucket.get(str(tarfile), audit_data='tarfile_populate')
             f.write(data)
 
         tf: TarFile = tarfile_open(name=scratch_path.path, mode='r')
@@ -123,7 +123,7 @@ def tarfile_populate(app, bucket: ObjectStore, tarfile: Path):
             subprocess.run(['mysql', "-h", db_hostname, f"-u{user}", f"-p{password}", database], input=fo.read())
 
         if p.returncode != 0:
-            raise RuntimeError(f'!! mysql re-population did not complete successfully')
+            raise RuntimeError(f'!! SQL database re-population did not complete successfully')
 
 
 def initial_populate_database(app, inspector):
@@ -133,7 +133,7 @@ def initial_populate_database(app, inspector):
     init_tarfile: Optional[Path] = initial_db.INITDB_TARFILE
 
     # query the bucket for a list of contents
-    contents = init_bucket.list()
+    contents = init_bucket.list(audit_data='initial_populate_database')
 
     lockfile_name = '_lockfile'
     if lockfile_name in contents:

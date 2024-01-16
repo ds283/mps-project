@@ -28,35 +28,30 @@
             {% endcall %}
         </div>
     {% endif %}
-    {% set twocolumn = period.collect_project_feedback or (period.has_presentation and period.collect_presentation_feedback) %}
-    <div class="row vertical-top {{ topclass }}">
-        <div class="col-1"></div>
-        {% if twocolumn %}
+    {% if period.collect_project_feedback or (period.has_presentation and period.collect_presentation_feedback) %}
+        <div class="row vertical-top {{ topclass }}">
+            <div class="col-1"></div>
             <div class="col-5">
-        {% else %}
-            <div class="col-10">
-        {% endif %}
-            <div class="list-group">
-                <div class="list-group-item">
-                    <span class="{% if pushed > 0 %}text-success{% else %}text-muted{% endif %}">Feedback pushed</span>
-                    <span class="badge bg-secondary rounded-pill">{{ pushed }}/{{ total }}</span>
-                </div>
-                <div class="list-group-item">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <span class="{% if not_pushed > 0 %}text-success{% else %}text-muted{% endif %}">Feedback available to push</span>
-                            <span class="badge bg-secondary rounded-pill">{{ not_pushed }}/{{ total }}</span>
-                        </div>
-                        <div class="mb-3">
-                            {% if not_pushed > 0 %}
-                                <a href="{{ url_for('convenor.push_feedback', id=period.id) }}" class="btn btn-success btn-sm text-nowrap">Push feedback</a>
-                            {% endif %}
+                <div class="list-group">
+                    <div class="list-group-item">
+                        <span class="{% if pushed > 0 %}text-success{% else %}text-muted{% endif %}">Feedback pushed</span>
+                        <span class="badge bg-secondary rounded-pill">{{ pushed }}/{{ total }}</span>
+                    </div>
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <span class="{% if not_pushed > 0 %}text-success{% else %}text-muted{% endif %}">Feedback available to push</span>
+                                <span class="badge bg-secondary rounded-pill">{{ not_pushed }}/{{ total }}</span>
+                            </div>
+                            <div class="mb-3">
+                                {% if not_pushed > 0 %}
+                                    <a href="{{ url_for('convenor.push_feedback', id=period.id) }}" class="btn btn-success btn-sm text-nowrap">Push feedback</a>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        {% if twocolumn %}
             <div class="col-5">
                 <div class="list-group">
                     {% if period.collect_project_feedback %}
@@ -75,7 +70,7 @@
                     {% endif %}
                 </div>
             </div>
-        {% endif %}
-        <div class="col-1"></div>
-    </div>
+            <div class="col-1"></div>
+        </div>
+    {% endif %}
 {% endmacro %}

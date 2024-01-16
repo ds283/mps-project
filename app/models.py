@@ -6190,13 +6190,23 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 @listens_for(ProjectClassConfig, "before_insert")
 def _ProjectClassConfig_insert_handler(mapper, connection, target: ProjectClassConfig):
     with db.session.no_autoflush:
-        target.project_class._most_recent_config = None
+        if target.project_class is not None:
+            target.project_class._most_recent_config = None
+        else:
+            pclass = db.session.query(ProjectClass).filter(ProjectClass.id == target.pclass_id).first()
+            if pclass is not None:
+                pclass._most_recent_config = None
 
 
 @listens_for(ProjectClassConfig, "before_delete")
 def _ProjectClassConfig_delete_handler(mapper, connection, target: ProjectClassConfig):
     with db.session.no_autoflush:
-        target.project_class._most_recent_config = None
+        if target.project_class is not None:
+            target.project_class._most_recent_config = None
+        else:
+            pclass = db.session.query(ProjectClass).filter(ProjectClass.id == target.pclass_id).first()
+            if pclass is not None:
+                pclass._most_recent_config = None
 
 
 class SubmissionPeriodRecord(db.Model):

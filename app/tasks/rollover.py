@@ -242,9 +242,8 @@ def register_rollover_tasks(celery):
         if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
             progress_update(task_id, TaskRecord.FAILURE, 100, "An error was encountered during rollover of the academic year", autocommit=True)
             convenor.post_message(
-                "Cannot yet rollover for {name} {yra}-{yrb} "
-                "because not all selector activities have been "
-                "finalised. (Lifecycle stage={l}.)".format(name=config.name, yra=year, yrb=year + 1, l=config.selector_lifecycle),
+                "Cannot yet rollover for {name} {yra}-{yrb} because not all selector activities have been finalised. "
+                "(Lifecycle stage={l}.)".format(name=config.name, yra=year, yrb=year + 1, l=config.selector_lifecycle),
                 "info",
                 autocommit=True,
             )
@@ -255,9 +254,8 @@ def register_rollover_tasks(celery):
         if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
             progress_update(task_id, TaskRecord.FAILURE, 100, "An error was encountered during rollover of the academic year", autocommit=True)
             convenor.post_message(
-                "Cannot yet rollover for {name} {yra}-{yrb} "
-                "because not all submitter activities have been "
-                "finalised. (Lifecycle stage={l}.)".format(name=config.name, yra=year, yrb=year + 1, l=config.submitter_lifecycle),
+                "Cannot yet rollover for {name} {yra}-{yrb} because not all submitter activities have been finalised. "
+                "(Lifecycle stage={l}.)".format(name=config.name, yra=year, yrb=year + 1, l=config.submitter_lifecycle),
                 "info",
                 autocommit=True,
             )

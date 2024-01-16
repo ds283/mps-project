@@ -5,18 +5,23 @@
         <div class="card-header bg-danger text-white"><strong>Rollover of academic year available</strong></div>
         <div class="card-body">
             <div class="row vertical-align">
-                <div class="col-6">
-                    Rollover of the academic year to {{ current_year }} is now available.
-                </div>
-                {{ blocking_task_list(config.get_blocking_tasks[0]) }}
-                <div class="col-6">
-                    <div class="float-end">
-                        <a href="{{ url_for('convenor.confirm_rollover', id=config.id, markers=0) }}"
-                           class="btn btn-outline-danger">Drop markers</a>
-                        <a href="{{ url_for('convenor.confirm_rollover', id=config.id, markers=1) }}"
-                           class="btn btn-outline-danger">Full rollover</a>
+                <div class="d-flex flex-row justify-content-between align-content-start gap-2">
+                    <div>
+                        Rollover of the academic year to {{ current_year }} is now available.
+                    </div>
+                    <div class="d-flex flex-row justify-content-end align-content-start gap-2">
+                        {% if pclass.select_in_previous_cycle %}
+                            <a href="{{ url_for('convenor.confirm_rollover', id=config.id, markers=0) }}"
+                               class="btn btn-outline-danger">Drop markers</a>
+                            <a href="{{ url_for('convenor.confirm_rollover', id=config.id, markers=1) }}"
+                               class="btn btn-outline-danger">Full rollover</a>
+                        {% else %}
+                            <a href="{{ url_for('convenor.confirm_rollover', id=config.id, markers=0) }}"
+                               class="btn btn-outline-danger">Rollover</a>
+                        {% endif %}
                     </div>
                 </div>
+                {{ blocking_task_list(config.get_blocking_tasks[0]) }}
             </div>
         </div>
     </div>

@@ -384,7 +384,7 @@ def periods(id):
         return redirect(redirect_url())
 
     # get record for current submission period
-    period = config.periods.filter_by(submission_period=config.submission_period).first()
+    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
     if period is None and config.submissions > 0:
         flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
         return redirect(redirect_url())
@@ -401,13 +401,18 @@ def periods(id):
             include_close_button=False,
         )
     else:
-        OpenFeedbackForm = OpenFeedbackFormFactory(
-            submit_label="Open feedback and email markers",
-            datebox_label="Deadline",
-            include_send_button=False,
-            include_test_button=True,
-            include_close_button=True,
-        )
+        if period.collect_project_feedback:
+            OpenFeedbackForm = OpenFeedbackFormFactory(
+                submit_label="Open feedback and email markers",
+                datebox_label="Deadline",
+                include_send_button=False,
+                include_test_button=True,
+                include_close_button=True,
+            )
+        else:
+            OpenFeedbackForm = OpenFeedbackFormFactory(
+                submit_label="Close period", include_send_button=False, include_test_button=False, include_close_button=False
+            )
 
     feedback_form = OpenFeedbackForm(request.form)
 
@@ -6017,9 +6022,9 @@ def student_clear_bookmarks(sid):
     return redirect(redirect_url())
 
 
-@convenor.route("/confirm_rollover/<int:id>/<int:markers>")
+@convenor.route("/confirm_rollover/<int:id>")
 @roles_accepted("faculty", "admin", "root")
-def confirm_rollover(id, markers):
+def confirm_rollover(id):
     # pid is a ProjectClass
     config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
 
@@ -6027,7 +6032,8 @@ def confirm_rollover(id, markers):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    use_markers = bool(markers)
+    # should marker information be populated (if it is available)?
+    use_markers = bool(int(request.args.get("markers", 0)))
 
     year = get_current_year()
     if config.year == year:
@@ -6051,29 +6057,31 @@ def confirm_rollover(id, markers):
         "<p>This action cannot be undone.</p>".format(proj=config.name, yeara=year, yearb=year + 1)
     )
 
-    if use_markers:
-        submit_label = "Rollover to {yr}".format(yr=year)
+    if config.select_in_previous_cycle:
+        if use_markers:
+            submit_label = "Rollover to {yr}".format(yr=year)
+        else:
+            submit_label = "Rollover to {yr} and drop markers".format(yr=year)
     else:
-        submit_label = "Rollover to {yr} and drop markers".format(yr=year)
+        submit_label = "Rollover to {yr}".format(yr=year)
 
     return render_template(
         "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
     )
 
 
-@convenor.route("/rollover/<int:id>/<int:markers>")
+@convenor.route("/rollover/<int:id>")
 @roles_accepted("faculty", "admin", "root")
-def rollover(id, markers):
+def rollover(id):
     # pid is a ProjectClass
     config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
 
     url = request.args.get("url", None)
+    use_markers = bool(int(request.args.get("markers", 0)))
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_is_convenor(config.project_class):
         return redirect(url) if url is not None else home_dashboard()
-
-    use_markers = bool(markers)
 
     year = get_current_year()
     if config.year == year:
@@ -6102,8 +6110,8 @@ def rollover(id, markers):
     backup = celery.tasks["app.tasks.backup.backup"]
     rollover_fail = celery.tasks["app.tasks.rollover.rollover_fail"]
 
-    # originally, everything was put into a single chain. But this just led to an indefinite hang,
-    # perhaps similar to the issue reported here:
+    # originally, everything was put into a single chain. But (for reasons that are not yet clear)
+    # this just led to an indefinite hang, perhaps similar to the issue reported here:
     # https://stackoverflow.com/questions/53507677/group-of-chains-hanging-forever-in-celery
 
     # So, instead, we effectively implement our own version of the chain logic.
@@ -7308,7 +7316,10 @@ def open_feedback(id):
     if period is not None and period.is_feedback_open:
         OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=True, include_test_button=True, include_close_button=False)
     else:
-        OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=False, include_test_button=True, include_close_button=True)
+        if period.collect_project_feedback:
+            OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=False, include_test_button=True, include_close_button=True)
+        else:
+            OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=False, include_test_button=False, include_close_button=False)
 
     feedback_form = OpenFeedbackForm(request.form)
 
@@ -7319,133 +7330,183 @@ def open_feedback(id):
     if feedback_form.is_submitted():
         deadline = feedback_form.feedback_deadline.data
 
-        if deadline is None:
-            flash(
-                f"The submission deadline was not returned correctly (deadline = {deadline}). "
-                f"If this issue persists, please contact a system administrator."
-            )
+        if feedback_form.submit_button.data:
+            if period.feedback_open:
+                response = _process_update_deadline(config, deadline, id, period, url)
+            else:
+                response = _open_feedback_request(config, deadline, feedback_form, id, period, url)
 
-        else:
-            if feedback_form.submit_button.data:
-                if period.feedback_open:
-                    # if feedback is already open, nothing to do but change the deadline
-                    period.feedback_deadline = deadline
+            if response is None:
+                redirect(redirect_url())
+            else:
+                return response
 
-                    try:
-                        db.session.commit()
-                        flash(
-                            "The feedback deadline for {proj}/{period} has been successfully changed "
-                            "to {deadline}.".format(proj=config.name, period=period.display_name, deadline=deadline.strftime("%a %d %b %Y")),
-                            "success",
-                        )
-                    except SQLAlchemyError as e:
-                        flash("Could not modify feedback status due to a database error. Please contact a system administrator.", "error")
-                        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                        db.session.rollback()
-                        return redirect(redirect_url())
+        elif hasattr(feedback_form, "send_notifications") and feedback_form.send_notifications.data:
+            return _send_feedback_notifications_request(config, deadline, feedback_form, id, period, url)
 
-                else:
-                    # issue confirmation request
-                    title = "Open feedback for {proj}/{period}".format(proj=config.name, period=period.display_name)
-                    panel_title = "Open feedback for <strong>{proj}/{period}</strong> and issue email notifications to markers".format(
-                        proj=config.name, period=period.display_name
-                    )
-                    message = (
-                        "<p>Are you sure that you wish to open <strong>{proj}/{period}</strong> for feedback?</p>"
-                        "<p>The marking deadline will be set to <strong>{deadline}</strong> and email "
-                        "notifications will be issued to markers where a project report has already been "
-                        "uploaded.</p>"
-                        "<p>If no report has yet been uploaded, email notifications can be issued at a later date "
-                        "when the report is available.</p>"
-                        "<p>These actions cannot be "
-                        "undone.</p>".format(proj=config.name, period=period.display_name, deadline=deadline.strftime("%a %d %b %Y"))
-                    )
+        elif hasattr(feedback_form, "test_button") and feedback_form.test_button.data:
+            return _test_notifications(deadline, feedback_form, id, url)
 
-                    action_url = url_for(
-                        "convenor.do_open_feedback",
-                        id=id,
-                        url=url,
-                        deadline=deadline.isoformat(),
-                        cc_me=int(feedback_form.cc_me.data),
-                        max_attachment=int(feedback_form.max_attachment.data),
-                    )
-                    submit_label = "Open feedback and issue notifications"
-
-                    return render_template(
-                        "admin/danger_confirm.html",
-                        title=title,
-                        panel_title=panel_title,
-                        action_url=action_url,
-                        message=message,
-                        submit_label=submit_label,
-                    )
-
-            elif hasattr(feedback_form, "send_notifications") and feedback_form.send_notifications.data:
-                # issue confirmation request
-                title = "Catch up email notifications for {proj}/{period}".format(proj=config.name, period=period.display_name)
-                panel_title = "Catch up email notifications for <strong>{proj}/{period}</strong>".format(proj=config.name, period=period.display_name)
-                message = (
-                    "<p>Are you sure that you wish to catch up email notifications for "
-                    "<strong>{proj}/{period}</strong>?</p>"
-                    "<p>Email notifications will be issued to markers where a project report is now "
-                    "available, but no notification email has previously been issued.</p>"
-                    "<p>If no report has yet been uploaded, further email notifications can be issued at a later "
-                    "date when the report is available.</p>".format(proj=config.name, period=period.display_name)
-                )
-
-                action_url = url_for(
-                    "convenor.do_send_notifications",
-                    id=id,
-                    url=url,
-                    deadline=deadline.isoformat(),
-                    cc_me=int(feedback_form.cc_me.data),
-                    max_attachment=int(feedback_form.max_attachment.data),
-                )
-                submit_label = "Catch up email notifications"
-
-                return render_template(
-                    "admin/danger_confirm.html",
-                    title=title,
-                    panel_title=panel_title,
-                    action_url=action_url,
-                    message=message,
-                    submit_label=submit_label,
-                )
-
-            elif hasattr(feedback_form, "test_button") and feedback_form.test_button.data:
-                return redirect(
-                    url_for(
-                        "convenor.test_notifications",
-                        id=id,
-                        url=url,
-                        deadline=deadline.isoformat(),
-                        cc_me=int(feedback_form.cc_me.data),
-                        max_attachment=int(feedback_form.max_attachment.data),
-                    )
-                )
-
-            elif hasattr(feedback_form, "close_button") and feedback_form.close_button.data:
-                title = "Immediately close {proj}/{period}".format(proj=config.name, period=period.display_name)
-                panel_title = "Immediately close <strong>{proj}/{period}</strong>".format(proj=config.name, period=period.display_name)
-                message = (
-                    "<p>Are you sure that you wish to immediately close <strong>{proj}/{period}</strong>?</p>"
-                    "<p>No marking requests will be sent, and the feedback window will be closed.<p>"
-                    "<p>These actions cannot be undone.</p>".format(proj=config.name, period=period.display_name)
-                )
-
-                action_url = url_for("convenor.immediate_close_feedback", id=id, url=url)
-                submit_label = "Immediately close {period}".format(period=period.display_name)
-
-                return render_template(
-                    "admin/danger_confirm.html",
-                    title=title,
-                    panel_title=panel_title,
-                    action_url=action_url,
-                    message=message,
-                    submit_label=submit_label,
-                )
+        elif hasattr(feedback_form, "close_button") and feedback_form.close_button.data:
+            return _close_period_request(config, id, period, url)
 
     return redirect(redirect_url())
+
+
+def _test_notifications(deadline: datetime, feedback_form, id, url):
+    return redirect(
+        url_for(
+            "convenor.test_notifications",
+            id=id,
+            url=url,
+            deadline=deadline.isoformat(),
+            cc_me=int(feedback_form.cc_me.data),
+            max_attachment=int(feedback_form.max_attachment.data),
+        )
+    )
+
+
+def _close_period_request(config: ProjectClassConfig, id, period: SubmissionPeriodRecord, url):
+    if period.collect_project_feedback:
+        title = "Immediately close {proj}/{period}".format(proj=config.name, period=period.display_name)
+        panel_title = "Immediately close <strong>{proj}/{period}</strong> without sending marking notifications".format(
+            proj=config.name, period=period.display_name
+        )
+        message = (
+            "<p>Are you sure that you wish to immediately close <strong>{proj}/{period}</strong>?</p>"
+            "<p>No marking requests will be sent, and the feedback window will be closed.<p>"
+            "<p>These actions cannot be undone.</p>".format(proj=config.name, period=period.display_name)
+        )
+        action_url = url_for("convenor.immediate_close_feedback", id=id, url=url)
+        submit_label = "Immediately close {period}".format(period=period.display_name)
+        return render_template(
+            "admin/danger_confirm.html",
+            title=title,
+            panel_title=panel_title,
+            action_url=action_url,
+            message=message,
+            submit_label=submit_label,
+        )
+
+    title = "Close {proj}/{period}".format(proj=config.name, period=period.display_name)
+    panel_title = "Close {proj}/{period}".format(proj=config.name, period=period.display_name)
+    message = (
+        "<p>Marking and feedback is not being collected online for this submission period.</p>"
+        "<p><strong>{proj}/{period}</strong> will be closed, and no notifications will be sent.</p>"
+        "<p>These actions cannot be undone.</p>".format(proj=config.name, period=period.display_name)
+    )
+    action_url = url_for("convenor.immediate_close_feedback", id=id, url=url)
+    submit_label = "Close {period}".format(period=period.display_name)
+    return render_template(
+        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+    )
+
+
+def _send_feedback_notifications_request(config, deadline, feedback_form, id, period, url):
+    # issue confirmation request
+    title = "Issue unsent marking notifications for {proj}/{period}".format(proj=config.name, period=period.display_name)
+    panel_title = "Issue unsent marking notifications for <strong>{proj}/{period}</strong>".format(proj=config.name, period=period.display_name)
+    message = (
+        "<p>Are you sure that you wish to issue unsent marking notifications for "
+        "<strong>{proj}/{period}</strong>?</p>"
+        "<p>Email notifications will be issued to markers where a project report is now "
+        "available, but no notification email has previously been issued.</p>"
+        "<p>If no report has yet been uploaded, further email notifications can be issued at a later "
+        "date when the report is available.</p>".format(proj=config.name, period=period.display_name)
+    )
+    action_url = url_for(
+        "convenor.do_send_notifications",
+        id=id,
+        url=url,
+        deadline=deadline.isoformat(),
+        cc_me=int(feedback_form.cc_me.data),
+        max_attachment=int(feedback_form.max_attachment.data),
+    )
+    submit_label = "Issue unsent marking notifications"
+
+    return render_template(
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
+    )
+
+
+def _open_feedback_request(config, deadline, feedback_form, id, period, url):
+    if not period.collect_project_feedback:
+        return _close_period_request(config, id, period, url)
+
+    if deadline is None:
+        flash(
+            f"The submission deadline was not processed correctly (stored value = {deadline}). "
+            f"If this issue persists, please contact a system administrator."
+        )
+        return None
+
+    # issue confirmation request
+    title = "Open feedback for {proj}/{period}".format(proj=config.name, period=period.display_name)
+    panel_title = "Open feedback for <strong>{proj}/{period}</strong> and issue email notifications to markers".format(
+        proj=config.name, period=period.display_name
+    )
+    message = (
+        "<p>Are you sure that you wish to open <strong>{proj}/{period}</strong> for feedback?</p>"
+        "<p>The marking deadline will be set to <strong>{deadline}</strong> and email "
+        "notifications will be issued to markers where a project report has already been "
+        "uploaded.</p>"
+        "<p>If no report has yet been uploaded, email notifications can be issued at a later date "
+        "when the report is available.</p>"
+        "<p>These actions cannot be "
+        "undone.</p>".format(proj=config.name, period=period.display_name, deadline=deadline.strftime("%a %d %b %Y"))
+    )
+    action_url = url_for(
+        "convenor.do_open_feedback",
+        id=id,
+        url=url,
+        deadline=deadline.isoformat(),
+        cc_me=int(feedback_form.cc_me.data),
+        max_attachment=int(feedback_form.max_attachment.data),
+    )
+    submit_label = "Open feedback and issue notifications"
+
+    return render_template(
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
+    )
+
+
+def _process_update_deadline(config: ProjectClassConfig, deadline, id, period: SubmissionPeriodRecord, url):
+    if not period.collect_project_feedback:
+        return _close_period_request(config, id, period, url)
+
+    if deadline is None:
+        flash(
+            f"The submission deadline was not processed correctly (stored value = {deadline}). "
+            f"If this issue persists, please contact a system administrator."
+        )
+        return None
+
+    # if feedback is already open, nothing to do but change the deadline
+    period.feedback_deadline = deadline
+
+    try:
+        db.session.commit()
+        flash(
+            "The feedback deadline for {proj}/{period} has been successfully changed "
+            "to {deadline}.".format(proj=config.name, period=period.display_name, deadline=deadline.strftime("%a %d %b %Y")),
+            "success",
+        )
+    except SQLAlchemyError as e:
+        flash("Could not modify feedback status due to a database error. Please contact a system administrator.", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
+
+    return None
 
 
 @convenor.route("/test_notifications/<int:id>", methods=["GET", "POST"])

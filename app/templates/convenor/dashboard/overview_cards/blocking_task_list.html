@@ -7,7 +7,7 @@
     {% set number = submitter|length + selector|length + global|length %}
     {% if number > 0 %}
         {% call icon_block("exclamation-circle") %}
-            <div><strong>The following tasks are blocking progress.</strong></div>
+            <div><strong>The following tasks must be resolved before it is possible to proceed.</strong></div>
             {% if submitter|length > 0 %}
                 <div><strong>Submitters</strong></div>
                 <ul>

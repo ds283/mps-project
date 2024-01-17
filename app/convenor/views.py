@@ -6037,11 +6037,11 @@ def confirm_rollover(id):
 
     year = get_current_year()
     if config.year == year:
-        flash("This project is not yet ready to rollover", "info")
+        flash("This project is not yet ready to rollover.", "info")
         return redirect(redirect_url())
 
     if not config.project_class.active:
-        flash("{name} is not an active project class, and therefore cannot be rolled over".format(name=config.name), "error")
+        flash("{name} is not an active project class, and therefore cannot be rolled over.".format(name=config.name), "error")
         return redirect(redirect_url())
 
     blocking, num_blocking = config.get_blocking_tasks
@@ -6053,7 +6053,7 @@ def confirm_rollover(id):
     action_url = url_for("convenor.rollover", id=id, url=request.referrer, markers=int(use_markers))
     message = (
         '<p>Please confirm that you wish to rollover project class "{proj}" to '
-        "{yeara}&ndash;{yearb}</p>"
+        "{yeara}&ndash;{yearb}.</p>"
         "<p>This action cannot be undone.</p>".format(proj=config.name, yeara=year, yearb=year + 1)
     )
 

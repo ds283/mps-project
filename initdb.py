@@ -17,6 +17,7 @@ from tarfile import TarFile, TarInfo
 from tarfile import open as tarfile_open
 from typing import Optional, List, Dict
 
+from flask_migrate import upgrade
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -100,6 +101,17 @@ def tarfile_populate(app, bucket: ObjectStore, tarfile: Path):
     database = app.config["DATABASE_NAME"]
     db_hostname = app.config["DATABASE_HOSTNAME"]
 
+    # try to drop all tables from the SQL database
+    # these stops problems with later upgrades via Alembic, if the tables already exist (usually because they were
+    # created by running Alembic during the boot process)
+    tables = db.metadata.tables.keys()
+    db.session.remove()
+    db.session.execute(text("SET FOREIGN_KEY_CHECKS = 0;"))
+    for table in tables:
+        db.session.execute(text(f"DROP TABLE {table};"))
+    db.session.execute(text("SET FOREIGN_KEY_CHECKS = 1;"))
+    db.session.commit()
+
     full_suffix = "".join(tarfile.suffixes)
 
     with ScratchFileManager(suffix=full_suffix) as scratch_path:
@@ -123,6 +135,10 @@ def tarfile_populate(app, bucket: ObjectStore, tarfile: Path):
 
         if p.returncode != 0:
             raise RuntimeError(f"!! SQL database re-population did not complete successfully")
+
+    # run Alembic upgrade
+    db.session.remove()
+    upgrade()
 
 
 def initial_populate_database(app, inspector):

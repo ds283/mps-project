@@ -1,3 +1,4 @@
+{% from "icon_block.html" import icon_block %}
 {% from "convenor/dashboard/overview_cards/blocking_task_list.html" import blocking_task_list %}
 
 {% macro rollover_card(current_year, pclass, config) %}
@@ -5,11 +6,36 @@
         <div class="card-header bg-danger text-white"><strong>Rollover of academic year available</strong></div>
         <div class="card-body">
             <div class="row vertical-align">
-                <div class="d-flex flex-row justify-content-between align-content-start gap-2">
+                <div class="d-flex flex-row justify-content-between align-content-end gap-2">
                     <div>
-                        Rollover of the academic year to {{ current_year }} is now available.
+                        {% call icon_block("check-circle") %}
+                            <div><strong>Rollover of the academic year to {{ current_year }} is now available.</strong></div>
+                        {% endcall %}
+                        {% if config.do_matching %}
+                            {% set match = config.allocated_match %}
+                            {% if match is not none %}
+                                <div class="mt-1">
+                                    During rollover, the match <a class="text-decoration-none link-primary" href="{{ url_for('admin.match_student_view', id=match.id, text='convenor dashboard', url=url_for('convenor.status', id=pclass.id)) }}"><strong>{{ match.name }}</strong></a> will be used to assign faculty roles.
+                                </div>
+                            {% else %}
+                                <div class="mt-1 text-danger">
+                                    This project class is configured to use automatic matching, but no match is currently selected.
+                                    Faculty roles will not be automatically assigned during rollover.
+                                </div>
+                            {% endif %}
+                            <div class="mt-1">
+                                <a class="text-decoration-none link-primary" href="{{ url_for('admin.manage_matching') }}">
+                                    Manage matches...
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="mt-1">
+                                This project is not configured to use automatic matching.
+                                Faculty roles will not be automatically assigned during rollover.
+                            </div>
+                        {% endif %}
                     </div>
-                    <div class="d-flex flex-row justify-content-end align-content-start gap-2">
+                    <div class="d-flex flex-row justify-content-end align-self-end gap-2">
                         {% if pclass.select_in_previous_cycle %}
                             <a href="{{ url_for('convenor.confirm_rollover', id=config.id, markers=0) }}"
                                class="btn btn-outline-danger">Drop markers</a>

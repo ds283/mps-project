@@ -36,10 +36,13 @@ with app.app_context():
     engine = db.engine
     inspector = inspect(engine)
 
-    # first inspect the main table; if this is empty then we assume that they database should be repopulated
+    # first inspect the main table; if this does not exist or is empty
+    # then we assume that they database should be repopulated
+    # (in general the table will exist but may be empty, because Flask-Migrate will already have been run
+    # by the boot script)
     if not has_table(inspector, "main_config"):
         # commit session to release any table locks; otherwise, if we are restoring from a mysqldump
-        # dump file which isues DROP TABLE statements, these will block against the table lock
+        # dump file which issues DROP TABLE statements, these will block against the table lock
         db.session.commit()
         initial_populate_database(app, inspector)
 

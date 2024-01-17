@@ -9,13 +9,14 @@
                 <div class="d-flex flex-row justify-content-between align-content-end gap-2">
                     <div>
                         {% call icon_block("check-circle") %}
-                            <div><strong>Rollover of the academic year to {{ current_year }} is now available.</strong></div>
+                            <div><strong>Rollover of the academic year to {{ current_year }}&ndash;{{ current_year+1 }}
+                                is now available.</strong></div>
                         {% endcall %}
                         {% if not config.select_in_previous_cycle %}
                             <div class="mt-1">
                                 The project class is configured for student selections to take place in the same
                                 academic year as submission.
-                                Faculty roles will not be automatically assigned during rollover.
+                                Faculty roles will not be assigned automatically during rollover.
                             </div>
                             <div class="mt-1">
                                 To use automated matching, set up a match during the academic year and use it to
@@ -34,7 +35,7 @@
                                     <div class="mt-1 text-danger">
                                         This project class is configured to use automatic matching, but no match is
                                         currently selected.
-                                        Faculty roles will not be automatically assigned during rollover.
+                                        Faculty roles will not be assigned automatically during rollover.
                                     </div>
                                 {% endif %}
                                 <div class="mt-1">
@@ -46,7 +47,7 @@
                             {% else %}
                                 <div class="mt-1">
                                     This project is not configured to use automatic matching.
-                                    Faculty roles will not be automatically assigned during rollover.
+                                    Faculty roles will not be assigned automatically during rollover.
                                 </div>
                             {% endif %}
                         {% endif %}

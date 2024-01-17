@@ -17,7 +17,7 @@ from celery.exceptions import Ignore
 from celery.result import GroupResult
 from dateutil.relativedelta import relativedelta
 from flask import current_app
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -202,10 +202,15 @@ def register_rollover_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
+    def _post_update_msg(
+        celery_self, task_id: int, celery_state: str, task_state: int, progress_percent: int, msg: str, autocommit: bool = True
+    ) -> None:
+        progress_update(task_id, task_state, progress=progress_percent, message=msg, autocommit=autocommit)
+        celery_self.update_state(state=celery_state, meta={"msg": msg})
+
     @celery.task(bind=True)
     def pclass_rollover(self, task_id, use_markers, current_id, convenor_id):
-        self.update_state(state="STARTED")
-        progress_update(task_id, TaskRecord.RUNNING, 0, "Preparing to rollover...", autocommit=True)
+        _post_update_msg(self, task_id, "STARTED", TaskRecord.RUNNING, 0, "Preparing to rollover...")
 
         # if use_markers is not directly a boolean type, try to cast it to something boolean
         if not isinstance(use_markers, bool):
@@ -221,48 +226,61 @@ def register_rollover_tasks(celery):
             config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=current_id).first()
             convenor: User = User.query.filter_by(id=convenor_id).first()
         except SQLAlchemyError as e:
+            _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 0, "Could not load ProjectClassConfig record: retrying...")
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         # if could not read database records for config and convenor, can hardly proceed
         if convenor is None or config is None:
-            progress_update(task_id, TaskRecord.FAILURE, 100, "An error was encountered during rollover of the academic year", autocommit=True)
-            if convenor is not None:
-                convenor.post_message("Rollover failed because some database records could not be loaded.", "danger", autocommit=True)
+            _post_update_msg(
+                self, task_id, "FAILURE", TaskRecord.FAILURE, "Rollover failed because some database records could not be loaded", autocommit=False
+            )
 
             if config is None:
-                self.update_state("FAILURE", meta={"msg": "Could not load ProjectClassConfig record from database"})
+                convenor.post_message(
+                    "A ProjectClassConfig instance could not be read from the database. Please retry your operation. "
+                    "If errors persist, please contact a system administrator.",
+                    "error",
+                    autocommit=True,
+                )
 
             if convenor is None:
-                self.update_state("FAILURE", meta={"msg": "Could not load convenor User record from database"})
+                convenor.post_message(
+                    "A User instance associated with the convenor could not be read from the database. "
+                    "Please retry your operation. If errors persist, please contact a system administrator.",
+                    "error",
+                    autocommit=True,
+                )
 
-            return
+            raise Ignore()
 
         # if selector lifecycle is not ready to rollover, bail out
         if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
-            progress_update(task_id, TaskRecord.FAILURE, 100, "An error was encountered during rollover of the academic year", autocommit=True)
+            _post_update_msg(
+                self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Selector lifecycle status is not yet ready for rollover", autocommit=False
+            )
             convenor.post_message(
                 "Cannot yet rollover for {name} {yra}-{yrb} because not all selector activities have been finalised. "
-                "(Lifecycle stage={l}.)".format(name=config.name, yra=year, yrb=year + 1, l=config.selector_lifecycle),
+                "(lifecycle stage={l}.)".format(name=config.name, yra=year, yrb=year + 1, l=config.selector_lifecycle),
                 "info",
                 autocommit=True,
             )
-            self.update_state("FAILURE", meta={"msg": "Selector lifecycle state is not ready for rollover"})
-            return
+            raise Ignore()
 
         # if submitter lifecycle is not ready to rollover, bail out
         if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-            progress_update(task_id, TaskRecord.FAILURE, 100, "An error was encountered during rollover of the academic year", autocommit=True)
+            _post_update_msg(
+                self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Submitter lifecycle status is not yet ready for rollover", autocommit=False
+            )
             convenor.post_message(
                 "Cannot yet rollover for {name} {yra}-{yrb} because not all submitter activities have been finalised. "
-                "(Lifecycle stage={l}.)".format(name=config.name, yra=year, yrb=year + 1, l=config.submitter_lifecycle),
+                "(lifecycle stage={l}.)".format(name=config.name, yra=year, yrb=year + 1, l=config.submitter_lifecycle),
                 "info",
                 autocommit=True,
             )
-            self.update_state("FAILURE", meta={"msg": "Submitter lifecycle state is not ready for rollover"})
-            return
+            raise Ignore()
 
-        ## EXECUTE THE TASK CHAIN
+        ## BUILD AND EXECUTE THE TASK CHAIN
 
         # This used to be done by constructing a long chain of chords, and replacing this task by the chain.
         # However, after the Data Science MSc was introduced into the database, we apparently got
@@ -291,13 +309,13 @@ def register_rollover_tasks(celery):
 
         # GENERATE NEW PROJECTCLASSCONFIG RECORD
 
-        progress_update(task_id, TaskRecord.RUNNING, 10, "Generating database records for new academic year...", autocommit=True)
+        _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 10, "Generating database records for new academic year...")
         new_config_id = insert_new_pclass_config(self, config, convenor_id)
 
         # CONVERT SELECTORS FROM PREVIOUS CYCLE INTO SUBMITTERS IN THE CURRENT CYCLE
 
         if config.select_in_previous_cycle:
-            progress_update(task_id, TaskRecord.RUNNING, 20, "Converting selector records into submitter records...", autocommit=True)
+            _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 20, "Converting selector records into submitter records...")
 
             # if automated matching is being used, find the selected MatchingAttempt that contains allocations for this
             # project class
@@ -306,16 +324,10 @@ def register_rollover_tasks(celery):
                 match = config.allocated_match
 
                 if match is None:
-                    progress_update(
-                        task_id, TaskRecord.FAILURE, 100, "An error was encountered during rollover of the academic year", autocommit=True
+                    _post_update_msg(
+                        self, task_id, "FAILURE", TaskRecord.FAILURE, 100, f"Could not find allocated match for {config.name} {year}-{year+1}"
                     )
-                    convenor.post_message(
-                        "Could not find allocated matches for {name} {yra}-{yrb}".format(name=config.name, yra=year, yrb=year + 1),
-                        "info",
-                        autocommit=True,
-                    )
-                    self.update_state("FAILURE", meta={"msg": "Could not find selected MatchingAttempt record"})
-                    return
+                    raise Ignore()
 
             # build task group to convert SelectingStudent instances from the current config into
             # SubmittingStudent instances for next year's config
@@ -328,9 +340,7 @@ def register_rollover_tasks(celery):
             convert_task.get(disable_sync_subtasks=False)
 
             if not convert_task.successful():
-                progress_update(task_id, TaskRecord.FAILURE, 100, "An error was encountered during rollover of the academic year", autocommit=True)
-                convenor.post_message("Could not convert selectors into submitter records", "error", autocommit=True)
-                self.update_state(state="FAILURE", meta={"msg": "Could not convert selectors into submitter records"})
+                _post_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not convert selectors into submitter records")
                 convert_task.forget()
                 return
 
@@ -338,20 +348,39 @@ def register_rollover_tasks(celery):
 
         # AUTO-CREATE NEW SELECTOR AND SUBMITTER INSTANCES
 
-        progress_update(task_id, TaskRecord.RUNNING, 30, "Attaching new student records...", autocommit=True)
+        _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 30, "Attaching new student records...")
 
         # build task group to perform attachment of new records;
         # these will attach all new SelectingStudent instances, and mop up any eligible
         # SubmittingStudent instances that weren't automatically created by conversion of
         # SelectingStudent instances
 
-        # students contains all active student records (so this does not scale well as the number of users goes up);
-        # we want to process these to attach submitters/selectors, bearing in mind that some submitter
-        # records will have been generated from conversion of selector records via convert_selector
-        # TODO: probably want to do this in a more intelligent way!
+        # build list of candidate students who may be attachable as selectors or submitters.
+        # We need to bear in mind that some SubmittingStudent instances will have been generated already
+        # from conversion of SelectingStudent instances
+
+        # First restrict the query to students enrolled on a degree programme at the appropriate level
         students = (
-            db.session.query(StudentData).join(User, User.id == StudentData.id).filter(User.active == True, StudentData.academic_year <= 6).all()
+            db.session.query(StudentData)
+            .join(User, User.id == StudentData.id)
+            .join(DegreeProgramme, DegreeProgramme.id == StudentData.degree_programme_id)
+            .join(DegreeType, DegreeType.id == DegreeProgramme.degree_type_id)
+            .filter(User.active == True, DegreeType.level == config.student_level)
         )
+
+        # if selection is open to all, we do not want to filter by programme type
+        # otherwise, if selection is limited to degree programmes of the type specified by the project class, the student should
+        # be enrolled on a suitable programme
+        if not config.selection_open_to_all:
+            students = students.filter(StudentData.programme.in_(config.programmes))
+
+        # we should only consider students who are in the appropriate academic year
+        first_year = config.start_year
+        last_year = config.start_year + config.extent
+        if config.select_in_previous_cycle:
+            first_year = first_year - 1
+
+        students = students.filter(and_(StudentData.academic_year >= first_year, StudentData.academic_year <= last_year))
 
         attach_group = group(attach_selectors_submitters.si(new_config_id, current_id, s.id, year) for s in students)
 
@@ -359,17 +388,15 @@ def register_rollover_tasks(celery):
         attach_task.get(disable_sync_subtasks=False)
 
         if not attach_task.successful():
-            progress_update(task_id, TaskRecord.FAILURE, 100, "An error was encountered during rollover of the academic year", autocommit=True)
-            convenor.post_message("Could not attach new student records", "error", autocommit=True)
-            self.update_state(state="FAILURE", meta={"msg": "Could not attach new student records"})
+            _post_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not attach new student records")
             attach_task.forget()
-            return
+            raise Ignore()
 
         attach_task.forget()
 
         # RETIRE OLD SELECTOR AND SUBMITTER RECORDS
 
-        progress_update(task_id, TaskRecord.RUNNING, 40, "Retiring current student records...", autocommit=True)
+        _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 40, "Retiring current student records...")
 
         # build group of tasks to perform retirements
         retire_selectors = [retire_selector.si(s.id) for s in config.selecting_students]
@@ -381,17 +408,17 @@ def register_rollover_tasks(celery):
         retire_task.get(disable_sync_subtasks=False)
 
         if not retire_task.successful():
-            progress_update(task_id, TaskRecord.FAILURE, 100, "An error was encountered during rollover of the academic year", autocommit=True)
-            convenor.post_message("Could not retire selector and submitter records from the previous cycle", "error", autocommit=True)
-            self.update_state(state="FAILURE", meta={"msg": "Could not retire selector and submitter records from the previous cycle"})
+            _post_update_msg(
+                self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not retire selector and submitter records from the previous cycle"
+            )
             retire_task.forget()
-            return
+            raise Ignore()
 
         retire_task.forget()
 
         # PERFORM FACULTY RE-ENROLLMENT WHERE NEEDED
 
-        progress_update(task_id, TaskRecord.RUNNING, 50, "Checking for faculty re-enrolments...", autocommit=True)
+        _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 50, "Checking for faculty re-enrolments...")
 
         # build group of tasks to check for faculty re-enrolment after buyout or sabbatical
         reenrol_query = db.session.query(EnrollmentRecord.id).filter(
@@ -408,17 +435,15 @@ def register_rollover_tasks(celery):
         reenrol_task.get(disable_sync_subtasks=False)
 
         if not reenrol_task.successful():
-            progress_update(task_id, TaskRecord.FAILURE, 100, "An error was encountered during rollover of the academic year", autocommit=True)
-            convenor.post_message("Could not perform faculty re-enrolment", "error", autocommit=True)
-            self.update_state(state="FAILURE", meta={"msg": "Could not perform faculty re-enrolment"})
+            _post_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not perform faculty re-enrolment")
             reenrol_task.forget()
-            return
+            raise Ignore()
 
         reenrol_task.forget()
 
         # ROUTINE DATABASE HOUSEKEEPING
 
-        progress_update(task_id, TaskRecord.RUNNING, 60, "Performing routine database maintenance...", autocommit=True)
+        _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 60, "Performing routine database maintenance...")
 
         # perform maintenance on EnrollmentRecords
         maintenance_query = db.session.query(EnrollmentRecord.id).filter(EnrollmentRecord.pclass_id == config.pclass_id)
@@ -429,17 +454,15 @@ def register_rollover_tasks(celery):
         maintenance_task.get(disable_sync_subtasks=False)
 
         if not maintenance_task.successful():
-            progress_update(task_id, TaskRecord.FAILURE, 100, "An error was encountered during rollover of the academic year", autocommit=True)
-            convenor.post_message("Could not perform maintenance for enrolment records", "error", autocommit=True)
-            self.update_state(state="FAILURE", meta={"msg": "Could not perform maintenance for enrolment records"})
+            _post_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not perform maintenance for enrolment records")
             maintenance_task.forget()
-            return
+            raise Ignore()
 
         maintenance_task.forget()
 
         ## RESET PROJECT DESCRIPTION LIFECYCLES
 
-        progress_update(task_id, TaskRecord.RUNNING, 70, "Reset project description lifecycles...", autocommit=True)
+        _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 70, "Reset project description lifecycles...")
 
         # build group of project descriptions attached to this project class
         project_descs = set()
@@ -460,17 +483,15 @@ def register_rollover_tasks(celery):
         descs_task.get(disable_sync_subtasks=False)
 
         if not descs_task.successful():
-            progress_update(task_id, TaskRecord.FAILURE, 100, "An error was encountered during rollover of the academic year", autocommit=True)
-            convenor.post_message("Could not reset project description lifecycles", "error", autocommit=True)
-            self.update_state(state="FAILURE", meta={"msg": "Could not reset project description lifecycles"})
+            _post_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not reset project description lifecycles")
             descs_task.forget()
-            return
+            raise Ignore()
 
         descs_task.forget()
 
         ## REMOVE UNUSED CONFIRMATION REQUESTS
 
-        progress_update(task_id, TaskRecord.RUNNING, 80, "Remove stale confirmation requests...", autocommit=True)
+        _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 80, "Remove stale confirmation requests...")
 
         # remove ConfirmRequest items that were never actioned
         confirm_request_query = (
@@ -487,27 +508,23 @@ def register_rollover_tasks(celery):
         confirm_task.get(disable_sync_subtasks=False)
 
         if not confirm_task.successful():
-            progress_update(task_id, TaskRecord.FAILURE, 100, "An error was encountered during rollover of the academic year", autocommit=True)
-            convenor.post_message("Could not remove stale confirmation requests", "error", autocommit=True)
-            self.update_state(state="FAILURE", meta={"msg": "Could not remove stale confirmation requests"})
+            _post_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not remove stale confirmation requests")
             confirm_task.forget()
-            return
+            raise Ignore()
 
         confirm_task.forget()
 
         ## FINALIZE
 
-        progress_update(task_id, TaskRecord.SUCCESS, 100, "Rollover complete", autocommit=True)
+        _post_update_msg(self, task_id, "SUCCESS", TaskRecord.SUCCESS, 100, "Rollover complete")
 
         finalize_task: GroupResult = rollover_finalize.si(new_config_id, convenor_id).apply_async()
         finalize_task.get(disable_sync_subtasks=False)
 
         if not finalize_task.successful():
-            progress_update(task_id, TaskRecord.FAILURE, 100, "An error was encountered during rollover of the academic year", autocommit=True)
-            convenor.post_message("An error occurred when finalizing the rollover transaction", "error", autocommit=True)
-            self.update_state(state="FAILURE", meta={"msg": "An error occurred when finalizing the rollover transaction"})
+            _post_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "An error occurred when finalizing the rollover transaction")
             finalize_task.forget()
-            return
+            raise Ignore()
 
         finalize_task.forget()
 
@@ -525,7 +542,7 @@ def register_rollover_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load new ProjectClassConfig"})
+            self.update_state(state="FAILURE", meta={"msg": "Could not load new ProjectClassConfig"})
             return
 
         self.update_state(state="SUCCESS")
@@ -553,7 +570,7 @@ def register_rollover_tasks(celery):
         self.update_state(state="FAILURE")
 
         if convenor is not None:
-            convenor.post_message("Rollover of academic year failed. Please contact a system administrator", "danger", autocommit=True)
+            convenor.post_message("Rollover of academic year failed. Please contact a system administrator", "error", autocommit=True)
 
     @celery.task(bind=True)
     def retire_selector(self, sid):

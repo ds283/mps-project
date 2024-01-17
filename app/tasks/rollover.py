@@ -363,8 +363,8 @@ def register_rollover_tasks(celery):
         students = (
             db.session.query(StudentData)
             .join(User, User.id == StudentData.id)
-            .join(DegreeProgramme, DegreeProgramme.id == StudentData.degree_programme_id)
-            .join(DegreeType, DegreeType.id == DegreeProgramme.degree_type_id)
+            .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
+            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
             .filter(User.active == True, DegreeType.level == config.student_level)
         )
 

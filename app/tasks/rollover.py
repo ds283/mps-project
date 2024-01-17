@@ -372,7 +372,8 @@ def register_rollover_tasks(celery):
         # otherwise, if selection is limited to degree programmes of the type specified by the project class, the student should
         # be enrolled on a suitable programme
         if not config.selection_open_to_all:
-            students = students.filter(StudentData.programme.in_(config.programmes))
+            valid_config_ids = [p.id for p in config.programmes]
+            students = students.filter(StudentData.programme_id.in_(valid_config_ids))
 
         # we should only consider students who are in the appropriate academic year
         first_year = config.start_year

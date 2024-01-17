@@ -156,6 +156,7 @@ from ..models import (
     SubmissionAttachment,
     PeriodAttachment,
     validate_nonce,
+    BackupLabel,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
@@ -3843,14 +3844,25 @@ def manage_backups():
     """
     type_filter = request.args.get("type_filter")
 
-    if type_filter is None and session.get("admin_backup_type_filter"):
-        type_filter = session["admin_backup_type_filter"]
+    if type_filter is None:
+        type_filter = session.get("admin_backup_type_filter")
 
     if type_filter is not None and type_filter not in ["all", "scheduled", "rollover", "golive", "close", "confirm", "batch"]:
         type_filter = "all"
 
     if type_filter is not None:
         session["admin_backup_type_filter"] = type_filter
+
+    property_filter = request.args.get("property_filter")
+
+    if property_filter is None:
+        property_filter = session.get("admin_backup_property_filter")
+
+    if property_filter is not None and property_filter not in ["all", "labels", "lock"]:
+        property_filter = "all"
+
+    if property_filter is not None:
+        session["admin_backup_property_filter"] = property_filter
 
     backup_count = compute_current_backup_count()
 
@@ -3859,7 +3871,14 @@ def manage_backups():
     if form.validate_on_submit() and form.delete_age.data is True:
         return redirect(url_for("admin.confirm_delete_backup_cutoff", cutoff=(form.weeks.data)))
 
-    return render_template("admin/backup_dashboard/manage.html", pane="view", backup_count=backup_count, form=form, type_filter=type_filter)
+    return render_template(
+        "admin/backup_dashboard/manage.html",
+        pane="view",
+        backup_count=backup_count,
+        form=form,
+        type_filter=type_filter,
+        property_filter=property_filter,
+    )
 
 
 @admin.route("/manage_backups_ajax", methods=["POST"])
@@ -3870,6 +3889,7 @@ def manage_backups_ajax():
     :return:
     """
     type_filter = request.args.get("type_filter")
+    property_filter = request.args.get("property_filter")
 
     base_query = db.session.query(BackupRecord).join(User, User.id == BackupRecord.owner_id)
 
@@ -3885,6 +3905,11 @@ def manage_backups_ajax():
         base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_ISSUE_CONFIRM_FALLBACK)
     elif type_filter == "batch":
         base_query = base_query.filter(BackupRecord.type == BackupRecord.BATCH_IMPORT_FALLBACK)
+
+    if property_filter == "labels":
+        base_query = base_query.filter(BackupRecord.labels.any(BackupLabel.id != None))
+    elif property_filter == "lock":
+        base_query = base_query.filter(BackupRecord.locked)
 
     date = {"search": func.date_format(BackupRecord.date, "%a %d %b %Y %H:%M:%S"), "order": BackupRecord.date}
     initiated = {

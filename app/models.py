@@ -1422,6 +1422,25 @@ class SubmissionRoleTypesMixin:
     }
 
 
+class BackupTypesMixin:
+    # type of backup
+    SCHEDULED_BACKUP = 1
+    PROJECT_ROLLOVER_FALLBACK = 2
+    PROJECT_GOLIVE_FALLBACK = 3
+    PROJECT_CLOSE_FALLBACK = 4
+    PROJECT_ISSUE_CONFIRM_FALLBACK = 5
+    BATCH_IMPORT_FALLBACK = 6
+
+    _type_index = {
+        SCHEDULED_BACKUP: "Scheduled backup",
+        PROJECT_ROLLOVER_FALLBACK: "Rollover restore point",
+        PROJECT_GOLIVE_FALLBACK: "Go Live restore point",
+        PROJECT_CLOSE_FALLBACK: "Close selection restore point",
+        PROJECT_ISSUE_CONFIRM_FALLBACK: "Issue confirmation requests restore point",
+        BATCH_IMPORT_FALLBACK: "Batch user creation restore point",
+    }
+
+
 class SupervisionEventTypesMixin:
     """
     Single point of definition for supervision event types
@@ -11766,7 +11785,7 @@ class BackupConfiguration(db.Model):
         return self.limit * self.unit_map[self.units]
 
 
-class BackupRecord(db.Model):
+class BackupRecord(db.Model, BackupTypesMixin):
     """
     Keep details of a website backup
     """
@@ -11786,23 +11805,7 @@ class BackupRecord(db.Model):
     # datestamp of backup
     date = db.Column(db.DateTime(), index=True)
 
-    # type of backup
-    SCHEDULED_BACKUP = 1
-    PROJECT_ROLLOVER_FALLBACK = 2
-    PROJECT_GOLIVE_FALLBACK = 3
-    PROJECT_CLOSE_FALLBACK = 4
-    PROJECT_ISSUE_CONFIRM_FALLBACK = 5
-    BATCH_IMPORT_FALLBACK = 6
-
-    _type_index = {
-        SCHEDULED_BACKUP: "Scheduled backup",
-        PROJECT_ROLLOVER_FALLBACK: "Rollover restore point",
-        PROJECT_GOLIVE_FALLBACK: "Go Live restore point",
-        PROJECT_CLOSE_FALLBACK: "Close selection restore point",
-        PROJECT_ISSUE_CONFIRM_FALLBACK: "Issue confirmation requests restore point",
-        BATCH_IMPORT_FALLBACK: "Batch user creation restore point",
-    }
-
+    # backup type
     type = db.Column(db.Integer())
 
     # unique key, used to identify the payload for this backup within a bucket

@@ -6,6 +6,10 @@
 {% set type_filter = 'all' %}
 {% endif %}
 
+{% if property_filter is not defined or property_filter is none %}
+{% set property_filter = 'all' %}
+{% endif %}
+
 {% block scripts %}
     {{ super() }}
     {{ import_datatables() }}
@@ -20,7 +24,7 @@
                 serverSide: true, processing: true,
                 language: {{ bootstrap_spinner() }},
                 ajax: {
-                    url: $SCRIPT_ROOT + '/admin/manage_backups_ajax?type_filter={{ type_filter }}',
+                    url: $SCRIPT_ROOT + '/admin/manage_backups_ajax?type_filter={{ type_filter }}&property_filter={{ property_filter }}',
                     type: 'POST',
                     data: function (args) {
                         return {"args": JSON.stringify(args)};
@@ -62,7 +66,7 @@
 
 {% block bodyblock %}
     <div class="m-3">
-        <form action="{{ url_for('admin.manage_backups') }}" method="POST">
+        <form action="{{ url_for('admin.manage_backups', type_filter=type_filter, property_filter=property_filter) }}" method="POST">
             {{ form.hidden_tag() }}
             <div class="row vertical-bottom">
                 <div class="col-2">
@@ -73,7 +77,9 @@
                 </div>
                 <div class="col-8 grouped-button-pad">
                     <div class="float-end">
-                        <a href="{{ url_for('admin.confirm_delete_all_backups') }}" class="btn btn-danger">Delete all</a>
+                        <a href="{{ url_for('admin.confirm_delete_all_backups') }}" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Delete all backups
+                        </a>
                     </div>
                 </div>
             </div>
@@ -85,34 +91,53 @@
             <div class="card mt-3 mb-3 card-body bg-well">
                 <div class="row">
                     <div class="col-12">
-                        <p>Filter by type</p>
-                        <a href="{{ url_for('admin.manage_backups', type_filter='all') }}"
+                        <p>Filter by restore point</p>
+                        <a href="{{ url_for('admin.manage_backups', type_filter='all', property_filter=property_filter) }}"
                            class="btn btn-sm filter-btn {% if type_filter is none or type_filter=='all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                            All
+                            Show all
                         </a>
-                        <a href="{{ url_for('admin.manage_backups', type_filter='scheduled') }}"
+                        <a href="{{ url_for('admin.manage_backups', type_filter='scheduled', property_filter=property_filter) }}"
                            class="btn btn-sm filter-btn {% if type_filter=='scheduled' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                            Scheduled backup
+                            Scheduled
                         </a>
-                        <a href="{{ url_for('admin.manage_backups', type_filter='rollover') }}"
+                        <a href="{{ url_for('admin.manage_backups', type_filter='rollover', property_filter=property_filter) }}"
                            class="btn btn-sm filter-btn {% if type_filter=='rollover' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                            Rollover restore point
+                            Rollover
                         </a>
-                        <a href="{{ url_for('admin.manage_backups', type_filter='golive') }}"
+                        <a href="{{ url_for('admin.manage_backups', type_filter='golive', property_filter=property_filter) }}"
                            class="btn btn-sm filter-btn {% if type_filter=='golive' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                            Go Live restore point
+                            Go Live
                         </a>
-                        <a href="{{ url_for('admin.manage_backups', type_filter='close') }}"
+                        <a href="{{ url_for('admin.manage_backups', type_filter='close', property_filter=property_filter) }}"
                            class="btn btn-sm filter-btn {% if type_filter=='close' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                            Close feedback restore point
+                            Close feedback
                         </a>
-                        <a href="{{ url_for('admin.manage_backups', type_filter='confirm') }}"
+                        <a href="{{ url_for('admin.manage_backups', type_filter='confirm', property_filter=property_filter) }}"
                            class="btn btn-sm filter-btn {% if type_filter=='confirm' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                            Issue confirmation requests restore point
+                            Issue confirmations
                         </a>
-                        <a href="{{ url_for('admin.manage_backups', type_filter='batch') }}"
+                        <a href="{{ url_for('admin.manage_backups', type_filter='batch', property_filter=property_filter) }}"
                            class="btn btn-sm filter-btn {% if type_filter=='batch' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                            Batch user import restore point
+                            Batch student import
+                        </a>
+                    </div>
+                </div>
+
+                <hr class="intro-divider">
+                <div class="row">
+                    <div class="col-12">
+                        <p>Filter by properties</p>
+                        <a href="{{ url_for('admin.manage_backups', type_filter=type_filter, property_filter='all') }}"
+                           class="btn  btn-sm filter-btn {% if property_filter is none or property_filter=='all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Show all
+                        </a>
+                        <a href="{{ url_for('admin.manage_backups', type_filter=type_filter, property_filter='labels') }}"
+                           class="btn btn-sm filter-btn {% if property_filter=='labels' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Has labels
+                        </a>
+                        <a href="{{ url_for('admin.manage_backups', type_filter=type_filter, property_filter='lock') }}"
+                           class="btn btn-sm filter-btn {% if property_filter=='lock' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Locked
                         </a>
                     </div>
                 </div>

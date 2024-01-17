@@ -687,7 +687,7 @@ class EmailLogForm(Form):
         "Age cutoff in weeks", validators=[InputRequired(message="Cutoff is required. Emails older than the limit will be removed.")]
     )
 
-    delete_age = SubmitField("Delete emails older than cutoff")
+    delete_age = SubmitField("Delete older emails")
 
 
 class BackupManageForm(Form):
@@ -695,7 +695,7 @@ class BackupManageForm(Form):
         "Age cutoff in weeks", validators=[InputRequired(message="Cutoff is required. Backups older than the limit will be removed.")]
     )
 
-    delete_age = SubmitField("Delete backups older than cutoff")
+    delete_age = SubmitField("Delete older backups")
 
 
 def MessageMixinFactory(query_factory, convenor_editing):

@@ -12,13 +12,15 @@
         {% if type is not none %}
             <span class="badge bg-{{ type }} {% if user_classes is not none %}{{ user_classes }}{% endif %}"
                 {%- if popover_text is not none %} data-bs-toggle="tooltip" data-bs-html="true" title="{{ popover_text }}"{% endif %}>
-                {%- if prefix -%}{{ prefix }} {% endif -%}{{ label }}{%- if suffix %} {{ suffix }}{%- endif -%}
+                {%- if prefix -%}{{ prefix|safe }} {% endif -%}{{ label|safe }}{%- if suffix %}
+                    {{ suffix|safe }}{%- endif -%}
             </span>
         {% else %}
             <span class="badge bg-secondary {% if user_classes is not none %}{{ user_classes }}{% endif %}"
                 {%- if style is not none %} style="{{ style }}"{% endif %}
                 {%- if popover_text is not none %} data-bs-toggle="tooltip" title="{{ popover_text }}"{% endif %}>
-                {%- if prefix -%}{{ prefix }} {% endif -%}{{ label }}{%- if suffix %} {{ suffix }}{%- endif -%}
+                {%- if prefix -%}{{ prefix|safe }} {% endif -%}{{ label|safe }}{%- if suffix %}
+                    {{ suffix|safe }}{%- endif -%}
             </span>
         {% endif %}
     {% elif label_data is none %}
@@ -52,12 +54,14 @@
         {% if type is not none %}
             <{{ tag }} {% if user_classes is not none %}class="{{ user_classes }}"{% endif %}
                 {%- if popover_text is not none %} data-bs-toggle="tooltip" data-bs-html="true" title="{{ popover_text }}"{% endif %}>
-                {%- if prefix -%}{{ prefix }} {% endif -%}{{ label }}{%- if suffix %} {{ suffix }}{%- endif -%}
+            {%- if prefix -%}{{ prefix|safe }} {% endif -%}{{ label|safe }}{%- if suffix %}
+                {{ suffix|safe }}{%- endif -%}
             </{{ tag }}>
         {% else %}
             <{{ tag }} {% if user_classes is not none %}class="{{ user_classes }}"{% endif %}
                 {%- if popover_text is not none %} data-bs-toggle="tooltip" title="{{ popover_text }}"{% endif %}>
-                {%- if prefix -%}{{ prefix }} {% endif -%}{{ label }}{%- if suffix %} {{ suffix }}{%- endif -%}
+            {%- if prefix -%}{{ prefix|safe }} {% endif -%}{{ label|safe }}{%- if suffix %}
+                {{ suffix|safe }}{%- endif -%}
             </{{ tag}}>
         {% endif %}
     {% elif label_data is none %}

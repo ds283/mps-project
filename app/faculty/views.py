@@ -10,13 +10,11 @@
 
 from datetime import datetime, date
 from typing import List, Dict
-from uuid import uuid4
 
 from flask import render_template, redirect, url_for, flash, request, session, jsonify, current_app
 from flask_security import roles_required, roles_accepted, current_user
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm.exc import StaleDataError
 from werkzeug.local import LocalProxy
 
 import app.ajax as ajax
@@ -30,7 +28,6 @@ from .forms import (
     MoveDescriptionFormFactory,
     FacultyPreviewFormFactory,
     SubmissionRoleFeedbackForm,
-    MarkerFeedbackForm,
     PresentationFeedbackForm,
     SubmissionRoleResponseForm,
     FacultySettingsFormFactory,
@@ -88,7 +85,6 @@ from ..shared.validators import (
     validate_project_open,
     validate_is_project_owner,
     validate_submission_supervisor,
-    validate_submission_marker,
     validate_submission_viewable,
     validate_assessment,
     validate_using_assessment,
@@ -1287,7 +1283,9 @@ def attach_assessors_ajax(id):
 
     faculty = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
-    return ajax.project.build_marker_data(faculty, proj, _marker_menu, disable_enrollment_links=True, url=url_for("faculty.attach_assessors", id=id))
+    return ajax.project.build_assessor_data(
+        faculty, proj, _marker_menu, disable_enrollment_links=True, url=url_for("faculty.attach_assessors", id=id)
+    )
 
 
 @faculty.route("/add_assessor/<int:proj_id>/<int:mid>")

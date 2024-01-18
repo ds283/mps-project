@@ -4463,7 +4463,7 @@ def attach_assessors_ajax(id, pclass_id):
 
     faculty = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
-    return ajax.project.build_marker_data(
+    return ajax.project.build_assessor_data(
         faculty,
         proj,
         _marker_menu,

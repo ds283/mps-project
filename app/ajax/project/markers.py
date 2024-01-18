@@ -29,7 +29,7 @@ _status = """
 """
 
 # language=jinja2
-_enrollments = """
+_enrolments = """
 {% set ns = namespace(count=0) %}
 {% for e in f.enrollments %}
     {% if e.pclass.publish and (e.pclass.uses_marker or e.pclass.uses_presentations) %}
@@ -60,7 +60,7 @@ _attached = """
 """
 
 
-def build_marker_data(faculty, proj, menu, pclass_id=None, url=None, disable_enrollment_links=False):
+def build_assessor_data(faculty, proj, menu, pclass_id=None, url=None, disable_enrollment_links=False):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
     data = [
@@ -69,7 +69,7 @@ def build_marker_data(faculty, proj, menu, pclass_id=None, url=None, disable_enr
             "attached": render_template_string(_attached, f=f),
             "groups": render_template_string(_affiliations, f=f, simple_label=simple_label),
             "status": render_template_string(_status, f=f, proj=proj),
-            "enrollments": render_template_string(_enrollments, f=f, url=url, disabled=disable_enrollment_links, simple_label=simple_label),
+            "enrolments": render_template_string(_enrolments, f=f, url=url, disabled=disable_enrollment_links, simple_label=simple_label),
             "menu": render_template_string(menu, f=f, proj=proj, pclass_id=pclass_id),
         }
         for f in faculty

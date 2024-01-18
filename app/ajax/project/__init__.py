@@ -8,5 +8,5 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from .assessors import build_assessor_data
 from .project import build_data
-from .markers import build_assessor_data

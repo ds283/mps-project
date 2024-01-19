@@ -8,9 +8,11 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, get_template_attribute
+from flask import jsonify, get_template_attribute, current_app, render_template
 from flask_security import current_user
+from jinja2 import Template, Environment
 
+from ...cache import cache
 
 # language=jinja2
 _menu = """
@@ -260,6 +262,42 @@ _name = """
 """
 
 
+@cache.memoize()
+def build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+@cache.memoize()
+def build_cohort_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_cohort)
+
+
+@cache.memoize()
+def build_bookmarks_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_bookmarks)
+
+
+@cache.memoize()
+def build_confirmations_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_confirmations)
+
+
+@cache.memoize()
+def build_submitted_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_submitted)
+
+
+@cache.memoize()
+def build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
+
 def selectors_data(students, config):
     # cache selector lifecycle information
     state = config.selector_lifecycle
@@ -268,14 +306,22 @@ def selectors_data(students, config):
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
+    # build and cache template strings
+    name_templ = build_name_templ()
+    cohort_templ = build_cohort_templ()
+    bookmarks_templ = build_bookmarks_templ()
+    confirmations_templ = build_confirmations_templ()
+    submitted_templ = build_submitted_templ()
+    menu_templ = build_menu_templ()
+
     data = [
         {
-            "name": {"display": render_template_string(_name, sel=s), "sortstring": s.student.user.last_name + s.student.user.first_name},
-            "cohort": {"display": render_template_string(_cohort, sel=s, simple_label=simple_label), "value": s.student.cohort},
-            "bookmarks": {"display": render_template_string(_bookmarks, sel=s), "value": s.number_bookmarks},
-            "confirmations": {"display": render_template_string(_confirmations, sel=s), "value": s.number_pending + s.number_confirmed},
-            "submitted": render_template_string(_submitted, sel=s, config=config, state=state),
-            "menu": render_template_string(_menu, student=s, config=config, state=state, is_admin=is_admin),
+            "name": {"display": render_template(name_templ, sel=s), "sortstring": s.student.user.last_name + s.student.user.first_name},
+            "cohort": {"display": render_template(cohort_templ, sel=s, simple_label=simple_label), "value": s.student.cohort},
+            "bookmarks": {"display": render_template(bookmarks_templ, sel=s), "value": s.number_bookmarks},
+            "confirmations": {"display": render_template(confirmations_templ, sel=s), "value": s.number_pending + s.number_confirmed},
+            "submitted": render_template(submitted_templ, sel=s, config=config, state=state),
+            "menu": render_template(menu_templ, student=s, config=config, state=state, is_admin=is_admin),
         }
         for s in students
     ]

@@ -8,7 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, get_template_attribute
+from flask import jsonify, get_template_attribute, current_app, render_template
+from jinja2 import Environment, Template
+
+from ...cache import cache
 
 # language=jinja2
 _affiliations = """
@@ -60,17 +63,51 @@ _attached = """
 """
 
 
+@cache.memoize()
+def build_attached_template() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_attached)
+
+
+@cache.memoize()
+def build_affiliations_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_affiliations)
+
+
+@cache.memoize()
+def build_status_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_status)
+
+
+@cache.memoize()
+def build_enrolments_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_enrolments)
+
+
+
 def build_assessor_data(faculty, proj, menu, pclass_id=None, url=None, disable_enrollment_links=False):
     simple_label = get_template_attribute("labels.html", "simple_label")
+
+    # pre-compile template string
+    attached_templ: Template = build_attached_template()
+    affiliations_templ: Template = build_affiliations_templ()
+    status_templ: Template = build_status_templ()
+    enrolments_templ: Template = build_enrolments_templ()
+
+    env: Environment = current_app.jinja_env
+    menu_templ: Template = env.from_string(menu)
 
     data = [
         {
             "name": {"display": f.user.name, "sortstring": f.user.last_name + f.user.first_name},
-            "attached": render_template_string(_attached, f=f),
-            "groups": render_template_string(_affiliations, f=f, simple_label=simple_label),
-            "status": render_template_string(_status, f=f, proj=proj),
-            "enrolments": render_template_string(_enrolments, f=f, url=url, disabled=disable_enrollment_links, simple_label=simple_label),
-            "menu": render_template_string(menu, f=f, proj=proj, pclass_id=pclass_id),
+            "attached": render_template(attached_templ, f=f),
+            "groups": render_template(affiliations_templ, f=f, simple_label=simple_label),
+            "status": render_template(status_templ, f=f, proj=proj),
+            "enrolments": render_template(enrolments_templ, f=f, url=url, disabled=disable_enrollment_links, simple_label=simple_label),
+            "menu": render_template(menu_templ, f=f, proj=proj, pclass_id=pclass_id),
         }
         for f in faculty
     ]

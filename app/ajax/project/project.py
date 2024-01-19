@@ -426,6 +426,7 @@ def build_menu_templ(key: str) -> Template:
     return env.from_string(_menus[key])
 
 
+@cache.memoize()
 def _render_name_labels(project_id):
     p: Project = db.session.query(Project).filter_by(id=project_id).one()
 

@@ -372,67 +372,60 @@ _config_proxy_str = str(_config_proxy)
 _pclass_proxy_str = str(_pclass_proxy)
 
 
-@cache.memoize()
+# TODO: work out how to memoize these template compilations.
+#  Just using @cache.memoize() seems to lead to Pickle serialization
+#  problems, at least with the Redis backend for Flask-Caching, so
+#  for now these have had to be left unmemoized
 def build_name_labels_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name_labels)
 
 
-@cache.memoize()
 def build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
-@cache.memoize()
 def build_owner_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_owner)
 
 
-@cache.memoize()
 def build_status_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_status)
 
 
-@cache.memoize()
 def build_pclasses_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_pclasses)
 
 
-@cache.memoize()
 def build_meetingreqd_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_meetingreqd)
 
 
-@cache.memoize()
 def build_affiliation_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_affiliation)
 
 
-@cache.memoize()
 def build_prefer_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_prefer)
 
 
-@cache.memoize()
 def build_skills_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_skills)
 
 
-@cache.memoize()
 def build_menu_templ(key: str) -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menus[key])
 
 
-@cache.memoize()
 def _render_name_labels(project_id):
     p: Project = db.session.query(Project).filter_by(id=project_id).one()
 

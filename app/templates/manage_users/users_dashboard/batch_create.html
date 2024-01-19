@@ -63,10 +63,14 @@
                                         <span class="badge bg-secondary">Not converted</span>
                                     {% endif %}
                                     {% if batch.report and batch.report|length > 0 %}
-                                        <div class="text-muted mt-1">
+                                        <div class="text-muted small mt-1">
                                             <span tabindex="1" data-bs-toggle="popover" title="Processing report" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ batch.report }}">
-                                                Processing report <i class="ms-1 fas fa-chevron-right"></i>
+                                                View report <i class="ms-1 fas fa-chevron-right"></i>
                                             </span>
+                                        </div>
+                                    {% else %}
+                                        <div class="text-muted small mt-1">
+                                            A report was not generated
                                         </div>
                                     {% endif %}
                                 {% endif %}

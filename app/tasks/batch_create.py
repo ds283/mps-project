@@ -10,8 +10,8 @@
 
 import csv
 from datetime import datetime
-from typing import Optional, Tuple, List
 from functools import total_ordering
+from typing import Optional, Tuple, List
 
 from celery import group
 from celery.exceptions import Ignore
@@ -130,8 +130,9 @@ Please click <a href="{{ url_for('manage_users.batch_create_users') }}" onclick=
 """
 
 # language=jinja2
-_batch_import_fail = """
-<div><strong>Batch list {{ name }} was not correctly imported because of errors.</strong></div>
+_batch_import_warn = """
+<div><strong>Batch list {{ name }} was imported, but some lines were skipped.</strong></div>
+<div class="mt-2">Please audit the processed items to ensure all required students are present. Missing students may need to be imported manually.</div>
 <div class="mt-2">This page does not auto-update.
 Please click <a href="{{ url_for('manage_users.batch_create_users') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the batch import details.</div>
 """
@@ -655,7 +656,7 @@ def register_batch_create_tasks(celery):
 
                 progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Reading uploaded user list...", autocommit=True)
 
-                current_line = 1
+                current_line = 0
                 interpreted_lines = 0
 
                 ignored_lines = []
@@ -862,8 +863,8 @@ def register_batch_create_tasks(celery):
             message_string = render_template_string(_batch_import_success, name=record.name)
             record.owner.post_message(message_string, "success", autocommit=True)
         else:
-            message_string = render_template_string(_batch_import_fail, name=record.name)
-            record.owner.post_message(message_string, "error", autocommit=True)
+            message_string = render_template_string(_batch_import_warn, name=record.name)
+            record.owner.post_message(message_string, "info", autocommit=True)
 
     @celery.task(bind=True, default_retry_delay=30)
     def import_batch_item(self, item_id, user_id):

@@ -75,7 +75,10 @@ class AmazonS3CloudStorageDriver:
         return BytesIO(response["Body"].read()).getvalue()
 
     def put(self, key: Path, data: bytes, mimetype: str = None) -> None:
-        self._storage.upload_fileobj(Fileobj=BytesIO(data), Bucket=self._bucket_name, Key=str(key), ExtraArgs={"ContentDisposition": mimetype})
+        if mimetype is not None:
+            self._storage.upload_fileobj(Fileobj=BytesIO(data), Bucket=self._bucket_name, Key=str(key), ExtraArgs={"ContentDisposition": mimetype})
+        else:
+            self._storage.upload_fileobj(Fileobj=BytesIO(data), Bucket=self._bucket_name, Key=str(key))
 
     def delete(self, key: Path) -> None:
         try:

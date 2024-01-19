@@ -67,11 +67,11 @@ from ..models import (
     SubmissionRole,
 )
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
+from ..shared.context.root_dashboard import get_root_dashboard_data
 from ..shared.conversions import is_integer
 from ..shared.projects import create_new_tags, project_list_SQL_handler
 from ..shared.utils import (
     home_dashboard,
-    get_root_dashboard_data,
     filter_assessors,
     get_current_year,
     get_count,

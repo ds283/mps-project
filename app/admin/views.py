@@ -15,7 +15,6 @@ from datetime import date, datetime, timedelta
 from functools import partial
 from io import BytesIO
 from itertools import chain as itertools_chain
-from math import pi
 from pathlib import Path
 from typing import List
 from urllib.parse import urlsplit
@@ -26,6 +25,7 @@ from bokeh.plotting import figure
 from celery import chain, group
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session, stream_with_context, abort, send_file
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
+from math import pi
 from numpy import histogram
 from sqlalchemy import or_, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -167,6 +167,8 @@ from ..shared.backup import (
     remove_backup,
     create_new_backup_labels,
 )
+from ..shared.context.matching import get_ready_to_match_data, get_matching_dashboard_data
+from ..shared.context.rollover import get_rollover_data
 from ..shared.conversions import is_integer
 from ..shared.formatters import format_size
 from ..shared.forms.queries import ScheduleSessionQuery
@@ -175,9 +177,6 @@ from ..shared.sqlalchemy import get_count
 from ..shared.utils import (
     get_current_year,
     home_dashboard,
-    get_matching_dashboard_data,
-    get_rollover_data,
-    get_ready_to_match_data,
     get_automatch_pclasses,
     redirect_url,
     get_main_config,

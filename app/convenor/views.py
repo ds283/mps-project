@@ -108,6 +108,13 @@ from ..models import (
 )
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import AssetUploadManager
+from ..shared.context.convenor_dashboard import (
+    get_convenor_dashboard_data,
+    get_convenor_todo_data,
+    build_convenor_tasks_query,
+    get_convenor_approval_data,
+    get_capacity_data,
+)
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
@@ -116,18 +123,13 @@ from ..shared.sqlalchemy import get_count, clone_model
 from ..shared.utils import (
     get_current_year,
     home_dashboard,
-    get_convenor_dashboard_data,
-    get_capacity_data,
     get_convenor_filter_record,
     filter_assessors,
     build_enrol_selector_candidates,
     build_enrol_submitter_candidates,
     build_submitters_data,
     redirect_url,
-    get_convenor_todo_data,
-    build_convenor_tasks_query,
     home_dashboard_url,
-    get_convenor_approval_data,
 )
 from ..shared.validators import (
     validate_is_convenor,

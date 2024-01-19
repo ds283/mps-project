@@ -13,9 +13,10 @@ from flask import flash
 from flask_login import current_user
 from sqlalchemy import and_
 
-from .utils import get_current_year, get_assessment_data
+from .context.assessments import get_assessment_data
+from .utils import get_current_year
 from ..database import db
-from ..models import ProjectClassConfig, SubmittingStudent, SubmissionRecord, LiveProject, SubmissionRole
+from ..models import ProjectClassConfig, SubmittingStudent, SubmissionRecord, SubmissionRole
 from ..shared.utils import get_count
 
 

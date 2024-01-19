@@ -14,7 +14,7 @@ from functools import partial
 from pathlib import Path
 
 from celery import chain, group
-from flask import render_template, redirect, url_for, flash, request, current_app, session
+from flask import redirect, url_for, flash, request, current_app, session
 from flask_security import current_user, roles_required, roles_accepted
 from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
@@ -65,6 +65,7 @@ from ..models import (
     validate_nonce,
 )
 from ..shared.asset_tools import AssetUploadManager
+from ..shared.context.global_context import render_template_context
 from ..shared.conversions import is_integer, is_boolean
 from ..shared.sqlalchemy import func
 from ..shared.utils import get_current_year, get_main_config, home_dashboard_url, redirect_url
@@ -109,7 +110,7 @@ def create_user():
             flash("Requested role was not recognized. If this error persists, please contact the system administrator.")
             return redirect(url_for("manage_users.edit_users"))
 
-    return render_template("security/register_role.html", role_form=form, title="Select new account role")
+    return render_template_context("security/register_role.html", role_form=form, title="Select new account role")
 
 
 @manage_users.route("/create_office/<string:role>", methods=["GET", "POST"])
@@ -147,7 +148,7 @@ def create_office(role):
             license = db.session.query(AssetLicense).filter_by(abbreviation=current_app.config["OFFICE_DEFAULT_LICENSE"]).first()
             form.default_license.data = license
 
-    return render_template("security/register_user.html", user_form=form, role=role, title="Register a new {r} user account".format(r=role))
+    return render_template_context("security/register_user.html", user_form=form, role=role, title="Register a new {r} user account".format(r=role))
 
 
 @manage_users.route("/create_faculty/<string:role>", methods=["GET", "POST"])
@@ -229,7 +230,7 @@ def create_faculty(role):
             license = db.session.query(AssetLicense).filter_by(abbreviation=current_app.config["FACULTY_DEFAULT_LICENSE"]).first()
             form.default_license.data = license
 
-    return render_template(
+    return render_template_context(
         "security/register_user.html", user_form=form, role=role, pane=pane, title="Register a new {r} user account".format(r=role)
     )
 
@@ -305,7 +306,7 @@ def create_student(role):
             form.dyspraxia_sticker.data = False
             form.dyslexia_sticker.data = False
 
-    return render_template(
+    return render_template_context(
         "security/register_user.html", user_form=form, role=role, pane=pane, title="Register a new {r} user account".format(r=role)
     )
 
@@ -327,7 +328,7 @@ def edit_users():
     if role_filter is not None:
         session["accounts_role_filter"] = role_filter
 
-    return render_template("manage_users/users_dashboard/accounts.html", filter=role_filter, pane="accounts")
+    return render_template_context("manage_users/users_dashboard/accounts.html", filter=role_filter, pane="accounts")
 
 
 @manage_users.route("/edit_users_students")
@@ -417,7 +418,7 @@ def edit_users_students():
 
     cohorts = [c[0] for c in cohort_data]
 
-    return render_template(
+    return render_template_context(
         "manage_users/users_dashboard/students.html",
         filter=prog_filter,
         pane="students",
@@ -489,7 +490,7 @@ def edit_users_faculty():
         .all()
     )
 
-    return render_template(
+    return render_template_context(
         "manage_users/users_dashboard/faculty.html",
         pane="faculty",
         group_filter=group_filter,
@@ -753,7 +754,7 @@ def batch_create_users():
 
     batches = db.session.query(StudentBatch).all()
 
-    return render_template("manage_users/users_dashboard/batch_create.html", form=form, pane="batch", batches=batches)
+    return render_template_context("manage_users/users_dashboard/batch_create.html", form=form, pane="batch", batches=batches)
 
 
 @manage_users.route("/terminate_batch/<int:batch_id>")
@@ -781,7 +782,7 @@ def terminate_batch(batch_id):
     )
     submit_label = "Terminate batch create"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -848,7 +849,7 @@ def delete_batch(batch_id):
     )
     submit_label = "Delete batch data"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -900,7 +901,7 @@ def view_batch_data(batch_id):
     if filter is not None:
         session["manage_users_batch_view_filter"] = filter
 
-    return render_template("manage_users/users_dashboard/view_batch.html", record=record, batch_id=batch_id, filter=filter)
+    return render_template_context("manage_users/users_dashboard/view_batch.html", record=record, batch_id=batch_id, filter=filter)
 
 
 @manage_users.route("/view_batch_data_ajax/<int:batch_id>", methods=["POST"])
@@ -1019,7 +1020,7 @@ def edit_batch_item(item_id):
 
         return redirect(url_for("manage_users.view_batch_data", batch_id=record.parent.id))
 
-    return render_template("manage_users/users_dashboard/edit_batch_item.html", form=form, record=record, title="Edit batch item")
+    return render_template_context("manage_users/users_dashboard/edit_batch_item.html", form=form, record=record, title="Edit batch item")
 
 
 @manage_users.route("/mark_batch_item_convert/<int:item_id>")
@@ -1282,7 +1283,7 @@ def edit_office(id):
 
         return redirect(url_for("manage_users.edit_users"))
 
-    return render_template("security/register_user.html", user_form=form, user=user, title="Edit a user account")
+    return render_template_context("security/register_user.html", user_form=form, user=user, title="Edit a user account")
 
 
 @manage_users.route("/edit_faculty/<int:id>", methods=["GET", "POST"])
@@ -1361,7 +1362,7 @@ def edit_faculty(id):
             if form.project_capacity.data is None and form.enforce_capacity.data:
                 form.project_capacity.data = current_app.config["DEFAULT_PROJECT_CAPACITY"]
 
-    return render_template("security/register_user.html", user_form=form, user=user, title="Edit a user account", pane=pane)
+    return render_template_context("security/register_user.html", user_form=form, user=user, title="Edit a user account", pane=pane)
 
 
 @manage_users.route("/edit_student/<int:id>", methods=["GET", "POST"])
@@ -1436,7 +1437,7 @@ def edit_student(id):
             form.dyspraxia_sticker.data = data.dyspraxia_sticker
             form.dyslexia_sticker.data = data.dyslexia_sticker
 
-    return render_template("security/register_user.html", user_form=form, user=user, title="Edit a user account", pane=pane, url=url)
+    return render_template_context("security/register_user.html", user_form=form, user=user, title="Edit a user account", pane=pane, url=url)
 
 
 @manage_users.route("/edit_affiliations/<int:id>")
@@ -1455,7 +1456,9 @@ def edit_affiliations(id):
     create = request.args.get("create", default=None)
     pane = request.args.get("pane", default=None)
 
-    return render_template("manage_users/edit_affiliations.html", user=user, data=data, research_groups=research_groups, create=create, pane=pane)
+    return render_template_context(
+        "manage_users/edit_affiliations.html", user=user, data=data, research_groups=research_groups, create=create, pane=pane
+    )
 
 
 @manage_users.route("/edit_enrollments/<int:id>")
@@ -1474,7 +1477,9 @@ def edit_enrollments(id):
     create = request.args.get("create", default=None)
     pane = request.args.get("pane", default=None)
 
-    return render_template("manage_users/edit_enrollments.html", user=user, data=data, project_classes=project_classes, create=create, pane=pane)
+    return render_template_context(
+        "manage_users/edit_enrollments.html", user=user, data=data, project_classes=project_classes, create=create, pane=pane
+    )
 
 
 @manage_users.route("/edit_enrollment/<int:id>", methods=["GET", "POST"])
@@ -1541,7 +1546,7 @@ def edit_enrollment(id):
 
         return redirect(url)
 
-    return render_template("manage_users/edit_enrollment.html", record=record, form=form, url=url)
+    return render_template_context("manage_users/edit_enrollment.html", record=record, form=form, url=url)
 
 
 @manage_users.route("/enroll_projects_assessor/<int:id>/<int:pclassid>")
@@ -1651,7 +1656,7 @@ def edit_roles():
     Display list of roles
     :return:
     """
-    return render_template("manage_users/edit_roles.html")
+    return render_template_context("manage_users/edit_roles.html")
 
 
 @manage_users.route("/edit_roles_ajax")
@@ -1685,7 +1690,7 @@ def add_role():
 
         return redirect(url_for("manage_users.edit_roles"))
 
-    return render_template("manage_users/edit_role.html", title="Edit role", role_form=form)
+    return render_template_context("manage_users/edit_role.html", title="Edit role", role_form=form)
 
 
 @manage_users.route("/edit_role/<int:id>", methods=["GET", "POST"])
@@ -1709,7 +1714,7 @@ def edit_role(id):
 
         return redirect(url_for("manage_users.edit_roles"))
 
-    return render_template("manage_users/edit_role.html", role=data, title="Edit role", role_form=form)
+    return render_template_context("manage_users/edit_role.html", role=data, title="Edit role", role_form=form)
 
 
 @manage_users.route("/assign_roles/<int:id>")
@@ -1730,7 +1735,7 @@ def assign_roles(id):
         .all()
     )
 
-    return render_template("manage_users/users_dashboard/assign_roles.html", roles=roles, user=data, pane=pane)
+    return render_template_context("manage_users/users_dashboard/assign_roles.html", roles=roles, user=data, pane=pane)
 
 
 @manage_users.route("/attach_role/<int:user_id>/<int:role_id>")

@@ -9,12 +9,18 @@
 #
 
 
-from functools import partial
 from typing import List, Set
 
-from flask import render_template, redirect, url_for, flash, request, session
-from flask_security import login_required, roles_required, roles_accepted, current_user
+from bokeh.embed import components
+from bokeh.models.ranges import Range1d
+from bokeh.plotting import figure
+from flask import redirect, flash, request, session
+from flask_security import roles_accepted, current_user
+from sqlalchemy import or_, and_
+from sqlalchemy.sql import func
 
+import app.ajax as ajax
+from . import reports
 from ..database import db
 from ..models import (
     User,
@@ -31,23 +37,11 @@ from ..models import (
     EnrollmentRecord,
     ProjectDescription,
 )
-
+from ..shared.context.global_context import render_template_context
 from ..shared.conversions import is_integer
 from ..shared.projects import project_list_SQL_handler
-from ..shared.utils import redirect_url, get_current_year
-
+from ..shared.utils import redirect_url
 from ..tools import ServerSideSQLHandler
-
-import app.ajax as ajax
-
-from sqlalchemy import or_, and_
-from sqlalchemy.sql import func
-
-from bokeh.plotting import figure
-from bokeh.models.ranges import Range1d
-from bokeh.embed import components
-
-from . import reports
 
 
 @reports.route("/workload")
@@ -78,7 +72,7 @@ def workload():
 
     groups = db.session.query(ResearchGroup).filter_by(active=True).all()
 
-    return render_template("reports/workload.html", groups=groups, group_filter=group_filter, detail=detail)
+    return render_template_context("reports/workload.html", groups=groups, group_filter=group_filter, detail=detail)
 
 
 @reports.route("/workload_ajax")
@@ -142,7 +136,7 @@ def all_projects():
     groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
     pclasses = ProjectClass.query.order_by(ProjectClass.name.asc()).all()
 
-    return render_template(
+    return render_template_context(
         "reports/all_projects.html",
         groups=groups,
         pclasses=pclasses,
@@ -291,7 +285,7 @@ def liveproject_analytics(proj_id):
     if len(scores) > 0:
         score_div, score_script = _build_score_plot(score_dates, scores, labels[1], colour)
 
-    return render_template(
+    return render_template_context(
         "reports/liveproject_analytics/graph.html",
         project=project,
         config=config,
@@ -409,7 +403,7 @@ def year_groups():
     if prog_filter is not None:
         session["reports_year_group_prog_filter"] = prog_filter
 
-    return render_template(
+    return render_template_context(
         "reports/year_groups.html",
         year_filter=year_filter,
         prog_filter=prog_filter,
@@ -515,7 +509,7 @@ def sabbaticals():
     if pclass_filter is not None:
         session["reports_sabbatical_pclass_filter"] = pclass_filter
 
-    return render_template("reports/sabbaticals.html", pclasses=pclasses, pclass_filter=pclass_filter)
+    return render_template_context("reports/sabbaticals.html", pclasses=pclasses, pclass_filter=pclass_filter)
 
 
 @reports.route("/sabbaticals_ajax", methods=["POST"])

@@ -8,19 +8,16 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from datetime import datetime
+
+from celery import chain, group
 from flask import current_app, render_template
 from flask_mailman import EmailMultiAlternatives
-
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import TaskRecord, ProjectClassConfig, User, BackupRecord, SelectingStudent, SelectionRecord
-
 from ..task_queue import progress_update, register_task
-
-from celery import chain, group
-
-from datetime import datetime
 
 
 def register_close_selection_tasks(celery):

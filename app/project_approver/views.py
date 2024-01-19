@@ -9,21 +9,18 @@
 #
 
 
-from flask import render_template, redirect, url_for, flash, request, current_app
+from datetime import datetime
+
+from flask import redirect, url_for, flash, request, current_app
 from flask_security import current_user, roles_required, roles_accepted, login_required
 
+import app.ajax as ajax
 from . import project_approver
-
 from .forms import EditCommentForm
-
 from ..database import db
 from ..models import ProjectDescription, DescriptionComment, EnrollmentRecord
-
+from ..shared.context.global_context import render_template_context
 from ..shared.utils import build_project_approval_queues, home_dashboard_url, redirect_url
-
-import app.ajax as ajax
-
-from datetime import datetime
 
 
 @project_approver.route("/validate")
@@ -40,7 +37,7 @@ def validate():
         url = redirect_url()
         text = "approvals dashboard"
 
-    return render_template("project_approver/validate.html", url=url, text=text)
+    return render_template_context("project_approver/validate.html", url=url, text=text)
 
 
 @project_approver.route("/validate_ajax")
@@ -192,7 +189,7 @@ def edit_comment(id):
             form.comment.data = comment.comment
             form.limit_visibility.data = comment.visibility == DescriptionComment.VISIBILITY_APPROVALS_TEAM
 
-    return render_template("project_approver/edit_comment.html", comment=comment, form=form, url=url)
+    return render_template_context("project_approver/edit_comment.html", comment=comment, form=form, url=url)
 
 
 @project_approver.route("/delete_comment/<int:id>")
@@ -219,7 +216,7 @@ def delete_comment(id):
     message = "<p>Are you sure that you wish to delete this comment?</p>" "<p>This action cannot be undone.</p>"
     submit_label = "Delete comment"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -276,7 +273,7 @@ def rejected():
         url = redirect_url()
         text = "approvals dashboard"
 
-    return render_template("project_approver/review.html", url=url, text=text)
+    return render_template_context("project_approver/review.html", url=url, text=text)
 
 
 @project_approver.route("/rejected_ajax")

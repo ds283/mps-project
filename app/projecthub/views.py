@@ -11,23 +11,21 @@
 import json
 from datetime import date, timedelta, datetime
 from functools import partial
-from math import pi
 
-from flask import render_template, redirect, flash, request, jsonify, current_app, url_for
+from bokeh.embed import components
+from bokeh.models import Label
+from bokeh.plotting import figure
+from flask import redirect, flash, request, jsonify, current_app, url_for
 from flask_security import current_user, roles_accepted, login_required
+from math import pi
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import with_polymorphic
 from sqlalchemy.sql import func
-from bokeh.embed import components
-from bokeh.plotting import figure
-from bokeh.models import Label
-
-from . import projecthub
-
-from .utils import validate_project_hub
-from .forms import AddFormatterArticleForm, EditFormattedArticleForm
 
 import app.ajax as ajax
+from . import projecthub
+from .forms import AddFormatterArticleForm, EditFormattedArticleForm
+from .utils import validate_project_hub
 from ..database import db
 from ..models import (
     SubmissionRecord,
@@ -43,6 +41,7 @@ from ..models import (
     ProjectSubmitterArticle,
     User,
 )
+from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 from ..tools import ServerSideSQLHandler
@@ -201,7 +200,7 @@ def hub(subid):
         burndown_script = None
         burndown_div = None
 
-    return render_template(
+    return render_template_context(
         "projecthub/hub.html",
         text=text,
         url=url,
@@ -305,7 +304,7 @@ def edit_subpd_record_articles(pid):
         )
         return redirect(redirect_url())
 
-    return render_template(
+    return render_template_context(
         "projecthub/articles/article_list.html",
         text=text,
         url=url,
@@ -401,7 +400,7 @@ def add_subpd_record_article(pid):
 
         return redirect(url_for("projecthub.edit_subpd_record_articles", pid=pid))
 
-    return render_template(
+    return render_template_context(
         "projecthub/articles/edit_article.html",
         form=form,
         record=record,
@@ -456,7 +455,7 @@ def edit_subpd_record_article(aid):
 
         return redirect(url_for("projecthub.edit_subpd_record_articles", pid=record.id))
 
-    return render_template(
+    return render_template_context(
         "projecthub/articles/edit_article.html",
         form=form,
         article=article,
@@ -479,7 +478,7 @@ def show_formatted_article(aid):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    return render_template("projecthub/articles/show_article.html", article=article, text=text, url=url)
+    return render_template_context("projecthub/articles/show_article.html", article=article, text=text, url=url)
 
 
 @projecthub.route("/article_widget_ajax/<int:subid>", methods=["POST"])

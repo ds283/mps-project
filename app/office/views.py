@@ -9,13 +9,14 @@
 #
 
 
-from flask import render_template, request, flash, session
+from flask import request, flash, session
 from flask_security import current_user, roles_required
 
 from . import office
 from .forms import OfficeSettingsForm
 from ..database import db
 from ..models import User
+from ..shared.context.global_context import render_template_context
 from ..shared.context.root_dashboard import get_root_dashboard_data
 from ..shared.utils import home_dashboard, get_approval_queue_data
 
@@ -40,7 +41,7 @@ def dashboard():
     root_data = get_root_dashboard_data()
     approvals_data = get_approval_queue_data()
 
-    return render_template("office/dashboard.html", root_data=root_data, approvals_data=approvals_data, pane=pane)
+    return render_template_context("office/dashboard.html", root_data=root_data, approvals_data=approvals_data, pane=pane)
 
 
 @office.route("/settings", methods=["GET", "POST"])
@@ -66,4 +67,4 @@ def settings():
 
         return home_dashboard()
 
-    return render_template("office/settings.html", settings_form=form, user=user)
+    return render_template_context("office/settings.html", settings_form=form, user=user)

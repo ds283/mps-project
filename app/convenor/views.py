@@ -19,7 +19,7 @@ from celery import chain
 from celery.result import AsyncResult
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
-from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session, abort
+from flask import redirect, url_for, flash, request, jsonify, current_app, session, abort
 from flask_mailman import EmailMultiAlternatives
 from flask_security import roles_accepted, current_user
 from ordered_set import OrderedSet
@@ -115,6 +115,7 @@ from ..shared.context.convenor_dashboard import (
     get_convenor_approval_data,
     get_capacity_data,
 )
+from ..shared.context.global_context import render_template_context
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
@@ -353,7 +354,7 @@ def status(id):
     todo = get_convenor_todo_data(config)
     approval_data = get_convenor_approval_data(pclass)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/status.html",
         pane="overview",
         subpane="status",
@@ -429,7 +430,7 @@ def periods(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/periods.html",
         pane="overview",
         subpane="periods",
@@ -466,7 +467,7 @@ def capacity(id):
     data = get_convenor_dashboard_data(pclass, config)
     capacity_data = get_capacity_data(pclass)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/capacity.html",
         pane="overview",
         subpane="capacity",
@@ -515,7 +516,7 @@ def attached(id):
     # get filter record
     filter_record = get_convenor_filter_record(config)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/attached.html",
         pane="attached",
         pclass=pclass,
@@ -644,7 +645,7 @@ def faculty(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/faculty.html",
         pane="faculty",
         subpane="list",
@@ -983,7 +984,7 @@ def selectors(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/selectors.html",
         pane="selectors",
         subpane="list",
@@ -1176,7 +1177,7 @@ def enrol_selectors(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/enrol_selectors.html",
         pane="selectors",
         subpane="enroll",
@@ -1431,7 +1432,7 @@ def delete_selector(sid):
         )
         submit_label = "Delete selector"
 
-        return render_template(
+        return render_template_context(
             "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
         )
 
@@ -1606,7 +1607,7 @@ def selector_grid(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/selector_grid.html",
         pane="selectors",
         subpane="grid",
@@ -1728,7 +1729,7 @@ def show_confirmations(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/show_confirmations.html",
         pane="selectors",
         subpane="confirm",
@@ -1881,7 +1882,7 @@ def submitters(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/submitters.html",
         pane="submitters",
         subpane="list",
@@ -2024,7 +2025,7 @@ def enrol_submitters(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/enrol_submitters.html",
         pane="submitters",
         subpane="enroll",
@@ -2216,7 +2217,7 @@ def delete_submitter(sid):
     )
     submit_label = "Delete submitter"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -2285,7 +2286,7 @@ def delete_all_submitters(configid):
     message = "<p>Are you sure that you wish to delete <strong>all submitters</strong>?" "<p>This action cannot be undone.</p>"
     submit_label = "Delete all submitters"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -2377,7 +2378,7 @@ def edit_roles(sub_id):
         url = url_for("convenor.submitters", id=pclass.id)
         text = "convenor submitters view"
 
-    return render_template(
+    return render_template_context(
         "convenor/submitter/edit_roles.html",
         form=form,
         pclass=pclass,
@@ -2475,7 +2476,7 @@ def delete_role(role_id):
     )
     submit_label = "Delete role"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -2560,7 +2561,7 @@ def add_role(record_id):
 
         return redirect(url)
 
-    return render_template("convenor/submitter/add_role.html", form=form, record=record, period=period, config=config, sub=sub, url=url)
+    return render_template_context("convenor/submitter/add_role.html", form=form, record=record, period=period, config=config, sub=sub, url=url)
 
 
 @convenor.route("/liveprojects/<int:id>")
@@ -2598,7 +2599,7 @@ def liveprojects(id):
     # get filter record
     filter_record = get_convenor_filter_record(config)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/liveprojects.html",
         pane="live",
         subpane="list",
@@ -2745,7 +2746,7 @@ def delete_live_project(pid):
     )
     submit_label = "Delete live project"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -2954,7 +2955,7 @@ def attach_liveproject(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/attach_liveproject.html", pane="live", subpane="attach", pclass=pclass, config=config, convenor_data=data
     )
 
@@ -3175,7 +3176,7 @@ def todo_list(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/todo_list.html",
         pane="todo",
         pclass=pclass,
@@ -3276,7 +3277,7 @@ def add_generic_task(config_id):
 
         return redirect(url)
 
-    return render_template("convenor/tasks/edit_generic_task.html", form=form, url=url, config=config)
+    return render_template_context("convenor/tasks/edit_generic_task.html", form=form, url=url, config=config)
 
 
 @convenor.route("/edit_generic_task/<int:tid>", methods=["GET", "POST"])
@@ -3328,7 +3329,7 @@ def edit_generic_task(tid):
 
         return redirect(url)
 
-    return render_template("convenor/tasks/edit_generic_task.html", form=form, url=url, task=task, config=config)
+    return render_template_context("convenor/tasks/edit_generic_task.html", form=form, url=url, task=task, config=config)
 
 
 @convenor.route("/edit_descriptions/<int:id>/<int:pclass_id>")
@@ -3355,7 +3356,7 @@ def edit_descriptions(id, pclass_id):
 
     create = request.args.get("create", default=None)
 
-    return render_template("convenor/edit_descriptions.html", project=project, pclass_id=pclass_id, create=create)
+    return render_template_context("convenor/edit_descriptions.html", project=project, pclass_id=pclass_id, create=create)
 
 
 @convenor.route("/descriptions_ajax/<int:id>/<int:pclass_id>")
@@ -3495,7 +3496,7 @@ def add_project(pclass_id):
                 form.enforce_capacity.data = True
                 form.dont_clash_presentations.data = True
 
-    return render_template("faculty/edit_project.html", project_form=form, pclass_id=pclass_id, title="Add new project")
+    return render_template_context("faculty/edit_project.html", project_form=form, pclass_id=pclass_id, title="Add new project")
 
 
 @convenor.route("/edit_project/<int:id>/<int:pclass_id>", methods=["GET", "POST"])
@@ -3570,7 +3571,7 @@ def edit_project(id, pclass_id):
 
         return redirect(url)
 
-    return render_template(
+    return render_template_context(
         "faculty/edit_project.html", project_form=form, project=project, pclass_id=pclass_id, title="Edit project details", url=url, text=text
     )
 
@@ -3695,7 +3696,7 @@ def add_description(pid, pclass_id):
 
         return redirect(url_for("convenor.edit_descriptions", id=pid, pclass_id=pclass_id, create=create))
 
-    return render_template(
+    return render_template_context(
         "faculty/edit_description.html", project=proj, form=form, pclass_id=pclass_id, title="Add new description", create=create, unique_id=uuid4()
     )
 
@@ -3745,7 +3746,7 @@ def edit_description(did, pclass_id):
 
         return redirect(url)
 
-    return render_template(
+    return render_template_context(
         "faculty/edit_description.html",
         project=desc.parent,
         desc=desc,
@@ -3796,7 +3797,7 @@ def edit_description_content(did, pclass_id):
 
         return redirect(url)
 
-    return render_template(
+    return render_template_context(
         "faculty/edit_description_content.html",
         project=desc.parent,
         desc=desc,
@@ -3844,7 +3845,7 @@ def description_modules(did, pclass_id, level_id=None):
     level_id = form.selector.data.id if form.selector.data is not None else None
     levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.numeric_level.asc()).all()
 
-    return render_template(
+    return render_template_context(
         "convenor/description_modules.html",
         project=desc.parent,
         desc=desc,
@@ -4109,7 +4110,7 @@ def move_description(did, pclass_id):
         else:
             return redirect(url_for("convenor.edit_descriptions", id=new_project.id, pclass_id=pclass_id))
 
-    return render_template(
+    return render_template_context(
         "faculty/move_description.html",
         form=form,
         desc=desc,
@@ -4193,7 +4194,7 @@ def attach_skills(id, pclass_id, sel_id=None):
 
     create = request.args.get("create", default=None)
 
-    return render_template(
+    return render_template_context(
         "convenor/attach_skills.html", data=proj, skills=skills, pclass_id=pclass_id, form=form, sel_id=form.selector.data.id, create=create
     )
 
@@ -4263,7 +4264,7 @@ def attach_programmes(id, pclass_id):
 
     create = request.args.get("create", default=None)
 
-    return render_template("convenor/attach_programmes.html", data=proj, programmes=q.all(), pclass_id=pclass_id, create=create)
+    return render_template_context("convenor/attach_programmes.html", data=proj, programmes=q.all(), pclass_id=pclass_id, create=create)
 
 
 @convenor.route("/add_programme/<int:id>/<int:pclass_id>/<int:prog_id>")
@@ -4425,7 +4426,7 @@ def attach_assessors(id, pclass_id):
     if group_filter is not None:
         session["convenor_marker_group_filter"] = group_filter
 
-    return render_template(
+    return render_template_context(
         "convenor/attach_assessors.html",
         data=proj,
         pclass_id=pclass_id,
@@ -4753,7 +4754,7 @@ def outstanding_confirm(id):
     if not validate_project_class(config.project_class):
         return redirect(redirect_url())
 
-    return render_template("convenor/dashboard/outstanding_confirm.html", config=config, pclass=config.project_class)
+    return render_template_context("convenor/dashboard/outstanding_confirm.html", config=config, pclass=config.project_class)
 
 
 @convenor.route("/outstanding_confirm_ajax/<int:id>", methods=["GET", "POST"])
@@ -4848,7 +4849,7 @@ def show_unofferable():
     if not validate_is_administrator():
         return redirect(redirect_url())
 
-    return render_template("convenor/unofferable.html")
+    return render_template_context("convenor/unofferable.html")
 
 
 @convenor.route("/unofferable_ajax", methods=["POST"])
@@ -5239,7 +5240,7 @@ def confirm_go_live(id):
     )
     submit_label = "Go Live"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -5450,7 +5451,7 @@ def submit_student_selection(sel_id):
             to=[sel.student.user.email, current_user.email],
         )
 
-        msg.body = render_template(
+        msg.body = render_template_context(
             "email/student_notifications/choices_received_proxy.txt",
             user=sel.student.user,
             pclass=sel.config.project_class,
@@ -6067,7 +6068,7 @@ def confirm_rollover(id):
     else:
         submit_label = "Rollover to {yr}".format(yr=year)
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -6182,7 +6183,7 @@ def reset_popularity_data(id):
     )
     submit_label = "Delete data"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -6218,7 +6219,7 @@ def selector_bookmarks(id):
         flash("It is not possible to view selector rankings before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template("convenor/selector/student_bookmarks.html", sel=sel)
+    return render_template_context("convenor/selector/student_bookmarks.html", sel=sel)
 
 
 @convenor.route("/project_bookmarks/<int:id>")
@@ -6236,7 +6237,7 @@ def project_bookmarks(id):
         flash("It is not possible to view selector rankings before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template("convenor/selector/project_bookmarks.html", project=proj)
+    return render_template_context("convenor/selector/project_bookmarks.html", project=proj)
 
 
 def _demap_project(item_id):
@@ -6326,7 +6327,7 @@ def delete_student_bookmark(sid, bid):
     )
     submit_label = "Delete bookmark"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -6376,7 +6377,7 @@ def add_student_bookmark(sid):
         flash("It is not possible to add a selector bookmark before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template("convenor/selector/add_bookmark.html", sel=sel)
+    return render_template_context("convenor/selector/add_bookmark.html", sel=sel)
 
 
 @convenor.route("/add_student_bookmark_ajax/<int:sid>")
@@ -6477,7 +6478,7 @@ def selector_choices(id):
         )
         return redirect(redirect_url())
 
-    return render_template("convenor/selector/student_choices.html", sel=sel, text=text, url=url)
+    return render_template_context("convenor/selector/student_choices.html", sel=sel, text=text, url=url)
 
 
 @convenor.route("/project_choices/<int:id>")
@@ -6495,7 +6496,7 @@ def project_choices(id):
         flash("It is not possible to view project rankings before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template("convenor/selector/project_choices.html", project=proj)
+    return render_template_context("convenor/selector/project_choices.html", project=proj)
 
 
 @convenor.route("/update_student_choices", methods=["POST"])
@@ -6579,7 +6580,7 @@ def delete_student_choice(sid, cid):
     )
     submit_label = "Delete ranking"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -6633,7 +6634,7 @@ def add_student_ranking(sid):
         flash("It is not possible to add a new ranking until the selector has submitted their own ranked list.", "info")
         return redirect(redirect_url())
 
-    return render_template("convenor/selector/add_ranking.html", sel=sel)
+    return render_template_context("convenor/selector/add_ranking.html", sel=sel)
 
 
 @convenor.route("/add_student_ranking_ajax/<int:sid>")
@@ -6730,7 +6731,7 @@ def selector_confirmations(id):
         flash("It is not possible to view selector confirmations before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template("convenor/selector/student_confirmations.html", sel=sel, now=datetime.now())
+    return render_template_context("convenor/selector/student_confirmations.html", sel=sel, now=datetime.now())
 
 
 @convenor.route("/project_custom_offers/<int:proj_id>")
@@ -6748,7 +6749,7 @@ def project_custom_offers(proj_id):
         flash("It is not possible to view project custom offers before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template("convenor/selector/project_custom_offers.html", project=proj, pclass_id=proj.config.project_class.id)
+    return render_template_context("convenor/selector/project_custom_offers.html", project=proj, pclass_id=proj.config.project_class.id)
 
 
 @convenor.route("/project_custom_offers_ajax/<int:proj_id>")
@@ -6783,7 +6784,7 @@ def selector_custom_offers(sel_id):
         flash("It is not possible to view selector custom offers before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template("convenor/selector/student_custom_offers.html", sel=sel, pclass_id=sel.config.project_class.id)
+    return render_template_context("convenor/selector/student_custom_offers.html", sel=sel, pclass_id=sel.config.project_class.id)
 
 
 @convenor.route("/selector_custom_offers_ajax/<int:sel_id>")
@@ -6818,7 +6819,7 @@ def new_selector_offer(sel_id):
         flash("It is not possible to set up a new selector custom offer before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template("convenor/selector/student_new_offer.html", sel=sel, pclass_id=sel.config.project_class.id)
+    return render_template_context("convenor/selector/student_new_offer.html", sel=sel, pclass_id=sel.config.project_class.id)
 
 
 @convenor.route("/new_selector_offer_ajax/<int:sel_id>")
@@ -6856,7 +6857,7 @@ def new_project_offer(proj_id):
         flash("It is not possible to set up a new custom offer before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template("convenor/selector/project_new_offer.html", project=proj, pclass_id=proj.config.project_class.id)
+    return render_template_context("convenor/selector/project_new_offer.html", project=proj, pclass_id=proj.config.project_class.id)
 
 
 @convenor.route("/new_project_offer_ajax/<int:proj_id>")
@@ -7016,7 +7017,7 @@ def project_confirmations(id):
     if not validate_is_convenor(proj.config.project_class):
         return home_dashboard()
 
-    return render_template("convenor/selector/project_confirmations.html", project=proj, now=datetime.now())
+    return render_template_context("convenor/selector/project_confirmations.html", project=proj, now=datetime.now())
 
 
 @convenor.route("/add_group_filter/<int:id>/<int:gid>")
@@ -7210,7 +7211,7 @@ def hints_list(id):
         .all()
     )
 
-    return render_template("convenor/dashboard/hints_list.html", pclass=pclass, hints=hints)
+    return render_template_context("convenor/dashboard/hints_list.html", pclass=pclass, hints=hints)
 
 
 @convenor.route("/audit_matches/<int:pclass_id>")
@@ -7223,7 +7224,7 @@ def audit_matches(pclass_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    return render_template("convenor/matching/audit.html", pclass=pclass)
+    return render_template_context("convenor/matching/audit.html", pclass=pclass)
 
 
 @convenor.route("/audit_matches_ajax/<int:pclass_id>")
@@ -7263,7 +7264,7 @@ def audit_schedules(pclass_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    return render_template("convenor/presentations/audit.html", pclass_id=pclass_id)
+    return render_template_context("convenor/presentations/audit.html", pclass_id=pclass_id)
 
 
 @convenor.route("/audit_schedules_ajax/<int:pclass_id>")
@@ -7381,7 +7382,7 @@ def _close_period_request(config: ProjectClassConfig, id, period: SubmissionPeri
         )
         action_url = url_for("convenor.immediate_close_feedback", id=id, url=url)
         submit_label = "Immediately close {period}".format(period=period.display_name)
-        return render_template(
+        return render_template_context(
             "admin/danger_confirm.html",
             title=title,
             panel_title=panel_title,
@@ -7399,7 +7400,7 @@ def _close_period_request(config: ProjectClassConfig, id, period: SubmissionPeri
     )
     action_url = url_for("convenor.immediate_close_feedback", id=id, url=url)
     submit_label = "Close {period}".format(period=period.display_name)
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -7426,7 +7427,7 @@ def _send_feedback_notifications_request(config, deadline, feedback_form, id, pe
     )
     submit_label = "Issue unsent marking notifications"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html",
         title=title,
         panel_title=panel_title,
@@ -7472,7 +7473,7 @@ def _open_feedback_request(config, deadline, feedback_form, id, period, url):
     )
     submit_label = "Open feedback and issue notifications"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html",
         title=title,
         panel_title=panel_title,
@@ -7568,7 +7569,7 @@ def test_notifications(id):
             )
         )
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/test_notifications.html",
         url=url,
         deadline=deadline,
@@ -7825,7 +7826,7 @@ def close_feedback(id):
     )
     submit_label = "Close feedback"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -7954,7 +7955,7 @@ def edit_project_config(pid):
                 value = None
             form.use_project_hub.data = form.project_hub_choice_map[value]
 
-    return render_template("convenor/dashboard/edit_project_config.html", form=form, config=config)
+    return render_template_context("convenor/dashboard/edit_project_config.html", form=form, config=config)
 
 
 def _validate_submission_period(record: SubmissionPeriodRecord, config: ProjectClassConfig):
@@ -8031,7 +8032,7 @@ def edit_period_record(pid):
 
         return redirect(url_for("convenor.periods", id=config.project_class.id))
 
-    return render_template("convenor/dashboard/edit_period_record.html", form=edit_form, record=record, config=config)
+    return render_template_context("convenor/dashboard/edit_period_record.html", form=edit_form, record=record, config=config)
 
 
 @convenor.route("/edit_period_presentation/<int:pid>", methods=["GET", "POST"])
@@ -8067,7 +8068,7 @@ def edit_period_presentation(pid):
 
         return redirect(url_for("convenor.periods", id=config.project_class.id))
 
-    return render_template("convenor/dashboard/edit_period_presentation.html", form=edit_form, record=record)
+    return render_template_context("convenor/dashboard/edit_period_presentation.html", form=edit_form, record=record)
 
 
 @convenor.route("/publish_assignment/<int:id>")
@@ -8367,7 +8368,7 @@ def remove_markers(configid):
     message = "<p>Are you sure that you wish to remove all marker assignments?</p>" "<p>This action cannot be undone.</p>"
     submit_label = "Remove markers"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -8467,7 +8468,7 @@ def view_feedback():
         period: SubmissionPeriodRecord = rec.period
         form.selector.data = period
 
-    return render_template("convenor/dashboard/view_feedback.html", submitter=submitter, record=rec, form=form, text=text, url=url)
+    return render_template_context("convenor/dashboard/view_feedback.html", submitter=submitter, record=rec, form=form, text=text, url=url)
 
 
 @convenor.route("/faculty_workload/<int:id>")
@@ -8513,7 +8514,7 @@ def faculty_workload(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/workload.html",
         pane="faculty",
         subpane="workload",
@@ -8665,7 +8666,7 @@ def teaching_groups(id):
 
     data = get_convenor_dashboard_data(pclass, config)
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/teaching_groups.html",
         pane="faculty",
         subpane="groups",
@@ -8809,7 +8810,7 @@ def manual_assign():
     if hasattr(form, "selector"):
         form.selector.data = period
 
-    return render_template(
+    return render_template_context(
         "convenor/dashboard/manual_assign.html",
         rec=rec,
         config=select_config,
@@ -9142,7 +9143,7 @@ def assign_presentation_feedback(id):
 
         return redirect(url)
 
-    return render_template(
+    return render_template_context(
         "faculty/dashboard/edit_feedback.html",
         form=form,
         title="Assign presentation feedback",
@@ -9215,7 +9216,7 @@ def edit_feedback(id):
             form.positive_feedback.data = role.positive_feedback
             form.improvement_feedback.data = role.improvements_feedback
 
-    return render_template(
+    return render_template_context(
         "faculty/dashboard/edit_feedback.html",
         form=form,
         title="Edit feedback",
@@ -9356,7 +9357,7 @@ def presentation_edit_feedback(feedback_id):
             form.positive_feedback.data = feedback.positive
             form.improvement_feedback.data = feedback.improvement_feedback
 
-    return render_template(
+    return render_template_context(
         "faculty/dashboard/edit_feedback.html",
         form=form,
         unique_id="pres-{id}".format(id=id),
@@ -9472,7 +9473,7 @@ def edit_response(id):
         if request.method == "GET":
             form.feedback.data = record.faculty_response
 
-    return render_template(
+    return render_template_context(
         "faculty/dashboard/edit_response.html", form=form, record=record, submit_url=url_for("convenor.edit_response", id=id, url=url), url=url
     )
 
@@ -9633,7 +9634,7 @@ def custom_CATS_limits(record_id):
 
         return redirect(url_for("convenor.faculty", id=record.pclass.id))
 
-    return render_template("convenor/dashboard/custom_CATS_limits.html", record=record, form=form, user=record.owner.user)
+    return render_template_context("convenor/dashboard/custom_CATS_limits.html", record=record, form=form, user=record.owner.user)
 
 
 @convenor.route("/submission_period_documents/<int:pid>")
@@ -9664,7 +9665,7 @@ def submission_period_documents(pid):
     deletable = (current_user.has_role("root") or current_user.has_role("admin")) or (
         not record.closed and (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
     )
-    return render_template(
+    return render_template_context(
         "convenor/documents/period_manager.html", record=record, url=url, text=text, state=state, config=config, deletable=deletable
     )
 
@@ -9725,7 +9726,7 @@ def delete_period_attachment(aid):
     )
     submit_label = "Remove attachment"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -9879,7 +9880,7 @@ def upload_period_attachment(pid):
         if request.method == "GET":
             form.license.data = current_user.default_license
 
-    return render_template("convenor/documents/upload_period_attachment.html", record=record, form=form, url=url, text=text)
+    return render_template_context("convenor/documents/upload_period_attachment.html", record=record, form=form, url=url, text=text)
 
 
 @convenor.route("/edit_period_attachment/<int:aid>", methods=["GET", "POST"])
@@ -9938,7 +9939,7 @@ def edit_period_attachment(aid):
         if request.method == "GET":
             form.license.data = asset.license if asset is not None else None
 
-    return render_template(
+    return render_template_context(
         "convenor/documents/edit_period_attachment.html", attachment=record, record=period, asset=asset, form=form, url=url, text=text
     )
 
@@ -10045,7 +10046,7 @@ def student_tasks(type, sid):
     if blocking_filter is not None:
         session["convenor_student_tasks_blocking_filter"] = blocking_filter
 
-    return render_template(
+    return render_template_context(
         "convenor/tasks/student_tasks.html",
         type=type,
         obj=obj,
@@ -10155,7 +10156,7 @@ def add_student_task(type, sid):
 
         return redirect(url)
 
-    return render_template("convenor/tasks/edit_task.html", form=form, url=url, type=type, obj=obj)
+    return render_template_context("convenor/tasks/edit_task.html", form=form, url=url, type=type, obj=obj)
 
 
 @convenor.route("/edit_student_task/<int:tid>", methods=["GET", "POST"])
@@ -10197,7 +10198,7 @@ def edit_student_task(tid):
 
         return redirect(url)
 
-    return render_template("convenor/tasks/edit_task.html", form=form, url=url, obj=obj, task=task)
+    return render_template_context("convenor/tasks/edit_task.html", form=form, url=url, obj=obj, task=task)
 
 
 @convenor.route("/delete_task/<int:tid>")
@@ -10261,7 +10262,7 @@ def delete_task(tid):
     action_url = url_for("convenor.do_delete_task", tid=tid, url=url)
     submit_label = "Delete task"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 

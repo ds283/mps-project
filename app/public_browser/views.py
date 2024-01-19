@@ -7,7 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-import re
+
 from functools import partial
 
 from flask import render_template, request, jsonify, url_for
@@ -17,7 +17,7 @@ from . import public_browser
 from .forms import PublicBrowserSelectorForm
 from ..ajax.public_browser.project_list_data import public_browser_project_list
 from ..database import db
-from ..models import ProjectClass, Project, FacultyData, User, ResearchGroup
+from ..models import ProjectClass, Project, User, ResearchGroup
 from ..shared.conversions import is_integer
 from ..tools import ServerSideSQLHandler
 

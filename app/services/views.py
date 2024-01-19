@@ -10,13 +10,14 @@
 
 from email.utils import getaddresses, formataddr
 
-from flask import render_template, redirect, flash, session, request, current_app
+from flask import redirect, flash, request, current_app
 from flask_security import roles_accepted, current_user
 
 from . import services
 from .forms import SendEmailFormFactory
 from ..database import db
 from ..models import User
+from ..shared.context.global_context import render_template_context
 from ..shared.utils import home_dashboard
 
 
@@ -83,6 +84,6 @@ def send_email():
             to_list = None
             length = 0
 
-    return render_template(
+    return render_template_context(
         "services/send_email.html", form=form, distribution_list=distribution_list, to_list=to_list, length=length, url=url, text=text
     )

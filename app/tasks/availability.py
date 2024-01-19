@@ -8,13 +8,15 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from datetime import datetime, date
+
 from celery import group, chain
 from celery.exceptions import Ignore
-from sqlalchemy import and_, or_
-from sqlalchemy.exc import SQLAlchemyError
-
+from dateutil import parser
 from flask import current_app, render_template
 from flask_mailman import EmailMultiAlternatives
+from sqlalchemy import and_, or_
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import (
@@ -28,11 +30,8 @@ from ..models import (
     SubmitterAttendanceData,
     SubmissionRecord,
 )
-from ..task_queue import progress_update, register_task
 from ..shared.sqlalchemy import get_count
-
-from datetime import datetime, date
-from dateutil import parser
+from ..task_queue import progress_update, register_task
 
 
 def register_availability_tasks(celery):

@@ -25,7 +25,6 @@ from dateutil import parser
 from flask import current_app, render_template
 from flask_mailman import EmailMessage
 from math import floor
-from ..shared.cloud_object_store import ObjectStore
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -34,6 +33,7 @@ from ..database import db
 from ..models import BackupRecord, validate_nonce
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.backup import get_backup_config, compute_current_backup_count, compute_current_backup_size, remove_backup
+from ..shared.cloud_object_store import ObjectStore
 from ..shared.formatters import format_size
 from ..shared.scratch import ScratchFileManager
 

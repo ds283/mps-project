@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from functools import partial
 
 from celery import chain, chord
-from flask import render_template, redirect, url_for, flash, request, current_app, jsonify, abort, session
+from flask import redirect, url_for, flash, request, current_app, jsonify, abort, session
 from flask_security import login_required, roles_accepted, current_user
 from sqlalchemy import or_, and_
 from sqlalchemy.exc import SQLAlchemyError
@@ -38,6 +38,7 @@ from ..models import (
     validate_nonce,
 )
 from ..shared.asset_tools import AssetUploadManager
+from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
@@ -108,7 +109,7 @@ def submitter_documents():
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    return render_template(
+    return render_template_context(
         "documents/submitter_manager.html",
         submitter=submitter,
         record=record,
@@ -191,7 +192,7 @@ def delete_submitter_report(sid):
     )
     submit_label = "Remove report"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -360,7 +361,7 @@ def upload_submitter_report(sid):
 
             form.license.data = default_report_license
 
-    return render_template("documents/upload_report.html", record=record, form=form, url=url, text=text)
+    return render_template_context("documents/upload_report.html", record=record, form=form, url=url, text=text)
 
 
 @documents.route("/pull_report_from_canvas/<int:rid>")
@@ -472,7 +473,7 @@ def edit_submitter_report(sid):
         return redirect(url_for("documents.submitter_documents", sid=record.id, url=url, text=text))
 
     action_url = url_for("documents.edit_submitter_report", sid=record.id, url=url, text=text)
-    return render_template("documents/edit_attachment.html", form=form, record=record, asset=asset, action_url=action_url)
+    return render_template_context("documents/edit_attachment.html", form=form, record=record, asset=asset, action_url=action_url)
 
 
 @documents.route("/edit_submitter_attachment/<int:aid>", methods=["GET", "POST"])
@@ -526,7 +527,7 @@ def edit_submitter_attachment(aid):
             form.target_name.data = asset.target_name
 
     action_url = url_for("documents.edit_submitter_attachment", aid=attachment.id, url=url, text=text)
-    return render_template(
+    return render_template_context(
         "documents/edit_attachment.html",
         form=form,
         record=record,
@@ -576,7 +577,7 @@ def delete_submitter_attachment(aid):
     )
     submit_label = "Remove attachment"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -721,7 +722,9 @@ def upload_submitter_attachment(sid):
         if request.method == "GET":
             form.license.data = current_user.default_license
 
-    return render_template("documents/upload_attachment.html", record=record, form=form, url=url, text=text, has_admin_rights=has_admin_rights)
+    return render_template_context(
+        "documents/upload_attachment.html", record=record, form=form, url=url, text=text, has_admin_rights=has_admin_rights
+    )
 
 
 def _get_attachment_asset(attach_type, attach_id):
@@ -798,7 +801,7 @@ def attachment_acl(attach_type, attach_id):
     if state_filter is not None:
         session["documents_acl_state_filter"] = state_filter
 
-    return render_template(
+    return render_template_context(
         "documents/edit_acl.html",
         asset=asset,
         pclass_id=pclass.id,
@@ -985,7 +988,7 @@ def attachment_download_log(attach_type, attach_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    return render_template(
+    return render_template_context(
         "documents/download_log.html", asset=asset, pclass_id=pclass.id, url=url, text=text, type=attach_type, attachment=attachment
     )
 

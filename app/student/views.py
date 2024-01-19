@@ -9,17 +9,16 @@
 #
 
 
-import re
 from datetime import datetime, date
 from functools import partial
 
 import parse
-from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session
+from flask import redirect, url_for, flash, request, jsonify, current_app, session
 from flask_mailman import EmailMultiAlternatives
 from flask_security import current_user, roles_required, roles_accepted
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from sqlalchemy.sql import func, or_, and_
 from sqlalchemy.orm.exc import StaleDataError
+from sqlalchemy.sql import func, or_, and_
 
 import app.ajax as ajax
 from . import student
@@ -48,6 +47,7 @@ from ..models import (
     DegreeProgramme,
     DegreeType,
 )
+from ..shared.context.global_context import render_template_context
 from ..shared.utils import home_dashboard, home_dashboard_url, get_count, redirect_url
 from ..shared.validators import validate_is_convenor, validate_submission_viewable
 from ..task_queue import register_task
@@ -160,7 +160,7 @@ def dashboard():
         if include:
             messages.append(message)
 
-    return render_template(
+    return render_template_context(
         "student/dashboard.html",
         enrolled_classes=enrolled_pclasses,
         enrollments=enrolled_configs,
@@ -215,7 +215,7 @@ def selector_browse_projects(id):
 
     is_live = state < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
     endpoint = url_for("student.selector_projects_ajax", id=id)
-    return render_template(
+    return render_template_context(
         "student/browse_projects.html",
         sel=sel,
         config=config,
@@ -271,7 +271,7 @@ def submitter_browse_projects(id):
 
     is_live = state < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
     endpoint = url_for("student.submitter_projects_ajax", id=id)
-    return render_template(
+    return render_template_context(
         "student/browse_projects.html",
         sel=sub,
         config=config,
@@ -500,7 +500,7 @@ def selector_view_project(sid, pid):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return render_template("student/show_project.html", title=project.name, sel=sel, project=project, desc=project, text=text, url=url)
+    return render_template_context("student/show_project.html", title=project.name, sel=sel, project=project, desc=project, text=text, url=url)
 
 
 @student.route("/submitter_view_project/<int:sid>/<int:pid>")
@@ -538,7 +538,7 @@ def submitter_view_project(sid, pid):
         url = url_for("student.submitter_browse_projects", id=sub.id)
         text = "project list"
 
-    return render_template(
+    return render_template_context(
         "student/show_project.html", title=project.name, sel=None, project=project, desc=project, url=url, text=text, archived=True
     )
 
@@ -852,7 +852,7 @@ def submit(sid):
             to=[sel.student.user.email],
         )
 
-        msg.body = render_template(
+        msg.body = render_template_context(
             "email/student_notifications/choices_received.txt", user=sel.student.user, pclass=sel.config.project_class, config=sel.config, sel=sel
         )
 
@@ -891,7 +891,7 @@ def clear_submission(sid):
     )
     submit_label = "Clear submitted preferences"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -931,7 +931,7 @@ def manage_custom_offers(sel_id):
         flash("You do not have permission to manage custom offers for this selector.", "error")
         return home_dashboard()
 
-    return render_template("student/manage_custom_offers.html", sel=sel)
+    return render_template_context("student/manage_custom_offers.html", sel=sel)
 
 
 @student.route("/accept_custom_offer/<int:offer_id>")
@@ -1002,7 +1002,7 @@ def view_selection(sid):
     if not verify_selector(sel, message=True):
         return redirect(redirect_url())
 
-    return render_template("student/choices.html", sel=sel)
+    return render_template_context("student/choices.html", sel=sel)
 
 
 @student.route("/view_feedback/<int:id>", methods=["GET", "POST"])
@@ -1031,7 +1031,7 @@ def view_feedback(id):
 
     preview = request.args.get("preview", None)
 
-    return render_template("student/dashboard/view_feedback.html", record=record, period=period, text=text, url=url, preview=preview)
+    return render_template_context("student/dashboard/view_feedback.html", record=record, period=period, text=text, url=url, preview=preview)
 
 
 @student.route("/edit_feedback/<int:id>", methods=["GET", "POST"])
@@ -1078,7 +1078,7 @@ def edit_feedback(id):
         if request.method == "GET":
             form.feedback.data = record.student_feedback
 
-    return render_template(
+    return render_template_context(
         "student/dashboard/edit_feedback.html",
         form=form,
         unique_id="stud-{id}".format(id=id),
@@ -1149,7 +1149,7 @@ def settings():
 
         return home_dashboard()
 
-    return render_template("student/settings.html", settings_form=form, user=user)
+    return render_template_context("student/settings.html", settings_form=form, user=user)
 
 
 @student.route("/timeline/<int:student_id>")
@@ -1218,7 +1218,7 @@ def timeline(student_id):
     generic_text = "student timeline".format(name=user.name)
     return_url = url_for("student.timeline", student_id=data.id, text=text, url=url)
 
-    return render_template(
+    return render_template_context(
         "student/timeline.html",
         data=data,
         years=years,

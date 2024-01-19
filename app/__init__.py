@@ -17,7 +17,7 @@ import latex2markdown
 import redis
 from dozer import Dozer
 from flask import Flask, g, make_response
-from flask import current_app, request, session, render_template, has_request_context
+from flask import current_app, request
 from flask_assets import Environment
 from flask_babel import Babel
 from flask_debugtoolbar import DebugToolbarExtension
@@ -39,7 +39,7 @@ from .database import db
 from .instance.version import site_revision, site_copyright_dates
 from .limiter import limiter
 from .models import User, MessageOfTheDay, Notification
-from .shared.context.global_context import get_global_context_data
+from .shared.context.global_context import get_global_context_data, build_static_context_data, render_template_context
 from .shared.precompute import precompute_at_login
 from .shared.utils import home_dashboard_url
 from .task_queue import make_celery, register_task, background_task
@@ -315,94 +315,18 @@ def create_app():
 
         return [f"{prefix}{item}{suffix}" for item in s]
 
-    def _get_previous_login():
-        if not has_request_context():
-            return None
-
-        if session.get("previous_login", None) is not None:
-            real_id = session["previous_login"]
-            real_user = db.session.query(User).filter_by(id=real_id).first()
-        else:
-            real_user = None
-
-        return real_user
-
-    # data that does not change from request to request can be evaluated, cached, and re-used
-    static_ctx = {
-        "website_revision": site_revision,
-        "website_copyright_dates": site_copyright_dates,
-        "branding_label": app.config.get("BRANDING_LABEL", "Not configured"),
-        "branding_login_landing_string": app.config.get("BRANDING_LOGIN_LANDING_STRING", "Not configured"),
-        "branding_public_landing_string": app.config.get("BRANDING_PUBLIC_LANDING_STRING", "Not configured"),
-        "email_is_live": app.config.get("EMAIL_IS_LIVE", False),
-        "backup_is_live": app.config.get("BACKUP_IS_LIVE", False),
-        "video_explainer_panopto_server": app.config.get("VIDEO_EXPLAINER_PANOPTO_SERVER", None),
-        "video_explainer_panopto_session": app.config.get("VIDEO_EXPLAINER_PANOPTO_SESSION", None),
-    }
-
-    if static_ctx["video_explainer_panopto_server"] is not None and static_ctx["video_explainer_panopto_session"] is not None:
-        static_ctx["enable_video_explainer"] = True
-    else:
-        static_ctx["enable_video_explainer"] = False
-
-    @app.context_processor
-    def global_context():
-        if not has_request_context():
-            return {}
-
-        roles = set(role.name for role in current_user.roles)
-        if isinstance(current_user, User):
-            mask_roles = set(role.name for role in current_user.mask_roles)
-            visible_roles = roles.difference(mask_roles)
-        else:
-            visible_roles = roles
-
-        is_faculty = "faculty" in visible_roles
-        is_office = "office" in visible_roles
-        is_student = "student" in visible_roles
-        is_reports = "reports" in visible_roles
-
-        is_root = "root" in visible_roles
-        is_admin = "admin" in visible_roles
-        is_edit_tags = "edit_tags" in visible_roles
-        is_view_email = "view_email" in visible_roles
-        is_manage_users = "manage_users" in visible_roles
-        is_emailer = "email" in visible_roles
-
-        base_context_data = get_global_context_data()
-        matching_ready = base_context_data["matching_ready"]
-        has_assessments = base_context_data["has_assessments"]
-
-        return static_ctx | {
-            "real_user": _get_previous_login(),
-            "home_dashboard_url": home_dashboard_url(),
-            "is_faculty": is_faculty,
-            "is_office": is_office,
-            "is_student": is_student,
-            "is_reports": is_reports,
-            "is_convenor": is_faculty and current_user.faculty_data is not None and current_user.faculty_data.is_convenor,
-            "is_root": is_root,
-            "is_admin": is_admin,
-            "is_edit_tags": is_edit_tags,
-            "is_view_email": is_view_email,
-            "is_manage_users": is_manage_users,
-            "is_emailer": is_emailer,
-            "matching_ready": matching_ready,
-            "has_assessments": has_assessments,
-        }
-
     @app.errorhandler(404)
     def not_found_error(error):
-        return render_template("errors/404.html"), 404
+        return render_template_context("errors/404.html"), 404
 
     @app.errorhandler(429)
     def rate_limit_error(error):
-        return render_template("errors/429.html"), 429
+        return render_template_context("errors/429.html"), 429
 
     @app.errorhandler(500)
     def internal_error(error):
         db.session.rollback()
-        return render_template("errors/500.html"), 500
+        return render_template_context("errors/500.html"), 500
 
     if not app.debug:
 
@@ -448,6 +372,9 @@ def create_app():
             return {"id": str(current_user.id), "username": str(current_user.username), "email": str(current_user.email)}
 
     app.request_class = CustomRequest
+
+    # cache static context data needed for rendering templates
+    build_static_context_data(app)
 
     # IMPORT BLUEPRINTS
 

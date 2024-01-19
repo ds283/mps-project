@@ -23,7 +23,7 @@ from bokeh.embed import components
 from bokeh.models import Label
 from bokeh.plotting import figure
 from celery import chain, group
-from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session, stream_with_context, abort, send_file
+from flask import current_app, redirect, url_for, flash, request, jsonify, session, stream_with_context, abort, send_file
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
 from math import pi
 from numpy import histogram
@@ -167,6 +167,7 @@ from ..shared.backup import (
     remove_backup,
     create_new_backup_labels,
 )
+from ..shared.context.global_context import render_template_context
 from ..shared.context.matching import get_ready_to_match_data, get_matching_dashboard_data
 from ..shared.context.rollover import get_rollover_data
 from ..shared.conversions import is_integer
@@ -223,7 +224,7 @@ def global_config():
 
         return home_dashboard()
 
-    return render_template("admin/global_config.html", config_form=form)
+    return render_template_context("admin/global_config.html", config_form=form)
 
 
 @admin.route("/edit_groups")
@@ -233,7 +234,7 @@ def edit_groups():
     View function that handles listing of all registered research groups
     :return:
     """
-    return render_template("admin/edit_groups.html")
+    return render_template_context("admin/edit_groups.html")
 
 
 @admin.route("/groups_ajax", methods=["POST"])
@@ -292,7 +293,7 @@ def add_group():
 
         return redirect(url_for("admin.edit_groups"))
 
-    return render_template("admin/edit_group.html", group_form=form, title="Add new affiliation")
+    return render_template_context("admin/edit_group.html", group_form=form, title="Add new affiliation")
 
 
 @admin.route("/edit_group/<int:id>", methods=["GET", "POST"])
@@ -330,7 +331,7 @@ def edit_group(id):
 
         return redirect(url_for("admin.edit_groups"))
 
-    return render_template("admin/edit_group.html", group_form=form, group=group, title="Edit affiliation")
+    return render_template_context("admin/edit_group.html", group_form=form, group=group, title="Edit affiliation")
 
 
 @admin.route("/activate_group/<int:id>")
@@ -382,7 +383,7 @@ def edit_degree_types():
     View for editing degree types
     :return:
     """
-    return render_template("admin/degree_types/edit_degrees.html", subpane="degrees")
+    return render_template_context("admin/degree_types/edit_degrees.html", subpane="degrees")
 
 
 @admin.route("/edit_degree_programmes")
@@ -392,7 +393,7 @@ def edit_degree_programmes():
     View for editing degree programmes
     :return:
     """
-    return render_template("admin/degree_types/edit_programmes.html", subpane="programmes")
+    return render_template_context("admin/degree_types/edit_programmes.html", subpane="programmes")
 
 
 @admin.route("/edit_modules")
@@ -402,7 +403,7 @@ def edit_modules():
     View for editing modules
     :return:
     """
-    return render_template("admin/degree_types/edit_modules.html", subpane="modules")
+    return render_template_context("admin/degree_types/edit_modules.html", subpane="modules")
 
 
 @admin.route("/edit_levels")
@@ -412,7 +413,7 @@ def edit_levels():
     View for editing FHEQ levels
     :return:
     """
-    return render_template("admin/degree_types/edit_levels.html", subpane="levels")
+    return render_template_context("admin/degree_types/edit_levels.html", subpane="levels")
 
 
 @admin.route("/edit_levels_ajax", methods=["POST"])
@@ -531,7 +532,7 @@ def add_degree_type():
 
         return redirect(url_for("admin.edit_degree_types"))
 
-    return render_template("admin/degree_types/edit_degree.html", type_form=form, title="Add new degree type")
+    return render_template_context("admin/degree_types/edit_degree.html", type_form=form, title="Add new degree type")
 
 
 @admin.route("/edit_type/<int:id>", methods=["GET", "POST"])
@@ -565,7 +566,7 @@ def edit_degree_type(id):
 
         return redirect(url_for("admin.edit_degree_types"))
 
-    return render_template("admin/degree_types/edit_degree.html", type_form=form, type=type, title="Edit degree type")
+    return render_template_context("admin/degree_types/edit_degree.html", type_form=form, type=type, title="Edit degree type")
 
 
 @admin.route("/make_type_active/<int:id>")
@@ -652,7 +653,7 @@ def add_degree_programme():
 
         return redirect(url_for("admin.edit_degree_programmes"))
 
-    return render_template("admin/degree_types/edit_programme.html", programme_form=form, title="Add new degree programme")
+    return render_template_context("admin/degree_types/edit_programme.html", programme_form=form, title="Add new degree programme")
 
 
 @admin.route("/edit_programme/<int:id>", methods=["GET", "POST"])
@@ -690,7 +691,7 @@ def edit_degree_programme(id):
 
         return redirect(url_for("admin.edit_degree_programmes"))
 
-    return render_template("admin/degree_types/edit_programme.html", programme_form=form, programme=programme, title="Edit degree programme")
+    return render_template_context("admin/degree_types/edit_programme.html", programme_form=form, programme=programme, title="Edit degree programme")
 
 
 @admin.route("/activate_programme/<int:id>")
@@ -766,7 +767,7 @@ def attach_modules(id, level_id=None):
 
     levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.numeric_level.asc()).all()
 
-    return render_template(
+    return render_template_context(
         "admin/degree_types/attach_modules.html", prog=programme, modules=modules, form=form, level_id=level_id, levels=levels, title="Attach modules"
     )
 
@@ -853,7 +854,7 @@ def add_level():
 
         return redirect(url_for("admin.edit_levels"))
 
-    return render_template("admin/degree_types/edit_level.html", form=form, title="Add new FHEQ Level")
+    return render_template_context("admin/degree_types/edit_level.html", form=form, title="Add new FHEQ Level")
 
 
 @admin.route("/edit_level/<int:id>", methods=["GET", "POST"])
@@ -884,7 +885,7 @@ def edit_level(id):
 
         return redirect(url_for("admin.edit_levels"))
 
-    return render_template("admin/degree_types/edit_level.html", form=form, level=level, title="Edit FHEQ Level")
+    return render_template_context("admin/degree_types/edit_level.html", form=form, level=level, title="Edit FHEQ Level")
 
 
 @admin.route("/activate_level/<int:id>")
@@ -967,7 +968,7 @@ def add_module():
 
         return redirect(url_for("admin.edit_modules"))
 
-    return render_template("admin/degree_types/edit_module.html", form=form, title="Add new module")
+    return render_template_context("admin/degree_types/edit_module.html", form=form, title="Add new module")
 
 
 @admin.route("/edit_module/<int:id>", methods=["GET", "POST"])
@@ -1004,7 +1005,7 @@ def edit_module(id):
 
         return redirect(url_for("admin.edit_modules"))
 
-    return render_template("admin/degree_types/edit_module.html", form=form, title="Edit module", module=module)
+    return render_template_context("admin/degree_types/edit_module.html", form=form, title="Edit module", module=module)
 
 
 @admin.route("/retire_module/<int:id>")
@@ -1059,7 +1060,7 @@ def edit_skills():
     if not validate_is_admin_or_convenor("edit_tags"):
         return home_dashboard()
 
-    return render_template("admin/transferable_skills/edit_skills.html", subpane="skills")
+    return render_template_context("admin/transferable_skills/edit_skills.html", subpane="skills")
 
 
 @admin.route("/skills_ajax", methods=["POST"])
@@ -1116,7 +1117,7 @@ def add_skill():
 
         return redirect(url_for("admin.edit_skills"))
 
-    return render_template("admin/transferable_skills/edit_skill.html", skill_form=form, title="Add new transferable skill")
+    return render_template_context("admin/transferable_skills/edit_skill.html", skill_form=form, title="Add new transferable skill")
 
 
 @admin.route("/edit_skill/<int:id>", methods=["GET", "POST"])
@@ -1150,7 +1151,7 @@ def edit_skill(id):
 
         return redirect(url_for("admin.edit_skills"))
 
-    return render_template("admin/transferable_skills/edit_skill.html", skill_form=form, skill=skill, title="Edit transferable skill")
+    return render_template_context("admin/transferable_skills/edit_skill.html", skill_form=form, skill=skill, title="Edit transferable skill")
 
 
 @admin.route("/activate_skill/<int:id>")
@@ -1211,7 +1212,7 @@ def edit_skill_groups():
     if not validate_is_admin_or_convenor("edit_tags"):
         return home_dashboard()
 
-    return render_template("admin/transferable_skills/edit_skill_groups.html", subpane="groups")
+    return render_template_context("admin/transferable_skills/edit_skill_groups.html", subpane="groups")
 
 
 @admin.route("/skill_groups_ajax", methods=["POST"])
@@ -1268,7 +1269,7 @@ def add_skill_group():
 
         return redirect(url_for("admin.edit_skill_groups"))
 
-    return render_template("admin/transferable_skills/edit_skill_group.html", group_form=form, title="Add new transferable skill group")
+    return render_template_context("admin/transferable_skills/edit_skill_group.html", group_form=form, title="Add new transferable skill group")
 
 
 @admin.route("/edit_skill_group/<int:id>", methods=["GET", "POST"])
@@ -1302,7 +1303,9 @@ def edit_skill_group(id):
 
         return redirect(url_for("admin.edit_skill_groups"))
 
-    return render_template("admin/transferable_skills/edit_skill_group.html", group=group, group_form=form, title="Edit transferable skill group")
+    return render_template_context(
+        "admin/transferable_skills/edit_skill_group.html", group=group, group_form=form, title="Edit transferable skill group"
+    )
 
 
 @admin.route("/activate_skill_group/<int:id>")
@@ -1363,7 +1366,7 @@ def edit_project_tag_groups():
     if not validate_is_admin_or_convenor("edit_tags"):
         return home_dashboard()
 
-    return render_template("admin/project_tags/edit_tag_groups.html", subpane="groups")
+    return render_template_context("admin/project_tags/edit_tag_groups.html", subpane="groups")
 
 
 @admin.route("/edit_project_tag_groups_ajax", methods=["POST"])
@@ -1424,7 +1427,7 @@ def add_project_tag_group():
 
         return redirect(url_for("admin.edit_project_tag_groups"))
 
-    return render_template("admin/project_tags/edit_tag_group.html", group_form=form, title="Add new project tag group")
+    return render_template_context("admin/project_tags/edit_tag_group.html", group_form=form, title="Add new project tag group")
 
 
 @admin.route("/edit_project_tag_group/<int:gid>", methods=["GET", "POST"])
@@ -1463,7 +1466,7 @@ def edit_project_tag_group(gid):
 
         return redirect(url_for("admin.edit_project_tag_groups"))
 
-    return render_template("admin/project_tags/edit_tag_group.html", group=group, group_form=form, title="Edit project tag group")
+    return render_template_context("admin/project_tags/edit_tag_group.html", group=group, group_form=form, title="Edit project tag group")
 
 
 @admin.route("/activate_project_tag_group/<int:gid>")
@@ -1529,7 +1532,7 @@ def edit_project_tags():
     if not validate_is_admin_or_convenor("edit_tags"):
         return home_dashboard()
 
-    return render_template("admin/project_tags/edit_tags.html", subpane="tags")
+    return render_template_context("admin/project_tags/edit_tags.html", subpane="tags")
 
 
 @admin.route("edit_project_tags_ajax", methods=["POST"])
@@ -1594,7 +1597,7 @@ def add_project_tag():
 
         return redirect(url_for("admin.edit_project_tags"))
 
-    return render_template("admin/project_tags/edit_tag.html", tag_form=form, title="Add new project tag")
+    return render_template_context("admin/project_tags/edit_tag.html", tag_form=form, title="Add new project tag")
 
 
 @admin.route("/edit_project_tag/<int:tid>", methods=["GET", "POST"])
@@ -1632,7 +1635,7 @@ def edit_project_tag(tid):
 
         return redirect(url_for("admin.edit_project_tags"))
 
-    return render_template("admin/project_tags/edit_tag.html", tag=tag, tag_form=form, title="Edit project tag")
+    return render_template_context("admin/project_tags/edit_tag.html", tag=tag, tag_form=form, title="Edit project tag")
 
 
 @admin.route("/activate_project_tag/<int:tid>")
@@ -1690,7 +1693,7 @@ def edit_licenses():
     Provide list and edit view for content licneses
     :return:
     """
-    return render_template("admin/edit_licenses.html")
+    return render_template_context("admin/edit_licenses.html")
 
 
 @admin.route("/licenses_ajax")
@@ -1737,7 +1740,7 @@ def add_license():
 
         return redirect(url_for("admin.edit_licenses"))
 
-    return render_template("admin/edit_license.html", form=form, title="Add new content license")
+    return render_template_context("admin/edit_license.html", form=form, title="Add new content license")
 
 
 @admin.route("/edit_license/<int:lid>", methods=["GET", "POST"])
@@ -1777,7 +1780,7 @@ def edit_license(lid):
 
         return redirect(url_for("admin.edit_licenses"))
 
-    return render_template("admin/edit_license.html", form=form, title="Edit content license", license=license)
+    return render_template_context("admin/edit_license.html", form=form, title="Edit content license", license=license)
 
 
 @admin.route("/activate_license/<int:lid>")
@@ -1834,7 +1837,7 @@ def edit_project_classes():
     Provide list and edit view for project classes
     :return:
     """
-    return render_template("admin/edit_project_classes.html")
+    return render_template_context("admin/edit_project_classes.html")
 
 
 @admin.route("/pclasses_ajax")
@@ -2028,7 +2031,7 @@ def add_pclass():
             form.use_project_tags.data = False
             form.force_tag_groups.data = []
 
-    return render_template("admin/edit_project_class.html", pclass_form=form, title="Add new project class")
+    return render_template_context("admin/edit_project_class.html", pclass_form=form, title="Add new project class")
 
 
 @admin.route("/edit_pclass/<int:id>", methods=["GET", "POST"])
@@ -2167,7 +2170,7 @@ def edit_pclass(id):
             if form.force_tag_groups.data is None:
                 form.force_tag_groups.data = []
 
-    return render_template("admin/edit_project_class.html", pclass_form=form, pclass=data, title="Edit project class")
+    return render_template_context("admin/edit_project_class.html", pclass_form=form, pclass=data, title="Edit project class")
 
 
 @admin.route("/edit_pclass_text/<int:id>", methods=["GET", "POST"])
@@ -2188,7 +2191,7 @@ def edit_pclass_text(id):
 
         return redirect(url_for("admin.edit_project_classes"))
 
-    return render_template("admin/edit_pclass_text.html", form=form, pclass=data)
+    return render_template_context("admin/edit_pclass_text.html", form=form, pclass=data)
 
 
 @admin.route("/activate_pclass/<int:id>")
@@ -2261,7 +2264,7 @@ def edit_period_definitions(id):
     :return:
     """
     data = ProjectClass.query.get_or_404(id)
-    return render_template("admin/edit_period_definitions.html", pclass=data)
+    return render_template_context("admin/edit_period_definitions.html", pclass=data)
 
 
 @admin.route("/period_definitions_ajax/<int:id>")
@@ -2480,7 +2483,7 @@ def add_period_definition(id):
 
         return redirect(url_for("admin.edit_period_definitions", id=pclass.id))
 
-    return render_template("admin/edit_period_definition.html", form=form, pclass_id=pclass.id, title="Add new submission period")
+    return render_template_context("admin/edit_period_definition.html", form=form, pclass_id=pclass.id, title="Add new submission period")
 
 
 @admin.route("/edit_period_definition/<int:id>", methods=["GET", "POST"])
@@ -2536,7 +2539,7 @@ def edit_period_definition(id):
 
         return redirect(url_for("admin.edit_period_definitions", id=pd.owner.id))
 
-    return render_template("admin/edit_period_definition.html", form=form, period=pd, title="Edit submission period")
+    return render_template_context("admin/edit_period_definition.html", form=form, period=pd, title="Edit submission period")
 
 
 @admin.route("/delete_period_definition/<int:id>")
@@ -2574,7 +2577,7 @@ def edit_supervisors():
     if not validate_is_admin_or_convenor("edit_tags"):
         return home_dashboard()
 
-    return render_template("admin/edit_supervisors.html")
+    return render_template_context("admin/edit_supervisors.html")
 
 
 @admin.route("/supervisors_ajax", methods=["POST"])
@@ -2629,7 +2632,7 @@ def add_supervisor():
 
         return redirect(url_for("admin.edit_supervisors"))
 
-    return render_template("admin/edit_supervisor.html", supervisor_form=form, title="Add new supervisory role")
+    return render_template_context("admin/edit_supervisor.html", supervisor_form=form, title="Add new supervisory role")
 
 
 @admin.route("/edit_supervisor/<int:id>", methods=["GET", "POST"])
@@ -2664,7 +2667,7 @@ def edit_supervisor(id):
 
         return redirect(url_for("admin.edit_supervisors"))
 
-    return render_template("admin/edit_supervisor.html", supervisor_form=form, role=data, title="Edit supervisory role")
+    return render_template_context("admin/edit_supervisor.html", supervisor_form=form, role=data, title="Edit supervisory role")
 
 
 @admin.route("/activate_supervisor/<int:id>")
@@ -2750,7 +2753,7 @@ def confirm_global_rollover():
     )
     submit_label = "Rollover to {yra}&ndash;{yrb}".format(yra=next_year, yrb=next_year + 1)
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -2831,7 +2834,7 @@ def email_log():
         if form.delete_age.data is True:
             return redirect(url_for("admin.confirm_delete_email_cutoff", cutoff=(form.weeks.data)))
 
-    return render_template("admin/email_log.html", form=form)
+    return render_template_context("admin/email_log.html", form=form)
 
 
 @limiter.exempt
@@ -2877,7 +2880,7 @@ def display_email(id):
         url = url_for("admin.email_log")
         text = "email log"
 
-    return render_template("admin/display_email.html", email=email, text=text, url=url)
+    return render_template_context("admin/display_email.html", email=email, text=text, url=url)
 
 
 @admin.route("/delete_email/<int:id>")
@@ -2916,7 +2919,7 @@ def confirm_delete_all_emails():
     message = "<p>Please confirm that you wish to delete all emails retained in the log.</p>" "<p>This action cannot be undone.</p>"
     submit_label = "Delete all"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -2970,7 +2973,7 @@ def confirm_delete_email_cutoff(cutoff):
     )
     submit_label = "Delete"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -3015,7 +3018,7 @@ def scheduled_email():
     Display scheduled outgoing email
     :return:
     """
-    return render_template("admin/scheduled_email.html")
+    return render_template_context("admin/scheduled_email.html")
 
 
 @admin.route("/scheduled_email_ajax", methods=["POST"])
@@ -3107,7 +3110,7 @@ def delete_notification(eid):
     )
     submit_label = "Delete"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label, url=url
     )
 
@@ -3146,7 +3149,7 @@ def edit_messages():
     if not validate_is_admin_or_convenor():
         return home_dashboard()
 
-    return render_template("admin/edit_messages.html")
+    return render_template_context("admin/edit_messages.html")
 
 
 @admin.route("/messages_ajax")
@@ -3218,7 +3221,7 @@ def add_message():
 
         return redirect(url_for("admin.edit_messages"))
 
-    return render_template("admin/edit_message.html", form=form, title="Add new broadcast message")
+    return render_template_context("admin/edit_message.html", form=form, title="Add new broadcast message")
 
 
 @admin.route("/edit_message/<int:id>", methods=["GET", "POST"])
@@ -3270,7 +3273,7 @@ def edit_message(id):
 
         return redirect(url_for("admin.edit_messages"))
 
-    return render_template("admin/edit_message.html", message=data, form=form, title="Edit broadcast message")
+    return render_template_context("admin/edit_message.html", message=data, form=form, title="Edit broadcast message")
 
 
 @admin.route("/delete_message/<int:id>")
@@ -3347,7 +3350,7 @@ def scheduled_tasks():
     :return:
     """
 
-    return render_template("admin/scheduled_tasks.html")
+    return render_template_context("admin/scheduled_tasks.html")
 
 
 @admin.route("/scheduled_ajax")
@@ -3383,7 +3386,7 @@ def add_scheduled_task():
             flash("The task type was not recognized. If this error persists, please contact the system administrator.")
             return redirect(url_for("admin.scheduled_tasks"))
 
-    return render_template("admin/scheduled_type.html", form=form, title="Select schedule type")
+    return render_template_context("admin/scheduled_type.html", form=form, title="Select schedule type")
 
 
 @admin.route("/add_interval_task", methods=["GET", "POST"])
@@ -3432,7 +3435,7 @@ def add_interval_task():
 
         return redirect(url_for("admin.scheduled_tasks"))
 
-    return render_template("admin/edit_scheduled_task.html", form=form, title="Add new fixed-interval task")
+    return render_template_context("admin/edit_scheduled_task.html", form=form, title="Add new fixed-interval task")
 
 
 @admin.route("/add_crontab_task", methods=["GET", "POST"])
@@ -3493,7 +3496,7 @@ def add_crontab_task():
 
         return redirect(url_for("admin.scheduled_tasks"))
 
-    return render_template("admin/edit_scheduled_task.html", form=form, title="Add new crontab task")
+    return render_template_context("admin/edit_scheduled_task.html", form=form, title="Add new crontab task")
 
 
 @admin.route("/edit_interval_task/<int:id>", methods=["GET", "POST"])
@@ -3539,7 +3542,7 @@ def edit_interval_task(id):
             form.every.data = data.interval.every
             form.period.data = data.interval.period
 
-    return render_template("admin/edit_scheduled_task.html", task=data, form=form, title="Edit fixed-interval task")
+    return render_template_context("admin/edit_scheduled_task.html", task=data, form=form, title="Edit fixed-interval task")
 
 
 @admin.route("/edit_crontab_task/<int:id>", methods=["GET", "POST"])
@@ -3600,7 +3603,7 @@ def edit_crontab_task(id):
             form.day_of_month.data = data.crontab.day_of_month
             form.month_of_year.data = data.crontab.month_of_year
 
-    return render_template("admin/edit_scheduled_task.html", task=data, form=form, title="Add new crontab task")
+    return render_template_context("admin/edit_scheduled_task.html", task=data, form=form, title="Add new crontab task")
 
 
 @admin.route("/delete_scheduled_task/<int:id>")
@@ -3817,7 +3820,7 @@ def backups_overview():
         gauge_script = None
         gauge_div = None
 
-    return render_template(
+    return render_template_context(
         "admin/backup_dashboard/overview.html",
         pane="overview",
         form=form,
@@ -3870,7 +3873,7 @@ def manage_backups():
     if form.validate_on_submit() and form.delete_age.data is True:
         return redirect(url_for("admin.confirm_delete_backup_cutoff", cutoff=(form.weeks.data)))
 
-    return render_template(
+    return render_template_context(
         "admin/backup_dashboard/manage.html",
         pane="view",
         backup_count=backup_count,
@@ -3952,7 +3955,7 @@ def confirm_delete_all_backups():
     )
     submit_label = "Delete all"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -4008,7 +4011,7 @@ def confirm_delete_backup_cutoff(cutoff):
     )
     submit_label = "Delete"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -4075,7 +4078,7 @@ def confirm_delete_backup(id):
     )
     submit_label = "Delete"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -4115,7 +4118,7 @@ def background_tasks():
             status_filter = "all"
         session["background_task_status_filter"] = status_filter
 
-    return render_template("admin/background_tasks.html", status_filter=status_filter)
+    return render_template_context("admin/background_tasks.html", status_filter=status_filter)
 
 
 @admin.route("/background_ajax", methods=["POST"])
@@ -4286,7 +4289,7 @@ def manage_matching():
 
     info = get_matching_dashboard_data(selected_year)
 
-    return render_template("admin/matching/manage.html", pane="manage", info=info, form=form, year=selected_year)
+    return render_template_context("admin/matching/manage.html", pane="manage", info=info, form=form, year=selected_year)
 
 
 @admin.route("/matches_ajax")
@@ -4566,7 +4569,7 @@ def create_match():
     # estimate equitable CATS loading
     data = estimate_CATS_load()
 
-    return render_template("admin/matching/create.html", pane="create", info=info, form=form, data=data, base_match=base_match)
+    return render_template_context("admin/matching/create.html", pane="create", info=info, form=form, data=data, base_match=base_match)
 
 
 @admin.route("/terminate_match/<int:id>")
@@ -4589,7 +4592,7 @@ def terminate_match(id):
     )
     submit_label = "Terminate job"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -4695,7 +4698,7 @@ def delete_match(id):
     )
     submit_label = "Delete match"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -4792,7 +4795,7 @@ def clean_up_match(id):
     )
     submit_label = "Clean up match"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -4873,7 +4876,7 @@ def revert_match(id):
     )
     submit_label = "Revert match"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -5018,7 +5021,7 @@ def rename_match(id):
 
         return redirect(url)
 
-    return render_template("admin/match_inspector/rename.html", form=form, record=record, url=url)
+    return render_template_context("admin/match_inspector/rename.html", form=form, record=record, url=url)
 
 
 @admin.route("/compare_match/<int:id>", methods=["GET", "POST"])
@@ -5052,7 +5055,7 @@ def compare_match(id):
         comparator = form.target.data
         return redirect(url_for("admin.do_match_compare", id1=id, id2=comparator.id, text=text, url=url))
 
-    return render_template("admin/match_inspector/compare_setup.html", form=form, record=record, text=text, url=url)
+    return render_template_context("admin/match_inspector/compare_setup.html", form=form, record=record, text=text, url=url)
 
 
 @admin.route("/do_match_compare/<int:id1>/<int:id2>")
@@ -5110,7 +5113,7 @@ def do_match_compare(id1, id2):
 
     pclasses = record1.available_pclasses
 
-    return render_template(
+    return render_template_context(
         "admin/match_inspector/compare.html",
         record1=record1,
         record2=record2,
@@ -5297,7 +5300,7 @@ def match_student_view(id):
 
     pclasses = record.available_pclasses
 
-    return render_template(
+    return render_template_context(
         "admin/match_inspector/student.html",
         pane="student",
         record=record,
@@ -5375,7 +5378,7 @@ def match_faculty_view(id):
 
     pclasses = get_automatch_pclasses()
 
-    return render_template(
+    return render_template_context(
         "admin/match_inspector/faculty.html",
         pane="faculty",
         record=record,
@@ -5464,7 +5467,7 @@ def match_dists_view(id):
 
     delta_script, delta_div = components(delta_plot)
 
-    return render_template(
+    return render_template_context(
         "admin/match_inspector/dists.html",
         pane="dists",
         record=record,
@@ -5858,7 +5861,7 @@ def reassign_supervisor_roles(rec_id):
             supv_roles = [x.user.faculty_data for x in record.roles if x.role == MatchingRole.ROLE_SUPERVISOR]
             assign_form.supervisors.data = supv_roles
 
-    return render_template("admin/match_inspector/reassign_supervisor.html", form=assign_form, record=record, url=url, text=text)
+    return render_template_context("admin/match_inspector/reassign_supervisor.html", form=assign_form, record=record, url=url, text=text)
 
 
 @admin.route("/publish_matching_selectors/<int:id>")
@@ -6078,7 +6081,7 @@ def select_match(id):
         )
         submit_label = "Force selection"
 
-        return render_template(
+        return render_template_context(
             "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
         )
 
@@ -6212,7 +6215,7 @@ def populate_submitters_from_match(match_id, config_id):
     )
     submit_label = "Populate submitters"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -6258,7 +6261,7 @@ def manage_assessments():
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    return render_template("admin/presentations/manage.html")
+    return render_template_context("admin/presentations/manage.html")
 
 
 @admin.route("/presentation_assessments_ajax")
@@ -6316,7 +6319,7 @@ def add_assessment():
 
         return redirect(url_for("admin.manage_assessments"))
 
-    return render_template("admin/presentations/edit_assessment.html", form=form, title="Add new presentation assessment event")
+    return render_template_context("admin/presentations/edit_assessment.html", form=form, title="Add new presentation assessment event")
 
 
 @admin.route("/edit_assessment/<int:id>", methods=["GET", "POST"])
@@ -6356,7 +6359,7 @@ def edit_assessment(id):
 
         return redirect(url_for("admin.manage_assessments"))
 
-    return render_template(
+    return render_template_context(
         "admin/presentations/edit_assessment.html", form=form, assessment=assessment, title="Edit existing presentation assessment event"
     )
 
@@ -6393,7 +6396,7 @@ def delete_assessment(id):
     )
     submit_label = "Delete assessment"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -6466,7 +6469,7 @@ def close_assessment(id):
     )
     submit_label = "Close feedback"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -6567,7 +6570,7 @@ def initialize_assessment(id):
         if hasattr(form, "issue_requests"):
             form.issue_requests.label.text = "Save changes"
 
-    return render_template("admin/presentations/availability.html", form=form, assessment=assessment)
+    return render_template_context("admin/presentations/availability.html", form=form, assessment=assessment)
 
 
 def _do_initialize_assessment(title: str, description: str, assessment_id: int, deadline: datetime, skip_availability: bool):
@@ -6746,7 +6749,7 @@ def outstanding_availability(id):
         flash("Cannot show outstanding availability responses for this assessment because it has not yet been opened", "info")
         return redirect(redirect_url())
 
-    return render_template("admin/presentations/availability/outstanding.html", assessment=assessment)
+    return render_template_context("admin/presentations/availability/outstanding.html", assessment=assessment)
 
 
 @admin.route("/outstanding_availability_ajax/<int:id>")
@@ -6858,7 +6861,9 @@ def schedule_set_limit(assessment_id, faculty_id):
 
         return redirect(url)
 
-    return render_template("admin/presentations/edit_assigned_limit.html", form=form, fac=faculty, rec=record, a=assessment, url=url, text=text)
+    return render_template_context(
+        "admin/presentations/edit_assigned_limit.html", form=form, fac=faculty, rec=record, a=assessment, url=url, text=text
+    )
 
 
 @admin.route("/remove_assessor/<int:assessment_id>/<int:faculty_id>")
@@ -6944,7 +6949,7 @@ def assessment_manage_sessions(id):
     if not validate_assessment(assessment):
         return redirect(redirect_url())
 
-    return render_template("admin/presentations/manage_sessions.html", assessment=assessment)
+    return render_template_context("admin/presentations/manage_sessions.html", assessment=assessment)
 
 
 @admin.route("/manage_sessions_ajax/<int:id>")
@@ -7003,7 +7008,7 @@ def add_session(id):
 
         return redirect(url_for("admin.assessment_manage_sessions", id=id))
 
-    return render_template("admin/presentations/edit_session.html", form=form, assessment=assessment)
+    return render_template_context("admin/presentations/edit_session.html", form=form, assessment=assessment)
 
 
 @admin.route("/edit_session/<int:id>", methods=["GET", "POST"])
@@ -7041,7 +7046,7 @@ def edit_session(id):
 
         return redirect(url_for("admin.assessment_manage_sessions", id=sess.owner_id))
 
-    return render_template("admin/presentations/edit_session.html", form=form, assessment=sess.owner, sess=sess)
+    return render_template_context("admin/presentations/edit_session.html", form=form, assessment=sess.owner, sess=sess)
 
 
 @admin.route("/delete_session/<int:id>", methods=["GET", "POST"])
@@ -7213,7 +7218,9 @@ def assessment_submitter_availability(a_id, s_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    return render_template("admin/presentations/availability/submitter_availability.html", assessment=data, submitter=submitter, url=url, text=text)
+    return render_template_context(
+        "admin/presentations/availability/submitter_availability.html", assessment=data, submitter=submitter, url=url, text=text
+    )
 
 
 @admin.route("/assessment_assessor_availability/<int:a_id>/<int:f_id>")
@@ -7242,7 +7249,9 @@ def assessment_assessor_availability(a_id, f_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    return render_template("admin/presentations/availability/assessor_availability.html", assessment=data, assessor=assessor, url=url, text=text)
+    return render_template_context(
+        "admin/presentations/availability/assessor_availability.html", assessment=data, assessor=assessor, url=url, text=text
+    )
 
 
 @admin.route("/submitter_session_availability/<int:id>")
@@ -7275,7 +7284,7 @@ def submitter_session_availability(id):
 
     pclasses = sess.owner.available_pclasses
 
-    return render_template(
+    return render_template_context(
         "admin/presentations/availability/submitter_session_availability.html",
         assessment=sess.owner,
         sess=sess,
@@ -7538,7 +7547,7 @@ def assessment_manage_assessors(id):
     if state_filter is not None:
         session["assessors_state_filter"] = state_filter
 
-    return render_template("admin/presentations/manage_assessors.html", assessment=data, state_filter=state_filter)
+    return render_template_context("admin/presentations/manage_assessors.html", assessment=data, state_filter=state_filter)
 
 
 @admin.route("/manage_assessors_ajax/<int:id>")
@@ -7610,7 +7619,7 @@ def assessor_session_availability(id):
     if state_filter is not None:
         session["assessors_session_state_filter"] = state_filter
 
-    return render_template(
+    return render_template_context(
         "admin/presentations/availability/assessor_session_availability.html", assessment=sess.owner, sess=sess, state_filter=state_filter
     )
 
@@ -7912,7 +7921,7 @@ def assessment_schedules(id):
 
     matches = get_count(assessment.scheduling_attempts)
 
-    return render_template("admin/presentations/scheduling/manage.html", pane="manage", info=matches, assessment=assessment)
+    return render_template_context("admin/presentations/scheduling/manage.html", pane="manage", info=matches, assessment=assessment)
 
 
 @admin.route("/assessment_schedules_ajax/<int:id>")
@@ -8047,7 +8056,7 @@ def create_assessment_schedule(id):
 
     matches = get_count(assessment.scheduling_attempts)
 
-    return render_template("admin/presentations/scheduling/create.html", pane="create", info=matches, form=form, assessment=assessment)
+    return render_template_context("admin/presentations/scheduling/create.html", pane="create", info=matches, form=form, assessment=assessment)
 
 
 @admin.route("/adjust_assessment_schedule/<int:id>", methods=["GET", "POST"])
@@ -8117,7 +8126,7 @@ def adjust_assessment_schedule(id):
 
             form.tag.data = new_tag
 
-    return render_template("admin/presentations/scheduling/adjust_options.html", record=schedule, form=form)
+    return render_template_context("admin/presentations/scheduling/adjust_options.html", record=schedule, form=form)
 
 
 @admin.route("/perform_adjust_assessment_schedule/<int:id>")
@@ -8236,7 +8245,7 @@ def terminate_schedule(id):
     )
     submit_label = "Terminate job"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -8333,7 +8342,7 @@ def delete_schedule(id):
 
     submit_label = "Delete schedule"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -8426,7 +8435,7 @@ def revert_schedule(id):
     )
     submit_label = "Revert schedule"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -8574,7 +8583,7 @@ def rename_schedule(id):
 
         return redirect(url)
 
-    return render_template("admin/presentations/scheduling/rename.html", form=form, record=record, url=url)
+    return render_template_context("admin/presentations/scheduling/rename.html", form=form, record=record, url=url)
 
 
 @admin.route("/compare_schedule/<int:id>", methods=["GET", "POST"])
@@ -8616,7 +8625,7 @@ def compare_schedule(id):
         comparator = form.target.data
         return redirect(url_for("admin.do_schedule_compare", id1=id, id2=comparator.id, text=text, url=url))
 
-    return render_template("admin/presentations/schedule_inspector/compare_setup.html", form=form, record=record, text=text, url=url)
+    return render_template_context("admin/presentations/schedule_inspector/compare_setup.html", form=form, record=record, text=text, url=url)
 
 
 @admin.route("/do_schedule_compare/<int:id1>/<int:id2>")
@@ -8690,7 +8699,7 @@ def do_schedule_compare(id1, id2):
 
     pclasses = record1.available_pclasses
 
-    return render_template(
+    return render_template_context(
         "admin/presentations/schedule_inspector/compare.html",
         record1=record1,
         record2=record2,
@@ -9048,7 +9057,7 @@ def schedule_view_sessions(id):
     rooms = record.available_rooms
     sessions = record.available_sessions
 
-    return render_template(
+    return render_template_context(
         "admin/presentations/schedule_inspector/sessions.html",
         pane="sessions",
         record=record,
@@ -9106,7 +9115,7 @@ def schedule_view_faculty(id):
     rooms = record.available_rooms
     sessions = record.available_sessions
 
-    return render_template(
+    return render_template_context(
         "admin/presentations/schedule_inspector/faculty.html",
         pane="faculty",
         record=record,
@@ -9310,7 +9319,7 @@ def schedule_adjust_assessors(id):
     text = request.args.get("text", None)
     url = request.args.get("url", None)
 
-    return render_template("admin/presentations/schedule_inspector/assign_assessors.html", url=url, text=text, slot=slot, rec=record)
+    return render_template_context("admin/presentations/schedule_inspector/assign_assessors.html", url=url, text=text, slot=slot, rec=record)
 
 
 @admin.route("/schedule_assign_assessors_ajax/<int:id>")
@@ -9499,7 +9508,9 @@ def schedule_adjust_submitter(slot_id, talk_id):
     text = request.args.get("text", None)
     url = request.args.get("url", None)
 
-    return render_template("admin/presentations/schedule_inspector/assign_presentation.html", url=url, text=text, slot=slot, rec=record, talk=talk)
+    return render_template_context(
+        "admin/presentations/schedule_inspector/assign_presentation.html", url=url, text=text, slot=slot, rec=record, talk=talk
+    )
 
 
 @admin.route("/schedule_assign_submitter_ajax/<int:slot_id>/<int:talk_id>")
@@ -9669,7 +9680,7 @@ def assessment_manage_attendees(id):
 
     pclasses = data.available_pclasses
 
-    return render_template(
+    return render_template_context(
         "admin/presentations/manage_attendees.html", assessment=data, pclass_filter=pclass_filter, attend_filter=attend_filter, pclasses=pclasses
     )
 
@@ -9804,7 +9815,7 @@ def edit_rooms():
     Manage bookable venues for presentation sessions
     :return:
     """
-    return render_template("admin/presentations/edit_rooms.html", pane="rooms")
+    return render_template_context("admin/presentations/edit_rooms.html", pane="rooms")
 
 
 @admin.route("/rooms_ajax")
@@ -9846,7 +9857,7 @@ def add_room():
 
         return redirect(url_for("admin.edit_rooms"))
 
-    return render_template("admin/presentations/edit_room.html", form=form, title="Add new venue")
+    return render_template_context("admin/presentations/edit_room.html", form=form, title="Add new venue")
 
 
 @admin.route("/edit_room/<int:id>", methods=["GET", "POST"])
@@ -9872,7 +9883,7 @@ def edit_room(id):
 
         return redirect(url_for("admin.edit_rooms"))
 
-    return render_template("admin/presentations/edit_room.html", form=form, room=data, title="Edit venue")
+    return render_template_context("admin/presentations/edit_room.html", form=form, room=data, title="Edit venue")
 
 
 @admin.route("/activate_room/<int:id>")
@@ -9907,7 +9918,7 @@ def edit_buildings():
     Essentially used to identify rooms in the same building with a coloured tag.
     :return:
     """
-    return render_template("admin/presentations/edit_buildings.html", pane="buildings")
+    return render_template_context("admin/presentations/edit_buildings.html", pane="buildings")
 
 
 @admin.route("/buildings_ajax")
@@ -9935,7 +9946,7 @@ def add_building():
 
         return redirect(url_for("admin.edit_buildings"))
 
-    return render_template("admin/presentations/edit_building.html", form=form, title="Add new building")
+    return render_template_context("admin/presentations/edit_building.html", form=form, title="Add new building")
 
 
 @admin.route("/edit_building/<int:id>", methods=["GET", "POST"])
@@ -9958,7 +9969,7 @@ def edit_building(id):
 
         return redirect(url_for("admin.edit_buildings"))
 
-    return render_template("admin/presentations/edit_building.html", form=form, building=data, title="Edit building")
+    return render_template_context("admin/presentations/edit_building.html", form=form, building=data, title="Edit building")
 
 
 @admin.route("/activate_building/<int:id>")
@@ -10191,7 +10202,7 @@ def edit_backup_labels(backup_id):
 
         return redirect(url_for("admin.manage_backups"))
 
-    return render_template("admin/edit_backup_labels.html", backup=backup, form=form)
+    return render_template_context("admin/edit_backup_labels.html", backup=backup, form=form)
 
 
 @admin.route("/upload_schedule/<int:schedule_id>", methods=["GET", "POST"])
@@ -10267,7 +10278,7 @@ def upload_schedule(schedule_id):
         if request.method == "GET":
             form.solver.data = record.solver
 
-    return render_template("admin/presentations/scheduling/upload.html", schedule=record, form=form)
+    return render_template_context("admin/presentations/scheduling/upload.html", schedule=record, form=form)
 
 
 @admin.route("/upload_match/<int:match_id>", methods=["GET", "POST"])
@@ -10343,7 +10354,7 @@ def upload_match(match_id):
         if request.method == "GET":
             form.solver.data = record.solver
 
-    return render_template("admin/matching/upload.html", match=record, form=form)
+    return render_template_context("admin/matching/upload.html", match=record, form=form)
 
 
 @admin.route("/view_schedule/<string:tag>", methods=["GET", "POST"])
@@ -10379,7 +10390,7 @@ def view_schedule(tag):
     else:
         slots = []
 
-    return render_template("admin/presentations/public/schedule.html", form=form, event=event, schedule=schedule, slots=slots)
+    return render_template_context("admin/presentations/public/schedule.html", form=form, event=event, schedule=schedule, slots=slots)
 
 
 @admin.route("/reset_tasks")
@@ -10447,7 +10458,7 @@ def move_selector(sid):
         )
         return redirect(url)
 
-    return render_template("admin/move_selector.html", sel=sel, student=sel.student, available=available, url=url, text=text)
+    return render_template_context("admin/move_selector.html", sel=sel, student=sel.student, available=available, url=url, text=text)
 
 
 @admin.route("/do_move_selector/<int:sid>/<int:dest_id>")

@@ -11,7 +11,7 @@
 from datetime import datetime, date
 from typing import List, Dict
 
-from flask import render_template, redirect, url_for, flash, request, session, jsonify, current_app
+from flask import redirect, url_for, flash, request, session, jsonify, current_app
 from flask_security import roles_required, roles_accepted, current_user
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
@@ -67,6 +67,7 @@ from ..models import (
     SubmissionRole,
 )
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
+from ..shared.context.global_context import render_template_context
 from ..shared.context.root_dashboard import get_root_dashboard_data
 from ..shared.conversions import is_integer
 from ..shared.projects import create_new_tags, project_list_SQL_handler
@@ -242,7 +243,7 @@ def affiliations():
     data = FacultyData.query.get_or_404(current_user.id)
     research_groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name).all()
 
-    return render_template("faculty/affiliations.html", user=current_user, data=data, research_groups=research_groups)
+    return render_template_context("faculty/affiliations.html", user=current_user, data=data, research_groups=research_groups)
 
 
 @faculty.route("/add_affiliation/<int:groupid>")
@@ -274,7 +275,7 @@ def remove_affiliation(groupid):
 def edit_projects():
     groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
 
-    return render_template("faculty/edit_projects.html", groups=groups)
+    return render_template_context("faculty/edit_projects.html", groups=groups)
 
 
 @faculty.route("/projects_ajax", methods=["POST"])
@@ -316,7 +317,7 @@ def assessor_for():
     groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
     pclasses = ProjectClass.query.filter_by(active=True, publish=True).order_by(ProjectClass.name.asc()).all()
 
-    return render_template("faculty/assessor_for.html", groups=groups, pclasses=pclasses, pclass_filter=pclass_filter)
+    return render_template_context("faculty/assessor_for.html", groups=groups, pclasses=pclasses, pclass_filter=pclass_filter)
 
 
 @faculty.route("/marking_ajax", methods=["POST"])
@@ -349,7 +350,7 @@ def edit_descriptions(id):
 
     missing_aims = [x for x in project.descriptions if x.has_warning("aims")]
 
-    return render_template("faculty/edit_descriptions.html", project=project, create=create, missing_aims=missing_aims)
+    return render_template_context("faculty/edit_descriptions.html", project=project, create=create, missing_aims=missing_aims)
 
 
 @faculty.route("/descriptions_ajax/<int:id>")
@@ -456,7 +457,7 @@ def add_project():
             form.enforce_capacity.data = owner.enforce_capacity
             form.dont_clash_presentations.data = owner.dont_clash_presentations
 
-    return render_template("faculty/edit_project.html", project_form=form, title="Add new project")
+    return render_template_context("faculty/edit_project.html", project_form=form, title="Add new project")
 
 
 @faculty.route("/edit_project/<int:id>", methods=["GET", "POST"])
@@ -515,7 +516,7 @@ def edit_project(id):
         else:
             return redirect(url)
 
-    return render_template("faculty/edit_project.html", project_form=form, project=project, title="Edit project settings", url=url, text=text)
+    return render_template_context("faculty/edit_project.html", project_form=form, project=project, title="Edit project settings", url=url, text=text)
 
 
 @faculty.route("/remove_project_pclass/<int:proj_id>/<int:pclass_id>")
@@ -593,7 +594,7 @@ def delete_project(id):
     )
     submit_label = "Delete project"
 
-    return render_template(
+    return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
     )
 
@@ -675,7 +676,7 @@ def add_description(pid):
         if request.method == "GET":
             form.capacity.data = proj.owner.project_capacity
 
-    return render_template("faculty/edit_description.html", project=proj, form=form, title="Add new description", create=create)
+    return render_template_context("faculty/edit_description.html", project=proj, form=form, title="Add new description", create=create)
 
 
 @faculty.route("/edit_description/<int:did>", methods=["GET", "POST"])
@@ -730,7 +731,7 @@ def edit_description(did):
 
         return redirect(url)
 
-    return render_template(
+    return render_template_context(
         "faculty/edit_description.html", project=desc.parent, desc=desc, form=form, title="Edit description", create=create, url=url, text=text
     )
 
@@ -768,7 +769,7 @@ def edit_description_content(did):
 
         return redirect(url)
 
-    return render_template(
+    return render_template_context(
         "faculty/edit_description_content.html",
         project=desc.parent,
         desc=desc,
@@ -809,7 +810,7 @@ def description_modules(did, level_id=None):
     level_id = form.selector.data.id if form.selector.data is not None else None
     levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.numeric_level.asc()).all()
 
-    return render_template(
+    return render_template_context(
         "faculty/description_modules.html",
         project=desc.parent,
         desc=desc,
@@ -1043,7 +1044,7 @@ def move_description(did):
         else:
             return redirect(url_for("faculty.edit_descriptions", id=new_project.id))
 
-    return render_template(
+    return render_template_context(
         "faculty/move_description.html", form=form, desc=desc, create=create, title='Move "{name}" to a new project'.format(name=desc.label)
     )
 
@@ -1106,7 +1107,7 @@ def attach_skills(id, sel_id=None):
 
     create = request.args.get("create", default=None)
 
-    return render_template("faculty/attach_skills.html", data=proj, skills=skills, form=form, sel_id=form.selector.data.id, create=create)
+    return render_template_context("faculty/attach_skills.html", data=proj, skills=skills, form=form, sel_id=form.selector.data.id, create=create)
 
 
 @faculty.route("/add_skill/<int:projectid>/<int:skillid>/<int:sel_id>")
@@ -1165,7 +1166,7 @@ def attach_programmes(id):
 
     create = request.args.get("create", default=None)
 
-    return render_template("faculty/attach_programmes.html", data=proj, programmes=q.all(), create=create)
+    return render_template_context("faculty/attach_programmes.html", data=proj, programmes=q.all(), create=create)
 
 
 @faculty.route("/add_programme/<int:id>/<int:prog_id>")
@@ -1255,7 +1256,7 @@ def attach_assessors(id):
         and_(ProjectClass.active == True, or_(ProjectClass.uses_marker == True, ProjectClass.uses_presentations == True))
     ).all()
 
-    return render_template(
+    return render_template_context(
         "faculty/attach_assessors.html",
         data=proj,
         groups=groups,
@@ -1629,7 +1630,7 @@ def dashboard():
     approvals_data = get_approval_queue_data()
     num_enrolments = len(enrolments)
 
-    return render_template(
+    return render_template_context(
         "faculty/dashboard/dashboard.html",
         enrolments=enrolments,
         num_enrolments=num_enrolments,
@@ -1887,7 +1888,7 @@ def past_projects():
     :return:
     """
 
-    return render_template("faculty/past_projects.html")
+    return render_template_context("faculty/past_projects.html")
 
 
 @faculty.route("/past_projects_ajax")
@@ -1962,7 +1963,7 @@ def edit_feedback(id):
             form.positive_feedback.data = role.positive_feedback
             form.improvement_feedback.data = role.improvements_feedback
 
-    return render_template(
+    return render_template_context(
         "faculty/dashboard/edit_feedback.html",
         form=form,
         title="Edit feedback",
@@ -2159,7 +2160,7 @@ def presentation_edit_feedback(slot_id, talk_id):
             form.positive_feedback.data = feedback.positive
             form.improvement_feedback.data = feedback.negative
 
-    return render_template(
+    return render_template_context(
         "faculty/dashboard/edit_feedback.html",
         form=form,
         unique_id="pres-{id}".format(id=id),
@@ -2256,7 +2257,7 @@ def view_feedback(id):
 
     preview = request.args.get("preview", None)
 
-    return render_template("faculty/dashboard/view_feedback.html", record=record, text=text, url=url, preview=preview)
+    return render_template_context("faculty/dashboard/view_feedback.html", record=record, text=text, url=url, preview=preview)
 
 
 @faculty.route("/edit_response/<int:id>", methods=["GET", "POST"])
@@ -2314,7 +2315,7 @@ def edit_response(id):
         if request.method == "GET":
             form.feedback.data = role.response
 
-    return render_template(
+    return render_template_context(
         "faculty/dashboard/edit_response.html", form=form, record=role, submit_url=url_for("faculty.edit_response", id=id, url=url), url=url
     )
 
@@ -2491,7 +2492,7 @@ def set_availability(id):
         if request.method == "GET":
             form.comment.data = data.faculty_get_comment(current_user.faculty_data)
 
-    return render_template("faculty/set_availability.html", form=form, assessment=data, url=url, text=text)
+    return render_template_context("faculty/set_availability.html", form=form, assessment=data, url=url, text=text)
 
 
 @faculty.route("/session_available/<int:id>")
@@ -2639,7 +2640,7 @@ def change_availability():
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    return render_template("faculty/change_availability.html")
+    return render_template_context("faculty/change_availability.html")
 
 
 @faculty.route("/show_enrollments")
@@ -2656,7 +2657,7 @@ def show_enrollments():
             url = None
 
     pclasses = db.session.query(ProjectClass).filter_by(active=True, publish=True).all()
-    return render_template("faculty/show_enrollments.html", data=data, url=url, project_classes=pclasses)
+    return render_template_context("faculty/show_enrollments.html", data=data, url=url, project_classes=pclasses)
 
 
 @faculty.route("/show_workload")
@@ -2672,7 +2673,7 @@ def show_workload():
         if isinstance(url, str) and "show_workload" in url:
             url = None
 
-    return render_template("faculty/show_workload.html", data=data, url=url)
+    return render_template_context("faculty/show_workload.html", data=data, url=url)
 
 
 @faculty.route("/settings", methods=["GET", "POST"])
@@ -2749,7 +2750,7 @@ def settings():
             if hasattr(form, "mask_roles"):
                 form.mask_roles.data = user.mask_roles
 
-    return render_template("faculty/settings.html", settings_form=form, data=data)
+    return render_template_context("faculty/settings.html", settings_form=form, data=data)
 
 
 @faculty.route("/past_feedback/<int:student_id>")
@@ -2812,7 +2813,7 @@ def past_feedback(student_id):
     generic_text = "student feedback"
     return_url = url_for("faculty.past_feedback", student_id=data.id, text=text, url=url)
 
-    return render_template(
+    return render_template_context(
         "student/timeline.html",
         data=data,
         user=user,

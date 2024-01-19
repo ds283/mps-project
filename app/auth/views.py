@@ -8,15 +8,14 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template, redirect, url_for, flash, session, current_app
-from flask_security import login_required, current_user, logout_user, login_user
-
+from flask import redirect, url_for, flash, session, current_app
+from flask_security import current_user, logout_user, login_user
 from sqlalchemy.exc import NoResultFound, MultipleResultsFound
 
+from . import auth
 from ..database import db
 from ..models import User
-
-from . import auth
+from ..shared.context.global_context import render_template_context
 
 
 @auth.route("/logout")
@@ -57,4 +56,4 @@ def logged_out():
     """
 
     logout_user()
-    return render_template("auth/error_logout.html")
+    return render_template_context("auth/error_logout.html")

@@ -9,23 +9,19 @@
 #
 
 
-from flask import render_template, redirect, url_for, flash, request, jsonify, session
+from datetime import datetime
+
+from flask import redirect, url_for, request, session
 from flask_security import current_user, roles_required, roles_accepted
-
 from sqlalchemy import and_, or_
-from sqlalchemy.exc import SQLAlchemyError
-
-from . import user_approver
-
-from ..database import db
-from ..models import StudentData, DegreeProgramme, DegreeType, WorkflowMixin
-
-from ..shared.utils import get_current_year, redirect_url
-from ..shared.conversions import is_integer
 
 import app.ajax as ajax
-
-from datetime import datetime
+from . import user_approver
+from ..database import db
+from ..models import StudentData, DegreeProgramme, DegreeType, WorkflowMixin
+from ..shared.context.global_context import render_template_context
+from ..shared.conversions import is_integer
+from ..shared.utils import redirect_url
 
 
 @user_approver.route("/validate")
@@ -68,7 +64,9 @@ def validate():
         .all()
     )
 
-    return render_template("user_approver/validate.html", url=url, text=text, prog_filter=prog_filter, year_filter=year_filter, programmes=programmes)
+    return render_template_context(
+        "user_approver/validate.html", url=url, text=text, prog_filter=prog_filter, year_filter=year_filter, programmes=programmes
+    )
 
 
 @user_approver.route("/validate_ajax")
@@ -180,7 +178,9 @@ def correct():
         .all()
     )
 
-    return render_template("user_approver/correct.html", url=url, text=text, prog_filter=prog_filter, year_filter=year_filter, programmes=programmes)
+    return render_template_context(
+        "user_approver/correct.html", url=url, text=text, prog_filter=prog_filter, year_filter=year_filter, programmes=programmes
+    )
 
 
 @user_approver.route("/correct_ajax")

@@ -9,12 +9,9 @@
 #
 
 
-from flask import render_template
-
 from ..database import db
+from ..shared.context.global_context import render_template_context
 from ..shared.utils import get_current_year
-
-import re
 
 
 def render_project(
@@ -46,7 +43,7 @@ def render_project(
         hidden = False
 
     # without the sel variable, won't render any of the student-specific items
-    return render_template(
+    return render_template_context(
         "student/show_project.html",
         title=data.name,
         project=data,

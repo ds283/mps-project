@@ -8,9 +8,11 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, get_template_attribute
-from ...models import ProjectClassConfig
+from flask import jsonify, get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
 
+from ...cache import cache
+from ...models import ProjectClassConfig
 
 # language=jinja2
 _cohort = """
@@ -358,23 +360,55 @@ _name = """
 """
 
 
+@cache.memoize()
+def build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+@cache.memoize()
+def build_cohort_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_cohort)
+
+
+@cache.memoize()
+def build_periods_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_periods)
+
+
+@cache.memoize()
+def build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
+
 def submitters_data(students, config, show_name, show_number, sort_number):
     submittter_state = config.submitter_lifecycle
     allow_delete = submittter_state <= ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
 
+    # since these templates are loaded from disk, Jinja2 will cache them automatically
     error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
     error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
     simple_label = get_template_attribute("labels.html", "simple_label")
 
+    # however, template *strings* are not cached
+    # we have to do this ourselves
+    name_templ = build_name_templ()
+    cohort_templ = build_cohort_templ()
+    periods_templ = build_periods_templ()
+    menu_templ = build_menu_templ()
+
     data = [
         {
             "name": {
-                "display": render_template_string(_name, sub=s, show_name=show_name, show_number=show_number, error_block_inline=error_block_inline),
+                "display": render_template(name_templ, sub=s, show_name=show_name, show_number=show_number, error_block_inline=error_block_inline),
                 "sortvalue": s.student.exam_number if sort_number else s.student.user.last_name + s.student.user.first_name,
             },
-            "cohort": {"display": render_template_string(_cohort, sub=s, simple_label=simple_label), "value": s.student.cohort},
-            "periods": render_template_string(_periods, sub=s, config=config, error_block_popover=error_block_popover),
-            "menu": render_template_string(_menu, sub=s, allow_delete=allow_delete),
+            "cohort": {"display": render_template(cohort_templ, sub=s, simple_label=simple_label), "value": s.student.cohort},
+            "periods": render_template(periods_templ, sub=s, config=config, error_block_popover=error_block_popover),
+            "menu": render_template(menu_templ, sub=s, allow_delete=allow_delete),
         }
         for s in students
     ]

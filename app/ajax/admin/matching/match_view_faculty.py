@@ -7,10 +7,13 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+
 from typing import List
 
-from flask import jsonify, render_template_string
+from flask import jsonify, render_template, current_app
+from jinja2 import Template, Environment
 
+from ....cache import cache
 from ....models import MatchingAttempt, MatchingRecord
 
 # language=jinja2
@@ -241,6 +244,30 @@ _workload = """
 """
 
 
+@cache.memoize()
+def build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+@cache.memoize()
+def build_projects_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_projects)
+
+
+@cache.memoize()
+def build_marking_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_marking)
+
+
+@cache.memoize()
+def build_workload_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_workload)
+
+
 def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, type_filter, hint_filter, show_includes):
     data = []
 
@@ -364,25 +391,30 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, ty
         sup_err_msgs = sup_errors.values()
         mark_err_msgs = mark_errors.values()
 
+        name_templ = build_name_templ()
+        projects_templ = build_projects_templ()
+        marking_templ = build_marking_templ()
+        workload_templ = build_workload_templ()
+
         data.append(
             {
                 "name": {
-                    "display": render_template_string(
-                        _name, f=f, overassigned=overassigned, match=match_attempt, enrollments=enrollments, pclass_filter=pclass_filter
+                    "display": render_template(
+                        name_templ, f=f, overassigned=overassigned, match=match_attempt, enrollments=enrollments, pclass_filter=pclass_filter
                     ),
                     "sortvalue": f.user.last_name + f.user.first_name,
                 },
                 "projects": {
-                    "display": render_template_string(_projects, recs=supv_records, pclass_filter=pclass_filter, err_msgs=sup_err_msgs),
+                    "display": render_template(projects_templ, recs=supv_records, pclass_filter=pclass_filter, err_msgs=sup_err_msgs),
                     "sortvalue": len(supv_records),
                 },
                 "marking": {
-                    "display": render_template_string(_marking, recs=mark_records, pclass_filter=pclass_filter, err_msgs=mark_err_msgs),
+                    "display": render_template(marking_templ, recs=mark_records, pclass_filter=pclass_filter, err_msgs=mark_err_msgs),
                     "sortvalue": len(mark_records),
                 },
                 "workload": {
-                    "display": render_template_string(
-                        _workload,
+                    "display": render_template(
+                        workload_templ,
                         m=match_attempt,
                         sup=this_sup,
                         mark=this_mark,

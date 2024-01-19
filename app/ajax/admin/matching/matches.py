@@ -8,7 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, render_template_string, get_template_attribute
+from flask import jsonify, get_template_attribute, render_template, current_app
+from jinja2 import Template, Environment
+
+from ....cache import cache
 
 # language=jinja2
 _status = """
@@ -401,6 +404,36 @@ _name = """
 """
 
 
+@cache.memoize()
+def build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+@cache.memoize()
+def build_status_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_status)
+
+
+@cache.memoize()
+def build_score_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_score)
+
+
+@cache.memoize()
+def build_info_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_info)
+
+
+@cache.memoize()
+def build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
+
 def matches_data(matches, config=None, text=None, url=None, is_root=False):
     """
     Build AJAX JSON payload
@@ -413,13 +446,19 @@ def matches_data(matches, config=None, text=None, url=None, is_root=False):
     number = len(matches)
     allow_compare = number > 1
 
+    name_templ = build_name_templ()
+    status_templ = build_status_templ()
+    score_templ = build_score_templ()
+    info_templ = build_info_templ()
+    menu_templ = build_menu_templ()
+
     data = [
         {
-            "name": render_template_string(_name, m=m, text=text, url=url, simple_label=simple_label),
-            "status": render_template_string(_status, m=m),
-            "score": {"display": render_template_string(_score, m=m), "value": float(m.score) if m.solution_usable and m.score is not None else 0},
-            "info": render_template_string(_info, m=m),
-            "menu": render_template_string(_menu, m=m, text=text, url=url, compare=allow_compare, is_root=is_root, config=config),
+            "name": render_template(name_templ, m=m, text=text, url=url, simple_label=simple_label),
+            "status": render_template(status_templ, m=m),
+            "score": {"display": render_template(score_templ, m=m), "value": float(m.score) if m.solution_usable and m.score is not None else 0},
+            "info": render_template(info_templ, m=m),
+            "menu": render_template(menu_templ, m=m, text=text, url=url, compare=allow_compare, is_root=is_root, config=config),
         }
         for m in matches
     ]

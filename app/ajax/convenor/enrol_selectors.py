@@ -10,13 +10,15 @@
 
 from typing import List
 
-from flask import render_template_string, get_template_attribute
+from flask import get_template_attribute, render_template, current_app
+from jinja2 import Template, Environment
 
+from ...cache import cache
 from ...models import StudentData, ProjectClassConfig
 from ...shared.utils import get_current_year
 
 # language=jinja2
-_enroll_action = """
+_enrol = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle table-button" type="button" data-bs-toggle="dropdown">
         Actions
@@ -48,18 +50,47 @@ _academic_year = """
 """
 
 
+@cache.memoize()
+def build_programme_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_programme)
+
+
+@cache.memoize()
+def build_cohort_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_cohort)
+
+
+@cache.memoize()
+def build_academic_year_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_academic_year)
+
+
+@cache.memoize()
+def build_enrol_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_enrol)
+
+
 def enrol_selectors_data(config: ProjectClassConfig, students: List[StudentData]):
     current_year = get_current_year()
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
+    programme_templ = build_programme_templ()
+    cohort_templ = build_cohort_templ()
+    academic_year_templ = build_academic_year_templ()
+    enrol_templ = build_enrol_templ()
+
     data = [
         {
             "name": s.user.name,
-            "programme": render_template_string(_programme, s=s, simple_label=simple_label),
-            "cohort": render_template_string(_cohort, s=s, simple_label=simple_label),
-            "current_year": render_template_string(_academic_year, s=s, config=config, current_year=current_year, simple_label=simple_label),
-            "actions": render_template_string(_enroll_action, s=s, config=config),
+            "programme": render_template(programme_templ, s=s, simple_label=simple_label),
+            "cohort": render_template(cohort_templ, s=s, simple_label=simple_label),
+            "current_year": render_template(academic_year_templ, s=s, config=config, current_year=current_year, simple_label=simple_label),
+            "actions": render_template(enrol_templ, s=s, config=config),
         }
         for s in students
     ]

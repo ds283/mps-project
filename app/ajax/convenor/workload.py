@@ -8,8 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string
+from flask import render_template, current_app
+from jinja2 import Template, Environment
 
+from ...cache import cache
 from ...models import ProjectClassConfig, User, FacultyData
 
 # language=jinja2
@@ -235,10 +237,39 @@ _workload = """
 """
 
 
+@cache.memoize()
+def build_supervising_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_supervising)
+
+
+@cache.memoize()
+def build_assessing_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_assessing)
+
+
+@cache.memoize()
+def build_presentations_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_presentations)
+
+
+@cache.memoize()
+def build_workload_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_workload)
+
+
 def faculty_workload_data(config: ProjectClassConfig, faculty):
     data = []
 
     count = 0
+
+    supervising_templ = build_supervising_templ()
+    assessing_templ = build_assessing_templ()
+    presentations_templ = build_presentations_templ()
+    workload_templ = build_workload_templ()
 
     u: User
     fd: FacultyData
@@ -254,12 +285,12 @@ def faculty_workload_data(config: ProjectClassConfig, faculty):
         data.append(
             {
                 "name": '<a class="text-decoration-none" ' 'href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
-                "supervising": render_template_string(_supervising, f=fd, config=config, recs=projects),
-                "marking": render_template_string(_assessing, f=fd, config=config, recs=marking),
-                "moderating": render_template_string(_assessing, f=fd, config=config, recs=moderating),
-                "presentations": render_template_string(_presentations, f=fd, config=config, slots=presentations),
-                "workload": render_template_string(
-                    _workload, CATS_sup=CATS_sup, CATS_mark=CATS_mark, CATS_moderate=CATS_moderate, CATS_pres=CATS_pres, f=fd, config=config
+                "supervising": render_template(supervising_templ, f=fd, config=config, recs=projects),
+                "marking": render_template(assessing_templ, f=fd, config=config, recs=marking),
+                "moderating": render_template(assessing_templ, f=fd, config=config, recs=moderating),
+                "presentations": render_template(presentations_templ, f=fd, config=config, slots=presentations),
+                "workload": render_template(
+                    workload_templ, CATS_sup=CATS_sup, CATS_mark=CATS_mark, CATS_moderate=CATS_moderate, CATS_pres=CATS_pres, f=fd, config=config
                 ),
             }
         )

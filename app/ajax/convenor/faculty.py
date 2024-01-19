@@ -7,15 +7,17 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+
 from typing import List, Tuple
 
-from flask import render_template_string, get_template_attribute
+from flask import get_template_attribute, render_template, current_app
+from jinja2 import Template, Environment
 
-from app.models import ProjectClass, ProjectClassConfig, User, FacultyData
-
+from ...cache import cache
+from ...models import ProjectClass, ProjectClassConfig, User, FacultyData
 
 # language=jinja2
-_faculty_menu = """
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button"
             data-bs-toggle="dropdown">
@@ -85,7 +87,7 @@ _name = """
 """
 
 # language=jinja2
-_enrollments = """
+_enrolments = """
 {% set f = d.get_enrollment_record(pclass_id) %}
 {% if f is not none %}
     {{ simple_label(f.enrolled_labels) }}
@@ -117,18 +119,54 @@ _enrollments = """
 """
 
 
+@cache.memoize()
+def build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+@cache.memoize()
+def build_enrolments_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_enrolments)
+
+
+@cache.memoize()
+def build_projects_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_projects)
+
+
+@cache.memoize()
+def build_golive_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_golive)
+
+
+@cache.memoize()
+def build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
+
 def faculty_data(pclass: ProjectClass, config: ProjectClassConfig, row_list: List[Tuple[User, FacultyData]]):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
+    name_templ = build_name_templ()
+    enrolments_templ = build_enrolments_templ()
+    projects_templ = build_projects_templ()
+    golive_templ = build_golive_templ()
+    menu_templ = build_menu_templ()
+
     data = [
         {
-            "name": render_template_string(_name, u=u, d=d, pclass_id=pclass.id),
+            "name": render_template(name_templ, u=u, d=d, pclass_id=pclass.id),
             "email": '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=u.email),
             "user": u.username,
-            "enrolled": render_template_string(_enrollments, d=d, pclass_id=pclass.id, simple_label=simple_label),
-            "projects": render_template_string(_projects, d=d, pclass=pclass, simple_label=simple_label),
-            "golive": render_template_string(_golive, config=config, pclass=pclass, user=u, userdata=d),
-            "menu": render_template_string(_faculty_menu, pclass=pclass, user=u, userdata=d),
+            "enrolled": render_template(enrolments_templ, d=d, pclass_id=pclass.id, simple_label=simple_label),
+            "projects": render_template(projects_templ, d=d, pclass=pclass, simple_label=simple_label),
+            "golive": render_template(golive_templ, config=config, pclass=pclass, user=u, userdata=d),
+            "menu": render_template(menu_templ, pclass=pclass, user=u, userdata=d),
         }
         for u, d in row_list
     ]

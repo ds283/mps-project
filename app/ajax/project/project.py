@@ -11,7 +11,8 @@
 from typing import Optional
 from urllib import parse
 
-from flask import render_template_string, current_app, url_for, get_template_attribute
+from flask import current_app, url_for, get_template_attribute, render_template
+from jinja2 import Template, Environment
 from sqlalchemy.event import listens_for
 
 from ...cache import cache
@@ -30,7 +31,7 @@ from ...models import (
 )
 
 # language=jinja2
-_project_name = """
+_name = """
 {% if project.active %}
     REPERRORSYMBOL
 {% endif %}
@@ -58,7 +59,7 @@ _project_name = """
 
 
 # language=jinja2
-_project_name_labels = """
+_name_labels = """
 <div>
     {% for pclass in project.project_classes %}
         {% if pclass.active %}
@@ -95,7 +96,7 @@ _owner = """
 
 
 # language=jinja2
-_project_status = """
+_status = """
 {% if not project.active %}
     <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Project inactive</span>
 {% else %}
@@ -111,7 +112,7 @@ _project_status = """
 
 
 # language=jinja2
-_project_pclasses = """
+_pclasses = """
 {% for pclass in project.project_classes %}
     {% set style = pclass.make_CSS_style() %}
     <a class="badge text-decoration-none text-nohover-dark bg-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
@@ -120,7 +121,7 @@ _project_pclasses = """
 
 
 # language=jinja2
-_project_meetingreqd = """
+_meetingreqd = """
 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
     <span class="badge bg-danger">Required</span>
 {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
@@ -134,7 +135,7 @@ _project_meetingreqd = """
 
 
 # language=jinja2
-_project_prefer = """
+_prefer = """
 {% for programme in project.ordered_programmes %}
     {% if programme.active %}
         {{ simple_label(programme.short_label) }}
@@ -144,7 +145,7 @@ _project_prefer = """
 
 
 # language=jinja2
-_project_skills = """
+_skills = """
 {% for skill in skills %}
     {% if skill.is_active %}
       {{ simple_label(skill.short_label) }}
@@ -372,10 +373,71 @@ _pclass_proxy_str = str(_pclass_proxy)
 
 
 @cache.memoize()
-def _name_labels(project_id):
+def build_name_labels_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name_labels)
+
+
+@cache.memoize()
+def build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+@cache.memoize()
+def build_owner_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_owner)
+
+
+@cache.memoize()
+def build_status_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_status)
+
+
+@cache.memoize()
+def build_pclasses_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_pclasses)
+
+
+@cache.memoize()
+def build_meetingreqd_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_meetingreqd)
+
+
+@cache.memoize()
+def build_affiliation_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_affiliation)
+
+
+@cache.memoize()
+def build_prefer_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_prefer)
+
+
+@cache.memoize()
+def build_skills_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_skills)
+
+
+@cache.memoize()
+def build_menu_templ(key: str) -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menus[key])
+
+
+@cache.memoize()
+def _render_name_labels(project_id):
     p: Project = db.session.query(Project).filter_by(id=project_id).one()
 
-    return render_template_string(_project_name_labels, project=p)
+    name_labels_templ = build_name_labels_templ()
+    return render_template(name_labels_templ, project=p)
 
 
 @cache.memoize()
@@ -385,22 +447,30 @@ def _element(project_id, desc_id, menu_template, in_selector, in_submitter, sele
     if desc_id is not None:
         d = db.session.query(ProjectDescription).filter_by(id=desc_id).one()
 
-    menu_string = _menus[menu_template]
-
     simple_label = get_template_attribute("labels.html", "simple_label")
     truncate = get_template_attribute("macros.html", "truncate")
 
+    name_templ = build_name_templ()
+    owner_templ = build_owner_templ()
+    status_templ = build_status_templ()
+    pclasses_templ = build_pclasses_templ()
+    meetingreqd_templ = build_meetingreqd_templ()
+    affiliation_templ = build_affiliation_templ()
+    prefer_templ = build_prefer_templ()
+    skills_templ = build_skills_templ()
+    menu_templ = build_menu_templ(menu_template)
+
     return {
-        "name": render_template_string(_project_name, project=p, desc=d, text="REPTEXT", url="REPURL"),
-        "owner": render_template_string(_owner, project=p),
-        "status": render_template_string(_project_status, project=p),
-        "pclasses": render_template_string(_project_pclasses, project=p),
-        "meeting": render_template_string(_project_meetingreqd, project=p),
-        "group": render_template_string(_affiliation, project=p, simple_label=simple_label, truncate=truncate),
-        "prefer": render_template_string(_project_prefer, project=p, simple_label=simple_label),
-        "skills": render_template_string(_project_skills, skills=p.ordered_skills, simple_label=simple_label),
-        "menu": render_template_string(
-            menu_string,
+        "name": render_template(name_templ, project=p, desc=d, text="REPTEXT", url="REPURL"),
+        "owner": render_template(owner_templ, project=p),
+        "status": render_template(status_templ, project=p),
+        "pclasses": render_template(pclasses_templ, project=p),
+        "meeting": render_template(meetingreqd_templ, project=p),
+        "group": render_template(affiliation_templ, project=p, simple_label=simple_label, truncate=truncate),
+        "prefer": render_template(prefer_templ, project=p, simple_label=simple_label),
+        "skills": render_template(skills_templ, skills=p.ordered_skills, simple_label=simple_label),
+        "menu": render_template(
+            menu_templ,
             project=p,
             desc=d,
             config_id=_config_proxy,
@@ -444,7 +514,7 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
     name = name.replace("REPTEXT", text_enc, 1).replace("REPURL", url_enc, 1)
 
     if name_labels:
-        name = name.replace("REPNAMELABELS", _name_labels(project_id), 1)
+        name = name.replace("REPNAMELABELS", _render_name_labels(project_id), 1)
     else:
         name = name.replace("REPNAMELABELS", "", 1)
 
@@ -481,7 +551,7 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
     else:
         name = name.replace("REPSUBMITTING", "", 1)
 
-    status = replace_enrollment_text(e, status)
+    status = replace_enrolment_text(e, status)
     name = replace_error_block(p, d, show_errors, name)
     name = replace_comment_notification(current_user_id, name, p)
     status = replace_approval_tags(p, show_approvals, config, status)
@@ -491,6 +561,12 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
     return record
 
 
+@cache.memoize()
+def build_error_block_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_error_block)
+
+
 def replace_error_block(p: Project, d: ProjectDescription, show_errors: bool, name: str):
     block = ""
     symbol = ""
@@ -498,15 +574,25 @@ def replace_error_block(p: Project, d: ProjectDescription, show_errors: bool, na
     error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
     error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
 
+    error_block_templ = build_error_block_templ()
+
     if show_errors:
         if d is not None and d.has_issues:
-            block = render_template_string(
-                _error_block, errors=d.errors, warnings=d.warnings, error_block_inline=error_block_inline, error_block_popover=error_block_popover
+            block = render_template(
+                error_block_templ,
+                errors=d.errors,
+                warnings=d.warnings,
+                error_block_inline=error_block_inline,
+                error_block_popover=error_block_popover,
             )
             symbol = '<i class="fas fa-exclamation-triangle text-danger"></i>'
         elif p is not None and p.has_issues:
-            block = render_template_string(
-                _error_block, errors=p.errors, warnings=p.warnings, error_block_inline=error_block_inline, error_block_popover=error_block_popover
+            block = render_template(
+                error_block_templ,
+                errors=p.errors,
+                warnings=p.warnings,
+                error_block_inline=error_block_inline,
+                error_block_popover=error_block_popover,
             )
             symbol = '<i class="fas fa-exclamation-triangle text-danger"></i>'
 
@@ -605,16 +691,24 @@ def replace_comment_notification(current_user_id, name, p):
     return name
 
 
-def replace_enrollment_text(e, status):
-    repenroll = ""
+@cache.memoize()
+def build_reenrol_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string("{{ simple_label(data) }}")
+
+
+def replace_enrolment_text(e, status):
+    repenrol = ""
+
+    enrol_templ = build_reenrol_templ()
 
     if e is not None:
         simple_label = get_template_attribute("labels.html", "simple_label")
 
         label_data = e.supervisor_label
-        repenroll = render_template_string("{{ simple_label(data) }}", data=label_data, simple_label=simple_label)
+        repenrol = render_template(enrol_templ, data=label_data, simple_label=simple_label)
 
-    status = status.replace("REPENROLLMENT", repenroll, 1)
+    status = status.replace("REPENROLLMENT", repenrol, 1)
     return status
 
 
@@ -623,7 +717,7 @@ def _invalidate_cache(project_id: int):
         cache.delete_memoized(_element, project_id, t, True)
         cache.delete_memoized(_element, project_id, t, False)
 
-    cache.delete_memoized(_name_labels, project_id)
+    cache.delete_memoized(_render_name_labels, project_id)
 
 
 @listens_for(Project, "before_update")

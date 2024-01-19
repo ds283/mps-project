@@ -8,10 +8,12 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, get_template_attribute
+from flask import get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
 
 from app import db
 from app.models import SelectingStudent, StudentData, EmailLog, User
+from ....cache import cache
 
 # language=jinja2
 _student = """
@@ -346,6 +348,48 @@ _scores = """
 """
 
 
+@cache.memoize()
+def build_student_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_student)
+
+
+@cache.memoize()
+def build_pclass_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_pclass)
+
+
+@cache.memoize()
+def build_details_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_details)
+
+
+@cache.memoize()
+def build_project_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_project)
+
+
+@cache.memoize()
+def build_marker_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_marker)
+
+
+@cache.memoize()
+def build_rank_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_rank)
+
+
+@cache.memoize()
+def build_scores_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_scores)
+
+
 def student_view_data(selector_data, attempt_id, text=None, url=None):
     # selector_data is a list of ((lists of) MatchingRecord, delta-value, score-value) triples
 
@@ -360,10 +404,18 @@ def student_view_data(selector_data, attempt_id, text=None, url=None):
 
         return emails
 
+    student_templ = build_student_templ()
+    pclass_templ = build_pclass_templ()
+    details_templ = build_details_templ()
+    project_templ = build_project_templ()
+    marker_templ = build_marker_templ()
+    rank_templ = build_rank_templ()
+    scores_templ = build_scores_templ()
+
     data = [
         {
-            "student": render_template_string(
-                _student,
+            "student": render_template(
+                student_templ,
                 sel=r[0].selector,
                 attempt_id=attempt_id,
                 emails=get_emails(r[0].selector),
@@ -373,12 +425,12 @@ def student_view_data(selector_data, attempt_id, text=None, url=None):
                 small_swatch=small_swatch,
                 medium_swatch=medium_swatch,
             ),
-            "pclass": render_template_string(_pclass, sel=r[0].selector, small_swatch=small_swatch),
-            "details": render_template_string(_details, sel=r[0].selector, unformatted_label=unformatted_label),
-            "project": render_template_string(_project, recs=r),
-            "marker": render_template_string(_marker, recs=r),
-            "rank": render_template_string(_rank, recs=r, delta=delta),
-            "scores": render_template_string(_scores, recs=r, total_score=score),
+            "pclass": render_template(pclass_templ, sel=r[0].selector, small_swatch=small_swatch),
+            "details": render_template(details_templ, sel=r[0].selector, unformatted_label=unformatted_label),
+            "project": render_template(project_templ, recs=r),
+            "marker": render_template(marker_templ, recs=r),
+            "rank": render_template(rank_templ, recs=r, delta=delta),
+            "scores": render_template(scores_templ, recs=r, total_score=score),
         }
         for r, delta, score in selector_data
     ]

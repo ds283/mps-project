@@ -65,12 +65,12 @@
                                     {% if batch.report and batch.report|length > 0 %}
                                         <div class="text-muted small mt-1">
                                             <span tabindex="1" data-bs-toggle="popover" title="Processing report" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ batch.report }}">
-                                                View report <i class="ms-1 fas fa-chevron-right"></i>
+                                                View import report <i class="ms-1 fas fa-chevron-right"></i>
                                             </span>
                                         </div>
                                     {% else %}
                                         <div class="text-muted small mt-1">
-                                            A report was not generated
+                                            An import report was not generated
                                         </div>
                                     {% endif %}
                                 {% endif %}

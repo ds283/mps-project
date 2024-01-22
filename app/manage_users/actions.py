@@ -17,8 +17,8 @@ from flask_security import user_registered
 from flask_security.confirmable import generate_confirmation_link
 from flask_security.utils import hash_password, do_flash, get_message, config_value, send_mail
 
-from app import db, User
-from app.models import Role
+from ..database import db
+from ..models import Role, User
 
 
 def _randompassword():

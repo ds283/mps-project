@@ -16,9 +16,10 @@ from flask_security import current_user
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
-from app import db, ajax
-from app.models import ProjectTagGroup, ProjectTag, ResearchGroup, TransferableSkill, SkillGroup, ProjectClass, Project, ProjectClassConfig, User
-from app.tools import ServerSideSQLHandler, ServerSideInMemoryHandler
+from app import ajax
+from ..database import db
+from ..models import ProjectTagGroup, ProjectTag, ResearchGroup, TransferableSkill, SkillGroup, ProjectClass, Project, ProjectClassConfig, User
+from ..tools import ServerSideSQLHandler, ServerSideInMemoryHandler
 
 
 def create_new_tags(form):

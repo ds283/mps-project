@@ -11,9 +11,9 @@
 from flask import get_template_attribute, current_app, render_template
 from jinja2 import Template, Environment
 
-from app import db
-from app.models import SelectingStudent, StudentData, EmailLog, User
 from ....cache import cache
+from ....database import db
+from ....models import SelectingStudent, StudentData, EmailLog, User
 
 # language=jinja2
 _student = """

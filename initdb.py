@@ -21,7 +21,7 @@ from flask_migrate import upgrade
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from app import db
+from app.database import db
 from app.shared.cloud_object_store import ObjectStore, ObjectMeta
 from app.shared.scratch import ScratchFileManager
 

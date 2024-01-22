@@ -493,7 +493,7 @@ class ProjectClassMixin:
         description="By default, selectors are auto-enrolled based on their degree programme. "
         "If this option is selected then selectors from all eligible years will be "
         "auto-enrolled as selectors. If no project selection is made, the selector "
-        "is deemed not to have opted-in.",
+        "is assumed not to have opted-in.",
     )
 
     auto_enrol_enable = BooleanField(

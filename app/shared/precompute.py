@@ -8,14 +8,13 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from datetime import datetime
+
+from celery import group
 from flask import current_app
 
 from ..database import db
 from ..shared.internal_redis import get_redis
-
-from celery import group
-
-from datetime import datetime
 
 
 def precompute_at_login(user, celery, now=None, autocommit=False):
@@ -25,15 +24,10 @@ def precompute_at_login(user, celery, now=None, autocommit=False):
         lp.apply_async(args=(user.id,))
 
     if user.has_role("admin") or user.has_role("root"):
-        # admin or root users are able to manage users, so we need to cache
-        user_accounts = celery.tasks["app.tasks.precompute.user_account_data"]
-        faculty_accounts = celery.tasks["app.tasks.precompute.user_faculty_data"]
-        student_accounts = celery.tasks["app.tasks.precompute.user_student_data"]
-
         # these users can also have edits made to user accounts bounced back to them
         user_corrections = celery.tasks["app.tasks.precompute.user_corrections"]
 
-        task = group(user_accounts.si(user.id), faculty_accounts.si(user.id), student_accounts.si(user.id), user_corrections.si(user.id))
+        task = user_corrections.si(user.id)
         task.apply_async()
 
     if user.has_role("faculty"):

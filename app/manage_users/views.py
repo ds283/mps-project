@@ -512,23 +512,23 @@ def users_ajax():
     filter = request.args.get("filter")
 
     if filter == "active":
-        base_query = db.session.query(User.id).filter_by(active=True)
+        base_query = db.session.query(User).filter_by(active=True)
     elif filter == "inactive":
-        base_query = db.session.query(User.id).filter_by(active=False)
+        base_query = db.session.query(User).filter_by(active=False)
     elif filter == "student":
-        base_query = db.session.query(User.id).filter(User.roles.any(Role.name == "student"))
+        base_query = db.session.query(User).filter(User.roles.any(Role.name == "student"))
     elif filter == "faculty":
-        base_query = db.session.query(User.id).filter(User.roles.any(Role.name == "faculty"))
+        base_query = db.session.query(User).filter(User.roles.any(Role.name == "faculty"))
     elif filter == "office":
-        base_query = db.session.query(User.id).filter(User.roles.any(Role.name == "office"))
+        base_query = db.session.query(User).filter(User.roles.any(Role.name == "office"))
     elif filter == "reports":
-        base_query = db.session.query(User.id).filter(User.roles.any(Role.name == "reports"))
+        base_query = db.session.query(User).filter(User.roles.any(Role.name == "reports"))
     elif filter == "admin":
-        base_query = db.session.query(User.id).filter(User.roles.any(Role.name == "admin"))
+        base_query = db.session.query(User).filter(User.roles.any(Role.name == "admin"))
     elif filter == "root":
-        base_query = db.session.query(User.id).filter(User.roles.any(Role.name == "root"))
+        base_query = db.session.query(User).filter(User.roles.any(Role.name == "root"))
     else:
-        base_query = db.session.query(User.id)
+        base_query = db.session.query(User)
 
     name = {
         "search": func.concat(User.first_name, " ", User.last_name),
@@ -545,7 +545,7 @@ def users_ajax():
     columns = {"name": name, "user": user, "email": email, "confirm": confirm, "active": active, "details": details, "role": role}
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(partial(ajax.users.build_accounts_data, current_user.id))
+        return handler.build_payload(partial(ajax.users.build_accounts_data, current_user))
 
 
 @manage_users.route("/users_students_ajax", methods=["POST"])
@@ -561,7 +561,7 @@ def users_students_ajax():
     filter_SEND_pre = request.args.get("SEND")
 
     base_query = (
-        db.session.query(StudentData.id)
+        db.session.query(StudentData)
         .join(User, User.id == StudentData.id)
         .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
@@ -616,7 +616,7 @@ def users_students_ajax():
     columns = {"name": name, "active": active, "programme": programme, "cohort": cohort, "acadyear": acadyear}
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(partial(ajax.users.build_student_data, current_user.id))
+        return handler.build_payload(partial(ajax.users.build_student_data, current_user))
 
 
 @manage_users.route("/users_faculty_ajax", methods=["POST"])
@@ -627,7 +627,7 @@ def users_faculty_ajax():
     pclass_filter = request.args.get("pclass")
     filter_CATS_pre = request.args.get("CATS")
 
-    base_query = db.session.query(FacultyData.id).join(User, User.id == FacultyData.id)
+    base_query = db.session.query(FacultyData).join(User, User.id == FacultyData.id)
 
     flag, group_value = is_integer(group_filter)
     if flag:
@@ -659,7 +659,7 @@ def users_faculty_ajax():
     columns = {"name": name, "active": active, "office": office}
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(partial(ajax.users.build_faculty_data, current_user.id))
+        return handler.build_payload(partial(ajax.users.build_faculty_data, current_user))
 
 
 @manage_users.route("/batch_create_users", methods=["GET", "POST"])

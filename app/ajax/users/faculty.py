@@ -7,16 +7,14 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from typing import List
 
-from flask import render_template_string, get_template_attribute
-from sqlalchemy.event import listens_for
+from flask import get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
 
-from .shared import menu, name, active
+from .shared import build_name_templ, build_active_templ, build_menu_templ
 from ...cache import cache
-from ...database import db
-from ...models import User, FacultyData, EnrollmentRecord
-from ...shared.utils import detuple
-
+from ...models import User, FacultyData
 
 # language=jinja2
 _affiliation = """
@@ -72,113 +70,42 @@ _settings = """
 
 
 @cache.memoize()
-def _element(user_id, current_user_id):
-    f = db.session.query(FacultyData).filter_by(id=user_id).one()
-    u = db.session.query(User).filter_by(id=user_id).one()
-    cu = db.session.query(User).filter_by(id=current_user_id).one()
+def _build_settings_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_settings)
+
+
+@cache.memoize()
+def _build_affiliation_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_affiliation)
+
+
+@cache.memoize()
+def _build_enrolled_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_enrolled)
+
+
+def build_faculty_data(current_user: User, faculty: List[FacultyData]):
+    name_templ: Template = build_name_templ()
+    active_templ: Template = build_active_templ()
+    settings_templ: Template = _build_settings_templ()
+    affiliation_templ: Template = _build_affiliation_templ()
+    enrolled_templ: Template = _build_enrolled_templ()
+    menu_templ: Template = build_menu_templ()
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    return {
-        "name": render_template_string(name, u=u, f=f, simple_label=simple_label),
-        "active": render_template_string(active, u=u, simple_label=simple_label),
-        "office": f.office,
-        "settings": render_template_string(_settings, f=f),
-        "affiliation": render_template_string(_affiliation, f=f, simple_label=simple_label),
-        "enrolled": render_template_string(_enrolled, f=f, simple_label=simple_label),
-        "menu": render_template_string(menu, user=u, cuser=cu, pane="faculty"),
-    }
-
-
-def _process(user_id, current_user_id):
-    u = db.session.query(User).filter_by(id=user_id).one()
-
-    record = _element(user_id, current_user_id)
-
-    name = record["name"]
-    if u.currently_active:
-        name = name.replace("REPACTIVE", '<span class="badge bg-success">ACTIVE</span>', 1)
-    else:
-        name = name.replace("REPACTIVE", "", 1)
-
-    record.update({"name": name})
-
-    return record
-
-
-def _delete_cache_entry(user_id):
-    ids = db.session.query(User.id).filter_by(active=True).all()
-    for id in ids:
-        cache.delete_memoized(_element, user_id, id[0])
-
-
-@listens_for(User, "before_insert")
-def _User_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.id)
-
-
-@listens_for(User, "before_update")
-def _User_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        if db.object_session(target).is_modified(target, include_collections=False):
-            _delete_cache_entry(target.id)
-
-
-@listens_for(User, "before_delete")
-def _User_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.id)
-
-
-@listens_for(FacultyData, "before_update")
-def _FacultyData_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        # this turns out to be an extremely expensive flush, so we want to avoid it
-        # unless the contents of FacultyData are really changed. We instrument the affiliations
-        # collection separately, and we don't care about other collections such as 'assessor_for'
-        if db.object_session(target).is_modified(target, include_collections=False):
-            _delete_cache_entry(target.id)
-
-
-@listens_for(FacultyData, "before_delete")
-def _FacultyData_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.id)
-
-
-@listens_for(FacultyData.affiliations, "append")
-def _FacultyData_affiliations_insert_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.id)
-
-
-@listens_for(FacultyData.affiliations, "remove")
-def _FacultyData_affiliations_remove_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.id)
-
-
-@listens_for(EnrollmentRecord, "before_insert")
-def _EnrollmentRecord_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.owner_id)
-
-
-@listens_for(EnrollmentRecord, "before_update")
-def _EnrollmentRecord_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        if db.object_session(target).is_modified(target, include_collections=False):
-            _delete_cache_entry(target.owner_id)
-
-
-@listens_for(EnrollmentRecord, "before_delete")
-def _EnrollmentRecord_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.owner_id)
-
-
-def build_faculty_data(current_user_id, faculty_ids):
-    data = [_process(detuple(f_id), current_user_id) for f_id in faculty_ids]
-
-    return data
+    return [
+        {
+            "name": render_template(name_templ, u=fd.user, f=fd, simple_label=simple_label),
+            "active": render_template(active_templ, u=fd.user, simple_label=simple_label),
+            "office": fd.office,
+            "settings": render_template(settings_templ, f=fd),
+            "affiliation": render_template(affiliation_templ, f=fd, simple_label=simple_label),
+            "enrolled": render_template(enrolled_templ, f=fd, simple_label=simple_label),
+            "menu": render_template(menu_templ, user=fd.user, cuser=current_user, pane="faculty"),
+        }
+        for fd in faculty
+    ]

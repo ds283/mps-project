@@ -8,18 +8,15 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app
-
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import and_, or_
-
-from celery import group, chain
+from celery import group
 from celery.exceptions import Ignore
-
-from ..database import db
-from ..models import User, FacultyData, StudentData, SelectingStudent, Project, LiveProject, WorkflowMixin, ProjectDescription, ProjectClassConfig
+from flask import current_app
+from sqlalchemy import and_, or_
+from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
+from ..database import db
+from ..models import User, FacultyData, StudentData, SelectingStudent, Project, LiveProject, WorkflowMixin, ProjectDescription, ProjectClassConfig
 
 
 def register_precompute_tasks(celery):
@@ -141,51 +138,6 @@ def register_precompute_tasks(celery):
     @celery.task(bind=True)
     def cache_project_rejected(self, project_id, current_user_id):
         ajax.project_approver.rejected_data([project_id], current_user_id)
-
-    @celery.task(bind=True)
-    def user_account_data(self, current_user_id):
-        try:
-            data = db.session.query(User).all()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        task = group(cache_user_account.si(user.id, current_user_id) for user in data)
-        task.apply_async()
-
-    @celery.task(bind=True)
-    def user_faculty_data(self, current_user_id):
-        try:
-            data = db.session.query(FacultyData).all()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        task = group(cache_user_faculty.si(user.id, current_user_id) for user in data)
-        task.apply_async()
-
-    @celery.task(bind=True)
-    def user_student_data(self, current_user_id):
-        try:
-            data = db.session.query(StudentData).all()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        task = group(cache_user_student.si(user.id, current_user_id) for user in data)
-        task.apply_async()
-
-    @celery.task(bind=True)
-    def cache_user_account(self, user_id, current_user_id):
-        ajax.users.build_accounts_data(current_user_id, [user_id])
-
-    @celery.task(bind=True)
-    def cache_user_faculty(self, user_id, current_user_id):
-        ajax.users.build_faculty_data(current_user_id, [user_id])
-
-    @celery.task(bind=True)
-    def cache_user_student(self, user_id, current_user_id):
-        ajax.users.build_student_data(current_user_id, [user_id])
 
     @celery.task(bind=True)
     def assessor_data(self, current_user_id):

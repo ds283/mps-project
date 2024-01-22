@@ -7,13 +7,16 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from flask import current_app
+from jinja2 import Template, Environment
 
+from ...cache import cache
 
 # language=jinja2
 name = """
 <a class="text-decoration-none" href="mailto:{{ u.email }}">{{ u.name }}</a>
 <div>
-    {{ 'REPACTIVE'|safe }}
+    {% if u.currently_active %}<span class="badge bg-success">ACTIVE</span>{% endif %}
     {% set sd = u.student_data %}
     {% if sd and sd is not none %}
         {% set programme = sd.programme %}
@@ -168,3 +171,39 @@ programme = """
 academic_year = """
 {{ simple_label(s.academic_year_label(show_details=True)) }}
 """
+
+
+@cache.memoize()
+def build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(name)
+
+
+@cache.memoize()
+def build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(menu)
+
+
+@cache.memoize()
+def build_active_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(active)
+
+
+@cache.memoize()
+def build_programme_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(programme)
+
+
+@cache.memoize()
+def build_cohort_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(cohort)
+
+
+@cache.memoize()
+def build_academic_year_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(academic_year)

@@ -8,15 +8,14 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, get_template_attribute
-from sqlalchemy.event import listens_for
+from typing import List
 
-from .shared import menu, name, active
+from flask import get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
+
+from .shared import build_active_templ, build_menu_templ, build_name_templ
 from ...cache import cache
-from ...database import db
-from ...models import User, Role
-from ...shared.utils import detuple
-
+from ...models import User
 
 # language=jinja2
 _roles = """
@@ -63,100 +62,38 @@ _status = """
 
 
 @cache.memoize()
-def _element(user_id, current_user_id):
-    u = db.session.query(User).filter_by(id=user_id).one()
-    cu = db.session.query(User).filter_by(id=current_user_id).one()
+def _build_roles_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_roles)
+
+
+@cache.memoize()
+def _build_status_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_status)
+
+
+def build_accounts_data(current_user: User, users: List[User]):
+    name_templ: Template = build_name_templ()
+    roles_templ: Template = _build_roles_templ()
+    status_templ: Template = _build_status_templ()
+    active_templ: Template = build_active_templ()
+    menu_templ: Template = build_menu_templ()
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    return {
-        "name": render_template_string(name, u=u, simple_label=simple_label),
-        "user": u.username,
-        "email": '<a class="text-decoration-none" href="mailto:{m}">{m}</a>'.format(m=u.email),
-        "confirm": u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S")
-        if u.confirmed_at is not None
-        else '<span class="badge bg-warning text-dark">Not confirmed</span>',
-        "active": render_template_string(active, u=u, simple_label=simple_label),
-        "details": render_template_string(_status, u=u),
-        "role": render_template_string(_roles, user=u, simple_label=simple_label),
-        "menu": render_template_string(menu, user=u, cuser=cu, pane="accounts"),
-    }
-
-
-def _process(user_id, current_user_id):
-    u = db.session.query(User).filter_by(id=user_id).one()
-
-    record = _element(user_id, current_user_id)
-
-    name = record["name"]
-    if u.currently_active:
-        name = name.replace("REPACTIVE", '<span class="badge bg-success">ACTIVE</span>', 1)
-    else:
-        name = name.replace("REPACTIVE", "", 1)
-
-    record.update({"name": name})
-
-    return record
-
-
-def _delete_cache_entry(user_id):
-    ids = db.session.query(User.id).filter_by(active=True).all()
-    for id in ids:
-        cache.delete_memoized(_element, user_id, id[0])
-
-
-@listens_for(User, "before_insert")
-def _User_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.id)
-
-
-@listens_for(User, "before_update")
-def _User_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.id)
-
-
-@listens_for(User, "before_delete")
-def _User_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.id)
-
-
-@listens_for(User.roles, "append")
-def _User_role_append_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.id)
-
-
-@listens_for(User.roles, "remove")
-def _User_role_remove_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.id)
-
-
-def _delete_cache_entry_role_change(role):
-    for user in role.users:
-        _delete_cache_entry(user.id)
-
-
-@listens_for(Role, "before_update")
-def _Role_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        # this turns out to be an extremely expensive flush, so we want to avoid it
-        # if all that is happening is that we're creating a new user that modified Role's backref
-        # collection 'users'
-        if db.object_session(target).is_modified(target, include_collections=False):
-            _delete_cache_entry_role_change(target)
-
-
-@listens_for(Role, "before_delete")
-def _Role_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry_role_change(target)
-
-
-def build_accounts_data(current_user_id, user_ids):
-    data = [_process(detuple(u_id), current_user_id) for u_id in user_ids]
-
-    return data
+    return [
+        {
+            "name": render_template(name_templ, u=u, simple_label=simple_label),
+            "user": u.username,
+            "email": '<a class="text-decoration-none" href="mailto:{m}">{m}</a>'.format(m=u.email),
+            "confirm": u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S")
+            if u.confirmed_at is not None
+            else '<span class="badge bg-warning text-dark">Not confirmed</span>',
+            "active": render_template(active_templ, u=u, simple_label=simple_label),
+            "details": render_template(status_templ, u=u),
+            "role": render_template(roles_templ, user=u, simple_label=simple_label),
+            "menu": render_template(menu_templ, user=u, cuser=current_user, pane="accounts"),
+        }
+        for u in users
+    ]

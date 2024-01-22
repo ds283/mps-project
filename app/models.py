@@ -4089,13 +4089,13 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     @property
     def has_timeline(self):
         # we allow published or unpublished records in the timeline
-        return get_count(self.selecting.filter_by(retired=True)) > 0 or get_count(self.submitting.filter_by(retired=True)) > 0
+        return self.selecting.filter_by(retired=True).first() is not None or self.submitting.filter_by(retired=True).first() is not None
 
     @property
     def has_previous_submissions(self):
         # this is intended to count "real" submissions, so we drop any records that
         # have not been published
-        return get_count(self.submitting.filter_by(retired=True, published=True)) > 0
+        return self.submitting.filter_by(retired=True, published=True).first() is not None
 
     def collect_student_records(self):
         selector_records = {}
@@ -9203,7 +9203,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
 
     @property
     def has_submission_list(self):
-        return get_count(self.selections) > 0
+        return self.selections.first() is not None
 
     @property
     def academic_year(self):
@@ -9239,13 +9239,14 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         #     return self.academic_year == config.start_year - (1 if config.select_in_previous_cycle else 0)
 
         # if it is none, check whether there are any SubmittingStudent instances for this project type
-        count = get_count(
+        return (
             db.session.query(SubmittingStudent)
             .filter(SubmittingStudent.student_id == self.student_id)
             .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
             .filter(ProjectClassConfig.pclass_id == self.config.pclass_id)
+            .first()
+            is None
         )
-        return count == 0
 
     @property
     def is_optional(self):

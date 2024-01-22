@@ -51,11 +51,6 @@ def precompute_at_login(user, celery, now=None, autocommit=False):
         # we don't cache these on a per-user basis, but rather globally for everyone
         precompute_for_reports(celery)
 
-    if user.has_role("user_approver"):
-        # likewise, 'user_approver' roles need tables for all the students to approve, but these are
-        # shared between everyone on the user approvals team. So we cache them globally for everyone
-        precompute_for_user_approver(celery)
-
     # reset last precompute time for this user
     if now is None:
         now = datetime.now()
@@ -100,18 +95,6 @@ def precompute_for_reports(celery):
     exc.apply_async()
 
     db.set("PRECOMPUTE_LAST_REPORTS", datetime.now().timestamp())
-
-
-def precompute_for_user_approver(celery):
-    db = get_redis()
-
-    if not _check_if_compute(db, "PRECOMPUTE_LAST_USER_APPROVER"):
-        return
-
-    ua = celery.tasks["app.tasks.precompute.user_approvals"]
-    ua.apply_async()
-
-    db.set("PRECOMPUTE_LAST_USER_APPROVER", datetime.now().timestamp())
 
 
 def precompute_faculty_projects(celery):

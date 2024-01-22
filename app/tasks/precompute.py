@@ -68,22 +68,6 @@ def register_precompute_tasks(celery):
         ajax.student.selector_liveprojects_data(sel_id, is_live, [proj_id])
 
     @celery.task(bind=True)
-    def user_approvals(self):
-        try:
-            data = db.session.query(StudentData).filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED).all()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        task = group(cache_user_approval.si(student.id) for student in data)
-        task.apply_async()
-
-    @celery.task(bind=True)
-    def cache_user_approval(self, user_id):
-        # request generation of table data for this validation line
-        ajax.user_approver.validate_data([user_id])
-
-    @celery.task(bind=True)
     def user_corrections(self, current_user_id):
         try:
             data = (

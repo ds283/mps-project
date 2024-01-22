@@ -10,7 +10,7 @@
     {% set year_filter = 'all' %}
 {% endif %}
 
-{% from "datatables.html" import import_datatables %}
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
 
 {% block scripts %}
     {{ super() }}
@@ -23,22 +23,54 @@
             $('#validation-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/user_approver/validate_ajax?prog_filter={{ prog_filter }}&year_filter={{ year_filter }}&url={{ url|urlencode }}&text={{ text|urlencode }}', dataSrc: '' },
+                serverSide: true,
+                processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: {
+                    url: $SCRIPT_ROOT + '/user_approver/validate_ajax?prog_filter={{ prog_filter }}&year_filter={{ year_filter }}&url={{ url|urlencode }}&text={{ text|urlencode }}',
+                    type: 'POST',
+                    data: function (args) {
+                        return {"args": JSON.stringify(args)};
+                    }
+                },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'}); },
                 columns: [
                     { data: 'name',
-                      render: {
-                        _: 'display',
-                        sort: 'sortstring'
-                    } },
-                    { data: 'email' },
-                    { data: 'year' },
-                    { data: 'exam_number' },
-                    { data: 'registration_number' },
-                    { data: 'programme' },
-                    { data: 'menu' }
+                        orderable: true,
+                        searchable: true
+                    },
+                    {
+                        data: 'email',
+                        orderable: true,
+                        searchable: true
+                    },
+                    {
+                        data: 'year',
+                        orderable: true,
+                        searchable: true
+                    },
+                    {
+                        data: 'exam_number',
+                        orderable: true,
+                        searchable: true
+                    },
+                    {
+                        data: 'registration_number',
+                        orderable: true,
+                        searchable: true
+                    },
+                    {
+                        data: 'programme',
+                        orderable: true,
+                        searchable: true
+                    },
+                    {
+                        data: 'menu',
+                        orderable: false,
+                        searchable: false
+                    }
                 ],
-                deferRender: true
+                order: [[0, 'asc']]
             });
         });
     </script>

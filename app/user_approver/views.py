@@ -10,18 +10,20 @@
 
 
 from datetime import datetime
+from functools import partial
 
 from flask import redirect, url_for, request, session
 from flask_security import current_user, roles_required, roles_accepted
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, func, String
 
 import app.ajax as ajax
 from . import user_approver
 from ..database import db
-from ..models import StudentData, DegreeProgramme, DegreeType, WorkflowMixin
+from ..models import StudentData, DegreeProgramme, DegreeType, WorkflowMixin, User
 from ..shared.context.global_context import render_template_context
 from ..shared.conversions import is_integer
 from ..shared.utils import redirect_url
+from ..tools import ServerSideSQLHandler
 
 
 @user_approver.route("/validate")
@@ -69,7 +71,7 @@ def validate():
     )
 
 
-@user_approver.route("/validate_ajax")
+@user_approver.route("/validate_ajax", methods=["GET", "POST"])
 @roles_required("user_approver")
 def validate_ajax():
     url = request.args.get("url", None)
@@ -78,8 +80,9 @@ def validate_ajax():
     prog_filter = request.args.get("prog_filter")
     year_filter = request.args.get("year_filter")
 
-    records = (
-        db.session.query(StudentData.id)
+    base_query = (
+        db.session.query(StudentData)
+        .join(User, User.id == StudentData.id)
         .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
         .filter(
@@ -93,17 +96,36 @@ def validate_ajax():
 
     flag, prog_value = is_integer(prog_filter)
     if flag:
-        records = records.filter(StudentData.programme_id == prog_value)
+        base_query = base_query.filter(StudentData.programme_id == prog_value)
 
     flag, year_value = is_integer(year_filter)
     if flag:
-        records = records.filter(StudentData.academic_year <= DegreeType.duration, StudentData.academic_year == year_value)
+        base_query = base_query.filter(StudentData.academic_year <= DegreeType.duration, StudentData.academic_year == year_value)
     elif year_filter == "grad":
-        records = records.filter(StudentData.academic_year > DegreeType.duration)
+        base_query = base_query.filter(StudentData.academic_year > DegreeType.duration)
 
-    record_ids = [r[0] for r in records.all()]
+    name = {
+        "search": func.concat(User.first_name, " ", User.last_name),
+        "order": [User.last_name, User.first_name],
+        "search_collation": "utf8_general_ci",
+    }
+    email = {"search": User.email, "order": User.email, "search_collation": "utf8_general_ci"}
+    exam_number = {"search": func.cast(StudentData.exam_number, String), "order": StudentData.exam_number}
+    registration_number = {"search": func.cast(StudentData.registration_number, String), "order": StudentData.registration_number}
+    programme = {"search": DegreeProgramme.name, "order": DegreeProgramme.name, "search_collation": "utf8_general_ci"}
+    year = {"order": StudentData.academic_year}
 
-    return ajax.user_approver.validate_data(record_ids, url=url, text=text)
+    columns = {
+        "name": name,
+        "email": email,
+        "exam_number": exam_number,
+        "registration_number": registration_number,
+        "programme": programme,
+        "year": year,
+    }
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(partial(ajax.user_approver.validate_data, url, text))
 
 
 @user_approver.route("/approve/<int:id>")

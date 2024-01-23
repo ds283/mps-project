@@ -110,7 +110,7 @@ def validate_ajax():
         "search_collation": "utf8_general_ci",
     }
     email = {"search": User.email, "order": User.email, "search_collation": "utf8_general_ci"}
-    exam_number = {"search": func.cast(StudentData.exam_number, String), "order": StudentData.exam_number}
+    exam_number = {"order": StudentData.exam_number}
     registration_number = {"search": func.cast(StudentData.registration_number, String), "order": StudentData.registration_number}
     programme = {"search": DegreeProgramme.name, "order": DegreeProgramme.name, "search_collation": "utf8_general_ci"}
     year = {"order": StudentData.academic_year}

@@ -13,7 +13,7 @@ from functools import partial
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, SubmitField, TextAreaField, BooleanField
 from wtforms.validators import InputRequired, Optional, Length, ValidationError
-from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField, GroupedQuerySelectMultipleField
+from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..models import DEFAULT_STRING_LENGTH, ProjectClass
 from ..models import Project
@@ -432,7 +432,7 @@ def FacultySettingsFormFactory(user=None, current_user=None, enable_canvas=False
 def AvailabilityFormFactory(include_confirm=False):
     class AvailabilityForm(Form):
         comment = TextAreaField(
-            "Please include any other information you would like the scheduling team to take into account:",
+            "Please let us know if there is anything you would like taken into account when creating the schedule",
             render_kw={"rows": 5},
             validators=[Optional()],
         )

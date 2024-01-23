@@ -2495,13 +2495,13 @@ def set_availability(id):
     return render_template_context("faculty/set_availability.html", form=form, assessment=data, url=url, text=text)
 
 
-@faculty.route("/session_available/<int:id>")
+@faculty.route("/session_available/<int:sess_id>")
 @roles_accepted("faculty")
-def session_available(id):
+def session_available(sess_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    assessment: PresentationAssessment = PresentationSession.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationSession.query.get_or_404(sess_id)
 
     current_year = get_current_year()
     if not validate_assessment(assessment.owner, current_year=current_year):

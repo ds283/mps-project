@@ -2,6 +2,7 @@
 {% import "bootstrap/form.html" as wtf %}
 
 {% from "labels.html" import simple_label %}
+{% from "icon_block.html" import icon_block %}
 
 {% block title %}
     Set availability for {{ assessment.name }}
@@ -24,15 +25,14 @@
                     Set availability for assessment event <strong>{{ assessment.name }}</strong>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="float-end">
-                                <a class="btn btn-secondary" href="{{ url_for('faculty.session_all_available', sess_id=assessment.id) }}"><i class="fas fa-check"></i> Set all Available</a>
-                                <a class="btn btn-secondary" href="{{ url_for('faculty.session_all_unavailable', sess_id=assessment.id) }}"><i class="fas fa-times"></i> Set all Not available</a>
-                            </div>
-                        </div>
+                    <div class="mt-1 mb-3 d-flex flex-row justify-content-end align-content-center gap-2">
+                        <a class="btn btn-sm btn-outline-success"
+                           href="{{ url_for('faculty.session_all_available', sess_id=assessment.id) }}"><i
+                                class="fas fa-check"></i> Set all Available</a>
+                        <a class="btn btn-sm btn-outline-danger"
+                           href="{{ url_for('faculty.session_all_unavailable', sess_id=assessment.id) }}"><i
+                                class="fas fa-times"></i> Set all Not available</a>
                     </div>
-                    <hr class="intro-divider">
                     <div class="row vertical-top event-table">
                         <div class="col-4"><strong>Date</strong></div>
                         <div class="col-1"><strong>Session</strong></div>
@@ -64,15 +64,26 @@
                                 </div>
                             </div>
                         {% endfor %}
-                        <hr class="intro-divider">
-                        {{ wtf.render_field(form.comment) }}
+                        <div class="mt-3">
+                            {{ wtf.render_field(form.comment) }}
+                        </div>
                         {% if form.update %}
-                            {{ wtf.render_field(form.update, button_map={'update': 'secondary'}) }}
+                            <div class="mt-3">
+                                {{ wtf.render_field(form.update, button_map={'update': 'secondary'}) }}
+                            </div>
                         {% endif %}
                         {% if form.confirm %}
-                            <hr class="intro-divider">
-                            <p>Please confirm your responses when you are finished. It is still possible to make changes up to the deadline.</p>
-                            {{ wtf.render_field(form.confirm, button_map={'confirm': 'primary'}) }}
+                            <div class="mt-3 alert alert-success">
+                                {% call icon_block("check-circle") %}
+                                    <strong>Please confirm your responses.</strong>
+                                    <div class="mt-1">
+                                        It is still possible to make changes up to the deadline.
+                                    </div>
+                                    <div class="mt-2">
+                                        {{ wtf.render_field(form.confirm, button_map={'confirm': 'success'}) }}
+                                    </div>
+                                {% endcall %}
+                            </div>
                         {% endif %}
                     </form>
                 </div>

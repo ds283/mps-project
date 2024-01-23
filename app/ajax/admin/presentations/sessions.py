@@ -8,10 +8,12 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, get_template_attribute
-
 import calendar
 
+from flask import jsonify, get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
+
+from ....cache import cache
 
 # language=jinja2
 _date = """
@@ -131,16 +133,58 @@ _availability = """
 """
 
 
+# language=jinja2
+_session = """
+{{ simple_label(s.session_type_label) }}
+"""
+
+
+@cache.memoize()
+def _build_date_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_date)
+
+
+@cache.memoize()
+def _build_session_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_session)
+
+
+@cache.memoize()
+def _build_rooms_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_rooms)
+
+
+@cache.memoize()
+def _build_availability_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_availability)
+
+
+@cache.memoize()
+def _build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
+
 def assessment_sessions_data(sessions):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
+    date_templ: Template = _build_date_templ()
+    session_templ: Template = _build_session_templ()
+    rooms_templ: Template = _build_rooms_templ()
+    availability_templ: Template = _build_availability_templ()
+    menu_templ: Template = _build_menu_templ()
+
     data = [
         {
-            "date": {"display": render_template_string(_date, s=s), "timestamp": calendar.timegm(s.date.timetuple())},
-            "session": s.session_type_label,
-            "rooms": render_template_string(_rooms, s=s, simple_label=simple_label),
-            "availability": render_template_string(_availability, s=s),
-            "menu": render_template_string(_menu, s=s),
+            "date": {"display": render_template(date_templ, s=s), "timestamp": calendar.timegm(s.date.timetuple())},
+            "session": render_template(session_templ, s=s, simple_label=simple_label),
+            "rooms": render_template(rooms_templ, s=s, simple_label=simple_label),
+            "availability": render_template(availability_templ, s=s),
+            "menu": render_template(menu_templ, s=s),
         }
         for s in sessions
     ]

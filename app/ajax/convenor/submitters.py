@@ -361,25 +361,25 @@ _name = """
 
 
 @cache.memoize()
-def build_name_templ() -> Template:
+def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
 @cache.memoize()
-def build_cohort_templ() -> Template:
+def _build_cohort_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_cohort)
 
 
 @cache.memoize()
-def build_periods_templ() -> Template:
+def _build_periods_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_periods)
 
 
 @cache.memoize()
-def build_menu_templ() -> Template:
+def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)
 
@@ -395,10 +395,10 @@ def submitters_data(students, config, show_name, show_number, sort_number):
 
     # however, template *strings* are not cached
     # we have to do this ourselves
-    name_templ = build_name_templ()
-    cohort_templ = build_cohort_templ()
-    periods_templ = build_periods_templ()
-    menu_templ = build_menu_templ()
+    name_templ: Template = _build_name_templ()
+    cohort_templ: Template = _build_cohort_templ()
+    periods_templ: Template = _build_periods_templ()
+    menu_templ: Template = _build_menu_templ()
 
     data = [
         {

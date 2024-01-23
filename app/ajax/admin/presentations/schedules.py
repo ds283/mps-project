@@ -8,7 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, get_template_attribute
+from flask import jsonify, get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
+
+from ....cache import cache
 
 # language=jinja2
 _status = """
@@ -342,6 +345,48 @@ _periods = """
 """
 
 
+@cache.memoize()
+def _build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+@cache.memoize()
+def _build_status_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_status)
+
+
+@cache.memoize()
+def _build_score_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_score)
+
+
+@cache.memoize()
+def _build_timestamp_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_timestamp)
+
+
+@cache.memoize()
+def _build_info_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_info)
+
+
+@cache.memoize()
+def _build_periods_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_periods)
+
+
+@cache.memoize()
+def _build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
+
 def assessment_schedules_data(schedules, text, url):
     """
     Build AJAX JSON payload
@@ -350,15 +395,23 @@ def assessment_schedules_data(schedules, text, url):
     """
     simple_label = get_template_attribute("labels.html", "simple_label")
 
+    name_templ: Template = _build_name_templ()
+    status_templ: Template = _build_status_templ()
+    score_templ: Template = _build_score_templ()
+    timestamp_templ: Template = _build_timestamp_templ()
+    info_templ: Template = _build_info_templ()
+    periods_templ: Template = _build_periods_templ()
+    menu_templ: Template = _build_menu_templ()
+
     data = [
         {
-            "name": render_template_string(_name, s=s, text=text, url=url),
-            "status": render_template_string(_status, s=s),
-            "score": {"display": render_template_string(_score, s=s), "value": float(s.score) if s.solution_usable and s.score is not None else 0},
-            "timestamp": render_template_string(_timestamp, s=s),
-            "info": render_template_string(_info, s=s),
-            "periods": render_template_string(_periods, a=s.owner, simple_label=simple_label),
-            "menu": render_template_string(_menu, s=s, text=text, url=url),
+            "name": render_template(name_templ, s=s, text=text, url=url),
+            "status": render_template(status_templ, s=s),
+            "score": {"display": render_template(score_templ, s=s), "value": float(s.score) if s.solution_usable and s.score is not None else 0},
+            "timestamp": render_template(timestamp_templ, s=s),
+            "info": render_template(info_templ, s=s),
+            "periods": render_template(periods_templ, a=s.owner, simple_label=simple_label),
+            "menu": render_template(menu_templ, s=s, text=text, url=url),
         }
         for s in schedules
     ]

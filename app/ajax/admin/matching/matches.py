@@ -405,31 +405,31 @@ _name = """
 
 
 @cache.memoize()
-def build_name_templ() -> Template:
+def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
 @cache.memoize()
-def build_status_templ() -> Template:
+def _build_status_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_status)
 
 
 @cache.memoize()
-def build_score_templ() -> Template:
+def _build_score_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_score)
 
 
 @cache.memoize()
-def build_info_templ() -> Template:
+def _build_info_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_info)
 
 
 @cache.memoize()
-def build_menu_templ() -> Template:
+def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)
 
@@ -446,11 +446,11 @@ def matches_data(matches, config=None, text=None, url=None, is_root=False):
     number = len(matches)
     allow_compare = number > 1
 
-    name_templ = build_name_templ()
-    status_templ = build_status_templ()
-    score_templ = build_score_templ()
-    info_templ = build_info_templ()
-    menu_templ = build_menu_templ()
+    name_templ: Template = _build_name_templ()
+    status_templ: Template = _build_status_templ()
+    score_templ: Template = _build_score_templ()
+    info_templ: Template = _build_info_templ()
+    menu_templ: Template = _build_menu_templ()
 
     data = [
         {

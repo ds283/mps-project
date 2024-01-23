@@ -245,25 +245,25 @@ _workload = """
 
 
 @cache.memoize()
-def build_name_templ() -> Template:
+def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
 @cache.memoize()
-def build_projects_templ() -> Template:
+def _build_projects_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_projects)
 
 
 @cache.memoize()
-def build_marking_templ() -> Template:
+def _build_marking_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_marking)
 
 
 @cache.memoize()
-def build_workload_templ() -> Template:
+def _build_workload_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_workload)
 
@@ -391,10 +391,10 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, ty
         sup_err_msgs = sup_errors.values()
         mark_err_msgs = mark_errors.values()
 
-        name_templ = build_name_templ()
-        projects_templ = build_projects_templ()
-        marking_templ = build_marking_templ()
-        workload_templ = build_workload_templ()
+        name_templ: Template = _build_name_templ()
+        projects_templ: Template = _build_projects_templ()
+        marking_templ: Template = _build_marking_templ()
+        workload_templ: Template = _build_workload_templ()
 
         data.append(
             {

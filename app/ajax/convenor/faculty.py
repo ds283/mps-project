@@ -120,31 +120,31 @@ _enrolments = """
 
 
 @cache.memoize()
-def build_name_templ() -> Template:
+def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
 @cache.memoize()
-def build_enrolments_templ() -> Template:
+def _build_enrolments_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_enrolments)
 
 
 @cache.memoize()
-def build_projects_templ() -> Template:
+def _build_projects_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_projects)
 
 
 @cache.memoize()
-def build_golive_templ() -> Template:
+def _build_golive_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_golive)
 
 
 @cache.memoize()
-def build_menu_templ() -> Template:
+def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)
 
@@ -152,11 +152,11 @@ def build_menu_templ() -> Template:
 def faculty_data(pclass: ProjectClass, config: ProjectClassConfig, row_list: List[Tuple[User, FacultyData]]):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    name_templ = build_name_templ()
-    enrolments_templ = build_enrolments_templ()
-    projects_templ = build_projects_templ()
-    golive_templ = build_golive_templ()
-    menu_templ = build_menu_templ()
+    name_templ: Template = _build_name_templ()
+    enrolments_templ: Template = _build_enrolments_templ()
+    projects_templ: Template = _build_projects_templ()
+    golive_templ: Template = _build_golive_templ()
+    menu_templ: Template = _build_menu_templ()
 
     data = [
         {

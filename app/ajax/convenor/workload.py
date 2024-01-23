@@ -238,25 +238,25 @@ _workload = """
 
 
 @cache.memoize()
-def build_supervising_templ() -> Template:
+def _build_supervising_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_supervising)
 
 
 @cache.memoize()
-def build_assessing_templ() -> Template:
+def _build_assessing_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_assessing)
 
 
 @cache.memoize()
-def build_presentations_templ() -> Template:
+def _build_presentations_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_presentations)
 
 
 @cache.memoize()
-def build_workload_templ() -> Template:
+def _build_workload_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_workload)
 
@@ -266,10 +266,10 @@ def faculty_workload_data(config: ProjectClassConfig, faculty):
 
     count = 0
 
-    supervising_templ = build_supervising_templ()
-    assessing_templ = build_assessing_templ()
-    presentations_templ = build_presentations_templ()
-    workload_templ = build_workload_templ()
+    supervising_templ: Template = _build_supervising_templ()
+    assessing_templ: Template = _build_assessing_templ()
+    presentations_templ: Template = _build_presentations_templ()
+    workload_templ: Template = _build_workload_templ()
 
     u: User
     fd: FacultyData
@@ -284,7 +284,7 @@ def faculty_workload_data(config: ProjectClassConfig, faculty):
 
         data.append(
             {
-                "name": '<a class="text-decoration-none" ' 'href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
+                "name": '<a class="text-decoration-none" href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
                 "supervising": render_template(supervising_templ, f=fd, config=config, recs=projects),
                 "marking": render_template(assessing_templ, f=fd, config=config, recs=marking),
                 "moderating": render_template(assessing_templ, f=fd, config=config, recs=moderating),

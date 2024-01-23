@@ -8,7 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, get_template_attribute
+from flask import jsonify, get_template_attribute, render_template, current_app
+from jinja2 import Template, Environment
+
+from ...cache import cache
 
 # language=jinja2
 _programmes = """
@@ -248,20 +251,84 @@ _name = """
 """
 
 
+@cache.memoize()
+def _build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+@cache.memoize()
+def _build_options_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_options)
+
+
+@cache.memoize()
+def _build_timing_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_timing)
+
+
+@cache.memoize()
+def _build_workload_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_workload)
+
+
+@cache.memoize()
+def _build_submissions_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_submissions)
+
+
+@cache.memoize()
+def _build_popularity_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_popularity)
+
+
+@cache.memoize()
+def _build_personnel_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_personnel)
+
+
+@cache.memoize()
+def _build_programmes_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_programmes)
+
+
+@cache.memoize()
+def _build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
+
 def pclasses_data(pclasses):
+    name_templ: Template = _build_name_templ()
+    options_templ: Template = _build_options_templ()
+    timing_templ: Template = _build_timing_templ()
+    workload_templ: Template = _build_workload_templ()
+    submissions_templ: Template = _build_submissions_templ()
+    popularity_templ: Template = _build_popularity_templ()
+    personnel_templ: Template = _build_personnel_templ()
+    programmes_templ: Template = _build_programmes_templ()
+    menu_templ: Template = _build_menu_templ()
+
     simple_label = get_template_attribute("labels.html", "simple_label")
 
     data = [
         {
-            "name": render_template_string(_name, p=p, simple_label=simple_label),
-            "options": render_template_string(_options, p=p, simple_label=simple_label),
-            "timing": render_template_string(_timing, p=p),
-            "cats": render_template_string(_workload, p=p),
-            "submissions": render_template_string(_submissions, p=p),
-            "popularity": render_template_string(_popularity, p=p),
-            "personnel": render_template_string(_personnel, p=p),
-            "programmes": render_template_string(_programmes, pcl=p, simple_label=simple_label),
-            "menu": render_template_string(_menu, pcl=p),
+            "name": render_template(name_templ, p=p, simple_label=simple_label),
+            "options": render_template(options_templ, p=p, simple_label=simple_label),
+            "timing": render_template(timing_templ, p=p),
+            "cats": render_template(workload_templ, p=p),
+            "submissions": render_template(submissions_templ, p=p),
+            "popularity": render_template(popularity_templ, p=p),
+            "personnel": render_template(personnel_templ, p=p),
+            "programmes": render_template(programmes_templ, pcl=p, simple_label=simple_label),
+            "menu": render_template(menu_templ, pcl=p),
         }
         for p in pclasses
     ]

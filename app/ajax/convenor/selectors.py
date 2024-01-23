@@ -263,37 +263,37 @@ _name = """
 
 
 @cache.memoize()
-def build_name_templ() -> Template:
+def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
 @cache.memoize()
-def build_cohort_templ() -> Template:
+def _build_cohort_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_cohort)
 
 
 @cache.memoize()
-def build_bookmarks_templ() -> Template:
+def _build_bookmarks_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_bookmarks)
 
 
 @cache.memoize()
-def build_confirmations_templ() -> Template:
+def _build_confirmations_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_confirmations)
 
 
 @cache.memoize()
-def build_submitted_templ() -> Template:
+def _build_submitted_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_submitted)
 
 
 @cache.memoize()
-def build_menu_templ() -> Template:
+def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)
 
@@ -307,12 +307,12 @@ def selectors_data(students, config):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
     # build and cache template strings
-    name_templ = build_name_templ()
-    cohort_templ = build_cohort_templ()
-    bookmarks_templ = build_bookmarks_templ()
-    confirmations_templ = build_confirmations_templ()
-    submitted_templ = build_submitted_templ()
-    menu_templ = build_menu_templ()
+    name_templ: Template = _build_name_templ()
+    cohort_templ: Template = _build_cohort_templ()
+    bookmarks_templ: Template = _build_bookmarks_templ()
+    confirmations_templ: Template = _build_confirmations_templ()
+    submitted_templ: Template = _build_submitted_templ()
+    menu_templ: Template = _build_menu_templ()
 
     data = [
         {

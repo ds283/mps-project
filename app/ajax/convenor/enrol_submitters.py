@@ -41,25 +41,25 @@ _academic_year = """
 
 
 @cache.memoize()
-def build_programme_templ() -> Template:
+def _build_programme_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_programme)
 
 
 @cache.memoize()
-def build_cohort_templ() -> Template:
+def _build_cohort_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_cohort)
 
 
 @cache.memoize()
-def build_academic_year_templ() -> Template:
+def _build_academic_year_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_academic_year)
 
 
 @cache.memoize()
-def build_enrol_templ() -> Template:
+def _build_enrol_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_enrol)
 
@@ -69,10 +69,10 @@ def enrol_submitters_data(students: List[StudentData], config):
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    programme_templ = build_programme_templ()
-    cohort_templ = build_cohort_templ()
-    academic_year_templ = build_academic_year_templ()
-    enrol_templ = build_enrol_templ()
+    programme_templ: Template = _build_programme_templ()
+    cohort_templ: Template = _build_cohort_templ()
+    academic_year_templ: Template = _build_academic_year_templ()
+    enrol_templ: Template = _build_enrol_templ()
 
     data = [
         {

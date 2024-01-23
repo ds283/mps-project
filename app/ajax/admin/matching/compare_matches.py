@@ -8,11 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, render_template_string, get_template_attribute, render_template, current_app
+from flask import jsonify, get_template_attribute, render_template, current_app
 from jinja2 import Template, Environment
 
-from ....database import db
-from ....models import MatchingRecord
 from ....cache import cache
 
 # language=jinja2
@@ -75,31 +73,31 @@ _menu = """
 
 
 @cache.memoize()
-def build_student_templ() -> Template:
+def _build_student_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_student)
 
 
 @cache.memoize()
-def build_cohort_templ() -> Template:
+def _build_cohort_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_cohort)
 
 
 @cache.memoize()
-def build_records_templ() -> Template:
+def _build_records_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_records)
 
 
 @cache.memoize()
-def build_delta_templ() -> Template:
+def _build_delta_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_delta)
 
 
 @cache.memoize()
-def build_menu_templ() -> Template:
+def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)
 
@@ -107,11 +105,11 @@ def build_menu_templ() -> Template:
 def compare_match_data(records):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    student_templ = build_student_templ()
-    cohort_templ = build_cohort_templ()
-    records_templ = build_records_templ()
-    delta_templ = build_delta_templ()
-    menu_templ = build_menu_templ()
+    student_templ: Template = _build_student_templ()
+    cohort_templ: Template = _build_cohort_templ()
+    records_templ: Template = _build_records_templ()
+    delta_templ: Template = _build_delta_templ()
+    menu_templ: Template = _build_menu_templ()
 
     data = [
         {

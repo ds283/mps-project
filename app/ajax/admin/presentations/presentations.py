@@ -8,7 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, get_template_attribute
+from flask import jsonify, get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
+
+from ....cache import cache
 
 # language=jinja2
 _name = """
@@ -60,7 +63,7 @@ _name = """
 _periods = """
 {% for period in a.submission_periods %}
     <div style="display: inline-block;">
-        {{ simple_label(eriod.label) }}
+        {{ simple_label(period.label) }}
         {% set num = period.number_projects %}
         {% set pl = 's' %}
         {% if num == 1 %}{% set pl = '' %}{% endif %}
@@ -188,15 +191,44 @@ _menu = """
 """
 
 
+@cache.memoize()
+def _build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+@cache.memoize()
+def _build_periods_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_periods)
+
+
+@cache.memoize()
+def _build_sessions_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_sessions)
+
+
+@cache.memoize()
+def _build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
+
 def presentation_assessments_data(assessments):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
+    name_templ: Template = _build_name_templ()
+    periods_templ: Template = _build_periods_templ()
+    sessions_templ: Template = _build_sessions_templ()
+    menu_templ: Template = _build_menu_templ()
+
     data = [
         {
-            "name": render_template_string(_name, a=a),
-            "periods": render_template_string(_periods, a=a, simple_label=simple_label),
-            "sessions": render_template_string(_sessions, a=a, simple_label=simple_label),
-            "menu": render_template_string(_menu, a=a),
+            "name": render_template(name_templ, a=a),
+            "periods": render_template(periods_templ, a=a, simple_label=simple_label),
+            "sessions": render_template(sessions_templ, a=a, simple_label=simple_label),
+            "menu": render_template(menu_templ, a=a),
         }
         for a in assessments
     ]

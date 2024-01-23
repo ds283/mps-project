@@ -349,43 +349,43 @@ _scores = """
 
 
 @cache.memoize()
-def build_student_templ() -> Template:
+def _build_student_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_student)
 
 
 @cache.memoize()
-def build_pclass_templ() -> Template:
+def _build_pclass_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_pclass)
 
 
 @cache.memoize()
-def build_details_templ() -> Template:
+def _build_details_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_details)
 
 
 @cache.memoize()
-def build_project_templ() -> Template:
+def _build_project_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_project)
 
 
 @cache.memoize()
-def build_marker_templ() -> Template:
+def _build_marker_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_marker)
 
 
 @cache.memoize()
-def build_rank_templ() -> Template:
+def _build_rank_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_rank)
 
 
 @cache.memoize()
-def build_scores_templ() -> Template:
+def _build_scores_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_scores)
 
@@ -404,13 +404,13 @@ def student_view_data(selector_data, attempt_id, text=None, url=None):
 
         return emails
 
-    student_templ = build_student_templ()
-    pclass_templ = build_pclass_templ()
-    details_templ = build_details_templ()
-    project_templ = build_project_templ()
-    marker_templ = build_marker_templ()
-    rank_templ = build_rank_templ()
-    scores_templ = build_scores_templ()
+    student_templ: Template = _build_student_templ()
+    pclass_templ: Template = _build_pclass_templ()
+    details_templ: Template = _build_details_templ()
+    project_templ: Template = _build_project_templ()
+    marker_templ: Template = _build_marker_templ()
+    rank_templ: Template = _build_rank_templ()
+    scores_templ: Template = _build_scores_templ()
 
     data = [
         {

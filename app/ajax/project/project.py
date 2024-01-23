@@ -376,52 +376,52 @@ _pclass_proxy_str = str(_pclass_proxy)
 #  Just using @cache.memoize() seems to lead to Pickle serialization
 #  problems, at least with the Redis backend for Flask-Caching, so
 #  for now these have had to be left unmemoized
-def build_name_labels_templ() -> Template:
+def _build_name_labels_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name_labels)
 
 
-def build_name_templ() -> Template:
+def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
-def build_owner_templ() -> Template:
+def _build_owner_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_owner)
 
 
-def build_status_templ() -> Template:
+def _build_status_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_status)
 
 
-def build_pclasses_templ() -> Template:
+def _build_pclasses_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_pclasses)
 
 
-def build_meetingreqd_templ() -> Template:
+def _build_meetingreqd_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_meetingreqd)
 
 
-def build_affiliation_templ() -> Template:
+def _build_affiliation_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_affiliation)
 
 
-def build_prefer_templ() -> Template:
+def _build_prefer_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_prefer)
 
 
-def build_skills_templ() -> Template:
+def _build_skills_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_skills)
 
 
-def build_menu_templ(key: str) -> Template:
+def _build_menu_templ(key: str) -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menus[key])
 
@@ -430,7 +430,7 @@ def build_menu_templ(key: str) -> Template:
 def _render_name_labels(project_id):
     p: Project = db.session.query(Project).filter_by(id=project_id).one()
 
-    name_labels_templ = build_name_labels_templ()
+    name_labels_templ: Template = _build_name_labels_templ()
     return render_template(name_labels_templ, project=p)
 
 
@@ -444,15 +444,15 @@ def _element(project_id, desc_id, menu_template, in_selector, in_submitter, sele
     simple_label = get_template_attribute("labels.html", "simple_label")
     truncate = get_template_attribute("macros.html", "truncate")
 
-    name_templ = build_name_templ()
-    owner_templ = build_owner_templ()
-    status_templ = build_status_templ()
-    pclasses_templ = build_pclasses_templ()
-    meetingreqd_templ = build_meetingreqd_templ()
-    affiliation_templ = build_affiliation_templ()
-    prefer_templ = build_prefer_templ()
-    skills_templ = build_skills_templ()
-    menu_templ = build_menu_templ(menu_template)
+    name_templ: Template = _build_name_templ()
+    owner_templ: Template = _build_owner_templ()
+    status_templ: Template = _build_status_templ()
+    pclasses_templ: Template = _build_pclasses_templ()
+    meetingreqd_templ: Template = _build_meetingreqd_templ()
+    affiliation_templ: Template = _build_affiliation_templ()
+    prefer_templ: Template = _build_prefer_templ()
+    skills_templ: Template = _build_skills_templ()
+    menu_templ: Template = _build_menu_templ(menu_template)
 
     return {
         "name": render_template(name_templ, project=p, desc=d, text="REPTEXT", url="REPURL"),
@@ -556,7 +556,7 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
 
 
 @cache.memoize()
-def build_error_block_templ() -> Template:
+def _build_error_block_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_error_block)
 
@@ -568,7 +568,7 @@ def replace_error_block(p: Project, d: ProjectDescription, show_errors: bool, na
     error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
     error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
 
-    error_block_templ = build_error_block_templ()
+    error_block_templ: Template = _build_error_block_templ()
 
     if show_errors:
         if d is not None and d.has_issues:
@@ -686,7 +686,7 @@ def replace_comment_notification(current_user_id, name, p):
 
 
 @cache.memoize()
-def build_reenrol_templ() -> Template:
+def _build_reenrol_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string("{{ simple_label(data) }}")
 
@@ -694,7 +694,7 @@ def build_reenrol_templ() -> Template:
 def replace_enrolment_text(e, status):
     repenrol = ""
 
-    enrol_templ = build_reenrol_templ()
+    enrol_templ: Template = _build_reenrol_templ()
 
     if e is not None:
         simple_label = get_template_attribute("labels.html", "simple_label")

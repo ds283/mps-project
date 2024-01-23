@@ -64,38 +64,37 @@ _attached = """
 
 
 @cache.memoize()
-def build_attached_template() -> Template:
+def _build_attached_template() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_attached)
 
 
 @cache.memoize()
-def build_affiliations_templ() -> Template:
+def _build_affiliations_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_affiliations)
 
 
 @cache.memoize()
-def build_status_templ() -> Template:
+def _build_status_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_status)
 
 
 @cache.memoize()
-def build_enrolments_templ() -> Template:
+def _build_enrolments_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_enrolments)
-
 
 
 def build_assessor_data(faculty, proj, menu, pclass_id=None, url=None, disable_enrollment_links=False):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
     # pre-compile template string
-    attached_templ: Template = build_attached_template()
-    affiliations_templ: Template = build_affiliations_templ()
-    status_templ: Template = build_status_templ()
-    enrolments_templ: Template = build_enrolments_templ()
+    attached_templ: Template = _build_attached_template()
+    affiliations_templ: Template = _build_affiliations_templ()
+    status_templ: Template = _build_status_templ()
+    enrolments_templ: Template = _build_enrolments_templ()
 
     env: Environment = current_app.jinja_env
     menu_templ: Template = env.from_string(menu)

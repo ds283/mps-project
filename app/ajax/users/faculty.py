@@ -28,7 +28,9 @@ _affiliation = """
 _enrolled = """
 {% for record in f.enrollments %}
     {% set pclass = record.pclass %}
-    {{ simple_label(pclass.make_label()) }}
+    {% if pclass.active and pclass.publish %}
+        {{ simple_label(pclass.make_label()) }}
+    {% endif %}
 {% endfor %}
 """
 

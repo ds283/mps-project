@@ -7,7 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-from typing import List
+from typing import List, Optional
 from urllib import parse
 
 from flask import current_app, get_template_attribute, render_template
@@ -40,13 +40,7 @@ def _build_actions_templ() -> Template:
     return env.from_string(_actions)
 
 
-def validate_data(url: str, text: str, records: List[StudentData]):
-    if url is None:
-        url = ""
-
-    if text is None:
-        text = ""
-
+def validate_data(url: Optional[str], text: Optional[str], records: List[StudentData]):
     bleach = current_app.extensions["bleach"]
 
     def urlencode(s):

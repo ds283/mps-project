@@ -11,7 +11,6 @@
 from celery import group
 from celery.exceptions import Ignore
 from flask import current_app
-from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
@@ -66,32 +65,6 @@ def register_precompute_tasks(celery):
         # request generation of table data for this selector id and project_id
         # will force it to be generated and cached if not already present
         ajax.student.selector_liveprojects_data(sel_id, is_live, [proj_id])
-
-    @celery.task(bind=True)
-    def user_corrections(self, current_user_id):
-        try:
-            data = (
-                db.session.query(StudentData)
-                .filter(
-                    StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED,
-                    or_(
-                        and_(StudentData.last_edit_id == None, StudentData.creator_id == current_user_id),
-                        and_(StudentData.last_edit_id != None, StudentData.last_edit_id == current_user_id),
-                    ),
-                )
-                .all()
-            )
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        task = group(cache_user_correction.si(student.id) for student in data)
-        task.apply_async()
-
-    @celery.task(bind=True)
-    def cache_user_correction(self, user_id):
-        # request generation of table data for this validation line
-        ajax.user_approver.correction_data([user_id])
 
     @celery.task(bind=True)
     def project_approval(self, current_user_id):

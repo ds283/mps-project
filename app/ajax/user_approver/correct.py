@@ -7,19 +7,14 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-
-from flask import render_template_string, jsonify, current_app, get_template_attribute
-
-from ...database import db
-from ...models import StudentData
-from ...cache import cache
-
-from sqlalchemy.event import listens_for
-
-from ...shared.utils import get_current_year
-
+from typing import Optional, List
 from urllib import parse
 
+from flask import current_app, get_template_attribute, render_template
+from jinja2 import Template, Environment
+
+from ...cache import cache
+from ...models import StudentData
 
 # language=jinja2
 _actions = """
@@ -46,42 +41,24 @@ _academic_year = """
 
 
 @cache.memoize()
-def _element(record_id):
-    r: StudentData = db.session.query(StudentData).filter_by(id=record_id).one()
-
-    simple_label = get_template_attribute("labels.html", "simple_label")
-
-    return {
-        "name": {"display": r.user.name, "sortstring": r.user.last_name + r.user.first_name},
-        "email": r.user.email,
-        "exam_number": r.exam_number,
-        "registration_number": r.registration_number,
-        "programme": r.programme.full_name,
-        "year": render_template_string(_academic_year, r=r, simple_label=simple_label),
-        "rejected_by": render_template_string(_rejected, s=r),
-        "menu": render_template_string(_actions, s=r, url="REPURL", text="REPTEXT"),
-    }
+def _build_academic_year_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_academic_year)
 
 
-@listens_for(StudentData, "before_insert")
-def _StudentData_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
+@cache.memoize()
+def _build_rejected_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_rejected)
 
 
-@listens_for(StudentData, "before_update")
-def _StudentData_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
+@cache.memoize()
+def _build_actions_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_actions)
 
 
-@listens_for(StudentData, "before_delete")
-def _StudentData_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
-
-
-def correction_data(record_ids, url="", text=""):
+def correction_data(url: Optional[str], text: Optional[str], records: List[StudentData]):
     bleach = current_app.extensions["bleach"]
 
     def urlencode(s):
@@ -92,10 +69,22 @@ def correction_data(record_ids, url="", text=""):
     url_enc = urlencode(url) if url is not None else ""
     text_enc = urlencode(text) if text is not None else ""
 
-    def update(d):
-        d.update({"menu": d["menu"].replace("REPURL", url_enc, 1).replace("REPTEXT", text_enc, 1)})
-        return d
+    simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [update(_element(r_id)) for r_id in record_ids]
+    academic_year_templ = _build_academic_year_templ()
+    rejected_templ = _build_rejected_templ()
+    actions_templ = _build_actions_templ()
 
-    return jsonify(data)
+    return [
+        {
+            "name": r.user.name,
+            "email": r.user.email,
+            "exam_number": r.exam_number,
+            "registration_number": r.registration_number,
+            "programme": r.programme.full_name,
+            "year": render_template(academic_year_templ, r=r, simple_label=simple_label),
+            "rejected_by": render_template(rejected_templ, s=r),
+            "menu": render_template(actions_templ, s=r, url=url_enc, text=text_enc),
+        }
+        for r in records
+    ]

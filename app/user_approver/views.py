@@ -15,6 +15,7 @@ from functools import partial
 from flask import redirect, url_for, request, session
 from flask_security import current_user, roles_required, roles_accepted
 from sqlalchemy import and_, or_, func, String
+from sqlalchemy.orm import aliased
 
 import app.ajax as ajax
 from . import user_approver
@@ -110,7 +111,6 @@ def validate_ajax():
         "search_collation": "utf8_general_ci",
     }
     email = {"search": User.email, "order": User.email, "search_collation": "utf8_general_ci"}
-    exam_number = {"order": StudentData.exam_number}
     registration_number = {"search": func.cast(StudentData.registration_number, String), "order": StudentData.registration_number}
     programme = {"search": DegreeProgramme.name, "order": DegreeProgramme.name, "search_collation": "utf8_general_ci"}
     year = {"order": StudentData.academic_year}
@@ -118,7 +118,6 @@ def validate_ajax():
     columns = {
         "name": name,
         "email": email,
-        "exam_number": exam_number,
         "registration_number": registration_number,
         "programme": programme,
         "year": year,
@@ -205,7 +204,7 @@ def correct():
     )
 
 
-@user_approver.route("/correct_ajax")
+@user_approver.route("/correct_ajax", methods=["GET", "POST"])
 @roles_accepted("user_approver", "admin", "root")
 def correct_ajax():
     url = request.args.get("url", None)
@@ -214,8 +213,13 @@ def correct_ajax():
     prog_filter = request.args.get("prog_filter")
     year_filter = request.args.get("year_filter")
 
-    records = (
-        db.session.query(StudentData.id)
+    student_user = aliased(User)
+    validator_user = aliased(User)
+
+    base_query = (
+        db.session.query(StudentData)
+        .join(student_user, student_user.id == StudentData.id)
+        .join(validator_user, validator_user.id == StudentData.validator_id, isouter=True)
         .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
         .filter(
@@ -229,14 +233,37 @@ def correct_ajax():
 
     flag, prog_value = is_integer(prog_filter)
     if flag:
-        records = records.filter(StudentData.programme_id == prog_value)
+        base_query = base_query.filter(StudentData.programme_id == prog_value)
 
     flag, year_value = is_integer(year_filter)
     if flag:
-        records = records.filter(StudentData.academic_year <= DegreeType.duration, StudentData.academic_year == year_value)
+        base_query = base_query.filter(StudentData.academic_year <= DegreeType.duration, StudentData.academic_year == year_value)
     elif year_filter == "grad":
-        records = records.filter(StudentData.academic_year > DegreeType.duration)
+        base_query = base_query.filter(StudentData.academic_year > DegreeType.duration)
 
-    record_ids = [r[0] for r in records.all()]
+    name = {
+        "search": func.concat(student_user.first_name, " ", student_user.last_name),
+        "order": [student_user.last_name, student_user.first_name],
+        "search_collation": "utf8_general_ci",
+    }
+    email = {"search": student_user.email, "order": student_user.email, "search_collation": "utf8_general_ci"}
+    registration_number = {"search": func.cast(StudentData.registration_number, String), "order": StudentData.registration_number}
+    programme = {"search": DegreeProgramme.name, "order": DegreeProgramme.name, "search_collation": "utf8_general_ci"}
+    year = {"order": StudentData.academic_year}
+    rejected_by = {
+        "search": func.concat(validator_user.first_name, " ", validator_user.last_name, " ", validator_user.email),
+        "order": [validator_user.last_name, validator_user.first_name, validator_user.email],
+        "search_collation": "utf8_general_ci",
+    }
 
-    return ajax.user_approver.correction_data(record_ids, url=url, text=text)
+    columns = {
+        "name": name,
+        "email": email,
+        "registration_number": registration_number,
+        "programme": programme,
+        "year": year,
+        "rejected_by": rejected_by,
+    }
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(partial(ajax.user_approver.correction_data, url, text))

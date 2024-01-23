@@ -23,13 +23,6 @@ def precompute_at_login(user, celery, now=None, autocommit=False):
         lp = celery.tasks["app.tasks.precompute.student_liveprojects"]
         lp.apply_async(args=(user.id,))
 
-    if user.has_role("admin") or user.has_role("root"):
-        # these users can also have edits made to user accounts bounced back to them
-        user_corrections = celery.tasks["app.tasks.precompute.user_corrections"]
-
-        task = user_corrections.si(user.id)
-        task.apply_async()
-
     if user.has_role("faculty"):
         # Faculty need to precompute the list of projects for which they are in the assessor pool.
         # These can be tagged with 'New comments' labels on a user-by-user basis.

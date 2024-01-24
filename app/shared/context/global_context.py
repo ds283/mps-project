@@ -6,6 +6,7 @@
 # the School of Mathematics & Physical Sciences, University of Sussex.
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
+
 from typing import List
 
 from flask import has_request_context, session, render_template
@@ -17,6 +18,7 @@ from .matching import get_matching_data
 from .utils import get_pclass_list, get_pclass_config_list
 from ..utils import home_dashboard_url
 from ... import site_revision, site_copyright_dates
+from ...database import db
 from ...models import User
 
 

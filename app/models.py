@@ -3080,7 +3080,11 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return (
             db.session.query(ProjectDescription)
             .join(Project, Project.id == ProjectDescription.parent_id)
-            .filter(Project.active == True, Project.owner_id == self.id, ProjectDescription.project_classes.any(id=pclass_id))
+            .filter(
+                Project.active == True,
+                Project.owner_id == self.id,
+                or_(ProjectDescription.project_classes.any(id=pclass_id), Project.default_id == ProjectDescription.id),
+            )
         )
 
     def variants_offered(self, pclass, filter_warnings=None, filter_errors=None):

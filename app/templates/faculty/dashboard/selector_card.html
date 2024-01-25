@@ -107,15 +107,16 @@
             {% endif %}
 
             {# show basic details about this project class #}
-            {% set ns = namespace(bgclass='alert-secondary', iconclass='info-circle') %}
+            {% set ns = namespace(bgclass='alert-secondary', iconclass='check-circle', textclass='text-success') %}
             {% if nproj == 0 and not (is_sabbatical or is_exempt) %}
                 {% set ns.bgclass = 'alert-warning' %}
                 {% set ns.iconclass = 'exclamation-circle' %}
+                {% set ns.textclass = 'text-danger' %}
             {% endif %}
             <div class="alert {{ ns.bgclass }} mt-1 mb-3">
                 {% call icon_block(ns.iconclass) %}
                     <div>
-                        You have <strong>{{ nproj }}</strong> active project{{ nproj_plural }} attached to this project class.
+                        <span class="{{ ns.textclass }}"><strong>You have {{ nproj }} active project{{ nproj_plural }} attached to this project class.</strong></span>
                         <a href="{{ url_for('faculty.edit_projects') }}" class="text-decoration-none ms-1">Go to project library...</a>
                     </div>
                     {% if nproj > 0 and sel_state <= config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}

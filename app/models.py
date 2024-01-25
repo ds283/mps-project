@@ -3083,9 +3083,10 @@ class FacultyData(db.Model, EditingMetadataMixin):
             .filter(
                 Project.active == True,
                 Project.owner_id == self.id,
-                or_(ProjectDescription.project_classes.any(id=pclass_id),
-                    and_(Project.project_classes.any(id=pclass_id),
-                         Project.default_id == ProjectDescription.id)),
+                or_(
+                    ProjectDescription.project_classes.any(id=pclass_id),
+                    and_(Project.project_classes.any(id=pclass_id), Project.default_id == ProjectDescription.id),
+                ),
             )
         )
 

@@ -10,7 +10,7 @@
 
 title = """
 {% set project = r.parent %}
-{% set pclass = r.project_classes.first() %}
+{% set pclass = project.project_classes.first() %}
 {% set disabled = (pclass is none) %}
 <a {% if not disabled %}href="{{ url_for('faculty.project_preview', id=r.parent.id, pclass=pclass.id, show_selector=0, url=url, text=text) }}"{% endif %}>
     {%- if project -%}{{ project.name }}{%- else -%}<unnamed project>{%- endif -%}/{%- if r.label -%}{{ r.label }}{%- else -%}<unnamed description>{%- endif -%}

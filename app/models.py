@@ -3069,7 +3069,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         return {"label": f"{n} available", "type": "success"}
 
-    def _variants_offered_query(self, pclass):
+    def variants_offered(self, pclass, filter_warnings=None, filter_errors=None):
         if isinstance(pclass, ProjectClass):
             pclass_id = pclass.id
         elif isinstance(pclass, int):
@@ -3077,21 +3077,35 @@ class FacultyData(db.Model, EditingMetadataMixin):
         else:
             raise RuntimeError("Could not interpret pclass parameter of type {typ} in FacultyData._variants_offered_query".format(typ=type(pclass)))
 
-        return (
+        # get variants that are explicitly marked as attached to the specified project class
+        explicit_variants = (
             db.session.query(ProjectDescription)
-            .join(Project, Project.id == ProjectDescription.parent_id)
+            .select_from(Project)
+            .filter(Project.active == True, Project.owner_id == self.id)
+            .join(ProjectDescription, ProjectDescription.parent_id == Project.id)
+            .filter(ProjectDescription.project_classes.any(id=pclass_id))
+        ).all()
+
+        # get variants that are *not* marked as attached to the specified project class, but which *are* the
+        # default variant for some project that *is* attached
+        # This prevents us from selecting a variant which is marked as the default, but overridden by
+        # some other explicitly-attached variant
+        explicit_variant_project_ids = [d.parent_id for d in explicit_variants]
+        default_variants = (
+            db.session.query(ProjectDescription)
+            .select_from(Project)
             .filter(
                 Project.active == True,
                 Project.owner_id == self.id,
-                or_(
-                    ProjectDescription.project_classes.any(id=pclass_id),
-                    and_(Project.project_classes.any(id=pclass_id), Project.default_id == ProjectDescription.id),
-                ),
+                ~Project.id.in_(explicit_variant_project_ids),
+                Project.project_classes.any(id=pclass_id),
             )
-        )
+            .join(ProjectDescription, ProjectDescription.parent_id == Project.id)
+            .filter(ProjectDescription.id == Project.default_id)
+        ).all()
 
-    def variants_offered(self, pclass, filter_warnings=None, filter_errors=None):
-        vs = self._variants_offered_query(pclass).all()
+        # the variants to be offered are the sum of these two groups
+        vs = explicit_variants + default_variants
 
         if filter_warnings is not None:
             if isinstance(filter_warnings, str):

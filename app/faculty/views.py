@@ -77,7 +77,7 @@ from ..shared.utils import (
     get_current_year,
     get_count,
     get_approval_queue_data,
-    allow_approval_for_project,
+    allow_approval_for_description,
     redirect_url,
     get_main_config,
 )
@@ -1450,7 +1450,7 @@ def project_preview(id):
     form.limit_visibility.data = True if current_user.has_role("project_approver") else False
 
     allow_approval = (
-        (current_user.has_role("project_approver") or current_user.has_role("root")) and desc is not None and allow_approval_for_project(desc.id)
+        (current_user.has_role("project_approver") or current_user.has_role("root")) and desc is not None and allow_approval_for_description(desc.id)
     )
 
     show_comments = allow_approval or (data.owner is not None and current_user.id == data.owner.id) or current_user.has_role("convenor")

@@ -166,7 +166,7 @@ def build_project_approval_queues():
     rejected = []
 
     for desc in descriptions:
-        if allow_approval_for_project(desc.id):
+        if allow_approval_for_description(desc.id):
             if desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED:
                 queued.append(desc.id)
             elif desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
@@ -176,17 +176,19 @@ def build_project_approval_queues():
 
 
 @cache.memoize()
-def allow_approval_for_project(desc_id):
+def allow_approval_for_description(desc_id):
     desc: ProjectDescription = db.session.query(ProjectDescription).filter_by(id=desc_id).first()
 
     if desc is None:
         return False
 
     parent: Project = desc.parent
+
+    # generic projects don't require approval (they are managed by the convenor anyway)
     if parent.generic:
         return False
 
-    owner: FacultyData = desc.parent.owner
+    owner: FacultyData = parent.owner
 
     if owner:
         # no-one should approve their own projects
@@ -198,54 +200,63 @@ def allow_approval_for_project(desc_id):
             return False
 
     # don't include inactive projects
-    if not desc.parent.active:
+    if not parent.active:
         return False
 
     # don't include descriptions or projects that have validation errors
     # no need to check descriptions separately since they are validated as part
     # of the parent project
-    if not desc.parent.is_offerable:
+    if not parent.is_offerable:
         return False
 
-    for pcl in desc.project_classes:
+    # check whether the current user is in the approval pool for this description
+    for pcl in parent.project_classes:
         pcl: ProjectClass
 
-        # ensure pcl is also in list of project classes for parent project
-        if pcl in desc.parent.project_classes:
-            # check user is root or in approvals team for this project class
-            in_team = current_user.has_role("root") or get_count(pcl.approvals_team.filter_by(id=current_user.id)) > 0
-            if not in_team:
+        # if this project class is not active or not published, there is nothing to do
+        if not pcl.active or not pcl.publish:
+            continue
+
+        # get variant that will be offered for this project class.
+        # if it isn't the variant we are inspecting, there is nothing to do
+        pcl_variant = parent.get_description(pcl)
+        if pcl_variant is None or pcl_variant.id != desc.id:
+            continue
+
+        # if the user is not in the approvals pool for this project class, there is nothing to do
+        in_team = current_user.has_role("root") or pcl.approvals_team.filter_by(id=current_user.id).first() is not None
+        if not in_team:
+            continue
+
+        # inspect current project class configuration
+        config: ProjectClassConfig = pcl.most_recent_config
+
+        # if this project class is currently live, there is nothing to do
+        if config.live:
+            continue
+
+        # don't include projects if project owner is not enrolled normally as a supervisor
+        record: EnrollmentRecord = owner.get_enrollment_record(pcl.id)
+        if record is None or record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+            continue
+
+        # for project classes that require project confirmations:
+        if config.require_confirm:
+            # don't include projects if confirmation is required and requests haven't been issued.
+            if not config.requests_issued:
                 continue
 
-            config: ProjectClassConfig = pcl.most_recent_config
+            # don't include descriptions that have not been confirmed by their owner
+            if not desc.confirmed:
+                continue
 
-            if config is not None and pcl.active and pcl.publish:
-                # don't include projects for project classes that have already gone live
-                if config.live:
-                    continue
-
-                # don't include projects if user is not enrolled normally as a supervisor
-                record: EnrollmentRecord = owner.get_enrollment_record(pcl.id)
-                if record is None or record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
-                    continue
-
-                # for project classes that require project confirmations:
-                if config.require_confirm:
-                    # don't include projects if confirmation is required and requests haven't been issued.
-                    if not config.requests_issued:
-                        continue
-
-                    # don't include descriptions that have not been confirmed by their owner
-                    if not desc.confirmed:
-                        continue
-
-                return True
+        return True
 
     return False
 
 
 def _approvals_ProjectDescription_delete_cache(desc):
-    cache.delete_memoized(allow_approval_for_project, desc.id)
+    cache.delete_memoized(allow_approval_for_description, desc.id)
 
 
 @listens_for(ProjectDescription, "before_insert")
@@ -280,7 +291,7 @@ def _approvals_ProjectDescription_project_classes_remove_handler(target, value, 
 
 def _approvals_delete_ProjectClass_cache(project):
     for d in project.descriptions:
-        cache.delete_memoized(allow_approval_for_project, d.id)
+        cache.delete_memoized(allow_approval_for_description, d.id)
 
 
 @listens_for(ProjectClass, "before_insert")
@@ -345,7 +356,7 @@ def _approvals_delete_EnrollmentRecord_cache(record):
     )
 
     for d in descriptions:
-        cache.delete_memoized(allow_approval_for_project, d.id)
+        cache.delete_memoized(allow_approval_for_description, d.id)
 
 
 @listens_for(EnrollmentRecord, "before_insert")

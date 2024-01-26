@@ -348,9 +348,16 @@
                         {% else %}
                             <div class="alert alert-danger">
                                 {% call icon_block("exclamation-circle") %}
-                                    <div><strong>This combination of project and project class has no assigned description.</strong></div>
+                                    <div><strong>This combination of project and project class has no assigned
+                                        variant.</strong></div>
                                     <div class="mt-1">
-                                        Please return to the description editor and generate a new description there.
+                                        Please return to the description editor and generate a new variant for this
+                                        project class,
+                                        or assign an existing variant.
+                                    </div>
+                                    <div class="mt-1">
+                                        Alternatively, choose one variant to be the default. The default applies for any
+                                        project class that does not have an explicitly assigned variant.
                                     </div>
                                 {% endcall %}
                             </div>

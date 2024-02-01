@@ -8,7 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, get_template_attribute
+from flask import jsonify, get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
+
+from ...cache import cache
 
 # language=jinja2
 _menu = """
@@ -63,20 +66,49 @@ _info = """
 
 # language=jinja2
 _building = """
-{{ simple_label(r.building.make_label() }}
+{{ simple_label(r.building.make_label()) }}
 """
+
+
+@cache.memoize()
+def _build_building_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_building)
+
+
+@cache.memoize()
+def _build_info_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_info)
+
+
+@cache.memoize()
+def _build_active_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_active)
+
+
+@cache.memoize()
+def _build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
 
 
 def rooms_data(rooms):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
+    building_templ: Template = _build_building_templ()
+    info_templ: Template = _build_info_templ()
+    active_templ: Template = _build_active_templ()
+    menu_templ: Template = _build_menu_templ()
+
     data = [
         {
             "name": r.name,
-            "building": render_template_string(_building, r=r, simple_label=simple_label),
-            "info": render_template_string(_info, r=r),
-            "active": render_template_string(_active, r=r),
-            "menu": render_template_string(_menu, r=r),
+            "building": render_template(building_templ, r=r, simple_label=simple_label),
+            "info": render_template(info_templ, r=r),
+            "active": render_template(active_templ, r=r),
+            "menu": render_template(menu_templ, r=r),
         }
         for r in rooms
     ]

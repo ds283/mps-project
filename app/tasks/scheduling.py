@@ -718,7 +718,7 @@ def _create_PuLP_problem(
             # it's not an error if supervisor_id is not in assessor_to_number; this just means that the supervisor
             # is not a possible assessor.
             # that most likely way this could happen is if the supervisor is exempt/on sabbatical from
-            # presentation assessments, eg. as HoD or HoS
+            # presentation assessments, e.g. as HoD or HoS
             if supervisor_id in assessor_to_number:
                 j = assessor_to_number[supervisor_id]
 

@@ -10588,8 +10588,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         if role not in role_map:
             raise KeyError('Unknown role "{role}" in SubmissionRecord.get_roles()'.format(role=role))
 
-        role_id = role_map[role]
-        return [role for role in self.roles if role.role == role_id]
+        role_type = role_map[role]
+        return [r for r in self.roles if r.role == role_type]
 
     def get_role_ids(self, role: str) -> Set[int]:
         """

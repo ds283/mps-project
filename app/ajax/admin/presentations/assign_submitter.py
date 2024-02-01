@@ -8,7 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, get_template_attribute
+from flask import jsonify, get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
+
+from ....cache import cache
 
 # language=jinja2
 _name = """
@@ -16,6 +19,12 @@ _name = """
 {% if s.has_issues %}
     <i class="fas fa-exclamation-triangle text-danger"></i>
 {% endif %}
+"""
+
+
+# language=jinja2
+_room = """
+{{ simple_label(room.label) }}
 """
 
 
@@ -128,16 +137,52 @@ _menu = """
 """
 
 
+@cache.memoize()
+def _build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+@cache.memoize()
+def _build_room_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_room)
+
+
+@cache.memoize()
+def _build_assessors_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_assessors)
+
+
+@cache.memoize()
+def _build_talks_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_talks)
+
+
+@cache.memoize()
+def _build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
+
 def assign_submitter_data(slots, old_slot, talk, url=None, text=None):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
+    name_templ: Template = _build_name_templ()
+    room_templ: Template = _build_room_templ()
+    assessors_templ: Template = _build_assessors_templ()
+    talks_templ: Template = _build_talks_templ()
+    menu_templ: Template = _build_menu_templ()
+
     data = [
         {
-            "session": {"display": render_template_string(_name, s=s, simple_label=simple_label), "sortvalue": s.session.date.isoformat()},
-            "room": s.room.label,
-            "assessors": render_template_string(_assessors, s=s, t=talk, url=url, text=text),
-            "talks": render_template_string(_talks, s=s, url=url, text=text),
-            "menu": render_template_string(_menu, old_slot=old_slot, new_slot=s, talk=talk, back_url=url, back_text=text),
+            "session": {"display": render_template(name_templ, s=s, simple_label=simple_label), "sortvalue": s.session.date.isoformat()},
+            "room": render_template(room_templ, room=s.room, simple_label=simple_label),
+            "assessors": render_template(assessors_templ, s=s, t=talk, url=url, text=text),
+            "talks": render_template(talks_templ, s=s, url=url, text=text),
+            "menu": render_template(menu_templ, old_slot=old_slot, new_slot=s, talk=talk, back_url=url, back_text=text),
         }
         for s in slots
     ]

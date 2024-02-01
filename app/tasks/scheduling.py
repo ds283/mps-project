@@ -16,6 +16,7 @@ from functools import partial
 from io import BytesIO
 from os import path
 from pathlib import Path
+from typing import Tuple, Dict, List
 from uuid import uuid4
 
 import pulp
@@ -47,19 +48,31 @@ from ..models import (
     ResearchGroup,
     ProjectClassConfig,
     validate_nonce,
+    SubmissionRole,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
 from ..task_queue import progress_update, register_task
 
+# create type for availability matrices;
+# these are mathematically matrices, but we represent them as maps from a tuple (i,j) -> value.
+AvailabilityMatrix = Dict[Tuple[int, int], int]
 
-def _enumerate_talks(schedule, read_serialized=False):
+# maps between "talks" (represented by a submission record) and their associated numerical identifier
+# these map a SubmissionRecord.id to an internal identifier (used as an index into matrices), and vice versa
+TalkToNumberMap = Dict[int, int]
+NumberToTalkMap = Dict[int, int]
+# this maps an internal identifier directly to a SubmissionRecord instances
+TalkDictMap = Dict[int, SubmissionRecord]
+
+
+def _enumerate_talks(schedule, read_serialized=False) -> Tuple[int, TalkToNumberMap, NumberToTalkMap, TalkDictMap]:
     # schedule is a ScheduleAttempt instance
-    talk_to_number = {}
-    number_to_talk = {}
+    talk_to_number: TalkToNumberMap = {}
+    number_to_talk: NumberToTalkMap = {}
 
-    talk_dict = {}
+    talk_dict: TalkDictMap = {}
 
     # the .schedulable_talks property returns a list of of SubmissionRecord instances,
     # minus any students who are not attending the main event and need to
@@ -179,7 +192,7 @@ def _enumerate_slots(schedule, read_serialized=False):
     return n + 1, slot_to_number, number_to_slot, slot_dict
 
 
-def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict):
+def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict) -> Tuple[AvailabilityMatrix, AvailabilityMatrix]:
     """
     Construct a dictionary mapping from (assessing-faculty, slot) pairs to yes/no availabilities,
     coded as 0 = not available, 1 = available
@@ -189,8 +202,8 @@ def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_s
     :param slot_dict:
     :return:
     """
-    A = {}
-    C = {}
+    A: AvailabilityMatrix = {}
+    C: AvailabilityMatrix = {}
 
     for i in range(number_assessors):
         assessor = assessor_dict[i]
@@ -218,7 +231,7 @@ def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_s
     return A, C
 
 
-def _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict):
+def _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict) -> AvailabilityMatrix:
     """
     Construct a dictionary mapping from (submitting-student, slot) pairs to yes/no availabilities,
     coded a 0 = not available, 1 = available
@@ -246,7 +259,7 @@ def _build_student_availability_matrix(number_talks, talk_dict, number_slots, sl
     return B
 
 
-def _generate_minimize_objective(C, X, Y, S, number_talks, number_assessors, number_slots, record):
+def _generate_minimize_objective(C: AvailabilityMatrix, X, Y, S, number_talks, number_assessors, number_slots, record):
     """
     Generate an objective function that tries to schedule as efficiently as possible,
     with workload balancing
@@ -370,16 +383,16 @@ def _forbid_unused_slots(prob, X, Y, number_assessors, number_talks, slot_dict, 
 
 
 def _create_PuLP_problem(
-    A,
-    B,
-    record: ScheduleAttempt,
-    number_talks,
-    number_assessors,
-    number_slots,
-    number_periods,
+    A: AvailabilityMatrix,
+    B: AvailabilityMatrix,
+    attempt: ScheduleAttempt,
+    number_talks: int,
+    number_assessors: int,
+    number_slots: int,
+    number_periods: int,
     assessor_to_number,
     period_to_number,
-    talk_dict,
+    talk_dict: TalkDictMap,
     assessor_dict,
     slot_dict,
     period_dict,
@@ -396,7 +409,7 @@ def _create_PuLP_problem(
     :param assessor_dict:
     :param talk_dict:
     :param slot_dict:
-    :param record:
+    :param attempt:
     :param A:
     :param number_talks:
     :param number_assessors:
@@ -408,7 +421,7 @@ def _create_PuLP_problem(
     print(" -- {l} talks, {m} assessors, {n} slots".format(l=number_talks, m=number_assessors, n=number_slots))
 
     # generate PuLP problem
-    prob = pulp.LpProblem(record.name, pulp.LpMinimize)
+    prob = pulp.LpProblem(attempt.name, pulp.LpMinimize)
 
     # generate student-to-slot assignment matrix
     # the entries of this matrix are either 0 or 1 representing 'unassigned' or 'assigned'
@@ -439,7 +452,7 @@ def _create_PuLP_problem(
 
     # OBJECTIVE FUNCTION
 
-    objective = make_objective(X, Y, S, number_talks, number_assessors, number_slots, record)
+    objective = make_objective(X, Y, S, number_talks, number_assessors, number_slots, attempt)
     prob += objective, "objective function"
 
     # keep track of how many constraints we generate
@@ -472,12 +485,12 @@ def _create_PuLP_problem(
             prob += Y[idx] == 0
             constraints += 1
 
-    # faculty members can only scheduled only up to the maximum specified multiplicity per session
+    # faculty members can be scheduled only up to the maximum specified multiplicity per session
     # for physical rooms this will usually be 1, but for Zoom-style teleconferences it could be larger
     # (corresponding to running different Zoom calls with different assessors)
-    for session in record.owner.sessions:
+    for session in attempt.owner.sessions:
         for j in range(number_assessors):
-            prob += sum(Y[(j, k)] for k in range(number_slots) if slot_dict[k].session_id == session.id) <= record.assessor_multiplicity_per_session
+            prob += sum(Y[(j, k)] for k in range(number_slots) if slot_dict[k].session_id == session.id) <= attempt.assessor_multiplicity_per_session
             constraints += 1
 
     # number of times each faculty member is scheduled should fall below the hard limit, or the
@@ -490,7 +503,7 @@ def _create_PuLP_problem(
             )
             prob += sum(Y[(j, k)] for k in range(number_slots)) <= int(assessor_limits[j])
         else:
-            prob += sum(Y[(j, k)] for k in range(number_slots)) <= int(record.assessor_assigned_limit)
+            prob += sum(Y[(j, k)] for k in range(number_slots)) <= int(attempt.assessor_assigned_limit)
         constraints += 1
 
     # if an assessor is scheduled in any slot, their occupation variable is allowed to become 1, otherwise
@@ -582,7 +595,7 @@ def _create_PuLP_problem(
     # this is taken care of by the constraints on occupation variables above, so doesn't have to be
     # done explicitly here)
 
-    if not record.ignore_coscheduling:
+    if not attempt.ignore_coscheduling:
         for i in range(number_talks):
             talk_i = talk_dict[i]
 
@@ -675,41 +688,43 @@ def _create_PuLP_problem(
 
         return _make_assessor_objective(i, mode, _not_available_predicate)
 
-    if record.all_assessors_in_pool == ScheduleAttempt.ALL_IN_POOL:
+    if attempt.all_assessors_in_pool == ScheduleAttempt.ALL_IN_POOL:
         for i in range(number_talks):
             _make_assessor_objective_pool(i, "all")
 
-    elif record.all_assessors_in_pool == ScheduleAttempt.AT_LEAST_ONE_IN_POOL:
+    elif attempt.all_assessors_in_pool == ScheduleAttempt.AT_LEAST_ONE_IN_POOL:
         for i in range(number_talks):
             _make_assessor_objective_pool(i, "one")
 
-    elif record.all_assessors_in_pool == ScheduleAttempt.ALL_IN_RESEARCH_GROUP:
+    elif attempt.all_assessors_in_pool == ScheduleAttempt.ALL_IN_RESEARCH_GROUP:
         for i in range(number_talks):
             _make_assessor_objective_research_group(i, "all")
 
-    elif record.all_assessors_in_pool == ScheduleAttempt.AT_LEAST_ONE_IN_RESEARCH_GROUP:
+    elif attempt.all_assessors_in_pool == ScheduleAttempt.AT_LEAST_ONE_IN_RESEARCH_GROUP:
         for i in range(number_talks):
             _make_assessor_objective_research_group(i, "one")
 
     else:
         raise RuntimeError("Unknown value for ScheduleAttempt.all_assessors_in_pool in _create_PuLP_problem()")
 
-    # TALKS CANNOT BE SCHEDULED WITH THE SUPERVISOR AS AN ASSESSOR
+    # TALKS CANNOT BE SCHEDULED WITH A SUPERVISOR AS AN ASSESSOR
 
     for i in range(number_talks):
-        talk = talk_dict[i]
-        supervisor_id = talk.supervisor.id
+        talk: SubmissionRecord = talk_dict[i]
+        supervisors: List[SubmissionRole] = talk.supervisor_roles
+        for supervisor in supervisors:
+            supervisor_id = supervisor.id
 
-        # it's not an error if supervisor_id is not in assessor_to_number; this just means that the supervisor
-        # is not a possible assessor.
-        # that most likely way this could happen is if the supervisor is exempt/on sabbatical from
-        # presentation assessments, eg. as HoD or HoS
-        if supervisor_id in assessor_to_number:
-            j = assessor_to_number[supervisor_id]
+            # it's not an error if supervisor_id is not in assessor_to_number; this just means that the supervisor
+            # is not a possible assessor.
+            # that most likely way this could happen is if the supervisor is exempt/on sabbatical from
+            # presentation assessments, eg. as HoD or HoS
+            if supervisor_id in assessor_to_number:
+                j = assessor_to_number[supervisor_id]
 
-            for k in range(number_slots):
-                prob += X[(i, k)] + Y[(j, k)] <= 1
-                constraints += 1
+                for k in range(number_slots):
+                    prob += X[(i, k)] + Y[(j, k)] <= 1
+                    constraints += 1
 
     # TALKS SHOULD ONLY BE SCHEDULED IN ROOMS WITH SUITABLE FACILITIES
 
@@ -741,7 +756,7 @@ def _create_PuLP_problem(
         constraints += 2
 
     # optimizer should use amin and amax to (try to) balance workloads as evenly as possible
-    objective += abs(float(record.levelling_tension)) * (amax - amin)
+    objective += abs(float(attempt.levelling_tension)) * (amax - amin)
 
     print(" -- {num} total constraints".format(num=constraints))
 
@@ -846,11 +861,14 @@ def _initialize(self, record, read_serialized=False):
 
         # build faculty availability and 'ifneeded' cost matrix
         with Timer() as fac_avail_timer:
+            A: AvailabilityMatrix
+            C: AvailabilityMatrix
             A, C = _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict)
         print(" -- computed faculty availabilities in time {s}".format(s=fac_avail_timer.interval))
 
         # build submitter availability matrix
         with Timer() as sub_avail_timer:
+            B: AvailabilityMatrix
             B = _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict)
         print(" -- computed submitter availabilities in time {s}".format(s=sub_avail_timer.interval))
 

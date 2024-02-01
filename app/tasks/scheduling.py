@@ -891,9 +891,9 @@ def _execute_live(self, record, prob, X, Y, create_time, number_talks, number_as
         record.awaiting_upload = False
 
         if record.solver == ScheduleAttempt.SOLVER_CBC_PACKAGED:
-            status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
+            status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=1, timeLimit=3600, gapRel=0.25))
         elif record.solver == ScheduleAttempt.SOLVER_CBC_CMD:
-            status = prob.solve(pulp_apis.COIN_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
+            status = prob.solve(pulp_apis.COIN_CMD(msg=True, timeLimit=3600, gapRel=0.25))
         elif record.solver == ScheduleAttempt.SOLVER_GLPK_CMD:
             status = prob.solve(pulp_apis.GLPK_CMD())
         elif record.solver == ScheduleAttempt.SOLVER_CPLEX_CMD:

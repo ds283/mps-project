@@ -2333,9 +2333,9 @@ def _execute_live(
         record.awaiting_upload = False
 
         if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
-            status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=True, maxSeconds=3600, fracGap=0.25))
+            status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=True, timeLimit=3600, gapRel=0.25))
         elif record.solver == MatchingAttempt.SOLVER_CBC_CMD:
-            status = prob.solve(pulp_apis.COIN_CMD(msg=True, maxSeconds=3600, fracGap=0.25))
+            status = prob.solve(pulp_apis.COIN_CMD(msg=True, timeLimit=3600, gapRel=0.25))
         elif record.solver == MatchingAttempt.SOLVER_GLPK_CMD:
             status = prob.solve(pulp_apis.GLPK_CMD())
         elif record.solver == MatchingAttempt.SOLVER_CPLEX_CMD:
@@ -2481,7 +2481,7 @@ def _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user: User
     progress_update(task_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...", autocommit=True)
 
     with Timer() as solve_time:
-        status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=True, maxSeconds=3600, fracGap=0.25))
+        status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=True, timeLimit=3600, gapRel=0.25))
 
     print("-- solved PuLP problem in time {t}".format(t=solve_time.interval))
 

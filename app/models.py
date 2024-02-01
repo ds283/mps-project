@@ -14929,7 +14929,7 @@ class Room(db.Model, EditingMetadataMixin):
     lecture_capture = db.Column(db.Boolean())
 
     # maximum allowable occupancy (i.e., multiple groups are allowed to be scheduled in the same room)
-    # This could be phsyical (maybe the room can be partitioned), or can be used to model e.g. Zoom teleconference rooms
+    # This could be physical (maybe the room can be partitioned), or can be used to model e.g. Zoom teleconference rooms
     maximum_occupancy = db.Column(db.Integer(), default=1, nullable=False)
 
     # active flag

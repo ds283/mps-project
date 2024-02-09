@@ -708,8 +708,6 @@ def _invalidate_cache(project_id: int):
         cache.delete_memoized(_element, project_id, t, True)
         cache.delete_memoized(_element, project_id, t, False)
 
-    cache.delete_memoized(_render_name_labels, project_id)
-
 
 @listens_for(Project, "before_update")
 def _Project_update_handler(mapper, connection, target):

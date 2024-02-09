@@ -555,7 +555,6 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
     return record
 
 
-@cache.memoize()
 def _build_error_block_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_error_block)
@@ -685,7 +684,6 @@ def replace_comment_notification(current_user_id, name, p):
     return name
 
 
-@cache.memoize()
 def _build_reenrol_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string("{{ simple_label(data) }}")

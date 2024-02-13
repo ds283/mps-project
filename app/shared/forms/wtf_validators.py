@@ -17,7 +17,7 @@ from werkzeug.local import LocalProxy
 from wtforms import ValidationError
 from wtforms.validators import Optional
 
-from ... import db
+from ...database import db
 from ...models import (
     ResearchGroup,
     DegreeType,

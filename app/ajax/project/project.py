@@ -426,7 +426,6 @@ def _build_menu_templ(key: str) -> Template:
     return env.from_string(_menus[key])
 
 
-@cache.memoize()
 def _render_name_labels(project_id):
     p: Project = db.session.query(Project).filter_by(id=project_id).one()
 
@@ -555,7 +554,6 @@ def _process(project_id, config, current_user_id, menu_template, name_labels, te
     return record
 
 
-@cache.memoize()
 def _build_error_block_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_error_block)
@@ -685,7 +683,6 @@ def replace_comment_notification(current_user_id, name, p):
     return name
 
 
-@cache.memoize()
 def _build_reenrol_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string("{{ simple_label(data) }}")
@@ -710,8 +707,6 @@ def _invalidate_cache(project_id: int):
     for t in _menus:
         cache.delete_memoized(_element, project_id, t, True)
         cache.delete_memoized(_element, project_id, t, False)
-
-    cache.delete_memoized(_render_name_labels, project_id)
 
 
 @listens_for(Project, "before_update")

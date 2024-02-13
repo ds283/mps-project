@@ -41,11 +41,11 @@ cycle.
 {%- endif %}
 
 When you are satisfied that your project descriptions are up-to-date,
-please return to your dashboard and select the "{{ pclass.name }}" tab.
-An information request box labelled "Selections: Confirmation of projects
-required" should appear highlighted in red at the top of the page.
-You can confirm projects individually, or use the green 'Confirm all projects'
-button if everything is ready to go.
+please return to your dashboard and select "{{ pclass.name }}" from the
+"My enrolments..." tab. An information request box labelled
+"Selections: Confirmation of projects required" should appear highlighted
+in red at the top of the page. You can confirm projects individually, or
+use the green 'Confirm all projects' button if everything is ready to go.
 
 {% if config.request_deadline is defined and config.request_deadline is not none -%}
 It would be very helpful if you could provide your response

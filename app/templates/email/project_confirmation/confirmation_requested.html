@@ -30,7 +30,10 @@
 {%- endif %}
 {%- endif %}
 
-<p>When you are satisfied that your project descriptions are up-to-date, please return to your dashboard and select the <strong>{{ pclass.name }}</strong> tab. An information request box labelled "Selections: Confirmation of projects required" should appear highlighted in red at the top of the page. You can confirm projects individually, or use the green 'Confirm all projects' button if everything is ready to go.</p>
+<p>When you are satisfied that your project descriptions are up-to-date, please return to your dashboard and select
+    <strong>{{ pclass.name }}</strong> from the &ldquo;My enrolments...&rdquo; tab. An information request box labelled
+    "Selections: Confirmation of projects required" should appear highlighted in red at the top of the page. You can
+    confirm projects individually, or use the green 'Confirm all projects' button if everything is ready to go.</p>
 
 {% if config.request_deadline is defined and config.request_deadline is not none -%}
 <p>It would be very helpful if you could provide your response by {{ config.request_deadline.strftime("%a %d %b %Y") }} at latest.</p>

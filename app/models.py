@@ -6446,11 +6446,13 @@ class SubmissionPeriodRecord(db.Model):
         if self.feedback_deadline is None:
             return "<invalid>"
 
-        today = date.today()
-        if today > self.feedback_deadline:
+        feedback_deadline_date: date = self.feedback_deadline.date()
+        today: date = date.today()
+
+        if today > feedback_deadline_date:
             return "in the past"
 
-        delta = self.feedback_deadline.date() - today
+        delta = feedback_deadline_date - today
         return format_readable_time(delta)
 
     @property

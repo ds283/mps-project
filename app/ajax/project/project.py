@@ -9,7 +9,6 @@
 #
 
 from typing import Optional, List, Tuple
-from urllib import parse
 
 from flask import current_app, get_template_attribute, render_template
 from jinja2 import Template, Environment
@@ -503,16 +502,6 @@ def build_data(
     if hasattr(projects, 'len') and len(projects) == 0:
         return []
 
-    bleach = current_app.extensions["bleach"]
-
-    def urlencode(s):
-        s = s.encode("utf8")
-        s = parse.quote_plus(s)
-        return bleach.clean(s)
-
-    url_enc = urlencode(url) if url is not None else ""
-    text_enc = urlencode(text) if text is not None else ""
-
     simple_label = get_template_attribute("labels.html", "simple_label")
     truncate = get_template_attribute("macros.html", "truncate")
 
@@ -557,8 +546,8 @@ def build_data(
                 in_selector=in_selector,
                 in_submitter=in_submitter,
                 show_errors=show_errors,
-                text=text_enc,
-                url=url_enc,
+                text=text,
+                url=url,
                 error_block_popover=error_block_popover,
                 current_user=current_user,
             ),
@@ -587,8 +576,8 @@ def build_data(
                 in_selector=in_selector,
                 in_submitter=in_submitter,
                 select_in_previous_cycle=config.select_in_previous_cycle if config is not None else True,
-                text=text_enc,
-                url=url_enc,
+                text=text,
+                url=url,
             ),
         }
 

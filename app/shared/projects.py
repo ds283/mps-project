@@ -107,7 +107,7 @@ def project_list_SQL_handler(
             if not isinstance(projects, list):
                 raise TypeError("Unexpected project list type")
 
-            if len(projects) == 0:
+            if hasattr(projects, "len") and len(projects) == 0:
                 return []
 
             return ajax.project.build_data(

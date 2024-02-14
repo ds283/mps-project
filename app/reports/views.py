@@ -85,15 +85,13 @@ def workload_ajax():
     group_filter = request.args.get("group_filter")
     detail = request.args.get("detail")
 
-    fac_query = db.session.query(FacultyData.id).join(User, User.id == FacultyData.id).filter(User.active)
+    fac_query = db.session.query(FacultyData).join(User, User.id == FacultyData.id).filter(User.active)
 
     flag, group_value = is_integer(group_filter)
     if flag:
         fac_query = fac_query.filter(FacultyData.affiliations.any(id=group_value))
 
-    faculty_ids = [f[0] for f in fac_query.all()]
-
-    return ajax.reports.workload_data(faculty_ids, detail == "simple")
+    return ajax.reports.workload_data(fac_query.all(), detail == "simple")
 
 
 @reports.route("/all_projects")

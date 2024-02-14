@@ -509,7 +509,7 @@ def build_data(
     show_approvals: Optional[bool] = False,
     show_errors: Optional[bool] = True,
 ):
-    if len(projects) == 0:
+    if hasattr(projects, 'len') and len(projects) == 0:
         return []
 
     bleach = current_app.extensions["bleach"]
@@ -536,14 +536,6 @@ def build_data(
     prefer_templ: Template = _build_prefer_templ()
     skills_templ: Template = _build_skills_templ()
     menu_templ: Template = _build_menu_templ(menu_template) if menu_template is not None else None
-
-    pfirst = projects[0]
-    if isinstance(pfirst, Project) or isinstance(pfirst, LiveProject):
-        indirect = False
-    elif isinstance(pfirst, tuple):
-        indirect = True
-    else:
-        raise TypeError("Could not interpret type of project list bassed to build_data()")
 
     selector_lifecycle = config.selector_lifecycle if config is not None else None
     waiting_confirmations = (
@@ -609,4 +601,4 @@ def build_data(
             ),
         }
 
-    return [_process(p=p[0], d=p[1]) if indirect else _process(p=p, d=None) for p in projects]
+    return [_process(p=p[0], d=p[1]) if isinstance(p, tuple) else _process(p=p, d=None) for p in projects]

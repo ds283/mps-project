@@ -263,7 +263,7 @@ def _build_selector_menu_templ() -> Template:
 
 
 def selector_liveprojects_data(sel: SelectingStudent, is_live: bool, projects: List[LiveProject]):
-    if len(projects) == 0:
+    if hasattr(projects, 'len') and len(projects) == 0:
         return []
 
     simple_label = get_template_attribute("labels.html", "simple_label")
@@ -305,7 +305,7 @@ def selector_liveprojects_data(sel: SelectingStudent, is_live: bool, projects: L
 
 
 def submitter_liveprojects_data(sub: SubmittingStudent, projects: List[LiveProject]):
-    if len(projects) == 0:
+    if hasattr(projects, 'len') and len(projects) == 0:
         return []
 
     simple_label = get_template_attribute("labels.html", "simple_label")

@@ -555,7 +555,7 @@ def _element_base(f: FacultyData, enrolment_template: Template, allocation_templ
             "sortvalue": total_allocation,
         },
         "availability": {
-            "display": render_template(_availability, t=availability, u=unbounded),
+            "display": render_template(availability_templ, t=availability, u=unbounded),
             "sortvalue": 999999 if unbounded else availability,
         },
         "workload": {

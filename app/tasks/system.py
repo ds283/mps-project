@@ -11,7 +11,7 @@
 from ast import literal_eval
 from datetime import datetime
 
-from celery import chain, group
+from celery import group
 from celery.exceptions import Ignore
 from dateutil import parser
 from flask import current_app
@@ -187,79 +187,6 @@ def register_system_tasks(celery):
         try:
             user.post_message(
                 "An error occurred while attempting to reset background tasks. Please check the appropriate server logs.", "error", autocommit=True
-            )
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def reset_precompute_times(self, user_id):
-        try:
-            users = db.session.query(User.id).filter_by(active=True).all()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        work = chain(group(reset_precompute_time.si(ident[0]) for ident in users), reset_precompute_notify.si(user_id)).on_error(
-            reset_precompute_fail.si(user_id)
-        )
-
-        raise self.replace(work)
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def reset_precompute_time(self, ident):
-        try:
-            user = db.session.query(User).filter_by(id=ident).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        user.last_precompute = None
-
-        try:
-            db.session.commit()
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        return True
-
-    @celery.task(bind=True, default_retry_delay=5)
-    def reset_precompute_notify(self, user_id):
-        try:
-            user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if user is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
-            raise Ignore()
-
-        try:
-            user.post_message("All user precompute times have been reset successfully.", "success", autocommit=True)
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-    @celery.task(bind=True, default_retry_delay=5)
-    def reset_precompute_fail(self, user_id):
-        try:
-            user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if user is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
-            raise Ignore()
-
-        try:
-            user.post_message(
-                "An error occurred while attempting to reset user precompute times. Please check the appropriate server logs.",
-                "error",
-                autocommit=True,
             )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

@@ -15,6 +15,7 @@ from datetime import date, datetime, timedelta
 from functools import partial
 from io import BytesIO
 from itertools import chain as itertools_chain
+from math import pi
 from pathlib import Path
 from typing import List
 from urllib.parse import urlsplit
@@ -25,7 +26,6 @@ from bokeh.plotting import figure
 from celery import chain, group
 from flask import current_app, redirect, url_for, flash, request, jsonify, session, stream_with_context, abort, send_file
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
-from math import pi
 from numpy import histogram
 from sqlalchemy import or_, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -10398,16 +10398,6 @@ def view_schedule(tag):
 def reset_tasks():
     celery = current_app.extensions["celery"]
     reset = celery.tasks["app.tasks.system.reset_tasks"]
-    reset.si(current_user.id).apply_async()
-
-    return redirect(redirect_url())
-
-
-@admin.route("/reset_precompute")
-@roles_accepted("admin", "root")
-def reset_precompute():
-    celery = current_app.extensions["celery"]
-    reset = celery.tasks["app.tasks.system.reset_precompute_times"]
     reset.si(current_user.id).apply_async()
 
     return redirect(redirect_url())

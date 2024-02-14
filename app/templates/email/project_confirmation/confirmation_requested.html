@@ -6,7 +6,12 @@
 
 <p>We are now preparing to publish project descriptions to this year's Y{%- if config.select_in_previous_cycle -%}{{ pclass.start_year-1 }}{%- else -%}{{ pclass.start_year }}{%- endif %} cohort. To help us, we would like to ask you to confirm the projects you wish to offer in this cycle.</p>
 
-<p>To check your projects, please log in to the <a href="https://mpsprojects.sussex.ac.uk">project management web app</a> and select 'My projects/My project library...' from the drop-down menu in the menubar. Alternatively, the list of active projects associated with each project type is shown in the corresponding tab on your dashboard. If you wish to withdraw a project, use the <em>Action</em> menu shown in the list and choose 'Don't offer this project'. If a project has come to the end of its life, you can deactivate the project entirely from the library view.</p>
+<p>To check your projects, please log in to the <a href="https://mpsprojects.sussex.ac.uk">project management web
+    app</a> and select &ldquo;My projects/My project library...&rdquo; from the drop-down menu in the menubar.
+    Alternatively, the list of active projects associated with each project type can be viewed from the &ldquo;My
+    enrolments...&rdquo; tab on your dashboard. If you wish to withdraw a project, use the <em>Action</em> menu shown in
+    the list and choose &ldquo;Don't offer this project&rdquo;. If a project has come to the end of its life, you can
+    deactivate the project entirely from the library view.</p>
 
 {% if number_projects == 0 -%}
 <p>Please note that you currently have <strong>no projects</strong> in your library that are eligible for this project type. If you wish one or more projects to be offered to students in this cycle you will need to edit an existing project, or create a new one.</p>
@@ -25,7 +30,10 @@
 {%- endif %}
 {%- endif %}
 
-<p>When you are satisfied that your project descriptions are up-to-date, please return to your dashboard and select the <strong>{{ pclass.name }}</strong> tab. An information request box labelled "Selections: Confirmation of projects required" should appear highlighted in red at the top of the page. You can confirm projects individually, or use the green 'Confirm all projects' button if everything is ready to go.</p>
+<p>When you are satisfied that your project descriptions are up-to-date, please return to your dashboard and select
+    <strong>{{ pclass.name }}</strong> from the &ldquo;My enrolments...&rdquo; tab. An information request box labelled
+    "Selections: Confirmation of projects required" should appear highlighted in red at the top of the page. You can
+    confirm projects individually, or use the green 'Confirm all projects' button if everything is ready to go.</p>
 
 {% if config.request_deadline is defined and config.request_deadline is not none -%}
 <p>It would be very helpful if you could provide your response by {{ config.request_deadline.strftime("%a %d %b %Y") }} at latest.</p>

@@ -121,7 +121,7 @@ def _pulp_dicts(
     indexs=None,
 ):
     """
-    Re-implementation of pulp.LpVariable.dicts to use list comprehension rather than a for loop, which
+    Re-implementation of pulp.LpVariable.dicts to use list comprehension rather than a for-loop, which
     is absurdly slow for large index sets
 
     :param name: The prefix to the name of each LP variable created

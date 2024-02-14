@@ -2156,13 +2156,10 @@ class User(db.Model, UserMixin):
         "AssetLicense", foreign_keys=[default_license_id], uselist=False, post_update=True, backref=db.backref("users", lazy="dynamic")
     )
 
-    # KEEP-ALIVE AND PRECOMPUTE
+    # KEEP-ALIVE TRACKING
 
     # keep track of when this user was last active on the site
     last_active = db.Column(db.DateTime(), default=None)
-
-    # keep track of when precompute was last run for this user
-    last_precompute = db.Column(db.DateTime(), default=None)
 
     # override inherited has_role method
     def has_role(self, role, skip_mask=False):

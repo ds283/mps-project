@@ -28,13 +28,11 @@ _academic_year = """
 """
 
 
-@cache.memoize()
 def _build_academic_year_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_academic_year)
 
 
-@cache.memoize()
 def _build_actions_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_actions)

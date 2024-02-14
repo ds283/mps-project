@@ -14,7 +14,6 @@ from flask import get_template_attribute, current_app, render_template
 from jinja2 import Template, Environment
 
 from .shared import build_active_templ, build_menu_templ, build_name_templ
-from ...cache import cache
 from ...models import User
 
 # language=jinja2
@@ -55,13 +54,11 @@ _status = """
 """
 
 
-@cache.memoize()
 def _build_roles_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_roles)
 
 
-@cache.memoize()
 def _build_status_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_status)

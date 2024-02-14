@@ -10,8 +10,6 @@
 from flask import current_app
 from jinja2 import Template, Environment
 
-from ...cache import cache
-
 _title = """
 {% set project = r.parent %}
 {% set pclass = project.project_classes.first() %}
@@ -70,19 +68,16 @@ _pclasses = """
 """
 
 
-@cache.memoize()
 def build_title_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_title)
 
 
-@cache.memoize()
 def build_owner_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_owner)
 
 
-@cache.memoize()
 def build_pclasses_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_pclasses)

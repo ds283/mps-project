@@ -11,8 +11,6 @@
 from flask import jsonify, get_template_attribute, render_template, current_app
 from jinja2 import Template, Environment
 
-from ....cache import cache
-
 # language=jinja2
 _student = """
 <a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
@@ -72,31 +70,26 @@ _menu = """
 """
 
 
-@cache.memoize()
 def _build_student_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_student)
 
 
-@cache.memoize()
 def _build_cohort_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_cohort)
 
 
-@cache.memoize()
 def _build_records_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_records)
 
 
-@cache.memoize()
 def _build_delta_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_delta)
 
 
-@cache.memoize()
 def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)

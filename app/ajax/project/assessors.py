@@ -11,8 +11,6 @@
 from flask import jsonify, get_template_attribute, current_app, render_template
 from jinja2 import Environment, Template
 
-from ...cache import cache
-
 # language=jinja2
 _affiliations = """
 {% for group in f.affiliations %}
@@ -63,25 +61,21 @@ _attached = """
 """
 
 
-@cache.memoize()
 def _build_attached_template() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_attached)
 
 
-@cache.memoize()
 def _build_affiliations_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_affiliations)
 
 
-@cache.memoize()
 def _build_status_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_status)
 
 
-@cache.memoize()
 def _build_enrolments_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_enrolments)

@@ -237,25 +237,21 @@ _workload = """
 """
 
 
-@cache.memoize()
 def _build_supervising_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_supervising)
 
 
-@cache.memoize()
 def _build_assessing_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_assessing)
 
 
-@cache.memoize()
 def _build_presentations_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_presentations)
 
 
-@cache.memoize()
 def _build_workload_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_workload)

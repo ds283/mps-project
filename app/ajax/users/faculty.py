@@ -13,7 +13,6 @@ from flask import get_template_attribute, current_app, render_template
 from jinja2 import Template, Environment
 
 from .shared import build_name_templ, build_active_templ, build_menu_templ
-from ...cache import cache
 from ...models import User, FacultyData
 
 # language=jinja2
@@ -71,19 +70,16 @@ _settings = """
 """
 
 
-@cache.memoize()
 def _build_settings_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_settings)
 
 
-@cache.memoize()
 def _build_affiliation_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_affiliation)
 
 
-@cache.memoize()
 def _build_enrolled_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_enrolled)

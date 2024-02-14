@@ -111,7 +111,6 @@ _menu = """
 """
 
 
-@cache.memoize()
 def _element(item_id):
     item = db.session.query(StudentBatchItem).filter_by(id=item_id).one()
 

@@ -11,8 +11,6 @@
 from flask import jsonify, get_template_attribute, current_app, render_template
 from jinja2 import Template, Environment
 
-from ....cache import cache
-
 # language=jinja2
 _status = """
 {% if s.finished %}
@@ -345,43 +343,36 @@ _periods = """
 """
 
 
-@cache.memoize()
 def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
-@cache.memoize()
 def _build_status_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_status)
 
 
-@cache.memoize()
 def _build_score_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_score)
 
 
-@cache.memoize()
 def _build_timestamp_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_timestamp)
 
 
-@cache.memoize()
 def _build_info_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_info)
 
 
-@cache.memoize()
 def _build_periods_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_periods)
 
 
-@cache.memoize()
 def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)

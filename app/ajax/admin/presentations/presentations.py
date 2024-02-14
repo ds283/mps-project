@@ -11,8 +11,6 @@
 from flask import jsonify, get_template_attribute, current_app, render_template
 from jinja2 import Template, Environment
 
-from ....cache import cache
-
 # language=jinja2
 _name = """
 {% set state = a.availability_lifecycle %}
@@ -191,25 +189,21 @@ _menu = """
 """
 
 
-@cache.memoize()
 def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
-@cache.memoize()
 def _build_periods_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_periods)
 
 
-@cache.memoize()
 def _build_sessions_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_sessions)
 
 
-@cache.memoize()
 def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)

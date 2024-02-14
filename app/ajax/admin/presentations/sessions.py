@@ -13,8 +13,6 @@ import calendar
 from flask import jsonify, get_template_attribute, current_app, render_template
 from jinja2 import Template, Environment
 
-from ....cache import cache
-
 # language=jinja2
 _date = """
 {{ s.date_as_string }}
@@ -139,31 +137,26 @@ _session = """
 """
 
 
-@cache.memoize()
 def _build_date_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_date)
 
 
-@cache.memoize()
 def _build_session_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_session)
 
 
-@cache.memoize()
 def _build_rooms_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_rooms)
 
 
-@cache.memoize()
 def _build_availability_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_availability)
 
 
-@cache.memoize()
 def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)

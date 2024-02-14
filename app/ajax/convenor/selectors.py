@@ -12,8 +12,6 @@ from flask import jsonify, get_template_attribute, current_app, render_template
 from flask_security import current_user
 from jinja2 import Template, Environment
 
-from ...cache import cache
-
 # language=jinja2
 _menu = """
 {% set pclass = student.config.project_class %}
@@ -262,37 +260,31 @@ _name = """
 """
 
 
-@cache.memoize()
 def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
-@cache.memoize()
 def _build_cohort_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_cohort)
 
 
-@cache.memoize()
 def _build_bookmarks_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_bookmarks)
 
 
-@cache.memoize()
 def _build_confirmations_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_confirmations)
 
 
-@cache.memoize()
 def _build_submitted_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_submitted)
 
 
-@cache.memoize()
 def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)

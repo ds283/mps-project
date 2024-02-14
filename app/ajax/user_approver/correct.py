@@ -13,7 +13,6 @@ from urllib import parse
 from flask import current_app, get_template_attribute, render_template
 from jinja2 import Template, Environment
 
-from ...cache import cache
 from ...models import StudentData
 
 # language=jinja2
@@ -40,19 +39,16 @@ _academic_year = """
 """
 
 
-@cache.memoize()
 def _build_academic_year_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_academic_year)
 
 
-@cache.memoize()
 def _build_rejected_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_rejected)
 
 
-@cache.memoize()
 def _build_actions_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_actions)

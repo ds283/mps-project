@@ -14,7 +14,6 @@ from urllib import parse
 from flask import current_app, get_template_attribute, render_template
 from jinja2 import Template, Environment
 
-from ...cache import cache
 from ...database import db
 from ...models import (
     Project,
@@ -440,49 +439,41 @@ _pclass_proxy_str = str(_pclass_proxy)
 #  for now these have had to be left unmemoized
 
 
-@cache.memoize()
 def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
-@cache.memoize()
 def _build_owner_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_owner)
 
 
-@cache.memoize()
 def _build_status_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_status)
 
 
-@cache.memoize()
 def _build_pclasses_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_pclasses)
 
 
-@cache.memoize()
 def _build_meetingreqd_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_meetingreqd)
 
 
-@cache.memoize()
 def _build_affiliation_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_affiliation)
 
 
-@cache.memoize()
 def _build_prefer_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_prefer)
 
 
-@cache.memoize()
 def _build_skills_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_skills)

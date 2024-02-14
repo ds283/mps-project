@@ -13,7 +13,6 @@ from typing import List, Tuple
 from flask import get_template_attribute, render_template, current_app
 from jinja2 import Template, Environment
 
-from ...cache import cache
 from ...models import ProjectClass, ProjectClassConfig, User, FacultyData
 
 # language=jinja2
@@ -119,31 +118,26 @@ _enrolments = """
 """
 
 
-@cache.memoize()
 def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
-@cache.memoize()
 def _build_enrolments_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_enrolments)
 
 
-@cache.memoize()
 def _build_projects_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_projects)
 
 
-@cache.memoize()
 def _build_golive_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_golive)
 
 
-@cache.memoize()
 def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)

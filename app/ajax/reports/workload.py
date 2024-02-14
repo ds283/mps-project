@@ -382,55 +382,46 @@ _simple_allocation = """
 """
 
 
-@cache.memoize()
 def _build_full_enrolment_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_full_enrollments)
 
 
-@cache.memoize()
 def _build_simple_enrolment_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_simple_enrollments)
 
 
-@cache.memoize()
 def _build_full_allocation_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_full_allocation)
 
 
-@cache.memoize()
 def _build_simple_allocation_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_simple_allocation)
 
 
-@cache.memoize()
 def _build_full_workload_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_full_workload)
 
 
-@cache.memoize()
 def _build_simple_workload_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_simple_workload)
 
 
-@cache.memoize()
 def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
-@cache.memoize()
 def _build_groups_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_groups)
 
 
-@cache.memoize()
 def _build_availability_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_availability)

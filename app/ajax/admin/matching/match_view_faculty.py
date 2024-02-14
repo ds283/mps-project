@@ -13,7 +13,6 @@ from typing import List
 from flask import jsonify, render_template, current_app
 from jinja2 import Template, Environment
 
-from ....cache import cache
 from ....models import MatchingAttempt, MatchingRecord
 
 # language=jinja2
@@ -244,25 +243,21 @@ _workload = """
 """
 
 
-@cache.memoize()
 def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
-@cache.memoize()
 def _build_projects_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_projects)
 
 
-@cache.memoize()
 def _build_marking_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_marking)
 
 
-@cache.memoize()
 def _build_workload_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_workload)

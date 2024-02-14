@@ -11,7 +11,6 @@
 from flask import get_template_attribute, current_app, render_template
 from jinja2 import Template, Environment
 
-from ....cache import cache
 from ....database import db
 from ....models import SelectingStudent, StudentData, EmailLog, User
 
@@ -348,43 +347,36 @@ _scores = """
 """
 
 
-@cache.memoize()
 def _build_student_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_student)
 
 
-@cache.memoize()
 def _build_pclass_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_pclass)
 
 
-@cache.memoize()
 def _build_details_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_details)
 
 
-@cache.memoize()
 def _build_project_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_project)
 
 
-@cache.memoize()
 def _build_marker_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_marker)
 
 
-@cache.memoize()
 def _build_rank_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_rank)
 
 
-@cache.memoize()
 def _build_scores_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_scores)

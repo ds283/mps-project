@@ -12,7 +12,6 @@ from typing import List
 from flask import url_for, get_template_attribute, current_app, render_template
 from jinja2 import Template, Environment
 
-from ...cache import cache
 from ...models import SelectingStudent, LiveProject, ProjectClassConfig, SubmittingStudent
 
 # language=jinja2
@@ -208,55 +207,46 @@ _owner = """
 """
 
 
-@cache.memoize()
 def _build_owner_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_owner)
 
 
-@cache.memoize()
 def _build_group_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_project_group)
 
 
-@cache.memoize()
 def _build_prefer_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_project_prefer)
 
 
-@cache.memoize()
 def _build_skills_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_project_skills)
 
 
-@cache.memoize()
 def _build_meeting_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_meeting)
 
 
-@cache.memoize()
 def _build_status_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_status)
 
 
-@cache.memoize()
 def _build_bookmarks_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_bookmarks)
 
 
-@cache.memoize()
 def _build_submitter_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_submitter_menu)
 
 
-@cache.memoize()
 def _build_selector_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_selector_menu)

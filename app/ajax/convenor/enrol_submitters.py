@@ -13,7 +13,6 @@ from typing import List
 from flask import jsonify, get_template_attribute, current_app, render_template
 from jinja2 import Template, Environment
 
-from ...cache import cache
 from ...models import StudentData
 from ...shared.utils import get_current_year
 
@@ -40,25 +39,21 @@ _academic_year = """
 """
 
 
-@cache.memoize()
 def _build_programme_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_programme)
 
 
-@cache.memoize()
 def _build_cohort_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_cohort)
 
 
-@cache.memoize()
 def _build_academic_year_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_academic_year)
 
 
-@cache.memoize()
 def _build_enrol_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_enrol)

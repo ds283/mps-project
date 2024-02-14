@@ -11,8 +11,6 @@
 from flask import jsonify, get_template_attribute, current_app, render_template
 from jinja2 import Template, Environment
 
-from ...cache import cache
-
 # language=jinja2
 _menu = """
 <div class="dropdown">
@@ -70,25 +68,21 @@ _building = """
 """
 
 
-@cache.memoize()
 def _build_building_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_building)
 
 
-@cache.memoize()
 def _build_info_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_info)
 
 
-@cache.memoize()
 def _build_active_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_active)
 
 
-@cache.memoize()
 def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)

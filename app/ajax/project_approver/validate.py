@@ -15,7 +15,6 @@ from flask import current_app, render_template, jsonify
 from jinja2 import Template, Environment
 
 from .common import build_title_templ, build_owner_templ, build_pclasses_templ
-from ...cache import cache
 from ...models import ProjectDescription, User
 
 # language=jinja2
@@ -25,7 +24,6 @@ _actions = """
 """
 
 
-@cache.memoize()
 def build_actions_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_actions)

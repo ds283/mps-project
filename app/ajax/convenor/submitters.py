@@ -11,7 +11,6 @@
 from flask import jsonify, get_template_attribute, current_app, render_template
 from jinja2 import Template, Environment
 
-from ...cache import cache
 from ...models import ProjectClassConfig
 
 # language=jinja2
@@ -360,25 +359,21 @@ _name = """
 """
 
 
-@cache.memoize()
 def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
-@cache.memoize()
 def _build_cohort_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_cohort)
 
 
-@cache.memoize()
 def _build_periods_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_periods)
 
 
-@cache.memoize()
 def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)

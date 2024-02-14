@@ -11,8 +11,6 @@
 from flask import jsonify, get_template_attribute, render_template, current_app
 from jinja2 import Template, Environment
 
-from ...cache import cache
-
 # language=jinja2
 _programmes = """
 {% for programme in pcl.programmes %}
@@ -251,55 +249,46 @@ _name = """
 """
 
 
-@cache.memoize()
 def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
-@cache.memoize()
 def _build_options_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_options)
 
 
-@cache.memoize()
 def _build_timing_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_timing)
 
 
-@cache.memoize()
 def _build_workload_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_workload)
 
 
-@cache.memoize()
 def _build_submissions_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_submissions)
 
 
-@cache.memoize()
 def _build_popularity_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_popularity)
 
 
-@cache.memoize()
 def _build_personnel_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_personnel)
 
 
-@cache.memoize()
 def _build_programmes_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_programmes)
 
 
-@cache.memoize()
 def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)

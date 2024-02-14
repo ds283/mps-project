@@ -8,42 +8,49 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from typing import Optional
+from typing import Optional, List, Tuple
 from urllib import parse
 
-from flask import current_app, url_for, get_template_attribute, render_template
+from flask import current_app, get_template_attribute, render_template
 from jinja2 import Template, Environment
-from sqlalchemy.event import listens_for
 
 from ...cache import cache
 from ...database import db
 from ...models import (
     Project,
     EnrollmentRecord,
-    ResearchGroup,
-    SkillGroup,
-    TransferableSkill,
-    DegreeProgramme,
-    DegreeType,
     ProjectDescription,
     User,
     ProjectClassConfig,
+    LiveProject,
 )
 
 # language=jinja2
 _name = """
-{% if project.active %}
-    REPERRORSYMBOL
+{% set desc_issues = desc is not none and desc.has_issues %}
+{% set project_issues = project is not none and project.has_issues %}
+{% set has_issues = desc_issues or project_issues %}
+{% if project.active and has_issues %}
+    <i class="fas fa-exclamation-triangle text-danger"></i>
 {% endif %}
 <a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
     {{ project.name }}{%- if desc is not none -%}/{{ desc.label }}{%- endif %}
 </a>
 {% if project.active %}
 <div class="mt-1">
-        {{ 'REPNEWCOMMENTS'|safe }}
-        REPSELECTING
-        REPSUBMITTING
-        REPISRUNNING
+    <div>
+        {% if current_user is not none and project.has_new_comments(current_user) %}
+            <span class="badge bg-warning text-dark">New comments</span>
+        {% endif %}
+        {% if in_selector %}
+            <span class="badge bg-primary" data-bs-toggle="tooltip" title="A version of this project is live for students who are selecting in the current cycle">SELECTING</span>
+        {% endif %}
+        {% if in_submitter %}
+            <span class="badge bg-primary" data-bs-toggle="tooltip" title="A version of this project is live and can be assigned for students who are submitting in the current cycle">SUBMITTING</span>
+        {% endif %}
+        {% if is_running %}
+            <span class="badge bg-success" data-bs-toggle="tooltip" title="One or more students are submitters for this project in the current cycle">RUNNING</span>
+        {% endif %} 
         {% if desc is none %}
             {% set num = project.num_descriptions %}
             {% if num > 0 %}
@@ -52,32 +59,31 @@ _name = """
             {% endif %}
         {% endif %}
     </div>
-    REPNAMELABELS
-    REPERRORBLOCK
+    {% if name_labels %}
+        <div>
+            {% for pclass in project.project_classes %}
+                {% if pclass.active %}
+                    {% set style = pclass.make_CSS_style() %}
+                    <a class="badge text-decoration-none text-nohover-dark bg-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
+                {% endif %}
+            {% else %}
+                <span class="badge bg-danger">No project classes</span>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if show_errors %}
+        {% if desc_issues %}
+            {{ error_block_popover(desc.errors, desc.warnings) }}
+        {% elif project_issues %}
+            {{ error_block_popover(project.errors, project.warnings) }}
+        {% endif %}
+    {% endif %}
 {% endif %}
 """
 
 
 # language=jinja2
-_name_labels = """
-<div>
-    {% for pclass in project.project_classes %}
-        {% if pclass.active %}
-            {% set style = pclass.make_CSS_style() %}
-            <a class="badge text-decoration-none text-nohover-dark bg-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
-        {% endif %}
-    {% else %}
-        <span class="badge bg-danger">No project classes</span>
-    {% endfor %}
-</div>
-"""
-
-
-# language=jinja2
 _error_block = """
-<div class="mt-1">
-    {{ error_block_popover(errors, warnings) }}
-</div>
 """
 
 
@@ -102,8 +108,64 @@ _status = """
 {% else %}
     {% if project.is_offerable %}
         <span class="badge bg-success"><i class="fas fa-check"></i> Project active</span>
-        {{ 'REPENROLLMENT'|safe }}
-        {{ 'REPAPPROVAL'|safe }}
+        {% if e is not none %}
+            {{ simple_label(e.supervisor_label) }}
+        {% endif %}
+        {% if project.has_published_pclass %}
+            {% if desc is not none %}
+                {% set state = desc.workflow_state %}
+                {% if desc.requires_confirmation and not desc.confirmed %}
+                    {% if waiting_confirmations and config is not none and desc is not none %}
+                        <div class="dropdown" style="display: inline-block;">
+                            <a class="badge text-decoration-none text-nohover-dark bg-light dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Not confirmed</a>
+                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                                <a class="dropdown-item d-flex gap-2" href="{{ url_for("convenor.confirm_description", config_id=config.id, did=desc.id) }}"><i class="fas fa-check fa-fw"></i> Confirm</a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <span class="badge bg-secondary">Not confirmed</span>
+                    {% endif %}
+                {% else %}
+                    {% if state == desc.WORKFLOW_APPROVAL_VALIDATED %}
+                        <span class="badge bg-success"><i class="fas fa-check"></i>Approved</span>
+                        {% if desc.validated_by %}
+                            <span class="small text-muted">
+                                Signed off by {{ desc.validated_by.name }}
+                                {% if desc.validated_timestamp %}
+                                    {{ desc.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                                {% endif %}
+                            </span>
+                        {% endif %}
+                    {% elif state == desc.WORKFLOW_APPROVAL_QUEUED %}
+                        <span class="badge bg-warning text-dark">Queued</span>
+                    {% elif state == desc.WORKFLOW_APPROVAL_REJECTED %}
+                        <span class="badge bg-info">In progress</span>
+                    {% else %}     
+                        <span class="badge bg-danger">Unknown approval state</span>
+                    {% endif %}
+                {% endif %} 
+            {% elif config is not none %}
+                <span class="badge bg-warning text-dark">No description</span>
+            {% else %}
+                {% set state = project.approval_state %}
+                {% if state == project.DESCRIPTIONS_APPROVED %}
+                    <span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>
+                {% elif state == project.SOME_DESCRIPTIONS_QUEUED %}
+                    <span class="badge bg-warning text-dark">Queued</span>
+                {% elif state == project.SOME_DESCRIPTIONS_REJECTED %}
+                    <span class="badge bg-info">In progress</span>
+                {% elif state == project.SOME_DESCRIPTIONS_UNCONFIRMED %}
+                    <span class="badge bg-secondary">Unconfirmed</span>
+                {% elif state == project.APPROVALS_NOT_ACTIVE %}
+                    <span class="badge bg-danger">Not offerable</span>
+                {% elif state == project.APPROVALS_NOT_OFFERABLE %}
+                {% else %}
+                    <span class="badge bg-danger">Unknown approval state</span>
+                {% endif %}
+            {% endif %}
+        {% else %}
+            <span class="badge bg-secondary"><i class="fas fa-ban"></i> Can\'t approve</span>
+        {% endif %}
     {% else %}
         <span class="badge bg-danger">Not available</span>
     {% endif %}
@@ -376,46 +438,51 @@ _pclass_proxy_str = str(_pclass_proxy)
 #  Just using @cache.memoize() seems to lead to Pickle serialization
 #  problems, at least with the Redis backend for Flask-Caching, so
 #  for now these have had to be left unmemoized
-def _build_name_labels_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string(_name_labels)
 
 
+@cache.memoize()
 def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
 
+@cache.memoize()
 def _build_owner_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_owner)
 
 
+@cache.memoize()
 def _build_status_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_status)
 
 
+@cache.memoize()
 def _build_pclasses_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_pclasses)
 
 
+@cache.memoize()
 def _build_meetingreqd_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_meetingreqd)
 
 
+@cache.memoize()
 def _build_affiliation_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_affiliation)
 
 
+@cache.memoize()
 def _build_prefer_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_prefer)
 
 
+@cache.memoize()
 def _build_skills_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_skills)
@@ -426,499 +493,25 @@ def _build_menu_templ(key: str) -> Template:
     return env.from_string(_menus[key])
 
 
-def _render_name_labels(project_id):
-    p: Project = db.session.query(Project).filter_by(id=project_id).one()
+_ProjectLike = Project | LiveProject
+_ProjectLikeList = List[_ProjectLike]
+_ProjectDescLikeList = List[Tuple[_ProjectLike, ProjectDescription]]
 
-    name_labels_templ: Template = _build_name_labels_templ()
-    return render_template(name_labels_templ, project=p)
 
-
-@cache.memoize()
-def _element(project_id, desc_id, menu_template, in_selector, in_submitter, select_in_previous_cycle):
-    p: Project = db.session.query(Project).filter_by(id=project_id).one()
-    d: Optional[ProjectDescription] = None
-    if desc_id is not None:
-        d = db.session.query(ProjectDescription).filter_by(id=desc_id).one()
-
-    simple_label = get_template_attribute("labels.html", "simple_label")
-    truncate = get_template_attribute("macros.html", "truncate")
-
-    name_templ: Template = _build_name_templ()
-    owner_templ: Template = _build_owner_templ()
-    status_templ: Template = _build_status_templ()
-    pclasses_templ: Template = _build_pclasses_templ()
-    meetingreqd_templ: Template = _build_meetingreqd_templ()
-    affiliation_templ: Template = _build_affiliation_templ()
-    prefer_templ: Template = _build_prefer_templ()
-    skills_templ: Template = _build_skills_templ()
-    menu_templ: Template = _build_menu_templ(menu_template)
-
-    return {
-        "name": render_template(name_templ, project=p, desc=d, text="REPTEXT", url="REPURL"),
-        "owner": render_template(owner_templ, project=p),
-        "status": render_template(status_templ, project=p),
-        "pclasses": render_template(pclasses_templ, project=p),
-        "meeting": render_template(meetingreqd_templ, project=p),
-        "group": render_template(affiliation_templ, project=p, simple_label=simple_label, truncate=truncate),
-        "prefer": render_template(prefer_templ, project=p, simple_label=simple_label),
-        "skills": render_template(skills_templ, skills=p.ordered_skills, simple_label=simple_label),
-        "menu": render_template(
-            menu_templ,
-            project=p,
-            desc=d,
-            config_id=_config_proxy,
-            pclass_id=_pclass_proxy,
-            in_selector=in_selector,
-            in_submitter=in_submitter,
-            select_in_previous_cycle=select_in_previous_cycle,
-            text="REPTEXT",
-            url="REPURL",
-        ),
-    }
-
-
-def _process(project_id, config, current_user_id, menu_template, name_labels, text_enc, url_enc, show_approvals, show_errors, desc_id=None):
-    p: Project = db.session.query(Project).filter_by(id=project_id).one()
-    d: Optional[ProjectDescription] = None
-    if desc_id is not None:
-        d = db.session.query(ProjectDescription).filter_by(id=desc_id).one()
-
-    if config is not None and not p.generic and p.owner is not None:
-        e = db.session.query(EnrollmentRecord).filter_by(owner_id=current_user_id, pclass_id=config.pclass_id).first()
-    else:
-        e = None
-
-    is_running = (p.running_counterpart(config.id) is not None) if config is not None else False
-
-    in_selector = (p.selector_live_counterpart(config.id) is not None) if config is not None else False
-    in_submitter = (p.submitter_live_counterpart(config.id) is not None) if config is not None else False
-
-    # _element is cached
-    record = _element(project_id, desc_id, menu_template, in_selector, in_submitter, config.select_in_previous_cycle if config is not None else True)
-
-    # need to replace text and url in 'name' field
-    # need to replace text, url, config_id and pclass_id in 'menu' field
-    # need to replace supervisor status in 'status' field
-    # need to replace new comment notification in 'name' field
-    name = record["name"]
-    status = record["status"]
-    menu = record["menu"]
-
-    name = name.replace("REPTEXT", text_enc, 1).replace("REPURL", url_enc, 1)
-
-    if name_labels:
-        name = name.replace("REPNAMELABELS", _render_name_labels(project_id), 1)
-    else:
-        name = name.replace("REPNAMELABELS", "", 1)
-
-    if is_running:
-        name = name.replace(
-            "REPISRUNNING",
-            '<span class="badge bg-success" data-bs-toggle="tooltip" title="One or '
-            "more students are submitters for this project in the current "
-            'cycle">RUNNING</span>',
-            1,
-        )
-    else:
-        name = name.replace("REPISRUNNING", "", 1)
-
-    if in_selector:
-        name = name.replace(
-            "REPSELECTING",
-            '<span class="badge bg-primary" data-bs-toggle="tooltip" title="A '
-            "version of this project is live for students who are selecting in the "
-            'current cycle">SELECTING</span>',
-            1,
-        )
-    else:
-        name = name.replace("REPSELECTING", "", 1)
-
-    if in_submitter:
-        name = name.replace(
-            "REPSUBMITTING",
-            '<span class="badge bg-primary" data-bs-toggle="tooltip" title="A '
-            "version of this project is live and can be assigned for students "
-            'who are submitting in the current cycle">SUBMITTING</span>',
-            1,
-        )
-    else:
-        name = name.replace("REPSUBMITTING", "", 1)
-
-    status = replace_enrolment_text(e, status)
-    name = replace_error_block(p, d, show_errors, name)
-    name = replace_comment_notification(current_user_id, name, p)
-    status = replace_approval_tags(p, show_approvals, config, status)
-    menu = replace_menu_anchor(text_enc, url_enc, config, menu)
-
-    record.update({"name": name, "status": status, "menu": menu})
-    return record
-
-
-def _build_error_block_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string(_error_block)
-
-
-def replace_error_block(p: Project, d: ProjectDescription, show_errors: bool, name: str):
-    block = ""
-    symbol = ""
-
-    error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
-    error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
-
-    error_block_templ: Template = _build_error_block_templ()
-
-    if show_errors:
-        if d is not None and d.has_issues:
-            block = render_template(
-                error_block_templ,
-                errors=d.errors,
-                warnings=d.warnings,
-                error_block_inline=error_block_inline,
-                error_block_popover=error_block_popover,
-            )
-            symbol = '<i class="fas fa-exclamation-triangle text-danger"></i>'
-        elif p is not None and p.has_issues:
-            block = render_template(
-                error_block_templ,
-                errors=p.errors,
-                warnings=p.warnings,
-                error_block_inline=error_block_inline,
-                error_block_popover=error_block_popover,
-            )
-            symbol = '<i class="fas fa-exclamation-triangle text-danger"></i>'
-
-    name = name.replace("REPERRORBLOCK", block, 1).replace("REPERRORSYMBOL", symbol, 1)
-    return name
-
-
-def replace_menu_anchor(text_enc: str, url_enc: str, config: ProjectClassConfig, menu: str):
-    menu = menu.replace("REPTEXT", text_enc, 2).replace("REPURL", url_enc, 2)
-
-    if config is not None:
-        menu = menu.replace(_config_proxy_str, str(config.id), 1).replace(_pclass_proxy_str, str(config.pclass_id), 8)
-
-    return menu
-
-
-def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClassConfig, status: str):
-    repapprove = ""
-
-    # if the project is not active, there is no need to do anything with its approval tag;
-    # just replace it by nothing. You can't approve an inactive project.
-    # Also, check that at least one project class this project belongs to is published
-    published = p.project_classes.filter_by(publish=True).first() is not None
-    if show_approvals:
-        if p.active and published:
-            # if no config supplied, we don't know which project class we are looking at and therefore which
-            # description is relevant. So we must describe the project as a whole
-            if config is None:
-                state = p.approval_state
-
-                if state == Project.DESCRIPTIONS_APPROVED:
-                    repapprove = '<span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>'
-                elif state == Project.SOME_DESCRIPTIONS_QUEUED:
-                    repapprove = '<span class="badge bg-warning text-dark">Approval: Queued</span>'
-                elif state == Project.SOME_DESCRIPTIONS_REJECTED:
-                    repapprove = '<span class="badge bg-info">Approval: In progress</span>'
-                elif state == Project.SOME_DESCRIPTIONS_UNCONFIRMED:
-                    repapprove = '<span class="badge bg-secondary">Approval: Unconfirmed</span>'
-                elif state == Project.APPROVALS_NOT_ACTIVE:
-                    repapprove = ""
-                elif state == Project.APPROVALS_NOT_OFFERABLE:
-                    repapprove = '<span class="badge bg-danger">Approval: Not offerable</span>'
-                else:
-                    repapprove = '<span class="badge bg-danger">Unknown approval state</span>'
-
-            # otherwise, we can pick the correct description
-            else:
-                desc = p.get_description(config.pclass_id)
-
-                if desc is None:
-                    repapprove = '<span class="badge bg-secondary">Approval: No description</span>'
-                else:
-                    state = desc.workflow_state
-                    if desc.requires_confirmation and not desc.confirmed:
-                        if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
-                            repapprove = """<div class="dropdown" style="display: inline-block;">
-                                                <a class="badge text-decoration-none text-nohover-dark bg-light dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Approval: Not confirmed</a>
-                                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                                                    <a class="dropdown-item d-flex gap-2" href="{url}"><i class="fas fa-check fa-fw"></i> Confirm</a>
-                                                </div>
-                                            </div>""".format(
-                                url=url_for("convenor.confirm_description", config_id=config.id, did=desc.id)
-                            )
-                        else:
-                            repapprove = '<span class="badge bg-secondary">Approval: Not confirmed</span>'
-                    else:
-                        if state == ProjectDescription.WORKFLOW_APPROVAL_VALIDATED:
-                            repapprove = '<span class="badge bg-success"><i class="fas fa-check"></i> Approval: Approved</span>'
-                        elif state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED:
-                            repapprove = '<span class="badge bg-warning text-dark">Approval: Queued</span>'
-                        elif state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
-                            repapprove = '<span class="badge bg-info">Approval: In progress</span>'
-                        else:
-                            repapprove = '<span class="badge bg-danger">Unknown approval state</span>'
-
-                        if desc.validated_by:
-                            repapprove += ' <span class="badge bg-info">Signed-off: ' + desc.validated_by.name + "</span>"
-                            if desc.validated_timestamp:
-                                repapprove += ' <span class="badge bg-info">' + desc.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") + "</span>"
-        else:
-            repapprove = '<span class="badge bg-secondary"><i class="fas fa-ban"></i> Can\'t approve</span>'
-
-    status = status.replace("REPAPPROVAL", repapprove, 1)
-    return status
-
-
-def replace_comment_notification(current_user_id, name, p):
-    repcomments = ""
-
-    if current_user_id is not None:
-        u = db.session.query(User).filter_by(id=current_user_id).one()
-        if p.has_new_comments(u):
-            repcomments = '<span class="badge bg-warning text-dark">New comments</span>'
-
-    name = name.replace("REPNEWCOMMENTS", repcomments, 1)
-    return name
-
-
-def _build_reenrol_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string("{{ simple_label(data) }}")
-
-
-def replace_enrolment_text(e, status):
-    repenrol = ""
-
-    enrol_templ: Template = _build_reenrol_templ()
-
-    if e is not None:
-        simple_label = get_template_attribute("labels.html", "simple_label")
-
-        label_data = e.supervisor_label
-        repenrol = render_template(enrol_templ, data=label_data, simple_label=simple_label)
-
-    status = status.replace("REPENROLLMENT", repenrol, 1)
-    return status
-
-
-def _invalidate_cache(project_id: int):
-    for t in _menus:
-        cache.delete_memoized(_element, project_id, t, True)
-        cache.delete_memoized(_element, project_id, t, False)
-
-
-@listens_for(Project, "before_update")
-def _Project_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _invalidate_cache(target.id)
-
-
-@listens_for(Project, "before_insert")
-def _Project_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _invalidate_cache(target.id)
-
-
-@listens_for(Project, "before_delete")
-def _Project_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _invalidate_cache(target.id)
-
-
-@listens_for(Project.project_classes, "append")
-def _Project_project_classes_append_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _invalidate_cache(target.id)
-
-
-@listens_for(Project.project_classes, "remove")
-def _Project_project_classes_remove_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _invalidate_cache(target.id)
-
-
-@listens_for(Project.skills, "append")
-def _Project_skills_append_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _invalidate_cache(target.id)
-
-
-@listens_for(Project.skills, "remove")
-def _Project_skills_remove_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _invalidate_cache(target.id)
-
-
-@listens_for(Project.programmes, "append")
-def _Project_programmes_append_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _invalidate_cache(target.id)
-
-
-@listens_for(Project.programmes, "remove")
-def _Project_programmes_remove_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _invalidate_cache(target.id)
-
-
-@listens_for(Project.assessors, "append")
-def _Project_assessors_append_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _invalidate_cache(target.id)
-
-
-@listens_for(Project.assessors, "remove")
-def _Project_assessors_remove_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _invalidate_cache(target.id)
-
-
-@listens_for(ProjectDescription, "before_insert")
-def _ProjectDescription_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _invalidate_cache(target.parent_id)
-
-
-@listens_for(ProjectDescription, "before_update")
-def _ProjectDescription_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _invalidate_cache(target.parent_id)
-
-
-@listens_for(ProjectDescription, "before_delete")
-def _ProjectDescription_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _invalidate_cache(target.parent_id)
-
-
-@listens_for(EnrollmentRecord, "before_update")
-def _EnrollmentRecord_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        p_ids = db.session.query(Project.id).filter_by(owner_id=target.owner_id).all()
-        for p_id in p_ids:
-            _invalidate_cache(p_id)
-
-
-@listens_for(EnrollmentRecord, "before_insert")
-def _EnrollmentRecord_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        p_ids = db.session.query(Project.id).filter_by(owner_id=target.owner_id).all()
-        for p_id in p_ids:
-            _invalidate_cache(p_id)
-
-
-@listens_for(EnrollmentRecord, "before_delete")
-def _EnrollmentRecord_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        p_ids = db.session.query(Project.id).filter_by(owner_id=target.owner_id).all()
-        for p_id in p_ids:
-            _invalidate_cache(p_id)
-
-
-@listens_for(ResearchGroup, "before_update")
-def _ResearchGroup_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        for project in target.projects:
-            _invalidate_cache(project.id)
-
-
-@listens_for(ResearchGroup, "before_delete")
-def _ResearchGroup_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        for project in target.projects:
-            _invalidate_cache(project.id)
-
-
-@listens_for(TransferableSkill, "before_update")
-def _TransferableSkill_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        for project in target.projects:
-            _invalidate_cache(project.id)
-
-
-@listens_for(TransferableSkill, "before_delete")
-def _TransferableSkill_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        for project in target.projects:
-            _invalidate_cache(project.id)
-
-
-@listens_for(SkillGroup, "before_update")
-def _SkillGroup_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        p_ids = set()
-        for skill in target.skills:
-            for project in skill.projects:
-                p_ids.add(project.id)
-
-        for p_id in p_ids:
-            _invalidate_cache(p_id)
-
-
-@listens_for(SkillGroup, "before_delete")
-def _SkillGroup_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        p_ids = set()
-        for skill in target.skills:
-            for project in skill.projects:
-                p_ids.add(project.id)
-
-        for p_id in p_ids:
-            _invalidate_cache(p_id)
-
-
-@listens_for(DegreeProgramme, "before_update")
-def _DegreeProgramme_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        for project in target.projects:
-            _invalidate_cache(project.id)
-
-
-@listens_for(DegreeProgramme, "before_delete")
-def _DegreeProgramme_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        for project in target.projects:
-            _invalidate_cache(project.id)
-
-
-@listens_for(DegreeType, "before_update")
-def _DegreeType_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        p_ids = set()
-        for programme in target.degree_programmes:
-            for project in programme.projects:
-                p_ids.add(project.id)
-
-        for p_id in p_ids:
-            _invalidate_cache(p_id)
-
-
-@listens_for(DegreeType, "before_delete")
-def _DegreeType_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        p_ids = set()
-        for programme in target.degree_programmes:
-            for project in programme.projects:
-                p_ids.add(project.id)
-
-        for p_id in p_ids:
-            _invalidate_cache(p_id)
-
-
-# projects argument could be a list of Project or LiveProject instances
 def build_data(
-    projects,
-    config: ProjectClassConfig = None,
-    current_user_id: int = None,
-    menu_template: str = None,
-    name_labels: bool = False,
-    text: str = None,
-    url: str = None,
-    show_approvals: bool = False,
-    show_errors: bool = True,
+    projects: _ProjectLikeList | _ProjectDescLikeList,
+    config: Optional[ProjectClassConfig] = None,
+    current_user: Optional[User] = None,
+    menu_template: Optional[str] = None,
+    name_labels: Optional[bool] = False,
+    text: Optional[str] = None,
+    url: Optional[str] = None,
+    show_approvals: Optional[bool] = False,
+    show_errors: Optional[bool] = True,
 ):
+    if len(projects) == 0:
+        return []
+
     bleach = current_app.extensions["bleach"]
 
     def urlencode(s):
@@ -929,34 +522,91 @@ def build_data(
     url_enc = urlencode(url) if url is not None else ""
     text_enc = urlencode(text) if text is not None else ""
 
-    if not isinstance(projects, list):
-        raise TypeError("Expected projects argument to be a list")
+    simple_label = get_template_attribute("labels.html", "simple_label")
+    truncate = get_template_attribute("macros.html", "truncate")
 
-    if len(projects) == 0:
-        return []
+    error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
 
-    p = projects[0]
-    if isinstance(p, dict):
-        data = [
-            _process(
-                p["project_id"],
-                config,
-                current_user_id,
-                menu_template,
-                name_labels,
-                text_enc,
-                url_enc,
-                show_approvals,
-                show_errors,
-                desc_id=p["desc_id"],
-            )
-            for p in projects
-        ]
-    elif isinstance(p, int):
-        data = [
-            _process(p_id, config, current_user_id, menu_template, name_labels, text_enc, url_enc, show_approvals, show_errors) for p_id in projects
-        ]
+    name_templ: Template = _build_name_templ()
+    owner_templ: Template = _build_owner_templ()
+    status_templ: Template = _build_status_templ()
+    pclasses_templ: Template = _build_pclasses_templ()
+    meetingreqd_templ: Template = _build_meetingreqd_templ()
+    affiliation_templ: Template = _build_affiliation_templ()
+    prefer_templ: Template = _build_prefer_templ()
+    skills_templ: Template = _build_skills_templ()
+    menu_templ: Template = _build_menu_templ(menu_template) if menu_template is not None else None
+
+    pfirst = projects[0]
+    if isinstance(pfirst, Project) or isinstance(pfirst, LiveProject):
+        indirect = False
+    elif isinstance(pfirst, tuple):
+        indirect = True
     else:
-        raise TypeError("Expected projects list to be of type int or dict")
+        raise TypeError("Could not interpret type of project list bassed to build_data()")
 
-    return data
+    selector_lifecycle = config.selector_lifecycle if config is not None else None
+    waiting_confirmations = (
+        selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS if selector_lifecycle is not None else False
+    )
+
+    def _process(p: _ProjectLike, d: Optional[ProjectDescription]):
+        if config is not None and not p.generic and p.owner is not None:
+            e = db.session.query(EnrollmentRecord).filter_by(owner_id=current_user.id, pclass_id=config.pclass_id).first()
+        else:
+            e = None
+
+        if d is None and config is not None:
+            d = p.get_description(config.pclass_id)
+
+        is_running = (p.running_counterpart(config.id) is not None) if config is not None else False
+
+        in_selector = (p.selector_live_counterpart(config.id) is not None) if config is not None else False
+        in_submitter = (p.submitter_live_counterpart(config.id) is not None) if config is not None else False
+
+        return {
+            "name": render_template(
+                name_templ,
+                project=p,
+                desc=d,
+                name_labels=name_labels,
+                is_running=is_running,
+                in_selector=in_selector,
+                in_submitter=in_submitter,
+                show_errors=show_errors,
+                text=text_enc,
+                url=url_enc,
+                error_block_popover=error_block_popover,
+                current_user=current_user,
+            ),
+            "owner": render_template(owner_templ, project=p),
+            "status": render_template(
+                status_templ,
+                project=p,
+                desc=d,
+                e=e,
+                config=config,
+                show_approvals=show_approvals,
+                waiting_confirmations=waiting_confirmations,
+                simple_label=simple_label,
+            ),
+            "pclasses": render_template(pclasses_templ, project=p),
+            "meeting": render_template(meetingreqd_templ, project=p),
+            "group": render_template(affiliation_templ, project=p, simple_label=simple_label, truncate=truncate),
+            "prefer": render_template(prefer_templ, project=p, simple_label=simple_label),
+            "skills": render_template(skills_templ, skills=p.ordered_skills, simple_label=simple_label),
+            "menu": render_template(
+                menu_templ,
+                project=p,
+                desc=d,
+                config_id=config.id if config is not None else None,
+                pclass_id=config.pclass_id if config is not None else None,
+                in_selector=in_selector,
+                in_submitter=in_submitter,
+                select_in_previous_cycle=config.select_in_previous_cycle if config is not None else True,
+                text=text_enc,
+                url=url_enc,
+            ),
+        }
+
+    return [_process(p=p[0], d=p[1]) if indirect else _process(p=p, d=None) for p in projects]

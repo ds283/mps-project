@@ -52,12 +52,6 @@ _status = """
 {% else %}
     <span class="small text-warning">No last login IP</span>
 {% endif %}
-<span class="small text-muted">|</span>
-{% if u.last_precompute is not none %}
-    <span class="small text-muted">Last precompute at {{ u.last_precompute.strftime("%Y-%m-%d %H:%M:%S") }}</span>
-{% else %}
-    <span class="small text-muted">No last precompute time</span>
-{% endif %}
 """
 
 

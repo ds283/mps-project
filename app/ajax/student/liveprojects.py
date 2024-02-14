@@ -7,13 +7,13 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from typing import List
 
-from flask import render_template_string, url_for, get_template_attribute
-from sqlalchemy.event import listens_for
+from flask import url_for, get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
 
 from ...cache import cache
-from ...database import db
-from ...models import ConfirmRequest, SelectingStudent, LiveProject, Bookmark, ProjectClassConfig
+from ...models import SelectingStudent, LiveProject, ProjectClassConfig, SubmittingStudent
 
 # language=jinja2
 _meeting = """
@@ -133,7 +133,7 @@ _submitter_menu = """
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.submitter_view_project', sid=sub_id, pid=project.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.submitter_view_project', sid=sub.id, pid=project.id) }}">
             <i class="fas fa-eye fa-fw"></i> View project...
         </a>
     </div>
@@ -209,125 +209,125 @@ _owner = """
 
 
 @cache.memoize()
-def _selector_element(sel_id, project_id, is_live):
-    sel: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sel_id).one() if sel_id is not None else None
-    p: LiveProject = db.session.query(LiveProject).filter_by(id=project_id).one()
-
-    config: ProjectClassConfig = p.config
-
-    simple_label = get_template_attribute("labels.html", "simple_label")
-
-    base = {
-        "name": '<a class="text-decoration-none" '
-        'href="{url}">{name}</a>'.format(name=p.name, url=url_for("student.selector_view_project", sid=sel.id, pid=p.id)),
-        "supervisor": render_template_string(_owner, project=p),
-        "group": render_template_string(_project_group, sel=sel, project=p, config=config, simple_label=simple_label),
-        "skills": render_template_string(_project_skills, sel=sel, skills=p.ordered_skills, simple_label=simple_label),
-        "prefer": render_template_string(_project_prefer, project=p, simple_label=simple_label),
-        "menu": render_template_string(_selector_menu, sel=sel, project=p, is_live=is_live, config=config),
-    }
-
-    if is_live:
-        extra_fields = {
-            "meeting": render_template_string(_meeting, sel=sel, project=p),
-            "availability": render_template_string(_status, sel=sel, project=p),
-            "bookmarks": render_template_string(_bookmarks, sel=sel, project=p),
-        }
-        base.update(extra_fields)
-
-    return base
+def _build_owner_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_owner)
 
 
 @cache.memoize()
-def _submitter_element(sub_id, project_id):
-    p: LiveProject = db.session.query(LiveProject).filter_by(id=project_id).one()
+def _build_group_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_project_group)
 
-    config: ProjectClassConfig = p.config
+
+@cache.memoize()
+def _build_prefer_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_project_prefer)
+
+
+@cache.memoize()
+def _build_skills_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_project_skills)
+
+
+@cache.memoize()
+def _build_meeting_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_meeting)
+
+
+@cache.memoize()
+def _build_status_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_status)
+
+
+@cache.memoize()
+def _build_bookmarks_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_bookmarks)
+
+
+@cache.memoize()
+def _build_submitter_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_submitter_menu)
+
+
+@cache.memoize()
+def _build_selector_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_selector_menu)
+
+
+def selector_liveprojects_data(sel: SelectingStudent, is_live: bool, projects: List[LiveProject]):
+    if len(projects) == 0:
+        return []
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    return {
-        "name": '<a class="text-decoration-none" href="{url}">{name}</a>'.format(
-            name=p.name, url=url_for("student.submitter_view_project", sid=sub_id, pid=p.id)
-        ),
-        "supervisor": render_template_string(_owner, project=p),
-        "group": render_template_string(_project_group, sel=None, project=p, config=config, simple_label=simple_label),
-        "skills": render_template_string(_project_skills, sel=None, skills=p.ordered_skills, simple_label=simple_label),
-        "prefer": render_template_string(_project_prefer, project=p, simple_label=simple_label),
-        "menu": render_template_string(_submitter_menu, sub_id=sub_id, project=p),
-    }
+    owner_templ: Template = _build_owner_templ()
+    group_templ: Template = _build_group_templ()
+    skills_templ: Template = _build_skills_templ()
+    prefer_templ: Template = _build_prefer_templ()
+    menu_templ: Template = _build_selector_menu_templ()
+
+    meeting_templ: Template = _build_meeting_templ()
+    status_templ: Template = _build_status_templ()
+    bookmarks_templ: Template = _build_bookmarks_templ()
+
+    config: ProjectClassConfig = sel.config
+
+    def _process(p: LiveProject, is_live: bool):
+        base = {
+            "name": '<a class="text-decoration-none" '
+            'href="{url}">{name}</a>'.format(name=p.name, url=url_for("student.selector_view_project", sid=sel.id, pid=p.id)),
+            "supervisor": render_template(owner_templ, project=p),
+            "group": render_template(group_templ, sel=sel, project=p, config=config, simple_label=simple_label),
+            "skills": render_template(skills_templ, sel=sel, skills=p.ordered_skills, simple_label=simple_label),
+            "prefer": render_template(prefer_templ, project=p, simple_label=simple_label),
+            "menu": render_template(menu_templ, sel=sel, project=p, is_live=is_live, config=config),
+        }
+
+        if is_live:
+            extra_fields = {
+                "meeting": render_template(meeting_templ, sel=sel, project=p),
+                "availability": render_template(status_templ, sel=sel, project=p),
+                "bookmarks": render_template(bookmarks_templ, sel=sel, project=p),
+            }
+            base.update(extra_fields)
+
+        return base
+
+    return [_process(p, is_live) for p in projects]
 
 
-def _delete_browsing_cache(owner_id, project_id):
-    cache.delete_memoized(_selector_element, owner_id, project_id, True)
-    cache.delete_memoized(_selector_element, owner_id, project_id, False)
+def submitter_liveprojects_data(sub: SubmittingStudent, projects: List[LiveProject]):
+    if len(projects) == 0:
+        return []
 
+    simple_label = get_template_attribute("labels.html", "simple_label")
 
-@listens_for(ConfirmRequest, "before_insert")
-def _ConfirmRequest_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_browsing_cache(target.owner_id, target.project_id)
+    owner_templ: Template = _build_owner_templ()
+    group_templ: Template = _build_group_templ()
+    skills_templ: Template = _build_skills_templ()
+    prefer_templ: Template = _build_prefer_templ()
+    menu_templ: Template = _build_submitter_menu_templ()
 
+    config: ProjectClassConfig = sub.config
 
-@listens_for(ConfirmRequest, "before_update")
-def _ConfirmRequest_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_browsing_cache(target.owner_id, target.project_id)
+    def _process(p: LiveProject):
+        return {
+            "name": '<a class="text-decoration-none" href="{url}">{name}</a>'.format(
+                name=p.name, url=url_for("student.submitter_view_project", sid=sub.id, pid=p.id)
+            ),
+            "supervisor": render_template(owner_templ, project=p),
+            "group": render_template(group_templ, sel=None, project=p, config=config, simple_label=simple_label),
+            "skills": render_template(skills_templ, sel=None, skills=p.ordered_skills, simple_label=simple_label),
+            "prefer": render_template(prefer_templ, project=p, simple_label=simple_label),
+            "menu": render_template(menu_templ, sub=sub, project=p),
+        }
 
-
-@listens_for(ConfirmRequest, "before_delete")
-def _ConfirmRequest_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_browsing_cache(target.owner_id, target.project_id)
-
-
-@listens_for(Bookmark, "before_update")
-def _Bookmark_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_browsing_cache(target.owner_id, target.liveproject_id)
-
-
-@listens_for(Bookmark, "before_insert")
-def _Bookmark_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_browsing_cache(target.owner_id, target.liveproject_id)
-
-
-@listens_for(Bookmark, "before_delete")
-def _Bookmark_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_browsing_cache(target.owner_id, target.liveproject_id)
-
-
-def selector_liveprojects_data(sel_id, is_live, projects):
-    if isinstance(projects, list):
-        if len(projects) > 0:
-            if isinstance(projects[0], int):
-                return [_selector_element(sel_id, pid, is_live) for pid in projects]
-            else:
-                return [_selector_element(sel_id, p.id, is_live) for p in projects]
-
-    else:
-        if isinstance(projects, int):
-            return [_selector_element(sel_id, projects, is_live)]
-        else:
-            return [_selector_element(sel_id, projects.id, is_live)]
-
-    return []
-
-
-def submitter_liveprojects_data(sub_id, projects):
-    if isinstance(projects, list):
-        if len(projects) > 0:
-            if isinstance(projects[0], int):
-                return [_submitter_element(sub_id, pid) for pid in projects]
-            else:
-                return [_submitter_element(sub_id, p.id) for p in projects]
-
-    else:
-        if isinstance(projects, int):
-            return [_submitter_element(sub_id, projects)]
-        else:
-            return [_submitter_element(sub_id, projects.id)]
-
-    return []
+    return [_process(p) for p in projects]

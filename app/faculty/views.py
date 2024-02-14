@@ -291,7 +291,7 @@ def projects_ajax():
     return project_list_SQL_handler(
         request,
         base_query,
-        current_user_id=current_user.id,
+        current_user=current_user,
         menu_template="faculty",
         name_labels=True,
         text="projects list",
@@ -334,7 +334,7 @@ def marking_ajax():
     if flag:
         base_query = base_query.filter(Project.project_classes.any(id=pclass_value))
 
-    return project_list_SQL_handler(request, base_query, current_user_id=current_user.id, show_approvals=False, show_errors=False)
+    return project_list_SQL_handler(request, base_query, current_user=current_user, show_approvals=False, show_errors=False)
 
 
 @faculty.route("/edit_descriptions/<int:id>")

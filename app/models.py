@@ -7363,6 +7363,12 @@ class Project(
     # which project classes are associated with this description?
     project_classes = db.relationship("ProjectClass", secondary=project_pclasses, lazy="dynamic", backref=db.backref("projects", lazy="dynamic"))
 
+    # test if at least one project class to which we are attached is published
+    @property
+    def has_published_pclass(self):
+        return self.project_classes.filter_by(publish=True).first() is not None
+
+
     @property
     def forced_group_tags(self):
         tags = set()

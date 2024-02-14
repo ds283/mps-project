@@ -50,7 +50,7 @@ def validate_ajax():
     queued = queues["queued"]
 
     return ajax.project_approver.validate_data(
-        queued, current_user.id, url=url_for("project_approver.validate", url=url, text=text), text="project approval list"
+        current_user, url=url_for("project_approver.validate", url=url, text=text), text="project approval list", records=queued
     )
 
 

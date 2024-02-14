@@ -7,8 +7,12 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from flask import current_app
+from jinja2 import Template, Environment
 
-title = """
+from ...cache import cache
+
+_title = """
 {% set project = r.parent %}
 {% set pclass = project.project_classes.first() %}
 {% set disabled = (pclass is none) %}
@@ -22,12 +26,14 @@ title = """
     </div>
 {% endif %}
 <div>
-    {{ 'REPNEWCOMMENTS'|safe }}
+    {% if project.has_new_comments(current_user) %}
+        <span class="badge bg-warning text-dark">New comments</span>
+    {% endif %}
 </div>
 """
 
 
-owner = """
+_owner = """
 {% if p.generic %}
     <span class="badge bg-secondary">Generic</span>
 {% else %}
@@ -41,7 +47,7 @@ owner = """
 """
 
 
-pclasses = """
+_pclasses = """
 {% set ns = namespace(count=0) %}
 {% if r.default is not none %}
     <span class="badge bg-success">Default</span>
@@ -62,3 +68,21 @@ pclasses = """
     <span class="badge bg-primary"><i class="fas fa-exclamation-circle"></i> Has recommended modules</span>
 {% endif %}
 """
+
+
+@cache.memoize()
+def build_title_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_title)
+
+
+@cache.memoize()
+def build_owner_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_owner)
+
+
+@cache.memoize()
+def build_pclasses_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_pclasses)

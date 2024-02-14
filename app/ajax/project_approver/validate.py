@@ -8,19 +8,15 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, current_app
-from .common import title, owner, pclasses
-
-from ...database import db
-from ...models import ProjectDescription, User
-from ...cache import cache
-
-from sqlalchemy.event import listens_for
-
-from ...shared.utils import get_current_year
-
+from typing import Optional, List
 from urllib import parse
 
+from flask import current_app, render_template, jsonify
+from jinja2 import Template, Environment
+
+from .common import build_title_templ, build_owner_templ, build_pclasses_templ
+from ...cache import cache
+from ...models import ProjectDescription, User
 
 # language=jinja2
 _actions = """
@@ -30,100 +26,12 @@ _actions = """
 
 
 @cache.memoize()
-def _element(r_id):
-    record: ProjectDescription = db.session.query(ProjectDescription).filter_by(id=r_id).one()
-
-    return {
-        "name": render_template_string(title, r=record, url="REPURL", text="REPTEXT"),
-        "owner": render_template_string(owner, p=record.parent),
-        "pclasses": render_template_string(pclasses, r=record),
-        "menu": render_template_string(_actions, r=record, url="REPURL", text="REPTEXT"),
-    }
+def build_actions_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_actions)
 
 
-def _process(r_id, current_user_id, text_enc, url_enc):
-    d = db.session.query(ProjectDescription).filter_by(id=r_id).one()
-
-    project = d.parent
-
-    # _element is cached
-    record = _element(r_id)
-
-    name = record["name"]
-    menu = record["menu"]
-
-    name = name.replace("REPTEXT", text_enc, 1).replace("REPURL", url_enc, 1)
-
-    if current_user_id is not None:
-        u = db.session.query(User).filter_by(id=current_user_id).one()
-        if project.has_new_comments(u):
-            name = name.replace("REPNEWCOMMENTS", '<span class="badge bg-warning text-dark">New comments</span>', 1)
-        else:
-            name = name.replace("REPNEWCOMMENTS", "", 1)
-    else:
-        name = name.replace("REPNEWCOMMENTS", "", 1)
-
-    menu = menu.replace("REPTEXT", text_enc, 2).replace("REPURL", url_enc, 2)
-
-    record.update({"name": name, "menu": menu})
-    return record
-
-
-@listens_for(ProjectDescription, "before_insert")
-def _ProjectDescription_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
-
-
-@listens_for(ProjectDescription, "before_update")
-def _ProjectDescription_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
-
-
-@listens_for(ProjectDescription, "before_delete")
-def _ProjectDescription_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
-
-
-@listens_for(ProjectDescription.project_classes, "append")
-def _ProjectDescription_project_classes_append_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
-
-
-@listens_for(ProjectDescription.project_classes, "remove")
-def _ProjectDescription_project_classes_delete_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
-
-
-@listens_for(ProjectDescription.team, "append")
-def _ProjectDescription_team_append_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
-
-
-@listens_for(ProjectDescription.team, "remove")
-def _ProjectDescription_team_delete_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
-
-
-@listens_for(ProjectDescription.modules, "append")
-def _ProjectDescription_modules_append_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
-
-
-@listens_for(ProjectDescription.modules, "remove")
-def _ProjectDescription_modules_delete_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
-
-
-def validate_data(record_ids, current_user_id=None, url="", text=""):
+def validate_data(current_user: User, url: Optional[str], text: Optional[str], records: List[ProjectDescription]):
     bleach = current_app.extensions["bleach"]
 
     def urlencode(s):
@@ -134,6 +42,19 @@ def validate_data(record_ids, current_user_id=None, url="", text=""):
     url_enc = urlencode(url) if url is not None else ""
     text_enc = urlencode(text) if text is not None else ""
 
-    data = [_process(r_id, current_user_id, text_enc, url_enc) for r_id in record_ids]
+    title_templ: Template = build_title_templ()
+    owner_templ: Template = build_owner_templ()
+    pclasses_templ: Template = build_pclasses_templ()
+    actions_templ: Template = build_actions_templ()
+
+    data = [
+        {
+            "name": render_template(title_templ, r=r, url=url_enc, text=text_enc, current_user=current_user),
+            "owner": render_template(owner_templ, p=r.parent),
+            "pclasses": render_template(pclasses_templ, r=r),
+            "menu": render_template(actions_templ, r=r, url=url_enc, text=text_enc),
+        }
+        for r in records
+    ]
 
     return jsonify(data)

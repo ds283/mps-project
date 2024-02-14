@@ -8,21 +8,18 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app
+from ast import literal_eval
+from datetime import datetime
 
 from celery import chain, group
 from celery.exceptions import Ignore
+from dateutil import parser
+from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import User, TaskRecord, Notification, MatchingAttempt, ScheduleAttempt, StudentBatch
-from ..shared.precompute import precompute_at_login
 from ..shared.internal_redis import get_redis
-
-from ast import literal_eval
-
-from datetime import datetime
-from dateutil import parser
 
 
 def register_system_tasks(celery):
@@ -361,41 +358,7 @@ def register_system_tasks(celery):
             if n.type == Notification.USER_MESSAGE or n.type == Notification.SHOW_HIDE_REQUEST or n.type == Notification.REPLACE_TEXT_REQUEST:
                 n.remove_on_pageload = True
 
-        # determine whether to kick off a background precompute task
-        # currently, precompute tasks are run *here*, and *at login*, and nowhere else,
-        # and the default lifetime for items in the cache is 24 hours
-
-        # the configuration item PRECOMPUTE_DELAY defaults to 30 minutes.
-        # We start a precompute task if either:
-        #  - If there is no recorded last precompute time. This means that the app has restarted since this
-        #    user was last seen online, and therefore the cache has been flushed. It is likely that all
-        #    precomputed items have been purged, so we need to start an urgent precompute
-        #  - The time since the last recorded precompute exceeds PRECOMPUTE_DELAY.
-        #    If a user with a non-expired session comes back to the site after a delay, they do not
-        #    (currently) go through login again. (The session is 'stale' but still treated as current.)
-        #    This means no precompute is kicked off. We won't pick up that the cache likely contains no
-        #    entries until we get here.
-        #    Of course, this means that we *also* perform redundant precomputes for all active users every
-        #    30 minutes or so. This does cover the possibility that the 24 hour cache period expires
-        #    while the user is still active. If it doesn't, at least we are only starting these jobs
-        #    for users actively using the system, which is probably only a handful.
         user.last_active = timestamp
-
-        compute_now = user.last_precompute is None
-        if not compute_now:
-            delta = timestamp - user.last_precompute
-
-            delay = current_app.config.get("PRECOMPUTE_DELAY")
-            if delay is None:
-                delay = 1800
-
-            if delta.seconds > delay:
-                compute_now = True
-
-        # if we need to re-run a precompute, spawn one
-        if compute_now:
-            celery = current_app.extensions["celery"]
-            precompute_at_login(user, celery, now=timestamp, autocommit=False)
 
         try:
             db.session.commit()

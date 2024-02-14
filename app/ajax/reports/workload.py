@@ -8,25 +8,18 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, get_template_attribute
-from sqlalchemy.event import listens_for
+from typing import List
+
+from flask import jsonify, get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
 
 from ...cache import cache
-from ...database import db
 from ...models import (
     FacultyData,
     EnrollmentRecord,
-    SubmissionRecord,
-    ScheduleSlot,
-    LiveProject,
-    ScheduleAttempt,
-    SubmissionRole,
     ProjectClassConfig,
-    ProjectClass,
 )
 from ...shared.sqlalchemy import get_count
-from ...shared.utils import get_current_year
-
 
 # language=jinja2
 _name = """
@@ -389,9 +382,61 @@ _simple_allocation = """
 """
 
 
-def _element_base(faculty_id, enrolment_template, allocation_template, workload_template):
-    f: FacultyData = db.session.query(FacultyData).filter_by(id=faculty_id).one()
+@cache.memoize()
+def _build_full_enrolment_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_full_enrollments)
 
+
+@cache.memoize()
+def _build_simple_enrolment_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_simple_enrollments)
+
+
+@cache.memoize()
+def _build_full_allocation_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_full_allocation)
+
+
+@cache.memoize()
+def _build_simple_allocation_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_simple_allocation)
+
+
+@cache.memoize()
+def _build_full_workload_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_full_workload)
+
+
+@cache.memoize()
+def _build_simple_workload_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_simple_workload)
+
+
+@cache.memoize()
+def _build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+@cache.memoize()
+def _build_groups_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_groups)
+
+
+@cache.memoize()
+def _build_availability_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_availability)
+
+
+def _element_base(f: FacultyData, enrolment_template: Template, allocation_template: Template, workload_template: Template):
     CATS_workload = {}
 
     CATS_supervising = {}
@@ -470,17 +515,21 @@ def _element_base(faculty_id, enrolment_template, allocation_template, workload_
     small_swatch = get_template_attribute("swatch.html", "small_swatch")
     medium_swatch = get_template_attribute("swatch.html", "medium_swatch")
 
+    name_templ: Template = _build_name_templ()
+    groups_templ: Template = _build_groups_templ()
+    availability_templ: Template = _build_availability_templ()
+
     return {
-        "name": {"display": render_template_string(_name, f=f), "sortstring": f.user.last_name + f.user.first_name},
-        "groups": render_template_string(_groups, f=f, simple_label=simple_label),
+        "name": {"display": render_template(name_templ, f=f), "sortstring": f.user.last_name + f.user.first_name},
+        "groups": render_template(groups_templ, f=f, simple_label=simple_label),
         "enrollments": {
-            "display": render_template_string(
+            "display": render_template(
                 enrolment_template, f=f, enrolments=enrolments, configs=configs, medium_swatch=medium_swatch, small_swatch=small_swatch
             ),
             "sortvalue": get_count(f.enrollments),
         },
         "allocation": {
-            "display": render_template_string(
+            "display": render_template(
                 allocation_template,
                 f=f,
                 enrolments=enrolments,
@@ -506,11 +555,11 @@ def _element_base(faculty_id, enrolment_template, allocation_template, workload_
             "sortvalue": total_allocation,
         },
         "availability": {
-            "display": render_template_string(_availability, t=availability, u=unbounded),
+            "display": render_template(_availability, t=availability, u=unbounded),
             "sortvalue": 999999 if unbounded else availability,
         },
         "workload": {
-            "display": render_template_string(
+            "display": render_template(
                 workload_template,
                 f=f,
                 enrolments=enrolments,
@@ -524,159 +573,26 @@ def _element_base(faculty_id, enrolment_template, allocation_template, workload_
     }
 
 
-@cache.memoize()
-def _element_full(faculty_id):
-    return _element_base(faculty_id, _full_enrollments, _full_allocation, _full_workload)
+def _element_full(f: FacultyData):
+    enrolment_templ: Template = _build_full_enrolment_templ()
+    allocation_templ: Template = _build_full_allocation_templ()
+    workload_templ: Template = _build_full_workload_templ()
+
+    return _element_base(f, enrolment_templ, allocation_templ, workload_templ)
 
 
-@cache.memoize()
-def _element_simple(faculty_id):
-    return _element_base(faculty_id, _simple_enrollments, _simple_allocation, _simple_workload)
+def _element_simple(f: FacultyData):
+    enrolment_templ: Template = _build_simple_enrolment_templ()
+    allocation_templ: Template = _build_simple_allocation_templ()
+    workload_templ: Template = _build_simple_workload_templ()
+
+    return _element_base(f, enrolment_templ, allocation_templ, workload_templ)
 
 
-def _delete_cache_entry(fac_id):
-    cache.delete_memoized(_element_full, fac_id)
-    cache.delete_memoized(_element_simple, fac_id)
-
-
-def _delete_enrolled_cache_entries(target: ProjectClass):
-    for fd in target.enrollments:
-        fd: FacultyData
-        _delete_cache_entry(fd.owner_id)
-
-
-def _SubmissionRecord_delete_cache(target: SubmissionRecord):
-    if not target.retired:
-        for role in target.roles:
-            role: SubmissionRole
-            _delete_cache_entry(role.user_id)
-
-
-@listens_for(FacultyData.affiliations, "append")
-def _FacultyData_affiliations_append_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.id)
-
-
-@listens_for(FacultyData.affiliations, "remove")
-def _FacultyData_affiliations_remove_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.id)
-
-
-@listens_for(EnrollmentRecord, "before_insert")
-def _EnrollmentRecord_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.owner_id)
-
-
-@listens_for(EnrollmentRecord, "before_update")
-def _EnrollmentRecord_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.owner_id)
-
-
-@listens_for(EnrollmentRecord, "before_delete")
-def _EnrollmentRecord_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.owner_id)
-
-
-@listens_for(SubmissionRecord, "before_insert")
-def _SubmissionRecord_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _SubmissionRecord_delete_cache(target)
-
-
-@listens_for(SubmissionRecord, "before_update")
-def _SubmissionRecord_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _SubmissionRecord_delete_cache(target)
-
-
-@listens_for(SubmissionRecord, "before_delete")
-def _SubmissionRecord_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _SubmissionRecord_delete_cache(target)
-
-
-@listens_for(SubmissionRecord.project, "set", active_history=True)
-def _SubmissionRecord_project_set_receiver(target, value, oldvalue, initiator):
-    with db.session.no_autoflush:
-        if isinstance(oldvalue, LiveProject):
-            _delete_cache_entry(oldvalue.owner_id)
-
-        if isinstance(value, LiveProject):
-            _delete_cache_entry(value.owner_id)
-
-
-@listens_for(SubmissionRole, "before_insert")
-def _SubmissionRole_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.user_id)
-
-
-@listens_for(SubmissionRole, "before_update")
-def _SubmissionRole_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.user_id)
-
-
-@listens_for(SubmissionRole, "before_delete")
-def _SubmissionRole_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.user_id)
-
-
-@listens_for(ProjectClassConfig, "before_update")
-def _ProjectClassConfig_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_enrolled_cache_entries(target.project_class)
-
-
-@listens_for(ProjectClass, "before_update")
-def _ProjectClass_update_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_enrolled_cache_entries(target)
-
-
-# no need for an insert handler for ProjectClassConfig or ProjectClass since at the point of insertion,
-# adding new project types cannot change anyone's workload
-
-# no need for a delete handler for ProjectClassConfig or ProjectClass since that will be entailed by the
-# removal of the corresponding EnrollmentRecord
-
-
-def _ScheduleSlot_assessors_delete_cache(target: ScheduleSlot, value):
-    if target.owner is not None:
-        owner = target.owner
-    else:
-        owner = db.session.query(ScheduleAttempt).filter_by(id=target.owner_id).first()
-
-    if owner is None:
-        return
-
-    if owner.deployed and owner.owner is not None:
-        if owner.owner.year == get_current_year():
-            _delete_cache_entry(value.id)
-
-
-@listens_for(ScheduleSlot.assessors, "append")
-def _ScheduleSlot_assessors_append_handler(target: ScheduleSlot, value, initiator):
-    with db.session.no_autoflush:
-        _ScheduleSlot_assessors_delete_cache(target, value)
-
-
-@listens_for(ScheduleSlot.assessors, "remove")
-def _ScheduleSlot_assessors_remove_handler(target: ScheduleSlot, value, initiator):
-    with db.session.no_autoflush:
-        _ScheduleSlot_assessors_delete_cache(target, value)
-
-
-def workload_data(faculty_ids, simple_display):
+def workload_data(fac_list: List[FacultyData], simple_display: bool):
     if simple_display:
-        data = [_element_simple(f_id) for f_id in faculty_ids]
+        data = [_element_simple(f) for f in fac_list]
     else:
-        data = [_element_full(f_id) for f_id in faculty_ids]
+        data = [_element_full(f) for f in fac_list]
 
     return jsonify(data)

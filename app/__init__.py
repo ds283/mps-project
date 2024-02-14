@@ -40,7 +40,6 @@ from .instance.version import site_revision, site_copyright_dates
 from .limiter import limiter
 from .models import User, MessageOfTheDay, Notification
 from .shared.context.global_context import get_global_context_data, build_static_context_data, render_template_context
-from .shared.precompute import precompute_at_login
 from .shared.utils import home_dashboard_url
 from .task_queue import make_celery, register_task, background_task
 from .thirdparty.flask_bleach import Bleach
@@ -231,7 +230,6 @@ def create_app():
     tasks.register_assessment_tasks(celery)
     tasks.register_assessor_tasks(celery)
     tasks.register_email_notification_tasks(celery)
-    tasks.register_precompute_tasks(celery)
     tasks.register_push_feedback_tasks(celery)
     tasks.register_system_tasks(celery)
     tasks.register_batch_create_tasks(celery)
@@ -349,10 +347,6 @@ def create_app():
 
         # # clear notifications for the user who has just logged in
         # Notification.query.filter_by(user_id=user.id).delete()
-
-        # force precompute of expensive views
-        celery = current_app.extensions["celery"]
-        precompute_at_login(user, celery, autocommit=False)
 
         user.last_active = datetime.now()
         db.session.commit()

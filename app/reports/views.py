@@ -198,7 +198,7 @@ def all_projects_ajax():
             Project.descriptions.any(ProjectDescription.requires_confirmation == True, ProjectDescription.confirmed == False)
         )
 
-    return project_list_SQL_handler(request, base_query, current_user_id=current_user.id, name_labels=True, show_approvals=True, show_errors=True)
+    return project_list_SQL_handler(request, base_query, current_user=current_user, name_labels=True, show_approvals=True, show_errors=True)
 
 
 _analyse_labels = {

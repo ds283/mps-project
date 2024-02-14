@@ -27,6 +27,3 @@ DEFAULT_SHOW_POPULARITY = True
 DEFAULT_DONT_CLASH_PRESENTATIONS = True
 
 DEFAULT_USE_ACADEMIC_TITLE = True
-
-# delay between precompute cycles, measured in seconds
-PRECOMPUTE_DELAY = 1800

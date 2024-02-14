@@ -11,6 +11,7 @@
 
 from datetime import datetime, date
 from functools import partial
+from typing import Optional
 
 import parse
 from flask import redirect, url_for, flash, request, jsonify, current_app, session
@@ -246,7 +247,7 @@ def selector_projects_ajax(id):
         return jsonify({})
 
     is_live = state < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
-    return _project_list_endpoint(sel.config, sel, partial(ajax.student.selector_liveprojects_data, sel.id, is_live), state=state)
+    return _project_list_endpoint(sel.config, sel, partial(ajax.student.selector_liveprojects_data, sel, is_live), state=state)
 
 
 @student.route("/submitter_browse_projects/<int:id>")
@@ -300,10 +301,10 @@ def submitter_projects_ajax(id):
     if not verify_submitter(sub):
         return jsonify({})
 
-    return _project_list_endpoint(config, None, partial(ajax.student.submitter_liveprojects_data, id))
+    return _project_list_endpoint(config, None, partial(ajax.student.submitter_liveprojects_data, sub))
 
 
-def _project_list_endpoint(config: ProjectClassConfig, sel: SelectingStudent, row_formatter, state=None):
+def _project_list_endpoint(config: ProjectClassConfig, sel: Optional[SelectingStudent], row_formatter, state=None):
     # check that project is viewable for this ProjectClassConfig instance
     if state is None:
         state = config.selector_lifecycle

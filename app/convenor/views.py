@@ -595,7 +595,7 @@ def attached_ajax(id):
     return project_list_SQL_handler(
         request,
         base_query,
-        current_user_id=current_user.id,
+        current_user=current_user,
         config=config,
         menu_template="convenor",
         name_labels=True,
@@ -3003,7 +3003,7 @@ def attach_liveproject_ajax(id):
     return project_list_SQL_handler(
         request,
         base_query,
-        current_user_id=current_user.id,
+        current_user=current_user,
         config=config,
         menu_template="attach",
         name_labels=True,
@@ -3097,7 +3097,7 @@ def attach_liveproject_other_ajax(id):
     return project_list_SQL_handler(
         request,
         base_query,
-        current_user_id=current_user.id,
+        current_user=current_user,
         config=config,
         menu_template="attach_other",
         name_labels=True,
@@ -4883,7 +4883,7 @@ def unofferable_ajax():
         request,
         base_query,
         row_filter=row_filter,
-        current_user_id=current_user.id,
+        current_user=current_user,
         menu_template="unofferable",
         name_labels=True,
         text="unofferable projects list",

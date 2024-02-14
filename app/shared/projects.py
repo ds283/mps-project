@@ -8,8 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from collections.abc import Iterable
 from datetime import datetime
+from typing import Optional
 
 from flask import flash, current_app
 from flask_security import current_user
@@ -81,12 +81,12 @@ def get_filter_list_for_groups_and_skills(pclass: ProjectClass):
 def project_list_SQL_handler(
     request,
     base_query,
-    current_user_id: int = None,
-    config: ProjectClassConfig = None,
-    menu_template: str = None,
-    name_labels: bool = None,
-    text: str = None,
-    url: str = None,
+    current_user: Optional[User] = None,
+    config: Optional[ProjectClassConfig] = None,
+    menu_template: Optional[str] = None,
+    name_labels: Optional[bool] = None,
+    text: Optional[str] = None,
+    url: Optional[str] = None,
     show_approvals: bool = False,
     show_errors: bool = True,
 ):
@@ -110,18 +110,10 @@ def project_list_SQL_handler(
             if len(projects) == 0:
                 return []
 
-            p = projects[0]
-            if isinstance(p, Iterable):
-                project_list = [{"project_id": p.id, "desc_id": d.id} for (p, d) in projects]
-            elif isinstance(p, Project):
-                project_list = [p.id for p in projects]
-            else:
-                raise TypeError("Unexpected project data type")
-
             return ajax.project.build_data(
-                project_list,
+                projects,
                 config=config,
-                current_user_id=current_user_id,
+                current_user=current_user,
                 menu_template=menu_template,
                 name_labels=name_labels,
                 text=text,
@@ -137,12 +129,12 @@ def project_list_in_memory_handler(
     request,
     base_query,
     row_filter=None,
-    current_user_id: int = None,
-    config: ProjectClassConfig = None,
-    menu_template: str = None,
-    name_labels: bool = None,
-    text: str = None,
-    url: str = None,
+    current_user: Optional[User] = None,
+    config: Optional[ProjectClassConfig] = None,
+    menu_template: Optional[str] = None,
+    name_labels: Optional[bool] = None,
+    text: Optional[str] = None,
+    url: Optional[str] = None,
     show_approvals: bool = False,
     show_errors: bool = True,
 ):
@@ -175,9 +167,9 @@ def project_list_in_memory_handler(
             # convert project list back into a list of primary keys, so that we can
             # use cached outcomes
             return ajax.project.build_data(
-                [p.id for p in projects],
+                projects,
                 config=config,
-                current_user_id=current_user_id,
+                current_user=current_user,
                 menu_template=menu_template,
                 name_labels=name_labels,
                 text=text,

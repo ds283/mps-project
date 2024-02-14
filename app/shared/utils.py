@@ -168,9 +168,9 @@ def build_project_approval_queues():
     for desc in descriptions:
         if allow_approval_for_description(desc.id):
             if desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED:
-                queued.append(desc.id)
+                queued.append(desc)
             elif desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
-                rejected.append(desc.id)
+                rejected.append(desc)
 
     return {"queued": queued, "rejected": rejected}
 

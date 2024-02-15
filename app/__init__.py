@@ -25,10 +25,10 @@ from flask_healthz import Healthz
 from flask_login.signals import user_logged_in
 from flask_mailman import Mail, EmailMultiAlternatives
 from flask_migrate import Migrate
-from flask_profiler import Profiler
+from flask_profiler import Profiler as EndpointProfiler
 from flask_security import current_user, SQLAlchemyUserDatastore, Security, LoginForm, MailUtil
 from flask_sqlalchemy.record_queries import get_recorded_queries
-from pyinstrument import Profiler
+from pyinstrument import Profiler as PyInstrumentProfiler
 from pymongo import MongoClient
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.middleware.profiler import ProfilerMiddleware
@@ -260,7 +260,7 @@ def create_app():
     @app.before_request
     def before_request_handler():
         if use_pyinstrument and "profile" in request.args:
-            g.profiler = Profiler()
+            g.profiler = PyInstrumentProfiler()
             g.profiler.start()
 
         if current_user.is_authenticated:
@@ -441,7 +441,7 @@ def create_app():
         # note Flask-Profiler is an endpoint profiler that tells us how long
         # is taken to return from endpoints; it doesn't actually profile the running code.
         # For that we need PROFILE_TO_DISK
-        profiler = Profiler(app)
+        profiler = EndpointProfiler(app)
 
         # set up Flask-Limiter
         limiter.init_app(app)

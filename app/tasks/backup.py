@@ -13,6 +13,7 @@ import subprocess
 import tarfile
 from datetime import datetime, timedelta
 from io import BytesIO
+from math import floor
 from operator import itemgetter
 from os import path
 from pathlib import Path
@@ -24,7 +25,6 @@ from celery.exceptions import Ignore
 from dateutil import parser
 from flask import current_app, render_template
 from flask_mailman import EmailMessage
-from math import floor
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -326,7 +326,7 @@ def register_backup_tasks(celery):
         # build list of objects in store, but only do it once so that we are not generating a lot of
         # LIST API requests that will each be billed
         object_store: ObjectStore = current_app.config["OBJECT_STORAGE_BACKUP"]
-        contents = object_store.list()
+        contents = object_store.list(audit_data="drop_absent_backups")
 
         # query database for backup records, and queue a retry if it fails
         try:

@@ -8,20 +8,20 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 from datetime import datetime, timedelta
+from math import floor
 from typing import List, Tuple
 from uuid import uuid1
 
-from celery import chain, group
-from dateutil import parser
+from celery import group
+from celery.result import GroupResult, AsyncResult
 from flask import current_app
-from math import floor
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import LiveProject, ProjectClass, ProjectClassConfig, PopularityRecord
 
 
-def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
+def compute_rank(self, num_live, rank_type, cid, uuid, query, accessor, writer):
     self.update_state(state="STARTED", meta={"msg": "Looking up current project class configuration for id={id}".format(id=cid)})
 
     try:
@@ -35,18 +35,24 @@ def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
     self.update_state(state="STARTED", meta={"msg": 'Update {type} ranking for project class "{name}"'.format(type=rank_type, name=config.name)})
 
     lowest_rank = None
+    records = query.all()
+    num_records = len(records)
 
     try:
         # dig out PopularityRecords with given datestamp and config_id
-        if query.count() != num_live:
-            raise RuntimeError("Number of records in group is incorrect: expected {exp}, found {obs}".format(exp=num_live, obs=query.count()))
+        if num_records != num_live:
+            msg = f"Number of records in group is incorrect: expected {num_live}, found {num_records} | uuid = {str(uuid)}, config_id = {cid}"
+            current_app.logger.warning(f'compute_rank: {msg}')
+            current_app.logger.warning(f'compute_rank: affected query is {query}')
+
+            # raising an exception will cause a retry
+            raise RuntimeError(msg)
 
         current_rank = 1
         current_record = 1
         current_value = None
 
         try:
-            records = query.all()
             for record in records:
                 this_value = accessor(record)
 
@@ -96,13 +102,21 @@ def register_popularity_tasks(celery):
             max_selections = data.config.project_class.initial_choices
             for item in data.selections:
                 item_score = max_selections - item.rank + 1
+                if item_score < 0:
+                    item_score = 0
                 score += 10 * item_score
+
+            # test whether a record exists; if it does, we should behave idempotently
+            rec = data.popularity_data.filter_by(uuid=str(uuid), config_id=data.config_id).first()
+            if rec is not None:
+                self.update_state(state="SUCCESS")
+                return {'score': score, 'action': 'none', 'id': rec.id, 'uuid': str(uuid), 'project_id': liveid, 'config_id': data.config_id}
 
             rec = PopularityRecord(
                 liveproject_id=data.id,
                 config_id=data.config_id,
                 datestamp=datestamp,
-                uuid=uuid,
+                uuid=str(uuid),
                 score=score,
                 views=data.page_views,
                 bookmarks=data.bookmarks.count(),
@@ -114,6 +128,7 @@ def register_popularity_tasks(celery):
                 total_number=num_live,
             )
             data.popularity_data.append(rec)
+            db.session.flush()
 
             db.session.commit()
 
@@ -122,10 +137,11 @@ def register_popularity_tasks(celery):
             raise self.retry()
 
         self.update_state(state="SUCCESS")
+        return {'score': score, 'action': 'insert', 'id': rec.id, 'uuid': str(uuid), 'project_id': liveid, 'config_id': data.config_id}
 
     @celery.task(bind=True, default_retry_delay=30)
     def compute_popularity_score_rank(self, cid, uuid, num_live):
-        query = db.session.query(PopularityRecord).filter_by(uuid=uuid, config_id=cid).order_by(PopularityRecord.score.desc())
+        query = db.session.query(PopularityRecord).filter_by(uuid=str(uuid), config_id=cid).order_by(PopularityRecord.score.desc())
 
         def accessor(x):
             return x.score
@@ -133,21 +149,23 @@ def register_popularity_tasks(celery):
         def writer(x, r):
             x.score_rank = r
 
-        return compute_rank(self, num_live, "popularity score", cid, query, accessor, writer)
+        return compute_rank(self, num_live, "popularity score", cid, uuid, query, accessor, writer)
 
     @celery.task(bind=True, default_retry_delay=30)
     def store_lowest_popularity_score_rank(self, lowest_rank, cid, uuid, num_live):
         self.update_state(state="STARTED", meta={"msg": "Storing lowest-rank for popularity score"})
 
-        query = db.session.query(PopularityRecord).filter_by(uuid=uuid, config_id=cid)
+        query = db.session.query(PopularityRecord).filter_by(uuid=str(uuid), config_id=cid)
+        records = query.all()
+        num_records = len(records)
 
         try:
-            if query.count() != num_live:
-                raise RuntimeError("Number of records in group is incorrect: expected {exp}, found {obs}".format(exp=num_live, obs=query.count()))
+            if num_records != num_live:
+                raise RuntimeError(
+                    f"Number of records in group is incorrect: expected {num_live}, found {num_records} | uuid = {str(uuid)}, config_id = {cid}"
+                )
 
             try:
-                records = query.all()
-
                 for record in records:
                     record.lowest_score_rank = lowest_rank
 
@@ -169,7 +187,7 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def compute_views_rank(self, cid, uuid, num_live):
-        query = db.session.query(PopularityRecord).filter_by(uuid=uuid, config_id=cid).order_by(PopularityRecord.views.desc())
+        query = db.session.query(PopularityRecord).filter_by(uuid=str(uuid), config_id=cid).order_by(PopularityRecord.views.desc())
 
         def accessor(x):
             return x.views
@@ -177,11 +195,11 @@ def register_popularity_tasks(celery):
         def writer(x, r):
             x.views_rank = r
 
-        return compute_rank(self, num_live, "views", cid, query, accessor, writer)
+        return compute_rank(self, num_live, "views", cid, uuid, query, accessor, writer)
 
     @celery.task(bind=True, default_retry_delay=30)
     def compute_bookmarks_rank(self, cid, uuid, num_live):
-        query = db.session.query(PopularityRecord).filter_by(uuid=uuid, config_id=cid).order_by(PopularityRecord.bookmarks.desc())
+        query = db.session.query(PopularityRecord).filter_by(uuid=str(uuid), config_id=cid).order_by(PopularityRecord.bookmarks.desc())
 
         def accessor(x):
             return x.bookmarks
@@ -189,11 +207,11 @@ def register_popularity_tasks(celery):
         def writer(x, r):
             x.bookmarks_rank = r
 
-        return compute_rank(self, num_live, "bookmarks", cid, query, accessor, writer)
+        return compute_rank(self, num_live, "bookmarks", cid, uuid, query, accessor, writer)
 
     @celery.task(bind=True, default_retry_delay=30)
     def compute_selections_rank(self, cid, uuid, num_live):
-        query = db.session.query(PopularityRecord).filter_by(uuid=uuid, config_id=cid).order_by(PopularityRecord.selections.desc())
+        query = db.session.query(PopularityRecord).filter_by(uuid=str(uuid), config_id=cid).order_by(PopularityRecord.selections.desc())
 
         def accessor(x):
             return x.selections
@@ -201,7 +219,7 @@ def register_popularity_tasks(celery):
         def writer(x, r):
             x.selections_rank = r
 
-        return compute_rank(self, num_live, "selections", cid, query, accessor, writer)
+        return compute_rank(self, num_live, "selections", cid, uuid, query, accessor, writer)
 
     @celery.task(bind=True, default_retry_delay=30)
     def update_project_popularity_data(self, pid):
@@ -225,22 +243,44 @@ def register_popularity_tasks(celery):
         uuid = uuid1()
 
         # only compute popularity for project classes where student selections are open
-        if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-            compute = group(compute_popularity_data.si(proj.id, datestamp, uuid, num_live) for proj in config.live_projects)
+        if config.selector_lifecycle != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+            self.update_state(state="SUCCESS")
+            return {'action': 'none', 'uuid': str(uuid), 'project_class': pcl.id, 'config': config.id}
 
-            tasks = chain(
-                [
-                    compute,
-                    compute_popularity_score_rank.si(config.id, uuid, num_live),
-                    store_lowest_popularity_score_rank.s(config.id, uuid, num_live),
-                    compute_views_rank.si(config.id, uuid, num_live),
-                    compute_bookmarks_rank.si(config.id, uuid, num_live),
-                    compute_selections_rank.si(config.id, uuid, num_live),
-                ]
-            )
-            raise self.replace(tasks)
+        # the following sequence simulates the action of a chord
+        # in general we are getting poor results with Celery's built-in chord structure;
+        # see the discussion around pclass_rollover()
+
+        # we would prefer not to use disable_sync_subtasks, which is discouraged, but needed so that we can call .get() within
+        # another task - that's needed to simulate the chord behaviour
+        compute = group(compute_popularity_data.si(proj.id, datestamp, uuid, num_live) for proj in config.live_projects)
+
+        compute_task: GroupResult = compute.apply_async()
+        compute_task.get(disable_sync_subtasks=False)
+        compute_task.forget()
+
+        score_rank_task: AsyncResult = compute_popularity_score_rank.si(config.id, uuid, num_live).apply_async()
+        lowest_rank = score_rank_task.get(disable_sync_subtasks=False)
+        score_rank_task.forget()
+
+        store_task: AsyncResult = store_lowest_popularity_score_rank.s(lowest_rank, config.id, uuid, num_live).apply_async()
+        store_task.get(disable_sync_subtasks=False)
+        store_task.forget()
+
+        view_rank_task: AsyncResult = compute_views_rank.si(config.id, uuid, num_live).apply_async()
+        view_rank_task.get(disable_sync_subtasks=False)
+        view_rank_task.forget()
+
+        bookmarks_rank_task: AsyncResult = compute_bookmarks_rank.si(config.id, uuid, num_live).apply_async()
+        bookmarks_rank_task.get(disable_sync_subtasks=False)
+        bookmarks_rank_task.forget()
+
+        selections_rank_task: AsyncResult = compute_selections_rank.si(config.id, uuid, num_live).apply_async()
+        selections_rank_task.get(disable_sync_subtasks=False)
+        selections_rank_task.forget()
 
         self.update_state(state="SUCCESS")
+        return {'action': 'compute', 'uuid': str(uuid), 'project_class': pcl.id, 'config': config.id}
 
     @celery.task(bind=True, default_retry_delay=30)
     def update_popularity_data(self):

@@ -247,6 +247,9 @@ def create_app():
     if use_pyinstrument:
         app.logger.info("-- endpoint profiling using PyInstrument enabled")
 
+    # cache static context data needed for rendering templates
+    static_ctx = build_static_context_data(app)
+
     @security.login_context_processor
     def login_context_processor():
         # build list of system messages to consider displaying on login screen
@@ -255,7 +258,7 @@ def create_app():
             if message.project_classes.first() is None:
                 messages.append(message)
 
-        return dict(messages=messages)
+        return dict(messages=messages) | static_ctx
 
     @app.before_request
     def before_request_handler():
@@ -367,8 +370,6 @@ def create_app():
 
     app.request_class = CustomRequest
 
-    # cache static context data needed for rendering templates
-    build_static_context_data(app)
 
     # IMPORT BLUEPRINTS
 

@@ -67,6 +67,8 @@ def build_static_context_data(app):
     else:
         _static_ctx["enable_video_explainer"] = False
 
+    return _static_ctx
+
 
 def _build_global_context():
     if not has_request_context():
@@ -95,6 +97,7 @@ def _build_global_context():
     matching_ready = base_context_data["matching_ready"]
     has_assessments = base_context_data["has_assessments"]
 
+    # assumes _static_ctx has been suitably initialized
     return _static_ctx | {
         "real_user": _get_previous_login(),
         "home_dashboard_url": home_dashboard_url(),

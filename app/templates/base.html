@@ -293,7 +293,7 @@
 {% endmacro %}
 
 {% block navbar %}
-    {% if not email_is_live or not backup_is_live %}
+    {% if (is_root or is_admin) and (not email_is_live or not backup_is_live) %}
         <div class="notify-bar small d-flex align-content-center justify-content-start gap-2 ps-2 pe-2">
             {% if not email_is_live %}
                 <div><i class="fa fa-circle me-1 text-danger"></i> Email is disabled</div>

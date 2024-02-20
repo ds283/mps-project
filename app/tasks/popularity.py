@@ -8,14 +8,14 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 from datetime import datetime, timedelta
+from math import floor
 from typing import List, Tuple
 from uuid import uuid1
 
-from celery import group
+from celery import group, states
 from celery.exceptions import Ignore
 from celery.result import GroupResult, AsyncResult
 from flask import current_app
-from math import floor
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -23,7 +23,7 @@ from ..models import LiveProject, ProjectClass, ProjectClassConfig, PopularityRe
 
 
 def compute_rank(self, num_live, rank_type, cid, uuid, query, accessor, writer):
-    self.update_state(state="STARTED", meta={"msg": "Looking up current project class configuration for id={id}".format(id=cid)})
+    self.update_state(state=states.STARTED, meta={"msg": "Looking up current project class configuration for id={id}".format(id=cid)})
 
     try:
         # get most recent configuration record for this project class
@@ -33,7 +33,7 @@ def compute_rank(self, num_live, rank_type, cid, uuid, query, accessor, writer):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         raise self.retry()
 
-    self.update_state(state="STARTED", meta={"msg": 'Update {type} ranking for project class "{name}"'.format(type=rank_type, name=config.name)})
+    self.update_state(state=states.STARTED, meta={"msg": 'Update {type} ranking for project class "{name}"'.format(type=rank_type, name=config.name)})
 
     lowest_rank = None
     records = query.all()
@@ -82,14 +82,14 @@ def compute_rank(self, num_live, rank_type, cid, uuid, query, accessor, writer):
     except RuntimeError:
         raise self.retry()
 
-    self.update_state(state="SUCCESS")
+    self.update_state(state=states.SUCCESS)
     return lowest_rank
 
 
 def register_popularity_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def compute_popularity_data(self, liveid, datestamp, uuid, num_live):
-        self.update_state(state="STARTED", meta={"msg": "Computing popularity score"})
+        self.update_state(state=states.STARTED, meta={"msg": "Computing popularity score"})
 
         try:
             data = db.session.query(LiveProject).filter_by(id=liveid).one()
@@ -110,7 +110,7 @@ def register_popularity_tasks(celery):
             # test whether a record exists; if it does, we should behave idempotently
             rec = data.popularity_data.filter_by(uuid=str(uuid), config_id=data.config_id).first()
             if rec is not None:
-                self.update_state(state="SUCCESS")
+                self.update_state(state=states.SUCCESS)
                 return {"score": score, "action": "none", "id": rec.id, "uuid": str(uuid), "project_id": liveid, "config_id": data.config_id}
 
             rec = PopularityRecord(
@@ -137,7 +137,7 @@ def register_popularity_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=states.SUCCESS)
         return {"score": score, "action": "insert", "id": rec.id, "uuid": str(uuid), "project_id": liveid, "config_id": data.config_id}
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -154,10 +154,11 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def store_lowest_popularity_score_rank(self, lowest_rank, cid, uuid, num_live):
-        self.update_state(state="STARTED", meta={"msg": "Storing lowest-rank for popularity score"})
+        self.update_state(state=states.STARTED, meta={"msg": "Storing lowest-rank for popularity score"})
 
         if lowest_rank is None:
-            self.update_state(state="FAILURE", meta={"msg": "Supplied value of lowest_rank is None"})
+            current_app.logger.warning("store_lowest_popularity_score_rank: Supplied value of lowest_rank is None")
+            self.update_state(state=states.IGNORED, meta={"msg": "Supplied value of lowest_rank is None"})
             raise Ignore()
 
         query = db.session.query(PopularityRecord).filter_by(uuid=str(uuid), config_id=cid)
@@ -180,7 +181,7 @@ def register_popularity_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=states.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def compute_views_rank(self, cid, uuid, num_live):
@@ -220,7 +221,7 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def update_project_popularity_data(self, pid):
-        self.update_state(state="STARTED", meta={"msg": "Looking up current project class configuration for id={id}".format(id=pid)})
+        self.update_state(state=states.STARTED, meta={"msg": "Looking up current project class configuration for id={id}".format(id=pid)})
 
         try:
             # get most recent configuration record for this project class
@@ -230,7 +231,7 @@ def register_popularity_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
-        self.update_state(state="STARTED", meta={"msg": 'Update popularity data for project class "{name}"'.format(name=config.name)})
+        self.update_state(state=states.STARTED, meta={"msg": 'Update popularity data for project class "{name}"'.format(name=config.name)})
 
         # set up group of tasks to update popularity score of each LiveProject on this configuration
         # only need to work with projects that are open for student selections
@@ -241,7 +242,7 @@ def register_popularity_tasks(celery):
 
         # only compute popularity for project classes where student selections are open
         if config.selector_lifecycle != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-            self.update_state(state="SUCCESS")
+            self.update_state(state=states.SUCCESS)
             return {"action": "none", "uuid": str(uuid), "project_class": pcl.id, "config": config.id}
 
         # the following sequence simulates the action of a chord
@@ -258,6 +259,12 @@ def register_popularity_tasks(celery):
 
         score_rank_task: AsyncResult = compute_popularity_score_rank.si(config.id, uuid, num_live).apply_async()
         lowest_rank = score_rank_task.get(disable_sync_subtasks=False)
+        current_app.logger.info(f'score_rank_task: task_id = {score_rank_task.task_id}')
+        current_app.logger.info(f'score_rank_task: state = {score_rank_task.state}')
+        current_app.logger.info(f'score_rank_task: worker = {score_rank_task.worker}')
+        current_app.logger.info(f'score_rank_task: retries = {score_rank_task.retries}')
+        current_app.logger.info(f'score_rank_task: result = {score_rank_task.result}')
+        current_app.logger.info(f'score_rank_task: info = {score_rank_task.info}')
         store_task: AsyncResult = store_lowest_popularity_score_rank.s(lowest_rank, config.id, uuid, num_live).apply_async()
         store_task.get(disable_sync_subtasks=False)
 
@@ -276,12 +283,12 @@ def register_popularity_tasks(celery):
         selections_rank_task.get(disable_sync_subtasks=False)
         selections_rank_task.forget()
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=states.SUCCESS)
         return {"action": "compute", "uuid": str(uuid), "project_class": pcl.id, "config": config.id}
 
     @celery.task(bind=True, default_retry_delay=30)
     def update_popularity_data(self):
-        self.update_state(state="STARTED", meta={"msg": "Update popularity data"})
+        self.update_state(state=states.STARTED, meta={"msg": "Update popularity data"})
 
         try:
             pclass_ids = db.session.query(ProjectClass.id).filter_by(active=True).all()
@@ -295,7 +302,7 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def thin_bin(self, period: int, unit: str, input_bin: List[Tuple[int, str]]):
-        self.update_state(state="STARTED", meta={"msg": "Thinning popularity record bin for {period} {unit}".format(period=period, unit=unit)})
+        self.update_state(state=states.STARTED, meta={"msg": "Thinning popularity record bin for {period} {unit}".format(period=period, unit=unit)})
 
         # sort records from the bin into order, then retain the record with the highest score
         # This means that re-running the thinning task is idempotent and stable under small changes in binning.
@@ -333,12 +340,12 @@ def register_popularity_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=states.SUCCESS)
         return {"period": period, "unit": unit, "retained": (retained_record.id, str(retained_record.datestamp)), "dropped": dropped}
 
     @celery.task(bind=True, default_retry_delay=30)
     def thin_popularity_data(self, liveid):
-        self.update_state(state="STARTED", meta={"msg": "Building list of popularity records for LiveProject id={id}".format(id=liveid)})
+        self.update_state(state=states.STARTED, meta={"msg": "Building list of popularity records for LiveProject id={id}".format(id=liveid)})
 
         try:
             liveproject: LiveProject = db.session.query(LiveProject).filter_by(id=liveid).first()
@@ -354,7 +361,7 @@ def register_popularity_tasks(celery):
         # if keep_hourly is not set then behaviour is undefined, so just leave everything as it is and exit
         # note, it's OK for keep_daily to be undefined; in that case we keep daily records forever
         if keep_hourly is None:
-            self.update_state(state="SUCCESS")
+            self.update_state(state=states.SUCCESS)
             return
 
         max_hourly_age = timedelta(days=keep_hourly)
@@ -400,7 +407,7 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def thin_project_popularity_data(self, pid):
-        self.update_state(state="STARTED", meta={"msg": "Looking up current project class configuration for id={id}".format(id=pid)})
+        self.update_state(state=states.STARTED, meta={"msg": "Looking up current project class configuration for id={id}".format(id=pid)})
 
         try:
             # get most recent configuration record for this project class
@@ -411,17 +418,17 @@ def register_popularity_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        self.update_state(state="STARTED", meta={"msg": 'Thin out popularity data for project class "{name}"'.format(name=config.name)})
+        self.update_state(state=states.STARTED, meta={"msg": 'Thin out popularity data for project class "{name}"'.format(name=config.name)})
 
         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
             tasks = group(thin_popularity_data.si(proj.id) for proj in config.live_projects)
             raise self.replace(tasks)
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=states.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def thin(self):
-        self.update_state(state="STARTED", meta={"msg": "Thin out popularity data"})
+        self.update_state(state=states.STARTED, meta={"msg": "Thin out popularity data"})
 
         try:
             pclass_ids = db.session.query(ProjectClass.id).filter_by(active=True).all()

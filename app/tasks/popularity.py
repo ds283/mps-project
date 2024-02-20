@@ -157,7 +157,7 @@ def register_popularity_tasks(celery):
         self.update_state(state="STARTED", meta={"msg": "Storing lowest-rank for popularity score"})
 
         if lowest_rank is None:
-            self.update_status(state="FAILURE", meta={"msg": "Supplied value of lowest_rank is None"})
+            self.update_state(state="FAILURE", meta={"msg": "Supplied value of lowest_rank is None"})
             raise Ignore()
 
         query = db.session.query(PopularityRecord).filter_by(uuid=str(uuid), config_id=cid)
@@ -178,7 +178,7 @@ def register_popularity_tasks(celery):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise
+            raise self.retry()
 
         self.update_state(state="SUCCESS")
 
@@ -258,10 +258,10 @@ def register_popularity_tasks(celery):
 
         score_rank_task: AsyncResult = compute_popularity_score_rank.si(config.id, uuid, num_live).apply_async()
         lowest_rank = score_rank_task.get(disable_sync_subtasks=False)
-        score_rank_task.forget()
-
         store_task: AsyncResult = store_lowest_popularity_score_rank.s(lowest_rank, config.id, uuid, num_live).apply_async()
         store_task.get(disable_sync_subtasks=False)
+
+        score_rank_task.forget()
         store_task.forget()
 
         view_rank_task: AsyncResult = compute_views_rank.si(config.id, uuid, num_live).apply_async()

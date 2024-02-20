@@ -8,13 +8,14 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 from datetime import datetime, timedelta
-from math import floor
 from typing import List, Tuple
 from uuid import uuid1
 
 from celery import group
+from celery.exceptions import Ignore
 from celery.result import GroupResult, AsyncResult
 from flask import current_app
+from math import floor
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -155,33 +156,29 @@ def register_popularity_tasks(celery):
     def store_lowest_popularity_score_rank(self, lowest_rank, cid, uuid, num_live):
         self.update_state(state="STARTED", meta={"msg": "Storing lowest-rank for popularity score"})
 
+        if lowest_rank is None:
+            self.update_status(state="FAILURE", meta={"msg": "Supplied value of lowest_rank is None"})
+            raise Ignore()
+
         query = db.session.query(PopularityRecord).filter_by(uuid=str(uuid), config_id=cid)
         records = query.all()
         num_records = len(records)
 
+        if num_records != num_live:
+            raise RuntimeError(
+                f"Number of records in group is incorrect: expected {num_live}, found {num_records} | uuid = {str(uuid)}, config_id = {cid}"
+            )
+
         try:
-            if num_records != num_live:
-                raise RuntimeError(
-                    f"Number of records in group is incorrect: expected {num_live}, found {num_records} | uuid = {str(uuid)}, config_id = {cid}"
-                )
+            for record in records:
+                record.lowest_score_rank = lowest_rank
 
-            try:
-                for record in records:
-                    record.lowest_score_rank = lowest_rank
-
-                db.session.commit()
-
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise
+            db.session.commit()
 
         except SQLAlchemyError as e:
+            db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        except RuntimeError:
-            raise self.retry()
+            raise
 
         self.update_state(state="SUCCESS")
 

@@ -43,8 +43,8 @@ def compute_rank(self, num_live, rank_type, cid, uuid, query, accessor, writer):
         # dig out PopularityRecords with given datestamp and config_id
         if num_records != num_live:
             msg = f"Number of records in group is incorrect: expected {num_live}, found {num_records} | uuid = {str(uuid)}, config_id = {cid}"
-            current_app.logger.warning(f'compute_rank: {msg}')
-            current_app.logger.warning(f'compute_rank: affected query is {query}')
+            current_app.logger.warning(f"compute_rank: {msg}")
+            current_app.logger.warning(f"compute_rank: affected query is {query}")
 
             # raising an exception will cause a retry
             raise RuntimeError(msg)
@@ -111,7 +111,7 @@ def register_popularity_tasks(celery):
             rec = data.popularity_data.filter_by(uuid=str(uuid), config_id=data.config_id).first()
             if rec is not None:
                 self.update_state(state="SUCCESS")
-                return {'score': score, 'action': 'none', 'id': rec.id, 'uuid': str(uuid), 'project_id': liveid, 'config_id': data.config_id}
+                return {"score": score, "action": "none", "id": rec.id, "uuid": str(uuid), "project_id": liveid, "config_id": data.config_id}
 
             rec = PopularityRecord(
                 liveproject_id=data.id,
@@ -138,7 +138,7 @@ def register_popularity_tasks(celery):
             raise self.retry()
 
         self.update_state(state="SUCCESS")
-        return {'score': score, 'action': 'insert', 'id': rec.id, 'uuid': str(uuid), 'project_id': liveid, 'config_id': data.config_id}
+        return {"score": score, "action": "insert", "id": rec.id, "uuid": str(uuid), "project_id": liveid, "config_id": data.config_id}
 
     @celery.task(bind=True, default_retry_delay=30)
     def compute_popularity_score_rank(self, cid, uuid, num_live):
@@ -242,7 +242,7 @@ def register_popularity_tasks(celery):
         # only compute popularity for project classes where student selections are open
         if config.selector_lifecycle != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
             self.update_state(state="SUCCESS")
-            return {'action': 'none', 'uuid': str(uuid), 'project_class': pcl.id, 'config': config.id}
+            return {"action": "none", "uuid": str(uuid), "project_class": pcl.id, "config": config.id}
 
         # the following sequence simulates the action of a chord
         # in general we are getting poor results with Celery's built-in chord structure;
@@ -277,7 +277,7 @@ def register_popularity_tasks(celery):
         selections_rank_task.forget()
 
         self.update_state(state="SUCCESS")
-        return {'action': 'compute', 'uuid': str(uuid), 'project_class': pcl.id, 'config': config.id}
+        return {"action": "compute", "uuid": str(uuid), "project_class": pcl.id, "config": config.id}
 
     @celery.task(bind=True, default_retry_delay=30)
     def update_popularity_data(self):

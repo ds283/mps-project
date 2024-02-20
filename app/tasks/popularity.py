@@ -259,12 +259,6 @@ def register_popularity_tasks(celery):
 
         score_rank_task: AsyncResult = compute_popularity_score_rank.si(config.id, uuid, num_live).apply_async()
         lowest_rank = score_rank_task.get(disable_sync_subtasks=False)
-        current_app.logger.info(f'score_rank_task: task_id = {score_rank_task.task_id}')
-        current_app.logger.info(f'score_rank_task: state = {score_rank_task.state}')
-        current_app.logger.info(f'score_rank_task: worker = {score_rank_task.worker}')
-        current_app.logger.info(f'score_rank_task: retries = {score_rank_task.retries}')
-        current_app.logger.info(f'score_rank_task: result = {score_rank_task.result}')
-        current_app.logger.info(f'score_rank_task: info = {score_rank_task.info}')
         store_task: AsyncResult = store_lowest_popularity_score_rank.s(lowest_rank, config.id, uuid, num_live).apply_async()
         store_task.get(disable_sync_subtasks=False)
 

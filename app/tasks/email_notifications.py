@@ -8,26 +8,6 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app, render_template
-from flask_mailman import EmailMultiAlternatives
-
-from sqlalchemy import or_
-from sqlalchemy.exc import SQLAlchemyError
-
-from ..database import db
-from ..models import User, TaskRecord, EmailNotification, ConfirmRequest, LiveProject, Role, SelectingStudent, ProjectClassConfig
-
-from ..task_queue import progress_update, register_task
-from ..shared.utils import get_current_year
-from ..shared.sqlalchemy import get_count
-
-from celery import chain, group
-from celery.exceptions import Ignore
-
-from datetime import datetime, date, timedelta
-from numpy import is_busday
-import holidays
-
 
 def _get_outstanding_faculty_confirmation_requests(user):
     # build list of ConfirmRequest instances used in these notifications, and compute any outstanding
@@ -157,9 +137,9 @@ def register_email_notification_tasks(celery):
 
         # we only issue notifications for faculty or students
         queue = None
-        if get_count(user.roles.filter(Role.name == "student")) > 0:
+        if any(r.name == "student" for r in user.roles):
             queue = chain(dispatch_student_notifications.si(user_id), notify_finalize.si(task_id)).on_error(notify_fail.si(task_id))
-        elif get_count(user.roles.filter(Role.name == "faculty")) > 0:
+        elif any(r.name == "faculty" for r in user.roles):
             queue = chain(dispatch_faculty_notifications.si(user_id), notify_finalize.si(task_id)).on_error(notify_fail.si(task_id))
 
         if queue is not None:
@@ -517,25 +497,21 @@ def register_email_notification_tasks(celery):
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from datetime import datetime, date, timedelta
+
+import holidays
+from celery import chain, group
+from celery.exceptions import Ignore
 from flask import current_app, render_template
 from flask_mailman import EmailMultiAlternatives
-
+from numpy import is_busday
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import User, TaskRecord, EmailNotification, ConfirmRequest, LiveProject, Role, SelectingStudent, ProjectClassConfig
-
-from ..task_queue import progress_update, register_task
 from ..shared.utils import get_current_year
-from ..shared.sqlalchemy import get_count
-
-from celery import chain, group
-from celery.exceptions import Ignore
-
-from datetime import datetime, date, timedelta
-from numpy import is_busday
-import holidays
+from ..task_queue import progress_update, register_task
 
 
 def _get_outstanding_faculty_confirmation_requests(user):
@@ -666,9 +642,9 @@ def register_email_notification_tasks(celery):
 
         # we only issue notifications for faculty or students
         queue = None
-        if get_count(user.roles.filter(Role.name == "student")) > 0:
+        if any(r.name == "student" for r in user.roles):
             queue = chain(dispatch_student_notifications.si(user_id), notify_finalize.si(task_id)).on_error(notify_fail.si(task_id))
-        elif get_count(user.roles.filter(Role.name == "faculty")) > 0:
+        elif any(r.name == "faculty" for r in user.roles):
             queue = chain(dispatch_faculty_notifications.si(user_id), notify_finalize.si(task_id)).on_error(notify_fail.si(task_id))
 
         if queue is not None:

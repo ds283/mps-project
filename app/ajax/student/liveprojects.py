@@ -100,19 +100,19 @@ _selector_menu = """
                 </a>
             {% endif %}
             {% if config.uses_selection %}
-                {% set disabled = project.is_available(sel) %}
-                {% if not disabled %}
+                {% set available = project.is_available(sel) %}
+                {% if not available %}
                     {% if project.is_waiting(sel) %}
                         <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}">
                             <i class="fas fa-times fa-fw"></i> Cancel confirmation
                         </a>
                     {% else %}
                         <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}">
-                            <i class="fas fa-check fa-fw"></i> 'Request confirmation
+                            <i class="fas fa-check fa-fw"></i> Request confirmation
                         </a>
                     {% endif %}
                 {% else %}
-                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-ban fa-fw"></i> Project unavailable</a>
+                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-check fa-fw"></i> Available to select</a>
                 {% endif %}
             {% endif %}
         {% else %}
@@ -253,7 +253,7 @@ def _build_selector_menu_templ() -> Template:
 
 
 def selector_liveprojects_data(sel: SelectingStudent, is_live: bool, projects: List[LiveProject]):
-    if hasattr(projects, 'len') and len(projects) == 0:
+    if hasattr(projects, "len") and len(projects) == 0:
         return []
 
     simple_label = get_template_attribute("labels.html", "simple_label")
@@ -295,7 +295,7 @@ def selector_liveprojects_data(sel: SelectingStudent, is_live: bool, projects: L
 
 
 def submitter_liveprojects_data(sub: SubmittingStudent, projects: List[LiveProject]):
-    if hasattr(projects, 'len') and len(projects) == 0:
+    if hasattr(projects, "len") and len(projects) == 0:
         return []
 
     simple_label = get_template_attribute("labels.html", "simple_label")

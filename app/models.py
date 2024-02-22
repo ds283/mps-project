@@ -8397,12 +8397,14 @@ class LiveProject(
         :param sel:
         :return:
         """
+        sel: SelectingStudent
+
         # if project is marked as hidden, it is not available
         if self.hidden:
             return False
 
-        # if student doesn't satisfy recommended modules, sign-off is required by default whether or not
-        # the project/owner settings require sign-off
+        # if student doesn't satisfy recommended modules, sign-off is required by default (whether or not
+        # the project/owner settings require sign-off)
         if not sel.satisfies_recommended(self) and not self.is_confirmed(sel):
             return False
 

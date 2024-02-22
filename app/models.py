@@ -7365,7 +7365,6 @@ class Project(
     def has_published_pclass(self):
         return self.project_classes.filter_by(publish=True).first() is not None
 
-
     @property
     def forced_group_tags(self):
         tags = set()

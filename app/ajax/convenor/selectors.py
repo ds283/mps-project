@@ -138,7 +138,7 @@ _cohort = """
 _bookmarks = """
 {% set count = sel.number_bookmarks %}
 {% if count > 0 %}
-    <div class="text-success"><i class="fas fa-check-circle"></i> <strong>{{ count }}</strong> bookmarks</div>
+    <div class="text-success"><i class="fas fa-check-circle"></i> <strong>{{ count }}</strong> bookmark{% if count > 1 %}s{% endif %}</div>
     <div><a class="text-decoration-none link-secondary small" href="{{ url_for('convenor.selector_bookmarks', id=sel.id) }}">
         Show <i class="fas fa-chevron-circle-right"></i>
     </a></div>
@@ -152,7 +152,7 @@ _submitted = """
 {% if sel.has_submitted %}
     {% set count = sel.number_selections %}
     {% if sel.has_submission_list %}
-        <div class="text-success"><i class="fas fa-check-circle"></i> <strong>{{ count }}</strong> selections</div>
+        <div class="text-success"><i class="fas fa-check-circle"></i> <strong>{{ count }}</strong> selection{% if count > 1 %}s{% endif %}</div>
         <div><a class="text-decoration-none link-success small" href="{{ url_for('convenor.selector_choices', id=sel.id) }}">
             Show <i class="fas fa-chevron-circle-right"></i>
         </a></div>
@@ -186,7 +186,7 @@ _confirmations = """
 {% if confirmed > 0 %}<div class="text-success"><i class="fas fa-check-circle"></i> <strong>{{ confirmed }}</strong> confirmed</div>{% endif %}
 {% if pending > 0 %}<div class="text-danger"><i class="fas fa-clock"></i> <strong>{{ pending }}</strong> pending</div>{% endif %}
 {% if pending > 0 or confirmed > 0 %}
-    <div><a class="text-decoration-none link-danger small" href="{{ url_for('convenor.selector_confirmations', id=sel.id) }}">
+    <div><a class="text-decoration-none {% if pending > 0 %}link-danger{% else %}link-secondary{% endif %} small" href="{{ url_for('convenor.selector_confirmations', id=sel.id) }}">
         Show <i class="fas fa-chevron-circle-right"></i>
     </a></div>
 {% else %}

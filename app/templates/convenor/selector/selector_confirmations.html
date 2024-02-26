@@ -20,7 +20,7 @@
 
                 <div class="card-body">
                     <div class="container-fluid">
-                        <div class="row vertical-align confirmation-table">
+                        <div class="row vertical-top confirmation-table">
                             <div class="col-4"><strong>Project title</strong></div>
                             <div class="col-3"><strong>Research group</strong></div>
                             <div class="col-3"><strong>Supervisor</strong></div>
@@ -31,26 +31,32 @@
 
                         {% for req in sel.requests_confirmed %}
                             {% set project = req.project %}
-                            <div class="row vertical-align confirmation-table">
+                            <div class="row vertical-top confirmation-table">
                                 <div class="col-4">
-                                    <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text='selector confirmation list', url=url_for('convenor.selector_confirmations', id=sel.id)) }}">
+                                    <a class="text-decoration-none link-primary"
+                                       href="{{ url_for('faculty.live_project', pid=project.id, text='selector confirmation request list', url=url_for('convenor.selector_confirmations', id=sel.id)) }}">
                                         <strong>{{ project.name }}</strong>
                                     </a>
                                     <div>
                                         {% if req.request_timestamp is not none %}
-                                            <span class="badge bg-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            <div class="text-secondary small"><i class="fas fa-calendar"></i> Request
+                                                made {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</div>
                                         {% endif %}
                                         {% if req.response_timestamp is not none %}
-                                            <span class="badge bg-secondary">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            <div class="text-secondary small"><i class="fas fa-calendar"></i> Response
+                                                issued {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                                            </div>
                                         {% endif %}
                                         {% if req.request_timestamp is not none and req.response_timestamp is not none %}
                                             {% set delta = req.response_timestamp - req.request_timestamp %}
                                             {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                            <span class="badge bg-primary"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
+                                            <div class="text-success small"><i
+                                                    class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</div>
                                         {% elif req.request_timestamp is not none %}
                                             {% set delta = now - req.request_timestamp %}
                                             {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                            <span class="badge bg-danger"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
+                                            <div class="text-danger small"><i class="fas fa-clock"></i> {{ delta.days }}
+                                                day{{ pl }}</div>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -65,26 +71,30 @@
                                         {% set ns.affiliation = true %}
                                     {% endfor %}
                                     {% if not ns.affiliation %}
-                                        <span class="badge bg-warning text-dark">No affiliations</span>
+                                        <div class="text-danger small"><i class="fas fa-ban"></i> No affiliations</div>
                                     {% endif %}
                                 </div>
                                 <div class="col-3">
                                     {% if project.generic %}
-                                        <span class="badge bg-info">Generic</span>
+                                        <div class="text-primary">Generic</div>
                                     {% else %}
                                         {% if project.owner is not none %}
-                                            <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
+                                            <div><a class="text-decoration-none link-primary"
+                                                    href="mailto:{{ project.owner.user.email }}">
                                                 {{ project.owner.user.name }}
-                                            </a>
+                                            </a></div>
                                         {% else %}
-                                            <span class="badge bg-danger">Missing</span>
+                                            <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Project
+                                                owner missing
+                                            </div>
                                         {% endif %}
                                     {% endif %}
                                 </div>
                                 <div class="col-2">
                                     <div class="float-end">
                                         <div class="dropdown">
-                                            <a class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                            <a class="btn btn-sm btn-warning dropdown-toggle" data-bs-toggle="dropdown"
+                                               role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                 Deconfirm
                                                 {% if not sel.satisfies_recommended(project) %}
                                                     <i class="fas fa-exclamation-triangle text-danger"></i>
@@ -117,26 +127,32 @@
 
                         {% for req in sel.requests_waiting %}
                             {% set project = req.project %}
-                            <div class="row vertical-align confirmation-table">
+                            <div class="row vertical-top confirmation-table">
                                 <div class="col-4">
-                                    <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text='selector confirmation list', url=url_for('convenor.selector_confirmations', id=sel.id)) }}">
+                                    <a class="text-decoration-none link-primary"
+                                       href="{{ url_for('faculty.live_project', pid=project.id, text='selector confirmation request list', url=url_for('convenor.selector_confirmations', id=sel.id)) }}">
                                         <strong>{{ project.name }}</strong>
                                     </a>
                                     <div>
                                         {% if req.request_timestamp is not none %}
-                                            <span class="badge bg-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            <div class="text-secondary small"><i class="fas fa-calendar"></i> Request
+                                                made {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</div>
                                         {% endif %}
                                         {% if req.response_timestamp is not none %}
-                                            <span class="badge bg-secondary">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            <div class="text-secondary small"><i class="fas fa-calendar"></i> Response
+                                                issued {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                                            </div>
                                         {% endif %}
                                         {% if req.request_timestamp is not none and req.response_timestamp is not none %}
                                             {% set delta = req.response_timestamp - req.request_timestamp %}
                                             {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                            <span class="badge bg-primary"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
+                                            <span class="text-success small"><i
+                                                    class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
                                         {% elif req.request_timestamp is not none %}
                                             {% set delta = now - req.request_timestamp %}
                                             {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                            <span class="badge bg-danger"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
+                                            <span class="text-danger small"><i
+                                                    class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -151,26 +167,30 @@
                                         {% set ns.affiliation = true %}
                                     {% endfor %}
                                     {% if not ns.affiliation %}
-                                        <span class="badge bg-warning text-dark">No affiliations</span>
+                                        <div class="text-danger small"><i class="fas fa-ban"></i> No affiliations</div>
                                     {% endif %}
                                 </div>
                                 <div class="col-3">
                                     {% if project.generic %}
-                                        <span class="badge bg-info">Generic</span>
+                                        <div class="text-primary">Generic</div>
                                     {% else %}
                                         {% if project.owner is not none %}
-                                            <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
+                                            <div><a class="text-decoration-none link-primary"
+                                                    href="mailto:{{ project.owner.user.email }}">
                                                 {{ project.owner.user.name }}
-                                            </a>
+                                            </a></div>
                                         {% else %}
-                                            <span class="badge bg-danger">Missing</span>
+                                            <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Project
+                                                owner missing
+                                            </div>
                                         {% endif %}
                                     {% endif %}
                                 </div>
                                 <div class="col-2">
                                     <div class="float-end">
                                         <div class="dropdown">
-                                            <a class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                            <a class="btn btn-sm btn-success dropdown-toggle" data-bs-toggle="dropdown"
+                                               role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                 Confirm
                                                 {% if not sel.satisfies_recommended(project) %}
                                                     <i class="fas fa-exclamation-triangle" style="color:white;"></i>

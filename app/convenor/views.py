@@ -6731,7 +6731,7 @@ def selector_confirmations(id):
         flash("It is not possible to view selector confirmations before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/student_confirmations.html", sel=sel, now=datetime.now())
+    return render_template_context("convenor/selector/selector_confirmations.html", sel=sel, now=datetime.now())
 
 
 @convenor.route("/project_custom_offers/<int:proj_id>")

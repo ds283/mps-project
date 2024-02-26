@@ -20,62 +20,21 @@ _meeting = """
     {% if project.meeting_reqd == project.MEETING_REQUIRED %}
         {% if sel %}
             {% if project.is_confirmed(sel) %}
-                <span class="badge bg-primary"><i class="fas fa-check"></i> Confirmed</span>
+                <span class="text-success"><i class="fas fa-check-circle"></i> Confirmed</span>
             {% else %}
-                <span class="badge bg-danger"><i class="fas fa-times"></i> Required</span>
+                <span class="text-danger"><i class="fas fa-exclamation-circle"></i> Required</span>
             {% endif %}
         {% else %}
-            <span class="badge bg-secondary">Not live</span>
+           <span class="text-secondary"><i class="fas fa-ban"></i> Not live</span>
         {% endif %}
     {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-        <span class="badge bg-warning text-dark">Optional</span>
+        <span class="text-secondary"><i class="fas fa-info-circle"></i> Optional</span>
     {% else %}
-        <span class="badge bg-secondary"><i class="fas fa-check"></i> Not required</span>
+        <span class="text-secondary"><i class="fas fa-info-circle"></i> Not required</span>
     {% endif %}
 {% else %}
-    <span class="badge bg-secondary"><i class="fas fa-check"></i> Not required</span>
+    <span class="text-secondary"><i class="fas fa-info-circle"></i> Not required</span>
 {% endif %}
-"""
-
-
-# language=jinja2
-_status = """
-{% if sel %}
-    {% if project.is_available(sel) %}
-        <span class="badge bg-success"><i class="fas fa-check"></i> Available for selection</span>
-    {% else %}
-        {% if project.is_waiting(sel) %}
-            <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="badge bg-warning text-dark text-decoration-none">
-                <i class="fas fa-times"></i> Cancel request
-            </a>
-        {% else %}
-            <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="badge bg-primary text-decoration-none">
-                <i class="fas fa-plus"></i> Request confirmation
-            </a>
-        {% endif %}
-    {% endif %}
-{% else %}
-   <span class="badge bg-secondary">Not live</span>
-{% endif %} 
-"""
-
-# language=jinja2
-_bookmarks = """
-{% if sel %}
-    {% if sel.is_project_bookmarked(project) %}
-        <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
-           class="badge bg-primary text-decoration-none text-light">
-           <i class="fas fa-times"></i> Remove
-        </a>
-    {% else %}
-        <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}"
-           class="badge bg-secondary text-decoration-none text-light">
-           <i class="fas fa-plus"></i> Add
-        </a>
-    {% endif %}
-{% else %}
-   <span class="badge bg-secondary">Not live</span>
-{% endif %} 
 """
 
 # language=jinja2
@@ -193,18 +152,59 @@ _not_live = """
 """
 
 
-# langauge=jinja2
+# language=jinja2
 _owner = """
 {% if project.generic %}
-    <span class="badge bg-info">Generic</span>
+    <div class="text-primary">Generic</div>
 {% else %}
     {% if project.owner is not none %}
-        <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
+        <div><a class="text-decoration-none link-primary" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a></div>
     {% else %}
-        <span class="badge bg-danger">Missing</span>
+        <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Project owner missing</div>
     {% endif %}
 {% endif %}
 """
+
+
+# language=jinja2
+_name = """
+{% if sel %}
+    <div class="mb-1"><a class="link-secondary" href="{{ url_for("student.selector_view_project", sid=sel.id, pid=project.id) }}"><strong>{{ project.name }}</strong></a></div>
+{% else %}
+    <div class="mb-1"><strong>{{ project.name }}</strong></div>
+{% endif %}
+{% if is_live and sel and config.uses_selection %}
+    {% if project.is_available(sel) %}
+        <div class="text-success small mb-1"><i class="fas fa-check-circle"></i> Available to select</div>
+    {% else %}
+        {% if project.is_waiting(sel) %}
+            <div><a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-xs btn-outline-danger">
+                <i class="fas fa-trash"></i> Cancel confirmation request
+            </a></div>
+        {% else %}
+            <div><a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-xs btn-outline-primary">
+                <i class="fas fa-plus"></i> Request confirmation
+            </a></div>
+        {% endif %}
+    {% endif %}
+    {% if sel.is_project_bookmarked(project) %}
+        <div><a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
+           class="btn btn-xs btn-outline-danger">
+           <i class="fas fa-trash"></i> Remove bookmark
+        </a></div>
+    {% else %}
+        <div><a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}"
+           class="btn btn-xs btn-outline-success">
+           <i class="fas fa-plus-circle"></i> Add bookmark
+        </a></div>
+    {% endif %}
+{% endif %}
+"""
+
+
+def _build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
 
 
 def _build_owner_templ() -> Template:
@@ -232,16 +232,6 @@ def _build_meeting_templ() -> Template:
     return env.from_string(_meeting)
 
 
-def _build_status_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string(_status)
-
-
-def _build_bookmarks_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string(_bookmarks)
-
-
 def _build_submitter_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_submitter_menu)
@@ -258,6 +248,7 @@ def selector_liveprojects_data(sel: SelectingStudent, is_live: bool, projects: L
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
+    name_templ: Template = _build_name_templ()
     owner_templ: Template = _build_owner_templ()
     group_templ: Template = _build_group_templ()
     skills_templ: Template = _build_skills_templ()
@@ -265,15 +256,12 @@ def selector_liveprojects_data(sel: SelectingStudent, is_live: bool, projects: L
     menu_templ: Template = _build_selector_menu_templ()
 
     meeting_templ: Template = _build_meeting_templ()
-    status_templ: Template = _build_status_templ()
-    bookmarks_templ: Template = _build_bookmarks_templ()
 
     config: ProjectClassConfig = sel.config
 
     def _process(p: LiveProject, is_live: bool):
         base = {
-            "name": '<a class="text-decoration-none" '
-            'href="{url}">{name}</a>'.format(name=p.name, url=url_for("student.selector_view_project", sid=sel.id, pid=p.id)),
+            "name": render_template(name_templ, project=p, is_live=is_live, sel=sel, config=config),
             "supervisor": render_template(owner_templ, project=p),
             "group": render_template(group_templ, sel=sel, project=p, config=config, simple_label=simple_label),
             "skills": render_template(skills_templ, sel=sel, skills=p.ordered_skills, simple_label=simple_label),
@@ -284,8 +272,6 @@ def selector_liveprojects_data(sel: SelectingStudent, is_live: bool, projects: L
         if is_live:
             extra_fields = {
                 "meeting": render_template(meeting_templ, sel=sel, project=p),
-                "availability": render_template(status_templ, sel=sel, project=p),
-                "bookmarks": render_template(bookmarks_templ, sel=sel, project=p),
             }
             base.update(extra_fields)
 

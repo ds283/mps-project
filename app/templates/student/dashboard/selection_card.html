@@ -294,12 +294,14 @@
                  class="row vertical-top list-group-item {% if config.uses_selection and (loop.index <= sel.number_choices) %}selected-project{% else %}deselected-project{% endif %}">
                 <div class="col-1">
                     <i class="fas fa-bars drag-handle"></i>
-                    <span id="ranking" class="badge {% if not config.uses_selection %}bg-secondary{% elif loop.index <= sel.number_choices %}bg-success{% else %}bg-danger{% endif %}">#{{ loop.index }}</span>
+                    <span id="ranking"
+                          class="{% if not config.uses_selection %}text-secondary{% elif loop.index <= sel.number_choices %}text-success{% else %}text-danger{% endif %}">#<strong>{{ loop.index }}</strong></span>
                 </div>
                 <div class="col-3">
-                    <a class="text-decoration-none" href="{{ url_for('student.selector_view_project', sid=sel.id, pid=project.id) }}">
+                    <div><a class="text-decoration-none link-primary"
+                            href="{{ url_for('student.selector_view_project', sid=sel.id, pid=project.id) }}">
                         <strong>{{ project.name }}</strong>
-                    </a>
+                    </a></div>
                     {% if not sel.satisfies_recommended(project) %}
                         <div class="alert alert-danger">
                             {% call icon_block("exclamation-triangle") %}
@@ -310,14 +312,17 @@
                 </div>
                 <div class="col-2">
                     {% if project.generic %}
-                        <span class="badge bg-info">Generic</span>
+                        <div class="text-primary">Generic</div>
                     {% else %}
                         {% if project.owner is not none %}
-                            <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
+                            <div><a class="text-decoration-none link-primary"
+                                    href="mailto:{{ project.owner.user.email }}">
                                 {{ project.owner.user.name }}
-                            </a>
+                            </a></div>
                         {% else %}
-                            <span class="badge bg-danger">Missing</span>
+                            <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Project
+                                owner missing
+                            </div>
                         {% endif %}
                     {% endif %}
                 </div>
@@ -326,7 +331,8 @@
                         {% if not project.is_available(sel) %}
                             {% if project.is_waiting(sel) %}
                                 <div class="dropdown student-confirm-button" style="display: inline-block;">
-                                    <a class="badge text-decoration-none text-nohover-dark bg-info dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                    <a class="btn btn-xs btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown"
+                                       role="button" href="" aria-haspopup="true" aria-expanded="false">
                                         <i class="fas fa-clock"></i>
                                         Meeting confirmation requested
                                     </a>
@@ -338,7 +344,8 @@
                                 </div>
                             {% else %}
                                 <div class="dropdown student-confirm-button" style="display: inline-block;">
-                                    <a class="badge text-decoration-none text-nohover-light bg-danger dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                    <a class="btn btn-xs btn-outline-danger dropdown-toggle" data-bs-toggle="dropdown"
+                                       role="button" href="" aria-haspopup="true" aria-expanded="false">
                                         <i class="fas fa-exclamation-triangle"></i>
                                         Requires meeting confirmation
                                     </a>
@@ -351,18 +358,21 @@
                             {% endif %}
                         {% else %}
                             {% if project.is_confirmed(sel) %}
-                                <span class="badge bg-success"><i class="fas fa-check"></i> Available for selection</span>
-                                <span class="badge bg-primary"><i class="fas fa-check"></i> Meeting confirmed</span>
+                                <div class="text-success small"><i class="fas fa-check-circle"></i> Available to select
+                                </div>
+                                <div class="text-primary small"><i class="fas fa-check-circle"></i> Meeting confirmed
+                                </div>
                             {% else %}
-                                <span class="badge bg-success"><i class="fas fa-check"></i> Available for selection</span>
+                                <span class="text-success small"><i class="fas fa-check-circle"></i> Available to select</span>
                             {% endif %}
                         {% endif %}
                     {% endif %}
                 </div>
                 <div class="col-2">
                     <div class="float-end">
-                        <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="badge bg-secondary text-decoration-none text-white">
-                            <i class="fas fa-times"></i> Remove bookmark
+                        <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
+                           class="btn btn-xs btn-outline-secondary">
+                            <i class="fas fa-trash"></i> Remove bookmark
                         </a>
                     </div>
                 </div>

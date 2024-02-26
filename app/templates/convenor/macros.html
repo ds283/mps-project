@@ -16,28 +16,31 @@
                 <div id="P-{{ project.id }}" class="row vertical-top final-selection-table">
                     <div class="col-1">
                         {% if not sel.retired %}<i class="fas fa-bars drag-handle"></i>{% endif %}
-                        <span id="ranking" class="badge bg-primary">#{{ item.rank }}</span>
+                        <span id="ranking" class="text-primary">#<strong>{{ item.rank }}</strong></span>
                     </div>
                     <div class="col-5">
                         <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
                             {{ item.format_project|safe }}
                         </a>
                         {% if project.is_available(sel) %}
-                            <span class="badge bg-success"><i class="fas fa-check"></i> Available</span>
+                            <div class="text-success small"><i class="fas fa-check-circle"></i> Available</div>
                         {% else %}
-                            <span class="badge bg-danger"><i class="fas fa-times"></i> Not available</span>
+                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not available</div>
                         {% endif %}
                     </div>
                     <div class="col-4">
                         {% if project.generic %}
-                            <span class="badge bg-info">Generic</span>
+                            <div class="text-primary">Generic</div>
                         {% else %}
                             {% if project.owner is not none %}
-                                <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
+                                <div><a class="text-decoration-none link-primary"
+                                        href="mailto:{{ project.owner.user.email }}">
                                     {{ project.owner.user.name }}
-                                </a>
+                                </a></div>
                             {% else %}
-                                <span class="badge bg-danger">Missing</span>
+                                <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Project
+                                    owner missing
+                                </div>
                             {% endif %}
                         {% endif %}
                         {% set ns = namespace(affiliation=false) %}
@@ -50,12 +53,13 @@
                             {% set ns.affiliation = true %}
                         {% endfor %}
                         {% if not ns.affiliation %}
-                            <span class="badge bg-warning text-dark">No affiliations</span>
+                            <div class="text-danger small"><i class="fas fa-ban"></i> No affiliations</div>
                         {% endif %}
                     </div>
                    <div class="col-2">
                        <div class="float-end">
-                           <a href="{{ url_for('convenor.delete_student_bookmark', sid=sel.id, bid=item.id) }}" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>
+                           <a href="{{ url_for('convenor.delete_student_bookmark', sid=sel.id, bid=item.id) }}"
+                              class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i> Delete</a>
                        </div>
                     </div>
                 </div>
@@ -79,40 +83,40 @@
                     <div class="col-3">
                         {{ item.format_name|safe }}
                         {% if item.owner.convert_to_submitter %}
-                            <span class="badge bg-success"><i class="fas fa-check"></i> Converting</span>
+                            <div class="text-success small"><i class="fas fa-check-circle"></i> Converting</div>
                         {% else %}
-                            <span class="badge bg-danger"><i class="fas fa-times"></i> Not converting</span>
+                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not converting</div>
                         {% endif %}
                     </div>
                     <div class="col-1">
-                        <span class="badge bg-success">#{{ item.rank }}</span>
+                        <span class="text-success">#<strong>{{ item.rank }}</strong></span>
                     </div>
                     <div class="col-3">
                         {% if item.owner.has_submitted %}
-                            <span class="badge bg-success">Yes</span>
+                            <div class="text-success"><i class="fas fa-check-circle"></i> Submitted</div>
                         {% else %}
-                            <span class="badge bg-secondary">No</span>
+                            <div class="text-secondary"><i class="fas fa-times-circle"></i> Not submitted</div>
                         {% endif %}
                         {% if proj.is_available(item.owner) %}
-                            <span class="badge bg-success"><i class="fas fa-check"></i> Available</span>
+                            <div class="text-success"><i class="fas fa-check-circle"></i> Available</div>
                         {% else %}
-                            <span class="badge bg-danger"><i class="fas fa-times"></i> Not available</span>
+                            <div class="text-danger"><i class="fas fa-times-circle"></i> Not available</div>
                         {% endif %}
                     </div>
                     <div class="col-3">
                         {% if item.owner.has_submitted %}
                             {% if item.owner.is_project_submitted(item.liveproject) %}
-                                <span class="badge bg-success">Yes</span>
+                                <div class="text-success"><i class="fas fa-check-circle"></i> In submission</div>
                             {% else %}
-                                <span class="badge bg-secondary">No</span>
+                                <div class="text-secondary"><i class="fas fa-check-circle"></i> Not in submission<</div>
                             {% endif %}
                         {% else %}
-                            <span class="badge bg-secondary">n/a</span>
+                            <div class="text-danger small"><i class="fas fa-ban"></i> Not submitted</div>
                         {% endif %}
                     </div>
                     <div class="col-2">
                         <div class="float-end">
-                            <a href="#" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</a>
+                            <a href="#" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i> Delete</a>
                         </div>
                     </div>
                 </div>
@@ -135,15 +139,17 @@
                     <div {% if show_hint %}class="col-4"{% else %}class="col-5"{% endif %}>
                         {{ item.format_name|safe }}
                         {% if item.owner.convert_to_submitter %}
-                            <span class="badge bg-success"><i class="fas fa-check"></i> Converting</span>
+                            <div class="text-success"><i class="fas fa-check-circle"></i> Converting</div>
                         {% else %}
-                            <span class="badge bg-danger"><i class="fas fa-times"></i> Not converting</span>
+                            <div class="text-danger"><i class="fas fa-times-circle"></i> Not converting</div>
                         {% endif %}
                     </div>
                     <div {% if show_hint %}class="col-3"{% else %}class="col-2"{% endif %}>
-                        <span class="badge bg-success rank-hint-button">#{{ item.rank }}</span>
+                        <div class="text-success rank-hint-button">#<strong>{{ item.rank }}</strong></div>
                         {% if item.converted_from_bookmark %}
-                            <span class="badge bg-warning text-dark rank-hint-button">From bookmark</span>
+                            <div class="text-secondary rank-hint-button"><i class="fas fa-exclamation-circle"></i>> From
+                                bookmark
+                            </div>
                         {% endif %}
                         {% if show_hint %}
                             <div class="rank-hint-button">
@@ -169,8 +175,10 @@
                         {% endif %}
                     </div>
                     <div class="col-3">
-                        {{ item.owner.submission_time.strftime("%a %d %b %Y %H:%M:%S") }} /
-                        {{ item.owner.submission_IP }}
+                        <div class="text-secondary small"><i
+                                class="fas fa-calendar"></i> {{ item.owner.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}
+                        </div>
+                        <div class="text-secondary small">{{ item.owner.submission_IP }}</div>
                     </div>
                     <div class="col-2">
                         <div class="d-flex flex-row justify-content-end align-content-start gap-2">
@@ -199,7 +207,7 @@
                 <div id="P-{{ project.id }}" class="row vertical-top final-selection-table">
                     <div {% if show_hint %}class="col-2"{% else %}class="col-1"{% endif %}>
                         {% if not sel.retired %}<i class="fas fa-bars drag-handle"></i>{% endif %}
-                        <span id="ranking" class="badge bg-success rank-hint-button">#{{ item.rank }}</span>
+                        <div id="ranking" class="text-success rank-hint-button">#<strong>{{ item.rank }}</strong></div>
                         {% if show_hint %}
                             <div class="rank-hint-button">
                                 <button class="btn btn-xs {% if item.has_hint %}btn-danger{% else %}btn-outline-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
@@ -228,19 +236,24 @@
                             {{ item.format_project(show_hint=show_hint)|safe }}
                         </a>
                         {% if item.converted_from_bookmark %}
-                            <span class="badge bg-warning text-dark rank-hint-button">Bookmark</span>
+                            <div class="text-secondary rank-hint-button"><i class="fas fa-exclamation-circle"></i>
+                                Bookmark
+                            </div>
                         {% endif %}
                     </div>
                     <div class="col-4">
                         {% if project.generic %}
-                            <span class="badge bg-info">Generic</span>
+                            <div class="text-primary">Generic</div>
                         {% else %}
                             {% if project.owner is not none %}
-                                <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
+                                <div><a class="text-decoration-none link-primary"
+                                        href="mailto:{{ project.owner.user.email }}">
                                     {{ project.owner.user.name }}
-                                </a>
+                                </a></div>
                             {% else %}
-                                <span class="badge bg-danger">Missing</span>
+                                <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Project
+                                    owner missing
+                                </div>
                             {% endif %}
                         {% endif %}
                         {% set ns = namespace(affiliation=false) %}
@@ -253,7 +266,7 @@
                             {% set ns.affiliation = true %}
                         {% endfor %}
                         {% if not ns.affiliation %}
-                            <span class="badge bg-warning text-dark">No affiliations</span>
+                            <div class="text-danger small"><i class="fas fa-ban"></i> No affiliations</div>
                         {% endif %}
                     </div>
                     <div class="col-2">

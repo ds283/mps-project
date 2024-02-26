@@ -13,12 +13,13 @@
                 {% set project = item.liveproject %}
                 <div class="row vertical-top final-selection-table">
                     <div class="col-1">
-                        <span class="badge bg-success">#{{ item.rank }}</span>
+                        <div class="text-success">#<strong>{{ item.rank }}</strong></div>
                     </div>
                     <div class="col-5">
-                        <a class="text-decoration-none" href="{{ url_for('student.selector_view_project', sid=sel.id, pid=project.id, url=url_for('student.view_selection', sid=sel.id), text='submitted project selection') }}">
+                        <div><a class="text-decoration-none link-primary"
+                                href="{{ url_for('student.selector_view_project', sid=sel.id, pid=project.id, url=url_for('student.view_selection', sid=sel.id), text='submitted project selection') }}">
                             <strong>{{ project.name }}</strong>
-                        </a>
+                        </a></div>
                     </div>
                     <div class="col-3">
                         {% set ns = namespace(affiliation=false) %}
@@ -31,19 +32,22 @@
                             {% set ns.affiliation = true %}
                         {% endfor %}
                         {% if not ns.affiliation %}
-                            <span class="badge bg-warning text-dark">No affiliations</span>
+                            <div class="text-danger small"><i class="fas fa-ban"></i> No affiliations</div>
                         {% endif %}
                     </div>
                     <div class="col-3">
                         {% if project.generic %}
-                            <span class="badge bg-info">Generic</span>
+                            <div class="text-primary">Generic</div>
                         {% else %}
                             {% if project.owner is not none %}
-                                <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">
+                                <div><a class="text-decoration-none link-primary"
+                                        href="mailto:{{ project.owner.user.email }}">
                                     {{ project.owner.user.name }}
-                                </a>
+                                </a></div>
                             {% else %}
-                                <span class="badge bg-danger">Missing</span>
+                                <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Project
+                                    owner missing
+                                </div>
                             {% endif %}
                         {% endif %}
                     </div>
@@ -76,13 +80,13 @@
                 {% if show_actions %}<div class="col-1">{% else %}<div class="col-2">{% endif %}
                     {% set status = offer.status %}
                     {% if status == offer.OFFERED %}
-                        <span class="badge bg-primary">Offered</span>
+                        <div class="text-primary small">Offered</div>
                     {% elif status == offer.DECLINED %}
-                        <span class="badge bg-danger">Declined</span>
+                        <div class="text-danger small"><i class="fas fa-times-circle"></i> Declined</div>
                     {% elif status == offer.ACCEPTED %}
-                        <span class="badge bg-success">Accepted</span>
+                        <div class="text-success small"><i class="fas fa-check-circle"></i> Accepted</div>
                     {% else %}
-                        <span class="badge bg-danger">Unknown status</span>
+                        <div class="text-danger small"><i class="fas fa-ban"></i> Unknown status</div>
                     {% endif %}
                 </div>
                 {% if show_actions %}

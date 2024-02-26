@@ -6219,7 +6219,7 @@ def selector_bookmarks(id):
         flash("It is not possible to view selector rankings before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/student_bookmarks.html", sel=sel)
+    return render_template_context("convenor/selector/selector_bookmarks.html", sel=sel)
 
 
 @convenor.route("/project_bookmarks/<int:id>")
@@ -6478,7 +6478,7 @@ def selector_choices(id):
         )
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/student_choices.html", sel=sel, text=text, url=url)
+    return render_template_context("convenor/selector/selector_choices.html", sel=sel, text=text, url=url)
 
 
 @convenor.route("/project_choices/<int:id>")
@@ -6784,7 +6784,7 @@ def selector_custom_offers(sel_id):
         flash("It is not possible to view selector custom offers before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/student_custom_offers.html", sel=sel, pclass_id=sel.config.project_class.id)
+    return render_template_context("convenor/selector/selector_custom_offers.html", sel=sel, pclass_id=sel.config.project_class.id)
 
 
 @convenor.route("/selector_custom_offers_ajax/<int:sel_id>")
@@ -6819,7 +6819,7 @@ def new_selector_offer(sel_id):
         flash("It is not possible to set up a new selector custom offer before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/student_new_offer.html", sel=sel, pclass_id=sel.config.project_class.id)
+    return render_template_context("convenor/selector/selector_new_offer.html", sel=sel, pclass_id=sel.config.project_class.id)
 
 
 @convenor.route("/new_selector_offer_ajax/<int:sel_id>")

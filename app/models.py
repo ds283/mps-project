@@ -9026,6 +9026,14 @@ def _SelectingStudent_is_valid(sid):
     if student.intermitting:
         errors["intermitting"] = "Student is intermitting"
 
+    # CONSTRAINT 3 - if a student has submitted a ranked selection list, it should
+    # contain as many selections as we are expecting
+    if obj.has_submitted and not obj.has_accepted_offer:
+        num_selected = obj.number_selections
+        num_expected = obj.number_choices
+        if num_selected != num_expected:
+            errors["number_selections"] = f"Expected {num_expected} selections, but {num_selected} submitted"
+
     if len(errors) > 0:
         return False, errors, warnings
 
@@ -9167,6 +9175,10 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         return get_count(self.bookmarks)
 
     @property
+    def number_selections(self):
+        return get_count(self.selections)
+
+    @property
     def number_custom_offers(self):
         return get_count(self.custom_offers)
 
@@ -9270,8 +9282,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
             db.session.query(SubmittingStudent)
             .filter(SubmittingStudent.student_id == self.student_id)
             .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
-            .filter(ProjectClassConfig.pclass_id == self.config.pclass_id,
-                    ProjectClassConfig.year < self.config.year)
+            .filter(ProjectClassConfig.pclass_id == self.config.pclass_id, ProjectClassConfig.year < self.config.year)
             .first()
             is None
         )
@@ -9328,15 +9339,15 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
                         fac: FacultyData = project.owner
                         user: User = fac.user
                         messages.append(
-                            "The project <em>{name}</em> currently ranked #{rk} is not yet available for "
+                            "The project <em>{name}</em> (currently ranked #{rk}) is not yet available for "
                             "selection because confirmation from the supervisor is required. Please set "
-                            "up a meeting by email to {supv} "
+                            'up a meeting by email to <a href="mailto:{email}">{supv}</a> '
                             '&langle;<a href="mailto:{email}">{email}</a>&rangle;.'
                             "".format(name=project.name, rk=rank, supv=user.name, email=user.email)
                         )
                     else:
                         messages.append(
-                            "The project <em>{name}</em> currently ranked #{rk} is not yet available for "
+                            "The project <em>{name}</em> (currently ranked #{rk}) is not yet available for "
                             "selection because confirmation from the supervisor is "
                             "required.".format(name=project.name, rk=rank)
                         )

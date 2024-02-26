@@ -138,42 +138,43 @@ _cohort = """
 _bookmarks = """
 {% set count = sel.number_bookmarks %}
 {% if count > 0 %}
-    <span class="badge bg-primary">{{ count }}</span>
-    <a class="text-decoration-none" href="{{ url_for('convenor.selector_bookmarks', id=sel.id) }}">
-        Show...
-    </a>
+    <div class="text-success"><i class="fas fa-check-circle"></i> <strong>{{ count }}</strong> bookmarks</div>
+    <div><a class="text-decoration-none link-secondary small" href="{{ url_for('convenor.selector_bookmarks', id=sel.id) }}">
+        Show <i class="fas fa-chevron-circle-right"></i>
+    </a></div>
 {% else %}
-    <span class="badge bg-secondary">None</span>
+    <span class="text-secondary"><i class="fas fa-times-circle"></i> None</span>
 {% endif %}
 """
 
 # language=jinja2
 _submitted = """
 {% if sel.has_submitted %}
+    {% set count = sel.number_selections %}
     {% if sel.has_submission_list %}
-        <span class="badge bg-success">Yes</span>
-        <a class="text-decoration-none" href="{{ url_for('convenor.selector_choices', id=sel.id) }}">
-            Show...
-        </a>
+        <div class="text-success"><i class="fas fa-check-circle"></i> <strong>{{ count }}</strong> selections</div>
+        <div><a class="text-decoration-none link-success small" href="{{ url_for('convenor.selector_choices', id=sel.id) }}">
+            Show <i class="fas fa-chevron-circle-right"></i>
+        </a></div>
     {% endif %}
     {% set offers = sel.number_offers_accepted %}
     {% if offers > 0 %}
         <div>
             {% for offer in sel.custom_offers_accepted %}
-                <span class="badge bg-success">Accepted: {{ offer.liveproject.name }}</span>
+                <div class="text-success small"><strong>Accepted:</strong> {{ offer.liveproject.name }}</div>
             {% endfor %}
         </div>
     {% endif %}
 {% else %}
     {% if state >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-        <span class="badge bg-secondary">No</span>
+        <div class="text-secondary"><i class="fas fa-times-circle"></i> No</div>
         {% if sel.is_valid_selection[0] %}
-            <span class="badge bg-success">Valid selection</span>
+            <div class="badge bg-success">Valid list</div>
         {% else %}
-            <span class="badge bg-danger">Invalid selection</span>
+            <div class="badge bg-danger">Invalid list</div>
         {% endif %}
     {% else %}
-        <span class="badge bg-secondary">Not yet open</span>
+        <div class="text-secondary"><i class="fas fa-ban"></i> Not yet open</div>
     {% endif %}
 {% endif %}
 """
@@ -182,23 +183,23 @@ _submitted = """
 _confirmations = """
 {% set pending = sel.number_pending %}
 {% set confirmed = sel.number_confirmed %}
-{% if confirmed > 0 %}<span class="badge bg-success"><i class="fas fa-check"></i> Confirmed {{ confirmed }}</span>{% endif %}
-{% if pending > 0 %}<span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pending {{ pending }}</span>{% endif %}
+{% if confirmed > 0 %}<div class="text-success"><i class="fas fa-check-circle"></i> <strong>{{ confirmed }}</strong> confirmed</div>{% endif %}
+{% if pending > 0 %}<div class="text-danger"><i class="fas fa-clock"></i> <strong>{{ pending }}</strong> pending</div>{% endif %}
 {% if pending > 0 or confirmed > 0 %}
-    <a class="text-decoration-none" href="{{ url_for('convenor.selector_confirmations', id=sel.id) }}">
-        Show...
-    </a>
+    <div><a class="text-decoration-none link-danger small" href="{{ url_for('convenor.selector_confirmations', id=sel.id) }}">
+        Show <i class="fas fa-chevron-circle-right"></i>
+    </a></div>
 {% else %}
-    <span class="badge bg-secondary">None</span>
+    <div class="text-secondary"><i class="fas fa-times-circle"></i> None</div>
 {% endif %}
 {% set offers = sel.number_offers_pending + sel.number_offers_declined %}
 {% if offers > 0 %}
     <div>
         {% for offer in sel.custom_offers_pending %}
-            <span class="badge bg-primary">Offer: {{ offer.liveproject.name }}</span>
+            <div class="text-primary small"><strong>Offer</strong>: {{ offer.liveproject.name }}</div>
         {% endfor %}
         {% for offer in sel.custom_offers_declined %}
-            <span class="badge bg-secondary">Declined: {{ offer.liveproject.name }}</span>
+            <div class="text-danger small"><strong>Declined</strong>: {{ offer.liveproject.name }}</div>
         {% endfor %}
     </div>
 {% endif %}

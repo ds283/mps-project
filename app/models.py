@@ -9270,7 +9270,8 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
             db.session.query(SubmittingStudent)
             .filter(SubmittingStudent.student_id == self.student_id)
             .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
-            .filter(ProjectClassConfig.pclass_id == self.config.pclass_id)
+            .filter(ProjectClassConfig.pclass_id == self.config.pclass_id,
+                    ProjectClassConfig.year < self.config.year)
             .first()
             is None
         )

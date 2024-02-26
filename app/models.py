@@ -11507,16 +11507,22 @@ class Bookmark(db.Model):
         return self.owner.student.user.name
 
 
-@listens_for(SelectingStudent.bookmarks, "append")
-def _SelectingStudent_bookmarks_append_handler(target, value, initiator):
+@listens_for(Bookmark, "before_insert")
+def _Bookmark_insert_handler(mapping, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_SelectingStudent_is_valid, target.id)
+        cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 
-@listens_for(SelectingStudent.bookmarks, "remove")
-def _SelectingStudent_bookmarks_remove_handler(target, value, initiator):
+@listens_for(Bookmark, "before_update")
+def _Bookmark_update_handler(mapping, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_SelectingStudent_is_valid, target.id)
+        cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
+
+
+@listens_for(Bookmark, "before_delete")
+def _Bookmark_delete_handler(mapping, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 
 class SelectionRecord(db.Model, SelectHintTypesMixin):
@@ -11652,12 +11658,16 @@ def _SelectionRecord_update_handler(mapper, connection, target):
         cache.delete_memoized(_MatchingAttempt_current_score)
         cache.delete_memoized(_MatchingAttempt_hint_status)
 
+        cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
+
 
 @listens_for(SelectionRecord, "before_insert")
 def _SelectionRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_MatchingAttempt_current_score)
         cache.delete_memoized(_MatchingAttempt_hint_status)
+
+        cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 
 @listens_for(SelectionRecord, "before_delete")
@@ -11666,17 +11676,7 @@ def _SelectionRecord_delete_handler(mapper, connection, target):
         cache.delete_memoized(_MatchingAttempt_current_score)
         cache.delete_memoized(_MatchingAttempt_hint_status)
 
-
-@listens_for(SelectingStudent.selections, "append")
-def _SelectingStudent_selections_append_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_SelectingStudent_is_valid, target.id)
-
-
-@listens_for(SelectingStudent.selections, "remove")
-def _SelectingStudent_selections_remove_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_SelectingStudent_is_valid, target.id)
+        cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 
 class CustomOffer(db.Model, EditingMetadataMixin, CustomOfferStatesMixin):

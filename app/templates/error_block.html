@@ -68,10 +68,10 @@
     {#    {% endif %}#}
     {% set ns = namespace(quickfix=none, msg=none) %}
     {% if num_errors > 0 %}
-        <div class="mt-1 p-1 small bg-danger">
+        <div class="mt-1 small">
             {% for item in errors %}
                 {% if loop.index <= max_errors %}
-                    {{ format_inline_item(item, ns, class='white', icon='exclamation-circle', quickfixes=quickfixes) }}
+                    {{ format_inline_item(item, ns, class='danger', icon='exclamation-circle', quickfixes=quickfixes) }}
                 {% elif loop.index == max_errors+1 %}
                     <div class='text-white'>Further errors suppressed...</div>
                 {% endif %}
@@ -79,12 +79,12 @@
         </div>
     {% endif %}
     {% if num_warnings > 0 %}
-        <div class="mt-1 p-1 small bg-warning">
+        <div class="mt-1 small">
             {% for item in warnings %}
                 {% if loop.index <= max_warnings %}
-                    {{ format_inline_item(item, ns, class='dark', icon='info-circle', quickfixes=quickfixes) }}
+                    {{ format_inline_item(item, ns, class='info', icon='info-circle', quickfixes=quickfixes) }}
                 {% elif loop.index == max_warnings+1 %}
-                    <div class='text-dark'>Further warnings suppressed...</div>
+                    <div class='text-info'>Further warnings suppressed...</div>
                 {% endif %}
             {% endfor %}
         </div>

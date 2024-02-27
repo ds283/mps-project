@@ -23,9 +23,11 @@
                             {{ item.format_project|safe }}
                         </a>
                         {% if project.is_available(sel) %}
-                            <div class="text-success small"><i class="fas fa-check-circle"></i> Available</div>
+                            <div class="text-success small"><i class="fas fa-check-circle"></i> Available to select
+                            </div>
                         {% else %}
-                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not available</div>
+                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not available to select
+                            </div>
                         {% endif %}
                     </div>
                     <div class="col-4">
@@ -78,37 +80,43 @@
             <div class="col-2"></div>
         </div>
         <div class="list-group" id="student-bookmarks">
-            {% for item in list %}
+            {% for item in list %} {# item is a Bookmark instance #}
+                {% set sel = item.owner %} {# sel is a SelectingStudent instance #}
                 <div class="row vertical-top bookmark-table">
                     <div class="col-3">
                         {{ item.format_name|safe }}
                         {% if item.owner.convert_to_submitter %}
-                            <div class="text-success small"><i class="fas fa-check-circle"></i> Converting</div>
+                            <div class="text-success small"><i class="fas fa-check-circle"></i> Convert to submitter
+                            </div>
                         {% else %}
-                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not converting</div>
+                            <div class="text-danger small"><i class="fas fa-times-circle"></i> No convert to submitter
+                            </div>
                         {% endif %}
                     </div>
                     <div class="col-1">
                         <span class="text-success">#<strong>{{ item.rank }}</strong></span>
                     </div>
                     <div class="col-3">
-                        {% if item.owner.has_submitted %}
-                            <div class="text-success"><i class="fas fa-check-circle"></i> Submitted</div>
+                        {% if sel.has_submitted %}
+                            <div class="text-success small"><i class="fas fa-check-circle"></i> Submitted</div>
                         {% else %}
-                            <div class="text-secondary"><i class="fas fa-times-circle"></i> Not submitted</div>
+                            <div class="text-secondary small"><i class="fas fa-times-circle"></i> Not submitted</div>
                         {% endif %}
                         {% if proj.is_available(item.owner) %}
-                            <div class="text-success"><i class="fas fa-check-circle"></i> Available</div>
+                            <div class="text-success small"><i class="fas fa-check-circle"></i> Available to select
+                            </div>
                         {% else %}
-                            <div class="text-danger"><i class="fas fa-times-circle"></i> Not available</div>
+                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not available to select
+                            </div>
                         {% endif %}
                     </div>
                     <div class="col-3">
-                        {% if item.owner.has_submitted %}
-                            {% if item.owner.is_project_submitted(item.liveproject) %}
-                                <div class="text-success"><i class="fas fa-check-circle"></i> In submission</div>
+                        {% if sel.has_submitted %}
+                            {% if sel.is_project_submitted(item.liveproject) %}
+                                <div class="text-success small"><i class="fas fa-check-circle"></i> In submission</div>
                             {% else %}
-                                <div class="text-secondary"><i class="fas fa-check-circle"></i> Not in submission<</div>
+                                <div class="text-secondary small"><i class="fas fa-check-circle"></i> Not in submission
+                                </div>
                             {% endif %}
                         {% else %}
                             <div class="text-danger small"><i class="fas fa-ban"></i> Not submitted</div>
@@ -116,7 +124,8 @@
                     </div>
                     <div class="col-2">
                         <div class="float-end">
-                            <a href="#" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i> Delete</a>
+                            <a href="{{ url_for('convenor.delete_student_bookmark', sid=sel.id, bid=item.id) }}"
+                               class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i> Delete</a>
                         </div>
                     </div>
                 </div>
@@ -125,7 +134,7 @@
     </div>
 {% endmacro %}
 
-{% macro selecting_students(proj, list, show_hint) %}
+{% macro selecting_students(proj, list, show_hint=false, show_delete=false) %}
     <div class="container-fluid">
         <div class="row vertical-align bookmark-table">
             <div {% if show_hint %}class="col-4"{% else %}class="col-5"{% endif %}><strong>Student</strong></div>
@@ -134,14 +143,18 @@
             <div class="col-2"></div>
         </div>
         <div class="list-group" id="student-selections">
-            {% for item in list %}
+            {% for item in list %} {# item is a SelectionRecord instance #}
+                {% set sel = item.owner %} {# sel is a SelectingStudent instance #}
+                {% set can_delete = sel.number_selections > sel.number_choices %}
                 <div class="row vertical-top bookmark-table">
                     <div {% if show_hint %}class="col-4"{% else %}class="col-5"{% endif %}>
                         {{ item.format_name|safe }}
                         {% if item.owner.convert_to_submitter %}
-                            <div class="text-success"><i class="fas fa-check-circle"></i> Converting</div>
+                            <div class="text-success small"><i class="fas fa-check-circle"></i> Convert to submitter
+                            </div>
                         {% else %}
-                            <div class="text-danger"><i class="fas fa-times-circle"></i> Not converting</div>
+                            <div class="text-danger small"><i class="fas fa-times-circle"></i> No convert to submitter
+                            </div>
                         {% endif %}
                     </div>
                     <div {% if show_hint %}class="col-3"{% else %}class="col-2"{% endif %}>
@@ -181,9 +194,13 @@
                         <div class="text-secondary small">{{ item.owner.submission_IP }}</div>
                     </div>
                     <div class="col-2">
-                        <div class="d-flex flex-row justify-content-end align-content-start gap-2">
-                            <a href="#" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i> Delete</a>
-                        </div>
+                        {% if show_delete %}
+                            <div class="d-flex flex-row justify-content-end align-content-start gap-2">
+                                <a {% if can_delete %}href="{{ url_for('convenor.delete_student_choice', sid=sel.id, cid=item.id) }}"{% endif %}
+                                   class="btn btn-sm btn-outline-danger {% if not can_delete %}disabled{% endif %}"><i
+                                        class="fas fa-trash"></i> Delete</a>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             {% endfor %}
@@ -192,7 +209,7 @@
 {% endmacro %}
 
 {% macro ranked_selection(sel, list, nav_text, nav_url, show_hint=false, show_delete=false) %}
-    {% set can_delete = sel.number_selections > sel.config.initial_choices %}
+    {% set can_delete = sel.number_selections > sel.number_choices %}
     <div class="container-fluid">
         <div class="row vertical-align final-selection-table">
             <div {% if show_hint %}class="col-2"{% else %}class="col-1"{% endif %}><strong>Rank</strong></div>

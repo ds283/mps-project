@@ -6318,6 +6318,10 @@ def delete_student_bookmark(sid, bid):
     if not validate_is_convenor(sel.config.project_class):
         return redirect(redirect_url())
 
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash("It is not possible to delete selector bookmarks before the corresponding project class has gone live.", "error")
@@ -6328,10 +6332,10 @@ def delete_student_bookmark(sid, bid):
         'Delete bookmark for selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>, '
         "project <strong>{proj}</strong>".format(name=sel.student.user.name, proj=bookmark.liveproject.name)
     )
-    action_url = url_for("convenor.perform_delete_student_bookmark", sid=sid, bid=bid)
+    action_url = url_for("convenor.perform_delete_student_bookmark", sid=sid, bid=bid, url=url)
     message = (
-        '<p>Please confirm that you wish to delete <i class="fas fa-user-circle"></i> <strong>{name}</strong> '
-        "bookmark for project <strong>{proj}</strong>.</p>"
+        '<p>Please confirm that you wish to delete the bookmark held by selector <i class="fas fa-user-circle"></i> <strong>{name}</strong> '
+        "for project <strong>{proj}</strong>.</p>"
         "<p>This action cannot be undone.</p>".format(name=sel.student.user.name, proj=bookmark.liveproject.name)
     )
     submit_label = "Delete bookmark"
@@ -6346,6 +6350,10 @@ def delete_student_bookmark(sid, bid):
 def perform_delete_student_bookmark(sid, bid):
     # sid is a SelectingStudent
     sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = url_for("convenor.selector_bookmarks", id=sid)
 
     if not validate_is_convenor(sel.config.project_class):
         return home_dashboard()
@@ -6368,7 +6376,7 @@ def perform_delete_student_bookmark(sid, bid):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             db.session.rollback()
 
-    return redirect(url_for("convenor.selector_bookmarks", id=sid))
+    return redirect(url)
 
 
 @convenor.route("/add_student_bookmark/<int:sid>")
@@ -6569,6 +6577,10 @@ def delete_student_choice(sid, cid):
     if not validate_is_convenor(sel.config.project_class):
         return redirect(redirect_url())
 
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         flash("It is not possible to delete selector rankings before the corresponding project class has gone live.", "error")
@@ -6578,7 +6590,7 @@ def delete_student_choice(sid, cid):
     panel_title = 'Delete ranking for selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>, ' "project <strong>{proj}</strong>".format(
         name=sel.student.user.name, proj=record.liveproject.name
     )
-    action_url = url_for("convenor.perform_delete_student_choice", sid=sid, cid=cid)
+    action_url = url_for("convenor.perform_delete_student_choice", sid=sid, cid=cid, url=url)
     message = (
         '<p>Please confirm that you wish to delete <i class="fas fa-user-circle"></i> <strong>{name}</strong> '
         "ranking #{num} for project <strong>{proj}</strong>.</p>"
@@ -6599,6 +6611,10 @@ def delete_student_choice(sid, cid):
 def perform_delete_student_choice(sid, cid):
     # sid is a SelectingStudent
     sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = url_for("convenor.selector_choices", id=sid)
 
     if not validate_is_convenor(sel.config.project_class):
         return home_dashboard()
@@ -6621,7 +6637,7 @@ def perform_delete_student_choice(sid, cid):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             db.session.rollback()
 
-    return redirect(url_for("convenor.selector_choices", id=sid))
+    return redirect(url)
 
 
 @convenor.route("/add_student_ranking/<int:sid>")

@@ -25,7 +25,7 @@
                             {% endcall %}
                         </div>
                     {% endif %}
-                    {{ selecting_students(project, project.selections, lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING) }}
+                    {{ selecting_students(project, project.selections, show_hint=(lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING), show_delete=true) }}
                 </div>
             </div>
 

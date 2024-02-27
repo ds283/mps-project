@@ -19,7 +19,7 @@
     {% endif %}
 {% endmacro %}
 
-{% macro format_inline_item(item, ns, class='dark', quickfixes=none) %}
+{% macro format_inline_item(item, ns, class='dark', icon='exclamation-circle', quickfixes=none) %}
     {% set ns.quickfix = none %}
     {% set ns.msg = none %}
     {% if item is mapping %}
@@ -37,11 +37,11 @@
     {% endif %}
     {% if ns.msg is not none %}
         <div class='text-{{ class }}'>
-            <i class="fas fa-exclamation-circle"></i>
+            <i class="fas fa-{{ icon }}"></i>
             {{ ns.msg }}
             {% if ns.quickfix is not none %}
                 {% set quickfix = ns.quickfix %}
-                <a class="text-decoration-none text-muted" href="{{ quickfix["url"] }}">(Fix: {{ quickfix["msg"] }})</a>
+                <a class="text-decoration-none" href="{{ quickfix["url"] }}">(Fix: {{ quickfix["msg"] }})</a>
             {% endif %}
         </div>
     {% endif %}
@@ -50,39 +50,39 @@
 {% macro error_block_inline(errors, warnings, max_errors=10, max_warnings=10, quickfixes=none) %}
     {% set num_errors = errors|length %}
     {% set num_warnings = warnings|length %}
-    {% if num_errors > 0 %}
-        {% if num_errors == 1 %}
-            {% set err_string = '1 error' %}
-        {% else %}
-            {% set err_string = num_errors|string + ' errors' %}
-        {% endif %}
-        <span class="badge bg-danger">{{ err_string}}</span>
-    {% endif %}
-    {% if num_warnings > 0 %}
-        {% if num_warnings == 1 %}
-            {% set warn_string = '1 warning' %}
-        {% else %}
-            {% set warn_string = num_warnings|string + ' warnings' %}
-        {% endif %}
-        <span class="badge bg-warning text-dark">{{ warn_string }}</span>
-    {% endif %}
+    {#    {% if num_errors > 0 %}#}
+    {#        {% if num_errors == 1 %}#}
+    {#            {% set err_string = '1 error' %}#}
+    {#        {% else %}#}
+    {#            {% set err_string = num_errors|string + ' errors' %}#}
+    {#        {% endif %}#}
+    {#        <span class="badge bg-danger">{{ err_string}}</span>#}
+    {#    {% endif %}#}
+    {#    {% if num_warnings > 0 %}#}
+    {#        {% if num_warnings == 1 %}#}
+    {#            {% set warn_string = '1 warning' %}#}
+    {#        {% else %}#}
+    {#            {% set warn_string = num_warnings|string + ' warnings' %}#}
+    {#        {% endif %}#}
+    {#        <span class="badge bg-warning text-dark">{{ warn_string }}</span>#}
+    {#    {% endif %}#}
     {% set ns = namespace(quickfix=none, msg=none) %}
     {% if num_errors > 0 %}
-        <div class="mt-1 small">
+        <div class="mt-1 p-1 small bg-danger">
             {% for item in errors %}
                 {% if loop.index <= max_errors %}
-                    {{ format_inline_item(item, ns, class='danger', quickfixes=quickfixes) }}
+                    {{ format_inline_item(item, ns, class='white', icon='exclamation-circle', quickfixes=quickfixes) }}
                 {% elif loop.index == max_errors+1 %}
-                    <div class='text-danger'>Further errors suppressed...</div>
+                    <div class='text-white'>Further errors suppressed...</div>
                 {% endif %}
             {% endfor %}
         </div>
     {% endif %}
     {% if num_warnings > 0 %}
-        <div class="mt-1 small">
+        <div class="mt-1 p-1 small bg-warning">
             {% for item in warnings %}
                 {% if loop.index <= max_warnings %}
-                    {{ format_inline_item(item, ns, class='dark', quickfixes=quickfixes) }}
+                    {{ format_inline_item(item, ns, class='dark', icon='info-circle', quickfixes=quickfixes) }}
                 {% elif loop.index == max_warnings+1 %}
                     <div class='text-dark'>Further warnings suppressed...</div>
                 {% endif %}

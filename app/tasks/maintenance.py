@@ -15,6 +15,7 @@ from typing import List, Iterable, Mapping, Union
 
 from celery import group
 from celery.exceptions import Ignore
+from celery.states import state
 from flask import current_app, render_template
 from flask_mailman import EmailMessage
 from sqlalchemy import or_
@@ -44,6 +45,8 @@ from ..models import (
     DegreeType,
     BackupRecord,
     validate_nonce,
+    SubmittingStudent,
+    SelectingStudent,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetCloudScratchContextManager, AssetUploadManager
 from ..shared.cloud_object_store import ObjectStore
@@ -53,7 +56,7 @@ from ..shared.utils import get_current_year, get_count
 def register_maintenance_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def maintenance(self):
-        self.update_state(state="STARTED")
+        self.update_state(state=state.STARTED)
 
         project_classes_maintenance(self)
 
@@ -63,6 +66,7 @@ def register_maintenance_tasks(celery):
         project_descriptions_maintenance(self)
 
         students_data_maintenance(self)
+        submitting_student_maintenance(self)
 
         assessor_attendance_maintenance(self)
         submitter_attendance_maintenance(self)
@@ -72,11 +76,11 @@ def register_maintenance_tasks(celery):
 
         submission_record_maintenance(self)
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=state.SUCCESS)
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
     def fix_unencrypted_assets(self):
-        self.update_state(state="STARTED")
+        self.update_state(state=state.STARTED)
 
         asset_maintenance(self, SubmittedAsset)
         asset_maintenance(self, TemporaryAsset)
@@ -84,7 +88,24 @@ def register_maintenance_tasks(celery):
 
         backup_maintenance(self)
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=state.SUCCESS)
+
+    def submitting_student_maintenance(self):
+        current_year = get_current_year()
+        try:
+            records = (
+                db.session.query(SubmittingStudent)
+                .filter(SubmittingStudent.retired == False)
+                .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
+                .filter(ProjectClassConfig.live == True, ProjectClassConfig.selection_closed == False)
+            )
+
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        task = group(submitting_student_record_maintenance.s(r.id) for r in records)
+        task.apply_async()
 
     def submitter_attendance_maintenance(self):
         current_year = get_current_year()
@@ -196,7 +217,7 @@ def register_maintenance_tasks(celery):
 
     def matching_enumeration_maintenance(self):
         try:
-            records = db.session.query(MatchingEnumeration).all()
+            records: List[MatchingEnumeration] = db.session.query(MatchingEnumeration).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -207,7 +228,7 @@ def register_maintenance_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def student_data_maintenance(self, sid):
         try:
-            record = db.session.query(StudentData).filter_by(id=sid).first()
+            record: StudentData = db.session.query(StudentData).filter_by(id=sid).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -223,7 +244,49 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=state.SUCCESS)
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def submitting_student_record_maintenance(self, sid):
+        try:
+            record: SubmittingStudent = db.session.query(SubmittingStudent).filter_by(id=sid).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        config: ProjectClassConfig = record.config_id
+
+        if not config.select_in_previous_cycle:
+            if record.selector is not None:
+                existing_selector: SelectingStudent = record.selector
+
+                if existing_selector.student_id != record.student_id:
+                    current_app.logger.warning(
+                        f'SubmittingStudent (id={record.id}) for student "{record.student.user.name}" has a paired SelectingStudent for a mismatching student "{existing_selector.student.user.name}"'
+                    )
+                    record.selector = None
+                elif existing_selector.config_id != record.config_id:
+                    current_app.logger.warning(
+                        f'SubmittingStudent (id={record.id}) for student "{record.student.user.name}" has a paired selector for a mismatching ProjectClassConfig instance (submitter config_id={record.config_id}, selector config_id={existing_selector.config_id})'
+                    )
+                    record.selector = None
+
+            # test whether there is a corresponding SelectingStudent instance
+            paired_selector: SelectingStudent = (
+                db.session.query(SelectingStudent)
+                .filter(SelectingStudent.student_id == record.student_id, SelectingStudent.config_id == record.config_id)
+                .first()
+            )
+
+            record.selector = paired_selector
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
+
+            self.update_state(state=state.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def project_class_maintenance(self, pid):
@@ -244,7 +307,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=state.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def project_record_maintenance(self, pid):
@@ -265,7 +328,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=state.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def liveproject_record_maintenance(self, pid):
@@ -286,7 +349,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=state.SUCCESS)
 
     def project_descriptions_maintenance(self):
         try:
@@ -317,7 +380,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=state.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def assessor_attendance_record_maintenance(self, id):
@@ -338,7 +401,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=state.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def submitter_attendance_record_maintenance(self, id):
@@ -359,7 +422,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=state.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def schedule_enumeration_record_maintenance(self, id):
@@ -382,7 +445,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=state.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def matching_enumeration_record_maintenance(self, id):
@@ -405,7 +468,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=state.SUCCESS)
 
     def _collect_expirable_assets(self, AssetType):
         try:
@@ -595,7 +658,7 @@ def register_maintenance_tasks(celery):
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=state.SUCCESS)
 
     def submission_record_maintenance(self):
         try:
@@ -626,7 +689,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state="SUCCESS")
+        self.update_state(state=state.SUCCESS)
 
     def asset_maintenance(self, RecordType):
         try:

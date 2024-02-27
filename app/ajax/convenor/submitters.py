@@ -355,6 +355,7 @@ _name = """
     {% set warnings = sub.warnings %}
     <div class="mt-1">
         {{ error_block_inline(errors, warnings, max_errors=5, max_warnings=5) }}
+    </div>
 {% endif %}
 """
 

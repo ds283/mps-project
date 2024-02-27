@@ -9025,6 +9025,7 @@ def _SelectingStudent_is_valid(sid):
 
     student: StudentData = obj.student
     user: User = student.user
+    config: ProjectClassConfig = obj.config
 
     # CONSTRAINT 1 - owning student should be active
     if not user.active:
@@ -9050,6 +9051,13 @@ def _SelectingStudent_is_valid(sid):
                     errors["number_selections"] = err_msg
             else:
                 warnings["number_selections"] = err_msg
+
+    if not config.select_in_previous_cycle:
+        num_submitters = get_count(obj.submitters)
+        if num_submitters > 1:
+            warnings["paired_submitter"] = {"msg": f"Selector has too many ({num_submitters}) paired submitters"}
+        elif num_submitters == 0:
+            warnings["paired_submitter"] = {"msg": f"Selector has no paired submitter"}
 
     if len(errors) > 0:
         return False, errors, warnings
@@ -9575,13 +9583,13 @@ def _SelectingStudent_delete_handler(mapper, connection, target):
 @cache.memoize()
 def _SubmittingStudent_is_valid(sid):
     obj: SubmittingStudent = db.session.query(SubmittingStudent).filter_by(id=sid).one()
-    config: ProjectClassConfig = obj.config
 
     errors = {}
     warnings = {}
 
     student: StudentData = obj.student
     user: User = student.user
+    config: ProjectClassConfig = obj.config
 
     # CONSTRAINT 1 - owning student should be active
     if not user.active:
@@ -9614,6 +9622,11 @@ def _SubmittingStudent_is_valid(sid):
             warnings["records"] = "Project or role assignments for some submission periods have warnings"
         else:
             warnings["records"] = "Project or role assignments have warnings"
+
+    # CONSTRAINT 4 - check if there should be a paired selector instance
+    if not config.select_in_previous_cycle:
+        if obj.selector is None:
+            warnings["paired_selector"] = {"msg": "Submitter has no paired selector"}
 
     if len(errors) > 0:
         return False, errors, warnings
@@ -10286,7 +10299,7 @@ def _SubmissionRecord_is_valid(sid):
 
     # 2. ASSIGNED PROJECT SHOULD BE PART OF THE PROJECT CLASS
     if obj.selection_config is not None:
-        if project.config_id != obj.selection_config_id:
+        if project is not None and project.config_id != obj.selection_config_id:
             errors[("config", 0)] = "Assigned project does not belong to the correct class for this submitter"
 
     # 3. STAFF WITH SUPERVISOR ROLES SHOULD BE ENROLLED FOR THIS PROJECT CLASS
@@ -10326,7 +10339,7 @@ def _SubmissionRecord_is_valid(sid):
             warnings[("enrolment", 2)] = '"{name}" has been assigned a moderation role, but is not a faculty member'
 
     # 6. ASSIGNED MARKERS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
-    if uses_marker:
+    if uses_marker and project is not None:
         for r in marker_roles:
             user: User = r.user
             count = get_count(project.assessor_list_query.filter(FacultyData.id == user.id))
@@ -10335,7 +10348,7 @@ def _SubmissionRecord_is_valid(sid):
                 errors[("markers", 2)] = 'Assigned marker "{name}" is not in assessor pool for ' "assigned project".format(name=user.name)
 
     # 7. ASSIGNED MODERATORS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
-    if uses_moderator:
+    if uses_moderator and project is not None:
         for r in moderator_roles:
             user: User = r.user
             count = get_count(project.assessor_list_query.filter(FacultyData.id == user.id))
@@ -10344,12 +10357,12 @@ def _SubmissionRecord_is_valid(sid):
                 errors[("moderators", 2)] = 'Assigned moderator "{name}" is not in assessor pool for ' "assigned project".format(name=user.name)
 
     # 8. FOR ORDINARY PROJECTS, THE PROJECT OWNER SHOULD USUALLY BE A SUPERVISOR
-    if not project.generic:
+    if project is not None and not project.generic:
         if project.owner is not None and project.owner_id not in supervisor_ids:
             warnings[("supervisors", 2)] = 'Assigned project owner "{name}" does not have a supervision ' "role".format(name=project.owner.user.name)
 
     # 9. For GENERIC PROJECTS, THE SUPERVISOR SHOULD BE IN THE SUPERVISION POOL
-    if project.generic:
+    if project is not None and project.generic:
         for r in supervisor_roles:
             user: User = r.user
             if not any(user.id == fd.id for fd in project.supervisors):

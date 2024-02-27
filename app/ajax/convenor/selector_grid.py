@@ -88,12 +88,12 @@ _name = """
 <a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 <div>
 {% if sel.convert_to_submitter %}
-    <span class="badge bg-success"><i class="fas fa-check"></i> Convert</span>
+    <div class="text-success small"><i class="fas fa-check-circle"></i> Convert to submitter</div>
 {% else %}
-    <span class="badge bg-danger"><i class="fas fa-times"></i> Disable convert</span>
+    <div class="text-danger small"><i class="fas fa-times-circle"></i> No convert to submitter</div>
 {% endif %}
 {% if sel.student.intermitting %}
-    <span class="badge bg-warning text-dark">TWD</span>
+    <div class="badge bg-warning text-dark">TWD</div>
 {% endif %}
 </div>
 """

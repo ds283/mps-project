@@ -1381,9 +1381,9 @@ def project_preview(id):
     if not validate_view_project(data):
         return redirect(redirect_url())
 
-    show_selector = bool(int(request.args.get("show_selector", True)))
-    all_comments = bool(int(request.args.get("all_comments", False)))
-    all_workflow = bool(int(request.args.get("all_workflow", False)))
+    show_selector = bool(int(request.args.get("show_selector", 1)))
+    all_comments = bool(int(request.args.get("all_comments", 0)))
+    all_workflow = bool(int(request.args.get("all_workflow", 0)))
 
     FacultyPreviewForm = FacultyPreviewFormFactory(id, show_selector)
     form = FacultyPreviewForm(request.form)

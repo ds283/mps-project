@@ -38,6 +38,7 @@ from .cache import cache
 from .database import db
 from .shared.colours import get_text_colour
 from .shared.formatters import format_size, format_time, format_readable_time
+from .shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS
 from .shared.sqlalchemy import get_count
 
 # length of database string for typical fields, if used
@@ -9031,8 +9032,17 @@ def _SelectingStudent_is_valid(sid):
     if obj.has_submitted and not obj.has_accepted_offer:
         num_selected = obj.number_selections
         num_expected = obj.number_choices
+        err_msg = f"Expected {num_expected} selections, but {num_selected} submitted"
+
         if num_selected != num_expected:
-            errors["number_selections"] = f"Expected {num_expected} selections, but {num_selected} submitted"
+            num_bookmarks = obj.number_bookmarks
+            if num_selected < num_expected:
+                if num_bookmarks >= num_expected:
+                    errors["number_selections"] = {"msg": err_msg, "quickfix": QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS}
+                else:
+                    errors["number_selections"] = err_msg
+            else:
+                warnings["number_selections"] = err_msg
 
     if len(errors) > 0:
         return False, errors, warnings
@@ -9310,7 +9320,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
     @property
     def is_valid_selection(self):
         """
-        Determine whether the current selection is valid
+        Determine whether the current set of bookmarks constitutes a valid selection
         :return:
         """
         messages = []
@@ -9430,10 +9440,6 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
     @property
     def ordered_selections(self):
         return self.selections.order_by(SelectionRecord.rank)
-
-    @property
-    def number_selections(self):
-        return get_count(self.selections)
 
     def project_rank(self, proj):
         # ignore bookmarks; these will have been converted to

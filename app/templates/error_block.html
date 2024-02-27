@@ -19,7 +19,35 @@
     {% endif %}
 {% endmacro %}
 
-{% macro error_block_inline(errors, warnings, max_errors=10, max_warnings=10) %}
+{% macro format_inline_item(item, ns, class='dark', quickfixes=none) %}
+    {% set ns.quickfix = none %}
+    {% set ns.msg = none %}
+    {% if item is mapping %}
+        {% if "quickfix" in item %}
+            {% set quickfix_type = item["quickfix"] %}
+            {% if quickfixes is mapping and quickfix_type in quickfixes %}
+                {% set ns.quickfix = quickfixes[quickfix_type] %}
+            {% endif %}
+        {% endif %}
+        {% if "msg" in item %}
+            {% set ns.msg = item["msg"] %}
+        {% endif %}
+    {% else %}
+        {% set ns.msg = item %}
+    {% endif %}
+    {% if ns.msg is not none %}
+        <div class='text-{{ class }}'>
+            <i class="fas fa-exclamation-circle"></i>
+            {{ ns.msg }}
+            {% if ns.quickfix is not none %}
+                {% set quickfix = ns.quickfix %}
+                <a class="text-decoration-none text-muted" href="{{ quickfix["url"] }}">(Fix: {{ quickfix["msg"] }})</a>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endmacro %}
+
+{% macro error_block_inline(errors, warnings, max_errors=10, max_warnings=10, quickfixes=none) %}
     {% set num_errors = errors|length %}
     {% set num_warnings = warnings|length %}
     {% if num_errors > 0 %}
@@ -38,30 +66,27 @@
         {% endif %}
         <span class="badge bg-warning text-dark">{{ warn_string }}</span>
     {% endif %}
+    {% set ns = namespace(quickfix=none, msg=none) %}
     {% if num_errors > 0 %}
         <div class="mt-1 small">
-            <ul>
-                {% for item in errors %}
-                    {% if loop.index <= max_errors %}
-                        <li class='text-danger'>{{ item }}</li>
-                    {% elif loop.index == max_errors+1 %}
-                        <li class='text-danger'>Further errors suppressed...</li>
-                    {% endif %}
-                {% endfor %}
-            </ul>
+            {% for item in errors %}
+                {% if loop.index <= max_errors %}
+                    {{ format_inline_item(item, ns, class='danger', quickfixes=quickfixes) }}
+                {% elif loop.index == max_errors+1 %}
+                    <div class='text-danger'>Further errors suppressed...</div>
+                {% endif %}
+            {% endfor %}
         </div>
     {% endif %}
     {% if num_warnings > 0 %}
         <div class="mt-1 small">
-            <ul>
-                {% for item in warnings %}
-                    {% if loop.index <= max_warnings %}
-                        <li class='text-dark'>{{ item }}</li>
-                    {% elif loop.index == max_warnings+1 %}
-                        <li class='text-dark'>Further warnings suppressed...</li>
-                    {% endif %}
-                {% endfor %}
-            </ul>
+            {% for item in warnings %}
+                {% if loop.index <= max_warnings %}
+                    {{ format_inline_item(item, ns, class='dark', quickfixes=quickfixes) }}
+                {% elif loop.index == max_warnings+1 %}
+                    <div class='text-dark'>Further warnings suppressed...</div>
+                {% endif %}
+            {% endfor %}
         </div>
     {% endif %}
 {% endmacro %}

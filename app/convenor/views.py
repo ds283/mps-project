@@ -120,6 +120,7 @@ from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.projects import create_new_tags, get_filter_list_for_groups_and_skills, project_list_SQL_handler, project_list_in_memory_handler
+from ..shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS
 from ..shared.sqlalchemy import get_count, clone_model
 from ..shared.utils import (
     get_current_year,
@@ -1037,7 +1038,15 @@ def selectors_ajax(id):
 
     data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter, match_filter, match_show)
 
-    return ajax.convenor.selectors_data(data, config)
+    def _quickfixes(s: SelectingStudent):
+        return {
+            QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS: {
+                "msg": "Populate from bookmarks...",
+                "url": url_for("convenor.force_convert_bookmarks", sel_id=s.id, converted=0),
+            }
+        }
+
+    return ajax.convenor.selectors_data(data, config, quickfix_factory=_quickfixes)
 
 
 def _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter, match_filter, match_show):
@@ -9568,28 +9577,24 @@ def force_convert_bookmarks(sel_id):
     # sel_id is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(sel_id)
 
+    converted_status = bool(int(request.args.get("converted", "1")))
+    no_submit_IP = bool(int(request.args.get("no_submit_IP", "1")))
+
     if not validate_is_convenor(sel.config.project_class):
         return redirect(redirect_url())
 
-    if sel.config.selector_lifecycle <= ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-        flash("Forced conversion of bookmarks can only be performed after student selections are closed.", "info")
-        return redirect(redirect_url())
-
-    if sel.has_submitted:
-        flash(
-            'Cannot force conversion of bookmarks for selector "{name}" because an existing submission ' "exists.".format(name=sel.student.user.name),
-            "error",
-        )
+    if sel.config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+        flash("Conversion of bookmarks can only be performed once project selection is open.", "info")
         return redirect(redirect_url())
 
     if sel.number_bookmarks < sel.number_choices:
         flash(
-            'Cannot force conversion of bookmarks for selector "{name}" because too few bookmarks ' "exist.".format(name=sel.student.user.name),
+            'Cannot force conversion of bookmarks for selector "{name}" because too few bookmarks exist.'.format(name=sel.student.user.name),
             "error",
         )
         return redirect(redirect_url())
 
-    store_selection(sel, converted=True, no_submit_IP=True)
+    store_selection(sel, converted=converted_status, no_submit_IP=no_submit_IP)
 
     try:
         db.session.commit()

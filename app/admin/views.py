@@ -1906,6 +1906,7 @@ def add_pclass():
                 auto_enroll_years=form.auto_enroll_years.data,
                 programmes=form.programmes.data,
                 initial_choices=form.initial_choices.data,
+                allow_switching=form.allow_switching.data,
                 switch_choices=form.switch_choices.data,
                 faculty_maximum=form.faculty_maximum.data,
                 active=True,
@@ -2027,6 +2028,7 @@ def add_pclass():
             form.uses_selection.data = True
             form.uses_submission.data = True
             form.do_matching.data = True
+            form.allow_switching = False
             form.advertise_research_group.data = True
             form.use_project_tags.data = False
             form.force_tag_groups.data = []
@@ -2091,6 +2093,7 @@ def edit_pclass(id):
         data.force_tag_groups = form.force_tag_groups.data
         data.programmes = form.programmes.data
         data.initial_choices = form.initial_choices.data
+        data.allow_switching = form.allow_switching.data
         data.switch_choices = form.switch_choices.data
         data.faculty_maximum = form.faculty_maximum.data
         data.CATS_supervision = form.CATS_supervision.data

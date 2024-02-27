@@ -387,6 +387,13 @@ class ProjectClassMixin:
         validators=[NotOptionalIf("uses_selection"), NumberRange(min=1, message="The required number of preferences should be at least 1")],
     )
 
+    allow_switching = BooleanField(
+        "Allow switching supervisors in subsequent years",
+        description="Some project types may allow switching supervisors after the first year. "
+        "If this is allowed, students may be required to submit a different number of ranked preferences.",
+        default=False,
+    )
+
     switch_choices = IntegerField(
         "Number of subsequent project preferences",
         description="Number of preferences to allow in subsequent years, if switching is allowed.",

@@ -202,6 +202,11 @@
             </div>
             <p class="form-group-heading mt-2">Student selections</p>
             <div class="row vertical-top">
+                <div class="col-12">
+                    {{ wtf.render_field(pclass_form.allow_switching) }}
+                </div>
+            </div>
+            <div class="row vertical-top">
                 <div class="col-6">
                     {{ wtf.render_field(pclass_form.initial_choices) }}
                 </div>

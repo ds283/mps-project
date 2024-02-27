@@ -4808,6 +4808,9 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     # how many initial_choices should students make?
     initial_choices = db.Column(db.Integer())
 
+    # is "switching" allowed in subsequent years? (This allows a different number of choices to initial_choices)
+    allow_switching = db.Column(db.Boolean(), default=False)
+
     # how many switch choices should students be allowed?
     switch_choices = db.Column(db.Integer())
 
@@ -5771,6 +5774,10 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     @property
     def initial_choices(self):
         return self.project_class.initial_choices
+
+    @property
+    def allow_switching(self):
+        return self.project_class.allow_switching
 
     @property
     def switch_choices(self):
@@ -9271,6 +9278,11 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         Determine whether this is the initial selection or a switch
         :return:
         """
+
+        # if this project class does not allow switching, we are always on an "initial" selection
+        if not self.config.allow_switching:
+            return True
+
         # 28 March 2023: removed this check based on the academic year because it can produce the wrong
         # result for part-time students. We now have these for the Data Science MSc programme.
         # These students seem to select a project in Y2 which leads to a wrong result when computed

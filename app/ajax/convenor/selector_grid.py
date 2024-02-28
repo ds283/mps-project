@@ -70,9 +70,9 @@ _selections = """
 {% else %}
     <div class="row vertical-align">
         <div class="col-12">
-            {% if sel.number_bookmarks >= sel.number_choices %}
-                <span class="badge bg-info">Bookmarks available</span>
-                <a class="text-decoration-none" href="{{ url_for('convenor.force_convert_bookmarks', sel_id=sel.id) }}">
+            {% if sel.number_bookmarks > 0 %}
+                <span class="badge bg-info">{{ sel.number_bookmarks }} bookmarks available</span>
+                <a class="text-decoration-none" href="{{ url_for('convenor.force_convert_bookmarks', sel_id=sel.id, converted=1, no_submit_IP=1, force=0, reset=1) }}">
                     Force conversion...
                 </a>
             {% else %}

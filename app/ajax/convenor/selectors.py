@@ -47,18 +47,17 @@ _menu = """
         {% endif %}
         <div role="separator" class="dropdown-divider"></div>
         <div class="dropdown-header">Selections</div>
-        {% if is_valid_selection %}
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.submit_student_selection', sel_id=student.id) }}">
-                <i class="fas fa-paper-plane fa-fw"></i> Submit selection
-            </a>
-        {% endif %}
         
         {% if student.has_submitted %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.selector_choices', id=student.id) }}">
                 <i class="fas fa-eye fa-fw"></i> Show selection
             </a>
-        {% elif (is_admin and not is_valid_selection) %}
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.force_submit_selection', sel_id=student.id) }}">
+        {% elif is_valid_selection %}
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.submit_student_selection', sel_id=student.id) }}">
+                <i class="fas fa-paper-plane fa-fw"></i> Submit selection
+            </a>
+        {% else %}
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.force_convert_bookmarks', sel_id=student.id, converted=1, no_submit_IP=1, force=0, reset=1) }}">
                 <i class="fas fa-exclamation-triangle fa-fw"></i> Force submission
             </a>
         {% endif %}
@@ -86,30 +85,10 @@ _menu = """
                 </a>
             {% endif %}
         {% endif %}
-
-        {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.number_pending > 0 %}
-            <div role="separator" class="dropdown-divider"></div>
-            <div class="dropdown-header">Meeting requests</div>
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_confirm_all', sid=student.id) }}">
-                <i class="fas fa-check fa-fw"></i> Confirm all
-            </a>
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_clear_requests', sid=student.id) }}">
-                <i class="fas fa-trash fa-fw"></i> Delete all
-            </a>
-        {% endif %}
-
-        {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.number_confirmed > 0 %}
-            <div role="separator" class="dropdown-divider"></div>
-            <div class="dropdown-header">Meeting confirmations</div>
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_make_all_confirms_pending', sid=student.id) }}">
-                <i class="fas fa-clock fa-fw"></i> Make all pending
-            </a>
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
-                <i class="fas fa-trash fa-fw"></i> Delete all
-            </a>
-        {% endif %}
                 
         {% if student.number_pending > 0 or student.number_confirmed > 0 %}
+            <div role="separator" class="dropdown-divider"></div>
+            <div class="dropdown-header">Meeting requests</div>
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.selector_confirmations', id=student.id) }}">
                 <i class="fas fa-cogs fa-fw"></i> Show confirmations
             </a>

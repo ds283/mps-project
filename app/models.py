@@ -9042,15 +9042,13 @@ def _SelectingStudent_is_valid(sid):
         num_expected = obj.number_choices
         err_msg = f"Expected {num_expected} selections, but {num_selected} submitted"
 
-        if num_selected != num_expected:
-            num_bookmarks = obj.number_bookmarks
-            if num_selected < num_expected:
-                if num_bookmarks >= num_expected:
-                    errors["number_selections"] = {"msg": err_msg, "quickfix": QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS}
-                else:
-                    errors["number_selections"] = err_msg
+        if num_selected < num_expected:
+            if obj.has_bookmarks:
+                errors["number_selections"] = {"msg": err_msg, "quickfix": QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS}
             else:
-                warnings["number_selections"] = err_msg
+                errors["number_selections"] = err_msg
+        elif num_selected > num_expected:
+            warnings["number_selections"] = err_msg
 
     if not config.select_in_previous_cycle:
         num_submitters = get_count(obj.submitters)

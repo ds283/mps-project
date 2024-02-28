@@ -19,7 +19,7 @@
     {% endif %}
 {% endmacro %}
 
-{% macro format_inline_item(item, ns, class='dark', icon='exclamation-circle', quickfixes=none) %}
+{% macro format_inline_item(item, ns, class='dark', link_class='secondary', icon='exclamation-circle', quickfixes=none) %}
     {% set ns.quickfix = none %}
     {% set ns.msg = none %}
     {% if item is mapping %}
@@ -41,7 +41,8 @@
             {{ ns.msg }}
             {% if ns.quickfix is not none %}
                 {% set quickfix = ns.quickfix %}
-                <a class="text-decoration-none" href="{{ quickfix["url"] }}">(Fix: {{ quickfix["msg"] }})</a>
+                <a class="text-decoration-none link-{{ link_class }}"
+                   href="{{ quickfix["url"] }}">(Fix: {{ quickfix["msg"] }})</a>
             {% endif %}
         </div>
     {% endif %}
@@ -71,7 +72,7 @@
         <div class="mt-1 small">
             {% for item in errors %}
                 {% if loop.index <= max_errors %}
-                    {{ format_inline_item(item, ns, class='danger', icon='exclamation-circle', quickfixes=quickfixes) }}
+                    {{ format_inline_item(item, ns, class='danger', link_class='secondary', icon='exclamation-circle', quickfixes=quickfixes) }}
                 {% elif loop.index == max_errors+1 %}
                     <div class='text-white'>Further errors suppressed...</div>
                 {% endif %}
@@ -82,7 +83,7 @@
         <div class="mt-1 small">
             {% for item in warnings %}
                 {% if loop.index <= max_warnings %}
-                    {{ format_inline_item(item, ns, class='info', icon='info-circle', quickfixes=quickfixes) }}
+                    {{ format_inline_item(item, ns, class='info', link_class='secondary', icon='info-circle', quickfixes=quickfixes) }}
                 {% elif loop.index == max_warnings+1 %}
                     <div class='text-info'>Further warnings suppressed...</div>
                 {% endif %}

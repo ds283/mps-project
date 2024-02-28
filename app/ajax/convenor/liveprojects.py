@@ -8,10 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, url_for, get_template_attribute
+from flask import render_template_string, get_template_attribute
 
 from ...models import ProjectClassConfig
-
 
 # language=jinja2
 _name = """
@@ -165,10 +164,8 @@ _menu = """
         <div role="separator" class="dropdown-divider">
         {% if project.number_bookmarks > 0 %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
-                <i class="fas fa-cogs fa-fw"></i> Bookmarking students
+                <i class="fas fa-cogs fa-fw"></i> Bookmarks...
             </a>
-        {% else %}
-            <a class="dropdown-item d-flex gap-2 disabled">><i class="fas fa-cogs fa-fw"></i> Bookmarking students</a>
         {% endif %}
         
         {% if project.number_selections > 0 %}
@@ -182,49 +179,35 @@ _menu = """
             <i class="fas fa-cogs fa-fw"></i> Custom offers...
         </a>
 
-        <div role="separator" class="dropdown-divider"></div>
-        <div class="dropdown-header">Meeting requests</div>
         {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and project.number_pending > 0 %}
+            <div role="separator" class="dropdown-divider"></div>
+            <div class="dropdown-header">Meeting requests</div>
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.project_confirm_all', pid=project.id) }}">
                 <i class="fas fa-check fa-fw"></i> Confirm all requests
             </a>
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.project_clear_requests', pid=project.id) }}">
                 <i class="fas fa-trash fa-fw"></i> Delete all requests
             </a>
-        {% else %}
-            <a class="dropdown-item d-flex gap-2 disabled">
-                <i class="fas fa-check fa-fw"></i> Confirm all requests
-            </a>
-            <a class="dropdown-item d-flex gap-2 disabled">
-                <i class="fas fa-trash fa-fw"></i> Delete all requests
-            </a>
         {% endif %}
 
-        <div role="separator" class="dropdown-divider"></div>
-        div class="dropdown-header">Meeting confirmations</div>
         {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and project.number_confirmed > 0 %}
+            <div role="separator" class="dropdown-divider"></div>
+            <div class="dropdown-header">Meeting confirmations</div>
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.project_remove_confirms', pid=project.id) }}">
                 <i class="fas fa-trash fa-fw"></i> Delete confirmations
             </a>
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.project_make_all_confirms_pending', pid=project.id) }}">
                 <i class="fas fa-clock fa-fw"></i> Make all pending
             </a>
-        {% else %}
-            <a class="dropdown-item d-flex gap-2 disabled">
-                <i class="fas fa-trash fa-fw"></i> Delete confirmations
-            </a>
-            <a class="dropdown-item d-flex gap-2 disabled">
-                <i class="fas fa-clock fa-fw"></i> Make all pending
-            </a>
         {% endif %}
         
         {% if project.number_pending > 0 or project.number_confirmed > 0 %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.project_confirmations', id=project.id) }}">
-                <i class="fas fa-cogs fa-fw"></i> Show confirmations
+                <i class="fas fa-cogs fa-fw"></i> Show confirmations...
             </a>
         {% else %}
             <a class="dropdown-item d-flex gap-2 disabled">
-                <i class="fas fa-cogs fa-fw"></i> Show confirmations
+                <i class="fas fa-cogs fa-fw"></i> Show confirmations...
             </a>
         {% endif %}
     </div>

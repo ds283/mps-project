@@ -9,16 +9,14 @@
 }, default_category=None, dismissible=False) -%}
     {% with messages = messages or get_flashed_messages(with_categories=True) -%}
         {% if messages -%} {# don't output anything if there are no messages #}
-
             {% for cat, msg in messages %}
                 <div class="alert alert-{{ transform.get(cat.lower(), default_category or cat) }}{% if dismissible %} alert-dismissible{% endif %}" role="alert">
                     {% if dismissible %}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     {% endif %}
-                    {{ msg }}
+                    {{ msg|blinkify|safe }}
                 </div>
             {%- endfor -%}
-
         {% endif -%}
     {% endwith -%}
 {% endmacro -%}

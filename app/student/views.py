@@ -839,8 +839,7 @@ def submit(sid):
         return redirect(redirect_url())
 
     try:
-        store_selection(sel)
-
+        _ = store_selection(sel)
         db.session.commit()
 
         celery = current_app.extensions["celery"]

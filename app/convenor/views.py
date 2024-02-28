@@ -19,7 +19,7 @@ from celery import chain
 from celery.result import AsyncResult
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
-from flask import redirect, url_for, flash, request, jsonify, current_app, session, abort
+from flask import redirect, url_for, flash, request, jsonify, current_app, session, abort, render_template_string
 from flask_mailman import EmailMultiAlternatives
 from flask_security import roles_accepted, current_user
 from ordered_set import OrderedSet
@@ -1042,7 +1042,7 @@ def selectors_ajax(id):
         return {
             QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS: {
                 "msg": "Populate from bookmarks...",
-                "url": url_for("convenor.force_convert_bookmarks", sel_id=s.id, converted=0),
+                "url": url_for("convenor.force_convert_bookmarks", sel_id=s.id, converted=0, no_submit_IP=1, force=1, reset=0),
             }
         }
 
@@ -5439,15 +5439,15 @@ def submit_student_selection(sel_id):
     valid, errors = sel.is_valid_selection
     if not valid:
         flash(
-            "The current bookmark list is not a valid set of project preferences. This is an internal error; "
-            "please contact a system administrator.",
+            'The current bookmark list for selector "{name}" is not a valid set of project preferences, and cannot currently be submitted.'.format(
+                name=sel.student.user.name
+            ),
             "error",
         )
         return redirect(redirect_url())
 
     try:
-        store_selection(sel)
-
+        _ = store_selection(sel)
         db.session.commit()
 
         celery = current_app.extensions["celery"]
@@ -5482,28 +5482,6 @@ def submit_student_selection(sel_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash("A database error occurred during submission. Please contact a system administrator.", "error")
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-    return redirect(redirect_url())
-
-
-@convenor.route("/force_submit_selection/<int:sel_id>")
-@roles_accepted("admin", "root")
-def force_submit_selection(sel_id):
-    # sel_id is a SelectingStudent
-    sel: SelectingStudent = SelectingStudent.query.get_or_404(sel_id)
-
-    if not sel.has_bookmarks:
-        flash('Selector "{name}" cannot be force-submit because they do not have ' "bookmarks.".format(name=sel.student.user.name), "info")
-        return redirect(redirect_url())
-
-    store_selection(sel)
-
-    try:
-        db.session.commit()
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        flash("A database error occurred during forced submission. Please contact a system administrator.", "error")
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
@@ -9595,22 +9573,32 @@ def force_convert_bookmarks(sel_id):
 
     converted_status = bool(int(request.args.get("converted", "1")))
     no_submit_IP = bool(int(request.args.get("no_submit_IP", "1")))
+    force = bool(int(request.args.get("force", "0")))
+    reset = bool(int(request.args.get("reset", "1")))
 
+    # reject user if not a suitable convenor or administrator
     if not validate_is_convenor(sel.config.project_class):
         return redirect(redirect_url())
 
     if sel.config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-        flash("Conversion of bookmarks can only be performed once project selection is open.", "info")
+        flash("Forced conversion of bookmarks can be performed only after project selection is open.", "info")
         return redirect(redirect_url())
 
-    if sel.number_bookmarks < sel.number_choices:
+    if not force and sel.has_submitted:
+        flash(
+            'Cannot force conversion of bookmarks for selector "{name}" because an existing submission exists.'.format(name=sel.student.user.name),
+            "error",
+        )
+        return redirect(redirect_url())
+
+    if not sel.has_bookmarks:
         flash(
             'Cannot force conversion of bookmarks for selector "{name}" because too few bookmarks exist.'.format(name=sel.student.user.name),
             "error",
         )
         return redirect(redirect_url())
 
-    store_selection(sel, converted=converted_status, no_submit_IP=no_submit_IP)
+    stored = store_selection(sel, converted=converted_status, no_submit_IP=no_submit_IP, reset=reset)
 
     try:
         db.session.commit()
@@ -9622,6 +9610,30 @@ def force_convert_bookmarks(sel_id):
         )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+    else:
+        if len(stored) > 0:
+            report = """
+            The following projects were added to the submission for selector "{{ sel.student.user.name }}":
+            <ul>
+                {% for item in stored %}
+                    <li><strong>{{ item.name }}</strong>
+                    {% if item.name.generic %}
+                        (generic)
+                    {% elif item.owner is not none %}
+                        supervised by <i class="fas fa-user-circle"></i> {{ item.owner.user.name }}
+                    {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+            """
+            report_body = render_template_string(report, sel=sel, stored=stored)
+            flash(report_body, "info")
+        else:
+            flash(
+                f'No further projects were added to the submission for selector "{sel.student.user.name}". '
+                f"This is most likely because no further bookmarked projects are available to this selector.",
+                "warning",
+            )
 
     return redirect(redirect_url())
 

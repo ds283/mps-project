@@ -9350,10 +9350,11 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         num_choices = self.number_choices
         if self.bookmarks.count() < num_choices:
             valid = False
-            messages.append(
-                "You have insufficient bookmarks. You must submit at least {n} "
-                "choice{pl}.".format(n=num_choices, pl="" if num_choices == 1 else "s")
-            )
+            if not self.has_submitted:
+                messages.append(
+                    "You have insufficient bookmarks. You must submit at least {n} "
+                    "choice{pl}.".format(n=num_choices, pl="" if num_choices == 1 else "s")
+                )
 
         rank = 0
         counts = {}
@@ -9369,7 +9370,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
                         fac: FacultyData = project.owner
                         user: User = fac.user
                         messages.append(
-                            "The project <em>{name}</em> (currently ranked #{rk}) is not yet available for "
+                            "Project <em>{name}</em> (currently ranked #{rk}) is not yet available for "
                             "selection because confirmation from the supervisor is required. Please set "
                             'up a meeting by email to <a href="mailto:{email}">{supv}</a> '
                             '&langle;<a href="mailto:{email}">{email}</a>&rangle;.'
@@ -9377,7 +9378,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
                         )
                     else:
                         messages.append(
-                            "The project <em>{name}</em> (currently ranked #{rk}) is not yet available for "
+                            "Project <em>{name}</em> (currently ranked #{rk}) is not yet available for "
                             "selection because confirmation from the supervisor is "
                             "required.".format(name=project.name, rk=rank)
                         )
@@ -9389,6 +9390,12 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
                         counts[project.owner_id] = 1
                     else:
                         counts[project.owner_id] += 1
+
+            if project.hidden:
+                valid = False
+                messages.append(
+                    "Project <em>{name}</em> (currently ranked #{rk}) is no longer available to be selected.".format(name=project.name, rk=rank)
+                )
 
             if rank >= num_choices:
                 break

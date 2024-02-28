@@ -50,14 +50,18 @@
         {% endcall %}
         {% if has_custom_offers %}
             {% call icon_block("info-circle", extra_classes='mt-3') %}
-                <div><strong>You have custom offers available.</strong></div>
+                {% if sel.has_submitted and sel.has_accepted_offer %}
+                    <div><strong>You have accepted a custom offer.</strong></div>
+                {% else %}
+                    <div><strong>You have custom offers available.</strong></div>
+                {% endif %}
                 <div class="mt-1">
                     Custom offers give you the option of a guaranteed
                     project and supervisor.
                 </div>
                 <div class="mt-1">
                     Use the <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}">Manage custom offers</a> button
-                    to accept or decline your offers.
+                    to accept or decline offers.
                     You can only accept one offer, but you can change your mind
                     up to the deadline.
                 </div>
@@ -110,8 +114,8 @@
             {% if normal_text and normal_text|length > 0 %}
                 {{ normal_text|markdown|bclean|blinkify|safe }}
             {% elif config.uses_selection %}
+                <h5>This project is mandatory for your degree programme</h5>
                 <ul>
-                    <li><strong>This project is mandatory for your degree programme.</strong></li>
                     <li>Add bookmarks to keep track of the projects in which you are interested,
                         then drag-and-drop to rank them in order of preference.
                     </li>
@@ -132,9 +136,8 @@
             {% if noninitial_text and noninitial_text|length > 0 %}
                 {{ noninitial_text|markdown|bclean|blinkify|safe }}
             {% else %}
+                <h5>If you wish to switch supervisors, add bookmarks for each project of interest</h5>
                 <ul>
-                    <li><strong>If you wish to switch supervisors,
-                        please add bookmarks for each project of interest.</strong></li>
                     <li>Drag-and-drop your bookmarks to indicate your order of preference.</li>
                 </ul>
             {% endif %}
@@ -428,12 +431,14 @@
                     {% set numpl = 's' %}
                     {% if num_choices == 1 %}{% set numpl = '' %}{% endif %}
                     {% if sel.is_initial_selection %}
-                        <ul>
+                        {% if not sel.has_submitted %}
                             {% if sel.is_optional %}
-                                <li><strong>To apply, select at least {{ num_choices }} project{{ numpl }}.</strong></li>
+                                <h5>To apply, select at least {{ num_choices }} project{{ numpl }}</h5>
                             {% else %}
-                                <li><strong>Select at least {{ num_choices }} project{{ numpl }}.</strong></li>
+                                <h5>Select at least {{ num_choices }} project{{ numpl }}</h5>
                             {% endif %}
+                        {% endif %}
+                        <ul>
                             <li>
                                 Although we make every effort,
                                 it is not possible to guarantee that you will be assigned

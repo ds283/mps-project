@@ -9,6 +9,10 @@
 #
 
 
+import csv
+from collections import deque
+from io import StringIO
+
 from ..database import db
 from ..models import (
     ProjectClass,
@@ -17,23 +21,17 @@ from ..models import (
     SelectingStudent,
     User,
     AssessorAttendanceData,
-    SubmissionPeriodRecord,
     SubmissionPeriodDefinition,
 )
-from ..shared.utils import get_current_year
 from ..shared.sqlalchemy import get_count
-
-import csv
-from io import StringIO
-
-from collections import deque
+from ..shared.utils import get_current_year
 
 
 def estimate_CATS_load():
     year = get_current_year()
 
     # get list of project classes that participate in automatic matching
-    pclasses = db.session.query(ProjectClass).filter_by(active=True, do_matching=True).all()
+    pclasses = db.session.query(ProjectClass).filter_by(active=True, publish=True, do_matching=True).all()
 
     supervision_CATS = 0
     marking_CATS = 0
@@ -52,7 +50,7 @@ def estimate_CATS_load():
         config: ProjectClassConfig = pclass.get_config(year)
 
         if config is None:
-            raise RuntimeError('Configuration record for "{name}" ' "and year={yr} is missing".format(name=pclass.name, yr=year))
+            raise RuntimeError('Configuration record for "{name}" and year={yr} is missing'.format(name=pclass.name, yr=year))
 
         # find number of selectors for this project class
         num_selectors = get_count(db.session.query(SelectingStudent).filter_by(retired=False, convert_to_submitter=True, config_id=config.id))

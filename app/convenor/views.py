@@ -3059,10 +3059,8 @@ def manual_attach_project(id, configid):
         flash('Project "{p}" does not have a description for "{c}" and cannot be ' "attached.".format(p=project.name, c=config.name))
         return redirect(redirect_url())
 
-    # get number for this project
-    number = config.live_projects.count() + 1
-
-    add_liveproject(number, project, configid, autocommit=True)
+    # passing number=None to add_liveproject() causes it to assign its own number
+    add_liveproject(None, project, configid, autocommit=True)
 
     return redirect(redirect_url())
 
@@ -3135,9 +3133,9 @@ def manual_attach_other_project(id, configid):
 
     # get number for this project
     desc: ProjectDescription = ProjectDescription.query.get_or_404(id)
-    number = config.live_projects.count() + 1
 
-    add_liveproject(number, desc.parent, configid, desc=desc, autocommit=True)
+    # passing number=None to add_liveproject() causes it to assign its own number
+    add_liveproject(None, desc.parent, configid, desc=desc, autocommit=True)
 
     return redirect(redirect_url())
 

@@ -7,16 +7,16 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-
+from typing import Optional
 
 from flask import current_app
 
-from ..shared.utils import get_current_year
 from ..database import db
 from ..models import Project, LiveProject, StudentData, SelectingStudent, SubmittingStudent, ProjectClassConfig, SubmissionRecord, ProjectDescription
+from ..shared.utils import get_current_year
 
 
-def add_liveproject(number, project, config_id, desc=None, autocommit=False):
+def add_liveproject(number: Optional[int], project: Project|int, config_id: int, desc: Optional[ProjectDescription]=None, autocommit: bool=False):
     # extract this project; input 'project' is allowed to be a Project instance, or else
     # the database id of an instance
     item: Project
@@ -46,6 +46,14 @@ def add_liveproject(number, project, config_id, desc=None, autocommit=False):
     if existing_record:
         # nothing to do
         return
+
+    if number is None:
+        largest_current_number = config.live_projects.order_by(LiveProject.number.desc()).first()
+        if largest_current_number is None:
+            # failed to get a result; estimate using the current count + 1
+            number = config.live_projects.count() + 1
+        else:
+            number = largest_current_number + 1
 
     # notice that this generates a LiveProject record ONLY FOR THIS PROJECT CLASS;
     # all project classes need their own LiveProject record

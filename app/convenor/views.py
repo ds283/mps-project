@@ -1732,8 +1732,8 @@ def show_confirmations(id):
         flash("The outstanding confirmations view is available only after student choices have opened", "error")
         return redirect(redirect_url())
 
-    if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
-        flash("The outstanding confirmations view is not available after student choices have closed", "error")
+    if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        flash("The outstanding confirmations view is not available after matching has been completed", "error")
         return redirect(redirect_url())
 
     data = get_convenor_dashboard_data(pclass, config)
@@ -1768,7 +1768,7 @@ def show_confirmations_ajax(id):
     if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         return jsonify({})
 
-    if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+    if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
         return jsonify({})
 
     outstanding = (
@@ -1780,6 +1780,78 @@ def show_confirmations_ajax(id):
     )
 
     return ajax.convenor.show_confirmations(outstanding, pclass.id)
+
+
+@convenor.route("/approve_outstanding_confirms/<int:pid>")
+@roles_accepted("faculty", "admin", "root")
+def approve_outstanding_confirms(pid):
+    # get details for project class
+    pclass: ProjectClass = ProjectClass.query.get_or_404(pid)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    # get current configuration record for this project class
+    config: ProjectClassConfig = pclass.most_recent_config
+    if config is None:
+        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        return redirect(redirect_url())
+
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+        flash("Approval of all outstanding confirmation requests can be performed only after student choices have opened", "error")
+        return redirect(redirect_url())
+
+    if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        flash("Approval of all outstanding confirmation requests can not be performed after matching has been completed", "error")
+        return redirect(redirect_url())
+
+    celery = current_app.extensions["celery"]
+    approve_task = celery.tasks["app.tasks.selecting.approve_outstanding_confirms"]
+
+    tk_name = f"Approve all outstanding confirmation requests for {pclass.name} {config.year}-{config.year+1}"
+    tk_description = "Approve all outstanding confirmation requests"
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    approve_task.apply_async(args=(task_id, config.id), task_id=task_id)
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/delete_outstanding_confirms/<int:pid>")
+@roles_accepted("faculty", "admin", "root")
+def delete_outstanding_confirms(pid):
+    # get details for project class
+    pclass: ProjectClass = ProjectClass.query.get_or_404(pid)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    # get current configuration record for this project class
+    config: ProjectClassConfig = pclass.most_recent_config
+    if config is None:
+        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        return redirect(redirect_url())
+
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+        flash("Deletion of all outstanding confirmation requests can be performed only after student choices have opened", "error")
+        return redirect(redirect_url())
+
+    if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        flash("Deletion of all outstanding confirmation requests can not be performed after matching has been completed", "error")
+        return redirect(redirect_url())
+
+    celery = current_app.extensions["celery"]
+    delete_task = celery.tasks["app.tasks.selecting.delete_outstanding_confirms"]
+
+    tk_name = f"Delete all outstanding confirmation requests for {pclass.name} {config.year}-{config.year+1}"
+    tk_description = "Delete all outstanding confirmation requests"
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    delete_task.apply_async(args=(task_id, config.id), task_id=task_id)
+
+    return redirect(redirect_url())
 
 
 @convenor.route("/submitters/<int:id>")
@@ -5542,7 +5614,12 @@ def confirm(sid, pid):
         return redirect(redirect_url())
 
     if do_confirm(sel, project):
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not confirm request because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -5564,7 +5641,12 @@ def deconfirm(sid, pid):
         return redirect(redirect_url())
 
     if do_deconfirm(sel, project):
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not deconfirm request because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -5586,7 +5668,12 @@ def deconfirm_to_pending(sid, pid):
         return redirect(redirect_url())
 
     if do_deconfirm_to_pending(sel, project):
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not change request status to pending because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -5608,7 +5695,12 @@ def cancel_confirm(sid, pid):
         return redirect(redirect_url())
 
     if do_cancel_confirm(sel, project):
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not cancel confirm request because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -5633,7 +5725,12 @@ def project_confirm_all(pid):
     for req in waiting:
         req.confirm()
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not confirm requests because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -5656,10 +5753,15 @@ def project_clear_requests(pid):
 
     waiting = project.requests_waiting
     for req in waiting:
-        req.remove()
+        req.remove(notify_student=True, notify_supervisor=False)
         db.session.delete(req)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not delete confirmation requests because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -5682,10 +5784,15 @@ def project_remove_confirms(pid):
 
     confirmed = project.requests_confirmed
     for req in confirmed:
-        req.remove()
+        req.remove(notify_student=True, notify_supervisor=False)
         db.session.delete(req)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not remove confirmations because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -5710,7 +5817,12 @@ def project_make_all_confirms_pending(pid):
     for req in confirmed:
         req.waiting()
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not change confirmation requests to pending because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -5733,7 +5845,12 @@ def student_confirm_all(sid):
     for req in waiting:
         req.confirm()
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not confirm requests because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -5754,10 +5871,15 @@ def student_remove_confirms(sid):
 
     confirmed = sel.requests_confirmed
     for req in confirmed:
-        req.remove()
+        req.remove(notify_student=True, notify_supervisor=False)
         db.session.delete(req)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not remove confirmations because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -5778,10 +5900,15 @@ def student_clear_requests(sid):
 
     waiting = sel.requests_waiting
     for req in waiting:
-        req.remove()
+        req.remove(notify_student=True, notify_supervisor=False)
         db.session.delete(req)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not clear confirmation requests because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -5804,7 +5931,12 @@ def student_make_all_confirms_pending(sid):
     for req in confirmed:
         req.waiting()
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not change confirmation requests to pending because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -5820,7 +5952,13 @@ def enable_conversion(sid):
         return home_dashboard()
 
     sel.convert_to_submitter = True
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not change conversion status because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -5836,7 +5974,13 @@ def disable_conversion(sid):
         return home_dashboard()
 
     sel.convert_to_submitter = False
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not change conversion status because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 

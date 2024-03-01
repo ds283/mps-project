@@ -86,7 +86,7 @@ def do_deconfirm(sel, project):
     if req is None:
         return False
 
-    req.remove()
+    req.remove(notify_student=True, notify_supervisor=False)
     db.session.delete(req)
     db.session.commit()
 
@@ -115,7 +115,7 @@ def do_cancel_confirm(sel, project):
     if req is None:
         return False
 
-    req.remove()
+    req.remove(notify_student=True, notify_supervisor=False)
     db.session.delete(req)
     db.session.commit()
 

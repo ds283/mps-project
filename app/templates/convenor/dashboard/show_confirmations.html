@@ -39,6 +39,17 @@
         <div class="card-header bg-primary text-white">Outstanding confirmation requests for <strong>{{ pclass.name }} {{ config.select_year_a }}&ndash;{{ config.select_year_b }}</strong></div>
         <div class="card-body">
 
+            <div class="d-flex flex-row justify-content-end align-items-end gap-2 mt-2 mb-2">
+                <a href="{{ url_for('convenor.approve_outstanding_confirms', pid=config.pclass_id) }}"
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-check"></i> Approve all
+                </a>
+                <a href="{{ url_for('convenor.delete_outstanding_confirms', pid=config.pclass_id) }}"
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-trash"></i> Delete all
+                </a>
+            </div>
+
             <table id="confirm-requests-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>

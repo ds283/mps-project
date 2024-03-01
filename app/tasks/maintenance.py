@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import List, Iterable, Mapping, Union
 
 from celery import group
+from celery import states
 from celery.exceptions import Ignore
-from celery.states import state
 from flask import current_app, render_template
 from flask_mailman import EmailMessage
 from sqlalchemy import or_
@@ -56,7 +56,7 @@ from ..shared.utils import get_current_year, get_count
 def register_maintenance_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def maintenance(self):
-        self.update_state(state=state.STARTED)
+        self.update_state(state=states.STARTED)
 
         project_classes_maintenance(self)
 
@@ -76,11 +76,11 @@ def register_maintenance_tasks(celery):
 
         submission_record_maintenance(self)
 
-        self.update_state(state=state.SUCCESS)
+        self.update_state(state=states.SUCCESS)
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
     def fix_unencrypted_assets(self):
-        self.update_state(state=state.STARTED)
+        self.update_state(state=states.STARTED)
 
         asset_maintenance(self, SubmittedAsset)
         asset_maintenance(self, TemporaryAsset)
@@ -88,7 +88,7 @@ def register_maintenance_tasks(celery):
 
         backup_maintenance(self)
 
-        self.update_state(state=state.SUCCESS)
+        self.update_state(state=states.SUCCESS)
 
     def submitting_student_maintenance(self):
         current_year = get_current_year()
@@ -244,7 +244,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state=state.SUCCESS)
+        self.update_state(state=states.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def submitting_student_record_maintenance(self, sid):
@@ -286,7 +286,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-            self.update_state(state=state.SUCCESS)
+            self.update_state(state=states.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def project_class_maintenance(self, pid):
@@ -307,7 +307,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state=state.SUCCESS)
+        self.update_state(state=states.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def project_record_maintenance(self, pid):
@@ -328,7 +328,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state=state.SUCCESS)
+        self.update_state(state=states.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def liveproject_record_maintenance(self, pid):
@@ -349,7 +349,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state=state.SUCCESS)
+        self.update_state(state=states.SUCCESS)
 
     def project_descriptions_maintenance(self):
         try:
@@ -380,7 +380,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state=state.SUCCESS)
+        self.update_state(state=states.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def assessor_attendance_record_maintenance(self, id):
@@ -401,7 +401,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state=state.SUCCESS)
+        self.update_state(state=states.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def submitter_attendance_record_maintenance(self, id):
@@ -422,7 +422,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state=state.SUCCESS)
+        self.update_state(state=states.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def schedule_enumeration_record_maintenance(self, id):
@@ -445,7 +445,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state=state.SUCCESS)
+        self.update_state(state=states.SUCCESS)
 
     @celery.task(bind=True, default_retry_delay=30)
     def matching_enumeration_record_maintenance(self, id):
@@ -468,7 +468,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state=state.SUCCESS)
+        self.update_state(state=states.SUCCESS)
 
     def _collect_expirable_assets(self, AssetType):
         try:
@@ -658,7 +658,7 @@ def register_maintenance_tasks(celery):
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
-        self.update_state(state=state.SUCCESS)
+        self.update_state(state=states.SUCCESS)
 
     def submission_record_maintenance(self):
         try:
@@ -689,7 +689,7 @@ def register_maintenance_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-        self.update_state(state=state.SUCCESS)
+        self.update_state(state=states.SUCCESS)
 
     def asset_maintenance(self, RecordType):
         try:

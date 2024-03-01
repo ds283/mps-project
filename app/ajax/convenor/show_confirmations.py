@@ -8,10 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, render_template_string
-
 from datetime import datetime
 
+from flask import jsonify, render_template_string
 
 # language=jinja2
 _student = """
@@ -67,7 +66,7 @@ _menu = """
     {% set project = req.project %}
     {% set config = sel.config %}
     {% set lifecycle = config.selector_lifecycle %}
-    {% if lifecycle >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING%}
+    {% if lifecycle >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and lifecycle <= config.SELECTOR_LIFECYCLE_READY_MATCHING %}
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
             <i class="fas fa-check fa-fw"></i> Confirm
         </a>

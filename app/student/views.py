@@ -721,7 +721,7 @@ def cancel_confirmation(sid, pid):
     if project.is_waiting(sel):
         req = project.get_confirm_request(sel)
         if req is not None:
-            req.remove()
+            req.remove(notify_student=False, notify_supervisor=True)
             db.session.delete(req)
 
             try:

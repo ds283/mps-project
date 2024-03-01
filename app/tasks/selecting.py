@@ -7,15 +7,16 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from typing import List
 
+from celery import states
+from celery.exceptions import Ignore
 from flask import current_app
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import ConfirmRequest, LiveProject, ProjectClassConfig, SelectingStudent, User
-
-from celery.exceptions import Ignore
-
-from sqlalchemy.exc import SQLAlchemyError
+from ..models import ConfirmRequest, LiveProject, ProjectClassConfig, SelectingStudent, User, TaskRecord
+from ..shared.tasks import post_task_update_msg
 
 
 def _reassign_liveprojects(item_list, dest_config):
@@ -111,3 +112,130 @@ def register_selecting_tasks(celery):
             "success",
             autocommit=True,
         )
+
+    @celery.task(bind=True, default_retry_delay=10)
+    def approve_outstanding_confirms(self, task_id: str, config_id: int):
+        post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 10, "Initializing task...")
+
+        try:
+            config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if config is None:
+            post_task_update_msg(
+                self, task_id, states.FAILURE, TaskRecord.FAILURE, 0, f"Could not load specified ProjectClassConfig instance id={config_id}"
+            )
+            raise Ignore()
+
+        if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+            post_task_update_msg(
+                self,
+                task_id,
+                states.FAILURE,
+                TaskRecord.FAILURE,
+                100,
+                "Approval of all outstanding confirmation requests can be performed only after student choices have opened",
+            )
+            raise Ignore()
+
+        if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+            post_task_update_msg(
+                self,
+                task_id,
+                states.FAILURE,
+                TaskRecord.FAILURE,
+                100,
+                "Approval of all outstanding confirmation requests can not be performed after matching has been completed",
+            )
+            raise Ignore()
+
+        post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 20, "Building list of outstanding confirmation requests...")
+
+        outstanding: List[ConfirmRequest] = (
+            db.session.query(ConfirmRequest)
+            .filter(ConfirmRequest.state == ConfirmRequest.REQUESTED)
+            .join(LiveProject, LiveProject.id == ConfirmRequest.project_id)
+            .filter(LiveProject.config_id == config.id)
+        )
+
+        post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 50, "Approving outstanding confirmation requests...")
+
+        for req in outstanding:
+            req: ConfirmRequest
+            req.confirm()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+        else:
+            post_task_update_msg(self, task_id, states.SUCCESS, TaskRecord.SUCCESS, 100, "All confirmation requests have been processed")
+
+    @celery.task(bind=True, default_retry_delay=10)
+    def delete_outstanding_confirms(self, task_id: str, config_id: int):
+        post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 10, "Initializing task...")
+
+        try:
+            config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if config is None:
+            post_task_update_msg(
+                self, task_id, states.FAILURE, TaskRecord.FAILURE, 0, f"Could not load specified ProjectClassConfig instance id={config_id}"
+            )
+            raise Ignore()
+
+        if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+            post_task_update_msg(
+                self,
+                task_id,
+                states.FAILURE,
+                TaskRecord.FAILURE,
+                100,
+                "Deletion of all outstanding confirmation requests can be performed only after student choices have opened",
+            )
+            raise Ignore()
+
+        if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+            post_task_update_msg(
+                self,
+                task_id,
+                states.FAILURE,
+                TaskRecord.FAILURE,
+                100,
+                "Deletion of all outstanding confirmation requests can not be performed after matching has been completed",
+            )
+            raise Ignore()
+
+        post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 20, "Building list of outstanding confirmation requests...")
+
+        outstanding: List[ConfirmRequest] = (
+            db.session.query(ConfirmRequest)
+            .filter(ConfirmRequest.state == ConfirmRequest.REQUESTED)
+            .join(LiveProject, LiveProject.id == ConfirmRequest.project_id)
+            .filter(LiveProject.config_id == config.id)
+        )
+
+        post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 50, "Removing outstanding confirmation requests...")
+
+        for req in outstanding:
+            req: ConfirmRequest
+            req.remove(notify_student=True, notify_supervisor=False)
+            db.session.delete(req)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+        else:
+            post_task_update_msg(self, task_id, states.SUCCESS, TaskRecord.SUCCESS, 100, "All confirmation requests have been processed")

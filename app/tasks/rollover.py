@@ -48,6 +48,7 @@ from ..models import (
 )
 from ..shared.convenor import add_selector, add_blank_submitter
 from ..shared.sqlalchemy import get_count
+from ..shared.tasks import post_task_update_msg
 from ..shared.utils import get_current_year
 from ..task_queue import progress_update
 
@@ -202,15 +203,9 @@ def register_rollover_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-    def _post_update_msg(
-        celery_self, task_id: int, celery_state: str, task_state: int, progress_percent: int, msg: str, autocommit: bool = True
-    ) -> None:
-        progress_update(task_id, task_state, progress=progress_percent, message=msg, autocommit=autocommit)
-        celery_self.update_state(state=celery_state, meta={"msg": msg})
-
     @celery.task(bind=True)
     def pclass_rollover(self, task_id, use_markers, current_id, convenor_id):
-        _post_update_msg(self, task_id, "STARTED", TaskRecord.RUNNING, 0, "Preparing to rollover...")
+        post_task_update_msg(self, task_id, "STARTED", TaskRecord.RUNNING, 0, "Preparing to rollover...")
 
         # if use_markers is not directly a boolean type, try to cast it to something boolean
         if not isinstance(use_markers, bool):
@@ -226,13 +221,13 @@ def register_rollover_tasks(celery):
             config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=current_id).first()
             convenor: User = User.query.filter_by(id=convenor_id).first()
         except SQLAlchemyError as e:
-            _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 0, "Could not load ProjectClassConfig record: retrying...")
+            post_task_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 0, "Could not load ProjectClassConfig record: retrying...")
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         # if could not read database records for config and convenor, can hardly proceed
         if convenor is None or config is None:
-            _post_update_msg(
+            post_task_update_msg(
                 self, task_id, "FAILURE", TaskRecord.FAILURE, "Rollover failed because some database records could not be loaded", autocommit=False
             )
 
@@ -256,7 +251,7 @@ def register_rollover_tasks(celery):
 
         # if selector lifecycle is not ready to rollover, bail out
         if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
-            _post_update_msg(
+            post_task_update_msg(
                 self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Selector lifecycle status is not yet ready for rollover", autocommit=False
             )
             convenor.post_message(
@@ -269,7 +264,7 @@ def register_rollover_tasks(celery):
 
         # if submitter lifecycle is not ready to rollover, bail out
         if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-            _post_update_msg(
+            post_task_update_msg(
                 self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Submitter lifecycle status is not yet ready for rollover", autocommit=False
             )
             convenor.post_message(
@@ -309,13 +304,13 @@ def register_rollover_tasks(celery):
 
         # GENERATE NEW PROJECTCLASSCONFIG RECORD
 
-        _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 10, "Generating database records for new academic year...")
+        post_task_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 10, "Generating database records for new academic year...")
         new_config_id = insert_new_pclass_config(self, config, convenor_id)
 
         # CONVERT SELECTORS FROM PREVIOUS CYCLE INTO SUBMITTERS IN THE CURRENT CYCLE
 
         if config.select_in_previous_cycle:
-            _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 20, "Converting selector records into submitter records...")
+            post_task_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 20, "Converting selector records into submitter records...")
 
             # if automated matching is being used, find the selected MatchingAttempt that contains allocations for this
             # project class
@@ -324,7 +319,7 @@ def register_rollover_tasks(celery):
                 match = config.allocated_match
 
                 if match is None:
-                    _post_update_msg(
+                    post_task_update_msg(
                         self, task_id, "FAILURE", TaskRecord.FAILURE, 100, f"Could not find allocated match for {config.name} {year}-{year+1}"
                     )
                     raise Ignore()
@@ -340,7 +335,7 @@ def register_rollover_tasks(celery):
             convert_task.get(disable_sync_subtasks=False)
 
             if not convert_task.successful():
-                _post_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not convert selectors into submitter records")
+                post_task_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not convert selectors into submitter records")
                 convert_task.forget()
                 return
 
@@ -348,7 +343,7 @@ def register_rollover_tasks(celery):
 
         # AUTO-CREATE NEW SELECTOR AND SUBMITTER INSTANCES
 
-        _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 30, "Attaching new student records...")
+        post_task_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 30, "Attaching new student records...")
 
         # build task group to perform attachment of new records;
         # these will attach all new SelectingStudent instances, and mop up any eligible
@@ -389,7 +384,7 @@ def register_rollover_tasks(celery):
         attach_task.get(disable_sync_subtasks=False)
 
         if not attach_task.successful():
-            _post_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not attach new student records")
+            post_task_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not attach new student records")
             attach_task.forget()
             raise Ignore()
 
@@ -397,7 +392,7 @@ def register_rollover_tasks(celery):
 
         # RETIRE OLD SELECTOR AND SUBMITTER RECORDS
 
-        _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 40, "Retiring current student records...")
+        post_task_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 40, "Retiring current student records...")
 
         # build group of tasks to perform retirements
         retire_selectors = [retire_selector.si(s.id) for s in config.selecting_students]
@@ -409,7 +404,7 @@ def register_rollover_tasks(celery):
         retire_task.get(disable_sync_subtasks=False)
 
         if not retire_task.successful():
-            _post_update_msg(
+            post_task_update_msg(
                 self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not retire selector and submitter records from the previous cycle"
             )
             retire_task.forget()
@@ -419,7 +414,7 @@ def register_rollover_tasks(celery):
 
         # PERFORM FACULTY RE-ENROLLMENT WHERE NEEDED
 
-        _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 50, "Checking for faculty re-enrolments...")
+        post_task_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 50, "Checking for faculty re-enrolments...")
 
         # build group of tasks to check for faculty re-enrolment after buyout or sabbatical
         reenrol_query = db.session.query(EnrollmentRecord.id).filter(
@@ -436,7 +431,7 @@ def register_rollover_tasks(celery):
         reenrol_task.get(disable_sync_subtasks=False)
 
         if not reenrol_task.successful():
-            _post_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not perform faculty re-enrolment")
+            post_task_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not perform faculty re-enrolment")
             reenrol_task.forget()
             raise Ignore()
 
@@ -444,7 +439,7 @@ def register_rollover_tasks(celery):
 
         # ROUTINE DATABASE HOUSEKEEPING
 
-        _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 60, "Performing routine database maintenance...")
+        post_task_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 60, "Performing routine database maintenance...")
 
         # perform maintenance on EnrollmentRecords
         maintenance_query = db.session.query(EnrollmentRecord.id).filter(EnrollmentRecord.pclass_id == config.pclass_id)
@@ -455,7 +450,7 @@ def register_rollover_tasks(celery):
         maintenance_task.get(disable_sync_subtasks=False)
 
         if not maintenance_task.successful():
-            _post_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not perform maintenance for enrolment records")
+            post_task_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not perform maintenance for enrolment records")
             maintenance_task.forget()
             raise Ignore()
 
@@ -463,7 +458,7 @@ def register_rollover_tasks(celery):
 
         ## RESET PROJECT DESCRIPTION LIFECYCLES
 
-        _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 70, "Reset project description lifecycles...")
+        post_task_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 70, "Reset project description lifecycles...")
 
         # build group of project descriptions attached to this project class
         project_descs = set()
@@ -484,7 +479,7 @@ def register_rollover_tasks(celery):
         descs_task.get(disable_sync_subtasks=False)
 
         if not descs_task.successful():
-            _post_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not reset project description lifecycles")
+            post_task_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not reset project description lifecycles")
             descs_task.forget()
             raise Ignore()
 
@@ -492,7 +487,7 @@ def register_rollover_tasks(celery):
 
         ## REMOVE UNUSED CONFIRMATION REQUESTS
 
-        _post_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 80, "Remove stale confirmation requests...")
+        post_task_update_msg(self, task_id, "PROGRESS", TaskRecord.RUNNING, 80, "Remove stale confirmation requests...")
 
         # remove ConfirmRequest items that were never actioned
         confirm_request_query = (
@@ -509,7 +504,7 @@ def register_rollover_tasks(celery):
         confirm_task.get(disable_sync_subtasks=False)
 
         if not confirm_task.successful():
-            _post_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not remove stale confirmation requests")
+            post_task_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "Could not remove stale confirmation requests")
             confirm_task.forget()
             raise Ignore()
 
@@ -517,13 +512,13 @@ def register_rollover_tasks(celery):
 
         ## FINALIZE
 
-        _post_update_msg(self, task_id, "SUCCESS", TaskRecord.SUCCESS, 100, "Rollover complete")
+        post_task_update_msg(self, task_id, "SUCCESS", TaskRecord.SUCCESS, 100, "Rollover complete")
 
         finalize_task: GroupResult = rollover_finalize.si(new_config_id, convenor_id).apply_async()
         finalize_task.get(disable_sync_subtasks=False)
 
         if not finalize_task.successful():
-            _post_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "An error occurred when finalizing the rollover transaction")
+            post_task_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, "An error occurred when finalizing the rollover transaction")
             finalize_task.forget()
             raise Ignore()
 

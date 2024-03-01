@@ -8951,7 +8951,7 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
     def confirm(self):
         if self.state != ConfirmRequest.CONFIRMED:
             self.owner.student.user.post_message(
-                'Your confirmation request for project "{name}" has been ' "approved.".format(name=self.project.name), "success"
+                'Your confirmation request for project "{name}" has been approved.'.format(name=self.project.name), "success"
             )
             add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_GRANTED, self)
 
@@ -8974,8 +8974,8 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
         self.response_timestamp = None
         self.state = ConfirmRequest.REQUESTED
 
-    def remove(self):
-        if current_user.id == self.owner.student.id:
+    def remove(self, notify_student: bool=False, notify_supervisor: bool=False):
+        if notify_supervisor:
             add_notification(
                 self.project.owner,
                 EmailNotification.CONFIRMATION_REQUEST_CANCELLED,
@@ -8985,31 +8985,29 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
             )
 
         if self.state == ConfirmRequest.CONFIRMED:
-            if current_user.id == self.project.owner.id:
+            if notify_student:
                 self.owner.student.user.post_message(
-                    'Your confirmation approval for project "{name}" has been removed. '
-                    "If you were not expecting this event, please make an appointment to discuss "
-                    "with the supervisor.".format(name=self.project.name),
+                    f'Your confirmation approval for project "{self.project.name}" has been removed. '
+                    f'If you were not expecting this event, please make an appointment to discuss with '
+                    f'the project supervisor.',
                     "info",
                 )
                 add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_GRANT_DELETED, self.project, notification_id=self.id)
 
         elif self.state == ConfirmRequest.DECLINED:
-            if current_user.id == self.project.owner.id:
+            if notify_student:
                 self.owner.student.user.post_message(
-                    'Your declined request for approval to select project "{name}" has been removed. '
-                    "If you still wish to select this project, you may now make a new request "
-                    "for approval.".format(name=self.project.name),
+                    f'Your declined request for approval to select project "{self.project.name}" has been removed. '
+                    'If you still wish to select this project, you may now make a new request '
+                    'for approval.',
                     "info",
                 )
                 add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_DECLINE_DELETED, self.project, notification_id=self.id)
 
         elif self.state == ConfirmRequest.REQUESTED:
-            if current_user.id == self.project.owner.id:
+            if notify_student:
                 self.owner.student.user.post_message(
-                    'Your request for confirmation approval for project "{name}" has been deleted by '
-                    "the project supervisor. If you were not expecting this event, please make an "
-                    "appointment to discuss with the supervisor.".format(name=self.project.name),
+                    'Your request for confirmation approval for project "{name}" has been removed.'.format(name=self.project.name),
                     "info",
                 )
                 add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_REQUEST_DELETED, self.project, notification_id=self.id)

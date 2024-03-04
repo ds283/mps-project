@@ -116,7 +116,7 @@ from ..shared.context.convenor_dashboard import (
     get_capacity_data,
 )
 from ..shared.context.global_context import render_template_context
-from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
+from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter, build_outstanding_confirmations_query
 from ..shared.conversions import is_integer
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.projects import create_new_tags, get_filter_list_for_groups_and_skills, project_list_SQL_handler, project_list_in_memory_handler
@@ -1780,13 +1780,7 @@ def show_confirmations_ajax(id):
     if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
         return jsonify({})
 
-    outstanding = (
-        db.session.query(ConfirmRequest)
-        .filter(or_(ConfirmRequest.state == ConfirmRequest.REQUESTED, ConfirmRequest.state == ConfirmRequest.DECLINED))
-        .join(LiveProject, LiveProject.id == ConfirmRequest.project_id)
-        .filter(LiveProject.config_id == config.id)
-        .all()
-    )
+    outstanding = build_outstanding_confirmations_query(config).all()
 
     return ajax.convenor.show_confirmations(outstanding, pclass.id)
 

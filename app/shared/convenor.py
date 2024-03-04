@@ -10,13 +10,26 @@
 from typing import Optional
 
 from flask import current_app
+from sqlalchemy import or_
 
 from ..database import db
-from ..models import Project, LiveProject, StudentData, SelectingStudent, SubmittingStudent, ProjectClassConfig, SubmissionRecord, ProjectDescription
+from ..models import (
+    Project,
+    LiveProject,
+    StudentData,
+    SelectingStudent,
+    SubmittingStudent,
+    ProjectClassConfig,
+    SubmissionRecord,
+    ProjectDescription,
+    ConfirmRequest,
+)
 from ..shared.utils import get_current_year
 
 
-def add_liveproject(number: Optional[int], project: Project|int, config_id: int, desc: Optional[ProjectDescription]=None, autocommit: bool=False):
+def add_liveproject(
+    number: Optional[int], project: Project | int, config_id: int, desc: Optional[ProjectDescription] = None, autocommit: bool = False
+):
     # extract this project; input 'project' is allowed to be a Project instance, or else
     # the database id of an instance
     item: Project
@@ -183,3 +196,12 @@ def add_blank_submitter(student, selecting_config_id, submitting_config_id, auto
     adjust_task = celery.tasks["app.tasks.assessment.adjust_submitter"]
 
     adjust_task.apply_async(args=(submitter.id, get_current_year()))
+
+
+def build_outstanding_confirmations_query(config: ProjectClassConfig):
+    return (
+        db.session.query(ConfirmRequest)
+        .filter(or_(ConfirmRequest.state == ConfirmRequest.REQUESTED, ConfirmRequest.state == ConfirmRequest.DECLINED))
+        .join(LiveProject, LiveProject.id == ConfirmRequest.project_id)
+        .filter(LiveProject.config_id == config.id)
+    )

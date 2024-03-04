@@ -11,6 +11,7 @@ from sqlalchemy import or_, and_, func
 from sqlalchemy.event import listens_for
 from sqlalchemy.orm import with_polymorphic
 
+from ..convenor import build_outstanding_confirmations_query
 from ..sqlalchemy import get_count
 from ...cache import cache
 from ...database import db
@@ -73,6 +74,9 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     todos = build_convenor_tasks_query(config, status_filter="available", due_date_order=True)
     todo_count = get_count(todos)
 
+    outstanding_confirms = build_outstanding_confirmations_query(config)
+    outstanding_confirms_count = get_count(outstanding_confirms)
+
     return {
         "faculty": enrolled_fac_count,
         "total_faculty": all_fac_count,
@@ -81,6 +85,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         "selectors": sel_count,
         "submitters": sub_count,
         "todo_count": todo_count,
+        "outstanding_confirms_count": outstanding_confirms_count
     }
 
 

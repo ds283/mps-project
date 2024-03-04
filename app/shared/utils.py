@@ -533,7 +533,7 @@ def _build_candidates(allowed_programmes, student_level: int, first_year: int, l
     candidates = (
         db.session.query(StudentData)
         .join(User, StudentData.id == User.id)
-        .filter(User.active == True)
+        .filter(User.active == True, StudentData.intermitting == False)
         .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
     )

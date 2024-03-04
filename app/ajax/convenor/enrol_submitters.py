@@ -72,6 +72,7 @@ def enrol_submitters_data(students: List[StudentData], config):
     data = [
         {
             "name": {"display": s.user.name, "sortstring": s.user.last_name + s.user.first_name},
+            "userid": s.user.username,
             "programme": render_template(programme_templ, s=s, simple_label=simple_label),
             "cohort": {"display": render_template(cohort_templ, s=s, simple_label=simple_label), "sortvalue": s.cohort},
             "acadyear": {

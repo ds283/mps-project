@@ -1300,12 +1300,21 @@ def _enrol_selectors_ajax_handler(request, candidates, config: ProjectClassConfi
     def sort_current_year(row: StudentData):
         return row.academic_year
 
+    def search_userid(row: StudentData):
+        u: User = row.user
+        return u.username
+
+    def sort_userid(row: StudentData):
+        u: User = row.user
+        return u.username
+
     name = {"search": search_name, "order": sort_name}
+    userid = {"search": search_userid, "order": sort_userid}
     programme = {"search": search_programme, "order": sort_programme}
     cohort = {"search": search_cohort, "order": sort_cohort}
     current_year = {"search": search_current_year, "order": sort_current_year}
 
-    columns = {"name": name, "programme": programme, "cohort": cohort, "current_year": current_year}
+    columns = {"name": name, "userid": userid, "programme": programme, "cohort": cohort, "current_year": current_year}
 
     with ServerSideInMemoryHandler(request, candidates, columns, row_filter=partial(_filter_candidates, year_value)) as handler:
         return handler.build_payload(partial(ajax.convenor.enrol_selectors_data, config))

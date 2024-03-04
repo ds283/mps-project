@@ -33,7 +33,8 @@ from ...models import (
     ConvenorTask,
     WorkflowMixin,
     ProjectDescription,
-    ResearchGroup, ConfirmRequest,
+    ResearchGroup,
+    ConfirmRequest,
 )
 
 
@@ -99,7 +100,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         "todo_count": todo_count,
         "outstanding_confirms_count": outstanding_confirms_count,
         "age_oldest_confirm_request": age_oldest_confirm_request.days,
-        "time_oldest_confirm_request": time_oldest_confirm_request
+        "time_oldest_confirm_request": time_oldest_confirm_request,
     }
 
 

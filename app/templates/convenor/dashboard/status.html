@@ -59,9 +59,28 @@
 {% block bodyblock %}
     {% set top_to_dos = todo['top_to_dos'] %}
     {% set num_to_dos = convenor_data['todo_count'] %}
+    {% set outstanding_confirms_count = convenor_data['outstanding_confirms_count'] %}
+    {% set age_oldest_confirm_request = convenor_data['age_oldest_confirm_request'] %}
+    {% set lifecycle = config.selector_lifecycle %}
+    {% set show_confirmations = (lifecycle >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN) and (lifecycle <= config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
+            {% if show_confirmations and age_oldest_confirm_request > 5 %}
+                <div class="alert alert-danger">
+                    {% call icon_block("exclamation-circle") %}
+                        <strong>
+                            {{ outstanding_confirms_count }} meeting confirmation requests are outstanding.
+                            The oldest request has been waiting for {{ age_oldest_confirm_request }} days.
+                        </strong>
+                        <div class="mt-1">
+                            <a class="link-primary text-decoration-none"
+                               href="{{ url_for('convenor.show_confirmations', id=pclass.id) }}">View outstanding
+                                confirmation requests...</a>
+                        </div>
+                    {% endcall %}
+                </div>
+            {% endif %}
             <div class="card mt-3 mb-3 card-body border-primary bg-well">
                 <div class="d-flex flex-row justify-content-start align-items-start mb-4">
                     <div class="dashboard-project-title align-self-start me-2">{{ pclass.name }} {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</div>

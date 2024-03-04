@@ -7,6 +7,9 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 
+from datetime import datetime, timedelta
+from typing import Optional
+
 from sqlalchemy import or_, and_, func
 from sqlalchemy.event import listens_for
 from sqlalchemy.orm import with_polymorphic
@@ -30,7 +33,7 @@ from ...models import (
     ConvenorTask,
     WorkflowMixin,
     ProjectDescription,
-    ResearchGroup,
+    ResearchGroup, ConfirmRequest,
 )
 
 
@@ -77,6 +80,15 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     outstanding_confirms = build_outstanding_confirmations_query(config)
     outstanding_confirms_count = get_count(outstanding_confirms)
 
+    last_confirm: Optional[ConfirmRequest] = outstanding_confirms.order_by(ConfirmRequest.request_timestamp).first()
+    now = datetime.now()
+    if last_confirm is not None:
+        age_oldest_confirm_request: timedelta = now - last_confirm.request_timestamp
+        time_oldest_confirm_request = last_confirm.request_timestamp
+    else:
+        age_oldest_confirm_request = None
+        time_oldest_confirm_request = None
+
     return {
         "faculty": enrolled_fac_count,
         "total_faculty": all_fac_count,
@@ -85,7 +97,9 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         "selectors": sel_count,
         "submitters": sub_count,
         "todo_count": todo_count,
-        "outstanding_confirms_count": outstanding_confirms_count
+        "outstanding_confirms_count": outstanding_confirms_count,
+        "age_oldest_confirm_request": age_oldest_confirm_request.days,
+        "time_oldest_confirm_request": time_oldest_confirm_request
     }
 
 

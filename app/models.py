@@ -6090,7 +6090,6 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
         submitted = 0
         bookmarks = 0
         missing = 0
-        outstanding_confirm = 0
 
         for student in self.selecting_students:
             total += 1
@@ -6098,21 +6097,13 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
             if student.has_submitted:
                 submitted += 1
 
-            outstanding_confirm += get_count(student.confirmation_requests.filter_by(state=ConfirmRequest.REQUESTED))
-
             if not student.has_submitted and student.has_bookmarks:
                 bookmarks += 1
 
             if not student.has_submitted and not student.has_bookmarks:
                 missing += 1
 
-        return {
-            "have_submitted": submitted,
-            "have_bookmarks": bookmarks,
-            "missing": missing,
-            "total": total,
-            "outstanding_confirm": outstanding_confirm,
-        }
+        return {"have_submitted": submitted, "have_bookmarks": bookmarks, "missing": missing, "total": total}
 
     @property
     def _closed_selector_data(self):
@@ -8974,7 +8965,7 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
         self.response_timestamp = None
         self.state = ConfirmRequest.REQUESTED
 
-    def remove(self, notify_student: bool=False, notify_supervisor: bool=False):
+    def remove(self, notify_student: bool = False, notify_supervisor: bool = False):
         if notify_supervisor:
             add_notification(
                 self.project.owner,
@@ -8988,8 +8979,8 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
             if notify_student:
                 self.owner.student.user.post_message(
                     f'Your confirmation approval for project "{self.project.name}" has been removed. '
-                    f'If you were not expecting this event, please make an appointment to discuss with '
-                    f'the project supervisor.',
+                    f"If you were not expecting this event, please make an appointment to discuss with "
+                    f"the project supervisor.",
                     "info",
                 )
                 add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_GRANT_DELETED, self.project, notification_id=self.id)
@@ -8998,8 +8989,8 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
             if notify_student:
                 self.owner.student.user.post_message(
                     f'Your declined request for approval to select project "{self.project.name}" has been removed. '
-                    'If you still wish to select this project, you may now make a new request '
-                    'for approval.',
+                    "If you still wish to select this project, you may now make a new request "
+                    "for approval.",
                     "info",
                 )
                 add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_DECLINE_DELETED, self.project, notification_id=self.id)

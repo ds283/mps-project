@@ -355,7 +355,7 @@
                 {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
                     {{ golive(config, golive_form, approval_data) }}
                 {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                    {{ selection_open(config, change_form) }}
+                    {{ selection_open(config, change_form, convenor_data) }}
                 {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
                     {{ selection_closed(config, rollover_in_progress) }}
                 {% else %}

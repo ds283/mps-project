@@ -2,7 +2,7 @@
 {% from "macros.html" import date_field %}
 {% from "icon_block.html" import icon_block %}
 
-{% macro selection_open(config, change_form) %}
+{% macro selection_open(config, change_form, data) %}
     <div class="card border-secondary mt-3 mb-3">
         <div class="card-header">
             <strong>Student selections are currently live</strong>
@@ -17,7 +17,7 @@
             {% set bookmarks = selector_data['have_bookmarks'] %}
             {% set missing = selector_data['missing'] %}
             {% set total = selector_data['total'] %}
-            {% set outstanding_confirm = selector_data['outstanding_confirm'] %}
+            {% set outstanding_confirm = data['outstanding_confirms_count'] %}
             <div class="mb-3">
                 {% if submitted == total %}
                     <div class="alert alert-success mb-3">

@@ -51,11 +51,7 @@
         {% if enrolments and num_enrolments > 0 %}
             <li class="nav-item dropdown megamenu">
                 <a class="nav-link {% if pane_is_enrollment %}active{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">
-                    {%- if pane_is_enrollment -%}
-                        {% if pane_label is defined and pane_label is not none  %}{{ pane_label }}{% else %}My enrolments{% endif %}
-                    {%- else -%}
-                        My enrolments
-                    {%- endif -%}
+                    My enrolments
                 </a>
                 <div class="dropdown-menu bg-secondary megamenu-body" data-bs-theme="dark" role="menu">
                     <div class="container mt-4 mb-4">

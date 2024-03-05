@@ -12,7 +12,6 @@ import re
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from uuid import uuid4
 
 import fitz
 from celery.exceptions import Ignore

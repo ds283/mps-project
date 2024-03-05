@@ -156,7 +156,7 @@ class AssetCloudAdapter:
         return self._asset
 
     def exists(self):
-        blobs = self._storage.list()
+        blobs = self._storage.list(audit_data=self._audit_data)
         return self._key in blobs
 
     def get(self):

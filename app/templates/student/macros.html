@@ -68,9 +68,14 @@
         {% for offer in list %}
             <div class="row vertical-top offers-table">
                 {% if show_actions %}<div class="col-4">{% else %}<div class="col-5">{% endif %}
-                <a class="text-decoration-none" href="{{ url_for('student.selector_view_project', sid=sel.id, pid=offer.liveproject.id, url=url_for('student.manage_custom_offers', sel_id=sel.id), text='manage custom offers view') }}">
-                    <strong>{{ offer.liveproject.name }}</strong>
-                </a>
+        {% if sel is not none %}
+            <a class="text-decoration-none"
+               href="{{ url_for('student.selector_view_project', sid=sel.id, pid=offer.liveproject.id, url=url_for('student.manage_custom_offers', sel_id=sel.id), text='manage custom offers view') }}">
+                <strong>{{ offer.liveproject.name }}</strong>
+            </a>
+        {% else %}
+            <span><strong>{{ offer.liveproject.name }}</strong></span>
+        {% endif %}
                 </div>
                 {% if show_actions %}<div class="col-4">{% else %}<div class="col-5">{% endif %}
                     <a class="text-decoration-none" href="mailto:{{ offer.liveproject.owner.user.email }}">

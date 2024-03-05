@@ -1350,7 +1350,7 @@ def register_scheduling_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        _send_offline_email(celery, record, user, lp_asset, mps_asset)
+        # _send_offline_email(celery, record, user, lp_asset, mps_asset)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Storing schedule details for later processing...", autocommit=True)
 

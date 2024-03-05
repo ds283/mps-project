@@ -9264,6 +9264,10 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         """
         return self.student.compute_academic_year(self.config.year)
 
+    @property
+    def has_graduated(self):
+        return self.student.has_graduated
+
     def academic_year_label(self, current_year=None, show_details=False):
         return self.student.academic_year_label(self.config.year, show_details=show_details, current_year=current_year)
 

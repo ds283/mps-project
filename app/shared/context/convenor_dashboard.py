@@ -84,7 +84,8 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     last_confirm: Optional[ConfirmRequest] = outstanding_confirms.order_by(ConfirmRequest.request_timestamp).first()
     now = datetime.now()
     if last_confirm is not None:
-        age_oldest_confirm_request: timedelta = now - last_confirm.request_timestamp
+        age: timedelta = now - last_confirm.request_timestamp
+        age_oldest_confirm_request: int = age.days
         time_oldest_confirm_request = last_confirm.request_timestamp
     else:
         age_oldest_confirm_request = None
@@ -99,7 +100,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         "submitters": sub_count,
         "todo_count": todo_count,
         "outstanding_confirms_count": outstanding_confirms_count,
-        "age_oldest_confirm_request": age_oldest_confirm_request.days,
+        "age_oldest_confirm_request": age_oldest_confirm_request,
         "time_oldest_confirm_request": time_oldest_confirm_request,
     }
 

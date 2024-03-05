@@ -254,7 +254,7 @@ def register_maintenance_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        config: ProjectClassConfig = record.config_id
+        config: ProjectClassConfig = record.config
 
         if not config.select_in_previous_cycle:
             if record.selector is not None:

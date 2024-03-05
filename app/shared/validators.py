@@ -309,7 +309,7 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool = True)
     # if a project has been specified and the current user is the owner of the project, then they are able
     # to view the submission
     if record.project is not None and not record.project.generic and record.project.owner_id is not None:
-        if current_user.id == record.project_owner_id:
+        if current_user.id == record.project.owner_id:
             return True
 
     # project convenors, root/admin users, and users with exam board privileges can always view

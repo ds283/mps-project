@@ -13,7 +13,6 @@ import subprocess
 import tarfile
 from datetime import datetime, timedelta
 from io import BytesIO
-from math import floor
 from operator import itemgetter
 from os import path
 from pathlib import Path
@@ -25,6 +24,7 @@ from celery.exceptions import Ignore
 from dateutil import parser
 from flask import current_app, render_template
 from flask_mailman import EmailMessage
+from math import floor
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -348,7 +348,7 @@ def register_backup_tasks(celery):
 
                 if record is None:
                     print(f'Object store item "{item}" has no counterpart backup record: deleting')
-                    object_store.delete(item)
+                    object_store.delete(item, audit_data="drop_absent_backups")
 
             db.session.commit()
         except SQLAlchemyError as e:

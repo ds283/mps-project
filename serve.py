@@ -7,13 +7,14 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from importlib import import_module
 
 from sqlalchemy import text, inspect
 from waitress import serve
 
 from app import create_app
 from app.database import db
-from initdb import initial_populate_database
+from initdb import initial_populate_database, populate_CATS_limits
 
 
 def has_table(inspector, table_name):
@@ -46,5 +47,11 @@ with app.app_context():
         # dump file which issues DROP TABLE statements, these will block against the table lock
         db.session.commit()
         initial_populate_database(app, inspector)
+
+    # import initdb configuration file
+    initdb_module = import_module("app.initdb.initdb")
+    if hasattr(initdb_module, "INITDB_CATS_LIMITS_FILE") and initdb_module.INITDB_CATS_LIMITS_FILE is not None:
+        db.session.commit()
+        populate_CATS_limits(app, inspector, initdb_module)
 
 serve(app, port=5000)

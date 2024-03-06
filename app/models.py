@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 from os import path
 from time import time
-from typing import List, Set, Union
+from typing import List, Set, Union, Optional
 from urllib.parse import urljoin
 from uuid import uuid4
 
@@ -12284,7 +12284,8 @@ def _MatchingAttempt_is_valid(id):
     #   2. Validate that project capacity constraints are not violated.
     #      This is also a fatal error.
     #   3. Validate that faculty CATS limits are respected.
-    #      This is a warning, not an error
+    #      This is a warning, not an error (sometimes supervisors have to take more
+    #      students than we would like, but they do all have to be supervised somehow)
     errors = {}
     warnings = {}
     student_issues = False
@@ -12771,16 +12772,21 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     def number_project_assignments(self, project):
         return _MatchingAttempt_number_project_assignments(self.id, project.id)
 
-    def is_supervisor_overassigned(self, faculty, include_matches=False, pclass_id=None):
+    def is_supervisor_overassigned(self, faculty: FacultyData, include_matches=False, pclass_id=None):
+        if pclass_id is not None:
+            pclass: Optional[ProjectClass] = db.session.query(ProjectClass).filter_by(id=pclass_id).first()
+            if pclass is None:
+                raise RuntimeError(f"Could not load ProjectClass record for pclass_id={pclass_id}")
+        else:
+            pclass: Optional[ProjectClass] = None
+
+        # calculate supervision assignment, either summed over all project types, or for one specific project type if specified
         sup, mark, mod = self.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
 
-        limit = self.supervising_limit
-        total = sup
-
-        message = None
-        rval = False
         included_matches = {}
 
+        # calculate total assignment
+        total = sup
         if include_matches:
             for match in self.include_matches:
                 sup, mark, mod = match.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
@@ -12789,23 +12795,41 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             if len(included_matches) > 0:
                 total += sum(included_matches.values())
 
-        if not self.ignore_per_faculty_limits:
-            if faculty.CATS_supervision is not None and faculty.CATS_supervision > 0:
-                limit = faculty.CATS_supervision
+        rval = False
+        message = None
+        pclass_label = "" if pclass is None else f"/{pclass.abbreviation}"
+        name = faculty.user.name
 
-        if sup > limit:
-            message = "Supervising workload for {name} exceeds CATS limit {pcl}" "(assigned={m}, max capacity={n})".format(
-                name=faculty.user.name, m=sup, n=limit, pcl="" if pclass_id is None else "for this project class "
-            )
+        limit = self.supervising_limit
+
+        if sup > self.supervising_limit:
+            message = f"Assigned supervising workload of {sup} for {name}{pclass_label} exceeds CATS limit {self.supervising_limit} for this match"
             rval = True
 
+        if not self.ignore_per_faculty_limits and faculty.CATS_supervision is not None and faculty.CATS_supervision >= 0:
+            if sup > faculty.CATS_supervision:
+                message = f"Assigned supervising workload of {sup} for {name}{pclass_label} exceeds global CATS limit {faculty.CATS_supervision} for this supervisor"
+                rval = True
+
+            if faculty.CATS_supervision < limit:
+                limit = faculty.CATS_supervision
+
+        if pclass is not None:
+            enrolment_rec: EnrollmentRecord = faculty.get_enrollment_record(pclass)
+            if enrolment_rec is not None:
+                if not self.ignore_per_faculty_limits and enrolment_rec.CATS_supervision is not None and 0 <= enrolment_rec.CATS_supervision < sup:
+                    message = f"Assigned supervising workload of {sup} for {name}{pclass_label} exceeds {pclass.abbreviation}-specific CATS limit {enrolment_rec.CATS_supervision} for this supervisor"
+                    rval = True
+
+                if sup > 0 and enrolment_rec.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+                    message = f"{name}{pclass_label} is not enrolled to supervise for {pclass.abbreviation}, but has been assigned a supervising workload {sup}"
+                    rval = True
+
+                if enrolment_rec.CATS_supervision < limit:
+                    limit = enrolment_rec.CATS_supervision
+
         if not rval and total > limit:
-            message = (
-                "Supervising workload for {name} exceeds CATS limit {pcl}after inclusion of all matches "
-                "(assigned={m}, max capacity={n})".format(
-                    name=faculty.user.name, m=total, n=limit, pcl="" if pclass_id is None else "for this project class "
-                )
-            )
+            message = f"After inclusion of all matches, assigned supervising workload of {total} for {name} exceeds CATS limit {limit}"
             rval = True
 
         data = {"flag": rval, "CATS_total": total, "CATS_limit": limit, "error_message": message}
@@ -12816,15 +12840,20 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         return data
 
     def is_marker_overassigned(self, faculty, include_matches=False, pclass_id=None):
+        if pclass_id is not None:
+            pclass: Optional[ProjectClass] = db.session.query(ProjectClass).filter_by(id=pclass_id).first()
+            if pclass is None:
+                raise RuntimeError(f"Could not load ProjectClass record for pclass_id={pclass_id}")
+        else:
+            pclass: Optional[ProjectClass] = None
+
+        # calculate marking assignment, either summed over all project types, or for one specific project type if specified
         sup, mark, mod = self.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
 
-        limit = self.marking_limit
-        total = mark
-
-        message = None
-        rval = False
         included_matches = {}
 
+        # calculate total assignment
+        total = mark
         if include_matches:
             for match in self.include_matches:
                 sup, mark, mod = match.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
@@ -12833,20 +12862,41 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             if len(included_matches) > 0:
                 total += sum(included_matches.values())
 
-        if not self.ignore_per_faculty_limits:
-            if faculty.CATS_marking is not None and faculty.CATS_marking > 0:
-                limit = faculty.CATS_marking
+        rval = False
+        message = None
+        pclass_label = "" if pclass is None else f"/{pclass.abbreviation}"
+        name = faculty.user.name
 
-        if mark > limit:
-            message = "Marking workload for {name} exceeds CATS limit {pcl}" "(assigned={m}, max capacity={n})".format(
-                name=faculty.user.name, m=mark, n=limit, pcl="" if pclass_id is None else "for this project class "
-            )
+        limit = self.marking_limit
+
+        if mark > self.marking_limit:
+            message = f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds CATS limit {self.marking_limit} for this match"
             rval = True
 
+        if not self.ignore_per_faculty_limits and faculty.CATS_marking is not None and faculty.CATS_marking >= 0:
+            if mark > faculty.CATS_marking:
+                message = f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds global CATS limit {faculty.CATS_marking} for this marker"
+                rval = True
+
+            if faculty.CATS_marking < limit:
+                limit = faculty.CATS_marking
+
+        if pclass is not None:
+            enrolment_rec: EnrollmentRecord = faculty.get_enrollment_record(pclass)
+            if enrolment_rec is not None:
+                if not self.ignore_per_faculty_limits and enrolment_rec.CATS_marking is not None and 0 <= enrolment_rec.CATS_marking < mark:
+                    message = f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds {pclass.abbreviation}-specific CATS limit {enrolment_rec.CATS_marking} for this marker"
+                    rval = True
+
+                if mark > 0 and enrolment_rec.marker_state != EnrollmentRecord.MARKER_ENROLLED:
+                    message = f"{name}{pclass_label} is not enrolled to mark for {pclass.abbreviation}, but has been assigned a marking workload {mark}"
+                    rval = True
+
+                if enrolment_rec.CATS_marking < limit:
+                    limit = enrolment_rec.CATS_marking
+
         if not rval and total > limit:
-            message = "Marking workload for {name} exceeds CATS limit {pcl}after inclusion of all matches (assigned={m}, max capacity={n})".format(
-                name=faculty.user.name, m=total, n=limit, pcl="" if pclass_id is None else "for this project class "
-            )
+            message = f"After inclusion of all matches, assigned marking workload of {total} for {name} exceeds CATS limit {limit}"
             rval = True
 
         data = {"flag": rval, "CATS_total": total, "CATS_limit": limit, "error_message": message}

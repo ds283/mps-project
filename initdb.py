@@ -317,7 +317,7 @@ def store_CATS_limits(app, bucket: ObjectStore, csv_file: str | Path):
     db.session.commit()
 
 
-def populate_CATS_limits(app, inspector, initial_db=None):
+def populate_CATS_limits(app, initial_db=None):
     # import initdb ObjectStore from which we can download the CATS limits
     if initial_db is None:
         initial_db = import_module("app.initdb.initdb")

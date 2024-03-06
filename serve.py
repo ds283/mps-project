@@ -52,6 +52,6 @@ with app.app_context():
     initdb_module = import_module("app.initdb.initdb")
     if hasattr(initdb_module, "INITDB_CATS_LIMITS_FILE") and initdb_module.INITDB_CATS_LIMITS_FILE is not None:
         db.session.commit()
-        populate_CATS_limits(app, inspector, initdb_module)
+        populate_CATS_limits(app, initdb_module)
 
 serve(app, port=5000)

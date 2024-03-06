@@ -229,16 +229,29 @@ _marking = """
 
 # language=jinja2
 _workload = """
-<span class="badge {% if sup_overassigned %}bg-danger{% else %}bg-info{% endif %}">S {{ sup }}</span>
-<span class="badge {% if mark_overassigned %}bg-danger{% else %}bg-secondary{% endif %}">M {{ mark }}</span>
-<span class="badge {% if sup_overassigned or mark_overassigned %}bg-danger{% else %}bg-primary{% endif %}">T {{ tot }}</span>
+<div class="small">
+    {% if sup_overassigned %}<span class="text-danger"><i class="fas fa-exclamation-triangle"></i></span>{% endif %}
+    <span class="text-secondary">Supervising</span> <strong>{{ sup }}</strong>
+</div>
+<div class="small">
+    {% if mark_overassigned %}<span class="text-danger"><i class="fas fa-exclamation-triangle"></i></span>{% endif %}
+    <span class="text-secondary">Marking</span> <strong>{{ mark }}</strong>
+</div>
+<div class="small mt-1">
+    <span class="text-primary">Total <strong>{{ tot }}</strong></span>
+</div>
 {% if included_sup is not none and included_mark is not none and included_workload is not none and included_workload|length > 0 %}
-    <p></p>
+    <hr>
+    <div class="small text-muted">INCLUDED MATCHES</div>
     {% for match in m.include_matches %}
-        <span class="badge bg-info">{{ match.name }} S {{ included_sup[match.id] }} M {{ included_mark[match.id] }} T {{ included_workload[match.id] }}</span>
+        <div class="small mt-1"><strong>{{ match.name }}</strong></div>
+        <div class="small">
+            S {{ included_sup[match.id] }} M {{ included_mark[match.id] }} T {{ included_workload[match.id] }}
+        </div>
     {% endfor %}
-    <p></p>
-    <span class="badge {% if sup_overassigned or mark_overassigned %}bg-danger{% else %}bg-primary{% endif %}">Total {{ total_CATS_value }}</span>
+    <div class="small mt-1">
+        <strong>Total included</strong>: {{ total_CATS_value }}
+    </div>
 {% endif %}
 """
 

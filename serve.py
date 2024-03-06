@@ -7,15 +7,17 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+
 from importlib import import_module
 
 from sqlalchemy import text, inspect
 from waitress import serve
+import flask_monitoringdashboard as dashboard
 
 from app import create_app
 from app.database import db
 from initdb import initial_populate_database, populate_CATS_limits
-
+from flask_security import current_user
 
 def has_table(inspector, table_name):
     # if table does not exist, then fail
@@ -32,14 +34,24 @@ def has_table(inspector, table_name):
     return True
 
 
+def get_user_id():
+    if current_user is not None:
+        return current_user.id
+
+    return None
+
+
 app = create_app()
+dashboard.config.init_from(envvar='DASHBOARD_CONFIG_FILE')
+dashboard.config.group_by = get_user_id
+dashboard.bind(app)
 
 with app.app_context():
     engine = db.engine
     inspector = inspect(engine)
 
     # first inspect the main table; if this does not exist or is empty
-    # then we assume that they database should be repopulated
+    # then we assume that the database should be repopulated
     # (in general the table will exist but may be empty, because Flask-Migrate will already have been run
     # by the boot script)
     if not has_table(inspector, "main_config"):

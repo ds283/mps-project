@@ -25,7 +25,6 @@ from flask_healthz import Healthz
 from flask_login.signals import user_logged_in
 from flask_mailman import Mail, EmailMultiAlternatives
 from flask_migrate import Migrate
-from flask_profiler import Profiler as EndpointProfiler
 from flask_security import current_user, SQLAlchemyUserDatastore, Security, LoginForm, MailUtil
 from flask_sqlalchemy.record_queries import get_recorded_queries
 from pyinstrument import Profiler as PyInstrumentProfiler
@@ -92,7 +91,6 @@ def read_configuration(app: Flask, config_name: str):
     app.config.from_pyfile("rollbar.py")
     app.config.from_pyfile("ratelimit.py")
     app.config.from_pyfile("database.py")
-    app.config.from_pyfile("endpoint_profiler.py")
     app.config.from_pyfile("defaults.py")
     app.config.from_pyfile("mail.py")
     app.config.from_pyfile("profiling.py")
@@ -438,12 +436,6 @@ def create_app():
 
     # add endpoint profiler Flask-Profiler and rate limiter in production mode
     if config_name == "production":
-        # profiler needs to be added near the end, because it has to wrap all existing endpoints
-        # note Flask-Profiler is an endpoint profiler that tells us how long
-        # is taken to return from endpoints; it doesn't actually profile the running code.
-        # For that we need PROFILE_TO_DISK
-        profiler = EndpointProfiler(app)
-
         # set up Flask-Limiter
         limiter.init_app(app)
 

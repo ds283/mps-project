@@ -78,7 +78,7 @@ def register_close_selection_tasks(celery):
 
     @celery.task(bind=True)
     def close_finalize(self, task_id, config_id, convenor_id, notify_convenor):
-        progress_update(task_id, TaskRecord.SUCCESS, 100, "Closure of selection complete", autocommit=False)
+        progress_update(task_id, TaskRecord.SUCCESS, 100, "Selections are now closed", autocommit=False)
 
         try:
             convenor = User.query.filter_by(id=convenor_id).first()

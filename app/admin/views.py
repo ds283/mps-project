@@ -10411,7 +10411,7 @@ def reset_tasks():
 def clear_redis_cache():
     cache.clear()
 
-    flash("The Redis cache has been successfully cleared.", "success")
+    flash("The website cache has been successfully cleared.", "success")
 
     return redirect(redirect_url())
 

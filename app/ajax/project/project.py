@@ -499,7 +499,7 @@ def build_data(
     show_approvals: Optional[bool] = False,
     show_errors: Optional[bool] = True,
 ):
-    if hasattr(projects, 'len') and len(projects) == 0:
+    if hasattr(projects, "len") and len(projects) == 0:
         return []
 
     simple_label = get_template_attribute("labels.html", "simple_label")
@@ -536,7 +536,7 @@ def build_data(
         in_selector = (p.selector_live_counterpart(config.id) is not None) if config is not None else False
         in_submitter = (p.submitter_live_counterpart(config.id) is not None) if config is not None else False
 
-        return {
+        data = {
             "name": render_template(
                 name_templ,
                 project=p,
@@ -567,18 +567,26 @@ def build_data(
             "group": render_template(affiliation_templ, project=p, simple_label=simple_label, truncate=truncate),
             "prefer": render_template(prefer_templ, project=p, simple_label=simple_label),
             "skills": render_template(skills_templ, skills=p.ordered_skills, simple_label=simple_label),
-            "menu": render_template(
-                menu_templ,
-                project=p,
-                desc=d,
-                config_id=config.id if config is not None else None,
-                pclass_id=config.pclass_id if config is not None else None,
-                in_selector=in_selector,
-                in_submitter=in_submitter,
-                select_in_previous_cycle=config.select_in_previous_cycle if config is not None else True,
-                text=text,
-                url=url,
-            ),
         }
+
+        if menu_templ is not None:
+            data.update(
+                {
+                    "menu": render_template(
+                        menu_templ,
+                        project=p,
+                        desc=d,
+                        config_id=config.id if config is not None else None,
+                        pclass_id=config.pclass_id if config is not None else None,
+                        in_selector=in_selector,
+                        in_submitter=in_submitter,
+                        select_in_previous_cycle=config.select_in_previous_cycle if config is not None else True,
+                        text=text,
+                        url=url,
+                    ),
+                }
+            )
+
+        return data
 
     return [_process(p=p[0], d=p[1]) if isinstance(p, tuple) else _process(p=p, d=None) for p in projects]

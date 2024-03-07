@@ -65,22 +65,21 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <div class="m-3">
+    <div class="mt-3 mb-3">
         <form action="{{ url_for('admin.manage_backups', type_filter=type_filter, property_filter=property_filter) }}" method="POST">
             {{ form.hidden_tag() }}
-            <div class="row vertical-bottom">
-                <div class="col-2">
-                    {{ wtf.render_field(form.weeks) }}
+            <div class="d-flex flex-row justify-content-between align-items-end">
+                <div class="d-flex flex-row gap-2 justify-content-start align-items-end">
+                    {{ wtf.render_field(form.weeks, form_group_class="") }}
+                    {{ wtf.render_field(form.delete_age, button_map={'delete_age': 'outline-danger'}) }}
                 </div>
-                <div class="col-2 grouped-button-pad">
-                    {{ wtf.render_field(form.delete_age, button_map={'delete_age': 'warning'}) }}
-                </div>
-                <div class="col-8 grouped-button-pad">
-                    <div class="float-end">
-                        <a href="{{ url_for('admin.confirm_delete_all_backups') }}" class="btn btn-danger">
+                <div class="d-flex flow-row gap-2 justify-content-end align-items-end">
+                    <a href="{{ url_for('admin.manual_backup') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-clock-rotate-left"></i> Backup now
+                    </a>
+                    <a href="{{ url_for('admin.confirm_delete_all_backups') }}" class="btn btn-outline-danger">
                             <i class="fas fa-trash"></i> Delete all backups
-                        </a>
-                    </div>
+                    </a>
                 </div>
             </div>
         </form>

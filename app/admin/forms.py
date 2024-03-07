@@ -1742,3 +1742,23 @@ class ApplyBackupLabelsForm(Form):
     )
 
     submit = SubmitField("Apply labels")
+
+
+class ManualBackupForm(Form):
+    description = StringField(
+        "Description",
+        description="Provide a short description of the purpose of this backup",
+        validators=[InputRequired(message="Please provide a description"), Length(max=DEFAULT_STRING_LENGTH)],
+    )
+
+    labels = BasicTagSelectField(
+        "Add labels to identify this backup",
+        query_factory=GetActiveBackupLabels,
+        get_label=BuildBackupLabelName,
+        description="Use labels to identify backups with specific properties, or to collect backups into groups.",
+        blank_text="Add labels...",
+    )
+
+    lock = BooleanField("Lock this backup to prevent removal during thinning", default=True)
+
+    submit = SubmitField("Backup now")

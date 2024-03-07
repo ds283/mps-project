@@ -1,0 +1,26 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+
+{% block title %}
+    Perform manual backup
+{% endblock %}
+
+{% block formtitle %}
+    Perform manual backup
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('admin.manual_backup') }}" method="POST" name="backup_form">
+        {{ form.hidden_tag() }}
+
+        <div class="mb-2">
+            {{ wtf.render_field(form.description) }}
+        </div>
+
+        {{ wtf.render_field(form.labels) }}
+        {{ wtf.render_field(form.lock) }}
+
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+    </form>
+{% endblock %}

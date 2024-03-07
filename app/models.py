@@ -1431,6 +1431,7 @@ class BackupTypesMixin:
     PROJECT_CLOSE_FALLBACK = 4
     PROJECT_ISSUE_CONFIRM_FALLBACK = 5
     BATCH_IMPORT_FALLBACK = 6
+    MANUAL_BACKUP = 7
 
     _type_index = {
         SCHEDULED_BACKUP: "Scheduled backup",
@@ -1439,6 +1440,7 @@ class BackupTypesMixin:
         PROJECT_CLOSE_FALLBACK: "Close selection restore point",
         PROJECT_ISSUE_CONFIRM_FALLBACK: "Issue confirmation requests restore point",
         BATCH_IMPORT_FALLBACK: "Batch user creation restore point",
+        MANUAL_BACKUP: "Manual backup",
     }
 
 

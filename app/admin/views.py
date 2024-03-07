@@ -101,6 +101,7 @@ from .forms import (
     EditSupervisorRolesForm,
     SelectMatchingYearFormFactory,
     ApplyBackupLabelsForm,
+    ManualBackupForm,
 )
 from ..cache import cache
 from ..database import db
@@ -3942,6 +3943,31 @@ def manage_backups_ajax():
         return handler.build_payload(ajax.site.backups_data)
 
 
+@admin.route("/manual_backup", methods=["GET", "POST"])
+@roles_required("root")
+def manual_backup():
+    """
+    Initiate manual backup
+    :return:
+    """
+    form = ManualBackupForm(request.form)
+
+    if form.validate_on_submit():
+        label_list = create_new_backup_labels(form)
+
+        tk_name = f"Manual backup initiated by {current_user.name}"
+        tk_description = "Perform a manual backup"
+        uuid = register_task(tk_name, owner=current_user, description=tk_description)
+
+        celery = current_app.extensions["celery"]
+        backup_task = celery.tasks["app.tasks.backup.backup"]
+
+        backup_task.apply_async(args=(current_user.id, BackupRecord.MANUAL_BACKUP, "backup", form.description))
+        return redirect(url_for("admin.manage_backups"))
+
+    return render_template_context("admin/manual_backup.html", form=form)
+
+
 @admin.route("/confirm_delete_all_backups")
 @roles_required("root")
 def confirm_delete_all_backups():
@@ -3953,9 +3979,7 @@ def confirm_delete_all_backups():
     panel_title = "Confirm delete all backups"
 
     action_url = url_for("admin.delete_all_backups")
-    message = (
-        "<p>Please confirm that you wish to delete all backups.</p>" "<p>Locked backups are not deleted.</p>" "<p>This action cannot be undone.</p>"
-    )
+    message = "<p>Please confirm that you wish to delete all backups.</p><p>Locked backups are not deleted.</p><p>This action cannot be undone.</p>"
     submit_label = "Delete all"
 
     return render_template_context(

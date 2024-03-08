@@ -743,6 +743,7 @@ def ProjectConfigurationMixinFactory(
 
             return removed > 0
 
+
         # PRESENTATIONS
 
         # don't schedule with other submitters doing the same project
@@ -1444,6 +1445,24 @@ class BackupTypesMixin:
     }
 
 
+class AlternativesPriorityMixin:
+    HIGHEST_PRIORITY = 1
+    LOWEST_PRIORIY = 10
+
+    # priority for this alternative
+    priority = db.Column(db.Integer(), default=HIGHEST_PRIORITY)
+
+    @validates("priority")
+    def _validate_priority(self, key, value):
+        if value < self.HIGHEST_PRIORITY:
+            return self.HIGHEST_PRIORITY
+
+        if value > self.LOWEST_PRIORIY:
+            return self.LOWEST_PRIORIY
+
+        return value
+
+
 class SupervisionEventTypesMixin:
     """
     Single point of definition for supervision event types
@@ -1618,7 +1637,7 @@ golive_confirmation = db.Table(
 )
 
 
-# PROJECT ASSOCIATIONS (NOT LIVE)
+# PROJECT ASSOCIATIONS (LIBRARY VERSIONS -- NOT LIVE)
 
 
 # association table giving association between projects and project classes
@@ -1649,7 +1668,9 @@ project_assessors = db.Table(
     db.Column("faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True),
 )
 
-# association table giving assessors
+# association table giving supervisor pool (currently only used for generic projects)
+# note this is different from the supervision team, which is a list of role *descriptors*, not
+# the people available to fill those roles
 project_supervisors = db.Table(
     "project_to_supervisors",
     db.Column("project_id", db.Integer(), db.ForeignKey("projects.id"), primary_key=True),
@@ -1657,6 +1678,8 @@ project_supervisors = db.Table(
 )
 
 # association table matching project descriptions to supervision team
+# note this is different from the supervisor pool. This is a list of links to role *descriptors*,
+# not the people available to fill those roles
 description_supervisors = db.Table(
     "description_to_supervisors",
     db.Column("description_id", db.Integer(), db.ForeignKey("descriptions.id"), primary_key=True),
@@ -1702,13 +1725,6 @@ live_project_programmes = db.Table(
     db.Column("programme_id", db.Integer(), db.ForeignKey("degree_programmes.id"), primary_key=True),
 )
 
-# association table giving association between projects and supervision tram
-live_project_supervision = db.Table(
-    "live_project_to_supervision",
-    db.Column("project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True),
-    db.Column("supervisor.id", db.Integer(), db.ForeignKey("supervision_team.id"), primary_key=True),
-)
-
 # association table matching live projects to assessors
 live_assessors = db.Table(
     "live_project_to_assessors",
@@ -1716,11 +1732,22 @@ live_assessors = db.Table(
     db.Column("faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True),
 )
 
-# association table matching live projects to supervisors
+# association table giving supervisor pool for this live project (currently only used for generic projects)
+# note this is different from the supervision team, which is a list of role *descriptors*, not
+# the people available to fill those roles
 live_supervisors = db.Table(
     "live_project_to_supervisors",
     db.Column("project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True),
     db.Column("faculty_id", db.Integer(), db.ForeignKey("faculty_data.id"), primary_key=True),
+)
+
+# association table matching live projects to supervision team
+# note this is different from the supervisor pool. This is a list of links to role *descriptors*,
+# not the people available to fill those roles
+live_project_supervision = db.Table(
+    "live_project_to_supervision",
+    db.Column("project_id", db.Integer(), db.ForeignKey("live_projects.id"), primary_key=True),
+    db.Column("supervisor.id", db.Integer(), db.ForeignKey("supervision_team.id"), primary_key=True),
 )
 
 # association table matching live projects to modules
@@ -7840,6 +7867,28 @@ def _Project_delete_handler(mapper, connection, target):
             cache.delete_memoized(_Project_num_supervisors, target.id, pclass.id)
 
 
+class ProjectAlternative(db.Model, AlternativesPriorityMixin):
+    """
+    Capture alternatives to a given project, with a priority
+    """
+
+    __tablename__ = "project_alternatives"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # owning project
+    parent_id = db.Column(db.Integer(), db.ForeignKey("projects.id"))
+    parent = db.relationship(
+        "Project", foreign_keys=[parent_id], uselist=False, backref=db.backref("alternatives", lazy="dynamic", cascade="all, delete, delete-orphan")
+    )
+
+    # alternative project
+    alternative_id = db.Column(db.Integer(), db.ForeignKey("projects.id"))
+    alternative = db.relationship("Project", foreign_keys=[alternative_id], uselist=False, backref=db.backref("alternative_for", lazy="dynamic"))
+
+
+
 @cache.memoize()
 def _ProjectDescription_is_valid(id):
     obj: ProjectDescription = ProjectDescription.query.filter_by(id=id).one()
@@ -9005,6 +9054,27 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
                 )
                 add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_REQUEST_DELETED, self.project, notification_id=self.id)
                 delete_notification(self.project.owner.user, EmailNotification.CONFIRMATION_REQUEST_CREATED, self)
+
+
+class LiveProjectAlternative(db.Model, AlternativesPriorityMixin):
+    """
+    Capture alternatives to a given project, with a priority
+    """
+
+    __tablename__ = "live_project_alternatives"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # owning project
+    parent_id = db.Column(db.Integer(), db.ForeignKey("live_projects.id"))
+    parent = db.relationship(
+        "LiveProject", foreign_keys=[parent_id], uselist=False, backref=db.backref("alternatives", lazy="dynamic", cascade="all, delete, delete-orphan")
+    )
+
+    # alternative project
+    alternative_id = db.Column(db.Integer(), db.ForeignKey("live_projects.id"))
+    alternative = db.relationship("LiveProject", foreign_keys=[alternative_id], uselist=False, backref=db.backref("alternative_for", lazy="dynamic"))
 
 
 @cache.memoize()

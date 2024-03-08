@@ -28,9 +28,9 @@ _selections = """
         {% set offer = sel.accepted_offer %}
         {% set project = offer.liveproject %}
         {% if project %}
-            <span class="text-success"><i class="fas fa-check-circle"></i> <strong>Accepted:</strong> {{ project.name }} ({{ project.owner.user.last_name }})</span>
+            <span class="text-success small"><i class="fas fa-check-circle"></i> <strong>Accepted:</strong> {{ project.name }} ({{ project.owner.user.last_name }})</span>
         {% else %}
-            <span class="text-danger"><strong>MISSING ACCEPTED PROJECT</strong></span>
+            <span class="text-danger small"><strong>MISSING ACCEPTED PROJECT</strong></span>
         {% endif %}
     {% else %}
         {% for item in sel.ordered_selections %}

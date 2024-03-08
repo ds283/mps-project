@@ -743,7 +743,6 @@ def ProjectConfigurationMixinFactory(
 
             return removed > 0
 
-
         # PRESENTATIONS
 
         # don't schedule with other submitters doing the same project
@@ -7888,7 +7887,6 @@ class ProjectAlternative(db.Model, AlternativesPriorityMixin):
     alternative = db.relationship("Project", foreign_keys=[alternative_id], uselist=False, backref=db.backref("alternative_for", lazy="dynamic"))
 
 
-
 @cache.memoize()
 def _ProjectDescription_is_valid(id):
     obj: ProjectDescription = ProjectDescription.query.filter_by(id=id).one()
@@ -9069,7 +9067,10 @@ class LiveProjectAlternative(db.Model, AlternativesPriorityMixin):
     # owning project
     parent_id = db.Column(db.Integer(), db.ForeignKey("live_projects.id"))
     parent = db.relationship(
-        "LiveProject", foreign_keys=[parent_id], uselist=False, backref=db.backref("alternatives", lazy="dynamic", cascade="all, delete, delete-orphan")
+        "LiveProject",
+        foreign_keys=[parent_id],
+        uselist=False,
+        backref=db.backref("alternatives", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # alternative project

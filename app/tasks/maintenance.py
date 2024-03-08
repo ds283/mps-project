@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime
+from datetime import datetime, date
 from io import BytesIO
 from pathlib import Path
 from typing import List, Iterable, Mapping, Union
@@ -813,3 +813,14 @@ def register_maintenance_tasks(celery):
 
             except FileNotFoundError:
                 print(f"!! Was not able to perform maintenance on backup record #{record.id}, " f'key="{record.unique_name}"')
+
+        now = date.today()
+        if record.locked and record.unlock_date is not None and now >= record.unlock_date:
+            record.locked = False
+            record.unlock_date = None
+
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()

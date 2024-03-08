@@ -23,8 +23,8 @@ _manage_backups_menu = """
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.download_backup', backup_id=backup.id) }}">
             <i class="fas fa-download fa-fw"></i> Download
         </a>
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_backup_labels', backup_id=backup.id) }}">
-            <i class="fas fa-tags fa-fw"></i> Edit labels...
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_backup', backup_id=backup.id) }}">
+            <i class="fas fa-tags fa-fw"></i> Edit backup...
         </a>
         {% if not backup.locked %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.lock_backup', backup_id=backup.id) }}">
@@ -56,6 +56,11 @@ _name = """
     <div class="mt-1 small text-muted">
         <i class="fas fa-lock"></i> Locked
     </div>
+    {% if b.unlock_date %}
+        <div class="mt-1 small text-muted">
+            <i class="fas fa-calendar"></i> Automatically unlock on {{ b.unlock_date.strftime("%a %d %b %Y") }}
+        </div>
+    {% endif %}
 {% endif %}
 """
 

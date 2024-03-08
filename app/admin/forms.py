@@ -1732,33 +1732,37 @@ def SelectMatchingYearFormFactory(allowed_years):
     return SelectMatchingYearForm
 
 
-class ApplyBackupLabelsForm(Form):
-    labels = BasicTagSelectField(
-        "Add labels to identify this backup",
-        query_factory=GetActiveBackupLabels,
-        get_label=BuildBackupLabelName,
-        description="Use labels to identify backups with specific properties, or to collect backups into groups.",
-        blank_text="Add labels...",
-    )
+def BackupMixinFactory(lock_default=False):
+    class BackupMixin:
+        labels = BasicTagSelectField(
+            "Add labels to identify this backup",
+            query_factory=GetActiveBackupLabels,
+            get_label=BuildBackupLabelName,
+            description="Use labels to identify backups with specific properties, or to collect backups into groups.",
+            blank_text="Add labels...",
+        )
 
-    submit = SubmitField("Apply labels")
+        locked = BooleanField("Lock this backup to prevent removal during thinning", default=lock_default)
+
+        unlock_date = DateTimeField(
+            "Automatically unlock on",
+            format="%d/%m/%Y",
+            validators=[Optional()],
+            description="Optionally specify a date when this backup will be automatically unlocked. Use to prevent a build-up of locked backup records that cannot be thinned.",
+        )
+
+    return BackupMixin
 
 
-class ManualBackupForm(Form):
+class EditBackupForm(Form, BackupMixinFactory(lock_default=False), SaveChangesMixin):
+    pass
+
+
+class ManualBackupForm(Form, BackupMixinFactory(lock_default=True)):
     description = StringField(
         "Description",
         description="Provide a short description of the purpose of this backup",
         validators=[InputRequired(message="Please provide a description"), Length(max=DEFAULT_STRING_LENGTH)],
     )
-
-    labels = BasicTagSelectField(
-        "Add labels to identify this backup",
-        query_factory=GetActiveBackupLabels,
-        get_label=BuildBackupLabelName,
-        description="Use labels to identify backups with specific properties, or to collect backups into groups.",
-        blank_text="Add labels...",
-    )
-
-    lock = BooleanField("Lock this backup to prevent removal during thinning", default=True)
 
     submit = SubmitField("Backup now")

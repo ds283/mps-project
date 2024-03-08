@@ -100,7 +100,7 @@ from .forms import (
     EditProjectTagForm,
     EditSupervisorRolesForm,
     SelectMatchingYearFormFactory,
-    ApplyBackupLabelsForm,
+    EditBackupForm,
     ManualBackupForm,
 )
 from ..cache import cache
@@ -3683,6 +3683,7 @@ def launch_scheduled_task(id):
         tk.signature(record.args, record.kwargs, immutable=True),
         final.si(task_id, record.name, current_user.id, notify=True),
     ).on_error(error.si(task_id, record.name, current_user.id))
+
     seq.apply_async(task_id=task_id)
 
     return redirect(redirect_url())
@@ -3954,16 +3955,36 @@ def manual_backup():
 
     if form.validate_on_submit():
         label_list = create_new_backup_labels(form)
+        label_ids = [l.id for l in label_list]
 
         tk_name = f"Manual backup initiated by {current_user.name}"
         tk_description = "Perform a manual backup"
-        uuid = register_task(tk_name, owner=current_user, description=tk_description)
+        task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
         celery = current_app.extensions["celery"]
         backup_task = celery.tasks["app.tasks.backup.backup"]
 
-        backup_task.apply_async(args=(current_user.id, BackupRecord.MANUAL_BACKUP, "backup", form.description))
+        init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
+        final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
+        error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
+
+        unlock_date_str = str(form.unlock_date.data) if form.unlock_date.data is not None else None
+        args = (current_user.id, BackupRecord.MANUAL_BACKUP, "backup", form.description.data, form.locked.data, unlock_date_str, label_ids)
+
+        seq = chain(
+            init.si(task_id, tk_name),
+            backup_task.signature(args, None, immutable=True),
+            final.si(task_id, tk_name, current_user.id, notify=True),
+        ).on_error(error.si(task_id, tk_name, current_user.id))
+
+        seq.apply_async(task_id=task_id)
         return redirect(url_for("admin.manage_backups"))
+
+    else:
+        if request.method == "GET":
+            default_unlock_date = date.today() + timedelta(weeks=24)
+
+            form.unlock_date.data = default_unlock_date
 
     return render_template_context("admin/manual_backup.html", form=form)
 
@@ -10208,17 +10229,24 @@ def unlock_backup(backup_id):
     return redirect(redirect_url())
 
 
-@admin.route("/edit_backup_labels/<int:backup_id>", methods=["GET", "POST"])
+@admin.route("/edit_backup/<int:backup_id>", methods=["GET", "POST"])
 @roles_required("root")
-def edit_backup_labels(backup_id):
+def edit_backup(backup_id):
     # backup_id is a BackupRecord instance
     backup: BackupRecord = BackupRecord.query.get_or_404(backup_id)
 
-    form = ApplyBackupLabelsForm(obj=backup)
+    form = EditBackupForm(obj=backup)
 
     if form.validate_on_submit():
         label_list = create_new_backup_labels(form)
+
         backup.labels = label_list
+        backup.locked = form.locked.data
+
+        if not backup.locked:
+            backup.unlock_date = None
+        else:
+            backup.unlock_date = form.unlock_date.data
 
         try:
             db.session.commit()
@@ -10229,7 +10257,13 @@ def edit_backup_labels(backup_id):
 
         return redirect(url_for("admin.manage_backups"))
 
-    return render_template_context("admin/edit_backup_labels.html", backup=backup, form=form)
+    else:
+        if request.method == "GET" and not form.locked.data:
+            default_unlock_date = date.today() + timedelta(weeks=24)
+
+            form.unlock_date.data = default_unlock_date
+
+    return render_template_context("admin/edit_backup.html", backup=backup, form=form)
 
 
 @admin.route("/upload_schedule/<int:schedule_id>", methods=["GET", "POST"])

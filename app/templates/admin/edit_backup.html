@@ -1,11 +1,14 @@
 {% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import date_field %}
 {% from "select2.html" import import_select2 %}
+{% from "datepicker.html" import import_datepicker %}
 
 {% block scripts %}
     {{ super() }}
     {{ import_select2() }}
+    {{ import_datepicker() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -19,23 +22,38 @@
                 tokenSeparators: [',', ';'],
                 placeholder: 'Add labels...'
             });
+
+            $('#datetimepicker1').datetimepicker({
+                format: 'DD/MM/YYYY',
+                allowInputToggle: true
+            });
         });
     </script>
 {% endblock %}
 
 {% block title %}
-    Apply backup labels
+    Edit backup
 {% endblock %}
 
 {% block formtitle %}
-    Apply labels to backup <strong>{{ backup.date.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
+    Edit backup <strong>{{ backup.date.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
 {% endblock %}
 
 {% block form_content %}
-    <form action="{{ url_for('admin.edit_backup_labels', backup_id=backup.id) }}" method="POST" name="labels_form">
+    <form action="{{ url_for('admin.edit_backup', backup_id=backup.id) }}" method="POST" name="edit_form">
 
         {{ form.hidden_tag() }}
-        {{ wtf.render_field(form.labels) }}
+
+        <div class="mb-2">
+            {{ wtf.render_field(form.labels) }}
+        </div>
+        <div class="mb-2">
+            {{ wtf.render_field(form.locked) }}
+        </div>
+        <div class="mb-3">
+            {{ date_field(form.unlock_date, 'datetimepicker1') }}
+        </div>
+
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>

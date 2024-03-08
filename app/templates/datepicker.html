@@ -1,0 +1,13 @@
+{% macro import_datepicker() %}
+    {% assets filters="cssmin", output="gen/tempusdominus-bootstrap-4.min.css", "css/tempusdominus-bootstrap-4.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="rjsmin", output="gen/moment.min.js", "js/moment.min.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/tempusdominus-bootstrap-4.min.js", "js/tempusdominus-bootstrap-4.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+{% endmacro %}

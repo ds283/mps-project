@@ -1,6 +1,35 @@
 {% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import date_field %}
+{% from "select2.html" import import_select2 %}
+{% from "datepicker.html" import import_datepicker %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+    {{ import_datepicker() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#labels').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                tags: true,
+                tokenSeparators: [',', ';'],
+                placeholder: 'Add labels...'
+            });
+
+            $('#datetimepicker1').datetimepicker({
+                format: 'DD/MM/YYYY',
+                allowInputToggle: true
+            });
+        });
+    </script>
+{% endblock %}
 
 {% block title %}
     Perform manual backup
@@ -17,9 +46,15 @@
         <div class="mb-2">
             {{ wtf.render_field(form.description) }}
         </div>
-
-        {{ wtf.render_field(form.labels) }}
-        {{ wtf.render_field(form.lock) }}
+        <div class="mb-2">
+            {{ wtf.render_field(form.labels) }}
+        </div>
+        <div class="mb-2">
+            {{ wtf.render_field(form.locked) }}
+        </div>
+        <div class="mb-3">
+            {{ date_field(form.unlock_date, 'datetimepicker1') }}
+        </div>
 
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
     </form>

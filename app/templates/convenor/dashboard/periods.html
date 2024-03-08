@@ -2,21 +2,11 @@
 
 {% from "icon_block.html" import icon_block %}
 {% from "convenor/dashboard/overview_cards/submitter_card.html" import submitter_card %}
+{% from "datepicker.html" import import_datepicker %}
 
 {% block scripts %}
     {{ super() }}
-
-    {% assets filters="cssmin", output="gen/tempusdominus-bootstrap-4.min.css", "css/tempusdominus-bootstrap-4.css" -%}
-        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
-    {% endassets %}
-
-    {% assets filters="rjsmin", output="gen/moment.min.js", "js/moment.min.js" -%}
-        <script src="{{ ASSET_URL }}"></script>
-    {% endassets %}
-
-    {% assets filters="jsmin", output="gen/tempusdominus-bootstrap-4.min.js", "js/tempusdominus-bootstrap-4.js" -%}
-        <script src="{{ ASSET_URL }}"></script>
-    {% endassets %}
+    {{ import_datepicker() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};

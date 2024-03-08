@@ -11920,6 +11920,10 @@ class BackupRecord(db.Model, BackupTypesMixin):
     # is this backup locked to prevent deletion?
     locked = db.Column(db.Boolean(), default=False)
 
+    # should this record be auto-unlocked after a given date?
+    # this prevents a build-up of un-deletable records
+    unlock_date = db.Column(db.Date(), default=None)
+
     # last time this backup was validated in the object store
     last_validated = db.Column(db.DateTime())
 
@@ -12877,7 +12881,9 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
         if not self.ignore_per_faculty_limits and faculty.CATS_marking is not None and faculty.CATS_marking >= 0:
             if mark > faculty.CATS_marking:
-                message = f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds global CATS limit {faculty.CATS_marking} for this marker"
+                message = (
+                    f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds global CATS limit {faculty.CATS_marking} for this marker"
+                )
                 rval = True
 
             if faculty.CATS_marking < limit:
@@ -12891,7 +12897,9 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
                     rval = True
 
                 if mark > 0 and enrolment_rec.marker_state != EnrollmentRecord.MARKER_ENROLLED:
-                    message = f"{name}{pclass_label} is not enrolled to mark for {pclass.abbreviation}, but has been assigned a marking workload {mark}"
+                    message = (
+                        f"{name}{pclass_label} is not enrolled to mark for {pclass.abbreviation}, but has been assigned a marking workload {mark}"
+                    )
                     rval = True
 
                 if enrolment_rec.CATS_marking < limit:

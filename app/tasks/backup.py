@@ -11,12 +11,13 @@
 import functools
 import subprocess
 import tarfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from io import BytesIO
+from math import floor
 from operator import itemgetter
 from os import path
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from uuid import uuid4
 
 from celery import group, chain
@@ -24,13 +25,12 @@ from celery.exceptions import Ignore
 from dateutil import parser
 from flask import current_app, render_template
 from flask_mailman import EmailMessage
-from math import floor
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
 from .. import register_task
 from ..database import db
-from ..models import BackupRecord, validate_nonce
+from ..models import BackupRecord, validate_nonce, BackupLabel
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.backup import get_backup_config, compute_current_backup_count, compute_current_backup_size, remove_backup
 from ..shared.cloud_object_store import ObjectStore
@@ -40,7 +40,16 @@ from ..shared.scratch import ScratchFileManager
 
 def register_backup_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
-    def backup(self, owner_id=None, type=BackupRecord.SCHEDULED_BACKUP, tag="backup", description=None):
+    def backup(
+        self,
+        owner_id: int = None,
+        type: int = BackupRecord.SCHEDULED_BACKUP,
+        tag: str = "backup",
+        description: str = None,
+        lock: bool = False,
+        unlock_date: str = None,
+        label_ids: List[int] = [],
+    ):
         self.update_state(state="STARTED", meta={"msg": "Initiating database backup"})
 
         # don't execute if we are not on a live backup platform
@@ -113,6 +122,16 @@ def register_backup_tasks(celery):
 
                 # bucket, comment, encryption, encrypted_sie, compressed, compressed_size
                 # fields will be populated by AssetUploadManager
+                unlock_date_value: Optional[date] = None
+                if lock and unlock_date is not None:
+                    unlock_date_value = parser.parse(unlock_date).date()
+
+                def lookup_label(label_id: int):
+                    return db.session.query(BackupLabel).filter_by(id=label_id).first()
+
+                label_items = [lookup_label(label_id) for label_id in label_ids]
+                label_items = [l for l in label_items if l is not None]
+
                 data = BackupRecord(
                     owner_id=owner_id,
                     date=now,
@@ -121,9 +140,10 @@ def register_backup_tasks(celery):
                     db_size=uncompressed_size,
                     archive_size=this_archive_size,
                     backup_size=current_backup_size + this_archive_size,
-                    locked=False,
+                    locked=lock,
+                    unlock_date=unlock_date_value,
                     last_validated=None,
-                    labels=[],
+                    labels=label_items,
                 )
 
                 with open(archive_scratch_path, "rb") as f:

@@ -2,6 +2,7 @@
 
 {% from "macros.html" import submission_period_configure_button %}
 {% from "icon_block.html" import icon_block %}
+{% from "datepicker.html" import import_datepicker %}
 
 {% from "convenor/dashboard/overview_cards/rollover.html" import rollover_card %}
 {% from "convenor/dashboard/overview_cards/issue_confirmations.html" import issue_confirmations %}
@@ -16,18 +17,7 @@
 
 {% block scripts %}
     {{ super() }}
-
-    {% assets filters="cssmin", output="gen/tempusdominus-bootstrap-4.min.css", "css/tempusdominus-bootstrap-4.css" -%}
-        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
-    {% endassets %}
-
-    {% assets filters="rjsmin", output="gen/moment.min.js", "js/moment.min.js" -%}
-        <script src="{{ ASSET_URL }}"></script>
-    {% endassets %}
-
-    {% assets filters="jsmin", output="gen/tempusdominus-bootstrap-4.min.js", "js/tempusdominus-bootstrap-4.js" -%}
-        <script src="{{ ASSET_URL }}"></script>
-    {% endassets %}
+    {{ import_datepicker() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};

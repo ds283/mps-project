@@ -5,10 +5,12 @@
             <div class="text-primary small" tabindex="0" data-bs-toggle="popover" title="{{ p.display_name }}" data-bs-container="body" data-bs-trigger="focus" data-bs-content="<ul class='small'>{% for msg in messages %}<li>{{ msg }}</li>{% endfor %}</ul>">Status <i class="fas fa-info-circle"></i></div>
         {% endif %}
         {% if p.start_date %}
-            <div class="text-primary small"><i class="fa fa-calendar"></i> Start date <strong>{{ p.start_date.strftime("%a %d %b %Y") }}</strong></div>
+            <div class="text-primary small"><i class="fas fa-calendar"></i> Start date
+                <strong>{{ p.start_date.strftime("%a %d %b %Y") }}</strong></div>
         {% endif %}
         {% if p.hand_in_date %}
-            <div class="text-primary small"><i class="fa fa-calendar"></i> Hand-in date <strong>{{ p.hand_in_date.strftime("%a %d %b %Y") }}</strong></div>
+            <div class="text-primary small"><i class="fas fa-calendar"></i> Hand-in date
+                <strong>{{ p.hand_in_date.strftime("%a %d %b %Y") }}</strong></div>
         {% endif %}
     </div>
     {% if p.feedback_open %}

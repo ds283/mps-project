@@ -2,15 +2,26 @@
 {% from "macros.html" import date_field %}
 {% from "icon_block.html" import icon_block %}
 
-{% macro dashboard_tile(title) %}
+{% macro dashboard_tile(title, title_icon=none, icon_state=none) %}
     <div class="card border-0 bg-light">
         <div class="card-body">
             <div class="row">
                 <div class="col d-flex justify-content-between">
                     <div>
-                        <h5 class="d-flex align-items-center text-uppercase text-muted fw-semibold mb-2">
-                            {{ title }}
-                        </h5>
+                        <div class="d-flex flex-row gap-2 justify-content-left align-items-center">
+                            {% if title_icon is not none %}
+                                {% if icon_state is true %}
+                                    <i class="text-success fs-6 fas fa-{{ title_icon }} me-1 pb-2"></i>
+                                {% elif icon_statei is false %}
+                                    <i class="text-warning fs-6 fas fa-{{ title_icon }} me-1 pb-2"></i>
+                                {% else %}
+                                    <i class="text-secondary fs-6 fas fa-{{ title_icon }} me-1 pb-2"></i>
+                                {% endif %}
+                            {% endif %}
+                            <span class="d-flex align-items-center text-uppercase text-muted fw-semibold fs-6 mb-2">
+                                {{ title }}
+                            </span>
+                        </div>
                         {{ caller() }}
                     </div>
                 </div>
@@ -115,12 +126,16 @@
                     {% endif %}
                 {% endif %}
             </div>
+            {% set submitted_ok = submitted == total %}
+            {% set confirmations_ok = outstanding_confirm == 0 %}
+            {% set bookmarks_ok = bookmarks > 0 %}
+            {% set missing_ok = missing == 0 %}
             <div class="row">
                 <div class="col-3">
-                    {% call dashboard_tile("Submitted") %}
-                        <span class="fw-bold fs-1 text-primary">{{ submitted }}</span>
+                    {% call dashboard_tile("Submitted", title_icon="circle", icon_state=submitted_ok) %}
+                        <span class="fw-bold fs-1 {% if submitted_ok %}text-primary{% else %}text-warning{% endif %}">{{ submitted }}</span>
                         <span class="fs-4 text-muted">/{{ total }}</span>
-                        <p class="fs-6 text-muted mb-0">
+                        <p class="small mb-0">
                             <a class="text-decoration-none link-secondary"
                                href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='submitted') }}">View
                                 submiters</a>
@@ -128,9 +143,9 @@
                     {% endcall %}
                 </div>
                 <div class="col-3">
-                    {% call dashboard_tile("Confirmations") %}
-                        <span class="fw-bold fs-1 text-primary">{{ outstanding_confirm }}</span>
-                        <p class="fs-6 text-muted mb-0">
+                    {% call dashboard_tile("Confirmations", title_icon="circle", icon_state=confirmations_ok) %}
+                        <span class="fw-bold fs-1 {% if confirmations_ok %}text-primary{% else %}text-warning{% endif %}">{{ outstanding_confirm }}</span>
+                        <p class="small mb-0">
                             <a class="text-decoration-none link-secondary"
                                href="{{ url_for('convenor.show_confirmations', id=config.pclass_id) }}">View
                                 requests</a>
@@ -138,10 +153,10 @@
                     {% endcall %}
                 </div>
                 <div class="col-3">
-                    {% call dashboard_tile("Bookmarks") %}
-                        <span class="fw-bold fs-1 text-primary">{{ bookmarks }}</span>
+                    {% call dashboard_tile("Bookmarks", title_icon="circle", icon_state=bookmarks_ok) %}
+                        <span class="fw-bold fs-1 {% if bookmarks_ok %}text-primary{% else %}text-warning{% endif %}">{{ bookmarks }}</span>
                         <span class="fs-4 text-muted">/{{ total }}</span>
-                        <p class="fs-6 text-muted mb-0">
+                        <p class="small mb-0">
                             <a class="text-decoration-none link-secondary"
                                href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='bookmarks') }}">View
                                 selectors</a>
@@ -149,10 +164,10 @@
                     {% endcall %}
                 </div>
                 <div class="col-3">
-                    {% call dashboard_tile("No bookmarks") %}
-                        <span class="fw-bold fs-1 text-primary">{{ missing }}</span>
+                    {% call dashboard_tile("No bookmarks", title_icon="circle", icon_state=missing_ok) %}
+                        <span class="fw-bold fs-1 {% if missing_ok %}text-primary{% else %}text-warning{% endif %}">{{ missing }}</span>
                         <span class="fs-4 text-muted">/{{ total }}</span>
-                        <p class="fs-6 text-muted mb-0">
+                        <p class="small mb-0">
                             <a class="text-decoration-none link-secondary"
                                href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">View
                                 selectors</a>

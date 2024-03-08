@@ -44,7 +44,7 @@ _student = """
             {{ medium_swatch(swatch_colour) }}
             <span class="text-secondary">{{ config.name }}</span>
             <span>
-                <i class="fa fa-user-circle me-1"></i>
+                <i class="fas fa-user-circle me-1"></i>
                 <a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a>
             </span>
         </div>
@@ -69,7 +69,7 @@ _student = """
                                 {% if project.generic or project.owner is none %}
                                     generic
                                 {% else %}
-                                    <i class="fa fa-user-circle me-1"></i>
+                                    <i class="fas fa-user-circle me-1"></i>
                                     <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
                                 {% endif %}
                             </div>
@@ -143,7 +143,7 @@ _pclass = """
     <span class="small">{{ config.name }}</span>
 </div>
 <div class="d-flex flex-row justify-content-start align-items-center gap-2 small">
-    <i class="fa fa-user-circle"></i>
+    <i class="fas fa-user-circle"></i>
     <a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a>
 </div>
 """

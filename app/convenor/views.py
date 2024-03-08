@@ -3438,7 +3438,7 @@ def edit_descriptions(id, pclass_id):
 
     create = request.args.get("create", default=None)
 
-    return render_template_context("convenor/edit_descriptions.html", project=project, pclass_id=pclass_id, create=create)
+    return render_template_context("convenor/projects/edit_descriptions.html", project=project, pclass_id=pclass_id, create=create)
 
 
 @convenor.route("/descriptions_ajax/<int:id>/<int:pclass_id>")
@@ -3928,7 +3928,7 @@ def description_modules(did, pclass_id, level_id=None):
     levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.numeric_level.asc()).all()
 
     return render_template_context(
-        "convenor/description_modules.html",
+        "convenor/projects/description_modules.html",
         project=desc.parent,
         desc=desc,
         form=form,
@@ -4277,7 +4277,7 @@ def attach_skills(id, pclass_id, sel_id=None):
     create = request.args.get("create", default=None)
 
     return render_template_context(
-        "convenor/attach_skills.html", data=proj, skills=skills, pclass_id=pclass_id, form=form, sel_id=form.selector.data.id, create=create
+        "convenor/projects/attach_skills.html", data=proj, skills=skills, pclass_id=pclass_id, form=form, sel_id=form.selector.data.id, create=create
     )
 
 
@@ -4346,7 +4346,7 @@ def attach_programmes(id, pclass_id):
 
     create = request.args.get("create", default=None)
 
-    return render_template_context("convenor/attach_programmes.html", data=proj, programmes=q.all(), pclass_id=pclass_id, create=create)
+    return render_template_context("convenor/projects/attach_programmes.html", data=proj, programmes=q.all(), pclass_id=pclass_id, create=create)
 
 
 @convenor.route("/add_programme/<int:id>/<int:pclass_id>/<int:prog_id>")
@@ -4509,7 +4509,7 @@ def attach_assessors(id, pclass_id):
         session["convenor_marker_group_filter"] = group_filter
 
     return render_template_context(
-        "convenor/attach_assessors.html",
+        "convenor/projects/attach_assessors.html",
         data=proj,
         pclass_id=pclass_id,
         groups=groups,

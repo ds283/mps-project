@@ -1,4 +1,5 @@
 {% from "icon_block.html" import icon_block %}
+{% from "dashboard_widgets.html" import dashboard_tile %}
 
 {% macro selection_closed(config, rollover_in_progress) %}
     <div class="card border-secondary mt-3 mb-3">
@@ -58,26 +59,40 @@
                     {% endif %}
                 {% endif %}
             </div>
-            <div class="d-flex flex-row justify-content-start align-items-start gap-2 mt-2">
-                <div class="list-group">
-                    <div class="list-group-item {% if submitted == total %}list-group-item-success{% else %}list-group-item-secondary{% endif %}">
-                        Selectors with ranking
-                        <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='submitted') }}">(Show...)</a>
-                        <span class="badge bg-secondary rounded-pill">{{ submitted }}/{{ total }}</span>
-                    </div>
+            {% set submitted_ok = submitted == total %}
+            {% set missing_ok = missing == 0 %}
+            <div class="row">
+                <div class="col-6">
+                    {% call dashboard_tile("Submitted", title_icon="circle", icon_state=submitted_ok) %}
+                        <span class="fw-bold fs-1 {% if submitted_ok %}text-primary{% else %}text-warning{% endif %}">{{ submitted }}</span>
+                        <span class="fs-4 text-muted">/{{ total }}</span>
+                        <div class="small mb-0">
+                            <div>
+                                <a class="text-decoration-none link-primary"
+                                   href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='submitted') }}">View
+                                    selectors
+                                </a>
+                            </div>
+                            <div>
+                                <a class="text-decoration-none link-primary"
+                                   href="{{ url_for('convenor.selector_grid', id=config.pclass_id) }}">
+                                    View selector grid
+                                </a>
+                            </div>
+                        </div>
+                    {% endcall %}
                 </div>
-                <div class="list-group">
-                    <div class="list-group-item {% if missing > 0 %}list-group-item-danger{% else %}list-group-item-success{% endif %}">
-                        Selectors missing data
-                        <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='none') }}">(Show...)</a>
-                        <span class="badge bg-secondary rounded-pill">{{ missing }}/{{ total }}</span>
-                    </div>
+                <div class="col-6">
+                    {% call dashboard_tile("Missing", title_icon="circle", icon_state=missing_ok) %}
+                        <span class="fw-bold fs-1 {% if missing_ok %}text-primary{% else %}text-warning{% endif %}">{{ missing }}</span>
+                        <span class="fs-4 text-muted">/{{ total }}</span>
+                        <p class="small mb-0">
+                            <a class="text-decoration-none link-primary"
+                               href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='none') }}">View
+                                selectors</a>
+                        </p>
+                    {% endcall %}
                 </div>
-            </div>
-            <div class="d-flex flex-row justify-content-start align-items-start gap-2 mt-2">
-                <a class="text-decoration-none" href="{{ url_for('convenor.selector_grid', id=config.pclass_id) }}">
-                    Show selector grid ...
-                </a>
             </div>
         </div>
     </div>

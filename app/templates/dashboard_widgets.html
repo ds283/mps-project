@@ -1,0 +1,20 @@
+{% macro dashboard_tile(title, title_icon=none, icon_state=none) %}
+    <div class="card border-0 bg-light h-100">
+        <div class="card-body">
+            <div class="row">
+                <div class="col d-flex justify-content-between">
+                    <div>
+                        <div class="d-flex flex-row gap-2 justify-content-left align-items-center">
+                            {% set text_class = "text-success" if icon_state is true else ("text-warning" if icon_state is false else "text-muted") %}
+                            <i class="{{ text_class }} fs-6 fas fa-{{ title_icon }} me-1 pb-2"></i>
+                            <span class="d-flex align-items-center text-uppercase fw-semibold {{ text_class }} fs-6 mb-2">
+                                {{ title }}
+                            </span>
+                        </div>
+                        {{ caller() }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endmacro %}

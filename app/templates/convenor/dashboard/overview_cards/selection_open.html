@@ -2,6 +2,23 @@
 {% from "macros.html" import date_field %}
 {% from "icon_block.html" import icon_block %}
 
+{% macro dashboard_tile(title) %}
+    <div class="card border-0 bg-light">
+        <div class="card-body">
+            <div class="row">
+                <div class="col d-flex justify-content-between">
+                    <div>
+                        <h5 class="d-flex align-items-center text-uppercase text-muted fw-semibold mb-2">
+                            {{ title }}
+                        </h5>
+                        {{ caller() }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endmacro %}
+
 {% macro selection_open(config, change_form, data) %}
     <div class="card border-secondary mt-3 mb-3">
         <div class="card-header">
@@ -98,36 +115,81 @@
                     {% endif %}
                 {% endif %}
             </div>
-            <div class="d-flex flex-row justify-content-start align-items-center gap-2 w-100 mb-3">
-                <div class="list-group">
-                    <div class="list-group-item {% if submitted == total %}list-group-item-success{% else %}list-group-item-primary"{% endif %}>
-                        Submitted
-                        <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='submitted') }}">(Show...)</a>
-                        <span class="badge bg-secondary rounded-pill">{{ submitted }}/{{ total }}</span>
-                    </div>
+            <div class="row">
+                <div class="col-3">
+                    {% call dashboard_tile("Submitted") %}
+                        <span class="fw-bold fs-1 text-primary">{{ submitted }}</span>
+                        <span class="fs-4 text-muted">/{{ total }}</span>
+                        <p class="fs-6 text-muted mb-0">
+                            <a class="text-decoration-none link-secondary"
+                               href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='submitted') }}">View
+                                submiters</a>
+                        </p>
+                    {% endcall %}
                 </div>
-                <div class="list-group">
-                    <div class="list-group-item {% if outstanding_confirm > 0 %}list-group-item-danger{% else %}list-group-item-success{% endif %}">
-                        Confirmation requests
-                        <a class="text-decoration-none" href="{{ url_for('convenor.show_confirmations', id=config.pclass_id) }}">(Show...)</a>
-                        <span class="badge bg-secondary rounded-pill">{{ outstanding_confirm }}</span>
-                    </div>
+                <div class="col-3">
+                    {% call dashboard_tile("Confirmations") %}
+                        <span class="fw-bold fs-1 text-primary">{{ outstanding_confirm }}</span>
+                        <p class="fs-6 text-muted mb-0">
+                            <a class="text-decoration-none link-secondary"
+                               href="{{ url_for('convenor.show_confirmations', id=config.pclass_id) }}">View
+                                requests</a>
+                        </p>
+                    {% endcall %}
                 </div>
-                <div class="list-group">
-                    <div class="list-group-item {% if bookmarks > 0 %}list-group-item-info{% else %}list-group-item-secondary{% endif %}">
-                        Has bookmarks
-                        <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='bookmarks') }}">(Show...)</a>
-                        <span class="badge bg-secondary rounded-pill">{{ bookmarks }}/{{ total }}</span>
-                    </div>
+                <div class="col-3">
+                    {% call dashboard_tile("Bookmarks") %}
+                        <span class="fw-bold fs-1 text-primary">{{ bookmarks }}</span>
+                        <span class="fs-4 text-muted">/{{ total }}</span>
+                        <p class="fs-6 text-muted mb-0">
+                            <a class="text-decoration-none link-secondary"
+                               href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='bookmarks') }}">View
+                                selectors</a>
+                        </p>
+                    {% endcall %}
                 </div>
-                <div class="list-group">
-                    <div class="list-group-item {% if bookmarks > 0 %}list-group-item-info{% else %}list-group-item-secondary{% endif %}">
-                        No bookmarks
-                        <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">(Show...)</a>
-                        <span class="badge bg-secondary rounded-pill">{{ missing}}/{{ total }}</span>
-                    </div>
+                <div class="col-3">
+                    {% call dashboard_tile("No bookmarks") %}
+                        <span class="fw-bold fs-1 text-primary">{{ missing }}</span>
+                        <span class="fs-4 text-muted">/{{ total }}</span>
+                        <p class="fs-6 text-muted mb-0">
+                            <a class="text-decoration-none link-secondary"
+                               href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">View
+                                selectors</a>
+                        </p>
+                    {% endcall %}
                 </div>
             </div>
+            {#            <div class="d-flex flex-row justify-content-start align-items-center gap-2 w-100 mb-3">#}
+            {#                <div class="list-group">#}
+            {#                    <div class="list-group-item {% if submitted == total %}list-group-item-success{% else %}list-group-item-primary"{% endif %}>#}
+            {#                        Submitted#}
+            {#                        <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='submitted') }}">(Show...)</a>#}
+            {#                        <span class="badge bg-secondary rounded-pill">{{ submitted }}/{{ total }}</span>#}
+            {#                    </div>#}
+            {#                </div>#}
+            {#                <div class="list-group">#}
+            {#                    <div class="list-group-item {% if outstanding_confirm > 0 %}list-group-item-danger{% else %}list-group-item-success{% endif %}">#}
+            {#                        Confirmation requests#}
+            {#                        <a class="text-decoration-none" href="{{ url_for('convenor.show_confirmations', id=config.pclass_id) }}">(Show...)</a>#}
+            {#                        <span class="badge bg-secondary rounded-pill">{{ outstanding_confirm }}</span>#}
+            {#                    </div>#}
+            {#                </div>#}
+            {#                <div class="list-group">#}
+            {#                    <div class="list-group-item {% if bookmarks > 0 %}list-group-item-info{% else %}list-group-item-secondary{% endif %}">#}
+            {#                        Has bookmarks#}
+            {#                        <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='bookmarks') }}">(Show...)</a>#}
+            {#                        <span class="badge bg-secondary rounded-pill">{{ bookmarks }}/{{ total }}</span>#}
+            {#                    </div>#}
+            {#                </div>#}
+            {#                <div class="list-group">#}
+            {#                    <div class="list-group-item {% if bookmarks > 0 %}list-group-item-info{% else %}list-group-item-secondary{% endif %}">#}
+            {#                        No bookmarks#}
+            {#                        <a class="text-decoration-none" href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">(Show...)</a>#}
+            {#                        <span class="badge bg-secondary rounded-pill">{{ missing}}/{{ total }}</span>#}
+            {#                    </div>#}
+            {#                </div>#}
+            {#            </div>#}
             <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}" method="POST" name="adjust_selection_deadline">
                 {{ change_form.hidden_tag() }}
                 {{ date_field(change_form.live_deadline, 'live_datetimepicker') }}

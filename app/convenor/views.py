@@ -1674,7 +1674,7 @@ def selector_grid_ajax(id):
         return jsonify({})
 
     # build a list of live students selecting from this project class
-    selectors: List[SelectingStudent] = config.selecting_students.filter_by(retired=False)
+    selectors = config.selecting_students.filter_by(retired=False)
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)

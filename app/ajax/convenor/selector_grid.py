@@ -36,7 +36,7 @@ _selections = """
         {% for item in sel.ordered_selections %}
             {% set project = item.liveproject %}
             <div class="d-flex flex-row justify-content-start align-items-start gap-1">
-                <span>#{{ item.rank }}</span>
+                <span class="small">#{{ item.rank }}</span>
                 {% if project.group %}
                     {% set swatch_color = project.group.make_CSS_style() %}
                     {{ small_swatch(swatch_color) }}
@@ -44,12 +44,12 @@ _selections = """
                 <span class="small">
                     {{ item.format_project()|safe }}
                     {% if not project.generic and project.owner is not none %}
-                        &ndash; {{ project.owner.user.name }}
+                        <span class="text-muted">&ndash; {{ project.owner.user.name }}</span>
                     {% else %}
                         <span class="fw-semibold text-uppercase text-info">Generic</span>
                     {% endif %}
                     {% if item.converted_from_bookmark %}
-                        <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Bookmark</span>
+                        <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> From bookmark</span>
                     {% endif %}
                 </span>
                 <div class="dropdown">

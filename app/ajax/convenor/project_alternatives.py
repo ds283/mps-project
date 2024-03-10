@@ -18,6 +18,23 @@ from ...models import ProjectAlternative, Project
 # language=jinja2
 _project = """
 <a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=proj.id, text='project alternatives list', url=url_for('convenor.edit_project_alternatives', proj_id=proj.id, url=url, text=text)) }}">{{ proj.name }}</a>
+{% set reciprocal = alt.get_reciprocal() %}
+{% set has_reciprocal = reciprocal is not none %}
+{% if not has_reciprocal %}
+    <div class="mt-1 small d-flex flex-row gap-2 justify-content-left align-items-center">
+        <div class="text-danger"><i class="fas fa-exclamation-circle me-1"></i> Reciprocal not present</div>
+        <a class="btn btn-xs btn-outline-danger" href="{{ url_for('convenor.copy_project_alternative_reciprocal', alt_id=alt.id) }}">Copy</a>
+    </div>
+{% else %}
+    <div class="mt-1 small d-flex flex-row gap-2 justify-content-left align-items-center">
+        <div class="text-success">
+            <i class="fas fa-check-circle me-1"></i> Reciprocal present
+            {% if reciprocal.priority != alt.priority %}
+                (priority {{ reciprocal.priority }})
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
 """
 
 # language=jinja2

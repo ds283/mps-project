@@ -23,11 +23,41 @@ _project = """
         <span class="badge bg-danger"><i class="fas fa-eye-slash"></i> HIDDEN</span>
     </div>
 {% endif %}
-{% if not alt.in_library %}
-    <div class="mt-1 small text-danger">
-        <i class="fas fa-exclamation-circle me-1"></i> Not in library
+{% set library_alt = alt.get_library() %}
+{% set in_library = library_alt is not none %}
+{% if not in_library %}
+    <div class="mt-1 small d-flex flex-row gap-2 justify-content-left align-items-center">
+        <div class="text-danger"><i class="fas fa-exclamation-circle me-1"></i> Not in library</div>
+        <a class="btn btn-xs btn-outline-danger" href="{{ url_for('convenor.copy_alternative_to_library', alt_id=alt.id) }}">Copy</a>
+    </div>
+{% else %}
+    <div class="mt-1 small d-flex flex-row gap-2 justify-content-left align-items-center">
+        <div class="text-success"><i class="fas fa-check-circle me-1"></i> In library</div>
+        {% set library_alt = alt.get_library() %}
+        {% if library_alt is not none and library_alt.priority != alt.priority %}
+            <div class="text-muted">Priority {{ library_alt.priority }} differs</div>
+            <a class="btn btn-xs btn-outline-secondary" href="{{ url_for('convenor.copy_alternative_to_library', alt_id=alt.id) }}">Update</a>
+        {% endif %}
     </div>
 {% endif %}
+{% set reciprocal = alt.get_reciprocal() %}
+{% set has_reciprocal = reciprocal is not none %}
+{% if not has_reciprocal %}
+    <div class="mt-1 small d-flex flex-row gap-2 justify-content-left align-items-center">
+        <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i> Reciprocal not present</span>
+        <a class="btn btn-xs btn-outline-danger" href="{{ url_for('convenor.copy_liveproject_alternative_reciprocal', alt_id=alt.id) }}">Copy</a>
+    </div>
+{% else %}
+    <div class="mt-1 small d-flex flex-row gap-2 justify-content-left align-items-center">
+        <div class="text-success">
+            <i class="fas fa-check-circle me-1"></i> Reciprocal present
+            {% if reciprocal.priority != alt.priority %}
+                (priority {{ reciprocal.priority }})
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+
 """
 
 # language=jinja2

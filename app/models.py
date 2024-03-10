@@ -7897,6 +7897,18 @@ class ProjectAlternative(db.Model, AlternativesPriorityMixin):
     alternative_id = db.Column(db.Integer(), db.ForeignKey("projects.id"))
     alternative = db.relationship("Project", foreign_keys=[alternative_id], uselist=False, backref=db.backref("alternative_for", lazy="dynamic"))
 
+    def get_reciprocal(self):
+        """
+        get reciprocal version of this alternative, if one exists
+        :return:
+        """
+        return db.session.query(ProjectAlternative).filter_by(parent_id=self.alternative_id, alternative_id=self.parent_id).first()
+
+    @property
+    def has_reciprocal(self):
+        rcp: Optional[ProjectAlternative] = self.get_reciprocal()
+        return rcp is not None
+
 
 @cache.memoize()
 def _ProjectDescription_is_valid(id):
@@ -9099,18 +9111,45 @@ class LiveProjectAlternative(db.Model, AlternativesPriorityMixin):
     alternative_id = db.Column(db.Integer(), db.ForeignKey("live_projects.id"))
     alternative = db.relationship("LiveProject", foreign_keys=[alternative_id], uselist=False, backref=db.backref("alternative_for", lazy="dynamic"))
 
+    def get_library(self):
+        """
+        get library version of this alternative, if one exists
+        :return:
+        """
+        lp: LiveProject = self.parent
+        p: Project = lp.parent
+
+        if p is None:
+            return None
+
+        alt_lp: LiveProject = self.alternative
+        alt_p: Project = alt_lp.parent
+
+        if alt_p is None:
+            return None
+
+        return db.session.query(ProjectAlternative).filter_by(parent_id=p.id, alternative_id=alt_p.id).first()
+
     @property
     def in_library(self):
         """
         test whether this alternative is also listed in the main library
         :return:
         """
-
-        lp: LiveProject = self.parent
-        p: Project = lp.parent
-
-        pa: Optional[ProjectAlternative] = db.session.query(ProjectAlternative).filter_by(parent_id=p.id, alternative_id=self.alternative_id).first()
+        pa: Optional[ProjectAlternative] = self.get_library()
         return pa is not None
+
+    def get_reciprocal(self):
+        """
+        get reciprocal version of this alternative, if one exists
+        :return:
+        """
+        return db.session.query(LiveProjectAlternative).filter_by(parent_id=self.alternative_id, alternative_id=self.parent_id).first()
+
+    @property
+    def has_reciprocal(self):
+        rcp: Optional[LiveProjectAlternative] = self.get_reciprocal()
+        return rcp is not None
 
 
 @cache.memoize()

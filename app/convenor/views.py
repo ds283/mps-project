@@ -11,7 +11,7 @@
 
 from datetime import date, datetime, timedelta
 from functools import partial
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from uuid import uuid4
 
 import parse
@@ -3040,6 +3040,119 @@ def create_liveproject_alternative(lp_id, alt_lp_id):
         db.session.rollback()
 
     return redirect(url)
+
+
+@convenor.route("/copy_alternative_to_library/<int:alt_id>")
+@roles_accepted("faculty", "admin", "root")
+def copy_alternative_to_library(alt_id):
+    # alt_id is a LiveProjectAlternative instance
+    alt: LiveProjectAlternative = LiveProjectAlternative.query.get_or_404(alt_id)
+
+    # reject user if not a convenor (or other suitable administrator)
+    if not validate_is_admin_or_convenor():
+        return redirect(redirect_url())
+
+    lp: LiveProject = alt.parent
+    library_project: Project = lp.parent
+
+    if library_project is None:
+        flash("Cannot copy this alternative to the main library, because no library project is linked to the parent LiveProject", "error")
+        return redirect(redirect_url())
+
+    alt_lp: LiveProject = alt.alternative
+    library_alt_project: Project = alt_lp.parent
+
+    if library_alt_project is None:
+        flash("Cannot copy this alternative to the main library, because no library project is linked to the alternative LiveProject", "error")
+        return redirect(redirect_url())
+
+    try:
+        library_alt = db.session.query(ProjectAlternative).filter_by(parent_id=library_project.id, alternative_id=library_alt_project.id).first()
+        if library_alt is None:
+            library_alt = ProjectAlternative(
+                parent_id=library_project.id,
+                alternative_id=library_alt_project.id,
+                priority=alt.priority,
+            )
+            db.session.add(library_alt)
+            db.session.flush()
+
+        # update priority if it has changed
+        if alt.priority != library_alt.priority:
+            library_alt.priority = alt.priority
+
+        db.session.commit()
+
+    except SQLAlchemyError as e:
+        flash("Could not create alternative due to a database error. Please contact a system administrator", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/copy_project_alternative_reciprocal/<int:alt_id>")
+@roles_accepted("faculty", "admin", "root")
+def copy_project_alternative_reciprocal(alt_id):
+    # alt_id is a ProjectAlternative instance
+    alt: ProjectAlternative = ProjectAlternative.query.get_or_404(alt_id)
+
+    # reject user if not a convenor (or other suitable administrator)
+    if not validate_is_admin_or_convenor():
+        return redirect(redirect_url())
+
+    rcp: Optional[ProjectAlternative] = alt.get_reciprocal()
+    if rcp is not None:
+        flash("A request to create a reciprocal alternative was ignored, because the reciprocal is already present", "error")
+        return redirect(redirect_url())
+
+    rcp = ProjectAlternative(
+        parent_id=alt.alternative_id,
+        alternative_id=alt.parent_id,
+        priority=alt.priority,
+    )
+
+    try:
+        db.session.add(rcp)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash("Could not create alternative due to a database error. Please contact a system administrator", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/copy_liveproject_alternative_reciprocal/<int:alt_id>")
+@roles_accepted("faculty", "admin", "root")
+def copy_liveproject_alternative_reciprocal(alt_id):
+    # alt_id is a LiveProjectAlternative instance
+    alt: LiveProjectAlternative = LiveProjectAlternative.query.get_or_404(alt_id)
+
+    # reject user if not a convenor (or other suitable administrator) for this project class
+    if not validate_is_convenor(alt.parent.config.project_class):
+        return redirect(redirect_url())
+
+    rcp: Optional[ProjectAlternative] = alt.get_reciprocal()
+    if rcp is not None:
+        flash("A request to create a reciprocal alternative was ignored, because the reciprocal is already present", "error")
+        return redirect(redirect_url())
+
+    rcp = LiveProjectAlternative(
+        parent_id=alt.alternative_id,
+        alternative_id=alt.parent_id,
+        priority=alt.priority,
+    )
+
+    try:
+        db.session.add(rcp)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash("Could not create alternative due to a database error. Please contact a system administrator", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
+
+    return redirect(redirect_url())
 
 
 @convenor.route("/liveprojects/<int:id>")

@@ -7814,6 +7814,17 @@ class Project(
 
         return Project.APPROVALS_UNKNOWN
 
+    @property
+    def has_alternatives(self) -> bool:
+        if self.number_alternatives > 0:
+            return True
+
+        return False
+
+    @property
+    def number_alternatives(self) -> int:
+        return get_count(self.alternatives)
+
     def maintenance(self):
         """
         Perform regular basic maintenance, to ensure validity of the database

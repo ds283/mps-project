@@ -50,6 +50,7 @@ from .forms import (
     AddSubmitterRoleForm,
     EditRolesFormFactory,
     EditLiveProjectAlternativeForm,
+    EditProjectAlternativeForm,
 )
 from ..admin.forms import LevelSelectorForm
 from ..database import db
@@ -107,6 +108,7 @@ from ..models import (
     MatchingRole,
     validate_nonce,
     LiveProjectAlternative,
+    ProjectAlternative,
 )
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import AssetUploadManager
@@ -144,6 +146,7 @@ from ..shared.validators import (
     validate_project_class,
     validate_edit_description,
     validate_view_project,
+    validate_is_admin_or_convenor,
 )
 from ..student.actions import store_selection
 from ..task_queue import register_task
@@ -2649,6 +2652,193 @@ def add_role(record_id):
         return redirect(url)
 
     return render_template_context("convenor/submitter/add_role.html", form=form, record=record, period=period, config=config, sub=sub, url=url)
+
+
+@convenor.route("/edit_project_alternatives/<int:proj_id>")
+@roles_accepted("faculty", "admin", "root")
+def edit_project_alternatives(proj_id):
+    # proj_id is a Project instance
+    proj: Project = Project.query.get_or_404(proj_id)
+
+    # reject user if not a convenor (or other suitable administrator)
+    if not validate_is_admin_or_convenor():
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    return render_template_context("convenor/projects/edit_alternatives.html", proj=proj, url=url, text=text)
+
+
+@convenor.route("/edit_project_alternatives_ajax/<int:proj_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_project_alternatives_ajax(proj_id):
+    # proj_id is a Project instance
+    proj: Project = Project.query.get_or_404(proj_id)
+
+    # reject user if not a convenor (or other suitable administrator)
+    if not validate_is_admin_or_convenor():
+        return jsonify({})
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    base_query = proj.alternatives.join(Project, Project.id == ProjectAlternative.alternative_id)
+
+    project = {"search": Project.name, "order": Project.name, "search_collation": "utf8_general_ci"}
+    priority = {"order": ProjectAlternative.priority}
+
+    columns = {"project": project, "priority": priority}
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+
+        def row_formatter(alternatives):
+            return ajax.convenor.project_alternatives(alternatives, url=url, text=text)
+
+        return handler.build_payload(row_formatter)
+
+
+@convenor.route("/delete_project_alternative/<int:alt_id>")
+@roles_accepted("faculty", "admin", "root")
+def delete_project_alternative(alt_id):
+    # alt_id is a ProjectAlternative instance
+    alt: ProjectAlternative = ProjectAlternative.query.get_or_404(alt_id)
+
+    # reject user if not a convenor (or other suitable administrator)
+    if not validate_is_admin_or_convenor():
+        return redirect(redirect_url())
+
+    try:
+        db.session.delete(alt)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash("Could not delete project alternative because of a database error. Please contact a system administrator.", "error")
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/edit_project_alternative/<int:alt_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_project_alternative(alt_id):
+    # alt_id is a ProjectAlternative instance
+    alt: ProjectAlternative = ProjectAlternative.query.get_or_404(alt_id)
+
+    # reject user if not a convenor (or other suitable administrator)
+    if not validate_is_admin_or_convenor():
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+
+    if url is None:
+        url = url_for("convenor.edit_project_alternatives", proj_id=alt.parent_id)
+
+    form = EditProjectAlternativeForm(obj=alt)
+
+    if form.validate_on_submit():
+        alt.priority = form.priority.data
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not modify project alternative properties due to a database error. Please contact a system administrator.", "error")
+
+        return redirect(url)
+
+    return render_template_context("convenor/projects/edit_alternative.html", form=form, alt=alt, url=url)
+
+
+@convenor.route("/new_project_alternative/<int:proj_id>")
+@roles_accepted("faculty", "admin", "root")
+def new_project_alternative(proj_id):
+    # proj_id is a Project instance
+    proj: Project = Project.query.get_or_404(proj_id)
+
+    # reject user if not a convenor (or other suitable administrator)
+    if not validate_is_admin_or_convenor():
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+
+    return render_template_context("convenor/projects/new_alternative.html", proj=proj, url=url)
+
+
+@convenor.route("/new_project_alternative_ajax/<int:proj_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def new_project_alternative_ajax(proj_id):
+    # proj_id is a Project instance
+    proj: Project = Project.query.get_or_404(proj_id)
+
+    # reject user if not a convenor (or other suitable administrator)
+    if not validate_is_admin_or_convenor():
+        return jsonify({})
+
+    url = request.args.get("url", None)
+
+    # get list of available projects, excluding any projects that are already alternatives for this one
+    base_query = (
+        db.session.query(Project)
+        .filter(Project.active, ~Project.alternative_for.any(parent_id=proj.id), Project.id != proj_id)
+        .join(FacultyData, FacultyData.id == Project.owner_id, isouter=True)
+        .join(User, User.id == FacultyData.id, isouter=True)
+    )
+
+    project = {"search": Project.name, "order": Project.name, "search_collation": "utf8_general_ci"}
+    owner = {
+        "search": func.concat(User.first_name, " ", User.last_name),
+        "search_collation": "utf8_general_ci",
+        "order": [User.last_name, User.first_name],
+    }
+    columns = {"project": project, "owner": owner}
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+
+        def row_formatter(projects):
+            return ajax.convenor.new_project_alternative(projects, proj, url)
+
+        return handler.build_payload(row_formatter)
+
+
+@convenor.route("/create_project_alternative/<int:proj_id>/<int:alt_proj_id>")
+@roles_accepted("faculty", "admin", "root")
+def create_project_alternative(proj_id, alt_proj_id):
+    # proj_id is a Project instance
+    proj: Project = Project.query.get_or_404(proj_id)
+
+    # alt_lp_id is a LiveProject instance
+    alt_proj: Project = Project.query.get_or_404(alt_proj_id)
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    # reject user if not a convenor (or other suitable administrator)
+    if not validate_is_admin_or_convenor():
+        return redirect(url)
+
+    # check whether an ProjectAlternative with this parent and alternative already exists
+    q = db.session.query(ProjectAlternative).filter(ProjectAlternative.parent_id == proj_id, ProjectAlternative.alternative_id == alt_proj_id).first()
+    if q is not None:
+        flash(
+            f'A request to create a project alternative for parent "{proj.name}" and alternative '
+            f'"{alt_proj.name}" was ignored, because this combination already exists in the database.'
+        )
+        return redirect(url)
+
+    alt = ProjectAlternative(parent_id=proj_id, alternative_id=alt_proj_id, priority=1)
+
+    try:
+        db.session.add(alt)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash("Could not create alternative due to a database error. Please contact a system administrator", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
+
+    return redirect(url)
 
 
 @convenor.route("/edit_liveproject_alternatives/<int:lp_id>")

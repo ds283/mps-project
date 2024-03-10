@@ -25,7 +25,7 @@ from ..models import (
     SubmissionRole,
     SubmissionRecord,
     FacultyData,
-    LiveProjectAlternative,
+    AlternativesPriorityMixin,
 )
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, PeriodPresentationsMixin, PeriodSelectorMixinFactory
 from ..shared.forms.queries import (
@@ -516,13 +516,17 @@ class AlternativePriorityMixin:
         validators=[
             InputRequired(),
             NumberRange(
-                max=LiveProjectAlternative.LOWEST_PRIORIY,
-                min=LiveProjectAlternative.HIGHEST_PRIORITY,
-                message=f"Please choose a priority between {LiveProjectAlternative.HIGHEST_PRIORITY} and {LiveProjectAlternative.LOWEST_PRIORIY}",
+                max=AlternativesPriorityMixin.LOWEST_PRIORIY,
+                min=AlternativesPriorityMixin.HIGHEST_PRIORITY,
+                message=f"Please choose a priority between {AlternativesPriorityMixin.HIGHEST_PRIORITY} and {AlternativesPriorityMixin.LOWEST_PRIORIY}",
             ),
         ],
     )
 
 
 class EditLiveProjectAlternativeForm(Form, AlternativePriorityMixin, SaveChangesMixin):
+    pass
+
+
+class EditProjectAlternativeForm(Form, AlternativePriorityMixin, SaveChangesMixin):
     pass

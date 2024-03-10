@@ -19,6 +19,7 @@ from .liveproject_alternatives import liveproject_alternatives, new_liveproject_
 from .liveprojects import liveprojects_data
 from .manual_assign import manual_assign_data
 from .outstanding_confirm import outstanding_confirm_data
+from .project_alternatives import project_alternatives, new_project_alternative
 from .selector_grid import selector_grid_data
 from .selectors import selectors_data
 from .show_confirmations import show_confirmations

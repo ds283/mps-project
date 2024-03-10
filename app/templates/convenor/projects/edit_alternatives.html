@@ -1,6 +1,8 @@
 {% extends "base_app.html" %}
 
 {% from "datatables.html" import import_datatables, bootstrap_spinner %}
+{% from "macros.html" import on_click_selector_field %}
+{% from "icon_block.html" import icon_block %}
 
 {% block scripts %}
     {{ super() }}
@@ -10,13 +12,13 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#create-alternative-table').DataTable({
+            $('#alternatives-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 serverSide: true, processing: true,
                 language: {{ bootstrap_spinner() }},
                 ajax: {
-                    url: $SCRIPT_ROOT + '/convenor/new_liveproject_alternative_ajax/{{ lp.id }}?url={{ url|urlencode }}',
+                    url: $SCRIPT_ROOT + '/convenor/edit_project_alternatives_ajax/{{ proj.id }}?url={{ url|urlencode }}&text={{ text|urlencode }}',
                     type: 'POST',
                     data: function (args) {
                         return {"args": JSON.stringify(args)};
@@ -33,12 +35,17 @@
                         searchable: true
                     },
                     {
-                        data: 'owner',
+                        data: 'priority',
                         orderable: true,
-                        searchable: true
+                        searchable: false
                     },
                     {
-                        data: 'actions',
+                        data: 'supervision',
+                        orderable: false,
+                        searchable: false
+                    },
+                    {
+                        data: 'menu',
                         orderable: false,
                         searchable: false
                     }
@@ -50,43 +57,52 @@
 {% endblock %}
 
 {% block title %}
-    Add new alternative project for live project {{ lp.name }}
+    Edit matching alternatives for library project {{ proj.name }}
 {% endblock %}
 
 {% block bodyblock %}
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
-            {% if url %}
+            {% if url and text %}
                 <div class="top-return-link">
                     <a class="text-decoration-none" href="{{ url }}">
-                        <i class="fas fa-backward"></i> Return to project alternatives view
+                        <i class="fas fa-backward"></i> Return to {{ text }}
                     </a>
                 </div>
             {% endif %}
 
             <div class="card border-primary mt-3 mb-3">
-                <div class="card-header bg-primary text-white">
-                    Add new alternative project for
-                    library project <strong>{{ lp.name }}</strong>
-                </div>
+                <div class="card-header bg-primary text-white">Edit matching alternatives for
+                    library project <strong>{{ proj.name }}</strong></div>
                 <div class="card-body">
-                    <table id="create-alternative-table" class="table table-striped table-bordered">
+
+                    <table id="alternatives-table" class="table table-striped table-bordered">
                         <thead>
                         <tr>
-                            <th width="50%"> Project</th>
-                            <th width="35%"> Owner</th>
+                            <th width="30%"> Project</th>
+                            <th width="10%"> Priority</th>
+                            <th width="45%"> Available supervisors</th>
                             <th width="15%"> Actions</th>
                         </tr>
                         </thead>
                     </table>
+                    <div class="text-center">
+                        <a href="{{ url_for('convenor.new_project_alternative', proj_id=proj.id, url=url_for('convenor.edit_project_alternatives', proj_id=proj.id, url=url, text=text)) }}"
+                           class="btn btn-secondary btn-lg">
+                            <i class="fas fa-plus"></i>
+                            Create new alternative
+                        </a>
+                    </div>
                 </div>
             </div>
 
-            {% if url %}
-                <a class="text-decoration-none" href="{{ url }}">
-                    <i class="fas fa-backward"></i> Return to project alternatives view
-                </a>
+            {% if url and text %}
+                <div>
+                    <a class="text-decoration-none" href="{{ url }}">
+                        <i class="fas fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
             {% endif %}
         </div>
         <div class="col-1"></div>

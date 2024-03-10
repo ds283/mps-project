@@ -156,7 +156,7 @@ _menu = """
             <i class="fas fa-wrench fa-fw"></i> View analytics
         </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_liveproject_alternatives', lp_id=project.id, text='live projects list', url=url_for('convenor.liveprojects', id=config.pclass_id)) }}">
-            <i class="fas fa-wrench fa-fw"></i> Edit alternatives...
+            <i class="fas fa-wrench fa-fw"></i> Alternatives...
         </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.delete_live_project', pid=project.id) }}">
             <i class="fas fa-trash fa-fw"></i> Delete

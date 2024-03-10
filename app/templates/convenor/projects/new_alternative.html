@@ -16,7 +16,7 @@
                 serverSide: true, processing: true,
                 language: {{ bootstrap_spinner() }},
                 ajax: {
-                    url: $SCRIPT_ROOT + '/convenor/new_liveproject_alternative_ajax/{{ lp.id }}?url={{ url|urlencode }}',
+                    url: $SCRIPT_ROOT + '/convenor/new_project_alternative_ajax/{{ proj.id }}?url={{ url|urlencode }}',
                     type: 'POST',
                     data: function (args) {
                         return {"args": JSON.stringify(args)};
@@ -50,7 +50,7 @@
 {% endblock %}
 
 {% block title %}
-    Add new alternative project for live project {{ lp.name }}
+    Add new alternative project for library project {{ proj.name }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -68,7 +68,7 @@
             <div class="card border-primary mt-3 mb-3">
                 <div class="card-header bg-primary text-white">
                     Add new alternative project for
-                    library project <strong>{{ lp.name }}</strong>
+                    library project <strong>{{ proj.name }}</strong>
                 </div>
                 <div class="card-body">
                     <table id="create-alternative-table" class="table table-striped table-bordered">

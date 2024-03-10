@@ -56,6 +56,11 @@ _name = """
                 <span class="badge bg-info">{{ num }} variant{{ pl }}</span>
             {% endif %}
         {% endif %}
+        {% set num = project.number_alternatives %}
+        {% if num > 0 %}
+            {% set pl = 's' %}{% if num == 1 %}{% set pl = '' %}{% endif %}
+            <span class="badge bg-success">{{ num }} alternative{{ pl }}</span>
+        {% endif %}
     </div>
     {% if name_labels %}
         <div>
@@ -306,8 +311,11 @@ _convenor_menu = """
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=pclass_id) }}">
             <i class="fas fa-tools fa-fw"></i> Variants...
         </a>
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=pclass_id, url=url_for('convenor.attached', id=pclass_id), text='convenor dashboard') }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=pclass_id, url=url_for('convenor.attached', id=pclass_id), text='convenor projects view') }}">
             <i class="fas fa-cogs fa-fw"></i> Assessors...
+        </a>
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_project_alternatives', proj_id=project.id, url=url_for('convenor.attached', id=pclass_id), text='convenor projects view') }}">
+            <i class="fas fa-cogs fa-fw"></i> Alternatives...
         </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=pclass_id) }}">
             <i class="fas fa-cogs fa-fw"></i> Transferable skills...

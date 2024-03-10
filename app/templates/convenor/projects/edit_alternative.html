@@ -3,15 +3,15 @@
 {% import "bootstrap/form.html" as wtf %}
 
 {% block title %}
-    Edit properties for live project alternative
+    Edit properties for library project alternative
 {% endblock %}
 
 {% block formtitle %}
-    Edit properties for live project alternative
+    Edit properties for library project alternative
 {% endblock %}
 
 {% block form_content %}
-    <form action="{{ url_for('convenor.edit_liveproject_alternative', alt_id=alt.id, url=url) }}" method="POST"
+    <form action="{{ url_for('convenor.edit_project_alternative', alt_id=alt.id, url=url) }}" method="POST"
           name="edit_alternative_form">
         {{ form.hidden_tag() }}
 

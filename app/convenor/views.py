@@ -49,6 +49,7 @@ from .forms import (
     EditSubmissionPeriodRecordPresentationsForm,
     AddSubmitterRoleForm,
     EditRolesFormFactory,
+    EditLiveProjectAlternativeForm,
 )
 from ..admin.forms import LevelSelectorForm
 from ..database import db
@@ -105,6 +106,7 @@ from ..models import (
     MatchingRecord,
     MatchingRole,
     validate_nonce,
+    LiveProjectAlternative,
 )
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import AssetUploadManager
@@ -2618,7 +2620,8 @@ def add_role(record_id):
             "convenor.edit_roles",
             sub_id=sub.id,
             record_id=record.id,
-            url=url_for("convenor.submitters", id=config.project_class.id, text="convenor submitters view"),
+            url=url_for("convenor.submitters", id=config.project_class.id),
+            text="convenor submitters view",
         )
 
     form = AddSubmitterRoleForm(request.form)
@@ -2646,6 +2649,207 @@ def add_role(record_id):
         return redirect(url)
 
     return render_template_context("convenor/submitter/add_role.html", form=form, record=record, period=period, config=config, sub=sub, url=url)
+
+
+@convenor.route("/edit_liveproject_alternatives/<int:lp_id>")
+@roles_accepted("faculty", "admin", "root")
+def edit_liveproject_alternatives(lp_id):
+    # lp_id is a LiveProject instance
+    lp: LiveProject = LiveProject.query.get_or_404(lp_id)
+
+    # reject user if not a convenor (or other suitable administrator) for this project class
+    if not validate_is_convenor(lp.config.project_class):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    return render_template_context("convenor/liveprojects/edit_alternatives.html", lp=lp, url=url, text=text)
+
+
+@convenor.route("/edit_liveproject_alternatives_ajax/<int:lp_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_liveproject_alternatives_ajax(lp_id):
+    # lp_id is a LiveProject instance
+    lp: LiveProject = LiveProject.query.get_or_404(lp_id)
+
+    # reject user if not a convenor (or other suitable administrator) for this project class
+    if not validate_is_convenor(lp.config.project_class):
+        return jsonify({})
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    base_query = lp.alternatives.join(LiveProject, LiveProject.id == LiveProjectAlternative.alternative_id)
+
+    project = {"search": LiveProject.name, "order": LiveProject.name, "search_collation": "utf8_general_ci"}
+    priority = {"order": LiveProjectAlternative.priority}
+
+    columns = {"project": project, "priority": priority}
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+
+        def row_formatter(alternatives):
+            return ajax.convenor.liveproject_alternatives(alternatives, url=url, text=text)
+
+        return handler.build_payload(row_formatter)
+
+
+@convenor.route("/delete_liveproject_alternative/<int:alt_id>")
+@roles_accepted("faculty", "admin", "root")
+def delete_liveproject_alternative(alt_id):
+    # alt_id is a LiveProjectAlternative instance
+    alt: LiveProjectAlternative = LiveProjectAlternative.query.get_or_404(alt_id)
+
+    # reject user if not a convenor (or other suitable administrator) for this project class
+    if not validate_is_convenor(alt.parent.config.project_class):
+        return redirect(redirect_url())
+
+    try:
+        db.session.delete(alt)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash("Could not delete LiveProject alternative because of a database error. Please contact a system administrator.", "error")
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/edit_liveproject_alternative/<int:alt_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_liveproject_alternative(alt_id):
+    # alt_id is a LiveProjectAlternative instance
+    alt: LiveProjectAlternative = LiveProjectAlternative.query.get_or_404(alt_id)
+
+    # reject user if not a convenor (or other suitable administrator) for this project class
+    if not validate_is_convenor(alt.parent.config.project_class):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+
+    if url is None:
+        url = url_for(
+            "convenor.edit_liveproject_alternatives",
+            lp_id=alt.parent.id,
+            url=url_for("convenor.liveprojects", id=alt.parent.config.project_class),
+            text="convenor LiveProjects view",
+        )
+
+    form = EditLiveProjectAlternativeForm(obj=alt)
+
+    if form.validate_on_submit():
+        alt.priority = form.priority.data
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not modify LiveProject alternative properties due to a database error. Please contact a system administrator.", "error")
+
+        return redirect(url)
+
+    return render_template_context("convenor/liveprojects/edit_alternative.html", form=form, alt=alt, url=url)
+
+
+@convenor.route("/new_liveproject_alternative/<int:lp_id>")
+@roles_accepted("faculty", "admin", "root")
+def new_liveproject_alternative(lp_id):
+    # lp_id is a LiveProject instance
+    lp: LiveProject = LiveProject.query.get_or_404(lp_id)
+
+    # reject user if not a convenor (or other suitable administrator) for this project class
+    if not validate_is_convenor(lp.config.project_class):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+
+    return render_template_context("convenor/liveprojects/new_alternative.html", lp=lp, url=url)
+
+
+@convenor.route("/new_liveproject_alternative_ajax/<int:lp_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def new_liveproject_alternative_ajax(lp_id):
+    # lp_id is a LiveProject instance
+    lp: LiveProject = LiveProject.query.get_or_404(lp_id)
+
+    # reject user if not a convenor (or other suitable administrator) for this project class
+    if not validate_is_convenor(lp.config.project_class):
+        return jsonify({})
+
+    url = request.args.get("url", None)
+
+    # get list of available projects, excluding any projects that are already alternatives for this one
+    config: ProjectClassConfig = lp.config
+    base_query = (
+        config.live_projects.filter(~LiveProject.alternative_for.any(parent_id=lp.id), LiveProject.id != lp_id)
+        .join(FacultyData, FacultyData.id == LiveProject.owner_id, isouter=True)
+        .join(User, User.id == FacultyData.id, isouter=True)
+    )
+
+    project = {"search": LiveProject.name, "order": LiveProject.name, "search_collation": "utf8_general_ci"}
+    owner = {
+        "search": func.concat(User.first_name, " ", User.last_name),
+        "search_collation": "utf8_general_ci",
+        "order": [User.last_name, User.first_name],
+    }
+    columns = {"project": project, "owner": owner}
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+
+        def row_formatter(projects):
+            return ajax.convenor.new_liveproject_alternative(projects, lp, url)
+
+        return handler.build_payload(row_formatter)
+
+
+@convenor.route("/create_liveproject_alternative/<int:lp_id>/<int:alt_lp_id>")
+@roles_accepted("faculty", "admin", "root")
+def create_liveproject_alternative(lp_id, alt_lp_id):
+    # lp_id is a LiveProject instance
+    lp: LiveProject = LiveProject.query.get_or_404(lp_id)
+
+    # alt_lp_id is a LiveProject instance
+    alt_lp: LiveProject = LiveProject.query.get_or_404(alt_lp_id)
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    # reject if lp and alt_lp don't belong to the same ProjectClassConfig
+    if lp.config_id != alt_lp.config_id:
+        flash(f'Projects "{lp.name}" and "{alt_lp.name}" do not belong to the same project cycle, ' f"so they cannot be alternatives", "error")
+        return redirect(url)
+
+    # reject user if not a convenor (or other suitable administrator) for this project class
+    if not validate_is_convenor(lp.config.project_class):
+        return redirect(url)
+
+    # check whether an LiveProjectAlternative with this parent and alternative already exists
+    q = (
+        db.session.query(LiveProjectAlternative)
+        .filter(LiveProjectAlternative.parent_id == lp_id, LiveProjectAlternative.alternative_id == alt_lp_id)
+        .first()
+    )
+    if q is not None:
+        flash(
+            f'A request to create a LiveProject alternative for parent "{lp.name}" and alternative '
+            f'"{alt_lp.name}" was ignored, because this combination already exists in the database.'
+        )
+        return redirect(url)
+
+    alt = LiveProjectAlternative(parent_id=lp_id, alternative_id=alt_lp_id, priority=1)
+
+    try:
+        db.session.add(alt)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash("Could not create alternative due to a database error. Please contact a system administrator", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
+
+    return redirect(url)
 
 
 @convenor.route("/liveprojects/<int:id>")
@@ -6984,7 +7188,8 @@ def new_selector_offer_ajax(sel_id):
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         return jsonify({})
 
-    config = sel.config
+    # get list of available projects, excluding any projects for which this selector already holds offers
+    config: ProjectClassConfig = sel.config
     projects = config.live_projects.filter(~LiveProject.custom_offers.any(selector_id=sel_id))
 
     return ajax.convenor.student_offer_projects(projects.all(), sel)
@@ -7023,8 +7228,8 @@ def new_project_offer_ajax(proj_id):
         flash("It is not possible to set up a new custom offer before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    # get list of available selectors
-    config = proj.config
+    # get list of available selectors, excluding any selectors who already hold offers for this project
+    config: ProjectClassConfig = proj.config
     selectors = config.selecting_students.filter(~SelectingStudent.custom_offers.any(liveproject_id=proj_id))
 
     return ajax.convenor.project_offer_selectors(selectors.all(), proj)
@@ -7047,15 +7252,19 @@ def create_new_offer(sel_id, proj_id):
     # check project and selector belong to the same project class
     if proj.config_id != sel.config_id:
         flash(
-            'Project "{pname}" and selector "{sname}" do not belong to the same project class, so a '
+            'Project "{pname}" and selector "{sname}" do not belong to the same project cycle, so a '
             "custom offer cannot be created for this pair.".format(pname=proj.name, sname=sel.student.user.name),
             "error",
         )
         return redirect(url)
 
+    # reject user if not a convenor (or other suitable administrator) for this project class
+    if not validate_is_convenor(proj.config.project_class):
+        return redirect(redirect_url())
+
     # check whether an offer with this selector and project already exists
-    q = db.session.query(CustomOffer).filter(CustomOffer.liveproject_id == proj_id, CustomOffer.selector_id == sel_id)
-    if get_count(q) > 0:
+    q = db.session.query(CustomOffer).filter(CustomOffer.liveproject_id == proj_id, CustomOffer.selector_id == sel_id).first()
+    if q is not None:
         flash(
             'A request to create a custom offer for project "{pname}" and selector "{sname}" was ignored, '
             "because an offer for this pair already exists".format(pname=proj.name, sname=sel.student.user.name),

@@ -119,10 +119,10 @@ _project_offers = """
 
 # language=jinja2
 _sel_actions = """
-<div class="float-end">
+<div class="d-flex flex-row justify-content-end">
     <a href="{{ url_for('convenor.create_new_offer', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.selector_custom_offers', sel_id=sel.id)) }}"
-       class="btn btn-sm btn-secondary">
-       Create offer
+       class="btn btn-sm btn-outline-primary">
+       <i class="fas fa-plus"></i> Create offer
     </a>
 </div>
 """
@@ -130,10 +130,10 @@ _sel_actions = """
 
 # language=jinja2
 _proj_actions = """
-<div class="float-end">
+<div class="d-flex flex-row justify-content-end">
     <a href="{{ url_for('convenor.create_new_offer', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.project_custom_offers', proj_id=project.id)) }}"
-       class="btn btn-sm btn-secondary">
-       Create offer
+       class="btn btn-sm btn-outline-primary">
+       <i class="fas fa-plus"></i> Create offer
     </a>
 </div>
 """

@@ -7,7 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-
+from typing import Optional, List
 
 from flask import flash
 from flask_login import current_user
@@ -16,7 +16,7 @@ from sqlalchemy import and_
 from .context.assessments import get_assessment_data
 from .utils import get_current_year
 from ..database import db
-from ..models import ProjectClassConfig, SubmittingStudent, SubmissionRecord, SubmissionRole
+from ..models import ProjectClassConfig, SubmittingStudent, SubmissionRecord, SubmissionRole, ProjectClass
 from ..shared.utils import get_count
 
 
@@ -28,13 +28,13 @@ def validate_is_administrator(message=True):
 
     if not current_user.has_role("admin") and not current_user.has_role("root"):
         if message:
-            flash("Only administrative users can perform this operation.", "error")
+            flash("This action is available only to administrative users.", "error")
         return False
 
     return True
 
 
-def validate_is_convenor(pclass, message=True, allow_roles=None):
+def validate_is_convenor(pclass: ProjectClass, message: bool = True, allow_roles: Optional[List[str]] = None):
     """
     Validate that the logged-in user is privileged to view a convenor dashboard or use other convenor functions
     :param pclass: Project class model instance
@@ -55,7 +55,7 @@ def validate_is_convenor(pclass, message=True, allow_roles=None):
                 return True
 
     if message:
-        flash("Convenor actions are available only to project convenors and administrative users.", "error")
+        flash("This action is available only to project convenors and administrative users.", "error")
 
     return False
 
@@ -78,7 +78,7 @@ def validate_is_admin_or_convenor(*roles):
         if current_user.has_role(role):
             return True
 
-    flash("This operation is available only to administrative users and project convenors.", "error")
+    flash("This action is available only to project convenors and administrative users.", "error")
     return False
 
 

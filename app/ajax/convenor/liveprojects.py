@@ -20,6 +20,12 @@ _name = """
         <span class="badge bg-danger"><i class="fas fa-eye-slash"></i> HIDDEN</span>
     </div>
 {% endif %}
+{% set num_alternatives = project.number_alternatives %}
+{% if num_alternatives > 0 %}
+    <div>
+        <span class="badge bg-success">{{ num_alternatives }} alternative{% if num_alternatives != 1 %}s{% endif %}</span>
+    </div>
+{% endif %}
 """
 
 
@@ -149,6 +155,9 @@ _menu = """
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}">
             <i class="fas fa-wrench fa-fw"></i> View analytics
         </a>
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_liveproject_alternatives', lp_id=project.id, text='live projects list', url=url_for('convenor.liveprojects', id=config.pclass_id)) }}">
+            <i class="fas fa-wrench fa-fw"></i> Edit alternatives...
+        </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.delete_live_project', pid=project.id) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
@@ -161,7 +170,7 @@ _menu = """
                 <i class="fas fa-eye-slash fa-fw"></i> Hide
             </a>
         {% endif %}        
-        <div role="separator" class="dropdown-divider">
+        <div role="separator" class="dropdown-divider"></div>
         {% if project.number_bookmarks > 0 %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
                 <i class="fas fa-cogs fa-fw"></i> Bookmarks...

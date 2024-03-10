@@ -39,7 +39,7 @@ _selections = """
                 <span class="small">#{{ item.rank }}</span>
                 {% if project.group %}
                     {% set swatch_color = project.group.make_CSS_style() %}
-                    {{ small_swatch(swatch_color) }}
+                    <div class="mt-1">{{ small_swatch(swatch_color) }}</div>
                 {% endif %}
                 <span class="small">
                     {{ item.format_project()|safe }}

@@ -25,6 +25,7 @@ from ..models import (
     SubmissionRole,
     SubmissionRecord,
     FacultyData,
+    LiveProjectAlternative,
 )
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, PeriodPresentationsMixin, PeriodSelectorMixinFactory
 from ..shared.forms.queries import (
@@ -506,3 +507,22 @@ def EditRolesFormFactory(config: ProjectClassConfig):
         pass
 
     return EditRolesForm
+
+
+class AlternativePriorityMixin:
+    priority = IntegerField(
+        "Priority",
+        description="Set the priority attached to this alternative. Low values represent high priority.",
+        validators=[
+            InputRequired(),
+            NumberRange(
+                max=LiveProjectAlternative.LOWEST_PRIORIY,
+                min=LiveProjectAlternative.HIGHEST_PRIORITY,
+                message=f"Please choose a priority between {LiveProjectAlternative.HIGHEST_PRIORITY} and {LiveProjectAlternative.LOWEST_PRIORIY}",
+            ),
+        ],
+    )
+
+
+class EditLiveProjectAlternativeForm(Form, AlternativePriorityMixin, SaveChangesMixin):
+    pass

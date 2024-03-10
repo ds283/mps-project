@@ -8906,6 +8906,17 @@ class LiveProject(
 
         return None
 
+    @property
+    def has_alternatives(self) -> bool:
+        if self.number_alternatives > 0:
+            return True
+
+        return False
+
+    @property
+    def number_alternatives(self) -> int:
+        return get_count(self.alternatives)
+
     def maintenance(self):
         """
         Perform regular basic maintenance, to ensure validity of the database
@@ -9076,6 +9087,19 @@ class LiveProjectAlternative(db.Model, AlternativesPriorityMixin):
     # alternative project
     alternative_id = db.Column(db.Integer(), db.ForeignKey("live_projects.id"))
     alternative = db.relationship("LiveProject", foreign_keys=[alternative_id], uselist=False, backref=db.backref("alternative_for", lazy="dynamic"))
+
+    @property
+    def in_library(self):
+        """
+        test whether this alternative is also listed in the main library
+        :return:
+        """
+
+        lp: LiveProject = self.parent
+        p: Project = lp.parent
+
+        pa: Optional[ProjectAlternative] = db.session.query(ProjectAlternative).filter_by(parent_id=p.id, alternative_id=self.alternative_id).first()
+        return pa is not None
 
 
 @cache.memoize()

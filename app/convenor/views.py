@@ -6171,27 +6171,65 @@ def adjust_selection_deadline(configid):
         elif form.close.data:
             notify_convenor = form.notify_convenor.data
 
-            year = get_current_year()
-
-            celery = current_app.extensions["celery"]
-            close = celery.tasks["app.tasks.close_selection.pclass_close"]
-            close_fail = celery.tasks["app.tasks.close_selection.close_fail"]
-
-            # register as new background task and push to celery scheduler
-            task_id = register_task(
-                'Close selections for "{proj}" {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year + 1),
-                owner=current_user,
-                description='Close selections for "{proj}"'.format(proj=config.name),
+            title = f'Close selections for "{config.name}"'
+            action_url = url_for('convenor.perform_close_selections', configid=configid, notify_convenor=int(notify_convenor), url=url_for("convenor.status", id=config.pclass_id))
+            message = (
+                f'<p>Please confirm that you wish to close student selections for project class "{config.name}".</p>'
+                '<p>No immediate action is taken, but students will no longer be able to submit ranked preference lists, '
+                'and this project class will become available for use when building automated matching attempts.</p>'
             )
+            submit_label = "Close selections"
 
-            close.apply_async(
-                args=(task_id, config.id, current_user.id, notify_convenor), task_id=task_id, link_error=close_fail.si(task_id, current_user.id)
+            return render_template_context(
+                "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
             )
-
-            # pclass_close task posts a user message if the close logic proceeds correctly.
 
     return redirect(url_for("convenor.status", id=config.pclass_id))
 
+
+@convenor.route("/perform_close_selections/<int:configid>")
+@roles_accepted("faculty", "admin", "root")
+def perform_close_selections(configid):
+    # config id is a ProjectClassConfig
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect(redirect_url())
+
+    notify_convenor = bool(int(request.args.get("notify_convenor", 0)))
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(url)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(url)
+
+    # reject if project class is not live
+    if not config.live:
+        return redirect(redirect_url())
+
+    year = get_current_year()
+
+    celery = current_app.extensions["celery"]
+    close = celery.tasks["app.tasks.close_selection.pclass_close"]
+    close_fail = celery.tasks["app.tasks.close_selection.close_fail"]
+
+    # register as new background task and push to celery scheduler
+    task_id = register_task(
+        'Close selections for "{proj}" {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year + 1),
+        owner=current_user,
+        description='Close selections for "{proj}"'.format(proj=config.name),
+    )
+
+    # pclass_close task posts a user message if the close logic proceeds correctly.
+    close.apply_async(
+        args=(task_id, config.id, current_user.id, notify_convenor), task_id=task_id, link_error=close_fail.si(task_id, current_user.id)
+    )
+
+    return redirect(url)
 
 @convenor.route("/submit_student_selection/<int:sel_id>")
 @roles_accepted("faculty", "admin", "root")

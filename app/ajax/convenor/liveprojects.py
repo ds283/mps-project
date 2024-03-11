@@ -243,7 +243,7 @@ def liveprojects_data(projects, config: ProjectClassConfig, url=None, text=None)
     data = [
         {
             "name": render_template_string(_name, project=p, config=config),
-            "owner": render_template_string(_owner, project=p),
+            "owner": render_template_string(_owner, project=p, text=text, url=url),
             "group": render_template_string(_affiliation, project=p, simple_label=simple_label, truncate=truncate),
             "bookmarks": render_template_string(_bookmarks, project=p),
             "selections": render_template_string(_selections, project=p),

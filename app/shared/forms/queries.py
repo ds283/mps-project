@@ -75,6 +75,25 @@ def BuildActiveFacultyName(fac: FacultyData):
     return fac.user.name
 
 
+def GetAllPossibleSupervisors():
+    return GetActiveFaculty()
+
+
+def BuildSupervisorName(fac: FacultyData):
+    return BuildActiveFacultyName(fac)
+
+
+def GetPossibleSupervisors(pclass_id: int):
+    return (
+        db.session.query(FacultyData)
+        .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id)
+        .join(User, User.id == FacultyData.id)
+        .filter(User.active, EnrollmentRecord.pclass_id == pclass_id, EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+        .order_by(User.last_name, User.first_name)
+        .all()
+    )
+
+
 def GetPossibleConvenors():
     return db.session.query(FacultyData).join(User, User.id == FacultyData.id).filter(User.active).order_by(User.last_name, User.first_name)
 

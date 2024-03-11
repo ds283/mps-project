@@ -1,0 +1,46 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import date_field %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#supervisors').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                tags: true,
+                tokenSeparators: [',', ';'],
+                placeholder: 'Add supervisors...'
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Edit supervisor pool
+{% endblock %}
+
+{% block formtitle %}
+    Edit supervisor pool for library project <strong>{{ proj.name }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('convenor.edit_project_supervisors', proj_id=proj.id, url=url) }}" method="POST"
+          name="supervisor_form">
+        {{ form.hidden_tag() }}
+
+        <div class="mb-2">
+            {{ wtf.render_field(form.supervisors) }}
+        </div>
+
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+    </form>
+{% endblock %}

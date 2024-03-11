@@ -13,7 +13,7 @@ from functools import partial
 from flask_security.forms import Form
 from wtforms import SubmitField, IntegerField, StringField, BooleanField, TextAreaField, DateTimeField, SelectField
 from wtforms.validators import InputRequired, Optional, Email, Length, ValidationError, NumberRange
-from wtforms_alchemy import QuerySelectField
+from wtforms_alchemy import QuerySelectField, QuerySelectMultipleField
 
 from ..models import (
     DEFAULT_STRING_LENGTH,
@@ -26,6 +26,7 @@ from ..models import (
     SubmissionRecord,
     FacultyData,
     AlternativesPriorityMixin,
+    Project,
 )
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, PeriodPresentationsMixin, PeriodSelectorMixinFactory
 from ..shared.forms.queries import (
@@ -36,6 +37,9 @@ from ..shared.forms.queries import (
     GetCanvasEnabledConvenors,
     BuildCanvasLoginUserName,
     GetActiveFaculty,
+    GetAllPossibleSupervisors,
+    BuildSupervisorName,
+    GetPossibleSupervisors,
 )
 from ..shared.forms.wtf_validators import NotOptionalIf
 
@@ -530,3 +534,27 @@ class EditLiveProjectAlternativeForm(Form, AlternativePriorityMixin, SaveChanges
 
 class EditProjectAlternativeForm(Form, AlternativePriorityMixin, SaveChangesMixin):
     pass
+
+
+def EditProjectSupervisorsFactory(project: Project):
+    class EditProjectSupervisors(Form, SaveChangesMixin):
+        supervisors = QuerySelectMultipleField(
+            "Supervisors",
+            query_factory=GetAllPossibleSupervisors,
+            get_label=BuildSupervisorName,
+            validators=[InputRequired(message="Please specify at least one supervisor")],
+        )
+
+    return EditProjectSupervisors
+
+
+def EditLiveProjectSupervisorsFactory(project: LiveProject):
+    class EditLiveProjectSupervisors(Form, SaveChangesMixin):
+        supervisors = QuerySelectMultipleField(
+            "Supervisors",
+            query_factory=partial(GetPossibleSupervisors, project.config.pclass_id),
+            get_label=BuildSupervisorName,
+            validators=[InputRequired(message="Please specify at least one supervisor")],
+        )
+
+    return EditLiveProjectSupervisors

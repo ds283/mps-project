@@ -51,6 +51,8 @@ from .forms import (
     EditRolesFormFactory,
     EditLiveProjectAlternativeForm,
     EditProjectAlternativeForm,
+    EditProjectSupervisorsFactory,
+    EditLiveProjectSupervisorsFactory,
 )
 from ..admin.forms import LevelSelectorForm
 from ..database import db
@@ -3153,6 +3155,70 @@ def copy_liveproject_alternative_reciprocal(alt_id):
         db.session.rollback()
 
     return redirect(redirect_url())
+
+
+@convenor.route("/edit_project_supervisors/<int:proj_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_project_supervisors(proj_id):
+    # proj_id labels a Project instance
+    proj: Project = Project.query.get_or_404(proj_id)
+
+    # reject if user is not a suitable convenor or administrator
+    if not validate_is_admin_or_convenor():
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = url_for("convenor.liveprojects", id=proj.config.pclass_id)
+
+    EditProjectSupervisorsForm = EditProjectSupervisorsFactory(proj)
+    form = EditProjectSupervisorsForm(obj=proj)
+
+    if form.validate_on_submit():
+        proj.supervisors = form.supervisors.data
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash("Could not save changes to supervisor pool because of a database error. Please contact a system administrator", "error")
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            db.session.rollback()
+
+        return redirect(url)
+
+    return render_template_context("convenor/projects/edit_supervisors.html", form=form, proj=proj, url=url)
+
+
+@convenor.route("/edit_liveproject_supervisors/<int:proj_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_liveproject_supervisors(proj_id):
+    # proj_id labels a LiveProject instance
+    proj: LiveProject = LiveProject.query.get_or_404(proj_id)
+
+    # reject is user is not a suitable convenor or administrator
+    if not validate_is_convenor(proj.config.project_class):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = url_for("convenor.liveprojects", id=proj.config.pclass_id)
+
+    EditLiveProjectSupervisorsForm = EditLiveProjectSupervisorsFactory(proj)
+    form = EditLiveProjectSupervisorsForm(obj=proj)
+
+    if form.validate_on_submit():
+        proj.supervisors = form.supervisors.data
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash("Could not save changed to supervisor pool because of a database error. Please contact a system administrator", "error")
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            db.session.rollback()
+
+        return redirect(url)
+
+    return render_template_context("convenor/liveprojects/edit_supervisors.html", form=form, proj=proj, url=url)
 
 
 @convenor.route("/liveprojects/<int:id>")

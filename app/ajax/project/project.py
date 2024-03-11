@@ -95,11 +95,14 @@ _owner = """
 {% if project.generic %}
     <div class="fw-semibold text-secondary">Generic</div>
     {% set num = project.number_supervisors() %}
-    {% if num > 0 %}
-        <div class="mt-1 small text-muted">Pool size = {{ num }}</div>
-    {% else %}
-        <div class="mt-1 small text-danger">Pool size = 0</div>
-    {% endif %}
+    <div class="mt-1 d-flex flex-row gap-2 justify-content-start align-items-center">
+        {% if num > 0 %}
+            <div class="mt-1 small text-muted">Pool size = {{ num }}</div>
+        {% else %}
+                <div class="mt-1 small text-danger">Pool size = 0</div>
+        {% endif %}
+        <a class="btn btn-xs btn-outline-secondary" href="{{ url_for('convenor.edit_project_supervisors', proj_id=project.id, url=url) }}">Edit</a>
+    </div>
 {% else %}
     {% if project.owner is not none %}
         <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
@@ -568,7 +571,7 @@ def build_data(
                 error_block_popover=error_block_popover,
                 current_user=current_user,
             ),
-            "owner": render_template(owner_templ, project=p),
+            "owner": render_template(owner_templ, project=p, url=url, text=text),
             "status": render_template(
                 status_templ,
                 project=p,

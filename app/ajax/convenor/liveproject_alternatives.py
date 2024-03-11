@@ -36,7 +36,7 @@ _project = """
         {% set library_alt = alt.get_library() %}
         {% if library_alt is not none and library_alt.priority != alt.priority %}
             <div class="text-muted">Priority {{ library_alt.priority }} differs</div>
-            <a class="btn btn-xs btn-outline-secondary" href="{{ url_for('convenor.copy_alternative_to_library', alt_id=alt.id) }}">Update</a>
+            <a class="btn btn-xs btn-outline-secondary" href="{{ url_for('convenor.copy_alternative_to_library', alt_id=alt.id) }}">Update library</a>
         {% endif %}
     </div>
 {% endif %}
@@ -45,7 +45,7 @@ _project = """
 {% if not has_reciprocal %}
     <div class="mt-1 small d-flex flex-row gap-2 justify-content-left align-items-center">
         <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i> Reciprocal not present</span>
-        <a class="btn btn-xs btn-outline-danger" href="{{ url_for('convenor.copy_liveproject_alternative_reciprocal', alt_id=alt.id) }}">Copy</a>
+        <a class="btn btn-xs btn-outline-danger" href="{{ url_for('convenor.copy_liveproject_alternative_reciprocal', alt_id=alt.id) }}">Copy to library</a>
     </div>
 {% else %}
     <div class="mt-1 small d-flex flex-row gap-2 justify-content-left align-items-center">

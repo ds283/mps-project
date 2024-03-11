@@ -560,6 +560,8 @@ def EditLiveProjectSupervisorsFactory(project: LiveProject):
             validators=[InputRequired(message="Please specify at least one supervisor")],
         )
 
+    return EditLiveProjectSupervisors
+
 
 class DuplicateProjectForm(
     Form,

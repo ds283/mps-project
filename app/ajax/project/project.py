@@ -369,6 +369,9 @@ _convenor_menu = """
                 <i class="fas fa-wrench fa-fw"></i> Make active
             </a>
         {% endif %}
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.duplicate_project', id=project.id, pclass_id=pclass_id) }}">
+            <i class="fas fa-wrench fa-fw"></i> Duplicate...
+        </a>
     </div>
 </div>
 """

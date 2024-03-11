@@ -15,6 +15,7 @@ from wtforms import SubmitField, IntegerField, StringField, BooleanField, TextAr
 from wtforms.validators import InputRequired, Optional, Email, Length, ValidationError, NumberRange
 from wtforms_alchemy import QuerySelectField, QuerySelectMultipleField
 
+from ..faculty.forms import ProjectMixinFactory
 from ..models import (
     DEFAULT_STRING_LENGTH,
     LiveProject,
@@ -40,8 +41,10 @@ from ..shared.forms.queries import (
     GetAllPossibleSupervisors,
     BuildSupervisorName,
     GetPossibleSupervisors,
+    AllProjectClasses,
+    AllResearchGroups,
 )
-from ..shared.forms.wtf_validators import NotOptionalIf
+from ..shared.forms.wtf_validators import NotOptionalIf, globally_unique_project
 
 
 def GoLiveFormFactory(submit_label="Go live", live_and_close_label="Go live and immediately close", datebox_label="Deadline"):
@@ -557,4 +560,15 @@ def EditLiveProjectSupervisorsFactory(project: LiveProject):
             validators=[InputRequired(message="Please specify at least one supervisor")],
         )
 
-    return EditLiveProjectSupervisors
+
+class DuplicateProjectForm(
+    Form,
+    ProjectMixinFactory(
+        convenor_editing=True, uses_tags=True, uses_research_groups=True, project_classes_qf=AllProjectClasses, group_qf=AllResearchGroups
+    ),
+):
+    name = StringField(
+        "Title", validators=[InputRequired(message="Project title is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_project]
+    )
+
+    submit = SubmitField("Duplicate project")

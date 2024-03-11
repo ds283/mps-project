@@ -47,22 +47,9 @@
 {% endblock %}
 
 {% block form_content %}
-    {% if project %}
-        {% if url is not defined %}{% set url = none %}{% endif %}
-        {% if text is not defined %}{% set text = none %}{% endif %}
-        {% if pclass_id is defined %}
-            <form action="{{ url_for('convenor.edit_project', id=project.id, pclass_id=pclass_id, url=url, text=text) }}" method="POST" name="project_form">
-        {% else %}
-            <form action="{{ url_for('faculty.edit_project', id=project.id, url=url, text=text) }}" method="POST" name="project_form">
-        {% endif %}
-    {% else %}
-        {% if pclass_id is defined %}
-            <form action="{{ url_for('convenor.add_project', pclass_id=pclass_id) }}" method="POST" name="project_form">
-        {% else %}
-            <form action="{{ url_for('faculty.add_project') }}" method="POST" name="project_form">
-        {% endif %}
-    {% endif %}
-
+    {% if url is not defined %}{% set url = none %}{% endif %}
+    {% if text is not defined %}{% set text = none %}{% endif %}
+    <form action="{{ submit_url }}" method="POST" name="project_form">
         {{ project_form.hidden_tag() }}
 
 {#        {{ wtf.form_errors(project_form) }}#}
@@ -107,7 +94,9 @@
             {% if project_form.save_and_exit %}
                 {{ wtf.render_field(project_form.save_and_exit, button_map={'save_and_exit': 'secondary'}) }}
             {% endif %}
-            {{ wtf.render_field(project_form.save_and_preview, button_map={'save_and_preview': 'secondary'}) }}
+            {% if project_form.save_and_preview %}
+                {{ wtf.render_field(project_form.save_and_preview, button_map={'save_and_preview': 'secondary'}) }}
+            {% endif %}
         </div>
 
     </form>

@@ -1,4 +1,5 @@
 {% from "icon_block.html" import icon_block %}
+{% from "dashboard_widgets.html" import dashboard_tile %}
 
 {% macro period_closed(config, period) %}
     {% set topclass = '' %}
@@ -29,48 +30,57 @@
         </div>
     {% endif %}
     {% if period.collect_project_feedback or (period.has_presentation and period.collect_presentation_feedback) %}
-        <div class="row vertical-top {{ topclass }}">
-            <div class="col-1"></div>
-            <div class="col-5">
-                <div class="list-group">
-                    <div class="list-group-item">
-                        <span class="{% if pushed > 0 %}text-success{% else %}text-muted{% endif %}">Feedback pushed</span>
-                        <span class="badge bg-secondary rounded-pill">{{ pushed }}/{{ total }}</span>
-                    </div>
-                    <div class="list-group-item">
-                        <div class="d-flex justify-content-between">
+        {% set pushed_ok = pushed > 0 %}
+        {% set not_pushed_ok = not_pushed > 0 %}
+        <div class="row {{ topclass }}">
+            <div class="col">
+                {% call dashboard_tile("Pushed", title_icon="check-circle", icon_state=pushed_ok) %}
+                    <span class="fw-bold fs-1 {% if pushed_ok %}text-success{% else %}text-primary{% endif %}">{{ pushed }}</span>
+                    <span class="fs-4 text-muted">/{{ total }}</span>
+                {% endcall %}
+            </div>
+            <div class="col">
+                {% call dashboard_tile("Ready", title_icon="circle", icon_state=not_pushed_ok) %}
+                    <span class="fw-bold fs-1 {% if not_pushed_ok %}text-success{% else %}text-secondary{% endif %}">{{ not_pushed }}</span>
+                    <span class="fs-4 text-muted">/{{ total }}</span>
+                    {% if not_pushed > 0 %}
+                        <div class="small mb-0">
                             <div>
-                                <span class="{% if not_pushed > 0 %}text-success{% else %}text-muted{% endif %}">Feedback available to push</span>
-                                <span class="badge bg-secondary rounded-pill">{{ not_pushed }}/{{ total }}</span>
-                            </div>
-                            <div class="mb-3">
-                                {% if not_pushed > 0 %}
-                                    <a href="{{ url_for('convenor.push_feedback', id=period.id) }}" class="btn btn-success btn-sm text-nowrap">Push feedback</a>
-                                {% endif %}
+                                <a class="text-decoration-none link-primary"
+                                   href="{{ url_for('convenor.push_feedback', id=period.id) }}">
+                                    Push feedback
+                                </a>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-5">
-                <div class="list-group">
-                    {% if period.collect_project_feedback %}
-                        <div class="list-group-item">
-                            Supervisor feedback <span class="badge bg-secondary rounded-pill">{{ supv }}/{{ total }}</span>
-                        </div>
-                        <div class="list-group-item">
-                            Marker feedback <span class="badge bg-secondary rounded-pill">{{ mark }}/{{ total }}</span>
-                        </div>
                     {% endif %}
-                    {% if period.has_presentation and period.collect_presentation_feedback %}
-                        {% set pres = period.number_submitters_presentation_feedback %}
-                        <div class="list-group-item">
-                            Presentation feedback <span class="badge bg-secondary rounded-pill">{{ pres }}/{{ total }}</span>
-                        </div>
-                    {% endif %}
-                </div>
+                {% endcall %}
             </div>
-            <div class="col-1"></div>
+            {% if period.collect_project_feedback %}
+                {% set supv_ok = supv == total %}
+                {% set mark_ok = mark == total %}
+                <div class="col">
+                    {% call dashboard_tile("Supervisors", title_icon="circle", icon_state=supv_ok) %}
+                        <span class="fw-bold fs-1 {% if supv_ok %}text-success{% else %}text-primary{% endif %}">{{ supv }}</span>
+                        <span class="fs-4 text-muted">/{{ total }}</span>
+                    {% endcall %}
+                </div>
+                <div class="col">
+                    {% call dashboard_tile("Examiners", title_icon="circle", icon_state=mark_ok) %}
+                        <span class="fw-bold fs-1 {% if mark_ok %}text-success{% else %}text-primary{% endif %}">{{ mark }}</span>
+                        <span class="fs-4 text-muted">/{{ total }}</span>
+                    {% endcall %}
+                </div>
+            {% endif %}
+            {% if period.has_presentation and period.collect_presentation_feedback %}
+                {% set pres = period.number_submitters_presentation_feedback %}
+                {% set pres_ok = pres == total %}
+                <div class="col">
+                    {% call dashboard_tile("Presentation", title_icon="circle", icon_state=mark_ok) %}
+                        <span class="fw-bold fs-1 {% if pres_ok %}text-success{% else %}text-primary{% endif %}">{{ pres }}</span>
+                        <span class="fs-4 text-muted">/{{ total }}</span>
+                    {% endcall %}
+                </div>
+            {% endif %}
         </div>
     {% endif %}
 {% endmacro %}

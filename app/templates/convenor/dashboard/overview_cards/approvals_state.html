@@ -1,26 +1,34 @@
+{% from "dashboard_widgets.html" import dashboard_tile %}
+
 {% macro approvals_state(approval_data) %}
     {% set pending = approval_data['pending'] %}
     {% set queued = approval_data['queued'] %}
     {% set approved = approval_data['approved'] %}
     {% set rejected = approval_data['rejected'] %}
-    <div class="list-group">
-        <div class="list-group-item list-group-item-success">
-            Approved <span class="badge bg-secondary rounded-pill">{{ approved }}</span>
+    {% set approved_ok = approved > 0 %}
+    {% set queued_ok = queued == 0 %}
+    {% set pending_ok = pending == 0 %}
+    {% set rejected_ok = rejected == 0 %}
+    <div class="row">
+        <div class="col-3">
+            {% call dashboard_tile("Approved", title_icon="check-circle", icon_state=approved_ok) %}
+                <span class="fw-bold fs-1 {% if approved_ok %}text-success{% else %}text-primary{% endif %}">{{ approved }}</span>
+            {% endcall %}
         </div>
-    </div>
-    <div class="list-group">
-        <div class="list-group-item list-group-item-warning">
-            Rejected <span class="badge bg-secondary rounded-pill">{{ rejected }}</span>
+        <div class="col-3">
+            {% call dashboard_tile("Rejected", title_icon="times-circle", icon_state=rejected_ok) %}
+                <span class="fw-bold fs-1 {% if rejected_ok %}text-success{% else %}text-danger{% endif %}">{{ rejected }}</span>
+            {% endcall %}
         </div>
-    </div>
-    <div class="list-group">
-        <div class="list-group-item">
-            Pending <span class="badge bg-secondary rounded-pill">{{ pending }}</span>
+        <div class="col-3">
+            {% call dashboard_tile("Pending", title_icon="circle", icon_state=pending_ok) %}
+                <span class="fw-bold fs-1 {% if pending_ok %}text-success{% else %}text-primary{% endif %}">{{ pending }}</span>
+            {% endcall %}
         </div>
-    </div>
-    <div class="list-group">
-        <div class="list-group-item">
-            Queued <span class="badge bg-secondary rounded-pill">{{ queued }}</span>
+        <div class="col-3">
+            {% call dashboard_tile("Queued", title_icon="circle", icon_state=queued_ok) %}
+                <span class="fw-bold fs-1 {% if queued_ok %}text-success{% else %}text-primary{% endif %}">{{ queued }}</span>
+            {% endcall %}
         </div>
     </div>
 {% endmacro %}

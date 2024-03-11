@@ -76,7 +76,7 @@ _supervision = """
 {% else %}
     <div class="small text-muted text-uppercase mb-2">Supervisor Pool</div>
     {% for fd in lp.supervisors %}
-        <div class="d-flex flex-row gap-1 justify-content-left align-items-center">
+        <div class="d-flex flex-row gap-1 justify-content-left align-items-center small">
             <i class="fas fa-user-circle"></i>
             <span>{{ fd.user.name }}</span>
         </div>

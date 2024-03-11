@@ -93,7 +93,13 @@ _error_block = """
 # language=jinja2
 _owner = """
 {% if project.generic %}
-    <span class="badge bg-info">Generic</span>
+    <div class="fw-semibold text-secondary">Generic</div>
+    {% set num = project.number_supervisors() %}
+    {% if num > 0 %}
+        <div class="mt-1 small text-muted">Pool size = {{ num }}</div>
+    {% else %}
+        <div class="mt-1 small text-danger">Pool size = 0</div>
+    {% endif %}
 {% else %}
     {% if project.owner is not none %}
         <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
@@ -107,10 +113,10 @@ _owner = """
 # language=jinja2
 _status = """
 {% if not project.active %}
-    <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Project inactive</span>
+    <div class="text-danger small"><i class="fas fa-ban"></i> Project inactive</span>
 {% else %}
     {% if project.is_offerable %}
-        <span class="badge bg-success"><i class="fas fa-check"></i> Project active</span>
+        <div class="text-success small"><i class="fas fa-check-circle"></i> Project active</div>
         {% if e is not none %}
             {{ simple_label(e.supervisor_label) }}
         {% endif %}
@@ -119,18 +125,21 @@ _status = """
                 {% set state = desc.workflow_state %}
                 {% if desc.requires_confirmation and not desc.confirmed %}
                     {% if waiting_confirmations and config is not none and desc is not none %}
-                        <div class="dropdown" style="display: inline-block;">
-                            <a class="badge text-decoration-none text-nohover-dark bg-light dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Not confirmed</a>
-                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                                <a class="dropdown-item d-flex gap-2" href="{{ url_for("convenor.confirm_description", config_id=config.id, did=desc.id) }}"><i class="fas fa-check fa-fw"></i> Confirm</a>
+                        <div class="d-flex flex-row gap-2 justify-content-left align-items-center">
+                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not confirmed</div>
+                            <div class="dropdown" style="display: inline-block;">
+                                <a class="btn btn-xs btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Actions</a>
+                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for("convenor.confirm_description", config_id=config.id, did=desc.id) }}"><i class="fas fa-check fa-fw"></i> Confirm</a>
+                                </div>
                             </div>
                         </div>
                     {% else %}
-                        <span class="badge bg-secondary">Not confirmed</span>
+                        <div class="text-danger small"><i class="fas fa-times-circle"></i> Not confirmed</div>
                     {% endif %}
                 {% else %}
                     {% if state == desc.WORKFLOW_APPROVAL_VALIDATED %}
-                        <span class="badge bg-success"><i class="fas fa-check"></i>Approved</span>
+                        <div class="text-success small"><i class="fas fa-check-circle"></i> Approved</div>
                         {% if desc.validated_by %}
                             <span class="small text-muted">
                                 Signed off by {{ desc.validated_by.name }}
@@ -140,11 +149,11 @@ _status = """
                             </span>
                         {% endif %}
                     {% elif state == desc.WORKFLOW_APPROVAL_QUEUED %}
-                        <span class="badge bg-warning text-dark">Queued</span>
+                        <div class="text-danger small"><i class="fas fa-circle"></i> Queued</div>
                     {% elif state == desc.WORKFLOW_APPROVAL_REJECTED %}
-                        <span class="badge bg-info">In progress</span>
+                        <div class="text-primary small"><i class="fas fa-circle"></i> In progress</div>
                     {% else %}     
-                        <span class="badge bg-danger">Unknown approval state</span>
+                        <span class="badge bg-danger">Unknown state</span>
                     {% endif %}
                 {% endif %} 
             {% elif config is not none %}
@@ -152,25 +161,25 @@ _status = """
             {% else %}
                 {% set state = project.approval_state %}
                 {% if state == project.DESCRIPTIONS_APPROVED %}
-                    <span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>
+                    <div class="text-success small"><i class="fas fa-check-circle"></i> Approved</div>
                 {% elif state == project.SOME_DESCRIPTIONS_QUEUED %}
-                    <span class="badge bg-warning text-dark">Queued</span>
+                    <div class="text-danger small"><i class="fas fa-circle"></i> Queued</div>
                 {% elif state == project.SOME_DESCRIPTIONS_REJECTED %}
-                    <span class="badge bg-info">In progress</span>
+                    <div class="text-primary small"><i class="fas fa-circle"></i> In progress</div>
                 {% elif state == project.SOME_DESCRIPTIONS_UNCONFIRMED %}
-                    <span class="badge bg-secondary">Unconfirmed</span>
+                    <div class="text-secondary small"><i class="fas fa-circle"></i> Not confirmed</div>
                 {% elif state == project.APPROVALS_NOT_ACTIVE %}
-                    <span class="badge bg-danger">Not offerable</span>
+                    <div class="text-danger small"><i class="fas fa-times-circle"></i> Not offerable/div>
                 {% elif state == project.APPROVALS_NOT_OFFERABLE %}
                 {% else %}
-                    <span class="badge bg-danger">Unknown approval state</span>
+                    <span class="badge bg-danger">Unknown state</span>
                 {% endif %}
             {% endif %}
         {% else %}
-            <span class="badge bg-secondary"><i class="fas fa-ban"></i> Can\'t approve</span>
+            <div class="text-danger small"><i class="fas fa-ban"></i> Can't approve/div>
         {% endif %}
     {% else %}
-        <span class="badge bg-danger">Not available</span>
+        <div class="text-secondary small"><i class="fas fa-ban"></i> Not available</div>
     {% endif %}
 {% endif %}
 """

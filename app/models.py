@@ -639,7 +639,7 @@ def ProjectConfigurationMixinFactory(
                 pclass_id = pclass.id
             else:
                 raise RuntimeError(
-                    "Could not interpret parameter pclass of type {typ} in ProjectConfigurationMixin._assessor_list_query".format(typ=type(pclass))
+                    "Could not interpret parameter pclass of type {typ} in ProjectConfigurationMixin._supervisor_list_query".format(typ=type(pclass))
                 )
 
             fac_ids = db.session.query(supervisor_mapped_column.label("faculty_id")).filter(supervisor_self_column == self.id).subquery()
@@ -7322,6 +7322,12 @@ def _Project_is_offerable(pid):
             else:
                 warnings[("descriptions", desc.id)] = 'Variant "{label}" has validation warnings'.format(label=desc.label)
 
+    # CONSTRAINT 5. For Generic projects, there should be a nonempty supervisor pool
+    if project.generic:
+        for pclass in project.project_classes:
+            if project.number_supervisors(pclass) == 0:
+                errors[("supervisors", pclass.id)] = f"Zero supervisors in pool for '{pclass.name}'"
+
     if len(errors) > 0:
         return False, errors, warnings
 
@@ -7636,12 +7642,15 @@ class Project(
         """
         return get_count(self.supervisors.filter_by(id=faculty_id)) > 0 and self._is_supervisor_for_at_least_one_pclass(faculty_id)
 
-    def number_supervisors(self, pclass):
+    def number_supervisors(self, pclass: Optional[ProjectClass] = None):
         """
         Determine the number of supervisors enrolled who are available for a given project class
         :param pclass:
         :return:
         """
+        if pclass is None:
+            return get_count(self.supervisors)
+
         return _Project_num_supervisors(self.id, pclass.id)
 
     def get_supervisor_list(self, pclass):

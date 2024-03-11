@@ -32,7 +32,13 @@ _name = """
 # language=jinja2
 _owner = """
 {% if project.generic %}
-    <span class="badge bg-info">Generic</span>
+    <div class="fw-semibold text-secondary">Generic</div>
+    {% set num = project.number_supervisors %}
+    {% if num > 0 %}
+        <div class="mt-1 small text-muted">Pool size = {{ num }}</div>
+    {% else %}
+        <div class="mt-1 small text-danger">Pool size = 0</div>
+    {% endif %}
 {% else %}
     {% if project.owner is not none %}
         <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>

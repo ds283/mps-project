@@ -49,7 +49,7 @@
 {% endblock %}
 
 {% block title %}
-    Attach assessors for project {{ data.name }}
+    Attach assessors for library project {{ data.name }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -62,7 +62,8 @@
     {% endif %}
 
     <div class="card border-primary mt-3 mb-3">
-        <div class="card-header bg-primary text-white">Attach assessors for project <strong>{{ data.name }}</strong></div>
+        <div class="card-header bg-primary text-white">Attach assessors for library project
+            <strong>{{ data.name }}</strong></div>
         <div class="card-body">
 
             {% if pclasses is not none and pclasses|length > 0 %}

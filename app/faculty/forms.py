@@ -58,7 +58,7 @@ def ProjectMixinFactory(convenor_editing: bool, uses_tags: bool, uses_research_g
                 query_factory=GetActiveFaculty,
                 get_label=BuildActiveFacultyName,
                 allow_blank=True,
-                description="Leave blank for a generic project",
+                description="This field is ignored if the project is set to generic",
             )
 
             # flag the project as generic

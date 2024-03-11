@@ -25,7 +25,7 @@ from flask_security import roles_accepted, current_user
 from ordered_set import OrderedSet
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from sqlalchemy.orm import with_polymorphic
+from sqlalchemy.orm import with_polymorphic, class_mapper
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import func, literal_column
 
@@ -52,7 +52,7 @@ from .forms import (
     EditLiveProjectAlternativeForm,
     EditProjectAlternativeForm,
     EditProjectSupervisorsFactory,
-    EditLiveProjectSupervisorsFactory,
+    EditLiveProjectSupervisorsFactory, DuplicateProjectForm,
 )
 from ..admin.forms import LevelSelectorForm
 from ..database import db
@@ -4151,7 +4151,13 @@ def add_project(pclass_id):
                 form.enforce_capacity.data = True
                 form.dont_clash_presentations.data = True
 
-    return render_template_context("faculty/edit_project.html", project_form=form, pclass_id=pclass_id, title="Add new project")
+    return render_template_context(
+        "faculty/edit_project.html",
+        project_form=form,
+        pclass_id=pclass_id,
+        title="Add new project",
+        submit_url=url_for('convenor.add_project', pclass_id=pclass_id),
+    )
 
 
 @convenor.route("/edit_project/<int:id>/<int:pclass_id>", methods=["GET", "POST"])
@@ -4173,8 +4179,12 @@ def edit_project(id, pclass_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
     if url is None:
-        url = url_for("convenor.attached", id=pclass_id)
-        text = "attached projects view"
+        if pclass_id > 0:
+            url = url_for("convenor.attached", id=pclass_id)
+            text = "attached projects view"
+        else:
+            url = redirect_url()
+            text = "previous view"
 
     # set up form
     project: Project = Project.query.get_or_404(id)
@@ -4227,7 +4237,118 @@ def edit_project(id, pclass_id):
         return redirect(url)
 
     return render_template_context(
-        "faculty/edit_project.html", project_form=form, project=project, pclass_id=pclass_id, title="Edit project details", url=url, text=text
+        "faculty/edit_project.html",
+        project_form=form,
+        project=project,
+        pclass_id=pclass_id,
+        title="Edit library project details",
+        url=url,
+        text=text,
+        submit_url=url_for('convenor.edit_project', id=project.id, pclass_id=pclass_id, url=url, text=text)
+    )
+
+
+@convenor.route("/duplicate_project/<int:id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def duplicate_project(id):
+    # id labels a Project instance
+    proj: Project = Project.query.get_or_404(id)
+
+    # ensure logged-in user is a convenor or other validated admin user
+    if not validate_is_admin_or_convenor():
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    pclass_id = int(request.args.get("pclass_id", 0))
+
+    if url is None:
+        if pclass_id > 0:
+            url = url_for("convenor.attached", id=pclass_id)
+            text = "attached projects view"
+        else:
+            url = redirect_url()
+            text = "previous view"
+
+    # set up form
+    form = DuplicateProjectForm(obj=proj)
+    form.project = proj
+
+    if form.validate_on_submit():
+        tag_list = create_new_tags(form)
+
+        new_proj = Project(
+            name=form.name.data,
+            active=True,
+            owner=form.owner.data if not form.generic.data else None,
+            generic=form.generic.data,
+            tags=tag_list,
+            group=form.group.data,
+            project_classes=form.project_classes.data,
+            meeting_reqd=form.meeting_reqd.data,
+            enforce_capacity=form.enforce_capacity.data,
+            show_popularity=form.show_popularity.data,
+            show_bookmarks=form.show_bookmarks.data,
+            show_selections=form.show_selections.data,
+            dont_clash_presentations=form.dont_clash_presentations.data,
+            last_edit_id=None,
+            last_edit_timestamp=None,
+            creator_id=current_user.id,
+            creation_timestamp=datetime.now(),
+        )
+
+        new_proj.default_id = None
+
+        # copy attached roles and alternative projects
+        new_proj.assessors = proj.assessors
+        new_proj.supervisors = proj.supervisors
+        new_proj.alternatives = proj.alternatives
+
+        new_proj.skills = proj.skills
+        new_proj.programmes = proj.programmes
+
+        try:
+            db.session.add(new_proj)
+            db.session.flush()
+
+            # duplicate attached descriptions
+            for desc in proj.descriptions:
+                desc: ProjectDescription
+
+                new_desc = ProjectDescription()
+                for item in [p.key for p in class_mapper(ProjectDescription).iterate_properties]:
+                    if item not in ['id', 'parent_id']:
+                        setattr(new_desc, item, getattr(desc, item))
+
+                    new_desc.parent_id = new_proj.id
+
+                    db.session.add(new_desc)
+
+            db.session.commit()
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not duplicate project due to a database error. Please contact a system administrator", "error")
+
+        else:
+            flash(f'Successfully duplicated project as "{new_proj.name}"', 'success')
+
+        return redirect(url)
+
+    else:
+        if request.method == "GET":
+            form.name.date = None
+
+    return render_template_context(
+        "faculty/edit_project.html",
+        project_form=form,
+        pclass_id=pclass_id,
+        title="Duplicate library project",
+        url=url,
+        text=text,
+        submit_url=url_for('convenor.duplicate_project', id=proj.id, pclass_id=pclass_id, url=url, text=text),
     )
 
 
@@ -4235,7 +4356,7 @@ def edit_project(id, pclass_id):
 @roles_accepted("faculty", "admin", "root")
 def activate_project(id, pclass_id):
     # get project details
-    proj = Project.query.get_or_404(id)
+    proj: Project = Project.query.get_or_404(id)
 
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator

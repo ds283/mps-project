@@ -457,7 +457,12 @@ def add_project():
             form.enforce_capacity.data = owner.enforce_capacity
             form.dont_clash_presentations.data = owner.dont_clash_presentations
 
-    return render_template_context("faculty/edit_project.html", project_form=form, title="Add new project")
+    return render_template_context(
+        "faculty/edit_project.html",
+        project_form=form,
+        title="Add new project",
+        submit_url=url_for("faculty.add_project"),
+    )
 
 
 @faculty.route("/edit_project/<int:id>", methods=["GET", "POST"])
@@ -516,7 +521,15 @@ def edit_project(id):
         else:
             return redirect(url)
 
-    return render_template_context("faculty/edit_project.html", project_form=form, project=project, title="Edit project settings", url=url, text=text)
+    return render_template_context(
+        "faculty/edit_project.html",
+        project_form=form,
+        project=project,
+        title="Edit project settings",
+        url=url,
+        text=text,
+        submit_url=url_for("faculty.edit_project", id=project.id, url=url, text=text),
+    )
 
 
 @faculty.route("/remove_project_pclass/<int:proj_id>/<int:pclass_id>")

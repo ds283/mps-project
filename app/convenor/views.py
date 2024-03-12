@@ -52,7 +52,8 @@ from .forms import (
     EditLiveProjectAlternativeForm,
     EditProjectAlternativeForm,
     EditProjectSupervisorsFactory,
-    EditLiveProjectSupervisorsFactory, DuplicateProjectForm,
+    EditLiveProjectSupervisorsFactory,
+    DuplicateProjectForm,
 )
 from ..admin.forms import LevelSelectorForm
 from ..database import db
@@ -3232,12 +3233,25 @@ def liveprojects(id):
         return redirect(redirect_url())
 
     state_filter = request.args.get("state_filter")
+    type_filter = request.args.get("type_filter")
 
     if state_filter is None and session.get("convenor_liveprojects_state_filter"):
         state_filter = session["convenor_liveprojects_state_filter"]
 
+    if state_filter not in ["all", "submitted", "bookmarks", "none", "confirmations", "custom"]:
+        state_filter = "all"
+
     if state_filter is not None:
         session["convenor_liveprojects_state_filter"] = state_filter
+
+    if type_filter is None and session.get("convenor_liveprojects_type_filter"):
+        type_filter = session["convenor_liveprojects_type_filter"]
+
+    if type_filter not in ["all", "generic", "hidden", "alternatives"]:
+        type_filter = "all"
+
+    if type_filter is not None:
+        session["convenor_liveprojects_type_filter"] = type_filter
 
     # get current academic year
     current_year = get_current_year()
@@ -3269,6 +3283,7 @@ def liveprojects(id):
         skill_list=skill_list,
         filter_record=filter_record,
         state_filter=state_filter,
+        type_filter=type_filter,
     )
 
 
@@ -3288,6 +3303,7 @@ def liveprojects_ajax(id):
         return jsonify({})
 
     state_filter = request.args.get("state_filter")
+    type_filter = request.args.get("type_filter")
 
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
@@ -3304,15 +3320,22 @@ def liveprojects_ajax(id):
     valid_skill_ids = [s.id for s in filter_record.skill_filters]
 
     if pclass.advertise_research_group and len(valid_group_ids) > 0:
-        base_query = base_query.filter(Project.group_id.in_(valid_group_ids))
+        base_query = base_query.filter(LiveProject.group_id.in_(valid_group_ids))
 
     if len(valid_skill_ids) > 0:
-        base_query = base_query.filter(Project.skills.any(TransferableSkill.id.in_(valid_skill_ids)))
+        base_query = base_query.filter(LiveProject.skills.any(TransferableSkill.id.in_(valid_skill_ids)))
 
-    return _liveprojects_ajax_handler(base_query, config, state_filter)
+    return _liveprojects_ajax_handler(base_query, config, state_filter, type_filter)
 
 
-def _liveprojects_ajax_handler(base_query, config: ProjectClassConfig, state_filter: str):
+def _liveprojects_ajax_handler(base_query, config: ProjectClassConfig, state_filter: str, type_filter: str):
+    if type_filter == "generic":
+        base_query = base_query.filter(LiveProject.generic == True)
+    elif type_filter == "hidden":
+        base_query = base_query.filter(LiveProject.hidden == True)
+    elif type_filter == "alternatives":
+        base_query = base_query.join(LiveProjectAlternative, LiveProjectAlternative.parent_id == LiveProject.id).distinct()
+
     if state_filter == "submitter":
         base_query = base_query.filter(func.count(LiveProject.submitted) > 0)
     elif state_filter == "bookmarks":
@@ -3325,6 +3348,8 @@ def _liveprojects_ajax_handler(base_query, config: ProjectClassConfig, state_fil
             .filter(ConfirmRequest.state == ConfirmRequest.REQUESTED)
             .distinct()
         )
+    elif state_filter == "custom":
+        base_query = base_query.join(CustomOffer, CustomOffer.liveproject_id == LiveProject.id).distinct()
 
     name = {"search": LiveProject.name, "order": LiveProject.name, "search_collation": "utf8_general_ci"}
     owner = {
@@ -4156,7 +4181,7 @@ def add_project(pclass_id):
         project_form=form,
         pclass_id=pclass_id,
         title="Add new project",
-        submit_url=url_for('convenor.add_project', pclass_id=pclass_id),
+        submit_url=url_for("convenor.add_project", pclass_id=pclass_id),
     )
 
 
@@ -4244,7 +4269,7 @@ def edit_project(id, pclass_id):
         title="Edit library project details",
         url=url,
         text=text,
-        submit_url=url_for('convenor.edit_project', id=project.id, pclass_id=pclass_id, url=url, text=text)
+        submit_url=url_for("convenor.edit_project", id=project.id, pclass_id=pclass_id, url=url, text=text),
     )
 
 
@@ -4318,7 +4343,7 @@ def duplicate_project(id):
 
                 new_desc = ProjectDescription()
                 for item in [p.key for p in class_mapper(ProjectDescription).iterate_properties]:
-                    if item not in ['id', 'parent_id']:
+                    if item not in ["id", "parent_id"]:
                         setattr(new_desc, item, getattr(desc, item))
 
                     new_desc.parent_id = new_proj.id
@@ -4333,7 +4358,7 @@ def duplicate_project(id):
             flash("Could not duplicate project due to a database error. Please contact a system administrator", "error")
 
         else:
-            flash(f'Successfully duplicated project as "{new_proj.name}"', 'success')
+            flash(f'Successfully duplicated project as "{new_proj.name}"', "success")
 
         return redirect(url)
 
@@ -4348,7 +4373,7 @@ def duplicate_project(id):
         title="Duplicate library project",
         url=url,
         text=text,
-        submit_url=url_for('convenor.duplicate_project', id=proj.id, pclass_id=pclass_id, url=url, text=text),
+        submit_url=url_for("convenor.duplicate_project", id=proj.id, pclass_id=pclass_id, url=url, text=text),
     )
 
 
@@ -6172,11 +6197,16 @@ def adjust_selection_deadline(configid):
             notify_convenor = form.notify_convenor.data
 
             title = f'Close selections for "{config.name}"'
-            action_url = url_for('convenor.perform_close_selections', configid=configid, notify_convenor=int(notify_convenor), url=url_for("convenor.status", id=config.pclass_id))
+            action_url = url_for(
+                "convenor.perform_close_selections",
+                configid=configid,
+                notify_convenor=int(notify_convenor),
+                url=url_for("convenor.status", id=config.pclass_id),
+            )
             message = (
                 f'<p>Please confirm that you wish to close student selections for project class "{config.name}".</p>'
-                '<p>No immediate action is taken, but students will no longer be able to submit ranked preference lists, '
-                'and this project class will become available for use when building automated matching attempts.</p>'
+                "<p>No immediate action is taken, but students will no longer be able to submit ranked preference lists, "
+                "and this project class will become available for use when building automated matching attempts.</p>"
             )
             submit_label = "Close selections"
 
@@ -6230,6 +6260,7 @@ def perform_close_selections(configid):
     )
 
     return redirect(url)
+
 
 @convenor.route("/submit_student_selection/<int:sel_id>")
 @roles_accepted("faculty", "admin", "root")

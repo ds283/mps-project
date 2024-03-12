@@ -4,6 +4,7 @@
 {% from "icon_block.html" import icon_block %}
 
 {% if state_filter is none %}{% set state_filter = 'all' %}{% endif %}
+{% if type_filter is none %}{% set type_filter = 'all' %}{% endif %}
 
 {% block scripts %}
     {{ super() }}
@@ -31,7 +32,8 @@
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 serverSide: true, processing: true,
                 language: {{ bootstrap_spinner() }},
-                ajax: { url: $SCRIPT_ROOT + '/convenor/liveprojects_ajax/{{ pclass.id }}?state_filter={{ state_filter }}',
+                ajax: {
+                    url: $SCRIPT_ROOT + '/convenor/liveprojects_ajax/{{ pclass.id }}?state_filter={{ state_filter }}&type_filter={{ type_filter }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; }},
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'}); },
@@ -104,26 +106,50 @@
             <div class="card mt-3 mb-3 card-body bg-well">
                 <div class="row">
                     <div class="col-12">
+                        <p>Filter by type</p>
+                        <a class="btn btn-sm filter-btn {% if type_filter is none or type_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                           href="{{ url_for('convenor.liveprojects', id=pclass.id, type_filter='all', state_filter=state_filter) }}">
+                            All
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if type_filter == 'generic' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                           href="{{ url_for('convenor.liveprojects', id=pclass.id, type_filter='generic', state_filter=state_filter) }}">
+                            Generic
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if type_filter == 'hidden' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                           href="{{ url_for('convenor.liveprojects', id=pclass.id, type_filter='hidden', state_filter=state_filter) }}">
+                            Hidden
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if type_filter == 'alternatives' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                           href="{{ url_for('convenor.liveprojects', id=pclass.id, type_filter='alternatives', state_filter=state_filter) }}">
+                            Has alternatives
+                        </a>
+                    </div>
+                    <hr>
+                    <div class="col-12">
                         <p>Filter by status</p>
                         <a class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                            href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='all') }}">
+                           href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='all', type_filter=type_filter) }}">
                             All
                         </a>
                         <a class="btn btn-sm filter-btn {% if state_filter == 'submitted' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                            href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='submitted') }}">
+                           href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='submitted', type_filter=type_filter) }}">
                             Has selections
                         </a>
                         <a class="btn btn-sm filter-btn {% if state_filter == 'bookmarks' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                            href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='bookmarks') }}">
+                           href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='bookmarks', type_filter=type_filter) }}">
                             Has bookmarks only
                         </a>
                         <a class="btn btn-sm filter-btn {% if state_filter == 'none' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                            href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='none') }}">
+                           href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='none', type_filter=type_filter) }}">
                             No bookmarks
                         </a>
                         <a class="btn btn-sm filter-btn {% if state_filter == 'confirmations' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                            href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='confirmations') }}">
+                           href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='confirmations', type_filter=type_filter) }}">
                             Confirmations outstanding
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'custom' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                           href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='custom', type_filter=type_filter) }}">
+                            Custom offers
                         </a>
                     </div>
                 </div>

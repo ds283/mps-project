@@ -358,6 +358,10 @@ p.copyright {
   margin-left: -5px;
 }
 
+.popover {
+    max-width: 100%;
+}
+
 
 /* disable link change on hover */
 .text-nohover-light {

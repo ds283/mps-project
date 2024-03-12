@@ -52,8 +52,8 @@ _status = """
     {% if m.awaiting_upload %}
         <div class="text-primary fw-semibold"><i class="fas fa-clock"></i> Awaiting upload</div>
         {% if m.lp_file is not none or m.mps_file is not none %}
-            <div class="mt-1">
-                <div class="text-secondary"></i class="fas fa-circle-down"></i> Download</div>
+            <div class="mt-2 p-1 bg-light">
+                <div class="text-secondary fw-semibold"><i class="fas fa-download"></i> Download</div>
                 {% if m.lp_file is not none %}
                     <a class="text-decoration-none link-secondary" href="{{ url_for('admin.download_generated_asset', asset_id=m.lp_file.id) }}">LP</a>
                 {% endif %}
@@ -97,24 +97,24 @@ _info = """
 <div>
     <span class="badge bg-info">Solver {{ m.solver_name }}</span>
 </div>
-<div class="mt-1">
+<div class="mt-2">
     <strong class="mr-1">Matching</strong>
     <span class="badge bg-secondary">Programme {{ m.programme_bias }}</span>
     <span class="badge bg-secondary">Bookmarks {{ m.bookmark_bias }}</span>
 </div>
-<div class="mt-1">
+<div class="mt-2">
     <strong class="mr-1">Biases</strong>
     <span class="badge bg-secondary">Levelling {{ m.levelling_bias }}</span>
     <span class="badge bg-secondary">Group tension {{ m.intra_group_tension }}</span>
     <span class="badge bg-secondary">S pressure {{ m.supervising_pressure }}</span>
     <span class="badge bg-secondary">M pressure {{ m.marking_pressure }}</span>
 </div>
-<div class="mt-1">
+<div class="mt-2">
     <strong class="mr-1">Penalties</strong>
     <span class="badge bg-secondary">CATS violation {{ m.CATS_violation_penalty }}</span>
     <span class="badge bg-secondary">No assignment {{ m.no_assignment_penalty }}</span>
 </div>
-<div class="mt-1">
+<div class="mt-2">
     {% if m.use_hints %}
         <span class="badge bg-info"><i class="fas fa-check"></i> Use hints</span>
         {% if m.require_to_encourage %}
@@ -131,7 +131,7 @@ _info = """
         <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Ignore hints</span>
     {% endif %}
 </div>
-<div class="mt-1">
+<div class="mt-2">
     {% if not m.ignore_programme_prefs %}
         {% set outcome = m.prefer_programme_status %}
         {% if outcome is not none %}
@@ -157,17 +157,16 @@ _info = """
         {% endif %}
     {% endif %}
 </div>
-<div class="mt-1">
-    <div class="mt-1 text-muted">
-        Created by <i class="fas fa-user-circle"></i>
-        <a class="text-decoration-none" href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
-        {% if m.creation_timestamp is not none %}
-            {{ m.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-        {% endif %}
-    </div>
+<div class="mt-2 text-muted small">
+    Created by <i class="fas fa-user-circle"></i>
+    <a class="text-decoration-none" href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
+    {% if m.creation_timestamp is not none %}
+        {{ m.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+    {% endif %}
+</div>
 </div>
 {% if m.last_edited_by is not none %}
-    <div class="mt-1 text-muted">
+    <div class="mt-2 text-muted small">
         Last edited by <i class="fas fa-user-circle"></i>
         <a class="text-decoration-none" href="mailto:{{ m.last_edited_by.email }}">{{ m.last_edited_by.name }}</a>
         {% if m.last_edit_timestamp is not none %}
@@ -176,7 +175,7 @@ _info = """
     </div>
 {% endif %}
 {% if m.solution_usable %}
-    <div class="mt-1">
+    <div class="mt-3 small">
         {% if m.draft_to_selectors is not none %}
             <div><i class="fas fa-envelope"></i> <strong>Draft to selectors</strong>: {{ m.draft_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</div>
         {% endif %}
@@ -191,37 +190,8 @@ _info = """
         {% endif %}
     </div>
 {% endif %}
-<div class="mt-1">
-    {% set errors = m.errors %}
-    {% set warnings = m.warnings %}
-    {% if errors|length == 1 %}
-        <span class="badge bg-danger">1 error</span>
-    {% elif errors|length > 1 %}
-        <span class="badge bg-danger">{{ errors|length }} errors</span>
-    {% endif %}
-    {% if warnings|length == 1 %}
-        <span class="badge bg-warning text-dark">1 warning</span>
-    {% elif warnings|length > 1 %}
-        <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
-    {% endif %}
-    {% if errors|length > 0 %}
-        {% for item in errors %}
-            {% if loop.index <= 10 %}
-                <div class="text-danger small">{{ item }}</div>
-            {% elif loop.index == 11 %}
-                <div class="text-danger small">Further errors suppressed...</div>
-            {% endif %}            
-        {% endfor %}
-    {% endif %}
-    {% if warnings|length > 0 %}
-        {% for item in warnings %}
-            {% if loop.index <= 10 %}
-                <div class="text-warning small">Warning: {{ item }}</div>
-            {% elif loop.index == 11 %}
-                <div class="text-warning small">Further warnings suppressed...</div>
-            {% endif %}
-        {% endfor %}
-    {% endif %}
+<div class="mt-3">
+    {{ error_block_popover(m.errors, m.warnings) }}
 </div>
 """
 
@@ -442,6 +412,7 @@ def matches_data(matches, config=None, text=None, url=None, is_root=False):
     :return:
     """
     simple_label = get_template_attribute("labels.html", "simple_label")
+    error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
 
     number = len(matches)
     allow_compare = number > 1
@@ -457,7 +428,7 @@ def matches_data(matches, config=None, text=None, url=None, is_root=False):
             "name": render_template(name_templ, m=m, text=text, url=url, simple_label=simple_label),
             "status": render_template(status_templ, m=m),
             "score": {"display": render_template(score_templ, m=m), "value": float(m.score) if m.solution_usable and m.score is not None else 0},
-            "info": render_template(info_templ, m=m),
+            "info": render_template(info_templ, m=m, error_block_popover=error_block_popover),
             "menu": render_template(menu_templ, m=m, text=text, url=url, compare=allow_compare, is_root=is_root, config=config),
         }
         for m in matches

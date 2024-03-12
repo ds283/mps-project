@@ -14,54 +14,56 @@ from jinja2 import Template, Environment
 # language=jinja2
 _status = """
 {% if m.finished %}
-    <span class="badge bg-primary">Finished</span>
     {% if m.solution_usable %}
-        <span class="badge bg-success">Optimal solution</span>
+        <div class="text-success fw-semibold"><i class="fas fa-check-circle"></i> Optimal solution</div>
     {% elif m.outcome == m.OUTCOME_NOT_SOLVED %}
-        <span class="badge bg-warning text-dark">Not solved</span>
+        <div class="text-danger"><i class="fas fa-times-circle"></i> Not solved</div>
     {% elif m.outcome == m.OUTCOME_INFEASIBLE %}
-        <span class="badge bg-danger">Infeasible</span>
+        <div class="text-danger"><i class="fas fa-ban"></i> Infeasible</div>
     {% elif m.outcome == m.OUTCOME_UNBOUNDED %}
-        <span class="badge bg-danger">Unbounded</span>
+        <div class="text-danger"><i class="fas fa-times-circle"></i> Unbounded</div>
     {% elif m.outcome == m.OUTCOME_UNDEFINED %}
-        <span class="badge bg-danger">Undefined</span>
+        <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Undefined</div>
     {% else %}
-        <span class="badge bg-danger">Unknown outcome</span>
+        <div class="badge bg-danger">Unknown outcome</div>
     {% endif %}
-    <div class="mt-1">
-        {% if m.is_modified %}
-            <span class="badge bg-warning text-dark">Modified</span>
-        {% else %}
-            <span class="badge bg-secondary">Original</span>
-        {% endif %}
-    </div>
-    {% if m.solution_usable %}
+    {% if m.is_modified %}
         <div class="mt-1">
-            <span class="badge bg-secondary">{{ m.records.count() }} selectors</span>
-            <span class="badge bg-secondary">{{ m.supervisors.count() }} supervisors</span>
-            <span class="badge bg-secondary">{{ m.markers.count() }} markers</span>
-            <span class="badge bg-secondary">{{ m.projects.count() }} projects</span>
+            <div class="text-info"><i class="fas fa-info-circle"></i> Modified</div>
+        </div>
+    {% endif %}
+    {% if m.solution_usable %}
+        <div class="mt-1 text-muted small d-flex flex-column justify-content-start align-items-start">
+            <div>{{ m.records.count() }} selectors</div>
+            <div>{{ m.supervisors.count() }} supervisors</div>
+            <div>{{ m.markers.count() }} markers</div>
+            <div>{{ m.projects.count() }} projects</div>
         </div>
     {% endif %}
     <div class="mt-1">
         {% if m.published and current_user.has_role('root') %}
-            <span class="badge bg-info">Published</span>
+            <div class="text-success fw-semibold"><i class="fas fa-check-circle"></i> Published</div>
         {% endif %}
         {% if m.selected %}
-            <span class="badge bg-success">Selected</span>
+            <div class="text-success fw-semibold"><i class="fas fa-check-circle"></i> Selected</div>
         {% endif %}
     </div>
 {% else %}
     {% if m.awaiting_upload %}
-        <span class="badge bg-info">Awaiting upload</span>
-        {% if m.lp_file is not none %}
-            <a class="text-decoration-none" href="{{ url_for('admin.download_generated_asset', asset_id=m.lp_file.id) }}">LP</a>
-        {% endif %}
-        {% if m.mps_file is not none %}
-            <a class="text-decoration-none" href="{{ url_for('admin.download_generated_asset', asset_id=m.mps_file.id) }}">MPS</a>
+        <div class="text-primary fw-semibold"><i class="fas fa-clock"></i> Awaiting upload</div>
+        {% if m.lp_file is not none or m.mps_file is not none %}
+            <div class="mt-1">
+                <div class="text-secondary"></i class="fas fa-circle-down"></i> Download</div>
+                {% if m.lp_file is not none %}
+                    <a class="text-decoration-none link-secondary" href="{{ url_for('admin.download_generated_asset', asset_id=m.lp_file.id) }}">LP</a>
+                {% endif %}
+                {% if m.mps_file is not none %}
+                    <a class="text-decoration-none link-secondary" href="{{ url_for('admin.download_generated_asset', asset_id=m.mps_file.id) }}">MPS</a>
+                {% endif %}
+            </div>
         {% endif %}
     {% else %}
-        <span class="badge bg-info">In progress</span>
+        <div class="text-primary fw-semibold"><i class="fas fa-clock"></i> In progress</div>
     {% endif %}
 {% endif %}
 """
@@ -238,11 +240,11 @@ _score = """
     {% set delta_min = m.delta_min %}
     {% set CATS_max = m.CATS_max %}
     {% set CATS_min = m.CATS_min %}
-    <div class="mt-2 d-flex flex-col gap-1 justify-content-start align-items-start">
-        {% if delta_max %}<div class="text-secondary small">&delta; max = {{ delta_max }}</div>{% endif %}
-        {% if delta_min %}<div class="text-secondary small">&delta; min = {{ delta_min }}</div>{% endif %}
-        {% if CATS_max %}<div class="text-secondary small">CATS max = {{ CATS_max }}</div>{% endif %}
-        {% if CATS_min %}<div class="text-secondary small">CATS min = {{ CATS_min }}</div>{% endif %}
+    <div class="mt-2 d-flex flex-column gap-1 justify-content-start align-items-start">
+        {% if delta_max is not none %}<div class="text-secondary small">&delta; max = {{ delta_max }}</div>{% endif %}
+        {% if delta_min is not none %}<div class="text-secondary small">&delta; min = {{ delta_min }}</div>{% endif %}
+        {% if CATS_max is not none %}<div class="text-secondary small">CATS max = {{ CATS_max }}</div>{% endif %}
+        {% if CATS_min is not none %}<div class="text-secondary small">CATS min = {{ CATS_min }}</div>{% endif %}
     </div>
 {% else %}
     <div class="text-danger fw-semibold"><i class="fas fa-times-circle"></i> Invalid</div>

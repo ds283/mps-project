@@ -322,13 +322,19 @@ _marker = """
 _rank = """
 {% if recs|length == 1 %}
     {% set r = recs[0] %}
-    <span class="badge {% if r.hi_ranked %}bg-success{% elif r.lo_ranked %}bg-warning text-dark{% else %}bg-info{% endif %}">{{ r.rank }}</span>
-    <span class="badge bg-primary">&delta; = {{ delta }}</span>
+    <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+        <div class="{% if r.hi_ranked %}text-success fw-semibold{% elif r.lo_ranked %}text-danger{% else %}text-primary{% endif %}">{{ r.total_rank }}</div>
+        {% if r.alternative %}<div class="small text-muted"><i class="fas fa-info-circle"></i> Alternative</div>{% endif %}
+        <div class="text-secondary small">&delta; = {{ delta }}</div>
+    </div>
 {% elif recs|length > 1 %}
-    {% for r in recs %}
-        <span class="badge {% if r.hi_ranked %}bg-success{% elif r.lo_ranked %}bg-warning text-dark{% else %}bg-info{% endif %}">#{{ r.submission_period }}: {{ r.rank }}</span>
-    {% endfor %}
-    <span class="badge bg-primary">&delta; = {{ delta }}</span>
+    <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+        {% for r in recs %}
+            <div class="{% if r.hi_ranked %}text-success fw-semibold{% elif r.lo_ranked %}text-danger{% else %}text-primary{% endif %}">#{{ r.submission_period }}: {{ r.total_rank }}</div>
+            {% if r.alternative %}<div class="small text-muted"><i class="fas fa-info-circle"></i> Alternative</div>{% endif %}
+        {% endfor %}
+        <div class="text-secondary small">&delta; = {{ delta }}</div>
+    </div>
 {% endif %}
 """
 

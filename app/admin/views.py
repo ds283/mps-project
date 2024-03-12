@@ -4436,8 +4436,8 @@ def create_match():
 
         elif form.offline.data:
             offline = True
-            task_name = 'Generate files for offline scheduling for "{name}"'.format(name=form.name.data)
-            desc = "Produce .LP and .MPS files for download and offline scheduling"
+            task_name = 'Generate files for offline matching for "{name}"'.format(name=form.name.data)
+            desc = "Produce .LP and .MPS files for download and offline matching"
 
         else:
             raise RuntimeError("Unknown submit button in create_match()")

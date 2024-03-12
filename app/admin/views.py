@@ -5589,7 +5589,7 @@ def match_student_view_ajax(id):
     def sort_rank(row: SelectingStudent):
         records: List[MatchingRecord] = row.matching_records.filter(MatchingRecord.matching_id == record.id).all()
 
-        return sum(rec.rank for rec in records)
+        return sum(rec.total_rank for rec in records)
 
     def sort_score(row: SelectingStudent):
         records: List[MatchingRecord] = row.matching_records.filter(MatchingRecord.matching_id == record.id).all()

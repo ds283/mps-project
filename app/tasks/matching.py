@@ -47,7 +47,7 @@ from ..models import (
     SubmissionPeriodDefinition,
     SubmittingStudent,
     SubmissionRole,
-    validate_nonce,
+    validate_nonce, CustomOffer, Project, LiveProjectAlternative,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.sqlalchemy import get_count
@@ -667,6 +667,7 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
 
     R = {}  # R is ranking matrix. Accounts for Forbid hints.
     W = {}  # W is weights matrix. Accounts for encourage & discourage hints, programme bias and bookmark bias
+
     cstr = set()  # cstr is a set of (student, project) pairs that will be converted into Require hints
 
     ignore_programme_prefs = record.ignore_programme_prefs
@@ -682,16 +683,26 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
     strong_encourage_bias = float(record.strong_encourage_bias)
     strong_discourage_bias = float(record.strong_discourage_bias)
 
+    base_alternative_rank = 1
+    for config in record.config_members:
+        config: ProjectClassConfig
+        largest_rank = max(config.initial_choices, config.switch_choices if config.allow_switching else 0)
+        if largest_rank > base_alternative_rank:
+            base_alternative_rank = largest_rank
+
     for i in range(0, number_sel):
-        sel = sel_dict[i]
+        sel: SelectingStudent = sel_dict[i]
 
         ranks = {}
         weights = {}
+        alternatives = {}
         require = set()
 
+        # if this selector has accepted an offer, we want to force assignment to that offer
+        # so we include only the accepted offer in the ranking matrix
         if sel.has_accepted_offer:
-            offer = sel.accepted_offer
-            project = offer.liveproject
+            offer: CustomOffer = sel.accepted_offer
+            project: Project = offer.liveproject
 
             if project.id in lp_to_number:
                 ranks[project.id] = 1
@@ -702,10 +713,12 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
                     "does not exist".format(name=sel.student.user.name)
                 )
 
+        # otherwise, we want to work through the student's entire submission list, keeping track of the ranks
         elif sel.has_submission_list:
             valid_projects = 0
 
             for item in sel.ordered_selections:
+                item: SelectionRecord
                 if item.liveproject_id in lp_to_number:
                     valid_projects += 1
 
@@ -714,6 +727,7 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
                     if not use_hints or forbid_to_discourage or hint != SelectionRecord.SELECTION_HINT_FORBID:
                         ranks[item.liveproject_id] = item.rank
 
+                    # determine weight for this allocation
                     w = 1.0
                     if item.converted_from_bookmark:
                         w *= bookmark_bias
@@ -735,6 +749,16 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
 
                     if use_hints and not require_to_encourage and hint == SelectionRecord.SELECTION_HINT_REQUIRE:
                         require.add(item.liveproject_id)
+
+                    # record alternatives, provided this selection has not been forbidden
+                    if item.liveproject is not None and (not use_hints or hint != SelectionRecord.SELECTION_HINT_FORBID):
+                        for alt in item.liveproject.alternatives:
+                            alt: LiveProjectAlternative
+
+                            if alt.alternative_id in lp_to_number:
+                                # don't overwrite priority if a higher-priority record already exists
+                                new_priority = max(alt.priority, alternatives.get(alt.alternative_id, 0))
+                                alternatives[alt.alternative_id] = new_priority
 
             if valid_projects == 0:
                 raise RuntimeError(
@@ -758,6 +782,9 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
 
             if proj.id in ranks:
                 R[idx] = ranks[proj.id]
+            elif proj.id in alternatives:
+                # alternatives should count has higher-order rankings
+                R[idx] = base_alternative_rank + alternatives[proj.id]
             else:
                 # if not ranked, prevent solver from making this choice
                 R[idx] = 0
@@ -1936,8 +1963,12 @@ def _store_PuLP_solution(
             # calculate selector's rank of the assigned project
             # (this lets us work out the quality of the fit from the student's perspective)
             rk = sel.project_rank(proj_id)
+            alt_data = None
             if sel.has_submitted and rk is None:
-                raise RuntimeError("PuLP solution assigns unranked project to selector")
+                alt_data = sel.alternative_priority(proj_id)
+
+                if alt_data is None:
+                    raise RuntimeError("PuLP solution assigns unranked project to selector")
 
             # decide which submission period to assign this project to
             if len(periods) == 0:
@@ -1953,6 +1984,9 @@ def _store_PuLP_solution(
                 original_project_id=proj_id,
                 submission_period=this_period,
                 rank=rk,
+                alternative=False if alt_data is None else True,
+                parent_id=None if alt_data is None else alt_data['project'].id,
+                priority=None if alt_data is None else alt_data['priority']
             )
             db.session.add(data)
             db.session.flush()
@@ -3371,6 +3405,7 @@ def register_matching_tasks(celery):
 
             # duplicate all matching records
             for item in old_record.records:
+                item: MatchingRecord
                 rec = MatchingRecord(
                     matching_id=new_record.id,
                     selector_id=item.selector_id,
@@ -3380,6 +3415,9 @@ def register_matching_tasks(celery):
                     rank=item.rank,
                     marker_id=item.marker_id,
                     original_marker_id=item.marker_id,
+                    alternative=item.alternative,
+                    parent_id=item.parent_id,
+                    priority=item.priority
                 )
                 db.session.add(rec)
 

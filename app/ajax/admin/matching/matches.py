@@ -227,20 +227,25 @@ _info = """
 # language=jinja2
 _score = """
 {% if m.solution_usable %}
-    <span class="badge bg-success">Score {{ m.score }} original</span>
+    <div class="text-success"><i class="fas fa-circle"></i> Original score {{ m.score }}</div>
     {% set score = m.current_score %}
     {% if score %}
-        <span class="badge bg-primary">Score {{ score|round(precision=2) }} now</span>
+        <div class="text-primary"><i class="fas fa-circle"></i> Current score {{ score|round(precision=2) }}</div>
     {% else %}
-        <span class="badge bg-warning text-dark">Current score undefined</span>
+        <div class="text-danger"><i class="fas fa-ban"></i> Current score: undefined</div>
     {% endif %}
-    <p></p>
-    <span class="badge bg-secondary">&delta; max {{ m.delta_max }}</span>
-    <span class="badge bg-secondary">&delta; min {{ m.delta_min }}</span>
-    <span class="badge bg-secondary">CATS max {{ m.CATS_max }}</span>
-    <span class="badge bg-secondary">CATS min {{ m.CATS_min }}</span>
+    {% set delta_max = m.delta_max %}
+    {% set delta_min = m.delta_min %}
+    {% set CATS_max = m.CATS_max %}
+    {% set CATS_min = m.CATS_min %}
+    <div class="mt-2 d-flex flex-col gap-1 justify-content-start align-items-start">
+        {% if delta_max %}<div class="text-secondary small">&delta; max = {{ delta_max }}</div>{% endif %}
+        {% if delta_min %}<div class="text-secondary small">&delta; min = {{ delta_min }}</div>{% endif %}
+        {% if CATS_max %}<div class="text-secondary small">CATS max = {{ CATS_max }}</div>{% endif %}
+        {% if CATS_min %}<div class="text-secondary small">CATS min = {{ CATS_min }}</div>{% endif %}
+    </div>
 {% else %}
-    <span class="badge bg-secondary">Invalid</span>
+    <div class="text-danger fw-semibold"><i class="fas fa-times-circle"></i> Invalid</div>
 {% endif %}
 """
 

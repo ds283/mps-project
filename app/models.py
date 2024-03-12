@@ -9479,10 +9479,10 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         :return:
         """
         if self.is_initial_selection:
-            return self.config.project_class.initial_choices
+            return self.config.initial_choices
 
         else:
-            return self.config.project_class.switch_choices
+            return self.config.switch_choices
 
     @property
     def is_valid_selection(self):
@@ -9637,10 +9637,39 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
             return None
 
         for item in self.selections.all():
+            item: SelectionRecord
             if item.liveproject_id == proj_id:
                 return item.rank
 
         return None
+
+    def alternative_priority(self, proj):
+        # if this project is not ranked, determine whether it is a viable alternative and the corresponding priority
+        if isinstance(proj, int):
+            proj_id = proj
+        elif isinstance(proj, LiveProject):
+            proj_id = proj.id
+        else:
+            raise RuntimeError('Could not interpret "proj" parameter of type {x}'.format(x=type(proj)))
+
+        data = {"project": None, "priority": 1000}
+
+        for item in self.selections.all():
+            item: SelectionRecord
+            lp: LiveProject = item.liveproject
+
+            for alt in lp.alternatives:
+                alt: LiveProjectAlternative
+                if alt.alternative_id == proj_id:
+                    current_priority = data["priority"]
+                    if alt.priority < current_priority:
+                        data["priority"] = alt.priority
+                        data["project"] = lp
+
+        if data["project"] is None:
+            return None
+
+        return data
 
     @property
     def accepted_offer(self):
@@ -12887,11 +12916,19 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     @property
     def delta_max(self):
         delta_set = self._get_delta_set()
+
+        if delta_set is None or len(delta_set) == 0:
+            return None
+
         return max(delta_set)
 
     @property
     def delta_min(self):
         delta_set = self._get_delta_set()
+
+        if delta_set is None or len(delta_set) == 0:
+            return None
+
         return min(delta_set)
 
     @property
@@ -13268,10 +13305,12 @@ class MatchingRole(db.Model, SubmissionRoleTypesMixin):
 
 @cache.memoize()
 def _MatchingRecord_current_score(id):
-    obj = db.session.query(MatchingRecord).filter_by(id=id).one()
+    obj: MatchingRecord = db.session.query(MatchingRecord).filter_by(id=id).one()
+    sel: SelectingStudent = obj.selector
+    config: ProjectClassConfig = sel.config
 
     # return None is SelectingStudent record is missing
-    if obj.selector is None:
+    if sel is None:
         return None
 
     # return None if SelectingStudent has no submission records.
@@ -13279,17 +13318,17 @@ def _MatchingRecord_current_score(id):
     # In this case we had to set their rank matrix to 1 for all suitable projects, in order that
     # an allocation could be made (because of the constraint that allocation <= rank).
     # Also weight is 1 so we always score 1
-    if not obj.selector.has_submitted:
+    if not sel.has_submitted:
         return 1.0
 
     # if selector had a custom offer, we score 1.0 if the selector is assigned to this offer, otherwise
     # we score 0
-    if obj.selector.has_accepted_offer:
-        offer = obj.selector.accepted_offer
+    if sel.has_accepted_offer:
+        offer = sel.accepted_offer
         return 1.0 if offer.liveproject_id == obj.project_id else 0.0
 
     # find selection record corresponding to our project
-    record = obj.selector.selections.filter_by(liveproject_id=obj.project_id).first()
+    record: SelectionRecord = sel.selections.filter_by(liveproject_id=obj.project_id).first()
 
     # if there isn't one, presumably a convenor has reallocated us to a project for which
     # we score 0
@@ -13320,10 +13359,12 @@ def _MatchingRecord_current_score(id):
 
     # upweight by programme bias, if this is not disabled
     if not obj.matching_attempt.ignore_programme_prefs:
-        if obj.project.satisfies_preferences(obj.selector):
+        if obj.project.satisfies_preferences(sel):
             weight *= float(obj.matching_attempt.programme_bias)
 
-    return weight / float(record.rank)
+    rank = obj.total_rank
+
+    return weight / float(rank)
 
 
 @cache.memoize()
@@ -13331,6 +13372,7 @@ def _MatchingRecord_is_valid(id):
     obj: MatchingRecord = db.session.query(MatchingRecord).filter_by(id=id).one()
     attempt: MatchingAttempt = obj.matching_attempt
     project: LiveProject = obj.project
+    sel: SelectingStudent = obj.selector
 
     pclass: ProjectClass = project.config.project_class
     config: ProjectClassConfig = project.config
@@ -13430,7 +13472,7 @@ def _MatchingRecord_is_valid(id):
             if count > 1:
                 user: User = supervisor_dict[u_id]
 
-                errors[("supervisors", 1)] = 'Supervisor "{name}" is assigned {n} times for this ' "selector".format(name=user.name, n=count)
+                errors[("supervisors", 1)] = 'Supervisor "{name}" is assigned {n} times for this selector'.format(name=user.name, n=count)
 
     if uses_marker:
         # 1D. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MARKERS
@@ -13451,7 +13493,7 @@ def _MatchingRecord_is_valid(id):
             if count > 1:
                 user: User = marker_dict[u_id]
 
-                errors[("markers", 1)] = 'Marker "{name}" is assigned {n} times for this ' "selector".format(name=user.name, n=count)
+                errors[("markers", 1)] = 'Marker "{name}" is assigned {n} times for this selector'.format(name=user.name, n=count)
 
     if uses_moderator:
         # 1G. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MODERATORS
@@ -13474,11 +13516,18 @@ def _MatchingRecord_is_valid(id):
             if count > 1:
                 user: User = moderator_dict[u_id]
 
-                errors[("moderators", 1)] = 'Moderator "{name}" is assigned {n} times for this ' "selector".format(name=user.name, n=count)
+                errors[("moderators", 1)] = 'Moderator "{name}" is assigned {n} times for this selector'.format(name=user.name, n=count)
 
     # 2. IF THERE IS A SUBMISSION LIST, WARN IF ASSIGNED PROJECT IS NOT ON THIS LIST
-    if obj.selector.has_submission_list and obj.selector.project_rank(obj.project_id) is None:
-        errors[("assignment", 0)] = "Assigned project did not appear in this selector's choices"
+    if sel.has_submission_list:
+        if sel.project_rank(obj.project_id) is None:
+            alt_data = sel.alternative_priority(obj.project_id)
+            if alt_data is None:
+                errors[("assignment", 0)] = "Assigned project did not appear in this selector's choices"
+            else:
+                alt_lp: LiveProject = alt_data["project"]
+                alt_priority: int = alt_data["priority"]
+                warnings[("assignment", 0)] = f'Assigned project is an alternative for "{alt_lp.name}" with priority={alt_priority}'
 
     # 3. IF THERE WAS AN ACCEPTED CUSTOM OFFER, WARN IF ASSIGNED SUPERVISOR IS NOT THE ONE IN THE OFFER
     if obj.selector.has_accepted_offer:
@@ -13486,9 +13535,9 @@ def _MatchingRecord_is_valid(id):
         offer_project = offer.liveproject if offer is not None else None
 
         if offer_project is not None and project.id != offer_project.id:
-            errors[
-                ("assignment", 1)
-            ] = 'This selector accepted a custom offer for project "{name}", ' "but their assigned project is different".format(name=project.name)
+            errors[("assignment", 1)] = 'This selector accepted a custom offer for project "{name}", but their assigned project is different'.format(
+                name=project.name
+            )
 
     # 4. ASSIGNED PROJECT MUST BE PART OF THE PROJECT CLASS
     if project.config_id != obj.selector.config_id:
@@ -13501,7 +13550,7 @@ def _MatchingRecord_is_valid(id):
             if enrolment is None or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
                 errors[
                     ("enrolment", 0)
-                ] = '"{name}" has been assigned a supervision role, but is not currently ' "enrolled for this project class".format(name=u.name)
+                ] = '"{name}" has been assigned a supervision role, but is not currently enrolled for this project class'.format(name=u.name)
         else:
             warnings[("enrolment", 0)] = '"{name}" has been assigned a supervision role, but is not a faculty member'
 
@@ -13510,9 +13559,9 @@ def _MatchingRecord_is_valid(id):
         if u.faculty_data is not None:
             enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
             if enrolment is None or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED:
-                errors[
-                    ("enrolment", 1)
-                ] = '"{name}" has been assigned a marking role, but is not currently ' "enrolled for this project class".format(name=u.name)
+                errors[("enrolment", 1)] = '"{name}" has been assigned a marking role, but is not currently enrolled for this project class'.format(
+                    name=u.name
+                )
         else:
             warnings[("enrolment", 1)] = '"{name}" has been assigned a marking role, but is not a faculty member'
 
@@ -13523,7 +13572,7 @@ def _MatchingRecord_is_valid(id):
             if enrolment is None or enrolment.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED:
                 errors[
                     ("enrolment", 2)
-                ] = '"{name}" has been assigned a moderation role, but is not currently ' "enrolled for this project class".format(name=u.name)
+                ] = '"{name}" has been assigned a moderation role, but is not currently enrolled for this project class'.format(name=u.name)
         else:
             warnings[("enrolment", 3)] = '"{name}" has been assigned a moderation role, but is not a faculty member'
 
@@ -13538,7 +13587,7 @@ def _MatchingRecord_is_valid(id):
         )
 
         if lo_rec is not None and lo_rec.submission_period == obj.submission_period:
-            errors[("assignment", 2)] = 'Project "{name}" is duplicated in multiple submission ' "periods".format(name=project.name)
+            errors[("assignment", 2)] = 'Project "{name}" is duplicated in multiple submission periods'.format(name=project.name)
 
     # 9. ASSIGNED MARKERS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
     # (unambiguous to use config here since #4 checks config agrees with obj.selector.config)
@@ -13547,7 +13596,7 @@ def _MatchingRecord_is_valid(id):
             count = get_count(project.assessor_list_query.filter(FacultyData.id == u.id))
 
             if count != 1:
-                errors[("markers", 2)] = 'Assigned marker "{name}" is not in assessor pool for ' "assigned project".format(name=u.name)
+                errors[("markers", 2)] = 'Assigned marker "{name}" is not in assessor pool for assigned project'.format(name=u.name)
 
     # 10. ASSIGNED MODERATORS SHOULD BE IN THE ASSESSOR POOL FOR THE ASSIGNED PROJECT
     if uses_moderator:
@@ -13555,18 +13604,18 @@ def _MatchingRecord_is_valid(id):
             count = get_count(project.assessor_list_query.filter(FacultyData.id == u.id))
 
             if count != 1:
-                errors[("moderators", 2)] = 'Assigned moderator "{name}" is not in assessor pool for ' "assigned project".format(name=u.name)
+                errors[("moderators", 2)] = 'Assigned moderator "{name}" is not in assessor pool for assigned project'.format(name=u.name)
 
     # 11. FOR ORDINARY PROJECTS, THE PROJECT OWNER SHOULD USUALLY BE A SUPERVISOR
     if not project.generic:
         if project.owner is not None and project.owner_id not in supervisor_ids:
-            warnings[("supervisors", 2)] = 'Assigned project owner "{name}" does not have a supervision ' "role".format(name=project.owner.user.name)
+            warnings[("supervisors", 2)] = 'Assigned project owner "{name}" does not have a supervision role'.format(name=project.owner.user.name)
 
     # 12. For GENERIC PROJECTS, THE SUPERVISOR SHOULD BE IN THE SUPERVISION POOL
     if project.generic:
         for u in supervisor_roles:
             if not any(u.id == fd.id for fd in project.supervisors):
-                errors[("supervisors", 3)] = 'Assigned supervisor "{name}" is not in supervision pool for ' "assigned project".format(name=u.name)
+                errors[("supervisors", 3)] = 'Assigned supervisor "{name}" is not in supervision pool for assigned project'.format(name=u.name)
 
     # 13. SELECTOR SHOULD BE MARKED FOR CONVERSION
     if not obj.selector.convert_to_submitter:
@@ -13574,7 +13623,7 @@ def _MatchingRecord_is_valid(id):
         lo_rec = attempt.records.filter_by(selector_id=obj.selector_id).order_by(MatchingRecord.submission_period.asc()).first()
 
         if lo_rec is not None and lo_rec.id == obj.id:
-            warnings[("conversion", 1)] = 'Selector "{name}" is not marked for conversion to submitter, ' "but is present in this matching".format(
+            warnings[("conversion", 1)] = 'Selector "{name}" is not marked for conversion to submitter, but is present in this matching'.format(
                 name=obj.selector.student.user.name
             )
 
@@ -13646,8 +13695,19 @@ class MatchingRecord(db.Model):
     # keep copy of original project assignment, can use later to revert
     original_project_id = db.Column(db.Integer(), db.ForeignKey("live_projects.id"))
 
-    # rank of this project in the student's selection
-    rank = db.Column(db.Integer())
+    # rank of this project in the student's selection, or None if the assigned project wasn't in the selection (e.g. because it is an alternative)
+    rank = db.Column(db.Integer(), nullable=True)
+
+    # is this project an alternative?
+    alternative = db.Column(db.Boolean(), nullable=False, default=False)
+
+    # if this project is an alternative, link to the project it was an alternative for, or None if it is not an alternative
+    # (anyway ignored unless the alternative flag is set to True)
+    parent_id = db.Column(db.Integer(), db.ForeignKey("live_projects.id"), nullable=True, default=None)
+    parent = db.relationship("LiveProject", foreign_keys=[parent_id], uselist=False)
+
+    # if this project is an alternative, record its priority, or None if it is not an alternative
+    priority = db.Column(db.Integer(), nullable=True, default=None)
 
     # PERSONNEL
 
@@ -13830,10 +13890,30 @@ class MatchingRecord(db.Model):
 
     @property
     def delta(self):
-        if self.rank is None:
+        rk = self.total_rank
+        if rk is None:
             return None
 
-        return self.rank - 1
+        return rk - 1
+
+    @property
+    def total_rank(self):
+        if self.rank is not None:
+            if self.rank > 0:
+                return self.rank
+            else:
+                return None
+
+        if self.alternative and self.priority is not None:
+            sel: SelectingStudent = self.selector
+            config: ProjectClassConfig = sel.config
+            base_priority = max(config.initial_choices, config.switch_choices if config.allow_switching else 0)
+
+            return base_priority + self.priority
+
+        return None
+
+
 
     @property
     def hi_ranked(self):
@@ -13841,6 +13921,9 @@ class MatchingRecord(db.Model):
 
     @property
     def lo_ranked(self):
+        if self.alternative:
+            return True
+
         choices = self.selector.config.project_class.initial_choices
         return self.rank == choices or self.rank == choices - 1
 

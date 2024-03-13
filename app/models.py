@@ -12511,7 +12511,8 @@ def _MatchingAttempt_is_valid(id):
                 student_issues = True
 
     # 2. EACH PARTICIPATING FACULTY MEMBER SHOULD NOT BE OVERASSIGNED, EITHER AS MARKER OR SUPERVISOR
-    for fac in obj.faculty:
+    query = obj.faculty_list_query()
+    for fac in query.all():
         data = obj.is_supervisor_overassigned(fac, include_matches=True)
         if data["flag"]:
             errors[("supervising", fac.id)] = data["error_message"]
@@ -12814,8 +12815,6 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._selector_list = None
-        self._faculty_list = None
         self._CATS_list = None
 
         self._validated = False
@@ -12826,7 +12825,6 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
     @orm.reconstructor
     def _reconstruct(self):
-        self._faculty_list = None
         self._CATS_list = None
 
         self._validated = False
@@ -12842,21 +12840,13 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             .distinct()
         )
 
-    def _build_faculty_list(self):
-        if self._faculty_list is not None:
-            return
-
-        self._faculty_list = {}
-
-        for item in self.supervisors:
-            item: FacultyData
-            if item.id not in self._faculty_list:
-                self._faculty_list[item.id] = item
-
-        for item in self.markers:
-            item: FacultyData
-            if item.id not in self._faculty_list:
-                self._faculty_list[item.id] = item
+    def faculty_list_query(self):
+        return (
+            db.session.query(FacultyData)
+            .join(supervisors_matching_table, and_(supervisors_matching_table.c.match_id == self.id, supervisors_matching_table.c.supervisor_id == FacultyData.id), isouter=True)
+            .join(marker_matching_table, and_(marker_matching_table.c.match_id == self.id, marker_matching_table.c.marker_id == FacultyData.id), isouter=True)
+            .distinct()
+        )
 
     def get_faculty_CATS(self, fac, pclass_id=None):
         """
@@ -12879,13 +12869,8 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
 
         fsum = lambda x: x[0] + x[1] + x[2]
 
-        self._build_faculty_list()
-        self._CATS_list = [fsum(self.get_faculty_CATS(fac.id)) for fac in self.faculty]
-
-    @property
-    def faculty(self):
-        self._build_faculty_list()
-        return self._faculty_list.values()
+        query = self.faculty_list_query()
+        self._CATS_list = [fsum(self.get_faculty_CATS(fac.id)) for fac in query.all()]
 
     @property
     def submit_year_a(self):

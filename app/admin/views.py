@@ -5300,15 +5300,13 @@ def match_student_view(id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash(
-                'Match "{name}" is not yet available for inspection because it is still awaiting ' "manual upload.".format(name=record.name), "error"
-            )
+            flash('Match "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name), "error")
         else:
-            flash('Match "{name}" is not yet available for inspection because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash('Match "{name}" is not yet available for inspection because it has not yet completed.'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Match "{name}" is not available for inspection ' "because it did not yield an optimal solution".format(name=record.name), "error")
+        flash('Match "{name}" is not available for inspection because it did not yield an optimal solution'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not validate_match_inspector(record):
@@ -5368,15 +5366,13 @@ def match_faculty_view(id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash(
-                'Match "{name}" is not yet available for inspection because it is still awaiting ' "manual upload.".format(name=record.name), "error"
-            )
+            flash('Match "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name), "error")
         else:
-            flash('Match "{name}" is not yet available for inspection because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash('Match "{name}" is not yet available for inspection because it has not yet terminated.'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Match "{name}" is not available for inspection ' "because it did not yield an optimal solution.".format(name=record.name), "error")
+        flash('Match "{name}" is not available for inspection because it did not yield an optimal solution.'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not validate_match_inspector(record):
@@ -5478,7 +5474,8 @@ def match_dists_view(id):
     pclasses = get_automatch_pclasses()
 
     fsum = lambda x: x[0] + x[1] + x[2]
-    CATS_tot = [fsum(record.get_faculty_CATS(f.id, pclass_value if flag else None)) for f in record.faculty]
+    query = record.faculty_list_query()
+    CATS_tot = [fsum(record.get_faculty_CATS(f.id, pclass_value if flag else None)) for f in query.all()]
 
     CATS_plot = figure(title="Workload distribution", x_axis_label="CATS", width=800, height=300)
     CATS_hist, CATS_edges = histogram(CATS_tot, bins="auto")
@@ -5542,7 +5539,7 @@ def match_student_view_ajax(id):
         return jsonify({})
 
     pclass_filter = request.args.get("pclass_filter", default=None)
-    flag, pclass_value = is_integer(pclass_filter)
+    pclass_flag, pclass_value = is_integer(pclass_filter)
 
     type_filter = request.args.get("type_filter", default=None)
     hint_filter = request.args.get("hint_filter", default=None)
@@ -5605,7 +5602,7 @@ def match_student_view_ajax(id):
 
     filter_list = []
 
-    if flag:
+    if pclass_flag:
 
         def filt(pclass_value, rs: List[MatchingRecord]):
             return any(r.selector.config.pclass_id == pclass_value for r in rs)
@@ -5679,13 +5676,16 @@ def match_faculty_view_ajax(id):
         return jsonify({})
 
     pclass_filter = request.args.get("pclass_filter", default=None)
+    pclass_flag, pclass_value = is_integer(pclass_filter)
+
     type_filter = request.args.get("type_filter", default=None)
     hint_filter = request.args.get("hint_filter", default=None)
     show_includes = request.args.get("show_includes", default=None)
 
-    flag, pclass_value = is_integer(pclass_filter)
-
-    return ajax.admin.faculty_view_data(record.faculty, record, pclass_value if flag else None, type_filter, hint_filter, show_includes == "true")
+    base_query = record.faculty_list_query()
+    return ajax.admin.faculty_view_data(
+        base_query.all(), record, pclass_value if pclass_flag else None, type_filter, hint_filter, show_includes == "true"
+    )
 
 
 @admin.route("/delete_match_record/<int:attempt_id>/<int:selector_id>")

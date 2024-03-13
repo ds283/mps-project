@@ -918,7 +918,7 @@ def selectors(id):
     if cohort_filter is None and session.get("convenor_selectors_cohort_filter"):
         cohort_filter = session["convenor_selectors_cohort_filter"]
 
-    if isinstance(cohort_filter, str) and cohort_filter not in ['all', 'twd'] and int(cohort_filter) not in cohorts:
+    if isinstance(cohort_filter, str) and cohort_filter not in ["all", "twd"] and int(cohort_filter) not in cohorts:
         cohort_filter = "all"
 
     if cohort_filter is not None:
@@ -1094,7 +1094,7 @@ def _build_selector_data(config, cohort_filter, prog_filter, state_filter, conve
     else:
         data = selectors.all()
 
-    if cohort_filter == 'twd':
+    if cohort_filter == "twd":
         data = [rec for rec in selectors.all() if rec.student.intermitting]
 
     if year_flag:

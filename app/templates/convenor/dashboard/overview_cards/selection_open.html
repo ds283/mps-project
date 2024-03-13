@@ -179,10 +179,13 @@
                                     class="fw-semibold">{{ custom_declined }}</span>/{{ custom_total }} <span
                                     class="text-uppercase">declined</span></span>
                         </div>
-                        <div class="small mb-0 mt-2">
+                        <div class="small mb-0 mt-2 d-flex flex-column gap-1 justify-content-start align-items-start">
                             <a class="text-decoration-none link-primary"
                                href="{{ url_for('convenor.liveprojects', id=config.pclass_id, state_filter='custom') }}">View
                                 offers by project</a>
+                            <a class="text-decoration-none link-primary"
+                               href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='custom') }}">View
+                                offers by selector</a>
                         </div>
                     {% endcall %}
                 </div>

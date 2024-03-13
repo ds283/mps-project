@@ -60,8 +60,13 @@
                 <div class="alert alert-danger">
                     {% call icon_block("exclamation-circle") %}
                         <strong>
-                            {{ outstanding_confirms }} meeting confirmation requests are outstanding.
-                            The oldest request has been waiting for {{ age_oldest_confirm_request }} days.
+                            {% if outstanding_confirms == 1 %}
+                                1 meeting confirmation request is outstanding.
+                                This request has been waiting for {{ age_oldest_confirm_request }} days.
+                            {% else %}
+                                {{ outstanding_confirms }} meeting confirmation requests are outstanding.
+                                The oldest request has been waiting for {{ age_oldest_confirm_request }} days.
+                            {% endif %}
                         </strong>
                         <div class="mt-1">
                             <a class="link-primary text-decoration-none"

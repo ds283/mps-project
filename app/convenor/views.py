@@ -918,7 +918,7 @@ def selectors(id):
     if cohort_filter is None and session.get("convenor_selectors_cohort_filter"):
         cohort_filter = session["convenor_selectors_cohort_filter"]
 
-    if isinstance(cohort_filter, str) and cohort_filter != "all" and int(cohort_filter) not in cohorts:
+    if isinstance(cohort_filter, str) and cohort_filter not in ['all', 'twd'] and int(cohort_filter) not in cohorts:
         cohort_filter = "all"
 
     if cohort_filter is not None:
@@ -936,7 +936,7 @@ def selectors(id):
     if state_filter is None and session.get("convenor_selectors_state_filter"):
         state_filter = session["convenor_selectors_state_filter"]
 
-    if isinstance(state_filter, str) and state_filter not in ["all", "submitted", "bookmarks", "none", "confirmations", "twd"]:
+    if isinstance(state_filter, str) and state_filter not in ["all", "submitted", "bookmarks", "none", "confirmations", "custom"]:
         state_filter = "all"
 
     if state_filter is not None:
@@ -1089,10 +1089,13 @@ def _build_selector_data(config, cohort_filter, prog_filter, state_filter, conve
         data = [rec for rec in selectors.all() if not rec.has_submitted and not rec.has_bookmarks]
     elif state_filter == "confirmations":
         data = [rec for rec in selectors.all() if rec.number_pending > 0]
-    elif state_filter == "twd":
-        data = [rec for rec in selectors.all() if rec.student.intermitting]
+    elif state_filter == "custom":
+        data = [rec for rec in selectors.all() if rec.number_custom_offers > 0]
     else:
         data = selectors.all()
+
+    if cohort_filter == 'twd':
+        data = [rec for rec in selectors.all() if rec.student.intermitting]
 
     if year_flag:
         data = [s for s in data if (s.academic_year is None or s.academic_year == year_value)]

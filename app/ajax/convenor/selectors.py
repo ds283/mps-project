@@ -140,7 +140,7 @@ _submitted = """
     {% endif %}
     {% set offers = sel.number_offers_accepted %}
     {% if offers > 0 %}
-        <div>
+        <div class="mt-2">
             {% for offer in sel.custom_offers_accepted %}
                 <div class="text-success small"><i class="fas fa-check-circle"></i> <strong>Accepted:</strong> {{ offer.liveproject.name }}</div>
             {% endfor %}

@@ -22,7 +22,7 @@
                {% if show_confirmations %}href="{{ url_for('convenor.show_confirmations', id=pclass.id) }}"{% endif %}>
                 Outstanding confirmations
                 {% if show_confirmations %}
-                    {% set num_outstanding = convenor_data['outstanding_confirms_count'] %}
+                    {% set num_outstanding = convenor_data['outstanding_confirms'] %}
                     <span class="badge bg-secondary rounded-pill">{{ num_outstanding }}</span>
                 {% endif %}
             </a>

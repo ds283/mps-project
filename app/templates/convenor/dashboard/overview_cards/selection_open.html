@@ -18,7 +18,14 @@
             {% set bookmarks = selector_data['have_bookmarks'] %}
             {% set missing = selector_data['missing'] %}
             {% set total = selector_data['total'] %}
-            {% set outstanding_confirm = data['outstanding_confirms_count'] %}
+            {% set outstanding_confirm = data['outstanding_confirms'] %}
+            {% set confirm_total = data['confirms_total'] %}
+            {% set confirm_accepted = data['confirms_accepted'] %}
+            {% set confirm_declined = data['confirms_declined'] %}
+            {% set outstanding_custom = data['outstanding_custom'] %}
+            {% set custom_total = data['custom_total'] %}
+            {% set custom_accepted = data['custom_accepted'] %}
+            {% set custom_declined = data['custom_declined'] %}
             <div class="mb-3">
                 {% if submitted == total %}
                     <div class="alert alert-success mb-3">
@@ -103,48 +110,80 @@
             {% set confirmations_ok = outstanding_confirm == 0 %}
             {% set bookmarks_ok = bookmarks > 0 %}
             {% set missing_ok = missing == 0 %}
+            {% set custom_ok = true if custom_total > 0 else none %}
             <div class="row">
-                <div class="col-3">
+                <div class="col">
                     {% call dashboard_tile("Submitted", title_icon="circle", icon_state=submitted_ok) %}
                         <span class="fw-bold fs-1 {% if submitted_ok %}text-primary{% else %}text-warning{% endif %}">{{ submitted }}</span>
                         <span class="fs-4 text-muted">/{{ total }}</span>
-                        <p class="small mb-0">
+                        <div class="small mb-0">
                             <a class="text-decoration-none link-primary"
                                href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='submitted') }}">View
                                 submitters</a>
-                        </p>
+                        </div>
                     {% endcall %}
                 </div>
-                <div class="col-3">
+                <div class="col">
                     {% call dashboard_tile("Confirmations", title_icon="circle", icon_state=confirmations_ok) %}
                         <span class="fw-bold fs-1 {% if confirmations_ok %}text-primary{% else %}text-warning{% endif %}">{{ outstanding_confirm }}</span>
-                        <p class="small mb-0">
+                        <span class="text-muted"><span class="fs-4">/{{ confirm_total }}</span> <span
+                                class="text-uppercase">outstanding</span></span>
+                        <div class="text-secondary mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
+                            <span class="text-secondary"><span
+                                    class="fw-semibold">{{ confirm_accepted }}</span>/{{ confirm_total }} <span
+                                    class="text-uppercase">accepted</span></span>
+                            <span class="text-secondary"><span
+                                    class="fw-semibold">{{ confirm_declined }}</span>/{{ confirm_total }} <span
+                                    class="text-uppercase">declined</span></span>
+                        </div>
+                        <div class="small mb-0 mt-2">
                             <a class="text-decoration-none link-primary"
                                href="{{ url_for('convenor.show_confirmations', id=config.pclass_id) }}">View
                                 requests</a>
-                        </p>
+                        </div>
                     {% endcall %}
                 </div>
-                <div class="col-3">
+                <div class="col">
                     {% call dashboard_tile("Bookmarks", title_icon="circle", icon_state=bookmarks_ok) %}
                         <span class="fw-bold fs-1 {% if bookmarks_ok %}text-primary{% else %}text-warning{% endif %}">{{ bookmarks }}</span>
                         <span class="fs-4 text-muted">/{{ total }}</span>
-                        <p class="small mb-0">
+                        <div class="small mb-0">
                             <a class="text-decoration-none link-primary"
                                href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='bookmarks') }}">View
                                 selectors</a>
-                        </p>
+                        </div>
                     {% endcall %}
                 </div>
-                <div class="col-3">
+                <div class="col">
                     {% call dashboard_tile("No bookmarks", title_icon="circle", icon_state=missing_ok) %}
                         <span class="fw-bold fs-1 {% if missing_ok %}text-primary{% else %}text-warning{% endif %}">{{ missing }}</span>
                         <span class="fs-4 text-muted">/{{ total }}</span>
-                        <p class="small mb-0">
+                        <div class="small mb-0">
                             <a class="text-decoration-none link-primary"
                                href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">View
                                 selectors</a>
-                        </p>
+                        </div>
+                    {% endcall %}
+                </div>
+                <div class="col">
+                    {% call dashboard_tile("Custom offers", title_icon="circle", icon_state=custom_ok) %}
+                        <span class="fw-bold fs-1 {% if custom_total > 0 %}text-success{% else %}text-primary{% endif %}">{{ custom_total }}</span>
+                        <div class="text-secondary mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
+                            <span class="text-secondary"><span
+                                    class="fw-semibold">{{ outstanding_custom }}</span>/{{ custom_total }} <span
+                                    class="text-uppercase">outstanding</span></span>
+                            <span class="text-secondary"><span
+                                    class="fw-semibold">{{ custom_accepted }}</span>/{{ custom_total }} <span
+                                    class="text-uppercase">accepted</span></span>
+                            <span class="text-secondary"><span
+                                    class="fw-semibold">{{ custom_declined }}</span>/{{ custom_total }} <span
+                                    class="text-uppercase">declined</span></span>
+                        </div>
+                        <div class="small mb-0 mt-2">
+                            <a class="text-decoration-none link-primary"
+                               href="{{ url_for('convenor.liveprojects', id=config.pclass_id, state_filter='custom') }}">View
+                                offers by project</a>
+                        </div>
                     {% endcall %}
                 </div>
             </div>

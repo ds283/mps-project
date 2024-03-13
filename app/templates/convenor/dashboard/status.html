@@ -49,7 +49,7 @@
 {% block bodyblock %}
     {% set top_to_dos = todo['top_to_dos'] %}
     {% set num_to_dos = convenor_data['todo_count'] %}
-    {% set outstanding_confirms_count = convenor_data['outstanding_confirms_count'] %}
+    {% set outstanding_confirms = convenor_data['outstanding_confirms'] %}
     {% set age_oldest_confirm_request = convenor_data['age_oldest_confirm_request'] %}
     {% set lifecycle = config.selector_lifecycle %}
     {% set show_confirmations = (lifecycle >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN) and (lifecycle <= config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
@@ -60,7 +60,7 @@
                 <div class="alert alert-danger">
                     {% call icon_block("exclamation-circle") %}
                         <strong>
-                            {{ outstanding_confirms_count }} meeting confirmation requests are outstanding.
+                            {{ outstanding_confirms }} meeting confirmation requests are outstanding.
                             The oldest request has been waiting for {{ age_oldest_confirm_request }} days.
                         </strong>
                         <div class="mt-1">
@@ -347,7 +347,7 @@
                 {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                     {{ selection_open(config, change_form, convenor_data) }}
                 {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
-                    {{ selection_closed(config, rollover_in_progress) }}
+                    {{ selection_closed(config, rollover_in_progress, convenor_data) }}
                 {% else %}
                     <div class="card border-danger mt-3 mb-3">
                         <div class="card-header bg-danger text-white">Error</div>

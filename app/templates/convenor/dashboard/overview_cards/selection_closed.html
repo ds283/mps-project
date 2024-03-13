@@ -1,7 +1,7 @@
 {% from "icon_block.html" import icon_block %}
 {% from "dashboard_widgets.html" import dashboard_tile %}
 
-{% macro selection_closed(config, rollover_in_progress) %}
+{% macro selection_closed(config, rollover_in_progress, data) %}
     <div class="card border-secondary mt-3 mb-3">
         <div class="card-header"><strong>Student selections are now closed</strong></div>
         <div class="card-body">
@@ -9,6 +9,10 @@
             {% set submitted = selector_data['have_submitted'] %}
             {% set missing = selector_data['missing'] %}
             {% set total = selector_data['total'] %}
+            {% set outstanding_custom = data['outstanding_custom'] %}
+            {% set custom_total = data['custom_total'] %}
+            {% set custom_accepted = data['custom_accepted'] %}
+            {% set custom_declined = data['custom_declined'] %}
             <div>
                 {% if submitted == total %}
                     <div class="alert alert-success">
@@ -26,7 +30,8 @@
                     {% else %}
                         <div class="alert alert-warning">
                             {% call icon_block("exclamation-circle") %}
-                                <div><strong>Some students did not submit validated choices. Of these, some students did not have valid bookmark lists.</strong></div>
+                                <div><strong>Some students did not submit validated choices. Of these, some also did not
+                                    have valid bookmark lists.</strong></div>
                                 <div class="mt-1">
                                     These students may optionally be allocated an arbitrary project
                                     during automated matching.
@@ -61,36 +66,54 @@
             </div>
             {% set submitted_ok = submitted == total %}
             {% set missing_ok = missing == 0 %}
+            {% set custom_ok = true if custom_total > 0 else none %}
             <div class="row">
-                <div class="col-6">
+                <div class="col">
                     {% call dashboard_tile("Submitted", title_icon="circle", icon_state=submitted_ok) %}
                         <span class="fw-bold fs-1 {% if submitted_ok %}text-primary{% else %}text-warning{% endif %}">{{ submitted }}</span>
                         <span class="fs-4 text-muted">/{{ total }}</span>
-                        <div class="small mb-0">
-                            <div>
-                                <a class="text-decoration-none link-primary"
-                                   href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='submitted') }}">View
-                                    selectors
-                                </a>
-                            </div>
-                            <div>
-                                <a class="text-decoration-none link-primary"
-                                   href="{{ url_for('convenor.selector_grid', id=config.pclass_id) }}">
-                                    View selector grid
-                                </a>
-                            </div>
+                        <div class="small mb-0 d-flex flex-column gap-1 justify-content-start align-content-start">
+                            <a class="text-decoration-none link-primary"
+                               href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='submitted') }}">View
+                                selectors
+                            </a>
+                            <a class="text-decoration-none link-primary"
+                               href="{{ url_for('convenor.selector_grid', id=config.pclass_id) }}">
+                                View selector grid
+                            </a>
                         </div>
                     {% endcall %}
                 </div>
-                <div class="col-6">
+                <div class="col">
                     {% call dashboard_tile("Missing", title_icon="circle", icon_state=missing_ok) %}
                         <span class="fw-bold fs-1 {% if missing_ok %}text-primary{% else %}text-warning{% endif %}">{{ missing }}</span>
                         <span class="fs-4 text-muted">/{{ total }}</span>
-                        <p class="small mb-0">
+                        <div class="small mb-0">
                             <a class="text-decoration-none link-primary"
                                href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='none') }}">View
                                 selectors</a>
-                        </p>
+                        </div>
+                    {% endcall %}
+                </div>
+                <div class="col">
+                    {% call dashboard_tile("Custom offers", title_icon="circle", icon_state=custom_ok) %}
+                        <span class="fw-bold fs-1 {% if custom_total > 0 %}text-success{% else %}text-primary{% endif %}">{{ custom_total }}</span>
+                        <div class="text-secondary mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
+                            <span class="text-secondary"><span
+                                    class="fw-semibold">{{ outstanding_custom }}</span>/{{ custom_total }} <span
+                                    class="text-uppercase">outstanding</span></span>
+                            <span class="text-secondary"><span
+                                    class="fw-semibold">{{ custom_accepted }}</span>/{{ custom_total }} <span
+                                    class="text-uppercase">accepted</span></span>
+                            <span class="text-secondary"><span
+                                    class="fw-semibold">{{ custom_declined }}</span>/{{ custom_total }} <span
+                                    class="text-uppercase">declined</span></span>
+                        </div>
+                        <div class="small mb-0 mt-2">
+                            <a class="text-decoration-none link-primary"
+                               href="{{ url_for('convenor.liveprojects', id=config.pclass_id, state_filter='custom') }}">View
+                                offers by project</a>
+                        </div>
                     {% endcall %}
                 </div>
             </div>

@@ -23,6 +23,7 @@ from ..models import (
     SubmissionRecord,
     ProjectDescription,
     ConfirmRequest,
+    CustomOffer,
 )
 from ..shared.utils import get_current_year
 
@@ -198,10 +199,63 @@ def add_blank_submitter(student, selecting_config_id, submitting_config_id, auto
     adjust_task.apply_async(args=(submitter.id, get_current_year()))
 
 
+def build_all_confirmations_query(config: ProjectClassConfig):
+    return db.session.query(ConfirmRequest).join(LiveProject, LiveProject.id == ConfirmRequest.project_id).filter(LiveProject.config_id == config.id)
+
+
 def build_outstanding_confirmations_query(config: ProjectClassConfig):
     return (
         db.session.query(ConfirmRequest)
         .filter(or_(ConfirmRequest.state == ConfirmRequest.REQUESTED, ConfirmRequest.state == ConfirmRequest.DECLINED))
         .join(LiveProject, LiveProject.id == ConfirmRequest.project_id)
+        .filter(LiveProject.config_id == config.id)
+    )
+
+
+def build_accepted_confirmations_query(config: ProjectClassConfig):
+    return (
+        db.session.query(ConfirmRequest)
+        .filter(ConfirmRequest.state == ConfirmRequest.CONFIRMED)
+        .join(LiveProject, LiveProject.id == ConfirmRequest.project_id)
+        .filter(LiveProject.config_id == config.id)
+    )
+
+
+def build_declined_confirmations_query(config: ProjectClassConfig):
+    return (
+        db.session.query(ConfirmRequest)
+        .filter(ConfirmRequest.state == ConfirmRequest.DECLINED)
+        .join(LiveProject, LiveProject.id == ConfirmRequest.project_id)
+        .filter(LiveProject.config_id == config.id)
+    )
+
+
+def build_all_custom_query(config: ProjectClassConfig):
+    return db.session.query(CustomOffer).join(LiveProject, LiveProject.id == CustomOffer.liveproject_id).filter(LiveProject.config_id == config.id)
+
+
+def build_outstanding_custom_query(config: ProjectClassConfig):
+    return (
+        db.session.query(CustomOffer)
+        .filter(CustomOffer.status == CustomOffer.OFFERED)
+        .join(LiveProject, LiveProject.id == CustomOffer.liveproject_id)
+        .filter(LiveProject.config_id == config.id)
+    )
+
+
+def build_accepted_custom_query(config: ProjectClassConfig):
+    return (
+        db.session.query(CustomOffer)
+        .filter(CustomOffer.status == CustomOffer.ACCEPTED)
+        .join(LiveProject, LiveProject.id == CustomOffer.liveproject_id)
+        .filter(LiveProject.config_id == config.id)
+    )
+
+
+def build_declined_custom_query(config: ProjectClassConfig):
+    return (
+        db.session.query(CustomOffer)
+        .filter(CustomOffer.status == CustomOffer.DECLINED)
+        .join(LiveProject, LiveProject.id == CustomOffer.liveproject_id)
         .filter(LiveProject.config_id == config.id)
     )

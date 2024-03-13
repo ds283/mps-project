@@ -14,7 +14,16 @@ from sqlalchemy import or_, and_, func
 from sqlalchemy.event import listens_for
 from sqlalchemy.orm import with_polymorphic
 
-from ..convenor import build_outstanding_confirmations_query
+from ..convenor import (
+    build_outstanding_confirmations_query,
+    build_all_confirmations_query,
+    build_accepted_confirmations_query,
+    build_all_custom_query,
+    build_declined_confirmations_query,
+    build_outstanding_custom_query,
+    build_accepted_custom_query,
+    build_declined_custom_query,
+)
 from ..sqlalchemy import get_count
 from ...cache import cache
 from ...database import db
@@ -78,10 +87,21 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     todos = build_convenor_tasks_query(config, status_filter="available", due_date_order=True)
     todo_count = get_count(todos)
 
-    outstanding_confirms = build_outstanding_confirmations_query(config)
-    outstanding_confirms_count = get_count(outstanding_confirms)
+    all_confirms_q = build_all_confirmations_query(config)
+    all_confirms = get_count(all_confirms_q)
 
-    last_confirm: Optional[ConfirmRequest] = outstanding_confirms.order_by(ConfirmRequest.request_timestamp).first()
+    outstanding_confirms_q = build_outstanding_confirmations_query(config)
+    outstanding_confirms = get_count(outstanding_confirms_q)
+
+    accepted_confirms_q = build_accepted_confirmations_query(config)
+    accepted_confirms = get_count(accepted_confirms_q)
+
+    declined_confirms_q = build_declined_confirmations_query(config)
+    declined_confirms = get_count(declined_confirms_q)
+
+    last_confirm: Optional[ConfirmRequest] = outstanding_confirms_q.order_by(ConfirmRequest.request_timestamp).first()
+    recent_confirm: Optional[ConfirmRequest] = outstanding_confirms_q.order_by(ConfirmRequest.request_timestamp.desc()).first()
+
     now = datetime.now()
     if last_confirm is not None:
         age: timedelta = now - last_confirm.request_timestamp
@@ -91,6 +111,26 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         age_oldest_confirm_request = None
         time_oldest_confirm_request = None
 
+    if recent_confirm is not None:
+        age: timedelta = now - recent_confirm.request_timestamp
+        age_recent_confirm_request: int = age.days
+        time_recent_confirm_request = recent_confirm.request_timestamp
+    else:
+        age_recent_confirm_request = None
+        time_recent_confirm_request = None
+
+    all_custom_q = build_all_custom_query(config)
+    all_custom = get_count(all_custom_q)
+
+    outstanding_custom_q = build_outstanding_custom_query(config)
+    outstanding_custom = get_count(outstanding_custom_q)
+
+    accepted_custom_q = build_accepted_custom_query(config)
+    accepted_custom = get_count(accepted_custom_q)
+
+    declined_custom_q = build_declined_custom_query(config)
+    declined_custom = get_count(declined_custom_q)
+
     return {
         "faculty": enrolled_fac_count,
         "total_faculty": all_fac_count,
@@ -99,9 +139,18 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         "selectors": sel_count,
         "submitters": sub_count,
         "todo_count": todo_count,
-        "outstanding_confirms_count": outstanding_confirms_count,
+        "outstanding_confirms": outstanding_confirms,
         "age_oldest_confirm_request": age_oldest_confirm_request,
         "time_oldest_confirm_request": time_oldest_confirm_request,
+        "age_recent_confirm_request": age_recent_confirm_request,
+        "time_recent_confirm_request": time_recent_confirm_request,
+        "confirms_total": all_confirms,
+        "confirms_accepted": accepted_confirms,
+        "confirms_declined": declined_confirms,
+        "outstanding_custom": outstanding_custom,
+        "custom_total": all_custom,
+        "custom_accepted": accepted_custom,
+        "custom_declined": declined_custom,
     }
 
 

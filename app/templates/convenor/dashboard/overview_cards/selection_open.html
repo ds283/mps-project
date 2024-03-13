@@ -45,65 +45,67 @@
                     <div class="alert alert-info mb-3">
                         {% call icon_block("info-circle") %}
                             <div><strong>Some students have not yet submitted a validated selection.</strong></div>
-                            <div class="mt-1">
-                                However, all students have bookmark data.
-                            </div>
+                            {% if config.selection_open_to_all %}
+                                <div class="mt-2">
+                                    <ul>
+                                        <li>Selection for this project is available to all eligible students on an
+                                            opt-in basis.
+                                        </li>
+                                        <li>
+                                            If selections are closed now, students who have not submitted a validated
+                                            selection
+                                            will be assumed not to have opted-in and will be ignored when performing
+                                            automatic matching.
+                                        </li>
+                                    </ul>
+                                </div>
+                            {% else %}
+                                <div class="mt-2">
+                                    <ul>
+                                        <li>
+                                            If selections are closed now, bookmark data will be used when performing
+                                            automated matching for students missing a validated selection.
+                                        </li>
+                                    </ul>
+                                </div>
+                            {% endif %}
                         {% endcall %}
                     </div>
-                    {% if config.selection_open_to_all %}
-                        <div class="alert alert-warning mb-3">
-                            {% call icon_block("exclamation-circle") %}
-                                <div>
-                                    <strong>Selection for this project is available to all eligible students on an opt-in basis.</strong>
-                                </div>
-                                <div class="mt-1">
-                                    If selections are closed now, students who have not submitted a validated selection
-                                    will be assumed not to have opted-in and will be ignored when performing
-                                    automatic matching.
-                                </div>
-                            {% endcall %}
-                        </div>
-                    {% else %}
-                        <div class="alert alert-info mb-3">
-                            {% call icon_block("info-circle") %}
-                                <div><strong>Bookmark data will be used for automated matching.</strong></div>
-                                <div class="mt-1">
-                                    If selections are closed now, bookmark data will be used when performing
-                                    automated matching for students missing a validated selection.
-                                </div>
-                            {% endcall %}
-                        </div>
-                    {% endif %}
                 {% else %}
                     <div class="alert alert-warning mb-3">
                         {% call icon_block("exclamation-circle") %}
                             <div><strong>Some students are missing both a validated selection and bookmark data.</strong></div>
+                            {% if config.selection_open_to_all %}
+                                <div class="mt-2">
+                                    <ul>
+                                        <li>Selection for this project is available to all eligible students on an
+                                            opt-in basis.
+                                        </li>
+                                        <li>
+                                            If selections are closed now, students who have not submitted a validated
+                                            selection
+                                            will be assumed not to have opted-in and will be ignored when performing
+                                            automatic matching.
+                                        </li>
+                                    </ul>
+                                </div>
+                            {% else %}
+                                <div class="mt-2">
+                                    <ul>
+                                        <li>
+                                            If selections are closed now, bookmark data (where it exists)
+                                            will be used when performing
+                                            automated matching for students missing a validated selection.
+                                        </li>
+                                        <li>
+                                            Students without bookmark data can optionally be assigned
+                                            a random project.
+                                        </li>
+                                    </ul>
+                                </div>
+                            {% endif %}
                         {% endcall %}
                     </div>
-                    {% if config.selection_open_to_all %}
-                        <div class="alert alert-warning mb-3">
-                            {% call icon_block("info-circle") %}
-                                <div>
-                                    <strong>Selection for this project is available to all eligible students on an opt-in basis.</strong>
-                                </div>
-                                <div class="mt-1">
-                                    If selections are closed now, students who have not submitted a validated selection
-                                    will be assumed not to have opted-in and will be ignored when performing
-                                    automatic matching.
-                                </div>
-                            {% endcall %}
-                        </div>
-                    {% else %}
-                        <div class="alert alert-info mb-3">
-                            {% call icon_block("info-circle") %}
-                                <div><strong>Bookmark data will be used for automated matching.</strong></div>
-                                <div class="mt-1">
-                                    If selections are closed now, bookmark data will be used when performing
-                                    automated matching for students missing a validated selection.
-                                </div>
-                            {% endcall %}
-                        </div>
-                    {% endif %}
                 {% endif %}
             </div>
             {% set submitted_ok = submitted == total %}

@@ -69,7 +69,7 @@ _project = """
         {{ project_tag(recs[0], false) }}
     {% elif recs|length > 1 %}
         {% for r in recs %}
-            {{ project_tag(r, true, 1, url_for('admin.match_student_view', id=r.matching_id))) }}
+            {{ project_tag(r, true, 1, url_for('admin.match_student_view', id=r.matching_id)) }}
         {% endfor %}
     {% endif %}
 </div>

@@ -114,8 +114,8 @@
             {% set confirmations_ok = outstanding_confirm == 0 %}
             {% set bookmarks_ok = bookmarks > 0 %}
             {% set missing_ok = missing == 0 %}
-            {% set custom_ok = true if custom_total > 0 else none %}
-            <div class="row">
+            {% set custom_ok = outstanding_custom == 0 %}
+            <div class="row gy-3 mb-3">
                 <div class="col">
                     {% call dashboard_tile("Submitted", title_icon="circle", icon_state=submitted_ok) %}
                         <span class="fw-bold fs-1 {% if submitted_ok %}text-primary{% else %}text-warning{% endif %}">{{ submitted }}</span>
@@ -133,12 +133,16 @@
                         <span class="text-muted"><span class="fs-4">/{{ confirm_total }}</span> <span
                                 class="text-uppercase">outstanding</span></span>
                         <div class="text-secondary mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
-                            <span class="text-secondary"><span
-                                    class="fw-semibold">{{ confirm_accepted }}</span>/{{ confirm_total }} <span
-                                    class="text-uppercase">accepted</span></span>
-                            <span class="text-secondary"><span
-                                    class="fw-semibold">{{ confirm_declined }}</span>/{{ confirm_total }} <span
-                                    class="text-uppercase">declined</span></span>
+                            {% if confirm_accepted > 0 %}
+                                <span class="text-secondary"><span
+                                        class="fw-semibold">{{ confirm_accepted }}</span>/{{ confirm_total }} <span
+                                        class="text-uppercase">accepted</span></span>
+                            {% endif %}
+                            {% if confirm_declined > 0 %}
+                                <span class="text-secondary"><span
+                                        class="fw-semibold">{{ confirm_declined }}</span>/{{ confirm_total }} <span
+                                        class="text-uppercase">declined</span></span>
+                            {% endif %}
                         </div>
                         <div class="small mb-0 mt-2">
                             <a class="text-decoration-none link-primary"
@@ -171,17 +175,20 @@
                 </div>
                 <div class="col">
                     {% call dashboard_tile("Custom offers", title_icon="circle", icon_state=custom_ok) %}
-                        <span class="fw-bold fs-1 {% if custom_total > 0 %}text-success{% else %}text-primary{% endif %}">{{ custom_total }}</span>
+                        <span class="fw-bold fs-1 {% if custom_ok > 0 %}text-primary{% else %}text-warning{% endif %}">{{ outstanding_custom }}</span>
+                        <span class="text-muted"><span class="fs-4">/{{ custom_total }}</span> <span
+                                class="text-uppercase">outstanding</span></span>
                         <div class="text-secondary mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
-                            <span class="text-secondary"><span
-                                    class="fw-semibold">{{ outstanding_custom }}</span>/{{ custom_total }} <span
-                                    class="text-uppercase">outstanding</span></span>
-                            <span class="text-secondary"><span
-                                    class="fw-semibold">{{ custom_accepted }}</span>/{{ custom_total }} <span
-                                    class="text-uppercase">accepted</span></span>
-                            <span class="text-secondary"><span
-                                    class="fw-semibold">{{ custom_declined }}</span>/{{ custom_total }} <span
-                                    class="text-uppercase">declined</span></span>
+                            {% if custom_accepted > 0 %}
+                                <span class="text-secondary"><span
+                                        class="fw-semibold">{{ custom_accepted }}</span>/{{ custom_total }} <span
+                                        class="text-uppercase">accepted</span></span>
+                            {% endif %}
+                            {% if custom_declined > 0 %}
+                                <span class="text-secondary"><span
+                                        class="fw-semibold">{{ custom_declined }}</span>/{{ custom_total }} <span
+                                        class="text-uppercase">declined</span></span>
+                            {% endif %}
                         </div>
                         <div class="small mb-0 mt-2 d-flex flex-column gap-1 justify-content-start align-items-start">
                             <a class="text-decoration-none link-primary"

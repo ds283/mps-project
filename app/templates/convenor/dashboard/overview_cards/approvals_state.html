@@ -9,7 +9,7 @@
     {% set queued_ok = queued == 0 %}
     {% set pending_ok = pending == 0 %}
     {% set rejected_ok = rejected == 0 %}
-    <div class="row">
+    <div class="row gy-3">
         <div class="col-3">
             {% call dashboard_tile("Approved", title_icon="check-circle", icon_state=approved_ok) %}
                 <span class="fw-bold fs-1 {% if approved_ok %}text-success{% else %}text-primary{% endif %}">{{ approved }}</span>

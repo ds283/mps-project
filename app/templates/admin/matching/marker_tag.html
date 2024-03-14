@@ -1,0 +1,68 @@
+{% from "macros.html" import truncate %}
+{% from "swatch.html" import small_swatch %}
+
+{% macro student_marker_tag(r, show_period) %}
+    {% set markers = r.marker_roles %}
+    <div class="d-flex flex-row flex-wrap gap-1 align-items-center">
+        {% for marker in markers %}
+            {% if show_period %}
+                <span class="small fw-semibold">
+                    #{{ r.submission_period }}:
+                </span>
+            {% endif %}
+            <div class="dropdown match-assign-button" style="display: inline-block;">
+                <a class="text-decoration-none link-secondary dropdown-toggle small" data-bs-toggle="dropdown"
+                   role="button" href="" aria-haspopup="true" aria-expanded="false">
+                    {{ marker.name }}
+                </a>
+                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
+                    <div class="dropdown-header small">Reassign marker</div>
+                    {% set assessor_list = r.project.assessor_list %}
+                    {% for fac in assessor_list %}
+                        {% set disabled = false %}
+                        {% if fac.id == marker.id %}{% set disabled = true %}{% endif %}
+                        <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}"
+                           {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=fac.id) }}"{% endif %}>
+                            {{ fac.user.name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <span class="badge bg-light text-dark">None</span>
+        {% endfor %}
+    </div>
+{% endmacro %}
+
+{% macro faculty_marker_tag(r, show_period) %}
+    {% set pclass = r.selector.config.project_class %}
+    {% set style = pclass.make_CSS_style() %}
+    <div class="d-flex flex-row flex-wrap gap-1 align-items-center">
+        {% if label_type == 2 %} {# label for faculty view #}
+            {{ small_swatch(style) }}
+        {% endif %}
+        {% if show_period %}
+            <span class="small fw-semibold">
+                #{{ r.submission_period }}:
+            </span>
+        {% endif %}
+        <div class="dropdown match-assign-button" style="display: inline-block;">
+            <a class="text-decoration-none link-secondary dropdown-toggle small" data-bs-toggle="dropdown" href=""
+               role="button" aria-haspopup="true" aria-expanded="false">
+                {{ r.selector.student.user.name }} ({{- truncate(r.project.name, 30) -}})
+            </a>
+            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
+                <div class="dropdown-header small">Reassign marker</div>
+                {% set assessor_list = r.project.assessor_list %}
+                {% for marker in assessor_list %}
+                    {% set disabled = false %}
+                    {% if marker.id == r.marker_id %}{% set disabled = true %}{% endif %}
+                    <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}"
+                       {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=marker.id) }}"{% endif %}>
+                        {{ marker.user.name }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endmacro %}

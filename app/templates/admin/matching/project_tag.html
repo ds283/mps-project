@@ -1,0 +1,94 @@
+{% from "macros.html" import truncate %}
+{% from "swatch.html" import small_swatch %}
+
+{% macro project_tag(r, show_period, label_type, return_url) %}
+    {% set adjustable = r.selector.has_submission_list %}
+    {% set pclass = r.selector.config.project_class %}
+    {% set style = pclass.make_CSS_style() %}
+    {% set has_issues = r.has_issues %}
+    {% set supervisors = r.supervisor_roles %}
+    <div class="d-flex flex-row flex-wrap gap-1 align-items-center">
+        {% if label_type == 2 %} {# label for faculty view #}
+            {{ small_swatch(style) }}
+        {% endif %}
+        {% if show_period %}
+            <span class="small fw-semibold {% if has_issues %}text-danger{% else %}text-primary{% endif %}">
+                #{{ r.submission_period }}:
+            </span>
+        {% endif %}
+        {% if adjustable %}
+            {% set list = r.selector.ordered_selections %}
+            <div class="dropdown">
+                <a class="text-decoration-none {% if has_issues %}link-danger{% else %}link-primary{% endif %} dropdown-toggle small"
+                   data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                    {% if label_type == 1 %} {# label for student view #}
+                        {% if supervisors|length > 0 %}
+                            {{ truncate(r.project.name, 35) }} ({{ supervisors[0].last_name }})
+                        {% else %}
+                            {{ truncate(r.project.name, 35) }}
+                        {% endif %}
+                    {% elif label_type == 2 %} {# label for faculty view #}
+                        {{ r.selector.student.user.last_name }} ({{ truncate(r.project.name, 35) }})
+                    {% else %}
+                        {{ truncate(r.project.name, 35) }}
+                    {% endif %}
+                </a>
+                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
+                    <div class="dropdown-header small">Quick reassignment</div>
+                    {% for item in list %}
+                        {% set disabled = false %}
+                        {% set project = item.liveproject %}
+                        {% if item.liveproject_id == r.project_id or not item.is_selectable %}
+                            {% set disabled = true %}{% endif %}
+                        <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}"
+                           {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
+                            #{{ item.rank }}: {{ item.format_project()|safe }}
+                            {% if project.generic or project.owner is none %}
+                                (generic)
+                            {% else %}
+                                ({{ project.owner.user.name }})
+                            {% endif %}
+                            {% if r.original_project_id == item.liveproject_id %}
+                                [automatch]
+                            {% endif %}
+                        </a>
+                    {% endfor %}
+                    <div role="separator" class="dropdown-divider"></div>
+                    <a class="dropdown-item d-flex gap-2 small"
+                       href="{{ url_for('admin.reassign_supervisor_roles', rec_id=r.id, url=return_url) }}">
+                        Edit supervisor roles...
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <span class="{% if has_issues %}text-danger{% else %}text-primary{% endif %} small">
+                {% if supervisors|length > 0 %}
+                    {{ truncate(r.project.name, 35) }} ({{ supervisors[0].last_name }})
+                {% endif %}
+            </span>
+        {% endif %}
+        {% if r.project.generic %}
+            <span class="badge bg-info">Generic</span>
+        {% endif %}
+        {% set outcome = r.hint_status %}
+        {% if outcome is not none %}
+            {% set satisfied, violated = outcome %}
+            {% if satisfied|length > 0 %}
+                <span class="badge bg-success">{%- for i in range(satisfied|length) -%}
+                    <i class="fas fa-check"></i>{%- endfor %} HINT</span>
+            {% endif %}
+            {% if violated|length > 0 %}
+                <span class="badge bg-warning text-dark">{%- for i in range(violated|length) -%}
+                    <i class="fas fa-times"></i>{%- endfor %} HINT</span>
+            {% endif %}
+        {% endif %}
+        {% set prog_status = r.project.satisfies_preferences(r.selector) %}
+        {% if prog_status is not none %}
+            {% if prog_status %}
+                <span class="badge bg-success"><i class="fas fa-check"></i> Prog</span>
+            {% else %}
+                <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Prog</span>
+            {% endif %}
+        {% endif %}
+    </div>
+{% endmacro %}

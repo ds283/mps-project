@@ -22,11 +22,11 @@
 {% endmacro -%}
 
 {% macro truncate(name, length=20) %}
-    {% if name|length > length %}
+    {%- if name|length > length -%}
         {{ name[0:length] }}...
-    {% else %}
+    {%- else -%}
         {{ name }}
-    {% endif %}
+    {%- endif -%}
 {% endmacro %}
 
 {% macro edit_data(item) %}

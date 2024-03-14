@@ -83,9 +83,9 @@
         <div class="mt-1 small">
             {% for item in warnings %}
                 {% if loop.index <= max_warnings %}
-                    {{ format_inline_item(item, ns, class='info', link_class='secondary', icon='info-circle', quickfixes=quickfixes) }}
+                    {{ format_inline_item(item, ns, class='warning', link_class='secondary', icon='info-circle', quickfixes=quickfixes) }}
                 {% elif loop.index == max_warnings+1 %}
-                    <div class='text-info'>Further warnings suppressed...</div>
+                    <div class='text-warning'>Further warnings suppressed...</div>
                 {% endif %}
             {% endfor %}
         </div>

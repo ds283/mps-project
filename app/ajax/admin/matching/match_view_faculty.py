@@ -10,7 +10,7 @@
 
 from typing import List
 
-from flask import render_template, current_app
+from flask import render_template, current_app, get_template_attribute
 from jinja2 import Template, Environment
 
 from ....models import MatchingAttempt, MatchingRecord, FacultyData
@@ -90,140 +90,37 @@ _name = """
 
 # language=jinja2
 _projects = """
-{% macro truncate_name(name, maxlength=25) %}
-    {%- if name|length > maxlength -%}
-        {{ name[0:maxlength] }}...
-    {%- else -%}
-        {{ name }}
-    {%- endif -%}
-{% endmacro %}
-{% macro project_tag(r) %}
-    {% set adjustable = false %}
-    {% if r.selector.has_submission_list %}{% set adjustable = true %}{% endif %}
-    {% set pclass = r.selector.config.project_class %}
-    {% set style = pclass.make_CSS_style() %}
-    {% set has_issues = r.has_issues %}
-    <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-        <a class="badge text-decoration-none text-nohover-light {% if has_issues %}bg-danger{% elif style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
-                {% if not has_issues and style %}style="{{ style }}"{% endif %}
-                {% if adjustable %}data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false"{% endif %}>
-            #{{ r.submission_period }}: {{ r.selector.student.user.last_name }} ({{ truncate_name(r.project.name) }})
-        </a>
-        {% if adjustable %}
-            {% set list = r.selector.ordered_selections %}
-            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                <div class="dropdown-header">Submitted choices</div>
-                {% for item in list %}
-                    {% set disabled = false %}
-                    {% set project = item.liveproject %}
-                    {% if item.liveproject_id == r.project_id or not item.is_selectable %}{% set disabled = true %}{% endif %}
-                    <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
-                       #{{ item.rank }}: {{ item.format_project()|safe }}
-                       {% if project.generic or project.owner is none %}
-                          (generic)
-                       {% else %}
-                          ({{ project.owner.user.name }})
-                       {% endif %}
-                       {% if r.original_project_id == item.liveproject_id %}
-                          [automatch]
-                       {% endif %}
-                    </a>
-                {% endfor %}
-                <div role="separator" class="dropdown-divider"></div>
-                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.reassign_supervisor_roles', rec_id=r.id, url=url_for('admin.match_faculty_view', id=r.matching_id)) }}">
-                    Edit supervisor roles...
-                </a>                
-            </div>
-        {% endif %}
-    </div>
-    {% if r.project.generic %}
-        <span class="badge bg-info">GENERIC</span>
-    {% endif %}
-    {% set outcome = r.hint_status %}
-    {% if outcome is not none %}
-        {% set satisfied, violated = outcome %}
-        {% if satisfied|length > 0 %}
-            <span class="badge bg-success">{%- for i in range(satisfied|length) -%}<i class="fas fa-check"></i>{%- endfor %} HINT</span>
-        {% endif %}
-        {% if violated|length > 0 %}
-            <span class="badge bg-warning text-dark">{%- for i in range(violated|length) -%}<i class="fas fa-times"></i>{%- endfor %} HINT</span>
-        {% endif %}
-    {% endif %}
-    {% set prog_status = r.project.satisfies_preferences(r.selector) %}
-    {% if prog_status is not none %}
-        {% if prog_status %}
-            <span class="badge bg-success"><i class="fas fa-check"></i> PROG</span>
-        {% else %}
-            <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> PROG</span>
-        {% endif %}
-    {% endif %}
-{% endmacro %}
 {% set ns = namespace(count=0) %}
-{% for r in recs %}
-    {% if pclass_filter is none or r.selector.config.pclass_id == pclass_filter %}
-        {% set ns.count = ns.count + 1 %}
-        {{ project_tag(r) }}
-    {% endif %}
-{% endfor %}
-{% if ns.count == 0 %}
-    <span class="badge bg-secondary btn-table-block">None</span>
-{% endif %}
-{% if err_msgs|length > 0 %}
-    {% for msg in err_msgs %}
-        <div class="text-danger small">{{ msg }}</div>
+<div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+    {% for r in recs %}
+        {% if pclass_filter is none or r.selector.config.pclass_id == pclass_filter %}
+            {% set ns.count = ns.count + 1 %}
+            {{ project_tag(r, true, 2, url_for('admin.match_faculty_view', id=r.matching_id)) }}
+        {% endif %}
     {% endfor %}
-{% endif %}
+    {% if ns.count == 0 %}
+        <span class="badge bg-secondary btn-table-block">None</span>
+    {% endif %}
+</div>
+{{ error_block_inline(err_msgs, warn_msgs) }}
 """
 
 
 # language=jinja2
 _marking = """
-{% macro truncate_name(name, maxlength=25) %}
-    {%- if name|length > maxlength -%}
-        {{ name[0:maxlength] }}...
-    {%- else -%}
-        {{ name }}
-    {%- endif -%}
-{% endmacro %}
-{% macro marker_tag(r) %}
-    {% set pclass = r.selector.config.project_class %}
-    {% set style = pclass.make_CSS_style() %}
-    <div class="badge {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block" {% if style %}style="{{ style }}"{% endif %}>
-        #{{ r.submission_period }}: {{ r.selector.student.user.last_name }} ({{ truncate_name(r.project.name) }})
-    </div>
-    {# <div class="dropdown match-assign-button" style="display: inline-block;">
-        <a class="badge text-decoration-none text-nohover-light {% if style %}bg-secondary{% else %}bg-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown"
-            href="" role="button" aria-haspopup="true" aria-expanded="false">
-            #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})
-        </a>
-        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-            <div class="dropdown-header">Reassign marker</div>
-            {% set assessor_list = r.project.assessor_list %}
-            {% for marker in assessor_list %}
-                {% set disabled = false %}
-                {% if marker.id == r.marker_id %}{% set disabled = true %}{% endif %}
-                <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=marker.id) }}"{% endif %}>
-                    {{ marker.user.name }}
-                </a>
-            {% endfor %}
-        </div>
-    </div> #}
-{% endmacro %}
 {% set ns = namespace(count=0) %}
-{% for r in recs %}
-    {% if pclass_filter is none or r.selector.config.pclass_id == pclass_filter %}
-        {% set ns.count = ns.count + 1 %}
-        {{ marker_tag(r) }}
-    {% endif %}
-{% endfor %}
-{% if ns.count == 0 %}
-    <span class="badge bg-secondary btn-table-block">None</span>
-{% endif %}
-{% if err_msgs|length > 0 %}
-    {% for msg in err_msgs %}
-        <div class="text-danger small">{{ msg }}</div>
+<div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+    {% for r in recs %}
+        {% if pclass_filter is none or r.selector.config.pclass_id == pclass_filter %}
+            {% set ns.count = ns.count + 1 %}
+            {{ faculty_marker_tag(r, true) }}
+        {% endif %}
     {% endfor %}
-{% endif %}
+    {% if ns.count == 0 %}
+        <span class="badge bg-secondary btn-table-block">None</span>
+    {% endif %}
+</div>
+{{ error_block_inline(err_msgs, warn_msgs) }}
 """
 
 
@@ -277,7 +174,10 @@ def _build_workload_templ() -> Template:
 
 
 def faculty_view_data(faculty: List[FacultyData], match_attempt: MatchingAttempt, pclass_filter, type_filter, hint_filter, show_includes):
-    data = []
+    project_tag = get_template_attribute("admin/matching/project_tag.html", "project_tag")
+    faculty_marker_tag = get_template_attribute("admin/matching/marker_tag.html", "faculty_marker_tag")
+
+    error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
 
     name_templ: Template = _build_name_templ()
     projects_templ: Template = _build_projects_templ()
@@ -287,6 +187,9 @@ def faculty_view_data(faculty: List[FacultyData], match_attempt: MatchingAttempt
     def _data(f: FacultyData):
         sup_errors = {}
         mark_errors = {}
+
+        sup_warnings = {}
+        mark_warnings = {}
 
         # check for CATS overassignment
         payload = match_attempt.is_supervisor_overassigned(f, include_matches=show_includes, pclass_id=pclass_filter)
@@ -401,12 +304,31 @@ def faculty_view_data(faculty: List[FacultyData], match_attempt: MatchingAttempt
         sup_err_msgs = sup_errors.values()
         mark_err_msgs = mark_errors.values()
 
+        sup_warn_msgs = sup_warnings.values()
+        mark_warn_msgs = mark_warnings.values()
+
         return {
             "name": render_template(
                 name_templ, f=f, overassigned=overassigned, match=match_attempt, enrollments=enrollments, pclass_filter=pclass_filter
             ),
-            "projects": render_template(projects_templ, recs=supv_records, pclass_filter=pclass_filter, err_msgs=sup_err_msgs),
-            "marking": render_template(marking_templ, recs=mark_records, pclass_filter=pclass_filter, err_msgs=mark_err_msgs),
+            "projects": render_template(
+                projects_templ,
+                recs=supv_records,
+                pclass_filter=pclass_filter,
+                err_msgs=sup_err_msgs,
+                warn_msgs=sup_warn_msgs,
+                project_tag=project_tag,
+                error_block_inline=error_block_inline,
+            ),
+            "marking": render_template(
+                marking_templ,
+                recs=mark_records,
+                pclass_filter=pclass_filter,
+                err_msgs=mark_err_msgs,
+                warn_msgs=mark_warn_msgs,
+                faculty_marker_tag=faculty_marker_tag,
+                error_block_inline=error_block_inline,
+            ),
             "workload": render_template(
                 workload_templ,
                 m=match_attempt,

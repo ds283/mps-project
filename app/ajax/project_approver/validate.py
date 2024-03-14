@@ -9,7 +9,6 @@
 #
 
 from typing import Optional, List
-from urllib import parse
 
 from flask import current_app, render_template, jsonify
 from jinja2 import Template, Environment
@@ -30,13 +29,6 @@ def build_actions_templ() -> Template:
 
 
 def validate_data(current_user: User, url: Optional[str], text: Optional[str], records: List[ProjectDescription]):
-    bleach = current_app.extensions["bleach"]
-
-    def urlencode(s):
-        s = s.encode("utf8")
-        s = parse.quote_plus(s)
-        return bleach.clean(s)
-
     title_templ: Template = build_title_templ()
     owner_templ: Template = build_owner_templ()
     pclasses_templ: Template = build_pclasses_templ()

@@ -8,7 +8,6 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 from typing import List, Optional
-from urllib import parse
 
 from flask import current_app, get_template_attribute, render_template
 from jinja2 import Template, Environment
@@ -38,13 +37,6 @@ def _build_actions_templ() -> Template:
 
 
 def validate_data(url: Optional[str], text: Optional[str], records: List[StudentData]):
-    bleach = current_app.extensions["bleach"]
-
-    def urlencode(s):
-        s = s.encode("utf8")
-        s = parse.quote_plus(s)
-        return bleach.clean(s)
-
     simple_label = get_template_attribute("labels.html", "simple_label")
 
     academic_year_templ = _build_academic_year_templ()

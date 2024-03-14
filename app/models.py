@@ -12843,23 +12843,31 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     def faculty_list_query(self):
         return (
             db.session.query(FacultyData)
-            .join(supervisors_matching_table, and_(supervisors_matching_table.c.match_id == self.id, supervisors_matching_table.c.supervisor_id == FacultyData.id), isouter=True)
-            .join(marker_matching_table, and_(marker_matching_table.c.match_id == self.id, marker_matching_table.c.marker_id == FacultyData.id), isouter=True)
+            .join(
+                supervisors_matching_table,
+                and_(supervisors_matching_table.c.match_id == self.id, supervisors_matching_table.c.supervisor_id == FacultyData.id),
+                isouter=True,
+            )
+            .join(
+                marker_matching_table,
+                and_(marker_matching_table.c.match_id == self.id, marker_matching_table.c.marker_id == FacultyData.id),
+                isouter=True,
+            )
             .distinct()
         )
 
-    def get_faculty_CATS(self, fac, pclass_id=None):
+    def get_faculty_CATS(self, fd: FacultyData, pclass_id=None):
         """
         Compute faculty workload in CATS, optionally for a specific pclass
-        :param fac: FacultyData instance
+        :param fd: FacultyData instance
         :return:
         """
-        if isinstance(fac, int):
-            fac_id = fac
-        elif isinstance(fac, FacultyData) or isinstance(fac, User):
-            fac_id = fac.id
+        if isinstance(fd, int):
+            fac_id = fd
+        elif isinstance(fd, FacultyData) or isinstance(fd, User):
+            fac_id = fd.id
         else:
-            raise RuntimeError("Cannot interpret parameter fac of type {n} in get_faculty_CATS()".format(n=type(fac)))
+            raise RuntimeError("Cannot interpret parameter fac of type {n} in get_faculty_CATS()".format(n=type(fd)))
 
         return _MatchingAttempt_get_faculty_CATS(self.id, fac_id, pclass_id)
 
@@ -13897,8 +13905,6 @@ class MatchingRecord(db.Model):
             return base_priority + self.priority
 
         return None
-
-
 
     @property
     def hi_ranked(self):

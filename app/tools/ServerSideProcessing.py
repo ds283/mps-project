@@ -233,7 +233,7 @@ def _filter_row(row, search_value):
                 continue
 
             elif isinstance(value, Iterable):
-                print(f"search_value={search_value}, values={value}")
+                # print(f"search_value={search_value}, values={value}")
                 if any(search_value in x.lower() for x in value):
                     return True
                 continue

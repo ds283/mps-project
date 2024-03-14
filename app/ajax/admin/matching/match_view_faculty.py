@@ -10,10 +10,10 @@
 
 from typing import List
 
-from flask import jsonify, render_template, current_app
+from flask import render_template, current_app
 from jinja2 import Template, Environment
 
-from ....models import MatchingAttempt, MatchingRecord
+from ....models import MatchingAttempt, MatchingRecord, FacultyData
 
 # language=jinja2
 _name = """
@@ -276,10 +276,15 @@ def _build_workload_templ() -> Template:
     return env.from_string(_workload)
 
 
-def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, type_filter, hint_filter, show_includes):
+def faculty_view_data(faculty: List[FacultyData], match_attempt: MatchingAttempt, pclass_filter, type_filter, hint_filter, show_includes):
     data = []
 
-    for f in faculty:
+    name_templ: Template = _build_name_templ()
+    projects_templ: Template = _build_projects_templ()
+    marking_templ: Template = _build_marking_templ()
+    workload_templ: Template = _build_workload_templ()
+
+    def _data(f: FacultyData):
         sup_errors = {}
         mark_errors = {}
 
@@ -366,9 +371,6 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, ty
         if len(filter_list) > 0:
             supv_records = [x for x in supv_records if all(f(x) for f in filter_list)]
 
-            if len(supv_records) == 0:
-                continue
-
         # FOR EACH INCLUDED PROJECT CLASS, FACULTY ASSIGNMENTS SHOULD RESPECT ANY CUSTOM CATS LIMITS
         enrollments = {}
         for config in match_attempt.config_members:
@@ -399,44 +401,25 @@ def faculty_view_data(faculty, match_attempt: MatchingAttempt, pclass_filter, ty
         sup_err_msgs = sup_errors.values()
         mark_err_msgs = mark_errors.values()
 
-        name_templ: Template = _build_name_templ()
-        projects_templ: Template = _build_projects_templ()
-        marking_templ: Template = _build_marking_templ()
-        workload_templ: Template = _build_workload_templ()
+        return {
+            "name": render_template(
+                name_templ, f=f, overassigned=overassigned, match=match_attempt, enrollments=enrollments, pclass_filter=pclass_filter
+            ),
+            "projects": render_template(projects_templ, recs=supv_records, pclass_filter=pclass_filter, err_msgs=sup_err_msgs),
+            "marking": render_template(marking_templ, recs=mark_records, pclass_filter=pclass_filter, err_msgs=mark_err_msgs),
+            "workload": render_template(
+                workload_templ,
+                m=match_attempt,
+                sup=this_sup,
+                mark=this_mark,
+                tot=this_sup + this_mark,
+                sup_overassigned=sup_overassigned,
+                mark_overassigned=mark_overassigned,
+                included_sup=included_sup,
+                included_mark=included_mark,
+                included_workload=included_workload,
+                total_CATS_value=CATS_sup + CATS_mark,
+            ),
+        }
 
-        data.append(
-            {
-                "name": {
-                    "display": render_template(
-                        name_templ, f=f, overassigned=overassigned, match=match_attempt, enrollments=enrollments, pclass_filter=pclass_filter
-                    ),
-                    "sortvalue": f.user.last_name + f.user.first_name,
-                },
-                "projects": {
-                    "display": render_template(projects_templ, recs=supv_records, pclass_filter=pclass_filter, err_msgs=sup_err_msgs),
-                    "sortvalue": len(supv_records),
-                },
-                "marking": {
-                    "display": render_template(marking_templ, recs=mark_records, pclass_filter=pclass_filter, err_msgs=mark_err_msgs),
-                    "sortvalue": len(mark_records),
-                },
-                "workload": {
-                    "display": render_template(
-                        workload_templ,
-                        m=match_attempt,
-                        sup=this_sup,
-                        mark=this_mark,
-                        tot=this_sup + this_mark,
-                        sup_overassigned=sup_overassigned,
-                        mark_overassigned=mark_overassigned,
-                        included_sup=included_sup,
-                        included_mark=included_mark,
-                        included_workload=included_workload,
-                        total_CATS_value=CATS_sup + CATS_mark,
-                    ),
-                    "sortvalue": CATS_sup + CATS_mark,
-                },
-            }
-        )
-
-    return jsonify(data)
+    return [_data(f) for f in faculty]

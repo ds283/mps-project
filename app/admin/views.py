@@ -5581,7 +5581,7 @@ def match_student_view_ajax(id):
             row.matching_records.filter(MatchingRecord.matching_id == record.id).order_by(MatchingRecord.submission_period).all()
         )
 
-        return (rec.project.name if rec.project is not None else "" for rec in records)
+        return list(rec.project.name if rec.project is not None else "" for rec in records)
 
     def sort_rank(row: SelectingStudent):
         records: List[MatchingRecord] = row.matching_records.filter(MatchingRecord.matching_id == record.id).all()
@@ -5664,7 +5664,7 @@ def match_student_view_ajax(id):
         return handler.build_payload(row_formatter)
 
 
-@admin.route("/match_faculty_view_ajax/<int:id>")
+@admin.route("/match_faculty_view_ajax/<int:id>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
 def match_faculty_view_ajax(id):
     record: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
@@ -5683,9 +5683,108 @@ def match_faculty_view_ajax(id):
     show_includes = request.args.get("show_includes", default=None)
 
     base_query = record.faculty_list_query()
-    return ajax.admin.faculty_view_data(
-        base_query.all(), record, pclass_value if pclass_flag else None, type_filter, hint_filter, show_includes == "true"
-    )
+
+    def search_name(row: FacultyData):
+        user: User = row.user
+        return user.name
+
+    def sort_name(row: FacultyData):
+        user: User = row.user
+        return [user.last_name, user.first_name]
+
+    def search_projects(row: FacultyData):
+        records: List[MatchingRecord] = record.get_supervisor_records(row.id).all()
+
+        def _get_data(rec: MatchingRecord):
+            yield rec.project.name if rec.project is not None else ""
+            for item in rec.roles:
+                item: MatchingRole
+                yield item.user.name if item.user is not None else ""
+
+        return list(itertools_chain.from_iterable(_get_data(rec) for rec in records))
+
+    def sort_projects(row: FacultyData):
+        records: List[MatchingRecord] = record.get_supervisor_records(row.id).all()
+
+        return list(rec.project.name if rec.project is not None else "" for rec in records)
+
+    def search_marker(row: FacultyData):
+        records: List[MatchingRecord] = record.get_marker_records(row.id).all()
+
+        def _get_data(rec: MatchingRecord):
+            yield rec.project.name if rec.project is not None else ""
+            for item in rec.roles:
+                item: MatchingRole
+                yield item.user.name if item.user is not None else ""
+
+        return list(itertools_chain.from_iterable(_get_data(rec) for rec in records))
+
+    def sort_marker(row: FacultyData):
+        records: List[MatchingRecord] = record.get_marker_records(row.id).all()
+
+        return list(rec.project.name if rec.project is not None else "" for rec in records)
+
+    def sort_workload(row: FacultyData):
+        sup, mark, mod = record.get_faculty_CATS(row, pclass_id=pclass_value)
+
+        return sup + mark + mod
+
+    name = {"search": search_name, "order": sort_name}
+    projects = {"search": search_projects, "order": sort_projects}
+    marking = {"search": search_marker, "order": sort_marker}
+    workload = {"order": sort_workload}
+    columns = {"name": name, "projects": projects, "marking": marking, "workload": workload}
+
+    filter_list = []
+
+    if pclass_flag:
+
+        def filt(pclass_value, rs: List[MatchingRecord]):
+            return any(r.selector.config.pclass_id == pclass_value for r in rs)
+
+        filter_list.append(partial(filt, pclass_value))
+
+    if type_filter == "ordinary":
+
+        def filt(rs: List[MatchingRecord]):
+            return any(not r.project.generic for r in rs)
+
+        filter_list.append(filt)
+
+    elif type_filter == "generic":
+
+        def filt(rs: List[MatchingRecord]):
+            return any(r.project.generic for r in rs)
+
+        filter_list.append(filt)
+
+    if hint_filter == "satisfied":
+
+        def filt(rs: List[MatchingRecord]):
+            return any(len(r.hint_status[0]) > 0 for r in rs)
+
+        filter_list.append(filt)
+
+    elif hint_filter == "violated":
+
+        def filt(rs: List[MatchingRecord]):
+            return any(len(r.hint_status[1]) > 0 for r in rs)
+
+        filter_list.append(filt)
+
+    def row_filter(row: FacultyData):
+        records: List[MatchingRecord] = record.get_supervisor_records(row.id).all()
+
+        return all(f(records) for f in filter_list)
+
+    with ServerSideInMemoryHandler(request, base_query, columns, row_filter=row_filter if len(filter_list) > 0 else None) as handler:
+
+        def row_formatter(records: List[FacultyData]):
+            return ajax.admin.faculty_view_data(
+                records, record, pclass_value if pclass_flag else None, type_filter, hint_filter, show_includes == "true"
+            )
+
+        return handler.build_payload(row_formatter)
 
 
 @admin.route("/delete_match_record/<int:attempt_id>/<int:selector_id>")

@@ -13,7 +13,6 @@ from urllib import parse
 from flask import current_app, get_template_attribute, render_template
 from jinja2 import Template, Environment
 
-from ...cache import cache
 from ...models import StudentData
 
 # language=jinja2
@@ -46,9 +45,6 @@ def validate_data(url: Optional[str], text: Optional[str], records: List[Student
         s = parse.quote_plus(s)
         return bleach.clean(s)
 
-    url_enc = urlencode(url) if url is not None else ""
-    text_enc = urlencode(text) if text is not None else ""
-
     simple_label = get_template_attribute("labels.html", "simple_label")
 
     academic_year_templ = _build_academic_year_templ()
@@ -62,7 +58,7 @@ def validate_data(url: Optional[str], text: Optional[str], records: List[Student
             "registration_number": r.registration_number,
             "programme": r.programme.full_name,
             "year": render_template(academic_year_templ, r=r, simple_label=simple_label),
-            "menu": render_template(actions_templ, s=r, url=url_enc, text=text_enc),
+            "menu": render_template(actions_templ, s=r, url=url, text=text),
         }
         for r in records
     ]

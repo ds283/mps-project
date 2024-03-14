@@ -56,9 +56,6 @@ def rejected_data(current_user: User, url: Optional[str], text: Optional[str], r
         s = parse.quote_plus(s)
         return bleach.clean(s)
 
-    url_enc = urlencode(url) if url is not None else ""
-    text_enc = urlencode(text) if text is not None else ""
-
     title_templ: Template = build_title_templ()
     owner_templ: Template = build_owner_templ()
     pclasses_templ: Template = build_pclasses_templ()
@@ -67,11 +64,11 @@ def rejected_data(current_user: User, url: Optional[str], text: Optional[str], r
 
     data = [
         {
-            "name": render_template(title_templ, r=r, url=url_enc, text=text_enc, current_user=current_user),
+            "name": render_template(title_templ, r=r, url=url, text=text, current_user=current_user),
             "owner": render_template(owner_templ, p=r.parent),
             "pclasses": render_template(pclasses_templ, r=r),
             "rejected_by": render_template(rejected_templ, r=r),
-            "menu": render_template(actions_templ, r=r, url=url_enc, text=text_enc),
+            "menu": render_template(actions_templ, r=r, url=url, text=text),
         }
         for r in records
     ]

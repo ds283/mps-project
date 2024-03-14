@@ -7,9 +7,11 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+
 from flask import current_app
 from jinja2 import Template, Environment
 
+# language=jinja2
 _title = """
 {% set project = r.parent %}
 {% set pclass = project.project_classes.first() %}
@@ -18,9 +20,9 @@ _title = """
     {%- if project -%}{{ project.name }}{%- else -%}<unnamed project>{%- endif -%}/{%- if r.label -%}{{ r.label }}{%- else -%}<unnamed description>{%- endif -%}
 </a>
 {% if not project.is_offerable %}
-    <i class="fas fa-exclamation-triangle text-danger"></i>
     <div>
-        This project has validation errors that will prevent it from being published.
+        <i class="fas fa-exclamation-triangle text-danger"></i>
+        <span>This project has validation errors that will prevent it from being published.</span>
     </div>
 {% endif %}
 <div>
@@ -31,6 +33,7 @@ _title = """
 """
 
 
+# language=jinja2
 _owner = """
 {% if p.generic %}
     <span class="badge bg-secondary">Generic</span>
@@ -45,6 +48,7 @@ _owner = """
 """
 
 
+# language=jinja2
 _pclasses = """
 {% set ns = namespace(count=0) %}
 {% if r.default is not none %}

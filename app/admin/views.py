@@ -5695,34 +5695,18 @@ def match_faculty_view_ajax(id):
     def search_projects(row: FacultyData):
         records: List[MatchingRecord] = record.get_supervisor_records(row.id).all()
 
-        def _get_data(rec: MatchingRecord):
-            yield rec.project.name if rec.project is not None else ""
-            for item in rec.roles:
-                item: MatchingRole
-                yield item.user.name if item.user is not None else ""
-
-        return list(itertools_chain.from_iterable(_get_data(rec) for rec in records))
+        return [r.project.name if r.project is not None else "" for r in records]
 
     def sort_projects(row: FacultyData):
-        records: List[MatchingRecord] = record.get_supervisor_records(row.id).all()
-
-        return list(rec.project.name if rec.project is not None else "" for rec in records)
+        return get_count(record.get_supervisor_records(row.id))
 
     def search_marker(row: FacultyData):
         records: List[MatchingRecord] = record.get_marker_records(row.id).all()
 
-        def _get_data(rec: MatchingRecord):
-            yield rec.project.name if rec.project is not None else ""
-            for item in rec.roles:
-                item: MatchingRole
-                yield item.user.name if item.user is not None else ""
-
-        return list(itertools_chain.from_iterable(_get_data(rec) for rec in records))
+        return [r.project.name if r.project is not None else "" for r in records]
 
     def sort_marker(row: FacultyData):
-        records: List[MatchingRecord] = record.get_marker_records(row.id).all()
-
-        return list(rec.project.name if rec.project is not None else "" for rec in records)
+        return get_count(record.get_marker_records(row.id))
 
     def sort_workload(row: FacultyData):
         sup, mark, mod = record.get_faculty_CATS(row, pclass_id=pclass_value)

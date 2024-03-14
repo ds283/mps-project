@@ -24,41 +24,54 @@
                     {% if missing == 0 %}
                         <div class="alert alert-success">
                             {% call icon_block("check-circle") %}
-                                <div><strong>Some students did not submit validated choices, but all students had bookmark data.</strong></div>
+                                <div><strong>Some students did not submit validated choices,
+                                    but all students have bookmark data.</strong></div>
                             {% endcall %}
                         </div>
                     {% else %}
                         <div class="alert alert-warning">
                             {% call icon_block("exclamation-circle") %}
-                                <div><strong>Some students did not submit validated choices. Of these, some also did not
+                                <div><strong>Some selectors did not submit validated choice and do not
                                     have valid bookmark lists.</strong></div>
-                                <div class="mt-1">
-                                    These students may optionally be allocated an arbitrary project
-                                    during automated matching.
-                                </div>
-                            {% endcall %}
-                        </div>
-                    {% endif %}
-                    {% if config.selection_open_to_all %}
-                        <div class="alert alert-info">
-                            {% call icon_block("info-circle") %}
-                                <div><strong>Selection for this project was available to all eligible students on an opt-in basis.</strong></div>
-                                <div class="mt-1">
-                                    Students who have not submitted a validated selection
-                                    will be assumed not to have opted-in and will be ignored when performing
-                                    automatic matching.
-                                </div>
-                            {% endcall %}
-                        </div>
-                    {% else %}
-                        <div class="alert alert-info">
-                            {% call icon_block("info-circle") %}
-                                <div><strong>Where students did not submit validated choices, their bookmark lists (if valid) have been converted into submission data.</strong></div>
-                                <div class="mt-1">
-                                    These choices may optionally be down-weighted
-                                    during matching in order to prioritize rankings from students who
-                                    submitted a correct list of choices.
-                                </div>
+                                {% if config.selection_open_to_all %}
+                                    <div class="mt-2">
+                                        <ul>
+                                            <li>Selection for this project was available to all eligible students on an
+                                                opt-in basis.
+                                            </li>
+                                            <li>
+                                                Selectors who did not make a validated submission
+                                                will be assumed <span class="fw-semibold">not to have opted-in</span>
+                                                and will be ignored when performing
+                                                automated matching.
+                                            </li>
+                                        </ul>
+                                    </div>
+                                {% else %}
+                                    <div class="mt-2">
+                                        <ul>
+                                            <li>
+                                                <span class="fw-semibold">Where selectors did not make a validated submission,
+                                                their bookmark lists (if valid) have been converted into submission data.</span>
+                                            </li>
+                                            <li>
+                                                Invalid bookmark lists can be inspected using the
+                                                <a class="text-decoration-none link-primary"
+                                                   href="{{ url_for('convenor.selector_grid', id=config.pclass_id) }}">selector
+                                                    grid</a>
+                                                and converted into submission data.
+                                            </li>
+                                            <li>
+                                                Optionally, converted bookmark lists may be down-weighted
+                                                during matching in order to prioritize rankings from selectors who
+                                                submitted a correct list of choices.
+                                            </li>
+                                            <li>Optionally, selectors with missing submission data may be allocated a
+                                                random project during automated matching.
+                                            </li>
+                                        </ul>
+                                    </div>
+                                {% endif %}
                             {% endcall %}
                         </div>
                     {% endif %}

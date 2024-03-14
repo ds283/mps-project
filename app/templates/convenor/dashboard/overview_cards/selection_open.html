@@ -30,7 +30,7 @@
                 {% if submitted == total %}
                     <div class="alert alert-success mb-3">
                         {% call icon_block("info-circle") %}
-                            <div><strong>All students have submitted validated choices.</strong></div>
+                            <div><strong>All selectors have submitted validated choices.</strong></div>
                             <div>
                                 It is safe to close selections.
                                 {% if total == 0 %}
@@ -44,7 +44,7 @@
                 {% elif missing == 0 %}
                     <div class="alert alert-info mb-3">
                         {% call icon_block("info-circle") %}
-                            <div><strong>Some students have not yet submitted a validated selection.</strong></div>
+                            <div><strong>Some selectors have not yet made a validated submission.</strong></div>
                             {% if config.selection_open_to_all %}
                                 <div class="mt-2">
                                     <ul>
@@ -52,8 +52,8 @@
                                             opt-in basis.
                                         </li>
                                         <li>
-                                            If selections are closed now, students who have not submitted a validated
-                                            selection
+                                            If selections are closed now, selectors who have not
+                                            made a validated submission
                                             will be assumed not to have opted-in and will be ignored when performing
                                             automatic matching.
                                         </li>
@@ -63,8 +63,9 @@
                                 <div class="mt-2">
                                     <ul>
                                         <li>
-                                            If selections are closed now, bookmark data will be used when performing
-                                            automated matching for students missing a validated selection.
+                                            If selections are closed now, bookmark data
+                                            can be used to perform
+                                            automated matching.
                                         </li>
                                     </ul>
                                 </div>
@@ -74,7 +75,8 @@
                 {% else %}
                     <div class="alert alert-warning mb-3">
                         {% call icon_block("exclamation-circle") %}
-                            <div><strong>Some students are missing both a validated selection and bookmark data.</strong></div>
+                            <div><strong>Some selectors are missing both a validated submission and bookmark
+                                data.</strong></div>
                             {% if config.selection_open_to_all %}
                                 <div class="mt-2">
                                     <ul>
@@ -82,8 +84,8 @@
                                             opt-in basis.
                                         </li>
                                         <li>
-                                            If selections are closed now, students who have not submitted a validated
-                                            selection
+                                            If selections are closed now, selectors who have not
+                                            made a validated submission
                                             will be assumed not to have opted-in and will be ignored when performing
                                             automatic matching.
                                         </li>
@@ -94,12 +96,12 @@
                                     <ul>
                                         <li>
                                             If selections are closed now, bookmark data (where it exists)
-                                            will be used when performing
-                                            automated matching for students missing a validated selection.
+                                            can be used to perform
+                                            automated matching
                                         </li>
                                         <li>
-                                            Students without bookmark data can optionally be assigned
-                                            a random project.
+                                            Optionally, selectors with missing submission data may be allocated a
+                                            random project during automated matching.
                                         </li>
                                     </ul>
                                 </div>

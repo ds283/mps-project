@@ -1563,7 +1563,6 @@ def register_scheduling_tasks(celery):
                 last_edit_id=None,
                 last_edit_timestamp=None,
                 lp_file_id=None,
-                mps_file_id=None,
             )
 
             db.session.add(new_record)

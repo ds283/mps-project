@@ -4503,7 +4503,6 @@ def create_match():
             last_edit_id=None,
             score=None,
             lp_file_id=None,
-            mps_file_id=None,
         )
 
         # check whether there is any work to do -- is there a current config entry for each
@@ -8151,7 +8150,6 @@ def create_assessment_schedule(id):
             last_edit_id=None,
             score=None,
             lp_file_id=None,
-            mps_file_id=None,
         )
 
         db.session.add(schedule)
@@ -8326,7 +8324,6 @@ def perform_adjust_assessment_schedule(id):
         last_edit_id=None,
         score=None,
         lp_file_id=None,
-        mps_file_id=None,
     )
 
     try:

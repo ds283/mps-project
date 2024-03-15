@@ -32,7 +32,7 @@
     {% if period.collect_project_feedback or (period.has_presentation and period.collect_presentation_feedback) %}
         {% set pushed_ok = pushed > 0 %}
         {% set not_pushed_ok = not_pushed > 0 %}
-        <div class="row {{ topclass }}">
+        <div class="row gy-3 {{ topclass }}">
             <div class="col">
                 {% call dashboard_tile("Pushed", title_icon="check-circle", icon_state=pushed_ok) %}
                     <span class="fw-bold fs-1 {% if pushed_ok %}text-success{% else %}text-primary{% endif %}">{{ pushed }}</span>

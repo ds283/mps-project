@@ -12607,16 +12607,6 @@ class PuLPMixin(PuLPStatusMixin):
     def lp_file(cls):
         return db.relationship("GeneratedAsset", primaryjoin=lambda: GeneratedAsset.id == cls.lp_file_id, uselist=False)
 
-    # .MPS file id
-    @declared_attr
-    def mps_file_id(cls):
-        return db.Column(db.Integer(), db.ForeignKey("generated_assets.id"), nullable=True, default=None)
-
-    # .MPS file asset object
-    @declared_attr
-    def mps_file(cls):
-        return db.relationship("GeneratedAsset", primaryjoin=lambda: GeneratedAsset.id == cls.mps_file_id, uselist=False)
-
     @property
     def formatted_construct_time(self):
         return format_time(self.construct_time)

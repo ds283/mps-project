@@ -58,9 +58,6 @@ _status = """
         {% if s.lp_file is not none %}
             <a class="text-decoration-none" href="{{ url_for('admin.download_generated_asset', asset_id=s.lp_file.id) }}">LP</a>
         {% endif %}
-        {% if s.mps_file is not none %}
-            <a class="text-decoration-none" href="{{ url_for('admin.download_generated_asset', asset_id=s.mps_file.id) }}">MPS</a>
-        {% endif %}
     {% else %}
         <span class="badge bg-success">In progress</span>
     {% endif %}

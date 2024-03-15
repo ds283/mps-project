@@ -1060,13 +1060,9 @@ def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
     scratch_folder = Path(current_app.config.get("SCRATCH_FOLDER"))
 
     lp_name = str(uuid4())
-    mps_name = str(uuid4())
-
     lp_path = scratch_folder / lp_name
-    mps_path = scratch_folder / mps_name
 
     prob.writeLP(lp_path)
-    prob.writeMPS(mps_path)
 
     now = datetime.now()
 
@@ -1095,24 +1091,21 @@ def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
         return asset
 
     lp_asset = make_asset(lp_name, lp_path, "schedule.lp")
-    mps_asset = make_asset(mps_name, mps_path, "scheudle.mps")
 
     # delete unneded temporary files
     lp_path.unlink()
-    mps_path.unlink()
 
     # write new assets to database, so they get a valid primary key
     db.session.flush()
 
     # add asset details to ScheduleAttempt record
     record.lp_file = lp_asset
-    record.mps_file = mps_asset
 
     # allow exceptions to propagate up to calling function
     record.celery_finished = True
     db.session.commit()
 
-    return lp_asset, mps_asset
+    return lp_asset
 
 
 def _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_period):
@@ -1345,7 +1338,7 @@ def register_scheduling_tasks(celery):
         progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP and .MPS files...", autocommit=True)
 
         try:
-            lp_asset, mps_asset = _write_LP_MPS_files(record, prob, user)
+            lp_asset = _write_LP_MPS_files(record, prob, user)
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -1654,9 +1647,6 @@ def register_scheduling_tasks(celery):
 
                 if old_record.lp_file is not None:
                     new_record.lp_file = copy_asset(old_record.lp_file, "schedule.lp", ext="lp")
-
-                if old_record.mps_file is not None:
-                    new_record.mps_file = copy_asset(old_record.mps_file, "schedule.mps", ext="mps")
 
             db.session.commit()
 

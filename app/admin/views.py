@@ -4675,10 +4675,6 @@ def perform_terminate_match(id):
             record.lp_file.expiry = expire_time
             record.lp_file = None
 
-        if record.mps_file is not None:
-            record.mps_file.expiry = expire_time
-            record.mps_file = None
-
         db.session.delete(record)
         db.session.commit()
 
@@ -4798,10 +4794,6 @@ def perform_delete_match(id):
         if attempt.lp_file is not None:
             attempt.lp_file.expiry = expire_time
             attempt.lp_file = None
-
-        if attempt.mps_file is not None:
-            attempt.mps_file.expiry = expire_time
-            attempt.mps_file = None
 
         db.session.delete(attempt)
         db.session.commit()
@@ -8411,10 +8403,6 @@ def perform_terminate_schedule(id):
             record.lp_file.expiry = expire_time
             record.lp_file = None
 
-        if record.mps_file is not None:
-            record.mps_file.expiry = expire_time
-            record.mps_file = None
-
         db.session.delete(record)
         db.session.commit()
 
@@ -8517,10 +8505,6 @@ def perform_delete_schedule(id):
         if record.lp_file is not None:
             record.lp_file.expiry = expire_time
             record.lp_file = None
-
-        if record.mps_file is not None:
-            record.mps_file.expiry = expire_time
-            record.mps_file = None
 
         db.session.delete(record)
         db.session.commit()

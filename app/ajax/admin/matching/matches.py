@@ -51,15 +51,10 @@ _status = """
 {% else %}
     {% if m.awaiting_upload %}
         <div class="text-primary fw-semibold"><i class="fas fa-clock"></i> Awaiting upload</div>
-        {% if m.lp_file is not none or m.mps_file is not none %}
+        {% if m.lp_file is not none %}
             <div class="mt-2 p-1 bg-light">
                 <div class="text-secondary fw-semibold"><i class="fas fa-download"></i> Download</div>
-                {% if m.lp_file is not none %}
-                    <a class="text-decoration-none link-secondary" href="{{ url_for('admin.download_generated_asset', asset_id=m.lp_file.id) }}">LP</a>
-                {% endif %}
-                {% if m.mps_file is not none %}
-                    <a class="text-decoration-none link-secondary" href="{{ url_for('admin.download_generated_asset', asset_id=m.mps_file.id) }}">MPS</a>
-                {% endif %}
+                <a class="text-decoration-none link-secondary" href="{{ url_for('admin.download_generated_asset', asset_id=m.lp_file.id) }}">LP</a>
             </div>
         {% endif %}
     {% else %}

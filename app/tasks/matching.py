@@ -47,7 +47,10 @@ from ..models import (
     SubmissionPeriodDefinition,
     SubmittingStudent,
     SubmissionRole,
-    validate_nonce, CustomOffer, Project, LiveProjectAlternative,
+    validate_nonce,
+    CustomOffer,
+    Project,
+    LiveProjectAlternative,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.sqlalchemy import get_count
@@ -1985,8 +1988,8 @@ def _store_PuLP_solution(
                 submission_period=this_period,
                 rank=rk,
                 alternative=False if alt_data is None else True,
-                parent_id=None if alt_data is None else alt_data['project'].id,
-                priority=None if alt_data is None else alt_data['priority']
+                parent_id=None if alt_data is None else alt_data["project"].id,
+                priority=None if alt_data is None else alt_data["priority"],
             )
             db.session.add(data)
             db.session.flush()
@@ -3002,7 +3005,7 @@ def register_matching_tasks(celery):
 
         print(" -- creation complete in time {t}".format(t=create_time.interval))
 
-        progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP and .MPS files...", autocommit=True)
+        progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP file...", autocommit=True)
 
         try:
             lp_asset = _write_LP_MPS_files(record, prob, user)
@@ -3409,7 +3412,7 @@ def register_matching_tasks(celery):
                     original_marker_id=item.marker_id,
                     alternative=item.alternative,
                     parent_id=item.parent_id,
-                    priority=item.priority
+                    priority=item.priority,
                 )
                 db.session.add(rec)
 

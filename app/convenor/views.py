@@ -1138,15 +1138,15 @@ def enrol_selectors(id):
         flash("Manual enrolment of selectors is only possible before student choices are closed", "error")
         return redirect(redirect_url())
 
-    cohort_filter = request.args.get("cohort_filter")
-    prog_filter = request.args.get("prog_filter")
-    year_filter = request.args.get("year_filter")
+    cohort_filter = request.args.get("cohort_filter", "all")
+    prog_filter = request.args.get("prog_filter", "all")
+    year_filter = request.args.get("year_filter", "all")
 
     if prog_filter is None and session.get("convenor_sel_enroll_prog_filter"):
         prog_filter = session["convenor_sel_enroll_prog_filter"]
 
     candidates = build_enrol_selector_candidates(
-        config, disable_programme_filter=True if isinstance(prog_filter, str) and prog_filter.lower() == "off" else False
+        config, disable_programme_filter=True if isinstance(prog_filter, str) and prog_filter.lower() != "all" else False
     )
 
     # build list of available cohorts and degree programmes
@@ -1162,25 +1162,24 @@ def enrol_selectors(id):
             years.add(academic_year)
 
     # build list of available programmes
-    all_progs = (
+    progs = (
         db.session.query(DegreeProgramme)
-        .filter(DegreeProgramme.active == True)
+        .filter(DegreeProgramme.active == True, DegreeProgramme.id.in_(programmes))
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
         .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
         .all()
     )
-    progs = [rec for rec in all_progs if rec.id in programmes]
 
     if cohort_filter is None and session.get("convenor_sel_enroll_cohort_filter"):
         cohort_filter = session["convenor_sel_enroll_cohort_filter"]
 
-    if isinstance(cohort_filter, str) and cohort_filter != "all" and int(cohort_filter) not in cohorts:
+    if isinstance(cohort_filter, str) and cohort_filter not in ["all"] and int(cohort_filter) not in cohorts:
         cohort_filter = "all"
 
     if cohort_filter is not None:
         session["convenor_sel_enroll_cohort_filter"] = cohort_filter
 
-    if isinstance(prog_filter, str) and prog_filter != "all" and prog_filter != "off" and int(prog_filter) not in programmes:
+    if isinstance(prog_filter, str) and prog_filter not in ["all", "off"] and int(prog_filter) not in programmes:
         prog_filter = "all"
 
     if prog_filter is not None:
@@ -1189,7 +1188,7 @@ def enrol_selectors(id):
     if year_filter is None and session.get("convenor_sel_enroll_year_filter"):
         year_filter = session["convenor_sel_enroll_year_filter"]
 
-    if isinstance(year_filter, str) and year_filter != "all" and int(year_filter) not in years:
+    if isinstance(year_filter, str) and year_filter not in ["all"] and int(year_filter) not in years:
         year_filter = "all"
 
     if year_filter is not None:
@@ -1228,9 +1227,9 @@ def enrol_selectors_ajax(id):
     if not validate_is_convenor(pclass):
         return jsonify({})
 
-    cohort_filter = request.args.get("cohort_filter")
-    prog_filter = request.args.get("prog_filter")
-    year_filter = request.args.get("year_filter")
+    cohort_filter = request.args.get("cohort_filter", "all")
+    prog_filter = request.args.get("prog_filter", "all")
+    year_filter = request.args.get("year_filter", "all")
 
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
@@ -1244,7 +1243,7 @@ def enrol_selectors_ajax(id):
     ):
         return jsonify({})
 
-    disable = True if (isinstance(prog_filter, str) and prog_filter.lower() == "off") else False
+    disable = True if (isinstance(prog_filter, str) and prog_filter.lower() != "all") else False
     candidates = build_enrol_selector_candidates(config, disable_programme_filter=disable)
 
     # filter by cohort and programme if required

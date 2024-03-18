@@ -1335,7 +1335,7 @@ def register_scheduling_tasks(celery):
 
         print(" -- creation complete in time {t}".format(t=create_time.interval))
 
-        progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP and .MPS files...", autocommit=True)
+        progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP file...", autocommit=True)
 
         try:
             lp_asset = _write_LP_MPS_files(record, prob, user)

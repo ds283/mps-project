@@ -5,7 +5,7 @@ it directly, because your email won't reach us.
 
 Thank you for your efforts in preparing project descriptions and accommodating
 student meetings over the last term. We now have a draft of the student
-project allocation for next academic year, {{ attempt.submit_year_a }}-{{ attempt.submit_year_b }}.
+project allocation.
 {% for key in matches %}
 {%- set match_list = matches[key] -%}
 {%- set config = match_list[0].selector.config %}

@@ -8,8 +8,8 @@
 # Contributors: ds283$ <$>
 #
 
-from distutils.util import strtobool
 from datetime import datetime
+from distutils.util import strtobool
 from typing import List
 
 from celery import group, chain
@@ -263,7 +263,7 @@ def register_matching_email_tasks(celery):
         )
 
         if is_draft:
-            msg.subject = "Notification: Provisional FYP allocation for {yra}-{yrb}".format(yra=record.submit_year_a, yrb=record.submit_year_b)
+            msg.subject = "Notification: Provisional Data Science MSc project allocation for {yra}-{yrb}".format(yra=record.submit_year_a, yrb=record.submit_year_b)
 
             # check whether we are notifying of an assignment, or that a faculty member is not needed for an
             # assignment
@@ -277,14 +277,14 @@ def register_matching_email_tasks(celery):
                 )
                 msg.attach_alternative(html, "text/html")
 
-            else:
-                msg.body = render_template("email/matching/draft_unneeded_faculty.txt", user=user, fac=fac, attempt=record)
-
-                html = render_template("email/matching/draft_unneeded_faculty.html", user=user, fac=fac, attempt=record)
-                msg.attach_alternative(html, "text/html")
+            # else:
+            #     msg.body = render_template("email/matching/draft_unneeded_faculty.txt", user=user, fac=fac, attempt=record)
+            #
+            #     html = render_template("email/matching/draft_unneeded_faculty.html", user=user, fac=fac, attempt=record)
+            #     msg.attach_alternative(html, "text/html")
 
         else:
-            msg.subject = "Notification: Final FYP allocation for {yra}-{yrb}".format(yra=record.submit_year_a, yrb=record.submit_year_b)
+            msg.subject = "Notification: Final Data Science MSc allocation for {yra}-{yrb}".format(yra=record.submit_year_a, yrb=record.submit_year_b)
 
             # check whether we are notifying of an assignment, or that a faculty member is not needed for an
             # assignment
@@ -298,11 +298,11 @@ def register_matching_email_tasks(celery):
                 )
                 msg.attach_alternative(html, "text/html")
 
-            else:
-                msg.body = render_template("email/matching/final_unneeded_faculty.txt", user=user, fac=fac, attempt=record)
-
-                html = render_template("email/matching/final_unneeded_faculty.html", user=user, fac=fac, attempt=record)
-                msg.attach_alternative(html, "text/html")
+            # else:
+            #     msg.body = render_template("email/matching/final_unneeded_faculty.txt", user=user, fac=fac, attempt=record)
+            #
+            #     html = render_template("email/matching/final_unneeded_faculty.html", user=user, fac=fac, attempt=record)
+            #     msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
         task_id = register_task(msg.subject, description="Send schedule email to {r}".format(r=", ".join(msg.to)))

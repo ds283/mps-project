@@ -158,9 +158,9 @@
                         {% endif %}
                     </div>
                     <div {% if show_hint %}class="col-3"{% else %}class="col-2"{% endif %}>
-                        <div class="text-success rank-hint-button">#<strong>{{ item.rank }}</strong></div>
+                        <div class="text-success">#<strong>{{ item.rank }}</strong></div>
                         {% if item.converted_from_bookmark %}
-                            <div class="text-secondary rank-hint-button"><i class="fas fa-exclamation-circle"></i>> From
+                            <div class="text-warning small"><i class="fas fa-exclamation-circle"></i> From
                                 bookmark
                             </div>
                         {% endif %}

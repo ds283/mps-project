@@ -13501,7 +13501,8 @@ def _MatchingRecord_is_valid(id):
 
                 errors[("moderators", 1)] = 'Moderator "{name}" is assigned {n} times for this selector'.format(name=user.name, n=count)
 
-    # 2. IF THERE IS A SUBMISSION LIST, WARN IF ASSIGNED PROJECT IS NOT ON THIS LIST
+    # 2. IF THERE IS A SUBMISSION LIST, WARN IF ASSIGNED PROJECT IS NOT ON THIS LIST, UNLESS IT IS AN ALTERNATIVE FOR ONE
+    # OF THE SELECTED PROJECTED
     if sel.has_submission_list:
         if sel.project_rank(obj.project_id) is None:
             alt_data = sel.alternative_priority(obj.project_id)
@@ -13515,12 +13516,11 @@ def _MatchingRecord_is_valid(id):
     # 3. IF THERE WAS AN ACCEPTED CUSTOM OFFER, WARN IF ASSIGNED SUPERVISOR IS NOT THE ONE IN THE OFFER
     if obj.selector.has_accepted_offer:
         offer = obj.selector.accepted_offer
-        offer_project = offer.liveproject if offer is not None else None
+        offer_project: LiveProject = offer.liveproject if offer is not None else None
 
-        if offer_project is not None and project.id != offer_project.id:
-            errors[("assignment", 1)] = 'This selector accepted a custom offer for project "{name}", but their assigned project is different'.format(
-                name=project.name
-            )
+        if offer_project is not None:
+            if project.id != offer_project.id:
+                errors[("custom", 0)] = f'This selector accepted a custom offer for project "{project.name}", but their assigned project is different'
 
     # 4. ASSIGNED PROJECT MUST BE PART OF THE PROJECT CLASS
     if project.config_id != obj.selector.config_id:

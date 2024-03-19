@@ -53,7 +53,7 @@ def register_send_log_email(celery, mail: Mail):
                 with mail.get_connection() as connection:
                     connection.send_messages([msg])
             else:
-                current_app.logger.error("-- send_mail) ignored attempt to send email with empty body")
+                current_app.logger.error("-- send_mail() ignored attempt to send email with empty body")
                 with mail.get_connection(backend="console") as connection:
                     msg.connection = connection
                     msg.send()

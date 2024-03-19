@@ -212,7 +212,7 @@ def initial_populate_database(app, inspector, initial_db=None):
                 tar_files.append(fname)
             elif full_suffix in [".sql"]:
                 sql_files.append(fname)
-            else:
+            elif object != _LOCKFILE_NAME:
                 print(f'** ignored unmatched object in initial bucket with name "{object}"')
 
         if len(tar_files) > 1:
@@ -304,15 +304,23 @@ def store_CATS_limits(app, bucket: ObjectStore, csv_file: str | Path):
 
             if ds_rec is not None:
                 if ds_rec.CATS_supervision is not None and ds_rec.CATS_supervision < fd.CATS_supervision:
-                    print(f' -- !! "{full_name}" <{email}> supervision limit of {ds_rec.CATS_supervision} for DS is lower than global limit of {fd.CATS_supervision}')
+                    print(
+                        f' -- !! "{full_name}" <{email}> supervision limit of {ds_rec.CATS_supervision} for DS is lower than global limit of {fd.CATS_supervision}'
+                    )
                 if ds_rec.CATS_marking is not None and ds_rec.CATS_marking < fd.CATS_marking:
-                    print(f' -- !! "{full_name}" <{email}> supervision limit of {ds_rec.CATS_supervision} for DS is lower than global limit of {fd.CATS_supervision}')
+                    print(
+                        f' -- !! "{full_name}" <{email}> supervision limit of {ds_rec.CATS_supervision} for DS is lower than global limit of {fd.CATS_supervision}'
+                    )
 
             if hsds_rec is not None:
                 if hsds_rec.CATS_supervision is not None and hsds_rec.CATS_supervision < fd.CATS_supervision:
-                    print(f' -- !! "{full_name}" <{email}> supervision limit of {hsds_rec.CATS_supervision} for HSDS is lower than global limit of {fd.CATS_supervision}')
+                    print(
+                        f' -- !! "{full_name}" <{email}> supervision limit of {hsds_rec.CATS_supervision} for HSDS is lower than global limit of {fd.CATS_supervision}'
+                    )
                 if hsds_rec.CATS_marking is not None and hsds_rec.CATS_marking < fd.CATS_marking:
-                    print(f' -- !! "{full_name}" <{email}> supervision limit of {hsds_rec.CATS_supervision} for HSDS is lower than global limit of {fd.CATS_supervision}')
+                    print(
+                        f' -- !! "{full_name}" <{email}> supervision limit of {hsds_rec.CATS_supervision} for HSDS is lower than global limit of {fd.CATS_supervision}'
+                    )
 
     db.session.commit()
 

@@ -112,13 +112,14 @@ _name = """
     {% endif %}
 </div>
 {% if s.finished and s.solution_usable %}
-    <p></p>
-    {% if s.construct_time %}
-        <span class="badge bg-secondary"><i class="fas fa-stopwatch"></i> Build {{ s.formatted_construct_time }}</span>
-    {% endif %}
-    {% if s.compute_time %}
-        <span class="badge bg-secondary"><i class="fas fa-stopwatch"></i> Solve {{ s.formatted_compute_time }}</span>
-    {% endif %}
+    <div class="mt-2">
+        {% if s.construct_time %}
+            <div class="text-secondary small mt-1"><i class="fas fa-stopwatch"></i> Build {{ s.formatted_construct_time }}</div>
+        {% endif %}
+        {% if s.compute_time %}
+            <span class="text-secondary small mt-1"><i class="fas fa-stopwatch"></i> Solve {{ s.formatted_compute_time }}</span>
+        {% endif %}
+    </div>
 {% endif %}
 """
 

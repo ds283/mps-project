@@ -349,25 +349,29 @@ _name = """
 {% if has_extra_matches %}
     <div class="mt-1">
         {% if m.base is not none %}
-            <p><span class="badge bg-success"><i class="fas fa-plus-circle"></i></span> <strong>Base</strong>: {{ m.base.name }}</p>
-            {% if m.force_base %}
-                <span class="badge bg-info">Force match</span>
-            {% else %}
-                <span class="badge bg-info">Bias {{ m.base_bias }}</span>
-            {% endif %}
+            <div class="mt-2">
+                <div class="small text-primary"><i class="fas fa-link"></i> Base: <span class="fw-semibold">{{ m.base.name }}</span></div>
+                {% if m.force_base %}
+                    <div class="text-secondary small"><i class="fas fa-check-circle"></i> Force inherit</div>
+                {% else %}
+                    <div class="text-secondary small"><i class="fas fa-circle"></i> Bias {{ m.base_bias }}</div>
+                {% endif %}
+            </div>
         {% endif %}
-        {% for match in m.include_matches %}
-            <p><span class="badge bg-primary"><i class="fas fa-arrow-right"></i></span> <strong>Inc</strong>: {{ match.name }}</p>
-        {% endfor %}
+        <div class="mt-2">       
+            {% for match in m.include_matches %}
+                <div class="small text-primary"><i class="fas fa-arrow-right"></i> Include:<span class="fw-semibold">{{ match.name }}</span></div>
+            {% endfor %}
+        </div>
     </div>
 {% endif %}
 {% if m.finished and m.solution_usable %}
-    <div class="mt-1">
+    <div class="mt-2">
         {% if m.construct_time %}
-            <span class="badge bg-secondary"><i class="fas fa-stopwatch"></i> Build {{ m.formatted_construct_time }}</span>
+            <div class="text-secondary small mt-1"><i class="fas fa-stopwatch"></i> Build {{ m.formatted_construct_time }}</div>
         {% endif %}
         {% if m.compute_time %}
-            <span class="badge bg-secondary"><i class="fas fa-stopwatch"></i> Solve {{ m.formatted_compute_time }}</span>
+            <span class="text-secondary small mt-1"><i class="fas fa-stopwatch"></i> Solve {{ m.formatted_compute_time }}</span>
         {% endif %}
     </div>
 {% endif %}

@@ -70,16 +70,19 @@
         {% if r.project.generic %}
             <span class="badge bg-info">Generic</span>
         {% endif %}
+        {% if r.alternative %}
+            <span class="badge bg-warning text-dark">Alternative</span>
+        {% endif %}
         {% set outcome = r.hint_status %}
         {% if outcome is not none %}
             {% set satisfied, violated = outcome %}
             {% if satisfied|length > 0 %}
                 <span class="badge bg-success">{%- for i in range(satisfied|length) -%}
-                    <i class="fas fa-check"></i>{%- endfor %} HINT</span>
+                    <i class="fas fa-check"></i>{%- endfor %} Hint</span>
             {% endif %}
             {% if violated|length > 0 %}
                 <span class="badge bg-warning text-dark">{%- for i in range(violated|length) -%}
-                    <i class="fas fa-times"></i>{%- endfor %} HINT</span>
+                    <i class="fas fa-times"></i>{%- endfor %} Hint</span>
             {% endif %}
         {% endif %}
         {% set prog_status = r.project.satisfies_preferences(r.selector) %}

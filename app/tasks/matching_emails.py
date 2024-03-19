@@ -263,7 +263,9 @@ def register_matching_email_tasks(celery):
         )
 
         if is_draft:
-            msg.subject = "Notification: Provisional Data Science MSc project allocation for {yra}-{yrb}".format(yra=record.submit_year_a, yrb=record.submit_year_b)
+            msg.subject = "Notification: Provisional Data Science MSc project allocation for {yra}-{yrb}".format(
+                yra=record.submit_year_a, yrb=record.submit_year_b
+            )
 
             # check whether we are notifying of an assignment, or that a faculty member is not needed for an
             # assignment
@@ -276,6 +278,10 @@ def register_matching_email_tasks(celery):
                     "email/matching/draft_notify_faculty.html", user=user, fac=fac, attempt=record, matches=binned_matches, convenors=convenors
                 )
                 msg.attach_alternative(html, "text/html")
+
+                # register a new task in the database
+                task_id = register_task(msg.subject, description="Send schedule email to {r}".format(r=", ".join(msg.to)))
+                send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
             # else:
             #     msg.body = render_template("email/matching/draft_unneeded_faculty.txt", user=user, fac=fac, attempt=record)
@@ -298,14 +304,18 @@ def register_matching_email_tasks(celery):
                 )
                 msg.attach_alternative(html, "text/html")
 
+                # register a new task in the database
+                task_id = register_task(msg.subject, description="Send schedule email to {r}".format(r=", ".join(msg.to)))
+                send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
             # else:
             #     msg.body = render_template("email/matching/final_unneeded_faculty.txt", user=user, fac=fac, attempt=record)
             #
             #     html = render_template("email/matching/final_unneeded_faculty.html", user=user, fac=fac, attempt=record)
             #     msg.attach_alternative(html, "text/html")
 
-        # register a new task in the database
-        task_id = register_task(msg.subject, description="Send schedule email to {r}".format(r=", ".join(msg.to)))
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        # # register a new task in the database
+        # task_id = register_task(msg.subject, description="Send schedule email to {r}".format(r=", ".join(msg.to)))
+        # send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1

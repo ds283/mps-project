@@ -64,7 +64,7 @@ def skills_data(skills):
     data = [
         {
             "name": s.name,
-            "group": render_template_string(_group, s=s),
+            "group": render_template_string(_group, s=s, simple_label=simple_label),
             "active": render_template_string(_active, s=s),
             "menu": render_template_string(_menu, skill=s),
         }

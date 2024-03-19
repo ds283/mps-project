@@ -49,7 +49,7 @@ def register_send_log_email(celery, mail: Mail):
             # So we need NOT to have the connection object stored in msg (as it normally would be
             # via the data member msg.connection in the Flask-Mailman workflow) when we exit, because that could
             # affect downstream pickling
-            if hasattr(msg, 'body') and msg.body is not None:
+            if hasattr(msg, "body") and msg.body is not None:
                 with mail.get_connection() as connection:
                     connection.send_messages([msg])
             else:

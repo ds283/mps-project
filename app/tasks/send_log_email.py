@@ -9,8 +9,8 @@
 #
 
 
-from flask import current_app
-from flask_mailman import Mail, EmailMessage
+from datetime import datetime
+from email.utils import parseaddr
 from smtplib import (
     SMTPAuthenticationError,
     SMTPConnectError,
@@ -24,18 +24,16 @@ from smtplib import (
     SMTPServerDisconnected,
 )
 
+from celery import chain
+from celery.exceptions import Ignore
+from flask import current_app
+from flask_mailman import Mail, EmailMessage
 from flask_mailman.message import sanitize_address
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import User, EmailLog, TaskRecord
 from ..task_queue import progress_update
-
-from celery import chain
-from celery.exceptions import Ignore
-from sqlalchemy.exc import SQLAlchemyError
-
-from datetime import datetime
-from email.utils import parseaddr
 
 
 def register_send_log_email(celery, mail: Mail):
@@ -51,8 +49,14 @@ def register_send_log_email(celery, mail: Mail):
             # So we need NOT to have the connection object stored in msg (as it normally would be
             # via the data member msg.connection in the Flask-Mailman workflow) when we exit, because that could
             # affect downstream pickling
-            with mail.get_connection() as connection:
-                connection.send_messages([msg])
+            if hasattr(msg, 'body') and msg.body is not None:
+                with mail.get_connection() as connection:
+                    connection.send_messages([msg])
+            else:
+                current_app.logger.error("-- send_mail) ignored attempt to send email with empty body")
+                with mail.get_connection(backend="console") as connection:
+                    msg.connection = connection
+                    msg.send()
 
         except TimeoutError as e:
             current_app.logger.info("-- send_mail() task reporting TimeoutError")

@@ -6,15 +6,14 @@
 {%- if text is not none and text|length > 0 -%}
 <p>{{ text }}</p>
 {%- else -%}
-<p>You are receiving this email because we expect you will undertake a project of type "{{ config.name }}" in academic year {{ config.select_year_a }}-{{ config.select_year_b }}. Please let us know as soon as possible if you believe this is not correct.</p>
-
-<p>We have now reached a provisional allocation of projects. Please be aware that this is <strong>not yet the final version</strong>. Although we do not expect significant alterations, it is possible that some details may change to accommodate students who are transferring between programmes. If changes are required we will advise you as soon as we are able.</p>
+    <p>You are receiving this email because you are enrolled for a {{ config.name }} project. Please let us know as soon
+        as possible if you believe this is not correct.</p>
 {%- endif %}
 
 {% if number == 1 -%}
-<p>You have been allocated the following project:</p>
+    <p>We have now reached a provisional allocation of projects. You have been allocated the following project:</p>
 {% elif number > 1 -%}
-<p>You have been allocated the following projects:</p>
+    <p>We have now reached a provisional allocation of projects. You have been allocated the following projects:</p>
 {% endif -%}
 <ol>
 {% for item in matches -%}
@@ -23,9 +22,11 @@
 {%- for u in supervisors -%}{%- do supervisor_names.append('<a href="mailto:' + u.email + '">' + u.name + '</a>') -%}{%- endfor -%}
 {% if number > 1 -%}
 {%- set period = pclass.get_period(item.submission_period) -%}
-<li>{{ period.display_name(config.select_year_a) }}: <strong>{{ item.project.name }}</strong> (supervised by {{ supervisor_names|join(", ")|safe }}, rank {{ item.rank|string }})</li>
+    <li>{{ period.display_name(config.select_year_a) }}: <strong>{{ item.project.name }}</strong> (supervised
+        by {{ supervisor_names|join(", ")|safe }})
+    </li>
 {%- else -%}
-<li><strong>{{ item.project.name }}</strong> (supervised by {{ supervisor_names|join(", ")|safe }}, rank {{ item.rank|string }})</li>{%- endif %}
+    <li><strong>{{ item.project.name }}</strong> (supervised by {{ supervisor_names|join(", ")|safe }})</li>{%- endif %}
 {%- endfor %}
 </ol>
 

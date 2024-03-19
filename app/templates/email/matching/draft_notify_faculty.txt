@@ -21,8 +21,8 @@ convenor {{ config.convenor_name }} <{{ config.convenor_email }}>
 {{ text|wordwrap(79) }}
 {%- endfor %}
 {% endfor %}
-If you anticipate any problems with this allocation, please let the
-appropriate project convenor know as soon as possible.
+If there are any anomalies, or you think this allocation contains an error,
+please contact the project convenor as soon as possible.
 
 Best wishes,
 {% for convenor in convenors -%}

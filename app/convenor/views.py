@@ -3323,11 +3323,16 @@ def liveprojects_ajax(id):
     )
 
     base_query = (
-        config.live_projects
-        .join(User, User.id == LiveProject.owner_id, isouter=True)
+        config.live_projects.join(User, User.id == LiveProject.owner_id, isouter=True)
         .join(popularity_subq, popularity_subq.c.popq_liveproject_id == LiveProject.id, isouter=True)
-        .join(PopularityRecord, and_(PopularityRecord.liveproject_id == popularity_subq.c.popq_liveproject_id,
-                                     PopularityRecord.datestamp == popularity_subq.c.popq_datestamp), isouter=True)
+        .join(
+            PopularityRecord,
+            and_(
+                PopularityRecord.liveproject_id == popularity_subq.c.popq_liveproject_id,
+                PopularityRecord.datestamp == popularity_subq.c.popq_datestamp,
+            ),
+            isouter=True,
+        )
     )
 
     # get FilterRecord for currently logged-in user

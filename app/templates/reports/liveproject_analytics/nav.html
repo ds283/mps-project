@@ -54,7 +54,7 @@
                         {% endcall %}
                     </div>
                     <div class="col">
-                        {% call dashboard_tile("Page view rank", title_icon="circle", icon_state=false, border=true) %}
+                        {% call dashboard_tile("Page view rank", title_icon="circle", icon_state=none, border=true) %}
                             {% set R = project.views_rank(live=require_live) %}
                             {% if R is not none %}
                                 {% set rank, total = R %}
@@ -72,7 +72,7 @@
                         {% endcall %}
                     </div>
                     <div class="col">
-                        {% call dashboard_tile("Bookmark rank", title_icon="circle", icon_state=false, border=true) %}
+                        {% call dashboard_tile("Bookmark rank", title_icon="circle", icon_state=none, border=true) %}
                             {% set R = project.bookmarks_rank(live=require_live) %}
                             {% if R is not none %}
                                 {% set rank, total = R %}
@@ -90,7 +90,7 @@
                         {% endcall %}
                     </div>
                     <div class="col">
-                        {% call dashboard_tile("Selection rank", title_icon="circle", icon_state=false, border=true) %}
+                        {% call dashboard_tile("Selection rank", title_icon="circle", icon_state=none, border=true) %}
                             {% set R = project.selections_rank(live=require_live) %}
                             {% if R is not none %}
                                 {% set rank, total = R %}

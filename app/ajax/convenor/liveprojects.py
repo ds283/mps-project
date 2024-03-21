@@ -87,7 +87,7 @@ _selections = """
 {% set selections = project.number_selections %}
 <div>
     {% if selections > 0 %}
-        <span class="badge bg-primary">{{ selections }}</span>
+        <span class="text-success"><i class="fas fa-check-circle"></i> {{ selections }}</span>
         <a class="text-decoration-none" href="{{ url_for('convenor.project_choices', id=project.id) }}">
             Show...
         </a>
@@ -99,7 +99,7 @@ _selections = """
 {% if offers > 0 %}
     <div>
         {% for offer in project.custom_offers_accepted %}
-            <span class="badge bg-success">Accepted: {{ offer.selector.student.user.name }}</span>
+            <span class="text-success small"><span class="fw-semibold">Accepted:</span> {{ offer.selector.student.user.name }}</span>
         {% endfor %}
     </div>
 {% endif %}
@@ -110,24 +110,24 @@ _confirmations = """
 {% set pending = project.number_pending %}
 {% set confirmed = project.number_confirmed %}
 <div>
-    {% if confirmed > 0 %}<span class="badge bg-success"><i class="fas fa-check"></i> Confirmed {{ confirmed }}</span>{% endif %}
-    {% if pending > 0 %}<span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pending {{ pending }}</span>{% endif %}
+    {% if confirmed > 0 %}<span class="text-success"><i class="fas fa-bookmark"></i> confirmed {{ confirmed }}</span>{% endif %}
+    {% if pending > 0 %}<span class="text-danger"><i class="fas fa-clock"></i> pending {{ pending }}</span>{% endif %}
     {% if pending > 0 or confirmed > 0 %}
         <a class="text-decoration-none" href="{{ url_for('convenor.project_confirmations', id=project.id) }}">
             Show...
         </a>
     {% else %}
-        <span class="badge bg-secondary">None</span>
+        <span class="text-secondary"><i class="fas fa-ban"></i> None</span>
     {% endif %}
 </div>
 {% set offers = project.number_offers_pending + project.number_offers_declined %}
 {% if offers > 0 %}
     <div>
         {% for offer in project.custom_offers_pending %}
-            <span class="badge bg-primary">Offer: {{ offer.selector.student.user.name }}</span>
+            <span class="text-primary small"><span class="fw-semibold">Offer:</span> {{ offer.selector.student.user.name }}</span>
         {% endfor %}
         {% for offer in project.custom_offers_declined %}
-            <span class="badge bg-secondary">Declined: {{ offer.selector.student.user.name }}</span>
+            <span class="text-secondary small"><span class="fw-semibold">Declined:</span> {{ offer.selector.student.user.name }}</span>
         {% endfor %}
     </div>
 {% endif %}
@@ -159,10 +159,10 @@ _menu = """
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.live_project', pid=project.id, text='live projects list', url=url_for('convenor.liveprojects', id=config.pclass_id)) }}">
-            <i class="fas fa-eye fa-fw"></i> View web page
+            <i class="fas fa-eye fa-fw"></i> View web page...
         </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}">
-            <i class="fas fa-wrench fa-fw"></i> View analytics
+            <i class="fas fa-wrench fa-fw"></i> View analytics...
         </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_liveproject_alternatives', lp_id=project.id, text='live projects list', url=url_for('convenor.liveprojects', id=config.pclass_id)) }}">
             <i class="fas fa-wrench fa-fw"></i> Alternatives...
@@ -188,7 +188,7 @@ _menu = """
         
         {% if project.number_selections > 0 %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.project_choices', id=project.id) }}">
-                <i class="fas fa-cogs fa-fw"></i> Selecting students
+                <i class="fas fa-cogs fa-fw"></i> Selecting students...
             </a>
         {% else %}
             <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-cogs fa-fw"></i> Selecting students</a>

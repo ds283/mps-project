@@ -15,12 +15,13 @@
         <div class="col-10">
             <div class="card border-success mt-3 mb-3">
                 <div class="card-header">
-                    Project confirmations for <strong>{{ sel.student.user.name }}</strong>
+                    Project confirmations for <i class="fas fa-user-circle"></i>
+                    <strong>{{ sel.student.user.name }}</strong>
                 </div>
 
                 <div class="card-body">
                     <div class="container-fluid">
-                        <div class="row vertical-top confirmation-table">
+                        <div class="row vertical-top mb-1">
                             <div class="col-4"><strong>Project title</strong></div>
                             <div class="col-3"><strong>Research group</strong></div>
                             <div class="col-3"><strong>Supervisor</strong></div>
@@ -31,7 +32,7 @@
 
                         {% for req in sel.requests_confirmed %}
                             {% set project = req.project %}
-                            <div class="row vertical-top confirmation-table">
+                            <div class="row vertical-top mb-3">
                                 <div class="col-4">
                                     <a class="text-decoration-none link-primary"
                                        href="{{ url_for('faculty.live_project', pid=project.id, text='selector confirmation request list', url=url_for('convenor.selector_confirmations', id=sel.id)) }}">
@@ -91,7 +92,7 @@
                                     {% endif %}
                                 </div>
                                 <div class="col-2">
-                                    <div class="float-end">
+                                    <div class="d-flex flex-row justify-content-end">
                                         <div class="dropdown">
                                             <a class="btn btn-sm btn-warning dropdown-toggle" data-bs-toggle="dropdown"
                                                role="button" href="" aria-haspopup="true" aria-expanded="false">
@@ -100,7 +101,7 @@
                                                     <i class="fas fa-exclamation-triangle text-danger"></i>
                                                 {% endif %}
                                             </a>
-                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                                            <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end mx-0 border-0">
                                                 {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
                                                         <i class="fas fa-clock fa-fw"></i> Make pending
@@ -127,7 +128,7 @@
 
                         {% for req in sel.requests_waiting %}
                             {% set project = req.project %}
-                            <div class="row vertical-top confirmation-table">
+                            <div class="row vertical-top mb-3">
                                 <div class="col-4">
                                     <a class="text-decoration-none link-primary"
                                        href="{{ url_for('faculty.live_project', pid=project.id, text='selector confirmation request list', url=url_for('convenor.selector_confirmations', id=sel.id)) }}">
@@ -187,7 +188,7 @@
                                     {% endif %}
                                 </div>
                                 <div class="col-2">
-                                    <div class="float-end">
+                                    <div class="d-flex flex-row justify-content-end">
                                         <div class="dropdown">
                                             <a class="btn btn-sm btn-success dropdown-toggle" data-bs-toggle="dropdown"
                                                role="button" href="" aria-haspopup="true" aria-expanded="false">
@@ -196,7 +197,7 @@
                                                     <i class="fas fa-exclamation-triangle" style="color:white;"></i>
                                                 {% endif %}
                                             </a>
-                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                                            <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end mx-0 border-0">
                                                 {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fas fa-check"></i> Confirm

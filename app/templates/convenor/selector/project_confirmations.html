@@ -17,7 +17,7 @@
 
                 <div class="card-body">
                     <div class="container-fluid">
-                        <div class="row vertical-align confirmation-table">
+                        <div class="row vertical-align mb-1">
                             <div class="col-5"><strong>Student</strong></div>
                             <div class="col-5"><strong>Timestamps</strong></div>
                             <div class="col-2"></div>
@@ -27,37 +27,44 @@
 
                         {% for req in project.requests_confirmed %}
                             {% set sel = req.owner %}
-                            <div class="row vertical-align confirmation-table">
+                            <div class="row vertical-align mb-3">
                                 <div class="col-5">
-                                    {{ sel.student.user.name }}
+                                    <a class="text-decoration-none link-primary"
+                                       href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
                                     {% if not sel.satisfies_recommended(project) %}
-                                        <i class="fas fa-exclamation-triangle text-danger"></i>
+                                        <i class="ms-1 fas fa-exclamation-triangle text-danger"></i>
                                     {% endif %}
                                 </div>
                                 <div class="col-5">
                                     {% if req.request_timestamp is not none %}
-                                        <span class="badge bg-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        <div class="text-secondary small"><i class="fas fa-calendar"></i> Request
+                                            made {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</div>
                                     {% endif %}
                                     {% if req.response_timestamp is not none %}
-                                        <span class="badge bg-secondary">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        <div class="text-secondary small"><i class="fas fa-calendar"></i> Response
+                                            issued {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                                        </div>
                                     {% endif %}
                                     {% if req.request_timestamp is not none and req.response_timestamp is not none %}
                                         {% set delta = req.response_timestamp - req.request_timestamp %}
                                         {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                        <span class="badge bg-primary"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
+                                        <div class="text-success small"><i
+                                                class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</div>
                                     {% elif req.request_timestamp is not none %}
                                         {% set delta = now - req.request_timestamp %}
                                         {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                        <span class="badge bg-danger"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
+                                        <div class="text-danger small"><i class="fas fa-clock"></i> {{ delta.days }}
+                                            day{{ pl }}</div>
                                     {% endif %}
                                 </div>
                                 <div class="col-2">
-                                    <div class="float-end">
+                                    <div class="d-flex flex-row justify-content-end">
                                         <div class="dropdown">
-                                            <a class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                            <a class="btn btn-sm btn-warning dropdown-toggle" data-bs-toggle="dropdown"
+                                               role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                 Deconfirm
                                             </a>
-                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                                            <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end mx-0 border-0">
                                                 {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
                                                         <i class="fas fa-clock fa-fw"></i> Make pending
@@ -84,37 +91,44 @@
 
                         {% for req in project.requests_waiting %}
                             {% set sel = req.owner %}
-                            <div class="row vertical-align confirmation-table">
+                            <div class="row vertical-align mb-3">
                                 <div class="col-5">
-                                    {{ sel.student.user.name }}
+                                    <a class="text-decoration-none link-primary"
+                                       href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
                                     {% if not sel.satisfies_recommended(project) %}
                                         <i class="fas fa-exclamation-triangle text-danger"></i>
                                     {% endif %}
                                 </div>
                                 <div class="col-5">
                                     {% if req.request_timestamp is not none %}
-                                        <span class="badge bg-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        <div class="text-secondary small"><i class="fas fa-calendar"></i> Request
+                                            made {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</div>
                                     {% endif %}
                                     {% if req.response_timestamp is not none %}
-                                        <span class="badge bg-secondary">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        <div class="text-secondary small"><i class="fas fa-calendar"></i> Response
+                                            issued {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                                        </div>
                                     {% endif %}
                                     {% if req.request_timestamp is not none and req.response_timestamp is not none %}
                                         {% set delta = req.response_timestamp - req.request_timestamp %}
                                         {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                        <span class="badge bg-primary"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
+                                        <div class="text-success small"><i
+                                                class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</div>
                                     {% elif req.request_timestamp is not none %}
                                         {% set delta = now - req.request_timestamp %}
                                         {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                        <span class="badge bg-danger"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
+                                        <div class="text-danger small"><i class="fas fa-clock"></i> {{ delta.days }}
+                                            day{{ pl }}</div>
                                     {% endif %}
                                 </div>
                                 <div class="col-2">
-                                    <div class="float-end">
+                                    <div class="d-flex flex-row justify-content-end">
                                         <div class="dropdown">
-                                            <a class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                            <a class="btn btn-sm btn-success dropdown-toggle" data-bs-toggle="dropdown"
+                                               role="button" href="" aria-haspopup="true" aria-expanded="false">
                                                 Confirm
                                             </a>
-                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                                            <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end mx-0 border-0">
                                                 {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fas fa-check fa-fw"></i> Confirm

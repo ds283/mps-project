@@ -1356,7 +1356,7 @@ def enrol_all_selectors(configid):
     year_filter = request.args.get("year_filter")
 
     candidates = build_enrol_selector_candidates(
-        config, disable_programme_filter=True if isinstance(prog_filter, str) and prog_filter.lower() == "off" else False
+        config, disable_programme_filter=True if isinstance(prog_filter, str) and prog_filter.lower() != "all" else False
     )
 
     # filter by cohort and programme if required

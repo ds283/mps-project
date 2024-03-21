@@ -64,7 +64,7 @@ _affiliation = """
     {% set ns.affiliation = true %}
 {% endfor %}
 {% if not ns.affiliation %}
-    <span class="badge bg-warning text-dark">No affiliations</span>
+    <div class="text-secondary"><i class="fas fa-ban"></i> No affiliations</div>
 {% endif %}
 """
 
@@ -73,12 +73,12 @@ _affiliation = """
 _bookmarks = """
 {% set bookmarks = project.number_bookmarks %}
 {% if bookmarks > 0 %}
-    <span class="badge bg-info">{{ bookmarks }}</span>
-    <a class="text-decoration-none" href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
+    <span class="text-primary"><i class="fas fa-bookmark"></i> <strong>{{ bookmarks }}</strong></span>
+    <a class="text-decoration-none link-secondary small" href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
        Show...
    </a>
 {% else %}
-    <span class="badge bg-secondary">None</span>
+    <div class="text-secondary"><i class="fas fa-ban"></i> None</div>
 {% endif %}
 """
 
@@ -87,19 +87,19 @@ _selections = """
 {% set selections = project.number_selections %}
 <div>
     {% if selections > 0 %}
-        <span class="text-success"><i class="fas fa-check-circle"></i> {{ selections }}</span>
-        <a class="text-decoration-none" href="{{ url_for('convenor.project_choices', id=project.id) }}">
+        <div class="text-success"><i class="fas fa-check-circle"></i> <strong>{{ selections }}</strong></div>
+        <a class="text-decoration-none link-secondary small" href="{{ url_for('convenor.project_choices', id=project.id) }}">
             Show...
         </a>
     {% else %}
-        <span class="badge bg-secondary">None</span>
+        <div class="text-secondary"><i class="fas fa-ban"></i> None</div>
     {% endif %}
 </div>
 {% set offers = project.number_offers_accepted %}
 {% if offers > 0 %}
-    <div>
+    <div class="mt-2">
         {% for offer in project.custom_offers_accepted %}
-            <span class="text-success small"><span class="fw-semibold">Accepted:</span> {{ offer.selector.student.user.name }}</span>
+            <div class="text-success small"><span class="fw-semibold"><i class="fas fa-check-circle"></i> Accepted:</span> {{ offer.selector.student.user.name }}</div>
         {% endfor %}
     </div>
 {% endif %}
@@ -110,24 +110,24 @@ _confirmations = """
 {% set pending = project.number_pending %}
 {% set confirmed = project.number_confirmed %}
 <div>
-    {% if confirmed > 0 %}<span class="text-success"><i class="fas fa-bookmark"></i> confirmed {{ confirmed }}</span>{% endif %}
-    {% if pending > 0 %}<span class="text-danger"><i class="fas fa-clock"></i> pending {{ pending }}</span>{% endif %}
+    {% if confirmed > 0 %}<div class="text-primary"><i class="fas fa-check-circle"></i> <strong>{{ confirmed }}</strong></div>{% endif %}
+    {% if pending > 0 %}<div class="text-danger"><i class="fas fa-clock"></i> <strong>{{ pending }}</strong> pending</div>{% endif %}
     {% if pending > 0 or confirmed > 0 %}
-        <a class="text-decoration-none" href="{{ url_for('convenor.project_confirmations', id=project.id) }}">
+        <a class="text-decoration-none link-secondary small" href="{{ url_for('convenor.project_confirmations', id=project.id) }}">
             Show...
         </a>
     {% else %}
-        <span class="text-secondary"><i class="fas fa-ban"></i> None</span>
+        <div class="text-secondary"><i class="fas fa-ban"></i> None</div>
     {% endif %}
 </div>
 {% set offers = project.number_offers_pending + project.number_offers_declined %}
 {% if offers > 0 %}
-    <div>
+    <div class="mt-2">
         {% for offer in project.custom_offers_pending %}
-            <span class="text-primary small"><span class="fw-semibold">Offer:</span> {{ offer.selector.student.user.name }}</span>
+            <div class="text-primary small"><span class="fw-semibold">Offer:</span> {{ offer.selector.student.user.name }}</div>
         {% endfor %}
         {% for offer in project.custom_offers_declined %}
-            <span class="text-secondary small"><span class="fw-semibold">Declined:</span> {{ offer.selector.student.user.name }}</span>
+            <div class="text-secondary small"><span class="fw-semibold">Declined:</span> {{ offer.selector.student.user.name }}</div>
         {% endfor %}
     </div>
 {% endif %}
@@ -138,16 +138,16 @@ _popularity = """
 {% set R = project.popularity_rank(live=require_live) %}
 {% if R is not none %}
     {% set rank, total = R %}
-    <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}" class="badge bg-primary text-decoration-none">Popularity {{ rank }}/{{ total }}</a>
+    <div><a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}" class="link-primary text-decoration-none">Popularity <strong>{{ rank }}</strong>/{{ total }}</a></div>
 {% else %}
-    <span class="badge bg-secondary">Popularity updating...</span>
+    <div class="text-secondary"><i class="fas fa-exclamation-circle"></i> Popularity updating...</div>
 {% endif %}
 {% set R = project.views_rank(live=require_live) %}
 {% if R is not none %}
     {% set rank, total = R %}
-    <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="badge bg-secondary text-decoration-none">Views {{ rank }}/{{ total }}</a>
+    <div><a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="link-primary text-decoration-none">Views <strong>{{ rank }}</strong>/{{ total }}</a></div>
 {% else %}
-    <span class="badge bg-secondary">Views updating...</span>
+    <div class="text-secondary"><i class="fas fa-exclamation-circle"></i> Views updating...</div>
 {% endif %}
 """
 

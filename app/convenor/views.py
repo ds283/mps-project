@@ -1356,7 +1356,7 @@ def enrol_all_selectors(configid):
     year_filter = request.args.get("year_filter")
 
     candidates = build_enrol_selector_candidates(
-        config, disable_programme_filter=True if isinstance(prog_filter, str) and prog_filter.lower() == "off" else False
+        config, disable_programme_filter=True if isinstance(prog_filter, str) and prog_filter.lower() != "all" else False
     )
 
     # filter by cohort and programme if required
@@ -1375,12 +1375,12 @@ def enrol_all_selectors(configid):
     year = year_value if year_flag else None
     c_list = [x for x in candidate_values if _filter_candidates(year, x)]
 
-    for c in c_list:
-        add_selector(c, configid, convert=convert, autocommit=False)
-
     try:
+        for c in c_list:
+            add_selector(c, configid, convert=convert, autocommit=False)
+
         db.session.commit()
-        flash('Added {count} selectors to project "{proj}"'.format(count=len(candidate_values), proj=config.project_class.name), "info")
+        flash('Added {count} selectors to project "{proj}"'.format(count=len(c_list), proj=config.project_class.name), "info")
     except SQLAlchemyError as e:
         db.session.rollback()
         flash("Could not add selectors because a database error occurred. Please check the logs for further information.", "error")

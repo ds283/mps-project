@@ -263,7 +263,7 @@ _menu = """
                 </a>
                 {% if is_root %}
                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.create_match', base_id=m.id) }}">
-                        <i class="fas fa-plus-circle fa-fw"></i> Use as base...
+                        <i class="fas fa-link fa-fw"></i> Use as base...
                     </a>
                 {% endif %}
             {% else %}
@@ -317,7 +317,7 @@ _menu = """
                     </a>
                     {% if config is not none and not config.select_in_previous_cycle %}
                         <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.populate_submitters_from_match', match_id=m.id, config_id=config.id) }}">
-                            <i class="fas fa-wrench fa-fw"></i> Populate submitters...
+                            <i class="fas fa-upload fa-fw"></i> Populate submitters...
                         </a>
                     {% endif %}
                 {% endif %}

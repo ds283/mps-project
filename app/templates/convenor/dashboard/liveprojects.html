@@ -28,7 +28,10 @@
 
         $(document).ready(function () {
             $('#liveprojects-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                responsive: true,
+                bAutoWidth: false,
+                colReorder: true,
+                dom: 'lftipr',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 serverSide: true, processing: true,
                 language: {{ bootstrap_spinner() }},
@@ -58,7 +61,8 @@
                       orderable: false },
                     { data: 'popularity',
                       searchable: false,
-                      orderable: false },
+                        orderable: true
+                    },
                     { data: 'menu',
                       searchable: false,
                       orderable: false }

@@ -3313,7 +3313,22 @@ def liveprojects_ajax(id):
         flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
         return jsonify({})
 
-    base_query = config.live_projects.join(User, User.id == LiveProject.owner_id, isouter=True)
+    popularity_subq = (
+        db.session.query(
+            PopularityRecord.liveproject_id.label("popq_liveproject_id"),
+            func.max(PopularityRecord.datestamp).label("popq_datestamp"),
+        )
+        .group_by(PopularityRecord.liveproject_id)
+        .subquery()
+    )
+
+    base_query = (
+        config.live_projects
+        .join(User, User.id == LiveProject.owner_id, isouter=True)
+        .join(popularity_subq, popularity_subq.c.popq_liveproject_id == LiveProject.id, isouter=True)
+        .join(PopularityRecord, and_(PopularityRecord.liveproject_id == popularity_subq.c.popq_liveproject_id,
+                                     PopularityRecord.datestamp == popularity_subq.c.popq_datestamp), isouter=True)
+    )
 
     # get FilterRecord for currently logged-in user
     filter_record = get_convenor_filter_record(config)
@@ -3359,20 +3374,11 @@ def _liveprojects_ajax_handler(base_query, config: ProjectClassConfig, state_fil
         "order": [User.last_name, User.first_name],
         "search_collation": "utf8_general_ci",
     }
-    bookmarks = {"order": func.count(LiveProject.bookmarks)}
-    selections = {"order": func.count(LiveProject.selections)}
-    # confirmations = {'order': func.count(LiveProject.confirmation_requests.filter_by(state=ConfirmRequest.REQUESTED))}
+    bookmarks = {"order": [PopularityRecord.bookmarks, PopularityRecord.score, LiveProject.name]}
+    selections = {"order": [PopularityRecord.selections, PopularityRecord.score, LiveProject.name]}
+    popularity = {"order": [PopularityRecord.score_rank, PopularityRecord.selections_rank, PopularityRecord.bookmarks_rank, LiveProject.name]}
 
-    columns = {"name": name, "owner": owner, "bookmarks": bookmarks, "selections": selections}
-
-    # def sort_popularity(row: LiveProject):
-    #     data = row.popularity_rank(live=True)
-    #
-    #     if data is None:
-    #         return -1
-    #
-    #     rank, total = data
-    #     return rank
+    columns = {"name": name, "owner": owner, "bookmarks": bookmarks, "selections": selections, "popularity": popularity}
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
 

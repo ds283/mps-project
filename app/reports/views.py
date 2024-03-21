@@ -243,6 +243,9 @@ def liveproject_analytics(proj_id):
 
     pane = request.args.get("pane", "popularity")
 
+    if pane not in ["views", "bookmarks", "selections", "popularity"]:
+        pane = "popularity"
+
     if pane == "views":
         rank_dates, rank_values = project.views_rank_history
         ranks = [x[0] for x in rank_values]

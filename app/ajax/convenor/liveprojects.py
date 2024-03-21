@@ -142,13 +142,29 @@ _popularity = """
 {% else %}
     <div class="text-secondary"><i class="fas fa-exclamation-circle"></i> Popularity updating...</div>
 {% endif %}
-{% set R = project.views_rank(live=require_live) %}
-{% if R is not none %}
-    {% set rank, total = R %}
-    <div><a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="link-primary text-decoration-none">Views <strong>{{ rank }}</strong>/{{ total }}</a></div>
-{% else %}
-    <div class="text-secondary"><i class="fas fa-exclamation-circle"></i> Views updating...</div>
-{% endif %}
+<div class="mt-2">
+    {% set R = project.views_rank(live=require_live) %}
+    {% if R is not none %}
+        {% set rank, total = R %}
+        <div><a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="link-secondary text-decoration-none small">Views rank <strong>{{ rank }}</strong>/{{ total }}</a></div>
+    {% else %}
+        <div class="text-secondary small"><i class="fas fa-exclamation-circle"></i> Views updating...</div>
+    {% endif %}
+    {% set R = project.selections_rank(live=require_live) %}
+    {% if R is not none %}
+        {% set rank, total = R %}
+        <div><a href="{{ url_for('reports.liveproject_analytics', pane='selections', proj_id=project.id, url=url, text=text) }}" class="link-secondary text-decoration-none small">Selections rank <strong>{{ rank }}</strong>/{{ total }}</a></div>
+    {% else %}
+        <div class="text-secondary small"><i class="fas fa-exclamation-circle"></i> Selections updating...</div>
+    {% endif %}
+    {% set R = project.bookmarks_rank(live=require_live) %}
+    {% if R is not none %}
+        {% set rank, total = R %}
+        <div><a href="{{ url_for('reports.liveproject_analytics', pane='bookmarks', proj_id=project.id, url=url, text=text) }}" class="link-secondary text-decoration-none small">Bookmarks rank <strong>{{ rank }}</strong>/{{ total }}</a></div>
+    {% else %}
+        <div class="text-secondary small"><i class="fas fa-exclamation-circle"></i> Bookmarks updating...</div>
+    {% endif %}
+</div>
 """
 
 # language=jinja2

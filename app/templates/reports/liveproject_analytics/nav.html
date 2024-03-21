@@ -40,7 +40,7 @@
                 </div>
                 <div class="row gy-3 mt-2 mb-3">
                     <div class="col">
-                        {% call dashboard_tile("Popularity rank", title_icon="trophy", icon_state=true, border=true) %}
+                        {% call dashboard_tile("Popularity rank", title_icon="arrow-up", icon_state=true, border=true) %}
                             {% set R = project.popularity_rank(live=require_live) %}
                             {% if R is not none %}
                                 {% set rank, total = R %}

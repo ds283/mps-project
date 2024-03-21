@@ -3,6 +3,295 @@
 {% from "labels.html" import simple_label %}
 {% from "macros.html" import truncate %}
 
+{% macro missing_aims_notify(config, variants_missing_aims, confirm_required) %}
+    {% set num_missing_aims = variants_missing_aims|length %}
+    {% set pl = '' if num_missing_aims == 1 else 's' %}
+    {% set dodoes = 'does' if num_missing_aims == 1 else 'do' %}
+    {% set thisthese = 'this' if num_missing_aims == 1 else 'these' %}
+    {% set isare = 'is' if num_missing_aims == 1 else 'are' %}
+    <div class="alert alert-danger mt-2 mb-4">
+        {% call icon_block("info-circle") %}
+            <div>
+                <strong>
+                    We are trying to improve the metadata for projects in our database.
+                    According to our records, {{ num_missing_aims }} project{{ pl }}
+                    that you offer {{ dodoes }} not have a statement of aims.
+                </strong>
+            </div>
+            <div class="mt-2">
+                We know that everyone is very busy.
+                However, if you have time and are able,
+                we would like to ask you to supply a short statement of aims for {{ thisthese }}
+                project{{ pl }}. The aims you specify will be provided to project markers to help them
+                assess students' progress.
+            </div>
+            <div class="mt-2">
+                To add a statement use the warning messages in the list below to identify
+                which project{{ pl }} {{ isare }} missing data, and select the
+                &ldquo;Fix this...&rdquo; link.
+            </div>
+            {% if not confirm_required %}
+                <div class="mt-2">
+                    You can still add a statement even if you have confirmed your project,
+                    because the database does not go live until it is published to students
+                    at the end of the confirmation period.
+                </div>
+            {% else %}
+                <div class="mt-2">
+                    If you are not able to provide a statement of aims this year,
+                    you can ignore the warning and confirm the project.
+                </div>
+            {% endif %}
+        {% endcall %}
+    </div>
+{% endmacro %}
+
+{% macro pre_selections_open(offered_variants, config, home_dashboard_url) %}
+    {% for desc in offered_variants %}
+        {% set project = desc.parent %}
+        {% set available = project.is_offerable %}
+        <div class="row vertical-top mb-1">
+            <div class="col-1">
+                <strong>{{ loop.index }}</strong>
+            </div>
+            <div class="col-8">
+                <div>
+                    <a class="text-decoration-none"
+                       href="{{ url_for('faculty.project_preview', id=project.id, url=url_for('faculty.dashboard', id=pclass.id), text='dashboard', pclass=pclass.id) }}">{{ project.name }}</a>
+                    {% set ns = namespace(affiliation=false) %}
+                    {% if project.group %}
+                        {{ simple_label(project.group.make_label(), user_classes='ms-1') }}
+                        {% set ns.affiliation = true %}
+                    {% endif %}
+                    {% for tag in project.forced_group_tags %}
+                        {{ simple_label(tag.make_label(truncate(tag.name)), user_classes='ms-1') }}
+                        {% set ns.affiliation = true %}
+                    {% endfor %}
+                    {% if not ns.affiliation %}
+                        <span class="small text-danger ms-2">No affiliations</span>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if project.meeting_reqd == project.MEETING_REQUIRED %}
+                        <span class="small text-success">Meeting confirmation required</span>
+                        {% if not faculty_data.sign_off_students %}
+                            <span class="small text-muted">|</span>
+                            <span class="small text-danger">Note: meeting confirmation requests are disabled in your settings. <a
+                                    class="text-decoration-none"
+                                    href="{{ url_for('faculty.settings') }}">Fix...</a></span>
+                        {% endif %}
+                    {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
+                        <span class="small text-dark">Meeting confirmation optional</span>
+                        {% if not faculty_data.sign_off_students %}
+                            <span class="small text-muted">|</span>
+                            <span class="small text-danger">Note: meeting confirmation requests are disabled in your settings. <a
+                                    class="text-decoration-none"
+                                    href="{{ url_for('faculty.settings') }}">Fix...</a></span>
+                        {% endif %}
+                    {% elif project.meeting_reqd == project.MEETING_NONE %}
+                        <span class="small text-dark">Meeting confirmation not required</span>
+                    {% endif %}
+                    <span class="small text-muted">|</span>
+                    {% set num_assessors = project.number_assessors(pclass) %}
+                    {% if num_assessors > 0 %}
+                        <span class="small text-dark">{{ num_assessors }} assessor{%- if num_assessors != 1 -%}
+                            s{%- endif -%}</span>
+                        <i class="small fas fa-info-circle text-secondary" tabindex="0" data-bs-toggle="popover"
+                           data-bs-container="body" data-bs-trigger="focus" title="Assessors for this project"
+                           data-bs-content="<div class='small text-muted'><ul>{%- for assessor in project.get_assessor_list(pclass) -%}<li>{{ assessor.user.name }}</li>{%- endfor -%}</ul></div>"></i>
+                    {% else %}
+                        <span class="small text-danger">No assessors assigned</span>
+                    {% endif %}
+                </div>
+                <div>
+                </div>
+                {% if not available %}
+                    <div class="mt-1">
+                        {% call icon_block("exclamation-circle") %}
+                            This project has validation errors that will prevent it from being published.
+                            <a class="text-decoration-none" href="{{ url_for('faculty.edit_projects') }}">Edit in
+                                library...</a>
+                        {% endcall %}
+                    </div>
+                    {#                {% elif desc.has_warning('aims') %}#}
+                    {#                        <div>#}
+                    {#                            {% call icon_block("exclamation-circle") %}#}
+                    {#                                This project variant does not have a statement of aims.#}
+                    {#                                Please consider adding a statement#}
+                    {#                                to help support robust marking.#}
+                    {#                                <a class="text-decoration-none" href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url, focus_aims=1) }}">Fix this...</a>#}
+                    {#                            {% endcall %}#}
+                    {#                        </div>#}
+                {% endif %}
+            </div>
+            <div class="col-3">
+                <div class="d-flex flex-row justify-content-end">
+                    <div class="btn-group btn-table-block">
+                        {% if desc %}
+                            {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
+                                {% if desc.confirmed %}
+                                    <a class="btn btn-sm btn-success disabled">Confirmed</a>
+                                {% else %}
+                                    <a href="{{ url_for('faculty.confirm_description', did=desc.id, pclass_id=pclass.id) }}"
+                                       class="btn btn-sm btn-outline-success">Confirm</a>
+                                {% endif %}
+                            {% endif %}
+                        {% endif %}
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                    data-bs-toggle="dropdown">Actions
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end small">
+                                <a class="dropdown-item d-flex gap-2 small"
+                                   href="{{ url_for('faculty.remove_project_pclass', proj_id=project.id, pclass_id=pclass.id) }}"><i
+                                        class="fas fa-times fa-fw"></i> Don't offer this project</a>
+                                <div class="dropdown-divider" role="separator"></div>
+                                <a class="dropdown-item d-flex gap-2 small"
+                                   href="{{ url_for('faculty.edit_project', id=project.id, text='home dashboard', url=home_dashboard_url) }}"><i
+                                        class="fas fa-sliders-h fa-fw"></i> Project settings...</a>
+                                <a class="dropdown-item d-flex gap-2 small"
+                                   href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url) }}"><i
+                                        class="fas fa-sliders-h fa-fw"></i> Variant settings...</a>
+                                <a class="dropdown-item d-flex gap-2 small"
+                                   href="{{ url_for('faculty.edit_description_content', did=desc.id, text='home dashboard', url=home_dashboard_url) }}"><i
+                                        class="fas fa-pencil-alt fa-fw"></i> Edit content...</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+{% endmacro %}
+
+{% macro selections_open(live_projects, config, home_dashboard_url) %}
+    {% set number_live_projects = live_projects.count() %}
+    {% if number_live_projects == 1 %}
+        {% set number_live_plural = '' %}
+    {% else %}
+        {% set number_live_plural = 's' %}
+    {% endif %}
+    {% if number_live_projects > 0 %}
+        <div class="alert alert-info mt-1 mb-3">
+            {% call icon_block("info-circle") %}
+                <div>
+                    You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }}
+                    on the live system for students making selections for
+                    {{ config.select_year_a }}&ndash;{{ config.select_year_b }}.
+                </div>
+            {% endcall %}
+        </div>
+        <div class="container-fluid">
+            <div class="row fac-project-table">
+                <div class="col-3"><strong>Name</strong></div>
+                <div class="col-3"><strong>Info</strong></div>
+                <div class="col-3"><strong>Meeting requests</strong></div>
+                <div class="col-3"><strong>Meetings confirmed</strong></div>
+            </div>
+            {% for project in live_projects %}
+                <div class="row mb-3">
+                    <div class="col-3">
+                        <div>
+                            <a class="text-decoration-none fw-semibold"
+                               href="{{ url_for('faculty.live_project', pid=project.id, text='home dashboard', url=home_dashboard_url) }}">
+                                {{ project.name }}
+                            </a>
+                        </div>
+                        <div class="mt-1">
+                            {{ project_metadata(project) }}
+                        </div>
+                        <div class="mt-2">
+                            <a class="link-secondary text-decoration-none small"
+                               href="{{ url_for('reports.liveproject_analytics', proj_id=project.id, text='home dashboard', url=home_dashboard_url) }}">View
+                                analytics...</a>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div>
+                            {{ project_selection_data(project) }}
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="d-flex flex-row justify-content-start align-items-start flex-wrap gap-2">
+                            {% for req in project.requests_waiting %}
+                                {% set sel = req.owner %}
+                                <div class="dropdown">
+                                    {% set has_recommended = sel.satisfies_recommended(project) %}
+                                    <a class="badge text-decoration-none text-nohover-light {% if has_recommended %}bg-primary{% else %}bg-warning text-dark{% endif %} dropdown-toggle"
+                                       data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true"
+                                       aria-expanded="false">{{ sel.student.user.name }}
+                                        {% if not has_recommended %}
+                                            <i class="fas fa-exclamation-triangle text-danger"></i> {% endif %}
+                                    </a>
+                                    {% if req.viewed is not none and not req.viewed %}
+                                        <span class="badge bg-info">NEW</span>
+                                    {% endif %}
+                                    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
+                                        {% if not has_recommended %}
+                                            <a class="dropdown-item d-flex gap-2 disabled small">Programme does
+                                                not include recommended modules</a>
+                                            <div role="separator" class="dropdown-divider"></div>
+                                        {% endif %}
+                                        <a class="dropdown-item d-flex gap-2 small"
+                                           href="mailto:{{ sel.student.user.email }}">
+                                            <i class="fas fa-envelope fa-fw"></i> Send email...
+                                        </a>
+                                        {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                            <a class="dropdown-item d-flex gap-2 small"
+                                               href="{{ url_for('faculty.confirm', sid=sel.id, pid=project.id) }}">
+                                                <i class="fas fa-check fa-fw"></i> Confirm
+                                            </a>
+                                            <a class="dropdown-item d-flex gap-2 small"
+                                               href="{{ url_for('faculty.cancel_confirm', sid=sel.id, pid=project.id) }}">
+                                                <i class="fas fa-trash fa-fw"></i> Delete
+                                            </a>
+                                        {% else %}
+                                            <a class="dropdown-item d-flex gap-2 small disabled">
+                                                <i class="fas fa-check fa-fw"></i> Confirm
+                                            </a>
+                                            <a class="dropdown-item d-flex gap-2 small disabled">
+                                                <i class="fas fa-trash fa-fw"></i> Delete
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="d-flex flex-row justify-content-start align-items-start flex-wrap gap-2">
+                            {% for req in project.requests_confirmed %}
+                                {% set sel = req.owner %}
+                                <div class="dropdown">
+                                    <a class="badge text-decoration-none text-nohover-light bg-success dropdown-toggle"
+                                       data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true"
+                                       aria-expanded="false">
+                                        {{ sel.student.user.name }}
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
+                                        <a class="dropdown-item d-flex gap-2 small"
+                                           href="mailto:{{ sel.student.user.email }}">
+                                            <i class="fas fa-envelope fa-fw"></i> Send email...
+                                        </a>
+                                        <a class="dropdown-item d-flex gap-2 small"
+                                           href="{{ url_for('faculty.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
+                                            <i class="fas fa-clock fa-fw"></i> Make pending
+                                        </a>
+                                        <a class="dropdown-item d-flex gap-2 small"
+                                           href="{{ url_for('faculty.deconfirm', sid=sel.id, pid=project.id) }}">
+                                            <i class="fas fa-trash fa-fw"></i> Delete
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endmacro %}
+
 {% macro selector_card(data, sel_state, current_user, home_dashboard_url) %}
     {% set config = data['config'] %}
     {% set record = data['record'] %}
@@ -131,268 +420,16 @@
                     {% endif %}
                 {% endcall %}
             </div>
-{#            {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and variants_missing_aims and variants_missing_aims|length > 0 %}#}
-{#                {% set num_missing_aims = variants_missing_aims|length %}#}
-{#                {% set pl = '' if num_missing_aims == 1 else 's' %}#}
-{#                {% set dodoes = 'does' if num_missing_aims == 1 else 'do' %}#}
-{#                {% set thisthese = 'this' if num_missing_aims == 1 else 'these' %}#}
-{#                {% set isare = 'is' if num_missing_aims == 1 else 'are' %}#}
-{#                <div class="alert alert-danger mt-2 mb-4">#}
-{#                    {% call icon_block("info-circle") %}#}
-{#                        <div>#}
-{#                            <strong>#}
-{#                                We are trying to improve the metadata for projects in our database.#}
-{#                                According to our records, {{ num_missing_aims }} project{{ pl }}#}
-{#                                that you offer {{ dodoes }} not have a statement of aims.#}
-{#                            </strong>#}
-{#                        </div>#}
-{#                        <div class="mt-2">#}
-{#                            We know that everyone is very busy.#}
-{#                            However, if you have time and are able,#}
-{#                            we would like to ask you to supply a short statement of aims for {{ thisthese }}#}
-{#                            project{{ pl }}. The aims you specify will be provided to project markers to help them#}
-{#                            assess students' progress.#}
-{#                        </div>#}
-{#                        <div class="mt-2">#}
-{#                            To add a statement use the warning messages in the list below to identify#}
-{#                            which project{{ pl }} {{ isare }} missing data, and select the#}
-{#                            &ldquo;Fix this...&rdquo; link.#}
-{#                        </div>#}
-{#                        {% if not confirm_required %}#}
-{#                            <div class="mt-2">#}
-{#                                You can still add a statement even if you have confirmed your project,#}
-{#                                because the database does not go live until it is published to students#}
-{#                                at the end of the confirmation period.#}
-{#                            </div>#}
-{#                        {% else %}#}
-{#                            <div class="mt-2">#}
-{#                                If you are not able to provide a statement of aims this year,#}
-{#                                you can ignore the warning and confirm the project.#}
-{#                            </div>#}
-{#                        {% endif %}#}
-{#                    {% endcall %}#}
-{#                </div>#}
-{#            {% endif %}#}
+            {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and variants_missing_aims and variants_missing_aims|length > 0 %}
+                {{ missing_aims_notify(config, variants_missing_aims, confirm_required) }}
+            {% endif %}
             {% if nproj > 0 and sel_state < config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                {% for desc in offered_variants %}
-                    {% set project = desc.parent %}
-                    {% set available = project.is_offerable %}
-                    <div class="row vertical-top mb-1">
-                        <div class="col-1">
-                            <strong>{{ loop.index }}</strong>
-                        </div>
-                        <div class="col-8">
-                            <div>
-                                <a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=project.id, url=url_for('faculty.dashboard', id=pclass.id), text='dashboard', pclass=pclass.id) }}">{{ project.name }}</a>
-                                {% set ns = namespace(affiliation=false) %}
-                                {% if project.group %}
-                                    {{ simple_label(project.group.make_label(), user_classes='ms-1') }}
-                                    {% set ns.affiliation = true %}
-                                {% endif %}
-                                {% for tag in project.forced_group_tags %}
-                                    {{ simple_label(tag.make_label(truncate(tag.name)), user_classes='ms-1') }}
-                                    {% set ns.affiliation = true %}
-                                {% endfor %}
-                                {% if not ns.affiliation %}
-                                    <span class="small text-danger ms-2">No affiliations</span>
-                                {% endif %}
-                            </div>
-                            <div>
-                                {% if project.meeting_reqd == project.MEETING_REQUIRED %}
-                                    <span class="small text-success">Meeting confirmation required</span>
-                                    {% if not faculty_data.sign_off_students %}
-                                        <span class="small text-muted">|</span> <span class="small text-danger">Note: meeting confirmation requests are disabled in your settings. <a class="text-decoration-none" href="{{ url_for('faculty.settings') }}">Fix...</a></span>
-                                    {% endif %}
-                                {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-                                    <span class="small text-dark">Meeting confirmation optional</span>
-                                    {% if not faculty_data.sign_off_students %}
-                                        <span class="small text-muted">|</span> <span class="small text-danger">Note: meeting confirmation requests are disabled in your settings. <a class="text-decoration-none" href="{{ url_for('faculty.settings') }}">Fix...</a></span>
-                                    {% endif %}
-                                {% elif project.meeting_reqd == project.MEETING_NONE %}
-                                    <span class="small text-dark">Meeting confirmation not required</span>
-                                {% endif %}
-                                <span class="small text-muted">|</span>
-                                {% set num_assessors = project.number_assessors(pclass) %}
-                                {% if num_assessors > 0 %}
-                                    <span class="small text-dark">{{ num_assessors }} assessor{%- if num_assessors != 1 -%}s{%- endif -%}</span>
-                                    <i class="small fas fa-info-circle text-secondary" tabindex="0" data-bs-toggle="popover" data-bs-container="body" data-bs-trigger="focus" title="Assessors for this project" data-bs-content="<div class='small text-muted'><ul>{%- for assessor in project.get_assessor_list(pclass) -%}<li>{{ assessor.user.name }}</li>{%- endfor -%}</ul></div>"></i>
-                                {% else %}
-                                    <span class="small text-danger">No assessors assigned</span>
-                                {% endif %}
-                            </div>
-                            <div>
-                            </div>
-                            {% if not available %}
-                                <div class="mt-1">
-                                    {% call icon_block("exclamation-circle") %}
-                                        This project has validation errors that will prevent it from being published.
-                                        <a class="text-decoration-none" href="{{ url_for('faculty.edit_projects') }}">Edit in library...</a>
-                                    {% endcall %}
-                                </div>
-{#                            {% elif desc.has_warning('aims') %}#}
-{#                                    <div>#}
-{#                                        {% call icon_block("exclamation-circle") %}#}
-{#                                            This project variant does not have a statement of aims.#}
-{#                                            Please consider adding a statement#}
-{#                                            to help support robust marking.#}
-{#                                            <a class="text-decoration-none" href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url, focus_aims=1) }}">Fix this...</a>#}
-{#                                        {% endcall %}#}
-{#                                    </div>#}
-                            {% endif %}
-                        </div>
-                        <div class="col-3">
-                            <div class="float-end">
-                                <div class="btn-group btn-table-block">
-                                    {% if desc %}
-                                        {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
-                                            {% if desc.confirmed %}
-                                                <a class="btn btn-sm btn-success disabled">Confirmed</a>
-                                            {% else %}
-                                                <a href="{{ url_for('faculty.confirm_description', did=desc.id, pclass_id=pclass.id) }}" class="btn btn-sm btn-outline-success">Confirm</a>
-                                            {% endif %}
-                                        {% endif %}
-                                    {% endif %}
-                                    <div class="btn-group">
-                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">Actions</button>
-                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.remove_project_pclass', proj_id=project.id, pclass_id=pclass.id) }}"><i class="fas fa-times fa-fw"></i> Don't offer this project</a>
-                                            <div class="dropdown-divider" role="separator"></div>
-                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.edit_project', id=project.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-sliders-h fa-fw"></i> Project settings...</a>
-                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.edit_description', did=desc.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-sliders-h fa-fw"></i> Variant settings...</a>
-                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.edit_description_content', did=desc.id, text='home dashboard', url=home_dashboard_url) }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit content...</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
+                {{ pre_selections_open(offered_variants, config, home_dashboard_url) }}
             {% endif %}
 
             {# show details about projects on the live system #}
-            {% set number_live_projects = live_projects.count() %}
-            {% if number_live_projects == 1 %}
-                {% set number_live_plural = '' %}
-            {% else %}
-                {% set number_live_plural = 's' %}
-            {% endif %}
-            {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and live_projects.first() %}
-                <div class="alert alert-info mt-1 mb-3">
-                    {% call icon_block("info-circle") %}
-                        <div>
-                            You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }}
-                            on the live system for students making selections for {{ config.select_year_a }}&ndash;{{ config.select_year_b }}.
-                        </div>
-                    {% endcall %}
-                </div>
-                <div class="container-fluid">
-                    <div class="row fac-project-table">
-                        <div class="col-3"><strong>Name</strong></div>
-                        <div class="col-3"><strong>Info</strong></div>
-                        <div class="col-3"><strong>Meeting requests</strong></div>
-                        <div class="col-3"><strong>Meetings confirmed</strong></div>
-                    </div>
-                    {% for project in live_projects %}
-                        <div class="row mb-3">
-                            <div class="col-3">
-                                <div>
-                                    <a class="text-decoration-none fw-semibold"
-                                       href="{{ url_for('faculty.live_project', pid=project.id, text='home dashboard', url=home_dashboard_url) }}">
-                                        {{ project.name }}
-                                    </a>
-                                </div>
-                                <div class="mt-1">
-                                    {{ project_metadata(project) }}
-                                </div>
-                                <div class="mt-2">
-                                    <a class="link-secondary text-decoration-none small"
-                                       href="{{ url_for('reports.liveproject_analytics', proj_id=project.id, text='home dashboard', url=home_dashboard_url) }}">View
-                                        analytics...</a>
-                                </div>
-                            </div>
-                            <div class="col-3">
-                                <div>
-                                    {{ project_selection_data(project) }}
-                                </div>
-                            </div>
-                            <div class="col-3">
-                                <div class="d-flex flex-row justify-content-start align-items-start flex-wrap gap-2">
-                                    {% for req in project.requests_waiting %}
-                                        {% set sel = req.owner %}
-                                        <div class="dropdown">
-                                            {% set has_recommended = sel.satisfies_recommended(project) %}
-                                            <a class="badge text-decoration-none text-nohover-light {% if has_recommended %}bg-primary{% else %}bg-warning text-dark{% endif %} dropdown-toggle"
-                                               data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true"
-                                               aria-expanded="false">{{ sel.student.user.name }}
-                                                {% if not has_recommended %}
-                                                    <i class="fas fa-exclamation-triangle text-danger"></i> {% endif %}
-                                            </a>
-                                            {% if req.viewed is not none and not req.viewed %}
-                                                <span class="badge bg-info">NEW</span>
-                                            {% endif %}
-                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
-                                                {% if not has_recommended %}
-                                                    <a class="dropdown-item d-flex gap-2 disabled small">Programme does
-                                                        not include recommended modules</a>
-                                                    <div role="separator" class="dropdown-divider"></div>
-                                                {% endif %}
-                                                <a class="dropdown-item d-flex gap-2 small"
-                                                   href="mailto:{{ sel.student.user.email }}">
-                                                    <i class="fas fa-envelope fa-fw"></i> Send email...
-                                                </a>
-                                                {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                                    <a class="dropdown-item d-flex gap-2 small"
-                                                       href="{{ url_for('faculty.confirm', sid=sel.id, pid=project.id) }}">
-                                                        <i class="fas fa-check fa-fw"></i> Confirm
-                                                    </a>
-                                                    <a class="dropdown-item d-flex gap-2 small"
-                                                       href="{{ url_for('faculty.cancel_confirm', sid=sel.id, pid=project.id) }}">
-                                                        <i class="fas fa-trash fa-fw"></i> Delete
-                                                    </a>
-                                                {% else %}
-                                                    <a class="dropdown-item d-flex gap-2 small disabled">
-                                                        <i class="fas fa-check fa-fw"></i> Confirm
-                                                    </a>
-                                                    <a class="dropdown-item d-flex gap-2 small disabled">
-                                                        <i class="fas fa-trash fa-fw"></i> Delete
-                                                    </a>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            <div class="col-3">
-                                <div class="d-flex flex-row justify-content-start align-items-start flex-wrap gap-2">
-                                    {% for req in project.requests_confirmed %}
-                                        {% set sel = req.owner %}
-                                        <div class="dropdown">
-                                            <a class="badge text-decoration-none text-nohover-light bg-success dropdown-toggle"
-                                               data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true"
-                                               aria-expanded="false">
-                                                {{ sel.student.user.name }}
-                                            </a>
-                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
-                                                <a class="dropdown-item d-flex gap-2 small"
-                                                   href="mailto:{{ sel.student.user.email }}">
-                                                    <i class="fas fa-envelope fa-fw"></i> Send email...
-                                                </a>
-                                                <a class="dropdown-item d-flex gap-2 small"
-                                                   href="{{ url_for('faculty.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
-                                                    <i class="fas fa-clock fa-fw"></i> Make pending
-                                                </a>
-                                                <a class="dropdown-item d-flex gap-2 small"
-                                                   href="{{ url_for('faculty.deconfirm', sid=sel.id, pid=project.id) }}">
-                                                    <i class="fas fa-trash fa-fw"></i> Delete
-                                                </a>
-                                            </div>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
+            {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                {{ selections_open(live_projects, config, home_dashboard_url) }}
             {% endif %}
         </div>
     </div>

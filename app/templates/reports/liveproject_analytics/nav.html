@@ -21,7 +21,10 @@
         <div class="col-1"></div>
         <div class="col-10">
             <div class="card mt-3 mb-3 card-body bg-well">
-                <div class="dashboard-project-title">{{ project.name }}</div>
+                <div class="dashboard-project-title">
+                    <a class="link-primary text-decoration-none"
+                       href="{{ url_for('faculty.live_project', pid=project.id, text='project analytics view', url=url_for('reports.liveproject_analytics', proj_id=project.id, url=url, text=text)) }}">{{ project.name }}</a>
+                </div>
                 <div class="mt-2">
                     {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }} |
                     {% if project.generic %}
@@ -44,10 +47,14 @@
                             {% set R = project.popularity_rank(live=require_live) %}
                             {% if R is not none %}
                                 {% set rank, total = R %}
-                                <div>
-                                    <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
-                                    <span class="fs-4 text-muted">/{{ total }}</span>
-                                </div>
+                                {% if rank is not none %}
+                                    <div>
+                                        <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
+                                        <span class="fs-4 text-muted">/{{ total }}</span>
+                                    </div>
+                                {% else %}
+                                    <span class="text-secondary">Updating...</span>
+                                {% endif %}
                             {% else %}
                                 <span class="text-secondary">Updating...</span>
                             {% endif %}
@@ -58,10 +65,14 @@
                             {% set R = project.views_rank(live=require_live) %}
                             {% if R is not none %}
                                 {% set rank, total = R %}
-                                <div>
-                                    <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
-                                    <span class="fs-4 text-muted">/{{ total }}</span>
-                                </div>
+                                {% if rank is not none %}
+                                    <div>
+                                        <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
+                                        <span class="fs-4 text-muted">/{{ total }}</span>
+                                    </div>
+                                {% else %}
+                                    <span class="text-secondary">Updating...</span>
+                                {% endif %}
                                 <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
                                     <span class="text-secondary"><span
                                             class="fw-semibold">{{ project.page_views }}</span> total views</span>
@@ -76,10 +87,14 @@
                             {% set R = project.bookmarks_rank(live=require_live) %}
                             {% if R is not none %}
                                 {% set rank, total = R %}
-                                <div>
-                                    <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
-                                    <span class="fs-4 text-muted">/{{ total }}</span>
-                                </div>
+                                {% if rank is not none %}
+                                    <div>
+                                        <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
+                                        <span class="fs-4 text-muted">/{{ total }}</span>
+                                    </div>
+                                {% else %}
+                                    <span class="text-secondary">Updating...</span>
+                                {% endif %}
                                 <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
                                     <span class="text-secondary"><span
                                             class="fw-semibold">{{ project.number_bookmarks }}</span> total bookmarks</span>
@@ -94,10 +109,14 @@
                             {% set R = project.selections_rank(live=require_live) %}
                             {% if R is not none %}
                                 {% set rank, total = R %}
-                                <div>
-                                    <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
-                                    <span class="fs-4 text-muted">/{{ total }}</span>
-                                </div>
+                                {% if rank is not none %}
+                                    <div>
+                                        <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
+                                        <span class="fs-4 text-muted">/{{ total }}</span>
+                                    </div>
+                                {% else %}
+                                    <span class="text-secondary">Updating...</span>
+                                {% endif %}
                                 <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
                                     <span class="text-secondary"><span
                                             class="fw-semibold">{{ project.number_selections }}</span> total selections</span>

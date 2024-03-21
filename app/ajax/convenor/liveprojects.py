@@ -8,7 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, get_template_attribute
+from flask import get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
 
 from ...models import ProjectClassConfig
 
@@ -249,6 +250,46 @@ _menu = """
 """
 
 
+def _build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+def _build_owner_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_owner)
+
+
+def _build_affiliation_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_affiliation)
+
+
+def _build_bookmarks_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_bookmarks)
+
+
+def _build_selections_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_selections)
+
+
+def _build_confirmations_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_confirmations)
+
+
+def _build_popularity_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_popularity)
+
+
+def _build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
+
 def liveprojects_data(projects, config: ProjectClassConfig, url=None, text=None):
     lifecycle = config.selector_lifecycle
     require_live = lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
@@ -256,16 +297,25 @@ def liveprojects_data(projects, config: ProjectClassConfig, url=None, text=None)
     simple_label = get_template_attribute("labels.html", "simple_label")
     truncate = get_template_attribute("macros.html", "truncate")
 
+    name_templ: Template = _build_name_templ()
+    owner_templ: Template = _build_owner_templ()
+    affiliation_templ: Template = _build_affiliation_templ()
+    bookmarks_templ: Template = _build_bookmarks_templ()
+    selections_templ: Template = _build_selections_templ()
+    confirmations_templ: Template = _build_confirmations_templ()
+    popularity_templ: Template = _build_popularity_templ()
+    menu_templ: Template = _build_menu_templ()
+
     data = [
         {
-            "name": render_template_string(_name, project=p, config=config),
-            "owner": render_template_string(_owner, project=p, text=text, url=url),
-            "group": render_template_string(_affiliation, project=p, simple_label=simple_label, truncate=truncate),
-            "bookmarks": render_template_string(_bookmarks, project=p),
-            "selections": render_template_string(_selections, project=p),
-            "confirmations": render_template_string(_confirmations, project=p),
-            "popularity": render_template_string(_popularity, project=p, require_live=require_live, url=url, text=text),
-            "menu": render_template_string(_menu, project=p, config=config, url=url, text=text),
+            "name": render_template(name_templ, project=p, config=config),
+            "owner": render_template(owner_templ, project=p, text=text, url=url),
+            "group": render_template(affiliation_templ, project=p, simple_label=simple_label, truncate=truncate),
+            "bookmarks": render_template(bookmarks_templ, project=p),
+            "selections": render_template(selections_templ, project=p),
+            "confirmations": render_template(confirmations_templ, project=p),
+            "popularity": render_template(popularity_templ, project=p, require_live=require_live, url=url, text=text),
+            "menu": render_template(menu_templ, project=p, config=config, url=url, text=text),
         }
         for p in projects
     ]

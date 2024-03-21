@@ -169,32 +169,30 @@ _owner = """
 # language=jinja2
 _name = """
 {% if sel %}
-    <div class="mb-1"><a class="link-secondary" href="{{ url_for("student.selector_view_project", sid=sel.id, pid=project.id) }}"><strong>{{ project.name }}</strong></a></div>
+    <div><a class="link-primary text-decoration-none" href="{{ url_for("student.selector_view_project", sid=sel.id, pid=project.id) }}"><strong>{{ project.name }}</strong></a></div>
 {% else %}
-    <div class="mb-1"><strong>{{ project.name }}</strong></div>
+    <div><strong>{{ project.name }}</strong></div>
 {% endif %}
 {% if is_live and sel and config.uses_selection %}
     {% if project.is_available(sel) %}
-        <div class="text-success small mb-1"><i class="fas fa-check-circle"></i> Available to select</div>
+        <div class="text-success small mt-2"><i class="fas fa-check-circle"></i> Available to select</div>
     {% else %}
         {% if project.is_waiting(sel) %}
-            <div><a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-xs btn-outline-danger">
+            <div class="mt-2"><a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-xs btn-outline-danger">
                 <i class="fas fa-trash"></i> Cancel confirmation request
             </a></div>
         {% else %}
-            <div><a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-xs btn-outline-primary">
+            <div class="mt-2"><a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-xs btn-outline-primary">
                 <i class="fas fa-plus"></i> Request confirmation
             </a></div>
         {% endif %}
     {% endif %}
     {% if sel.is_project_bookmarked(project) %}
-        <div><a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
-           class="btn btn-xs btn-outline-danger">
+        <div class="mt-2"><a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="btn btn-xs btn-outline-secondary">
            <i class="fas fa-trash"></i> Remove bookmark
         </a></div>
     {% else %}
-        <div><a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}"
-           class="btn btn-xs btn-outline-success">
+        <div class="mt-2"><a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}" class="btn btn-xs btn-outline-secondarys">
            <i class="fas fa-plus-circle"></i> Add bookmark
         </a></div>
     {% endif %}

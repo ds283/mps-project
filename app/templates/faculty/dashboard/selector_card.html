@@ -177,7 +177,7 @@
                 {% for desc in offered_variants %}
                     {% set project = desc.parent %}
                     {% set available = project.is_offerable %}
-                    <div class="row vertical-top fac-project-table">
+                    <div class="row vertical-top mb-1">
                         <div class="col-1">
                             <strong>{{ loop.index }}</strong>
                         </div>
@@ -293,83 +293,105 @@
                         <div class="col-3"><strong>Meetings confirmed</strong></div>
                     </div>
                     {% for project in live_projects %}
-                        <div class="row fac-project-table">
+                        <div class="row mb-1">
                             <div class="col-3">
-                                <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text='home dashboard', url=home_dashboard_url) }}">
-                                    {{ project.name }}
-                                </a>
                                 <div>
+                                    <a class="text-decoration-none fw-semibold"
+                                       href="{{ url_for('faculty.live_project', pid=project.id, text='home dashboard', url=home_dashboard_url) }}">
+                                        {{ project.name }}
+                                    </a>
+                                </div>
+                                <div class="mt-1">
                                     {{ project_metadata(project) }}
+                                </div>
+                                <div class="mt-2">
+                                    <a class="link-secondary text-decoration-none small"
+                                       href="{{ url_for('reports.liveproject_analytics', proj_id=project.id, text='home dashboard', url=home_dashboard_url) }}">View
+                                        analytics...</a>
                                 </div>
                             </div>
                             <div class="col-3">
                                 <div>
                                     {{ project_selection_data(project) }}
                                 </div>
-                                <div style="margin-top: 6px;">
+                                <div class="mt-2">
                                     {{ project_rank_data(project, url_for('faculty.dashboard', pane=config.id), text='home dashboard', live=true) }}
                                 </div>
                             </div>
-                            <div class="col-3 faculty-confirm-area">
-                                {% for req in project.requests_waiting %}
-                                    {% set sel = req.owner %}
-                                    {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
-                                    {#  for some reason, we need the explicit stlye attribute #}
-                                    <div class="dropdown faculty-confirm-button" style="display: inline-block;">
-                                        {% set has_recommended = sel.satisfies_recommended(project) %}
-                                        <a class="badge text-decoration-none text-nohover-light {% if has_recommended %}bg-primary{% else %}bg-warning text-dark{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">{{ sel.student.user.name }} {% if not has_recommended %}<i class="fas fa-exclamation-triangle text-danger"></i> {% endif %}</a>
-                                        {% if req.viewed is not none and not req.viewed %}
-                                            <span class="badge bg-info">NEW</span>
-                                        {% endif %}
-                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                                            {% if not has_recommended %}
-                                                <a class="dropdown-item d-flex gap-2 disabled">Programme does not include recommended modules</a>
-                                                <div role="separator" class="dropdown-divider"></div>
-                                            {% endif %}
-                                            <a class="dropdown-item d-flex gap-2" href="mailto:{{ sel.student.user.email }}">
-                                                <i class="fas fa-envelope fa-fw"></i> Send email...
+                            <div class="col-3">
+                                <div class="d-flex flex-row justify-content-start align-items-start flex-wrap gap-2">
+                                    {% for req in project.requests_waiting %}
+                                        {% set sel = req.owner %}
+                                        <div class="dropdown">
+                                            {% set has_recommended = sel.satisfies_recommended(project) %}
+                                            <a class="badge text-decoration-none text-nohover-light {% if has_recommended %}bg-primary{% else %}bg-warning text-dark{% endif %} dropdown-toggle"
+                                               data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true"
+                                               aria-expanded="false">{{ sel.student.user.name }}
+                                                {% if not has_recommended %}
+                                                    <i class="fas fa-exclamation-triangle text-danger"></i> {% endif %}
                                             </a>
-                                            {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.confirm', sid=sel.id, pid=project.id) }}">
-                                                    <i class="fas fa-check fa-fw"></i> Confirm
-                                                </a>
-                                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.cancel_confirm', sid=sel.id, pid=project.id) }}">
-                                                    <i class="fas fa-trash fa-fw"></i> Delete
-                                                </a>
-                                            {% else %}
-                                                <a class="dropdown-item d-flex gap-2 disabled">
-                                                    <i class="fas fa-check fa-fw"></i> Confirm
-                                                </a>
-                                                <a class="dropdown-item d-flex gap-2 disabled">
-                                                    <i class="fas fa-trash fa-fw"></i> Delete
-                                                </a>
+                                            {% if req.viewed is not none and not req.viewed %}
+                                                <span class="badge bg-info">NEW</span>
                                             {% endif %}
+                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
+                                                {% if not has_recommended %}
+                                                    <a class="dropdown-item d-flex gap-2 disabled small">Programme does
+                                                        not include recommended modules</a>
+                                                    <div role="separator" class="dropdown-divider"></div>
+                                                {% endif %}
+                                                <a class="dropdown-item d-flex gap-2 small"
+                                                   href="mailto:{{ sel.student.user.email }}">
+                                                    <i class="fas fa-envelope fa-fw"></i> Send email...
+                                                </a>
+                                                {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                                    <a class="dropdown-item d-flex gap-2 small"
+                                                       href="{{ url_for('faculty.confirm', sid=sel.id, pid=project.id) }}">
+                                                        <i class="fas fa-check fa-fw"></i> Confirm
+                                                    </a>
+                                                    <a class="dropdown-item d-flex gap-2 small"
+                                                       href="{{ url_for('faculty.cancel_confirm', sid=sel.id, pid=project.id) }}">
+                                                        <i class="fas fa-trash fa-fw"></i> Delete
+                                                    </a>
+                                                {% else %}
+                                                    <a class="dropdown-item d-flex gap-2 small disabled">
+                                                        <i class="fas fa-check fa-fw"></i> Confirm
+                                                    </a>
+                                                    <a class="dropdown-item d-flex gap-2 small disabled">
+                                                        <i class="fas fa-trash fa-fw"></i> Delete
+                                                    </a>
+                                                {% endif %}
+                                            </div>
                                         </div>
-                                    </div>
-                                {% endfor %}
+                                    {% endfor %}
+                                </div>
                             </div>
-                            <div class="col-3 faculty-confirm-area">
-                                {% for req in project.requests_confirmed %}
-                                    {% set sel = req.owner %}
-                                    {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
-                                    {#  for some reason, we need the explicit stlye attribute #}
-                                    <div class="dropdown faculty-confirm-button" style="display: inline-block;">
-                                        <a class="badge text-decoration-none text-nohover-light bg-success dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                            {{ sel.student.user.name }}
-                                        </a>
-                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                                            <a class="dropdown-item d-flex gap-2" href="mailto:{{ sel.student.user.email }}">
-                                                <i class="fas fa-envelope fa-fw"></i> Send email...
+                            <div class="col-3">
+                                <div class="d-flex flex-row justify-content-start align-items-start flex-wrap gap-2">
+                                    {% for req in project.requests_confirmed %}
+                                        {% set sel = req.owner %}
+                                        <div class="dropdown">
+                                            <a class="badge text-decoration-none text-nohover-light bg-success dropdown-toggle"
+                                               data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true"
+                                               aria-expanded="false">
+                                                {{ sel.student.user.name }}
                                             </a>
-                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
-                                                <i class="fas fa-clock fa-fw"></i> Make pending
-                                            </a>
-                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.deconfirm', sid=sel.id, pid=project.id) }}">
-                                                <i class="fas fa-trash fa-fw"></i> Delete
-                                            </a>
+                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
+                                                <a class="dropdown-item d-flex gap-2 small"
+                                                   href="mailto:{{ sel.student.user.email }}">
+                                                    <i class="fas fa-envelope fa-fw"></i> Send email...
+                                                </a>
+                                                <a class="dropdown-item d-flex gap-2 small"
+                                                   href="{{ url_for('faculty.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
+                                                    <i class="fas fa-clock fa-fw"></i> Make pending
+                                                </a>
+                                                <a class="dropdown-item d-flex gap-2 small"
+                                                   href="{{ url_for('faculty.deconfirm', sid=sel.id, pid=project.id) }}">
+                                                    <i class="fas fa-trash fa-fw"></i> Delete
+                                                </a>
+                                            </div>
                                         </div>
-                                    </div>
-                                {% endfor %}
+                                    {% endfor %}
+                                </div>
                             </div>
                         </div>
                     {% endfor %}

@@ -221,10 +221,6 @@ p.copyright {
     margin-bottom: 1rem;
 }
 
-.fac-project-table {
-    margin-bottom: 1rem;
-}
-
 .confirmation-table {
     margin-bottom: 1rem;
 }
@@ -243,18 +239,6 @@ p.copyright {
 
 .top-row-button {
     margin-bottom: 10px;
-}
-
-.faculty-confirm-button {
-    display: inline-block;
-    margin-bottom: 5px;
-    margin-right: 5px;
-}
-
-.faculty-confirm-area {
-    display: flex;
-    flex-wrap: wrap;
-    vertical-align: top;
 }
 
 .student-confirm-button {

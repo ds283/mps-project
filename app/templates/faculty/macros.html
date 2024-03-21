@@ -2,15 +2,10 @@
 
 {% macro project_metadata(project) %}
     {% if project is not none %}
-        <div class="d-flex flex-column justify-content-start align-items-start gap-1">
-            <div>
-                <div class="small text-secondary"><i class="fas fa-circle"></i> <span
-                        class="fw-semibold">{{ unformatted_label(project.views_label()) }}</span></div>
-                {% if project.last_view %}
-                    <div class="text-muted small">last
-                        view {{ project.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</div>
-                {% endif %}
-            </div>
+        <div class="d-flex flex-column justify-content-start align-items-start gap-1 mt-2">
+            {% if project.last_view %}
+                <div class="text-muted small">last view {{ project.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</div>
+            {% endif %}
         </div>
     {% else %}
         <span class="badge bg-danger">Missing project data</span>
@@ -20,59 +15,9 @@
 {% macro project_selection_data(project) %}
     {% if project is not none %}
         <div class="d-flex flex-column justify-content-start align-items-start">
-            <div class="text-secondary">{{ unformatted_label(project.selections_label(popover=True), user_classes="fw-semibold", prefix='<i class="fas fa-info-circle"></i>') }}</div>
-            <div class="text-secondary">{{ unformatted_label(project.bookmarks_label(popover=True), user_classes="fw-semibold", prefix='<i class="fas fa-info-circle"></i>') }}</div>
-        </div>
-    {% else %}
-        <span class="badge bg-danger">Missing project data</span>
-    {% endif %}
-{% endmacro %}
-
-{% macro project_rank_data(project, url, text, live) %}
-    {% if project is not none %}
-        <div class="d-flex flex-column justify-content-start align-items-start gap-1">
-            {% set R = project.popularity_rank(live) %}
-            {% if R is not none %}
-                {% set rank, total = R %}
-                {% if rank is none or total is none %}
-                    <div class="text-secondary small"><i class="fas fa-exclamation-circle"></i> Popularity rank
-                        updating...
-                    </div>
-                {% else %}
-                    <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}"
-                       class="link-secondary text-decoration-none small"><i class="fas fa-circle"></i> Popularity rank
-                        <strong>{{ rank }}</strong>/{{ total }}</a>
-                {% endif %}
-            {% endif %}
-            {#            {% set R = project.selections_rank(live) %}#}
-            {#            {% if R is not none %}#}
-            {#                {% set rank, total = R %}#}
-            {#                {% if rank is none or total is none %}#}
-            {#                    <div class="text-secondary small"><i class="fas fa-exclamation-circle"></i> Selection rank updating...</div>#}
-            {#                {% else %}#}
-            {#                    <a href="{{ url_for('reports.liveproject_analytics', pane='selections', proj_id=project.id, url=url, text=text) }}" class="link-secondary text-decoration-none small"><i class="fas fa-circle"></i> Selection rank <strong>{{ rank }}</strong>/{{ total }}</a>#}
-            {#                {% endif %}#}
-            {#            {% endif %}#}
-            {##}
-            {#            {% set R = project.bookmarks_rank(live) %}#}
-            {#            {% if R is not none %}#}
-            {#                {% set rank, total = R %}#}
-            {#                {% if rank is none or total is none %}#}
-            {#                    <div class="text-secondary small"><i class="fas fa-exclamation-circle"></i> Bookmark rank updating...</div>#}
-            {#                {% else %}#}
-            {#                    <a href="{{ url_for('reports.liveproject_analytics', pane='bookmarks', proj_id=project.id, url=url, text=text) }}" class="link-secondary text-decoration-none small"><i class="fas fa-circle"></i> Bookmark rank <strong>{{ rank }}</strong>/{{ total }}</a>#}
-            {#                {% endif %}#}
-            {#            {% endif %}#}
-            {##}
-            {#            {% set R = project.views_rank(live) %}#}
-            {#            {% if R is not none %}#}
-            {#                {% set rank, total = R %}#}
-            {#                {% if rank is none or total is none %}#}
-            {#                    <div class="text-secondary small"><i class="fas fa-exclamation-circle"></i> View rank updating...</div>#}
-            {#                {% else %}#}
-            {#                    <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="link-secondary text-decoration-none small"><i class="fas fa-circle"></i> View rank <strong>{{ rank }}</strong>/{{ total }}</a>#}
-            {#                {% endif %}#}
-            {#            {% endif %}#}
+            <div class="text-secondary small">{{ unformatted_label(project.selections_label(popover=True), prefix='<i class="fas fa-arrow-right"></i>') }}</div>
+            <div class="text-secondary small">{{ unformatted_label(project.bookmarks_label(popover=True), prefix='<i class="fas fa-arrow-right"></i>') }}</div>
+            <div class="text-secondary small">{{ unformatted_label(project.views_label(), prefix='<i class="fas fa-arrow-right"></i>') }}</div>
         </div>
     {% else %}
         <span class="badge bg-danger">Missing project data</span>

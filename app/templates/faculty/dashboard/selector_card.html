@@ -1,4 +1,4 @@
-{% from "faculty/macros.html" import project_metadata, project_rank_data, project_selection_data %}
+{% from "faculty/macros.html" import project_metadata, project_selection_data %}
 {% from "icon_block.html" import icon_block %}
 {% from "labels.html" import simple_label %}
 {% from "macros.html" import truncate %}
@@ -293,7 +293,7 @@
                         <div class="col-3"><strong>Meetings confirmed</strong></div>
                     </div>
                     {% for project in live_projects %}
-                        <div class="row mb-1">
+                        <div class="row mb-3">
                             <div class="col-3">
                                 <div>
                                     <a class="text-decoration-none fw-semibold"
@@ -313,9 +313,6 @@
                             <div class="col-3">
                                 <div>
                                     {{ project_selection_data(project) }}
-                                </div>
-                                <div class="mt-2">
-                                    {{ project_rank_data(project, url_for('faculty.dashboard', pane=config.id), text='home dashboard', live=true) }}
                                 </div>
                             </div>
                             <div class="col-3">

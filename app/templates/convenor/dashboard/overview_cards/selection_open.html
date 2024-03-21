@@ -132,7 +132,7 @@
                         <span class="fw-bold fs-1 {% if confirmations_ok %}text-primary{% else %}text-warning{% endif %}">{{ outstanding_confirm }}</span>
                         <span class="text-muted"><span class="fs-4">/{{ confirm_total }}</span> <span
                                 class="text-uppercase">outstanding</span></span>
-                        <div class="text-secondary mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
+                        <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
                             {% if confirm_accepted > 0 %}
                                 <span class="text-secondary"><span
                                         class="fw-semibold">{{ confirm_accepted }}</span>/{{ confirm_total }} <span
@@ -178,7 +178,7 @@
                         <span class="fw-bold fs-1 {% if custom_ok > 0 %}text-primary{% else %}text-warning{% endif %}">{{ outstanding_custom }}</span>
                         <span class="text-muted"><span class="fs-4">/{{ custom_total }}</span> <span
                                 class="text-uppercase">outstanding</span></span>
-                        <div class="text-secondary mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
+                        <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
                             {% if custom_accepted > 0 %}
                                 <span class="text-secondary"><span
                                         class="fw-semibold">{{ custom_accepted }}</span>/{{ custom_total }} <span

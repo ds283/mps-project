@@ -1,6 +1,7 @@
 {% extends "base_app.html" %}
 
 {% from "bokeh.html" import import_bokeh %}
+{% from "dashboard_widgets.html" import dashboard_tile %}
 
 {% block scripts %}
     {{ super() }}
@@ -20,8 +21,9 @@
         <div class="col-1"></div>
         <div class="col-10">
             <div class="card mt-3 mb-3 card-body bg-well">
-                <p><span class="dashboard-project-title">{{ project.name }}</span></p>
-                <p>{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }} |
+                <div class="dashboard-project-title">{{ project.name }}</div>
+                <div class="mt-2">
+                    {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }} |
                     {% if project.generic %}
                         <span class="badge bg-info">Generic</span>
                     {% else %}
@@ -30,73 +32,80 @@
                                 {{ project.owner.user.name }}
                             </a>
                         {% else %}
-                            <span class="badge bg-danger">Missing</span>
+                            <span class="badge bg-danger">Missing owner</span>
                         {% endif %}
                     {% endif %}
                     |
-                    {{ config.project_class.name }}</p>
-                <hr class="intro-divider">
-                <div class="row vertical-top">
-                    <div class="col-3">
-                        <div class="list-group">
-                            <div class="list-group-item list-group-item-info">
-                                {% set R = project.popularity_rank(live=require_live) %}
-                                {% if R is not none %}
-                                    {% set rank, total = R %}
-                                    Popularity rank <span class="badge bg-light text-dark rounded-pill">{{ rank }}/{{ total }}</span>
-                                {% else %}
-                                    Popularity rank updating...
-                                {% endif %}
-                            </div>
-                        </div>
+                    {{ config.project_class.name }}
+                </div>
+                <div class="row gy-3 mt-2 mb-3">
+                    <div class="col">
+                        {% call dashboard_tile("Popularity rank", title_icon="trophy", icon_state=true, border=true) %}
+                            {% set R = project.popularity_rank(live=require_live) %}
+                            {% if R is not none %}
+                                {% set rank, total = R %}
+                                <div>
+                                    <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
+                                    <span class="fs-4 text-muted">/{{ total }}</span>
+                                </div>
+                            {% else %}
+                                <span class="text-secondary">Updating...</span>
+                            {% endif %}
+                        {% endcall %}
                     </div>
-                    <div class="col-3">
-                        <div class="list-group">
-                            <div class="list-group-item">
-                                Views <span class="badge bg-light text-dark rounded-pill">{{ project.page_views }}</span>
-                            </div>
-                            <div class="list-group-item">
-                                {% set R = project.views_rank(live=require_live) %}
-                                {% if R is not none %}
-                                    {% set rank, total = R %}
-                                    View rank <span class="badge bg-light text-dark rounded-pill">{{ rank }}/{{ total }}</span>
-                                {% else %}
-                                    View rank updating...
-                                {% endif %}
-                            </div>
-                        </div>
+                    <div class="col">
+                        {% call dashboard_tile("Page view rank", title_icon="circle", icon_state=false, border=true) %}
+                            {% set R = project.views_rank(live=require_live) %}
+                            {% if R is not none %}
+                                {% set rank, total = R %}
+                                <div>
+                                    <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
+                                    <span class="fs-4 text-muted">/{{ total }}</span>
+                                </div>
+                                <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
+                                    <span class="text-secondary"><span
+                                            class="fw-semibold">{{ project.page_views }}</span> total views</span>
+                                </div>
+                            {% else %}
+                                <span class="text-secondary">Updating...</span>
+                            {% endif %}
+                        {% endcall %}
                     </div>
-                    <div class="col-3">
-                        <div class="list-group">
-                            <div class="list-group-item">
-                                Bookmarks <span class="badge bg-light text-dark rounded-pill">{{ project.number_bookmarks }}</span>
-                            </div>
-                            <div class="list-group-item">
-                                {% set R = project.bookmarks_rank(live=require_live) %}
-                                {% if R is not none %}
-                                    {% set rank, total = R %}
-                                    Bookmarks rank <span class="badge bg-light text-dark rounded-pill">{{ rank }}/{{ total }}</span>
-                                {% else %}
-                                    Bookmarks rank updating...
-                                {% endif %}
-                            </div>
-                        </div>
+                    <div class="col">
+                        {% call dashboard_tile("Bookmark rank", title_icon="circle", icon_state=false, border=true) %}
+                            {% set R = project.bookmarks_rank(live=require_live) %}
+                            {% if R is not none %}
+                                {% set rank, total = R %}
+                                <div>
+                                    <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
+                                    <span class="fs-4 text-muted">/{{ total }}</span>
+                                </div>
+                                <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
+                                    <span class="text-secondary"><span
+                                            class="fw-semibold">{{ project.number_bookmarks }}</span> total bookmarks</span>
+                                </div>
+                            {% else %}
+                                <span class="text-secondary">Updating...</span>
+                            {% endif %}
+                        {% endcall %}
                     </div>
-                    <div class="col-3">
-                        <div class="list-group">
-                            <div class="list-group-item">
-                                Selections <span class="badge bg-light text-dark rounded-pill">{{ project.number_selections }}</span>
-                            </div>
-                            <div class="list-group-item">
-                                {% set R = project.selections_rank(live=require_live) %}
-                                {% if R is not none %}
-                                    {% set rank, total = R %}
-                                    Selections rank <span class="badge bg-light text-dark rounded-pill">{{ rank }}/{{ total }}</span>
-                                {% else %}
-                                    Selections rank updating...
-                                {% endif %}
-                            </div>
-                        </div>
+                    <div class="col">
+                        {% call dashboard_tile("Selection rank", title_icon="circle", icon_state=false, border=true) %}
+                            {% set R = project.selections_rank(live=require_live) %}
+                            {% if R is not none %}
+                                {% set rank, total = R %}
+                                <div>
+                                    <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
+                                    <span class="fs-4 text-muted">/{{ total }}</span>
+                                </div>
+                                <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
+                                    <span class="text-secondary"><span
+                                            class="fw-semibold">{{ project.number_selections }}</span> total selections</span>
+                                </div>
+                            {% else %}
+                                <span class="text-secondary">Updating...</span>
+                            {% endif %}
+                        {% endcall %}
                     </div>
                 </div>
             </div>

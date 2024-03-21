@@ -8811,10 +8811,7 @@ class LiveProject(
 
         data = {"label": f"{num} bookmark{pl}", "type": "info"}
         if popover and num > 0:
-            project_tags = [
-                "{name}".format(name=rec.owner.student.user.name)
-                for rec in self.bookmarks.order_by(Bookmark.rank).limit(10).all()
-            ]
+            project_tags = ["{name}".format(name=rec.owner.student.user.name) for rec in self.bookmarks.order_by(Bookmark.rank).limit(10).all()]
             data["popover"] = project_tags
 
         return data

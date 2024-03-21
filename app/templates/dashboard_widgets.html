@@ -1,5 +1,5 @@
-{% macro dashboard_tile(title, title_icon=none, icon_state=none) %}
-    <div class="card border-0 bg-light h-100">
+{% macro dashboard_tile(title, title_icon=none, icon_state=none, border=false, bg="light") %}
+    <div class="card {% if border %}border-2{% else %}border-0{% endif %} bg-{{ bg }} h-100">
         <div class="card-body">
             <div class="row">
                 <div class="col d-flex justify-content-between">

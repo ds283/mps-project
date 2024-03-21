@@ -574,3 +574,14 @@ class DuplicateProjectForm(
     )
 
     submit = SubmitField("Duplicate project")
+
+
+class CreateCustomOfferForm(Form):
+    comment = TextAreaField(
+        "Comment",
+        render_kw={"rows": 3},
+        description="Please enter a brief explanation or justification for this offer",
+        validators=[InputRequired(message="A brief comment is required to help document the reason this offer has been made")],
+    )
+
+    submit = SubmitField("Create new custom offer")

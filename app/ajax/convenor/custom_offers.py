@@ -20,6 +20,11 @@ _student = """
         <span class="badge bg-secondary">Not submitted</span>
     {% endif %}
 </div>
+{% if offer is defined and offer.comment is not none and offer.comment|length > 0 %}
+    <div class="mt-2 text-muted small">
+        <span tabindex="0" data-bs-toggle="popover" title="Offer notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ offer.comment|truncate(600) }}">Notes <i class="ms-1 fas fa-chevron-right"></i></span>
+    </div>
+{% endif %}
 """
 
 
@@ -28,6 +33,11 @@ _project = """
 <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=proj.id, url=url_for('convenor.selector_custom_offers', sel_id=sel.id), text='selector custom offers') }}">
     {{ proj.name }}
 </a>
+{% if offer is defined and offer.comment is not none and offer.comment|length > 0 %}
+    <div class="mt-2 text-muted small">
+        <span tabindex="0" data-bs-toggle="popover" title="Offer notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ offer.comment|truncate(600) }}">Notes <i class="ms-1 fas fa-chevron-right"></i></span>
+    </div>
+{% endif %}
 """
 
 
@@ -166,7 +176,7 @@ def project_offer_data(items):
     data = [
         {
             "student": {
-                "display": render_template_string(_student, sel=item.selector),
+                "display": render_template_string(_student, offer=item, sel=item.selector),
                 "sortvalue": item.selector.student.user.last_name + item.selector.student.user.first_name,
             },
             "timestamp": {
@@ -190,7 +200,7 @@ def student_offer_data(items):
 
     data = [
         {
-            "project": render_template_string(_project, sel=item.selector, proj=item.liveproject),
+            "project": render_template_string(_project, offer=item, sel=item.selector, proj=item.liveproject),
             "owner": {
                 "display": render_template_string(_owner, project=item.liveproject, simple_label=simple_label),
                 "sortvalue": "Generic"
@@ -213,10 +223,13 @@ def student_offer_data(items):
     return jsonify(data)
 
 
-def project_offer_selectors(selectors, project):
+def new_project_offer_selectors(selectors, project):
     data = [
         {
-            "student": {"display": render_template_string(_student, sel=sel), "sortvalue": sel.student.user.last_name + sel.student.user.first_name},
+            "student": {
+                "display": render_template_string(_student, sel=sel),
+                "sortvalue": sel.student.user.last_name + sel.student.user.first_name,
+            },
             "offers": render_template_string(_selector_offers, record=sel),
             "actions": render_template_string(_proj_actions, sel=sel, project=project),
         }
@@ -226,7 +239,7 @@ def project_offer_selectors(selectors, project):
     return jsonify(data)
 
 
-def student_offer_projects(projects, sel):
+def new_student_offer_projects(projects, sel):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
     data = [

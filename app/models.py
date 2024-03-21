@@ -11917,6 +11917,9 @@ class CustomOffer(db.Model, EditingMetadataMixin, CustomOfferStatesMixin):
     # status of offer
     status = db.Column(db.Integer(), default=CustomOfferStatesMixin.OFFERED, nullable=False)
 
+    # document reason/explanation for offer
+    comment = db.Column(db.Text())
+
 
 class EmailLog(db.Model):
     """

@@ -10,7 +10,7 @@
 
 from .add_bookmark import add_student_bookmark
 from .add_ranking import add_student_ranking
-from .custom_offers import project_offer_data, student_offer_data, project_offer_selectors, student_offer_projects
+from .custom_offers import project_offer_data, student_offer_data, new_project_offer_selectors, new_student_offer_projects
 from .edit_roles import edit_roles
 from .enrol_selectors import enrol_selectors_data
 from .enrol_submitters import enrol_submitters_data

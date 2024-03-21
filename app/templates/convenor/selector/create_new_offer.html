@@ -1,0 +1,33 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+
+{% block title %}
+    Add new custom offer for {{ sel.student.user.name }}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card border-primary mt-3 mb-3">
+                <div class="card-header bg-primary text-white">
+                    Add new custom offer for <i class="fas fa-user-circle"></i>
+                    <strong>{{ sel.student.user.name }}</strong>
+                    and project <strong>{{ proj.name }}</strong>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('convenor.create_new_offer', sel_id=sel.id, proj_id=proj.id, url=url) }}"
+                          method="POST" name="create_form">
+                        {{ form.hidden_tag() }}
+
+                        {{ wtf.render_field(form.comment) }}
+
+                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

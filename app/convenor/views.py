@@ -54,6 +54,7 @@ from .forms import (
     EditProjectSupervisorsFactory,
     EditLiveProjectSupervisorsFactory,
     DuplicateProjectForm,
+    CreateCustomOfferForm,
 )
 from ..admin.forms import LevelSelectorForm
 from ..database import db
@@ -7764,7 +7765,7 @@ def new_selector_offer_ajax(sel_id):
     config: ProjectClassConfig = sel.config
     projects = config.live_projects.filter(~LiveProject.custom_offers.any(selector_id=sel_id))
 
-    return ajax.convenor.student_offer_projects(projects.all(), sel)
+    return ajax.convenor.new_student_offer_projects(projects.all(), sel)
 
 
 @convenor.route("/new_project_offer/<int:proj_id>")
@@ -7804,10 +7805,10 @@ def new_project_offer_ajax(proj_id):
     config: ProjectClassConfig = proj.config
     selectors = config.selecting_students.filter(~SelectingStudent.custom_offers.any(liveproject_id=proj_id))
 
-    return ajax.convenor.project_offer_selectors(selectors.all(), proj)
+    return ajax.convenor.new_project_offer_selectors(selectors.all(), proj)
 
 
-@convenor.route("/create_new_offer/<int:sel_id>/<int:proj_id>")
+@convenor.route("/create_new_offer/<int:sel_id>/<int:proj_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def create_new_offer(sel_id, proj_id):
     # proj_id is a LiveProject
@@ -7844,19 +7845,29 @@ def create_new_offer(sel_id, proj_id):
         )
         return redirect(url)
 
-    offer = CustomOffer(
-        liveproject_id=proj.id, selector_id=sel.id, status=CustomOffer.OFFERED, creator_id=current_user.id, creation_timestamp=datetime.now()
-    )
+    form = CreateCustomOfferForm(request.form)
 
-    try:
-        db.session.add(offer)
-        db.session.commit()
-    except SQLAlchemyError as e:
-        flash("Could not create custom offer due to a database error. Please contact a system administrator", "error")
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        db.session.rollback()
+    if form.validate_on_submit():
+        offer = CustomOffer(
+            liveproject_id=proj.id,
+            selector_id=sel.id,
+            status=CustomOffer.OFFERED,
+            comment=form.comment.data,
+            creator_id=current_user.id,
+            creation_timestamp=datetime.now(),
+        )
 
-    return redirect(url)
+        try:
+            db.session.add(offer)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash("Could not create custom offer due to a database error. Please contact a system administrator", "error")
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            db.session.rollback()
+
+        return redirect(url)
+
+    return render_template_context("convenor/selector/create_new_offer.html", form=form, sel=sel, proj=proj, config=config, url=url)
 
 
 @convenor.route("/accept_custom_offer/<int:offer_id>")

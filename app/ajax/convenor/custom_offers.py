@@ -34,7 +34,7 @@ _project = """
 # language=jinja2
 _owner = """
 {% if not project.generic and project.owner is not none %}
-    <a class="text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
+    <a class="link-primary text-decoration-none" href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
     {% if project.group %}{{ simple_label(project.group.make_label()) }}{% endif %}
 {% else %}
     <span class="badge bg-info">Generic</span>
@@ -43,14 +43,37 @@ _owner = """
 
 
 # language=jinja2
+_timestamp = """
+<div class="small text-secondary">
+    Created by <i class="fas fa-user-circle"></i>
+    <a class="text-decoration-none link-primary" href="mailto:{{ offer.created_by.email }}">{{ offer.created_by.name }}</a>
+    {% if offer.creation_timestamp is not none %}
+        {{ offer.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+    {% else %}
+        <span class="badge bg-secondary">Unknown</span>
+    {% endif %}
+    {% if offer.last_edited_by is not none %}
+        <div class="mt-1 text-muted">
+            Last edited by <i class="fas fa-user-circle"></i>
+            <a class="text-decoration-none link-primary" href="mailto:{{ offer.last_edited_by.email }}">{{ offer.last_edited_by.name }}</a>
+            {% if offer.last_edit_timestamp is not none %}
+                {{ offer.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+"""
+
+
+# language=jinja2
 _status = """
 {% set status = offer.status %}
 {% if status == offer.OFFERED %}
-    <span class="badge bg-primary">Offered</span>
+    <div class="text-primary"><i class="fas fa-history"></i> Offered</div>
 {% elif status == offer.DECLINED %}
-    <span class="badge bg-danger">Declined</span>
+    <div class="text-danger"><i class="fas fa-times-circle"></i> Declined</div>
 {% elif status == offer.ACCEPTED %}
-    <span class="badge bg-success">Accepted</span>
+    <div class="text-success"><i class="fas fa-check-circle"></i> Accepted</div>
 {% else %}
     <span class="badge bg-danger">Unknown status</span>
 {% endif %}
@@ -92,13 +115,13 @@ _menu = """
 # language=jinja2
 _selector_offers = """
 {% for offer in record.custom_offers_accepted %}
-    <span class="badge bg-success">Accepted: {{ offer.liveproject.name }} ({{offer.liveproject.owner.user.last_name }})</span>
+    <div class="text-success"><i class="fas fa-check-circle"></i> <span class="fw-semibold">Accepted:</span> {{ offer.liveproject.name }} ({{offer.liveproject.owner.user.last_name }})</div>
 {% endfor %}
 {% for offer in record.custom_offers_pending %}
-    <span class="badge bg-primary">Offer: {{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</span>
+    <div class="text-primary"><i class="fas fa-history"></i> <span class="fw-semibold">Offer:</span> {{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</div>
 {% endfor %}
 {% for offer in record.custom_offers_declined %}
-    <span class="badge bg-danger">Declined: {{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</span>
+    <div class="text-danger"><i class="fas fa-time-circle"></i> <span class="fw-semibold">Declined:</span> {{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</div>
 {% endfor %}
 """
 
@@ -106,13 +129,13 @@ _selector_offers = """
 # language=jinja2
 _project_offers = """
 {% for offer in record.custom_offers_accepted %}
-    <span class="badge bg-success">Accepted: {{ offer.selector.student.user.name }}</span>
+    <div class="text-success"><i class="fas fa-check-circle"></i> <span class="fw-semibold">Accepted:</span> {{ offer.selector.student.user.name }}</div>
 {% endfor %}
 {% for offer in record.custom_offers_pending %}
-    <span class="badge bg-primary">Offer: {{ offer.selector.student.user.name }}</span>
+    <div class="text-primary"><i class="fas fa-history"></i> <span class="fw-semibold">Offer:</span> {{ offer.selector.student.user.name }}</div>
 {% endfor %}
 {% for offer in record.custom_offers_declined %}
-    <span class="badge bg-danger">Declined: {{ offer.selector.student.user.name }}</span>
+    <div class="text-danger"><i class="fas fa-time-circle"></i> <span class="fw-semibold">Declined:</span> {{ offer.selector.student.user.name }}</div>
 {% endfor %}
 """
 
@@ -146,7 +169,10 @@ def project_offer_data(items):
                 "display": render_template_string(_student, sel=item.selector),
                 "sortvalue": item.selector.student.user.last_name + item.selector.student.user.first_name,
             },
-            "timestamp": {"display": item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S"), "timestamp": item.creation_timestamp.timestamp()},
+            "timestamp": {
+                "display": render_template_string(_timestamp, offer=item),
+                "timestamp": item.creation_timestamp.timestamp(),
+            },
             "status": {
                 "display": render_template_string(_status, offer=item),
                 "sortvalue": "{x}_{y}".format(x=item.status, y=item.last_edit_timestamp.timestamp() if item.last_edit_timestamp is not None else 0),
@@ -171,7 +197,10 @@ def student_offer_data(items):
                 if item.liveproject.generic or item.liveproject.owner is None
                 else item.liveproject.owner.user.last_name + item.liveproject.owner.user.first_name,
             },
-            "timestamp": {"display": item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S"), "timestamp": item.creation_timestamp.timestamp()},
+            "timestamp": {
+                "display": render_template_string(_timestamp, offer=item),
+                "timestamp": item.creation_timestamp.timestamp(),
+            },
             "status": {
                 "display": render_template_string(_status, offer=item),
                 "sortvalue": "{x}_{y}".format(x=item.status, y=item.last_edit_timestamp.timestamp() if item.last_edit_timestamp is not None else 0),

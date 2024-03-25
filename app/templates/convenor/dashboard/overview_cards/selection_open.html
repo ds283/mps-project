@@ -6,42 +6,51 @@
 {% macro data_with_delta(key, item, delta, period=none, user_classes=none, negative_is_higher=false) %}
     {% set value = item.get(key) %}
     {% if value %}
-        <span class="fw-semibold text-primary
+        <div class="d-flex flex-row justify-content-between align-items-baseline">
+            <span class="fw-semibold text-primary
                 {% if user_classes is not none %}{{ user_classes }}{% endif %}">{{ value }}</span>
-        {% if delta is not none %}
-            {% set d = delta.get(key) %}
-            {% if d is not none %}
-                {% if d > 0 %}
-                    {% if negative_is_higher %}
-                        <span class="ms-2 text-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">
-                            <i class="fas fa-caret-down"></i> {{ d }}
-                        </span>
-                    {% else %}
-                        <span class="ms-2 text-success {% if user_classes is not none %}{{ user_classes }}{% endif %}">
-                            <i class="fas fa-caret-up"></i> {{ d }}
-                        </span>
-                    {% endif %}
-                {% elif d < 0 %}
-                    {% if negative_is_higher %}
-                        <span class="ms-2 text-success {% if user_classes is not none %}{{ user_classes }}{% endif %}">
-                            <i class="fas fa-caret-up"></i> {{ -d }}
-                        </span>
-                    {% else %}
-                        <span class="ms-2 text-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">
-                            <i class="fas fa-caret-down"></i> {{ -d }}
-                        </span>
-                    {% endif %}
-                {% else %}
-                    <span class="ms-2 text-secondary {% if user_classes is not none %}{{ user_classes }}{% endif %}">
-                        <i class="fas fa-equals"></i>
+            {% if delta is not none %}
+                {% set d = delta.get(key) %}
+                {% if d is not none %}
+                    <span>
+                        {% if d > 0 %}
+                            {% if negative_is_higher %}
+                                <span class="ms-2 text-danger
+                                        {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                                    <i class="fas fa-caret-down"></i> {{ d }}
+                                </span>
+                            {% else %}
+                                <span class="ms-2 text-success
+                                        {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                                    <i class="fas fa-caret-up"></i> {{ d }}
+                                </span>
+                            {% endif %}
+                        {% elif d < 0 %}
+                            {% if negative_is_higher %}
+                                <span class="ms-2 text-success
+                                        {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                                    <i class="fas fa-caret-up"></i> {{ -d }}
+                                </span>
+                            {% else %}
+                                <span class="ms-2 text-danger
+                                        {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                                    <i class="fas fa-caret-down"></i> {{ -d }}
+                                </span>
+                            {% endif %}
+                        {% else %}
+                            <span class="ms-2 text-secondary
+                                    {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                                <i class="fas fa-equals"></i>
+                            </span>
+                        {% endif %}
+                        {% if period is not none %}
+                            <span class="ms-2 text-muted
+                                    {% if user_classes is not none %}{{ user_classes }}{% endif %}">{{ period }}</span>
+                        {% endif %}
                     </span>
                 {% endif %}
-                {% if period is not none %}
-                    <span class="ms-2 text-muted
-                            {% if user_classes is not none %}{{ user_classes }}{% endif %}">{{ period }}</span>
-                {% endif %}
             {% endif %}
-        {% endif %}
+        </div>
     {% endif %}
 {% endmacro %}
 
@@ -159,87 +168,102 @@
             {% set custom_ok = outstanding_custom == 0 %}
             <div class="row gy-3 mb-3">
                 <div class="col">
-                    {% call dashboard_tile("Submitted", title_icon="circle", icon_state=submitted_ok) %}
-                        <span class="fw-bold fs-1 {% if submitted_ok %}text-primary{% else %}text-warning{% endif %}">{{ submitted }}</span>
-                        <span class="fs-4 text-muted">/{{ total }}</span>
-                        <div class="small mb-0">
-                            <a class="text-decoration-none link-primary"
-                               href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='submitted') }}">View
-                                submitters</a>
-                        </div>
+                    {% call(blk) dashboard_tile("Submitted", title_icon="circle", icon_state=submitted_ok) %}
+                        {% if blk == 'body' %}
+                            <span class="fw-bold fs-1 {% if submitted_ok %}text-primary{% else %}text-warning{% endif %}">{{ submitted }}</span>
+                            <span class="fs-4 text-muted">/{{ total }}</span>
+                        {% elif blk == 'footer' %}
+                            <div class="small mb-0">
+                                <a class="text-decoration-none link-primary"
+                                   href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='submitted') }}">View
+                                    submitters</a>
+                            </div>
+                        {% endif %}
                     {% endcall %}
                 </div>
                 <div class="col">
-                    {% call dashboard_tile("Confirmations", title_icon="circle", icon_state=confirmations_ok) %}
-                        <span class="fw-bold fs-1 {% if confirmations_ok %}text-primary{% else %}text-warning{% endif %}">{{ outstanding_confirm }}</span>
-                        <span class="text-muted"><span class="fs-4">/{{ confirm_total }}</span> <span
-                                class="text-uppercase">outstanding</span></span>
-                        <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
-                            {% if confirm_accepted > 0 %}
-                                <span class="text-secondary"><span
-                                        class="fw-semibold">{{ confirm_accepted }}</span>/{{ confirm_total }} <span
-                                        class="text-uppercase">accepted</span></span>
-                            {% endif %}
-                            {% if confirm_declined > 0 %}
-                                <span class="text-secondary"><span
-                                        class="fw-semibold">{{ confirm_declined }}</span>/{{ confirm_total }} <span
-                                        class="text-uppercase">declined</span></span>
-                            {% endif %}
-                        </div>
-                        <div class="small mb-0 mt-2">
-                            <a class="text-decoration-none link-primary"
-                               href="{{ url_for('convenor.show_confirmations', id=config.pclass_id) }}">View
-                                requests</a>
-                        </div>
+                    {% call(blk) dashboard_tile("Confirmations", title_icon="circle", icon_state=confirmations_ok) %}
+                        {% if blk == 'body' %}
+                            <span class="fw-bold fs-1 {% if confirmations_ok %}text-primary{% else %}text-warning{% endif %}">{{ outstanding_confirm }}</span>
+                            <span class="text-muted"><span class="fs-4">/{{ confirm_total }}</span> <span
+                                    class="text-uppercase">outstanding</span></span>
+                            <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
+                                {% if confirm_accepted > 0 %}
+                                    <span class="text-secondary"><span
+                                            class="fw-semibold">{{ confirm_accepted }}</span>/{{ confirm_total }} <span
+                                            class="text-uppercase">accepted</span></span>
+                                {% endif %}
+                                {% if confirm_declined > 0 %}
+                                    <span class="text-secondary"><span
+                                            class="fw-semibold">{{ confirm_declined }}</span>/{{ confirm_total }} <span
+                                            class="text-uppercase">declined</span></span>
+                                {% endif %}
+                            </div>
+                        {% elif blk == 'footer' %}
+                            <div class="small mb-0 mt-2">
+                                <a class="text-decoration-none link-primary"
+                                   href="{{ url_for('convenor.show_confirmations', id=config.pclass_id) }}">View
+                                    requests</a>
+                            </div>
+                        {% endif %}
                     {% endcall %}
                 </div>
                 <div class="col">
-                    {% call dashboard_tile("Bookmarks", title_icon="circle", icon_state=bookmarks_ok) %}
-                        <span class="fw-bold fs-1 {% if bookmarks_ok %}text-primary{% else %}text-warning{% endif %}">{{ bookmarks }}</span>
-                        <span class="fs-4 text-muted">/{{ total }}</span>
-                        <div class="small mb-0">
-                            <a class="text-decoration-none link-primary"
-                               href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='bookmarks') }}">View
-                                selectors</a>
-                        </div>
+                    {% call(blk) dashboard_tile("Bookmarks", title_icon="circle", icon_state=bookmarks_ok) %}
+                        {% if blk == 'body' %}
+                            <span class="fw-bold fs-1 {% if bookmarks_ok %}text-primary{% else %}text-warning{% endif %}">{{ bookmarks }}</span>
+                            <span class="fs-4 text-muted">/{{ total }}</span>
+                        {% elif blk == 'footer' %}
+                            <div class="small mb-0">
+                                <a class="text-decoration-none link-primary"
+                                   href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='bookmarks') }}">View
+                                    selectors</a>
+                            </div>
+                        {% endif %}
                     {% endcall %}
                 </div>
                 <div class="col">
-                    {% call dashboard_tile("No bookmarks", title_icon="circle", icon_state=missing_ok) %}
-                        <span class="fw-bold fs-1 {% if missing_ok %}text-primary{% else %}text-warning{% endif %}">{{ missing }}</span>
-                        <span class="fs-4 text-muted">/{{ total }}</span>
-                        <div class="small mb-0">
-                            <a class="text-decoration-none link-primary"
-                               href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">View
-                                selectors</a>
-                        </div>
+                    {% call(blk) dashboard_tile("No bookmarks", title_icon="circle", icon_state=missing_ok) %}
+                        {% if blk == 'body' %}
+                            <span class="fw-bold fs-1 {% if missing_ok %}text-primary{% else %}text-warning{% endif %}">{{ missing }}</span>
+                            <span class="fs-4 text-muted">/{{ total }}</span>
+                        {% elif blk == 'footer' %}
+                            <div class="small mb-0">
+                                <a class="text-decoration-none link-primary"
+                                   href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">View
+                                    selectors</a>
+                            </div>
+                        {% endif %}
                     {% endcall %}
                 </div>
                 <div class="col">
-                    {% call dashboard_tile("Custom offers", title_icon="circle", icon_state=custom_ok) %}
-                        <span class="fw-bold fs-1 {% if custom_ok > 0 %}text-primary{% else %}text-warning{% endif %}">{{ outstanding_custom }}</span>
-                        <span class="text-muted"><span class="fs-4">/{{ custom_total }}</span> <span
-                                class="text-uppercase">outstanding</span></span>
-                        <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
-                            {% if custom_accepted > 0 %}
-                                <span class="text-secondary"><span
-                                        class="fw-semibold">{{ custom_accepted }}</span>/{{ custom_total }} <span
-                                        class="text-uppercase">accepted</span></span>
-                            {% endif %}
-                            {% if custom_declined > 0 %}
-                                <span class="text-secondary"><span
-                                        class="fw-semibold">{{ custom_declined }}</span>/{{ custom_total }} <span
-                                        class="text-uppercase">declined</span></span>
-                            {% endif %}
-                        </div>
-                        <div class="small mb-0 mt-2 d-flex flex-column gap-1 justify-content-start align-items-start">
-                            <a class="text-decoration-none link-primary"
-                               href="{{ url_for('convenor.liveprojects', id=config.pclass_id, state_filter='custom') }}">View
-                                offers by project</a>
-                            <a class="text-decoration-none link-primary"
-                               href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='custom') }}">View
-                                offers by selector</a>
-                        </div>
+                    {% call(blk) dashboard_tile("Custom offers", title_icon="circle", icon_state=custom_ok) %}
+                        {% if blk == 'body' %}
+                            <span class="fw-bold fs-1 {% if custom_ok > 0 %}text-primary{% else %}text-warning{% endif %}">{{ outstanding_custom }}</span>
+                            <span class="text-muted"><span class="fs-4">/{{ custom_total }}</span> <span
+                                    class="text-uppercase">outstanding</span></span>
+                            <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
+                                {% if custom_accepted > 0 %}
+                                    <span class="text-secondary"><span
+                                            class="fw-semibold">{{ custom_accepted }}</span>/{{ custom_total }} <span
+                                            class="text-uppercase">accepted</span></span>
+                                {% endif %}
+                                {% if custom_declined > 0 %}
+                                    <span class="text-secondary"><span
+                                            class="fw-semibold">{{ custom_declined }}</span>/{{ custom_total }} <span
+                                            class="text-uppercase">declined</span></span>
+                                {% endif %}
+                            </div>
+                        {% elif blk == 'footer' %}
+                            <div class="small mb-0 mt-2 d-flex flex-column gap-1 justify-content-start align-items-start">
+                                <a class="text-decoration-none link-primary"
+                                   href="{{ url_for('convenor.liveprojects', id=config.pclass_id, state_filter='custom') }}">View
+                                    offers by project</a>
+                                <a class="text-decoration-none link-primary"
+                                   href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='custom') }}">View
+                                    offers by selector</a>
+                            </div>
+                        {% endif %}
                     {% endcall %}
                 </div>
             </div>
@@ -247,65 +271,68 @@
             {% if popular_data is not none %}
                 <div class="row mb-3">
                     <div class="col">
-                        {% call dashboard_tile("Popular projects", title_icon="arrow-up", icon_state=none, user_block_classes="w-100") %}
-                            <table class="table table-sm table-striped">
-                                <thead>
-                                <tr>
-                                    <th width="25% small">Project</th>
-                                    <th width="15% small">Owner</th>
-                                    <th width="20% small">Last view</th>
-                                    <th width="10% small">Popularity</th>
-                                    <th width="10% small">Selections</th>
-                                    <th width="10% small">Bookmarks</th>
-                                    <th width="10% small">Views</th>
-                                </tr>
-                                </thead>
-                                <tbody class="table-group-divider">
-                                {% for item in popular_data %}
-                                    {% set p = item['project'] %}
-                                    {% set delta = item.get('delta') %}
+                        {% call(blk) dashboard_tile("Popular projects", title_icon="arrow-up", icon_state=none, user_block_classes="w-100") %}
+                            {% if blk == 'body' %}
+                                <table class="table table-sm table-striped">
+                                    <thead>
                                     <tr>
-                                        <td>
-                                            <a class="link-primary text-decoration-none small"
-                                               href="{{ url_for('faculty.live_project', pid=project.id, text='convenor dashboard', url=url_for('convenor.status', id=config.pclass_id)) }}">{{ p.name }}</a>
-                                        </td>
-                                        <td>
-                                            {% if not p.generic %}
-                                                {% if p.owner %}
-                                                    <a class="link-primary text-decoration-none small"
-                                                       href="mailto:{{ p.owner.user.email }}">{{ p.owner.user.name }}</a>
-                                                {% else %}
-                                                    <span class="badge bg-danger text-white">Owner missing</span>
-                                                {% endif %}
-                                            {% else %}
-                                                <span class="badge bg-info text-white">Generic</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if p.last_view %}
-                                                <span class="text-secondary small">{{ p.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                                            {% else %}
-                                                <span class="text-secondary small"><i
-                                                        class="fas fa-ban"></i> None</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {{ data_with_delta('score_rank', item, delta, user_classes='small', period=none, negative_is_higher=true) }}
-                                        </td>
-                                        <td>
-                                            {{ data_with_delta('selections', item, delta, user_classes='small', period=none) }}
-                                        </td>
-                                        <td>
-                                            {{ data_with_delta('bookmarks', item, delta, user_classes='small', period=none) }}
-                                        </td>
-                                        <td>
-                                            {{ data_with_delta('views', item, delta, user_classes='small', period=none) }}
-                                        </td>
+                                        <th width="25% small">Project</th>
+                                        <th width="15% small">Owner</th>
+                                        <th width="20% small">Last view</th>
+                                        <th width="10% small">Popularity</th>
+                                        <th width="10% small">Selections</th>
+                                        <th width="10% small">Bookmarks</th>
+                                        <th width="10% small">Views</th>
                                     </tr>
-                                {% endfor %}
-                                </tbody>
-                            </table>
-                            <div class="small text-muted mt-3">Comparison to 3 days ago</div>
+                                    </thead>
+                                    <tbody class="table-group-divider">
+                                    {% for item in popular_data %}
+                                        {% set p = item['project'] %}
+                                        {% set delta = item.get('delta') %}
+                                        <tr>
+                                            <td>
+                                                <a class="link-primary text-decoration-none small"
+                                                   href="{{ url_for('faculty.live_project', pid=p.id, text='convenor dashboard', url=url_for('convenor.status', id=config.pclass_id)) }}">{{ p.name }}</a>
+                                            </td>
+                                            <td>
+                                                {% if not p.generic %}
+                                                    {% if p.owner %}
+                                                        <a class="link-primary text-decoration-none small"
+                                                           href="mailto:{{ p.owner.user.email }}">{{ p.owner.user.name }}</a>
+                                                    {% else %}
+                                                        <span class="badge bg-danger text-white">Owner missing</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="badge bg-info text-white">Generic</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if p.last_view %}
+                                                    <span class="text-secondary small">{{ p.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                                {% else %}
+                                                    <span class="text-secondary small"><i
+                                                            class="fas fa-ban"></i> None</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ data_with_delta('score_rank', item, delta, user_classes='small', period=none, negative_is_higher=true) }}
+                                            </td>
+                                            <td>
+                                                {{ data_with_delta('selections', item, delta, user_classes='small', period=none) }}
+                                            </td>
+                                            <td>
+                                                {{ data_with_delta('bookmarks', item, delta, user_classes='small', period=none) }}
+                                            </td>
+                                            <td>
+                                                {{ data_with_delta('views', item, delta, user_classes='small', period=none) }}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% elif blk == 'footer' %}
+                                <div class="small text-muted mt-3">Comparison to 3 days ago</div>
+                            {% endif %}
                         {% endcall %}
                     </div>
                 </div>

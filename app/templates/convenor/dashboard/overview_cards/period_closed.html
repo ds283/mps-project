@@ -34,24 +34,27 @@
         {% set not_pushed_ok = not_pushed > 0 %}
         <div class="row gy-3 {{ topclass }}">
             <div class="col">
-                {% call dashboard_tile("Pushed", title_icon="check-circle", icon_state=pushed_ok) %}
-                    <span class="fw-bold fs-1 {% if pushed_ok %}text-success{% else %}text-primary{% endif %}">{{ pushed }}</span>
-                    <span class="fs-4 text-muted">/{{ total }}</span>
+                {% call(blk) dashboard_tile("Pushed", title_icon="check-circle", icon_state=pushed_ok) %}
+                    {% if blk == 'body' %}
+                        <span class="fw-bold fs-1 {% if pushed_ok %}text-success{% else %}text-primary{% endif %}">{{ pushed }}</span>
+                        <span class="fs-4 text-muted">/{{ total }}</span>
+                    {% endif %}
                 {% endcall %}
             </div>
             <div class="col">
-                {% call dashboard_tile("Ready", title_icon="circle", icon_state=not_pushed_ok) %}
-                    <span class="fw-bold fs-1 {% if not_pushed_ok %}text-success{% else %}text-secondary{% endif %}">{{ not_pushed }}</span>
-                    <span class="fs-4 text-muted">/{{ total }}</span>
-                    {% if not_pushed > 0 %}
-                        <div class="small mb-0">
-                            <div>
+                {% call(blk) dashboard_tile("Ready", title_icon="circle", icon_state=not_pushed_ok) %}
+                    {% if blk == 'body' %}
+                        <span class="fw-bold fs-1 {% if not_pushed_ok %}text-success{% else %}text-secondary{% endif %}">{{ not_pushed }}</span>
+                        <span class="fs-4 text-muted">/{{ total }}</span>
+                    {% elif blk == 'footer' %}
+                        {% if not_pushed > 0 %}
+                            <div class="small mb-0">
                                 <a class="text-decoration-none link-primary"
                                    href="{{ url_for('convenor.push_feedback', id=period.id) }}">
                                     Push feedback
                                 </a>
                             </div>
-                        </div>
+                        {% endif %}
                     {% endif %}
                 {% endcall %}
             </div>
@@ -59,15 +62,19 @@
                 {% set supv_ok = supv == total %}
                 {% set mark_ok = mark == total %}
                 <div class="col">
-                    {% call dashboard_tile("Supervisors", title_icon="circle", icon_state=supv_ok) %}
-                        <span class="fw-bold fs-1 {% if supv_ok %}text-success{% else %}text-primary{% endif %}">{{ supv }}</span>
-                        <span class="fs-4 text-muted">/{{ total }}</span>
+                    {% call(blk) dashboard_tile("Supervisors", title_icon="circle", icon_state=supv_ok) %}
+                        {% if blk == 'body' %}
+                            <span class="fw-bold fs-1 {% if supv_ok %}text-success{% else %}text-primary{% endif %}">{{ supv }}</span>
+                            <span class="fs-4 text-muted">/{{ total }}</span>
+                        {% endif %}
                     {% endcall %}
                 </div>
                 <div class="col">
-                    {% call dashboard_tile("Examiners", title_icon="circle", icon_state=mark_ok) %}
-                        <span class="fw-bold fs-1 {% if mark_ok %}text-success{% else %}text-primary{% endif %}">{{ mark }}</span>
-                        <span class="fs-4 text-muted">/{{ total }}</span>
+                    {% call(blk) dashboard_tile("Examiners", title_icon="circle", icon_state=mark_ok) %}
+                        {% if blk == 'body' %}
+                            <span class="fw-bold fs-1 {% if mark_ok %}text-success{% else %}text-primary{% endif %}">{{ mark }}</span>
+                            <span class="fs-4 text-muted">/{{ total }}</span>
+                        {% endif %}
                     {% endcall %}
                 </div>
             {% endif %}
@@ -75,9 +82,11 @@
                 {% set pres = period.number_submitters_presentation_feedback %}
                 {% set pres_ok = pres == total %}
                 <div class="col">
-                    {% call dashboard_tile("Presentation", title_icon="circle", icon_state=mark_ok) %}
-                        <span class="fw-bold fs-1 {% if pres_ok %}text-success{% else %}text-primary{% endif %}">{{ pres }}</span>
-                        <span class="fs-4 text-muted">/{{ total }}</span>
+                    {% call(blk) dashboard_tile("Presentation", title_icon="circle", icon_state=mark_ok) %}
+                        {% if blk == 'body' %}
+                            <span class="fw-bold fs-1 {% if pres_ok %}text-success{% else %}text-primary{% endif %}">{{ pres }}</span>
+                            <span class="fs-4 text-muted">/{{ total }}</span>
+                        {% endif %}
                     {% endcall %}
                 </div>
             {% endif %}

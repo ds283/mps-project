@@ -43,86 +43,97 @@
                 </div>
                 <div class="row gy-3 mt-2 mb-3">
                     <div class="col">
-                        {% call dashboard_tile("Popularity rank", title_icon="arrow-up", icon_state=true, border=true) %}
-                            {% set R = project.popularity_rank(live=require_live) %}
-                            {% if R is not none %}
-                                {% set rank, total = R %}
-                                {% if rank is not none %}
-                                    <div>
-                                        <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
-                                        <span class="fs-4 text-muted">/{{ total }}</span>
-                                    </div>
+                        {% set R = project.popularity_rank(live=require_live) %}
+                        {% call(blk) dashboard_tile("Popularity rank", title_icon="arrow-up", icon_state=true, border=true) %}
+                            {% if blk == 'body' %}
+                                {% if R is not none %}
+                                    {% set rank, total = R %}
+                                    {% if rank is not none %}
+                                        <div>
+                                            <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
+                                            <span class="fs-4 text-muted">/{{ total }}</span>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-secondary">Updating...</span>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-secondary">Updating...</span>
                                 {% endif %}
-                            {% else %}
-                                <span class="text-secondary">Updating...</span>
                             {% endif %}
                         {% endcall %}
                     </div>
                     <div class="col">
-                        {% call dashboard_tile("Page view rank", title_icon="binoculars", icon_state=none, border=true) %}
-                            {% set R = project.views_rank(live=require_live) %}
-                            {% if R is not none %}
-                                {% set rank, total = R %}
-                                {% if rank is not none %}
-                                    <div>
-                                        <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
-                                        <span class="fs-4 text-muted">/{{ total }}</span>
-                                    </div>
+                        {% set R = project.views_rank(live=require_live) %}
+                        {% call(blk) dashboard_tile("Page view rank", title_icon="binoculars", icon_state=none, border=true) %}
+                            {% if blk == 'body' %}
+                                {% if R is not none %}
+                                    {% set rank, total = R %}
+                                    {% if rank is not none %}
+                                        <div>
+                                            <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
+                                            <span class="fs-4 text-muted">/{{ total }}</span>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-secondary">Updating...</span>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-secondary">Updating...</span>
                                 {% endif %}
+                            {% elif blk == 'footer' %}
                                 <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
                                     <span class="text-secondary"><span
                                             class="fw-semibold">{{ project.page_views }}</span> total views</span>
                                 </div>
-                            {% else %}
-                                <span class="text-secondary">Updating...</span>
                             {% endif %}
                         {% endcall %}
                     </div>
                     <div class="col">
-                        {% call dashboard_tile("Bookmark rank", title_icon="bookmark", icon_state=none, border=true) %}
-                            {% set R = project.bookmarks_rank(live=require_live) %}
-                            {% if R is not none %}
-                                {% set rank, total = R %}
-                                {% if rank is not none %}
-                                    <div>
-                                        <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
-                                        <span class="fs-4 text-muted">/{{ total }}</span>
-                                    </div>
+                        {% set R = project.bookmarks_rank(live=require_live) %}
+                        {% call(blk) dashboard_tile("Bookmark rank", title_icon="bookmark", icon_state=none, border=true) %}
+                            {% if blk == 'body' %}
+                                {% if R is not none %}
+                                    {% set rank, total = R %}
+                                    {% if rank is not none %}
+                                        <div>
+                                            <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
+                                            <span class="fs-4 text-muted">/{{ total }}</span>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-secondary">Updating...</span>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-secondary">Updating...</span>
                                 {% endif %}
+                            {% elif blk == 'footer' %}
                                 <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
                                     <span class="text-secondary"><span
                                             class="fw-semibold">{{ project.number_bookmarks }}</span> total bookmarks</span>
                                 </div>
-                            {% else %}
-                                <span class="text-secondary">Updating...</span>
                             {% endif %}
                         {% endcall %}
                     </div>
                     <div class="col">
-                        {% call dashboard_tile("Selection rank", title_icon="check-circle", icon_state=none, border=true) %}
-                            {% set R = project.selections_rank(live=require_live) %}
-                            {% if R is not none %}
-                                {% set rank, total = R %}
-                                {% if rank is not none %}
-                                    <div>
-                                        <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
-                                        <span class="fs-4 text-muted">/{{ total }}</span>
-                                    </div>
+                        {% set R = project.selections_rank(live=require_live) %}
+                        {% call(blk) dashboard_tile("Selection rank", title_icon="check-circle", icon_state=none, border=true) %}
+                            {% if blk == 'body' %}
+                                {% if R is not none %}
+                                    {% set rank, total = R %}
+                                    {% if rank is not none %}
+                                        <div>
+                                            <span class="fw-bold fs-1 text-primary">{{ rank }}</span>
+                                            <span class="fs-4 text-muted">/{{ total }}</span>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-secondary">Updating...</span>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-secondary">Updating...</span>
                                 {% endif %}
+                            {% elif blk == 'footer' %}
                                 <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
                                     <span class="text-secondary"><span
                                             class="fw-semibold">{{ project.number_selections }}</span> total selections</span>
                                 </div>
-                            {% else %}
-                                <span class="text-secondary">Updating...</span>
                             {% endif %}
                         {% endcall %}
                     </div>

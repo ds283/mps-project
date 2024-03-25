@@ -11,23 +11,31 @@
     {% set rejected_ok = rejected == 0 %}
     <div class="row gy-3">
         <div class="col-3">
-            {% call dashboard_tile("Approved", title_icon="check-circle", icon_state=approved_ok) %}
-                <span class="fw-bold fs-1 {% if approved_ok %}text-success{% else %}text-primary{% endif %}">{{ approved }}</span>
+            {% call(blk) dashboard_tile("Approved", title_icon="check-circle", icon_state=approved_ok) %}
+                {% if blk == 'body' %}
+                    <span class="fw-bold fs-1 {% if approved_ok %}text-success{% else %}text-primary{% endif %}">{{ approved }}</span>
+                {% endif %}
             {% endcall %}
         </div>
         <div class="col-3">
-            {% call dashboard_tile("Rejected", title_icon="times-circle", icon_state=rejected_ok) %}
-                <span class="fw-bold fs-1 {% if rejected_ok %}text-success{% else %}text-danger{% endif %}">{{ rejected }}</span>
+            {% call(blk) dashboard_tile("Rejected", title_icon="times-circle", icon_state=rejected_ok) %}
+                {% if blk == 'body' %}
+                    <span class="fw-bold fs-1 {% if rejected_ok %}text-success{% else %}text-danger{% endif %}">{{ rejected }}</span>
+                {% endif %}
             {% endcall %}
         </div>
         <div class="col-3">
-            {% call dashboard_tile("Pending", title_icon="circle", icon_state=pending_ok) %}
-                <span class="fw-bold fs-1 {% if pending_ok %}text-success{% else %}text-primary{% endif %}">{{ pending }}</span>
+            {% call(blk) dashboard_tile("Pending", title_icon="circle", icon_state=pending_ok) %}
+                {% if blk == 'body' %}
+                    <span class="fw-bold fs-1 {% if pending_ok %}text-success{% else %}text-primary{% endif %}">{{ pending }}</span>
+                {% endif %}
             {% endcall %}
         </div>
         <div class="col-3">
-            {% call dashboard_tile("Queued", title_icon="circle", icon_state=queued_ok) %}
-                <span class="fw-bold fs-1 {% if queued_ok %}text-success{% else %}text-primary{% endif %}">{{ queued }}</span>
+            {% call(blk) dashboard_tile("Queued", title_icon="circle", icon_state=queued_ok) %}
+                {% if blk == 'body' %}
+                    <span class="fw-bold fs-1 {% if queued_ok %}text-success{% else %}text-primary{% endif %}">{{ queued }}</span>
+                {% endif %}
             {% endcall %}
         </div>
     </div>

@@ -283,7 +283,7 @@
                                         </td>
                                         <td>
                                             {% if p.last_view %}
-                                                <span class="text-secondary small">last view {{ p.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                                <span class="text-secondary small">{{ p.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                             {% else %}
                                                 <span class="text-secondary small"><i
                                                         class="fas fa-ban"></i> None</span>

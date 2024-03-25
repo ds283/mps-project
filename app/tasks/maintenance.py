@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from io import BytesIO
 from pathlib import Path
 from typing import List, Iterable, Mapping, Union
@@ -18,7 +18,7 @@ from celery import states
 from celery.exceptions import Ignore
 from flask import current_app, render_template
 from flask_mailman import EmailMessage
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from sqlalchemy.exc import SQLAlchemyError
 
 import app.shared.cloud_object_store.encryption_types as encryptions
@@ -47,6 +47,7 @@ from ..models import (
     validate_nonce,
     SubmittingStudent,
     SelectingStudent,
+    PopularityRecord,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetCloudScratchContextManager, AssetUploadManager
 from ..shared.cloud_object_store import ObjectStore
@@ -58,23 +59,37 @@ def register_maintenance_tasks(celery):
     def maintenance(self):
         self.update_state(state=states.STARTED)
 
+        print("database maintenance: performing maintenance for ProjectClass records")
         project_classes_maintenance(self)
 
+        print("database maintenance: performing maintenance for Project records")
         projects_maintenance(self)
+        print("database maintenance: performing maintenance for LiveProject records")
         liveprojects_maintenance(self)
 
+        print("database maintenance: performing maintenance for ProjectDescription records")
         project_descriptions_maintenance(self)
 
+        print("database maintenance: performing maintenance for StudentData records")
         students_data_maintenance(self)
+        print("database maintenance: performing maintenance for SubmittingStudent records")
         submitting_student_maintenance(self)
 
+        print("database maintenance: performing maintenance for AssessorAttendanceData records")
         assessor_attendance_maintenance(self)
+        print("database maintenance: performing maintenance for SubmitterAttendanceData records")
         submitter_attendance_maintenance(self)
 
+        print("database maintenance: performing maintenance for MatchingEnumeration records")
         matching_enumeration_maintenance(self)
+        print("database maintenance: performing maintenance for ScheduleEnumeration records")
         schedule_enumeration_maintenance(self)
 
+        print("database maintenance: performing maintenance for SubmissionRecord records")
         submission_record_maintenance(self)
+
+        print("database maintenance: performing maintenance for PopularityRecord records")
+        popularity_record_maintenance(self)
 
         self.update_state(state=states.SUCCESS)
 
@@ -89,6 +104,29 @@ def register_maintenance_tasks(celery):
         backup_maintenance(self)
 
         self.update_state(state=states.SUCCESS)
+
+    def popularity_record_maintenance(self):
+        # remove any stale PopularityRecord instances (at least 1 day old) that did not get properly filled in
+        now = datetime.now()
+        cutoff = now - timedelta(days=1)
+
+        try:
+            db.session.query(PopularityRecord).filter(
+                and_(
+                    PopularityRecord.datestamp <= cutoff,
+                    or_(
+                        PopularityRecord.score_rank == None,
+                        PopularityRecord.selections_rank == None,
+                        PopularityRecord.bookmarks_rank == None,
+                        PopularityRecord.views_rank == None,
+                    ),
+                )
+            ).delete()
+            db.session.commit()
+
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
     def submitting_student_maintenance(self):
         current_year = get_current_year()

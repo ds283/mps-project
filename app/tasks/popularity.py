@@ -253,29 +253,41 @@ def register_popularity_tasks(celery):
 
         # we would prefer not to use disable_sync_subtasks, which is discouraged, but needed so that we can call .get() within
         # another task - that's needed to simulate the chord behaviour
+        print(f"update_project_popularity_data({pid}={pcl.name}: compute popularity data for individual projects (via Celery group)")
         compute = group(compute_popularity_data.si(proj.id, datestamp, uuid, num_live) for proj in config.live_projects)
 
         compute_task: GroupResult = compute.apply_async()
+        print(f"update_project_popularity_data({pid}={pcl.name}): waiting for asynchronous group result")
         compute_task.get(disable_sync_subtasks=False)
         compute_task.forget()
 
+        print(f"update_project_popularity_data({pid}={pcl.name}): compute popularity score ranks")
         score_rank_task: AsyncResult = compute_popularity_score_rank.si(config.id, uuid, num_live).apply_async()
+        print(f"update_project_popularity_data({pid}={pcl.name}): waiting for asynchronous group result")
         lowest_rank = score_rank_task.get(disable_sync_subtasks=False)
+        print(f"update_project_popularity_data({pid}={pcl.name}): store lowest popularity score rank")
         store_task: AsyncResult = store_lowest_popularity_score_rank.s(lowest_rank, config.id, uuid, num_live).apply_async()
+        print(f"update_project_popularity_data({pid}={pcl.name}): waiting for asynchronous group result")
         store_task.get(disable_sync_subtasks=False)
 
         score_rank_task.forget()
         store_task.forget()
 
+        print(f"update_project_popularity_data({pid}={pcl.name}): compute views rank")
         view_rank_task: AsyncResult = compute_views_rank.si(config.id, uuid, num_live).apply_async()
+        print(f"update_project_popularity_data({pid}={pcl.name}): waiting for asynchronous group result")
         view_rank_task.get(disable_sync_subtasks=False)
         view_rank_task.forget()
 
+        print(f"update_project_popularity_data({pid}={pcl.name}): compute bookmarks rank")
         bookmarks_rank_task: AsyncResult = compute_bookmarks_rank.si(config.id, uuid, num_live).apply_async()
+        print(f"update_project_popularity_data({pid}={pcl.name}): waiting for asynchronous group result")
         bookmarks_rank_task.get(disable_sync_subtasks=False)
         bookmarks_rank_task.forget()
 
+        print(f"update_project_popularity_data({pid}={pcl.name}): compute selections rank")
         selections_rank_task: AsyncResult = compute_selections_rank.si(config.id, uuid, num_live).apply_async()
+        print(f"update_project_popularity_data({pid}={pcl.name}): waiting for asynchronous group result")
         selections_rank_task.get(disable_sync_subtasks=False)
         selections_rank_task.forget()
 

@@ -267,7 +267,7 @@
                                     <tr>
                                         <td>
                                             <a class="link-primary text-decoration-none small"
-                                               href="{{ url_for('faculty.project_preview', id=p.id, text='convenor dashboard', url=url_for('convenor.status', id=config.pclass_id)) }}">{{ p.name }}</a>
+                                               href="{{ url_for('faculty.live_project', pid=project.id, text='convenor dashboard', url=url_for('convenor.status', id=config.pclass_id)) }}">{{ p.name }}</a>
                                         </td>
                                         <td>
                                             {% if not p.generic %}

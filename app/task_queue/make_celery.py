@@ -17,6 +17,7 @@ def make_celery(app):
         app.import_name,
         backend=app.config["CELERY_RESULT_BACKEND"],
         broker=app.config["CELERY_BROKER_URL"],
+        broker_transport_options={'ttl': True},
         accept_content=app.config["CELERY_ACCEPT_CONTENT"],
         beat_scheduler="app.sqlalchemy_scheduler:DatabaseScheduler",
     )

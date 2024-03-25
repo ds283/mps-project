@@ -1,9 +1,9 @@
-{% macro dashboard_tile(title, title_icon=none, icon_state=none, border=false, bg="light") %}
+{% macro dashboard_tile(title, title_icon=none, icon_state=none, border=false, bg="light", user_block_classes=none) %}
     <div class="card {% if border %}border-2{% else %}border-0{% endif %} bg-{{ bg }} h-100">
         <div class="card-body">
             <div class="row">
                 <div class="col d-flex justify-content-between">
-                    <div>
+                    <div {% if user_block_classes is not none %}class="{{ user_block_classes }}"{% endif %}>
                         <div class="d-flex flex-row gap-2 justify-content-left align-items-start">
                             {% set text_class = "text-success" if icon_state is true else ("text-warning" if icon_state is false else "text-secondary") %}
                             <i class="{{ text_class }} fs-6 fas fa-{{ title_icon }} me-1 pt-1"></i>

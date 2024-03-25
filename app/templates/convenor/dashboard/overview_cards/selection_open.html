@@ -12,20 +12,21 @@
             {% set d = delta['score_rank'] %}
             {% if d is not none %}
                 {% if d > 0 %}
-                    <span class="text-success {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                    <span class="ms-2 text-success {% if user_classes is not none %}{{ user_classes }}{% endif %}">
                         <i class="fas fa-caret-up"></i> {{ d }}
                     </span>
                 {% elif d < 0 %}
-                    <span class="text-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                    <span class="ms-2 text-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">
                         <i class="fas fa-caret-down"></i> {{ -d }}
                     </span>
                 {% else %}
-                    <span class="text-secondary {% if user_classes is not none %}{{ user_classes }}{% endif %}">
-                        <i class="fas fa-equals"></i> {{ 0 }}
+                    <span class="ms-2 text-secondary {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                        <i class="fas fa-equals"></i>
                     </span>
                 {% endif %}
                 {% if period is not none %}
-                    <span class="ms-2 text-muted {% if user_classes is not none %}{{ user_classes }}{% endif %}"></span>
+                    <span class="ms-2 text-muted
+                            {% if user_classes is not none %}{{ user_classes }}{% endif %}">{{ period }}</span>
                 {% endif %}
             {% endif %}
         {% endif %}
@@ -234,13 +235,13 @@
             {% if popular_data is not none %}
                 <div class="row mb-3">
                     <div class="col">
-                        {% call dashboard_tile("Popular projects", title_icon="arrow-up", icon_state=none) %}
+                        {% call dashboard_tile("Popular projects", title_icon="arrow-up", icon_state=none, user_block_classes="w-100") %}
                             <table class="table table-sm table-striped">
                                 <thead>
                                 <tr>
                                     <th width="25% small">Project</th>
-                                    <th width="20% small">Owner</th>
-                                    <th width="15% small">Last view</th>
+                                    <th width="15% small">Owner</th>
+                                    <th width="20% small">Last view</th>
                                     <th width="10% small">Popularity</th>
                                     <th width="10% small">Selections</th>
                                     <th width="10% small">Bookmarks</th>

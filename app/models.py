@@ -6057,9 +6057,9 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
         return self.matching_attempts.filter_by(selected=True).first()
 
     @property
-    def time_to_request_deadline(self):
+    def time_to_request_deadline(self) -> Optional[str]:
         if self.request_deadline is None:
-            return "<invalid>"
+            return None
 
         today = date.today()
         if today > self.request_deadline:
@@ -6069,9 +6069,9 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
         return format_readable_time(delta)
 
     @property
-    def time_to_live_deadline(self):
+    def time_to_live_deadline(self) -> Optional[str]:
         if self.live_deadline is None:
-            return "<invalid>"
+            return None
 
         today = date.today()
         if today > self.live_deadline:
@@ -6108,11 +6108,10 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
         """
 
         if self.selector_lifecycle < self.SELECTOR_LIFECYCLE_READY_MATCHING:
-            return self._open_selector_data
+            return self._open_selector_data()
 
-        return self._closed_selector_data
+        return self._closed_selector_data()
 
-    @property
     def _open_selector_data(self):
         total = 0
         submitted = 0
@@ -6133,7 +6132,6 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
         return {"have_submitted": submitted, "have_bookmarks": bookmarks, "missing": missing, "total": total}
 
-    @property
     def _closed_selector_data(self):
         total = 0
         submitted = 0
@@ -6148,6 +6146,87 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
                 missing += 1
 
         return {"have_submitted": submitted, "missing": missing, "total": total}
+
+    def most_popular_projects(self, limit: int = 5, compare_interval: Optional[timedelta] = timedelta(days=1)):
+        popularity_subq = (
+            db.session.query(
+                PopularityRecord.liveproject_id.label("popq_liveproject_id"),
+                func.max(PopularityRecord.datestamp).label("popq_datestamp"),
+            )
+            .group_by(PopularityRecord.liveproject_id)
+            .subquery()
+        )
+
+        # could base query on self.live_projects, but that would apparently require a subquery (because of the .select_from()),
+        # and so to avoid that we filter directly from LiveProjects
+        query = (
+            db.session.query(LiveProject, PopularityRecord)
+            .select_from(LiveProject)
+            .filter(LiveProject.config_id == self.id)
+            .join(FacultyData, FacultyData.id == LiveProject.owner_id, isouter=True)
+            .join(User, User.id == FacultyData.id, isouter=True)
+            .join(popularity_subq, popularity_subq.c.popq_liveproject_id == LiveProject.id, isouter=True)
+            .join(
+                PopularityRecord,
+                and_(
+                    PopularityRecord.liveproject_id == popularity_subq.c.popq_liveproject_id,
+                    PopularityRecord.datestamp == popularity_subq.c.popq_datestamp,
+                ),
+                isouter=True,
+            )
+            .order_by(PopularityRecord.score_rank.asc())
+            .limit(limit)
+        )
+
+        now: datetime = datetime.now()
+        compare_cutoff: datetime = now - compare_interval if compare_interval is not None else None
+
+        def _build_item(p: LiveProject, pr: Optional[PopularityRecord]):
+            if pr is None:
+                return None
+
+            data = {
+                "project": p,
+                "score_rank": pr.score_rank,
+                "bookmarks_rank": pr.bookmarks_rank,
+                "views_rank": pr.views_rank,
+                "selections_rank": pr.selections_rank,
+            }
+
+            if compare_interval is not None:
+                compare_pr: PopularityRecord = (
+                    db.session.query(PopularityRecord)
+                    .filter(PopularityRecord.liveproject_id == p.id, PopularityRecord.datestamp <= compare_cutoff)
+                    .order_by(PopularityRecord.datestamp.desc())
+                    .first()
+                )
+                if compare_pr is not None:
+                    compare = {
+                        "score_rank": compare_pr.score_rank,
+                        "bookmarks_rank": compare_pr.bookmarks_rank,
+                        "views_rank": compare_pr.views_rank,
+                        "selections_rank": compare_pr.selections_rank,
+                    }
+
+                    def compute_delta(a, b):
+                        if a is None or b is None:
+                            return None
+
+                        return a - b
+
+                    delta = {
+                        "score_rank": compute_delta(pr.score_rank, compare_pr.score_rank),
+                        "bookmarks_rank": compute_delta(pr.bookmarks_rank, compare_pr.bookmarks_rank),
+                        "views_rank": compute_delta(pr.views_rank, compare_pr.views_rank),
+                        "selections_rank": compute_delta(pr.selections_rank, compare_pr.selections_rank),
+                    }
+
+                    data.update({"compare": compare, "delta": delta})
+
+            return data
+
+        items = [_build_item(*p) for p in query]
+        return [x for x in items if x is not None]
 
     @property
     def convenor_email(self):
@@ -8532,13 +8611,28 @@ class LiveProject(
             .order_by(User.last_name.asc(), User.first_name.asc(), CustomOffer.creation_timestamp.asc())
         )
 
-    def _get_popularity_attr(self, getter, live=True):
-        record = self.popularity_data.order_by(PopularityRecord.datestamp.desc()).first()
+    def _get_popularity_attr(self, getter, live=True, live_interval: timedelta = timedelta(days=1), compare_interval: Optional[timedelta] = None):
+        # compare_interval and live are incompatible
+        if compare_interval is not None:
+            live = False
+            print(
+                "Warning: LiveProject._get_popularity_attr() called with both live=True and compare_interval not None. live=True has been discarded"
+            )
+
+        if compare_interval is not None and not isinstance(compare_interval, timedelta):
+            raise RuntimeError(f'Could not interpret type of compare_interval argument (type="{type(compare_interval)}"')
 
         now = datetime.now()
 
+        if compare_interval is None:
+            record = self.popularity_data.order_by(PopularityRecord.datestamp.desc()).first()
+        else:
+            record = (
+                self.popularity_data.filter(PopularityRecord.datestamp <= now - compare_interval).order_by(PopularityRecord.datestamp.desc()).first()
+            )
+
         # return None if no value stored, or if stored value is too stale (> 1 day old)
-        if record is None or (live and (now - record.datestamp) > timedelta(days=1)):
+        if record is None or (live and (now - record.datestamp) > live_interval):
             return None
 
         return getter(record)
@@ -8552,21 +8646,23 @@ class LiveProject(
 
         return xs, ys
 
-    def popularity_score(self, live=True):
+    def popularity_score(self, live=True, live_interval: timedelta = timedelta(days=1), compare_interval: Optional[timedelta] = None):
         """
         Return popularity score
         :param live: require a "live" estimate, ie. one that is sufficiently recent?
         :return:
         """
-        return self._get_popularity_attr(lambda x: x.score, live=live)
+        return self._get_popularity_attr(lambda x: x.score, live=live, live_interval=live_interval, compare_interval=compare_interval)
 
-    def popularity_rank(self, live=True):
+    def popularity_rank(self, live=True, live_interval: timedelta = timedelta(days=1), compare_interval: Optional[timedelta] = None):
         """
         Return popularity rank
         :param live: require a "live" estimate, ie. one that is sufficiently recent?
         :return:
         """
-        return self._get_popularity_attr(lambda x: (x.score_rank, x.total_number), live=live)
+        return self._get_popularity_attr(
+            lambda x: (x.score_rank, x.total_number), live=live, live_interval=live_interval, compare_interval=compare_interval
+        )
 
     @property
     def popularity_score_history(self):
@@ -8584,21 +8680,23 @@ class LiveProject(
         """
         return self._get_popularity_history(lambda x: (x.score_rank, x.total_number))
 
-    def lowest_popularity_rank(self, live=True):
+    def lowest_popularity_rank(self, live=True, live_interval: timedelta = timedelta(days=1), compare_interval: Optional[timedelta] = None):
         """
         Return least popularity rank
         :param live: require a "live" estimate, ie. one that is sufficiently recent?
         :return:
         """
-        return self._get_popularity_attr(lambda x: x.lowest_score_rank, live=live)
+        return self._get_popularity_attr(lambda x: x.lowest_score_rank, live=live, live_interval=live_interval, compare_interval=compare_interval)
 
-    def views_rank(self, live=True):
+    def views_rank(self, live=True, live_interval: timedelta = timedelta(days=1), compare_interval: Optional[timedelta] = None):
         """
         Return views rank (there is no need for a views score -- the number of views is directly available)
         :param live: require a "live" estimate, ie. one that is sufficiently recent?
         :return:
         """
-        return self._get_popularity_attr(lambda x: (x.views_rank, x.total_number), live=live)
+        return self._get_popularity_attr(
+            lambda x: (x.views_rank, x.total_number), live=live, live_interval=live_interval, compare_interval=compare_interval
+        )
 
     @property
     def views_history(self):
@@ -8616,13 +8714,15 @@ class LiveProject(
         """
         return self._get_popularity_history(lambda x: (x.views_rank, x.total_number))
 
-    def bookmarks_rank(self, live=True):
+    def bookmarks_rank(self, live=True, live_interval: timedelta = timedelta(days=1), compare_interval: Optional[timedelta] = None):
         """
         Return bookmark rank (number of bookmarks can be read directly)
         :param live: require a "live" estimate, ie. one that is sufficiently recent?
         :return:
         """
-        return self._get_popularity_attr(lambda x: (x.bookmarks_rank, x.total_number), live=live)
+        return self._get_popularity_attr(
+            lambda x: (x.bookmarks_rank, x.total_number), live=live, live_interval=live_interval, compare_interval=compare_interval
+        )
 
     @property
     def bookmarks_history(self):
@@ -8640,13 +8740,15 @@ class LiveProject(
         """
         return self._get_popularity_history(lambda x: (x.bookmarks_rank, x.total_number))
 
-    def selections_rank(self, live=True):
+    def selections_rank(self, live=True, live_interval: timedelta = timedelta(days=1), compare_interval: Optional[timedelta] = None):
         """
         Return selection rank
         :param live: require a "live" estimate, ie. one that is sufficiently recent?
         :return:
         """
-        return self._get_popularity_attr(lambda x: (x.selections_rank, x.total_number), live=live)
+        return self._get_popularity_attr(
+            lambda x: (x.selections_rank, x.total_number), live=live, live_interval=live_interval, compare_interval=compare_interval
+        )
 
     @property
     def selections_history(self):

@@ -3,6 +3,35 @@
 {% from "icon_block.html" import icon_block %}
 {% from "dashboard_widgets.html" import dashboard_tile %}
 
+{% macro data_with_delta(key, item, delta, period='1 day', user_classes=none) %}
+    {% set value = item.get(key) %}
+    {% if value %}
+        <span class="fw-semibold text-primary
+                {% if user_classes is not none %}{{ user_classes }}{% endif %}">{{ value }}</span>
+        {% if delta is not none %}
+            {% set d = delta['score_rank'] %}
+            {% if d is not none %}
+                {% if d > 0 %}
+                    <span class="text-success {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                        <i class="fas fa-caret-up"></i> {{ d }}
+                    </span>
+                {% elif d < 0 %}
+                    <span class="text-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                        <i class="fas fa-caret-down"></i> {{ -d }}
+                    </span>
+                {% else %}
+                    <span class="text-secondary {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                        <i class="fas fa-equals"></i> {{ 0 }}
+                    </span>
+                {% endif %}
+                {% if period is not none %}
+                    <span class="ms-2 text-muted {% if user_classes is not none %}{{ user_classes }}{% endif %}"></span>
+                {% endif %}
+            {% endif %}
+        {% endif %}
+    {% endif %}
+{% endmacro %}
+
 {% macro selection_open(config, change_form, data) %}
     <div class="card border-secondary mt-3 mb-3">
         <div class="card-header">
@@ -201,19 +230,88 @@
                     {% endcall %}
                 </div>
             </div>
-            <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}" method="POST" name="adjust_selection_deadline">
-                {{ change_form.hidden_tag() }}
-                {{ date_field(change_form.live_deadline, 'live_datetimepicker') }}
-                {{ wtf.render_field(change_form.notify_convenor) }}
-                <div class="d-flex flex-row justify-content-end align-items-end gap-2">
-                    <a href="{{ url_for('convenor.reset_popularity_data', id=config.id) }}"
-                       class="btn btn-sm btn-outline-secondary">
-                        Reset popularity data
-                    </a>
-                    {{ wtf.render_field(change_form.change, button_map={'change': 'outline-secondary'}, button_size='sm') }}
-                    {{ wtf.render_field(change_form.close, button_map={'close': 'outline-primary'}, button_size='sm') }}
+            {% set popular_data = config.most_popular_projects() %}
+            {% if popular_data is not none %}
+                <div class="row mb-3">
+                    <div class="col">
+                        {% call dashboard_tile("Popular projects", title_icon="arrow-up", icon_state=none) %}
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                <tr>
+                                    <th width="25% small">Project</th>
+                                    <th width="20% small">Owner</th>
+                                    <th width="15% small">Last view</th>
+                                    <th width="10% small">Popularity</th>
+                                    <th width="10% small">Selections</th>
+                                    <th width="10% small">Bookmarks</th>
+                                    <th width="10% small">Views</th>
+                                </tr>
+                                </thead>
+                                <tbody class="table-group-divider">
+                                {% for item in popular_data %}
+                                    {% set p = item['project'] %}
+                                    {% set delta = item.get('delta') %}
+                                    <tr>
+                                        <td>
+                                            <a class="link-primary text-decoration-none small"
+                                               href="{{ url_for('faculty.project_preview', id=p.id, text='convenor dashboard', url=url_for('convenor.status', id=config.pclass_id)) }}">{{ p.name }}</a>
+                                        </td>
+                                        <td>
+                                            {% if not p.generic %}
+                                                {% if p.owner %}
+                                                    <a class="link-primary text-decoration-none small"
+                                                       href="mailto:{{ p.owner.user.email }}">{{ p.owner.user.name }}</a>
+                                                {% else %}
+                                                    <span class="badge bg-danger text-white">Owner missing</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-info text-white">Generic</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if p.last_view %}
+                                                <span class="text-secondary small">last view {{ p.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            {% else %}
+                                                <span class="text-secondary small"><i
+                                                        class="fas fa-ban"></i> None</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ data_with_delta('score_rank', item, delta, user_classes='small') }}
+                                        </td>
+                                        <td>
+                                            {{ data_with_delta('selections_rank', item, delta, user_classes='small') }}
+                                        </td>
+                                        <td>
+                                            {{ data_with_delta('bookmarks_rank', item, delta, user_classes='small') }}
+                                        </td>
+                                        <td>
+                                            {{ data_with_delta('views_rank', item, delta, user_classes='small') }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        {% endcall %}
+                    </div>
                 </div>
-            </form>
+            {% endif %}
+            <div class="mt-3">
+                <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}" method="POST"
+                      name="adjust_selection_deadline">
+                    {{ change_form.hidden_tag() }}
+                    {{ date_field(change_form.live_deadline, 'live_datetimepicker') }}
+                    {{ wtf.render_field(change_form.notify_convenor) }}
+                    <div class="d-flex flex-row justify-content-end align-items-end gap-2">
+                        <a href="{{ url_for('convenor.reset_popularity_data', id=config.id) }}"
+                           class="btn btn-sm btn-outline-secondary">
+                            Reset popularity data
+                        </a>
+                        {{ wtf.render_field(change_form.change, button_map={'change': 'outline-secondary'}, button_size='sm') }}
+                        {{ wtf.render_field(change_form.close, button_map={'close': 'outline-primary'}, button_size='sm') }}
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 {% endmacro %}

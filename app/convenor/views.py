@@ -3319,6 +3319,7 @@ def liveprojects_ajax(id):
             PopularityRecord.liveproject_id.label("popq_liveproject_id"),
             func.max(PopularityRecord.datestamp).label("popq_datestamp"),
         )
+        .filter(PopularityRecord.score_rank != None)
         .group_by(PopularityRecord.liveproject_id)
         .subquery()
     )

@@ -114,6 +114,7 @@ def register_popularity_tasks(celery):
                 self.update_state(state=states.SUCCESS)
                 return {"score": score, "action": "none", "id": rec.id, "uuid": str(uuid), "project_id": liveid, "config_id": data.config_id}
 
+            # rank data cannot be computed until we have done at least one pass through all LiveProjects, to find the max/min values
             rec = PopularityRecord(
                 liveproject_id=data.id,
                 config_id=data.config_id,

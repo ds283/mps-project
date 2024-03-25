@@ -6223,6 +6223,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
                     data.update({"compare": compare, "delta": delta})
 
+            print(f'Project "{p.name}", data={data}')
             return data
 
         items = [_build_item(*p) for p in query]

@@ -3,22 +3,34 @@
 {% from "icon_block.html" import icon_block %}
 {% from "dashboard_widgets.html" import dashboard_tile %}
 
-{% macro data_with_delta(key, item, delta, period=none, user_classes=none) %}
+{% macro data_with_delta(key, item, delta, period=none, user_classes=none, negative_is_higher=false) %}
     {% set value = item.get(key) %}
     {% if value %}
         <span class="fw-semibold text-primary
                 {% if user_classes is not none %}{{ user_classes }}{% endif %}">{{ value }}</span>
         {% if delta is not none %}
-            {% set d = delta['score_rank'] %}
+            {% set d = delta.get(key) %}
             {% if d is not none %}
                 {% if d > 0 %}
-                    <span class="ms-2 text-success {% if user_classes is not none %}{{ user_classes }}{% endif %}">
-                        <i class="fas fa-caret-up"></i> {{ d }}
-                    </span>
+                    {% if negative_is_higher %}
+                        <span class="ms-2 text-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                            <i class="fas fa-caret-down"></i> {{ d }}
+                        </span>
+                    {% else %}
+                        <span class="ms-2 text-success {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                            <i class="fas fa-caret-up"></i> {{ d }}
+                        </span>
+                    {% endif %}
                 {% elif d < 0 %}
-                    <span class="ms-2 text-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">
-                        <i class="fas fa-caret-down"></i> {{ -d }}
-                    </span>
+                    {% if negative_is_higher %}
+                        <span class="ms-2 text-success {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                            <i class="fas fa-caret-up"></i> {{ -d }}
+                        </span>
+                    {% else %}
+                        <span class="ms-2 text-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+                            <i class="fas fa-caret-down"></i> {{ -d }}
+                        </span>
+                    {% endif %}
                 {% else %}
                     <span class="ms-2 text-secondary {% if user_classes is not none %}{{ user_classes }}{% endif %}">
                         <i class="fas fa-equals"></i>
@@ -278,7 +290,7 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            {{ data_with_delta('score_rank', item, delta, user_classes='small', period=none) }}
+                                            {{ data_with_delta('score_rank', item, delta, user_classes='small', period=none, negative_is_higher=true) }}
                                         </td>
                                         <td>
                                             {{ data_with_delta('selections', item, delta, user_classes='small', period=none) }}

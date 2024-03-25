@@ -6147,7 +6147,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
         return {"have_submitted": submitted, "missing": missing, "total": total}
 
-    def most_popular_projects(self, limit: int = 5, compare_interval: Optional[timedelta] = timedelta(days=1)):
+    def most_popular_projects(self, limit: int = 5, compare_interval: Optional[timedelta] = timedelta(days=3)):
         popularity_subq = (
             db.session.query(
                 PopularityRecord.liveproject_id.label("popq_liveproject_id"),
@@ -6188,9 +6188,9 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
             data = {
                 "project": p,
                 "score_rank": pr.score_rank,
-                "bookmarks_rank": pr.bookmarks_rank,
-                "views_rank": pr.views_rank,
-                "selections_rank": pr.selections_rank,
+                "bookmarks": pr.bookmarks,
+                "views": pr.views,
+                "selections": pr.selections,
             }
 
             if compare_interval is not None:
@@ -6203,9 +6203,9 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
                 if compare_pr is not None:
                     compare = {
                         "score_rank": compare_pr.score_rank,
-                        "bookmarks_rank": compare_pr.bookmarks_rank,
-                        "views_rank": compare_pr.views_rank,
-                        "selections_rank": compare_pr.selections_rank,
+                        "bookmarks": compare_pr.bookmarks,
+                        "views": compare_pr.views,
+                        "selections": compare_pr.selections,
                     }
 
                     def compute_delta(a, b):
@@ -6216,9 +6216,9 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
                     delta = {
                         "score_rank": compute_delta(pr.score_rank, compare_pr.score_rank),
-                        "bookmarks_rank": compute_delta(pr.bookmarks_rank, compare_pr.bookmarks_rank),
-                        "views_rank": compute_delta(pr.views_rank, compare_pr.views_rank),
-                        "selections_rank": compute_delta(pr.selections_rank, compare_pr.selections_rank),
+                        "bookmarks": compute_delta(pr.bookmarks, compare_pr.bookmarks),
+                        "views": compute_delta(pr.views, compare_pr.views),
+                        "selections": compute_delta(pr.selections, compare_pr.selections),
                     }
 
                     data.update({"compare": compare, "delta": delta})

@@ -3,7 +3,7 @@
 {% from "icon_block.html" import icon_block %}
 {% from "dashboard_widgets.html" import dashboard_tile %}
 
-{% macro data_with_delta(key, item, delta, period='1 day', user_classes=none) %}
+{% macro data_with_delta(key, item, delta, period=none, user_classes=none) %}
     {% set value = item.get(key) %}
     {% if value %}
         <span class="fw-semibold text-primary
@@ -278,21 +278,22 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            {{ data_with_delta('score_rank', item, delta, user_classes='small') }}
+                                            {{ data_with_delta('score_rank', item, delta, user_classes='small', period=none) }}
                                         </td>
                                         <td>
-                                            {{ data_with_delta('selections_rank', item, delta, user_classes='small') }}
+                                            {{ data_with_delta('selections', item, delta, user_classes='small', period=none) }}
                                         </td>
                                         <td>
-                                            {{ data_with_delta('bookmarks_rank', item, delta, user_classes='small') }}
+                                            {{ data_with_delta('bookmarks', item, delta, user_classes='small', period=none) }}
                                         </td>
                                         <td>
-                                            {{ data_with_delta('views_rank', item, delta, user_classes='small') }}
+                                            {{ data_with_delta('views', item, delta, user_classes='small', period=none) }}
                                         </td>
                                     </tr>
                                 {% endfor %}
                                 </tbody>
                             </table>
+                            <div class="small text-muted mt-3">Comparison to 3 days ago</div>
                         {% endcall %}
                     </div>
                 </div>

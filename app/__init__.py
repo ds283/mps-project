@@ -368,7 +368,6 @@ def create_app():
 
     app.request_class = CustomRequest
 
-
     # IMPORT BLUEPRINTS
 
     app.logger.info("-- importing Flask routes")

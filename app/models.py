@@ -12349,7 +12349,7 @@ class PopularityRecord(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # tag LiveProject to which this record applies
-    liveproject_id = db.Column(db.Integer(), db.ForeignKey("live_projects.id"))
+    liveproject_id = db.Column(db.Integer(), db.ForeignKey("live_projects.id"), index=True)
     liveproject = db.relationship(
         "LiveProject", uselist=False, backref=db.backref("popularity_data", lazy="dynamic", cascade="all, delete, delete-orphan")
     )

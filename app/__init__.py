@@ -138,7 +138,7 @@ def create_app():
     app.logger.info("-- creating MongoDB session for Flask-Sessionstore")
     app.config["SESSION_MONGODB"] = MongoClient(host=app.config["SESSION_MONGO_URL"])
 
-    # we have two proxies -- we're behind both waitress and nginx
+    # we have two proxies -- we're behind both gunicorn and nginx
     proxyfix_for = app.config.get("PROXYFIX_FOR", 0)
     app.logger.info(f"-- patching Werkzeug to allow for {proxyfix_for}-level proxying")
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxyfix_for)

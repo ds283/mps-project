@@ -10,14 +10,16 @@
 
 from importlib import import_module
 
-from sqlalchemy import text, inspect
-from waitress import serve
 import flask_monitoringdashboard as dashboard
+import gunicorn.app.base
+from flask_security import current_user
+from sqlalchemy import text, inspect
 
+import gunicorn_config
 from app import create_app
 from app.database import db
 from initdb import initial_populate_database, populate_CATS_limits
-from flask_security import current_user
+
 
 def has_table(inspector, table_name):
     # if table does not exist, then fail
@@ -42,7 +44,7 @@ def get_user_id():
 
 
 app = create_app()
-dashboard.config.init_from(envvar='DASHBOARD_CONFIG_FILE')
+dashboard.config.init_from(envvar="DASHBOARD_CONFIG_FILE")
 dashboard.config.group_by = get_user_id
 dashboard.bind(app)
 
@@ -66,4 +68,21 @@ with app.app_context():
         db.session.commit()
         populate_CATS_limits(app, initdb_module)
 
-serve(app, port=5000)
+
+class StandaloneApplication(gunicorn.app.base.BaseApplication):
+    def __init__(self, app, options=None):
+        self.options = options or {}
+        self.application = app
+        super().__init__()
+
+    def load_config(self):
+        config = {key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None}
+        for key, value in config.items():
+            self.cfg.set(key.lower(), value)
+
+    def load(self):
+        return self.application
+
+
+if __name__ == "__main__":
+    StandaloneApplication(app, gunicorn_config.__dict__).run()

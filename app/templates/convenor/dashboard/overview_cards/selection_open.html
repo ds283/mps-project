@@ -54,7 +54,7 @@
     {% endif %}
 {% endmacro %}
 
-{% macro selection_open(config, change_form, data) %}
+{% macro selection_open(config, change_form, data, current_time) %}
     <div class="card border-secondary mt-3 mb-3">
         <div class="card-header">
             <strong>Student selections are currently live</strong>
@@ -331,7 +331,11 @@
                                     </tbody>
                                 </table>
                             {% elif blk == 'footer' %}
-                                <div class="small text-muted mt-3">Comparison to 3 days ago</div>
+                                <div class="d-flex flex-row justify-content-between align-items-baseline mt-3">
+                                    <div class="small text-muted">Comparison to 3 days ago</div>
+                                    <div class="small text-muted">Last
+                                        updated: {{ current_time.strftime("%a %d %b %Y %H:%M:%S") }}</div>
+                                </div>
                             {% endif %}
                         {% endcall %}
                     </div>

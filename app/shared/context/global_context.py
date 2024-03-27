@@ -7,6 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 
+from datetime import datetime
 from typing import List
 
 from flask import has_request_context, session, render_template
@@ -99,6 +100,7 @@ def _build_global_context():
 
     # assumes _static_ctx has been suitably initialized
     return _static_ctx | {
+        "current_time": datetime.now(),
         "real_user": _get_previous_login(),
         "home_dashboard_url": home_dashboard_url(),
         "is_faculty": is_faculty,

@@ -7,16 +7,14 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-
+from datetime import datetime, timedelta
+from typing import List
 
 from flask import current_app
-
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import EmailLog
-
-from datetime import datetime, timedelta
 
 
 def register_prune_email(celery):
@@ -34,7 +32,13 @@ def register_prune_email(celery):
         limit = now - delta
 
         try:
-            db.session.query(EmailLog).filter(EmailLog.send_date < limit).delete()
+            # need to use SQLAlchemy session.delete() if we want to remove rows from the email_log_recipients
+            # association table
+            to_delete: List[EmailLog] = db.session.query(EmailLog).filter(EmailLog.send_date < limit)
+            for email in to_delete:
+                email: EmailLog
+                db.session.delete(email)
+
             db.session.commit()
 
         except SQLAlchemyError as e:

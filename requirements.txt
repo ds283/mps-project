@@ -5,9 +5,9 @@ billiard==4.2.0
 bleach==6.1.0
 bleach-whitelist==0.0.11
 blinker==1.7.0
-bokeh==3.4.0
-boto3==1.34.80
-botocore==1.34.80
+bokeh==3.4.1
+boto3==1.34.83
+botocore==1.34.83
 cachelib==0.9.0
 cachetools==5.3.3
 celery==5.3.6
@@ -66,10 +66,10 @@ itsdangerous==2.1.2
 Jinja2==3.1.3
 jmespath==1.0.1
 jsmin==3.0.1
-kombu==5.3.6
+kombu==5.3.7
 latex2markdown==0.2.1
 limits==3.10.1
-Mako==1.3.2
+Mako==1.3.3
 Markdown==3.6
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
@@ -79,7 +79,7 @@ nameparser==1.1.3
 numpy==1.26.4
 ordered-set==4.1.0
 packaging==24.0
-pandas==2.2.1
+pandas==2.2.2
 parse==1.20.1
 passlib==1.7.4
 Pillow==10.3.0

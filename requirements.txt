@@ -58,7 +58,7 @@ gunicorn==21.2.0
 holidays==0.46
 htmlmin==0.1.12
 humanize==4.9.0
-idna==3.6
+idna==3.7
 importlib-resources==6.4.0
 infinity==1.5
 intervals==0.9.2

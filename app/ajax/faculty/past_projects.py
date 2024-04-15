@@ -61,12 +61,8 @@ _affiliation = """
 
 # language=jinja2
 _metadata = """
-<div>
-    {{ project_selection_data(p) }}
-</div>
-<div class="mt-1">
-    {{ project_metadata(p) }}
-</div>
+{{ project_selection_data(p) }}
+{{ project_metadata(p) }}
 """
 
 

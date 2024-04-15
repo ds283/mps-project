@@ -1,25 +1,60 @@
 {% from "labels.html" import simple_label, unformatted_label %}
 
-{% macro project_metadata(project) %}
+{% macro project_metadata(project, user_classes=none) %}
     {% if project is not none %}
-        <div class="d-flex flex-column justify-content-start align-items-start gap-1 mt-2">
+        <div class="d-flex flex-column justify-content-start align-items-start gap-1
+                {% if user_classes is not none %}{{ user_classes }}{% endif %}">
             {% if project.last_view %}
                 <div class="text-muted small">last view {{ project.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</div>
             {% endif %}
         </div>
     {% else %}
-        <span class="badge bg-danger">Missing project data</span>
+        <span class="badge bg-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">Missing project data</span>
     {% endif %}
 {% endmacro %}
 
-{% macro project_selection_data(project) %}
+{% macro project_selection_data(project, user_classes=none) %}
     {% if project is not none %}
-        <div class="d-flex flex-column justify-content-start align-items-start">
-            <div class="text-secondary small">{{ unformatted_label(project.selections_label(popover=True), prefix='<i class="fas fa-arrow-right"></i>') }}</div>
-            <div class="text-secondary small">{{ unformatted_label(project.bookmarks_label(popover=True), prefix='<i class="fas fa-arrow-right"></i>') }}</div>
-            <div class="text-secondary small">{{ unformatted_label(project.views_label(), prefix='<i class="fas fa-arrow-right"></i>') }}</div>
+        {% set select_label = project.selections_label(popover=True) %}
+        {% set bookmark_label = project.bookmarks_label(popover=True) %}
+        {% set view_label = project.views_label() %}
+        <div class="d-flex flex-row justify-content-start align-items-start gap-1
+                {% if user_classes is not none %}{{ user_classes }}{% endif %}">
+            {% if 'label' in select_label %}
+                <span class="small text-secondary">{{ select_label['label'] }},</span>
+            {% else %}
+                <span class="small text-danger">selection data missing,</span>
+            {% endif %}
+            {% if 'label' in bookmark_label %}
+                <span class="small text-secondary">{{ bookmark_label['label'] }},</span>
+            {% else %}
+                <span class="small text-danger">bookmark data missing,</span>
+            {% endif %}
+            {% if 'label' in view_label %}
+                <span class="small text-secondary">{{ view_label['label'] }},</span>
+            {% else %}
+                <span class="small text-danger">views data missing,</span>
+            {% endif %}
         </div>
+        {% if 'popover' in select_label %}
+            {%- set popover_str = select_label['popover'] %}
+            {%- if popover_str is iterable and popover_str is not string %}
+                {%- set popover_str = popover_str|wrap_list('<div>', '</div>')|join -%}
+            {%- endif -%}
+            <div><span class="small text-secondary" tabindex="0" data-bs-toggle="popover" data-bs-container="body"
+                       data-bs-trigger="focus" data-bs-content="{{ popover_str }}">View selections <i
+                    class="fas fa-chevron-right"></i></span></div>
+        {% endif %}
+        {% if 'popover' in bookmark_label %}
+            {%- set popover_str = bookmark_label['popover'] %}
+            {%- if popover_str is iterable and popover_str is not string %}
+                {%- set popover_str = popover_str|wrap_list('<div>', '</div>')|join -%}
+            {%- endif -%}
+            <div><span class="small text-secondary" tabindex="0" data-bs-toggle="popover" data-bs-container="body"
+                       data-bs-trigger="focus" data-bs-content="{{ popover_str }}">View bookmarks <i
+                    class="fas fa-chevron-right"></i></span></div>
+        {% endif %}
     {% else %}
-        <span class="badge bg-danger">Missing project data</span>
+        <span class="badge bg-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">Missing project data</span>
     {% endif %}
 {% endmacro %}

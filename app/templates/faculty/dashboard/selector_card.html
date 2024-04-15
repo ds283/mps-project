@@ -183,14 +183,13 @@
         </div>
         <div class="container-fluid">
             <div class="row fac-project-table">
-                <div class="col-3"><strong>Name</strong></div>
-                <div class="col-3"><strong>Info</strong></div>
+                <div class="col-6"><strong>Name</strong></div>
                 <div class="col-3"><strong>Meeting requests</strong></div>
                 <div class="col-3"><strong>Meetings confirmed</strong></div>
             </div>
             {% for project in live_projects %}
                 <div class="row mb-3">
-                    <div class="col-3">
+                    <div class="col-6">
                         <div>
                             <a class="text-decoration-none fw-semibold"
                                href="{{ url_for('faculty.live_project', pid=project.id, text='home dashboard', url=home_dashboard_url) }}">
@@ -198,17 +197,13 @@
                             </a>
                         </div>
                         <div class="mt-1">
-                            {{ project_metadata(project) }}
+                            {{ project_metadata(project, user_classes="mt-2") }}
+                            {{ project_selection_data(project) }}
                         </div>
                         <div class="mt-2">
                             <a class="link-secondary text-decoration-none small"
                                href="{{ url_for('reports.liveproject_analytics', proj_id=project.id, text='home dashboard', url=home_dashboard_url) }}">View
                                 analytics...</a>
-                        </div>
-                    </div>
-                    <div class="col-3">
-                        <div>
-                            {{ project_selection_data(project) }}
                         </div>
                     </div>
                     <div class="col-3">

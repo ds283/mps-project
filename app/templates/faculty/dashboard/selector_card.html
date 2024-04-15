@@ -221,7 +221,8 @@
                                        data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true"
                                        aria-expanded="false">{{ sel.student.user.name }}
                                         {% if not has_recommended %}
-                                            <i class="fas fa-exclamation-triangle text-danger"></i> {% endif %}
+                                            <i class="fas fa-exclamation-triangle text-danger"></i>
+                                        {% endif %}
                                     </a>
                                     {% if req.viewed is not none and not req.viewed %}
                                         <span class="badge bg-info">NEW</span>
@@ -236,23 +237,26 @@
                                            href="mailto:{{ sel.student.user.email }}">
                                             <i class="fas fa-envelope fa-fw"></i> Send email...
                                         </a>
-                                        {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                            <a class="dropdown-item d-flex gap-2 small"
-                                               href="{{ url_for('faculty.confirm', sid=sel.id, pid=project.id) }}">
-                                                <i class="fas fa-check fa-fw"></i> Confirm
-                                            </a>
-                                            <a class="dropdown-item d-flex gap-2 small"
-                                               href="{{ url_for('faculty.cancel_confirm', sid=sel.id, pid=project.id) }}">
-                                                <i class="fas fa-trash fa-fw"></i> Delete
-                                            </a>
-                                        {% else %}
-                                            <a class="dropdown-item d-flex gap-2 small disabled">
-                                                <i class="fas fa-check fa-fw"></i> Confirm
-                                            </a>
-                                            <a class="dropdown-item d-flex gap-2 small disabled">
-                                                <i class="fas fa-trash fa-fw"></i> Delete
-                                            </a>
-                                        {% endif %}
+                                        <a class="dropdown-item d-flex gap-2 small"
+                                           href="{{ url_for('faculty.confirm', sid=sel.id, pid=project.id) }}">
+                                            <i class="fas fa-check fa-fw"></i> Confirm
+                                        </a>
+                                        <a class="dropdown-item d-flex gap-2 small"
+                                           href="{{ url_for('faculty.cancel_confirm', sid=sel.id, pid=project.id) }}">
+                                            <i class="fas fa-trash fa-fw"></i> Delete
+                                        </a>
+                                        {# Previously this information could be viewed if the project wasn't in a selections open state, i.e.
+   SELECTOR_LIFECYCLE_SELECTIONS_OPEN. But now, this macro is only called in that state, so there
+   is no need to test whether these menu options should be disabled.
+   TODO: remove this markup when we are sure it is unneeded #}
+                                        {#                                        {% else %}#}
+                                        {#                                            <a class="dropdown-item d-flex gap-2 small disabled">#}
+                                        {#                                                <i class="fas fa-check fa-fw"></i> Confirm#}
+                                        {#                                            </a>#}
+                                        {#                                            <a class="dropdown-item d-flex gap-2 small disabled">#}
+                                        {#                                                <i class="fas fa-trash fa-fw"></i> Delete#}
+                                        {#                                            </a>#}
+                                        {#                                        {% endif %}#}
                                     </div>
                                 </div>
                             {% endfor %}

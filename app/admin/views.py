@@ -6359,10 +6359,9 @@ def do_populate_submitters_from_match(match_id, config_id):
         url = home_dashboard_url()
 
     task_id = register_task(
-        "Populate selectors from match",
+        "Populate submitters from match",
         owner=current_user,
-        description='Populate submitter records for project "{pcl}" in the current submission cycle '
-        'from match "{name}"'.format(pcl=config.name, name=record.name),
+        description=f'Use match "{record.name}" to populate submitter records in the current cycle for project type "{config.name}"',
     )
 
     celery = current_app.extensions["celery"]

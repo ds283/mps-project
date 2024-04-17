@@ -51,6 +51,7 @@ from ..models import (
     CustomOffer,
     Project,
     LiveProjectAlternative,
+    StudentData,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.sqlalchemy import get_count
@@ -3226,18 +3227,49 @@ def register_matching_tasks(celery):
             raise Ignore()
 
         progress_update(task_id, TaskRecord.RUNNING, 20, "Sorting SubmittingStudent records...", autocommit=True)
+        payload = {}
 
+        payload_data = []
         for period in config.periods:
             period: SubmissionPeriodRecord
+
+            period_data = {"name": period.display_name}
 
             # ignore periods that are retired, closed, or have open feedback; the markers for these
             # cannot be changed
             if period.retired or period.closed or period.feedback_open:
+                period_data.update({"action": "ignore"})
+                payload.update(period_data)
                 continue
 
-            for sub in period.submissions:
-                sub: SubmissionRecord
-                sub.marker = None
+            submissions_data = []
+            for rec in period.submissions:
+                rec: SubmissionRecord
+                sub: SubmittingStudent = rec.owner
+                student: StudentData = sub.student
+                owner: User = student.user
+
+                removed_markers = []
+                for role in rec.roles:
+                    role: SubmissionRole
+
+                    if role.role == SubmissionRole.ROLE_MARKER:
+                        user: User = role.user
+                        if user is not None:
+                            removed_markers.append(
+                                {"id": user.id, "last_name": user.last_name, "first_name": user.first_name, "full_name": user.name}
+                            )
+
+                        db.session.delete(role)
+
+                record_data = {"id": rec.id, "last_name": owner.last_name, "first_name": owner.first_name, "full_name": owner.name}
+                if rec.project is not None:
+                    record_data.update({"project_id": rec.project_id, "project_name": rec.project.name})
+                record_data.update({"removed_markers": removed_markers})
+                submissions_data.append(record_data)
+
+            period_data.update({"action": "process", "submission_records": submissions_data})
+            payload_data.append(period_data)
 
         try:
             progress_update(task_id, TaskRecord.SUCCESS, 100, "Finishing remove markers task...", autocommit=False)
@@ -3247,7 +3279,7 @@ def register_matching_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        return None
+        return payload_data
 
     @celery.task(bind=True, default_retry_delay=30)
     def revert_record(self, id):
@@ -3611,14 +3643,36 @@ def register_matching_tasks(celery):
 
     @celery.task(bind=True)
     def populate_final_msg(self, _result_data, task_id):
-        filtered_data = [x for x in _result_data if x is not None]
-        imported = sum(filtered_data)
+        new_submitters = 0
+        new_submissions = 0
+        projects_set = 0
+
+        for payload in _result_data:
+            if payload is not None and "actions" in payload:
+                actions = payload["actions"]
+
+                if "insert_submitter" in actions:
+                    new_submitters += 1
+
+                if "insert_submission" in actions:
+                    new_submissions += 1
+
+                if "set_project" in actions:
+                    projects_set += 1
+
+        def pluralize(n):
+            if n != 1:
+                return "s"
+
+            return " " ""
+
         progress_update(
             task_id,
             TaskRecord.SUCCESS,
             100,
-            "Populate submitters now complete. {n} submitter record{pl} imported from the "
-            "match".format(n=imported, pl="s were" if imported != 1 else " was"),
+            f"Import submitter data now complete: {new_submitters} submitter record{pluralize(new_submitters)} created, "
+            f"{new_submissions} submission record{pluralize(new_submissions)} generated, "
+            f"{projects_set} project assignment{pluralize(projects_set)} set",
             autocommit=True,
         )
 
@@ -3660,15 +3714,23 @@ def register_matching_tasks(celery):
         sel: SelectingStudent = data.selector
         sub: SubmittingStudent = config.submitting_students.filter(SubmittingStudent.student_id == sel.student_id).first()
 
+        # data payload returned from this task
+        payload = {}
+
+        # records actions taken; returned as part of the payload from this task
+        actions = []
+
         # if no record, insert one, but otherwise do nothing; this is designed to produce idempotent behaviour on
         # multiple application
         if sub is None:
             try:
                 new_sub = SubmittingStudent(config_id=config_id, student_id=sel.student_id, selector_id=sel.id, published=False, retired=False)
                 db.session.add(new_sub)
+                actions.append("insert_submitter")
                 needs_commit = True
 
                 db.session.flush()
+                payload.update({"new_submitter_id": new_sub.id})
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -3681,6 +3743,35 @@ def register_matching_tasks(celery):
 
         sr: SubmissionRecord = sub.get_assignment(period=data.submission_period)
         now = datetime.now()
+
+        def set_roles(sr: SubmissionRecord):
+            new_ids = []
+            for role in data.roles:
+                role: MatchingRole
+                new_role = SubmissionRole(
+                    submission_id=sr.id,
+                    user_id=role.user_id,
+                    role=role.role,
+                    marking_email=False,
+                    positive_feedback=None,
+                    improvements_feedback=None,
+                    submitted_feedback=False,
+                    feedback_timestamp=None,
+                    acknowledge_student=False,
+                    response=None,
+                    submitted_response=False,
+                    response_timestamp=None,
+                    creator_id=None,
+                    creation_timestamp=now,
+                    last_edit_id=None,
+                    last_edit_timestamp=None,
+                )
+
+                db.session.add(new_role)
+                db.session.flush()
+                new_ids.append(new_role.id)
+
+            return new_ids
 
         # if no record, insert one, but otherwise do nothing
         if sr is None:
@@ -3713,46 +3804,46 @@ def register_matching_tasks(celery):
                 )
 
                 db.session.add(new_sr)
-                needs_commit = True
-
+                actions.extend(["insert_submission", "set_project"])
+                payload.update({"project_id": new_sr.project_id})
                 db.session.flush()
 
-                for role in data.roles:
-                    role: MatchingRole
-                    new_role = SubmissionRole(
-                        submission_id=new_sr.id,
-                        user_id=role.user_id,
-                        role=role.role,
-                        marking_email=False,
-                        positive_feedback=None,
-                        improvements_feedback=None,
-                        submitted_feedback=False,
-                        feedback_timestamp=None,
-                        acknowledge_student=False,
-                        response=None,
-                        submitted_response=False,
-                        response_timestamp=None,
-                        creator_id=None,
-                        creation_timestamp=now,
-                        last_edit_id=None,
-                        last_edit_timestamp=None,
-                    )
+                new_ids = set_roles(new_sr)
+                actions.append("set_roles")
+                payload.update({"new_role_ids": new_ids})
 
-                    db.session.add(new_role)
+                needs_commit = True
 
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 return self.retry()
+        else:
+            # do nothing is a project has already been specified for this student
+            if sr.project is None:
+                # empty existing submission roles
+                sr.roles = []
+                db.session.flush()
+
+                sr.project_id = data.project_id
+                sr.selection_config_id = config.id
+                sr.matching_record_id = data.id
+                payload.update({"project_id": sr.project_id})
+
+                new_ids = set_roles(sr)
+                actions.extend(["set_project", "set_roles"])
+                payload.update({"new_role_ids": new_ids})
+
+                needs_commit = True
 
         if needs_commit:
             try:
                 db.session.commit()
+                actions.append("commit")
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 return self.retry()
 
-            return 1
-
-        return 0
+        payload.update({"actions": actions})
+        return payload

@@ -54,7 +54,7 @@ google-cloud-storage==2.16.0
 google-crc32c==1.5.0
 google-resumable-media==2.7.0
 googleapis-common-protos==1.63.0
-gunicorn==21.2.0
+gunicorn==22.0.0
 holidays==0.47
 htmlmin==0.1.12
 humanize==4.9.0

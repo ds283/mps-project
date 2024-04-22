@@ -26,7 +26,8 @@
                             <div class="text-success small"><i class="fas fa-check-circle"></i> Available to select
                             </div>
                         {% else %}
-                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not available to select
+                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not yet available to
+                                select
                             </div>
                         {% endif %}
                     </div>
@@ -54,7 +55,7 @@
                             {{ simple_label(tag.make_label(truncate(tag.name))) }}
                             {% set ns.affiliation = true %}
                         {% endfor %}
-                        {% if not ns.affiliation %}
+                        {% if config.advertise_research_group and not ns.affiliation %}
                             <div class="text-danger small"><i class="fas fa-ban"></i> No affiliations</div>
                         {% endif %}
                     </div>
@@ -106,7 +107,8 @@
                             <div class="text-success small"><i class="fas fa-check-circle"></i> Available to select
                             </div>
                         {% else %}
-                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not available to select
+                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not yet available to
+                                select
                             </div>
                         {% endif %}
                     </div>
@@ -282,7 +284,7 @@
                             {{ simple_label(tag.make_label(truncate(tag.name))) }}
                             {% set ns.affiliation = true %}
                         {% endfor %}
-                        {% if not ns.affiliation %}
+                        {% if config.advertise_research_group and not ns.affiliation %}
                             <div class="text-danger small"><i class="fas fa-ban"></i> No affiliations</div>
                         {% endif %}
                     </div>

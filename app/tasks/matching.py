@@ -398,11 +398,15 @@ def _enumerate_liveprojects_primary(configs):
         # (e.g. enrolment status may have changed since the projects went live)
         projects = (
             db.session.query(LiveProject)
-            .filter_by(config_id=config.id)
+            .filter(LiveProject.config_id == config.id)
             .join(ProjectClassConfig, ProjectClassConfig.id == LiveProject.config_id)
             .join(User, User.id == LiveProject.owner_id, isouter=True)
             .join(FacultyData, FacultyData.id == LiveProject.owner_id, isouter=True)
-            .join(EnrollmentRecord, EnrollmentRecord.owner_id == LiveProject.owner_id, isouter=True)
+            .join(
+                EnrollmentRecord,
+                and_(EnrollmentRecord.owner_id == LiveProject.owner_id, EnrollmentRecord.pclass_id == ProjectClassConfig.pclass_id),
+                isouter=True,
+            )
             .filter(
                 or_(
                     LiveProject.generic == True,
@@ -410,11 +414,11 @@ def _enumerate_liveprojects_primary(configs):
                         LiveProject.generic == False,
                         User.active == True,
                         FacultyData.id != None,
-                        EnrollmentRecord.pclass_id == ProjectClassConfig.pclass_id,
                         EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
                     ),
                 )
             )
+            .distinct()
             .all()
         )
 
@@ -423,22 +427,23 @@ def _enumerate_liveprojects_primary(configs):
         for item in projects:
             item: LiveProject
 
-            lp_to_number[item.id] = number
-            number_to_lp[number] = item.id
+            if item.id not in lp_to_number:
+                lp_to_number[item.id] = number
+                number_to_lp[number] = item.id
 
-            sup = item.CATS_supervision
-            mk = item.CATS_marking
-            CATS_supervisor[number] = sup if sup is not None else FALLBACK_DEFAULT_SUPERVISOR_CATS
-            CATS_marker[number] = mk if mk is not None else FALLBACK_DEFAULT_MARKER_CATS
+                sup = item.CATS_supervision
+                mk = item.CATS_marking
+                CATS_supervisor[number] = sup if sup is not None else FALLBACK_DEFAULT_SUPERVISOR_CATS
+                CATS_marker[number] = mk if mk is not None else FALLBACK_DEFAULT_MARKER_CATS
 
-            capacity[number] = (
-                item.capacity if (item.enforce_capacity and item.capacity is not None and item.capacity > 0) else UNBOUNDED_SUPERVISING_CAPACITY
-            )
+                capacity[number] = (
+                    item.capacity if (item.enforce_capacity and item.capacity is not None and item.capacity > 0) else UNBOUNDED_SUPERVISING_CAPACITY
+                )
 
-            project_dict[number] = item
-            project_group_dict[config.id].append(number)
+                project_dict[number] = item
+                project_group_dict[config.id].append(number)
 
-            number += 1
+                number += 1
 
     return number, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict, project_group_dict
 
@@ -522,6 +527,7 @@ def _enumerate_supervising_faculty_primary(configs):
             .filter_by(pclass_id=config.pclass_id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED)
             .join(User, User.id == EnrollmentRecord.owner_id)
             .filter(User.active)
+            .distinct()
             .all()
         )
 
@@ -628,6 +634,7 @@ def _enumerate_marking_faculty_primary(configs):
             .filter_by(pclass_id=config.pclass_id, marker_state=EnrollmentRecord.MARKER_ENROLLED)
             .join(User, User.id == EnrollmentRecord.owner_id)
             .filter(User.active)
+            .distinct()
             .all()
         )
 
@@ -1339,6 +1346,7 @@ def _create_PuLP_problem(
 
                 # enforce maximum capacity for each project; each supervisor should have no more assignments than
                 # the specified project capacity
+                print(f"Supervisor: {user.first_name} {user.last_name}, config_id = {proj.config_id}, project number = {proj.number}")
                 prob += S[(k, j)] <= capacity[j] * P[(k, j)], "_CS{first}{last}_C{cfg}_P{num}_supv_capacity".format(
                     first=user.first_name, last=user.last_name, cfg=proj.config_id, num=proj.number
                 )

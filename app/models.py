@@ -10067,7 +10067,7 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
         :return:
         """
         sub: SubmissionRecord = self.get_assignment()
-        return sub.number_record_attachments > 0
+        return sub.attachments.first() is not None
 
     def detach_records(self):
         """
@@ -11391,6 +11391,80 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         """
         return get_count(self.project.assessors.filter_by(id=fac_id)) > 0
 
+    def _build_submitted_attachment_query(
+        self,
+        published_to_students=True,
+        allowed_users: Optional[List[User]] = None,
+        allowed_roles: Optional[List[Role]] = None,
+        ordering: Optional[List] = None,
+    ):
+        allowed_user_ids = [x.id for x in allowed_users] if allowed_users is not None else None
+        allowed_role_ids = [x.id for x in allowed_roles] if allowed_roles is not None else None
+
+        query = db.session.query(SubmissionAttachment).filter(SubmissionAttachment.parent_id == self.id)
+        if published_to_students:
+            query = query.filter(SubmissionAttachment.publish_to_students == True)
+
+        query = (
+            query.join(SubmittedAsset, SubmittedAsset.id == SubmissionAttachment.attachment_id)
+            .join(submitted_acl, submitted_acl.c.asset_id == SubmittedAsset.id)
+            .join(submitted_acr, submitted_acr.c.asset_id == SubmittedAsset.id)
+            .join(User, User.id == submitted_acl.c.user_id)
+            .join(Role, Role.id == submitted_acr.c.role_id)
+        )
+
+        conditions = []
+        if allowed_user_ids is not None and len(allowed_user_ids) > 0:
+            conditions.append(User.id.in_(allowed_user_ids))
+        if allowed_role_ids is not None and len(allowed_role_ids) > 0:
+            conditions.append(Role.id.in_(allowed_role_ids))
+
+        # initial False is needed because or_ requires at least one argument, so we need something that evaluates to False if conditions is empty
+        query = query.filter(or_(False, *conditions))
+
+        if ordering is not None and len(ordering) > 0:
+            query = query.order_by(*ordering)
+
+        query = query.distinct()
+        return query
+
+    def _build_period_attachment_query(
+        self,
+        published_to_students=True,
+        allowed_users: Optional[List[User]] = None,
+        allowed_roles: Optional[List[Role]] = None,
+        ordering: Optional[List] = None,
+    ):
+        allowed_user_ids = [x.id for x in allowed_users] if allowed_users is not None else None
+        allowed_role_ids = [x.id for x in allowed_roles] if allowed_roles is not None else None
+
+        query = db.session.query(PeriodAttachment).filter(PeriodAttachment.parent_id == self.period.id)
+        if published_to_students:
+            query = query.filter(PeriodAttachment.publish_to_students == True)
+
+        query = (
+            query.join(SubmittedAsset, SubmittedAsset.id == PeriodAttachment.attachment_id)
+            .join(submitted_acl, submitted_acl.c.asset_id == SubmittedAsset.id)
+            .join(submitted_acr, submitted_acr.c.asset_id == SubmittedAsset.id)
+            .join(User, User.id == submitted_acl.c.user_id)
+            .join(Role, Role.id == submitted_acr.c.role_id)
+        )
+
+        conditions = []
+        if allowed_user_ids is not None and len(allowed_user_ids) > 0:
+            conditions.append(User.id.in_(allowed_user_ids))
+        if allowed_role_ids is not None and len(allowed_role_ids) > 0:
+            conditions.append(Role.id.in_(allowed_role_ids))
+
+        # initial False is needed because or_ requires at least one argument, so we need something that evaluates to False if conditions is empty
+        query = query.filter(or_(False, *conditions))
+
+        if ordering is not None and len(ordering) > 0:
+            query = query.order_by(*ordering)
+
+        query = query.distinct()
+        return query
+
     @property
     def number_attachments(self):
         """
@@ -11398,12 +11472,21 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         and any uploaded report
         :return:
         """
-        # note that we count the original report, rather than the processed version of it;
-        # this is a bit arbitrary, but hopefully sensible
-        return get_count(self.attachments) + get_count(self.period.attachments) + (1 if self.report is not None else 0)
+        submission_attachments = self._build_submitted_attachment_query(
+            published_to_students=False, allowed_users=[current_user], allowed_roles=current_user.roles
+        )
+        period_attachments = self._build_period_attachment_query(
+            published_to_students=False, allowed_users=[current_user], allowed_roles=current_user.roles
+        )
+
+        return (
+            get_count(submission_attachments)
+            + get_count(period_attachments)
+            + (1 if (self.report is not None or self.processed_report is not None) else 0)
+        )
 
     @property
-    def number_record_attachments(self):
+    def number_attachments_internal(self):
         """
         Get total number of attachments only for this record. This excludes a report and any documents
         provided by the convenor
@@ -11412,35 +11495,33 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return get_count(self.attachments)
 
     @property
-    def ordered_record_attachments(self):
-        return (
-            self.attachments.join(SubmittedAsset, SubmittedAsset.id == SubmissionAttachment.attachment_id)
-            .order_by(SubmissionAttachment.type.asc(), SubmittedAsset.target_name.asc())
-            .all()
+    def ordered_attachments(self):
+        query = self._build_submitted_attachment_query(
+            allowed_users=[current_user],
+            allowed_roles=current_user.roles,
+            ordering=[SubmissionAttachment.type.asc(), SubmittedAsset.target_name.asc()],
         )
+        return query.all()
 
     @property
     def number_attachments_student(self):
         """
         Get total number of attachments for this record that are visible to the student.
-        Students can only see documents they uploaded, or which have been made available to them.
+        Students can only see documents they uploaded, or which have been made explicitly available to them.
         They can only see convenor-provided attachments that have been marked as 'publish to students'
         :return:
         """
-        # note that we count the original report, rather than the processed version of it;
-        # this is a bit arbitrary, but hopefully sensible
+        submission_attachments = self._build_submitted_attachment_query(
+            published_to_students=True, allowed_users=[current_user], allowed_roles=current_user.roles
+        )
+        period_attachments = self._build_period_attachment_query(
+            published_to_students=True, allowed_users=[current_user], allowed_roles=current_user.roles
+        )
+
         return (
-            get_count(
-                self.attachments.join(SubmittedAsset, SubmittedAsset.id == SubmissionAttachment.attachment_id).filter(
-                    or_(
-                        SubmittedAsset.uploaded_id == current_user.id,
-                        SubmittedAsset.access_control_list.any(id=current_user.id),
-                        SubmittedAsset.access_control_roles.any(name="student"),
-                    )
-                )
-            )
-            + get_count(self.period.attachments.filter_by(publish_to_students=True))
-            + (1 if self.report is not None else 0)
+            get_count(submission_attachments)
+            + get_count(period_attachments)
+            + (1 if (self.report is not None or self.processed_report is not None) else 0)
         )
 
     @property
@@ -11456,9 +11537,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     @property
     def has_articles(self):
-        articles = self.article_list
-        return len(articles.all()) > 0
-        # return self.article_list.first() is not None
+        return self.article_list.first() is not None
 
     def _check_access_control_users(self, asset, allow_student=False):
         asset: Union[SubmittedAsset, GeneratedAsset]

@@ -431,7 +431,7 @@ def register_marking_tasks(celery):
                         endpoint="download_submitted_asset",
                     )
 
-            for attachment in record.ordered_record_attachments:
+            for attachment in record.ordered_attachments:
                 attachment: SubmissionAttachment
 
                 if (role in ["marker"] and attachment.include_marker_emails) or (role in ["supervisor"] and attachment.include_supervisor_emails):

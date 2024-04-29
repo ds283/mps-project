@@ -70,7 +70,7 @@ def acl_user(user_list, role_list, asset, attachment, type):
         {
             "name": {"display": render_template_string(_name, u=u), "sortstring": u.last_name + u.first_name},
             "roles": render_template_string(_role, u=u, role_list=role_list, simple_label=simple_label),
-            "access": render_template_string(_access, user=u, asset=asset),
+            "access": render_template_string(_access, user=u, asset=asset, simple_label=simple_label),
             "actions": render_template_string(_actions, user=u, asset=asset, attachment=attachment, type=type),
         }
         for u in user_list

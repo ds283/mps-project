@@ -139,7 +139,7 @@ _periods = """
                     {% if r.report is not none %}
                         <div class="badge bg-success"><i class="fas fa-check"></i> Report</div>
                     {% endif %}
-                    {% set number_attachments = r.number_record_attachments %}
+                    {% set number_attachments = r.number_attachments %}
                     {% if number_attachments > 0 %}
                         <div class="badge bg-success"><i class="fas fa-check"></i> Attachments ({{ number_attachments }})</div>
                     {% endif %}

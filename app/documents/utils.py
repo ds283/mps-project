@@ -27,12 +27,12 @@ def is_editable(
     if current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("office"):
         return True
 
+    period = period or record.period
+    config = config or period.config
+    pclass = config.project_class
+
     if current_user.has_role("faculty"):
         # a SubmissionRecord is editable if the user is 'convenor' for the project class
-        period = period or record.period
-        config = config or period.config
-        pclass = config.project_class
-
         if pclass.is_convenor(current_user.id):
             return True
 

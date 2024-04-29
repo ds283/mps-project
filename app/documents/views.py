@@ -794,7 +794,7 @@ def attachment_acl(attach_type, attach_id):
     if state_filter is None and session.get("documents_acl_state_filter"):
         state_filter = session["documents_acl_state_filter"]
 
-    if state_filter not in ["al l", "access", "no-access"]:
+    if state_filter not in ["all", "access", "no-access"]:
         # default to showing only users that have access
         state_filter = "access"
 
@@ -832,7 +832,7 @@ def acl_user_ajax(attach_type, attach_id):
         state_filter = "all"
 
     user_list = db.session.query(User).filter_by(active=True).all()
-    role_list = db.session.query(Role).filter(or_(Role.name == "faculty", or_(Role.name == "student", Role.name == "office"))).all()
+    role_list = db.session.query(Role).filter(or_(Role.name == "faculty", Role.name == "student", Role.name == "office")).all()
 
     if state_filter == "access":
         user_list = [u for u in user_list if asset.has_access(u)]

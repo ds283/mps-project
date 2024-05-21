@@ -101,7 +101,7 @@ pyinstrument==4.6.2
 pymongo==4.6.2
 PyMuPDF==1.24.4
 PyMuPDFb==1.24.3
-PyMySQL==1.1.0
+PyMySQL==1.1.1
 python-dateutil==2.9.0.post0
 python-usernames==1.0.0
 pytz==2024.1

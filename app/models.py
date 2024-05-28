@@ -11497,8 +11497,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     @property
     def ordered_attachments(self):
         query = self._build_submitted_attachment_query(
-            allowed_users=[current_user],
-            allowed_roles=current_user.roles,
+            allowed_users=None,
+            allowed_roles=None,
             ordering=[SubmissionAttachment.type.asc(), SubmittedAsset.target_name.asc()],
         )
         return query.all()

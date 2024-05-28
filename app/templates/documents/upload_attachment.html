@@ -4,7 +4,7 @@
 {% from "labels.html" import unformatted_label %}
 
 {% block title %}
-    Upload new attachment for {{ unformatted_label(record.student_identifier) }}
+    Upload new attachment for {{ unformatted_label(record.student_identifier, tag=none) }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -37,7 +37,7 @@
                             {{ wtf.render_field(form.include_supervisor_emails) }}
                             {{ wtf.render_field(form.include_marker_emails) }}
                         {% endif %}
-                        <div class="mt-2">
+                        <div class="mt-4">
                             {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
                         </div>
                     </form>

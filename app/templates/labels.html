@@ -61,28 +61,35 @@
         {%- if popover_str is iterable and popover_str is not string %}
             {%- set popover_str = popover_str|wrap_list('<div>', '</div>')|join -%}
         {%- endif -%}
-        {% if type is not none %}
-            <{{ tag }} {% if user_classes is not none %}class="{{ user_classes }}"{% endif %}
-            {%- if popover_str is not none and popover_as_tooltip %} data-bs-toggle="tooltip" data-bs-html="true"
-                title="{{ popover_str }}"{% endif %}>
+        {% if tag is none %}
             {%- if prefix -%}{{ prefix|safe }} {% endif -%}{{ label|safe }}{%- if suffix %}
                 {{ suffix|safe }}{%- endif -%}
-            </{{ tag }}>
-            {%- if popover_str is not none and not popover_as_tooltip -%}
-                <span class="ms-1 small text-muted" tabindex="0" data-bs-toggle="popover" data-bs-container="body"
-                      data-bs-trigger="focus" data-bs-content="{{ popover_str }}">(Show <i class="fas fa-chevron-right">)</i></span>
-            {%- endif -%}
         {% else %}
-            <{{ tag }} {% if user_classes is not none %}class="{{ user_classes }}"{% endif %}
-            {%- if popover_str is not none and popover_as_tooltip %} data-bs-toggle="tooltip" data-bs-html="true"
-                title="{{ popover_str }}"{% endif %}>
-            {%- if prefix -%}{{ prefix|safe }} {% endif -%}{{ label|safe }}{%- if suffix %}
-                {{ suffix|safe }}{%- endif -%}
-            </{{ tag}}>
-            {%- if popover_str is not none and not popover_as_tooltip -%}
-                <span class="ms-1 small text-muted" tabindex="0" data-bs-toggle="popover" data-bs-container="body"
-                      data-bs-trigger="focus" data-bs-content="{{ popover_str }}">(Show <i class="fas fa-chevron-right">)</i></span>
-            {%- endif -%}
+            {% if type is not none %}
+                <{{ tag }} {% if user_classes is not none %}class="{{ user_classes }}"{% endif %}
+                {%- if popover_str is not none and popover_as_tooltip %} data-bs-toggle="tooltip" data-bs-html="true"
+                    title="{{ popover_str }}"{% endif %}>
+                {%- if prefix -%}{{ prefix|safe }} {% endif -%}{{ label|safe }}{%- if suffix %}
+                    {{ suffix|safe }}{%- endif -%}
+                </{{ tag }}>
+                {%- if popover_str is not none and not popover_as_tooltip -%}
+                    <span class="ms-1 small text-muted" tabindex="0" data-bs-toggle="popover" data-bs-container="body"
+                          data-bs-trigger="focus" data-bs-content="{{ popover_str }}">(Show <i
+                            class="fas fa-chevron-right">)</i></span>
+                {%- endif -%}
+            {% else %}
+                <{{ tag }} {% if user_classes is not none %}class="{{ user_classes }}"{% endif %}
+                {%- if popover_str is not none and popover_as_tooltip %} data-bs-toggle="tooltip" data-bs-html="true"
+                    title="{{ popover_str }}"{% endif %}>
+                {%- if prefix -%}{{ prefix|safe }} {% endif -%}{{ label|safe }}{%- if suffix %}
+                    {{ suffix|safe }}{%- endif -%}
+                </{{ tag }}>
+                {%- if popover_str is not none and not popover_as_tooltip -%}
+                    <span class="ms-1 small text-muted" tabindex="0" data-bs-toggle="popover" data-bs-container="body"
+                          data-bs-trigger="focus" data-bs-content="{{ popover_str }}">(Show <i
+                            class="fas fa-chevron-right">)</i></span>
+                {%- endif -%}
+            {% endif %}
         {% endif %}
     {% elif label_data is none %}
         <{{ tag }} class="text-danger {% if user_classes is not none %}{{ user_classes }}{% endif %}">UI error</{{ tag }}>

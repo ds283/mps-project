@@ -472,9 +472,13 @@ def register_marking_tasks(celery):
         # if attachment is too large, generate a link instead
         if max_attached_size is not None and float(current_size + asset_size) / (1024 * 1024) > max_attached_size:
             if filename is not None:
-                link = "https://mpsprojects.sussex.ac.uk/admin/{endpoint}/" "{asset_id}?filename={fnam}".format(
-                    endpoint=endpoint, asset_id=asset.id, fnam=quote(filename)
-                )
+                try:
+                    link = "https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}?filename={fnam}".format(
+                        endpoint=endpoint, asset_id=asset.id, fnam=quote(filename)
+                    )
+                except TypeError as e:
+                    link = "https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}".format(endpoint=endpoint, asset_id=asset.id)
+                    print(f'_attach_asset: TypeError received with filename="{filename}"')
             else:
                 link = "https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}".format(endpoint=endpoint, asset_id=asset.id)
             attached_documents.append((False, link, description))

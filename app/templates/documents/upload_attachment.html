@@ -4,7 +4,7 @@
 {% from "labels.html" import unformatted_label %}
 
 {% block title %}
-    Upload new attachment for {{ record.student_identifier|safe }}
+    Upload new attachment for {{ unformatted_label(record.student_identifier) }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -32,12 +32,14 @@
                         {{ wtf.render_field(form.license) }}
                         {% if has_admin_rights %}
                             {{ wtf.render_field(form.type) }}
-                            <hr class="intro-divider">
+                            <div class="form-group-heading mt-3">Visibility</div>
                             {{ wtf.render_field(form.publish_to_students) }}
                             {{ wtf.render_field(form.include_supervisor_emails) }}
                             {{ wtf.render_field(form.include_marker_emails) }}
                         {% endif %}
-                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                        <div class="mt-2">
+                            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                        </div>
                     </form>
                 </div>
             </div>

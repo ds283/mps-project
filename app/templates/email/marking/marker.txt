@@ -57,8 +57,8 @@ Please record your assessments using this online form:
 
   {{ role.external_marking_url|safe }}
 
-The form requests a short justification of the mark you assign in each
-category. Please also enter feedback for the student.
+The form requests a short justification of the mark you assign.
+Please also enter feedback for the student.
 
 {% endif -%}
 If the marks returned by other examiners (if any) or assigned supervision

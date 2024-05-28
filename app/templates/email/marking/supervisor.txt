@@ -56,8 +56,8 @@ misconduct should be raised based on your academic judgement and not on the
 similarity score alone. The similarity report is not provided to the project
 examiners.
 
-Your assessment of the project can be based on the submitted report,
-but also continuous assessment over the entire project period.
+Your assessment should be based on your continuous assessment over the
+entire project period.
 
 {% if role.external_marking_url and role.external_marking_url|length > 0 -%}
 Please record your assessments using this online form:

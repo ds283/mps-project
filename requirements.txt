@@ -98,7 +98,7 @@ pyasn1_modules==0.4.0
 pycparser==2.22
 Pygments==2.18.0
 pyinstrument==4.6.2
-pymongo==4.6.2
+pymongo==4.6.3
 PyMuPDF==1.24.4
 PyMuPDFb==1.24.3
 PyMySQL==1.1.1

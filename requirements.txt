@@ -117,7 +117,7 @@ simplejson==3.19.2
 six==1.16.0
 SQLAlchemy==2.0.30
 SQLAlchemy-Utils==0.41.2
-tornado==6.4
+tornado==6.4.1
 tzdata==2024.1
 tzlocal==2.0.0
 url-normalize==1.4.3

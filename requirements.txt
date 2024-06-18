@@ -121,7 +121,7 @@ tornado==6.4.1
 tzdata==2024.1
 tzlocal==2.0.0
 url-normalize==1.4.3
-urllib3==1.26.18
+urllib3==1.26.19
 validators==0.28.1
 vine==5.1.0
 wcwidth==0.2.13

@@ -57,8 +57,11 @@ _menu = """
                 <i class="fas fa-paper-plane fa-fw"></i> Submit selection
             </a>
         {% else %}
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.force_convert_bookmarks', sel_id=student.id, converted=1, no_submit_IP=1, force=0, reset=1) }}">
-                <i class="fas fa-exclamation-triangle fa-fw"></i> Force submission
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.force_convert_bookmarks', sel_id=student.id, converted=1, no_submit_IP=1, force=0, reset=1, force_unavailable=0) }}">
+                <i class="fas fa-exclamation-triangle fa-fw"></i> Submit (available only)
+            </a>
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.force_convert_bookmarks', sel_id=student.id, converted=1, no_submit_IP=1, force=0, reset=1, force_unavailable=1) }}">
+                <i class="fas fa-exclamation-triangle fa-fw"></i> Submit (incl. unavailable)
             </a>
         {% endif %}
         

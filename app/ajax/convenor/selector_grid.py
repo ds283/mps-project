@@ -85,8 +85,12 @@ _selections = """
             <span class="small">           
                 <i class="fas fa-info-circle text-danger"></i>
                 <span class="text-danger">{{ sel.number_bookmarks }} bookmark{% if sel.number_bookmarks != 1 %}s{% endif %} available</span>
-                <a class="text-decoration-none" href="{{ url_for('convenor.force_convert_bookmarks', sel_id=sel.id, converted=1, no_submit_IP=1, force=0, reset=1) }}">
-                    Force conversion...
+                <a class="text-decoration-none" href="{{ url_for('convenor.force_convert_bookmarks', sel_id=sel.id, converted=1, no_submit_IP=1, force=0, reset=1, force_unavailable=0) }}">
+                    Convert...
+                </a>
+                |
+                <a class="text-decoration-none" href="{{ url_for('convenor.force_convert_bookmarks', sel_id=sel.id, converted=1, no_submit_IP=1, force=0, reset=1, force_unavailable=1) }}">
+                    Convert (incl. unavailable)...
                 </a>
             </span>
         {% else %}

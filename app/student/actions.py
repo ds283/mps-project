@@ -17,7 +17,7 @@ from app.models import SelectionRecord
 from ..models import SelectingStudent
 
 
-def store_selection(sel: SelectingStudent, converted: bool = False, no_submit_IP: bool = False, reset: bool = True):
+def store_selection(sel: SelectingStudent, converted: bool = False, no_submit_IP: bool = False, reset: bool = True, force_unavailable: bool = False):
     # delete any existing selections if reset flag is set;
     # otherwise we try to merge the current submission list with the current bookmark list
     existing = set()
@@ -36,7 +36,7 @@ def store_selection(sel: SelectingStudent, converted: bool = False, no_submit_IP
     # iterate through bookmarks, appending them to a selection set, until we have sufficient selections or we have run out
     num_selections = len(existing)
     for bookmark in sel.ordered_bookmarks:
-        if bookmark.liveproject_id not in existing and bookmark.liveproject.is_available(sel):
+        if bookmark.liveproject_id not in existing and (bookmark.liveproject.is_available(sel) or force_unavailable):
             rec = SelectionRecord(
                 owner_id=sel.id,
                 liveproject_id=bookmark.liveproject_id,

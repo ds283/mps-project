@@ -38,7 +38,7 @@ from .cache import cache
 from .database import db
 from .shared.colours import get_text_colour
 from .shared.formatters import format_size, format_time, format_readable_time
-from .shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS
+from .shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE
 from .shared.sqlalchemy import get_count
 
 # length of database string for typical fields, if used
@@ -9289,7 +9289,7 @@ def _SelectingStudent_is_valid(sid):
 
         if num_selected < num_expected:
             if obj.has_bookmarks:
-                errors["number_selections"] = {"msg": err_msg, "quickfix": QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS}
+                errors["number_selections"] = {"msg": err_msg, "quickfix": QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE}
             else:
                 errors["number_selections"] = err_msg
         elif num_selected > num_expected:

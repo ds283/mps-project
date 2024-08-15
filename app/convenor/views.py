@@ -128,7 +128,7 @@ from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.projects import create_new_tags, get_filter_list_for_groups_and_skills, project_list_SQL_handler, project_list_in_memory_handler
-from ..shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS
+from ..shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE, QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_UNAVAILABLE
 from ..shared.sqlalchemy import get_count, clone_model
 from ..shared.utils import (
     get_current_year,
@@ -1049,9 +1049,13 @@ def selectors_ajax(id):
 
     def _quickfixes(s: SelectingStudent):
         return {
-            QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS: {
-                "msg": "Populate from bookmarks...",
-                "url": url_for("convenor.force_convert_bookmarks", sel_id=s.id, converted=0, no_submit_IP=1, force=1, reset=0),
+            QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE: {
+                "msg": "Populate (available only)...",
+                "url": url_for("convenor.force_convert_bookmarks", sel_id=s.id, converted=0, no_submit_IP=1, force=1, reset=0, force_unavailable=0),
+            },
+            QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_UNAVAILABLE: {
+                "msg": "Populate (incl. unavailable)...",
+                "url": url_for("convenor.force_convert_bookmarks", sel_id=s.id, converted=0, no_submit_IP=1, force=1, reset=0, force_unavailable=1),
             }
         }
 
@@ -10514,6 +10518,7 @@ def force_convert_bookmarks(sel_id):
     no_submit_IP = bool(int(request.args.get("no_submit_IP", "1")))
     force = bool(int(request.args.get("force", "0")))
     reset = bool(int(request.args.get("reset", "1")))
+    force_unavailable = bool(int(request.args.get("force_unavailable", "0")))
 
     # reject user if not a suitable convenor or administrator
     if not validate_is_convenor(sel.config.project_class):
@@ -10537,7 +10542,7 @@ def force_convert_bookmarks(sel_id):
         )
         return redirect(redirect_url())
 
-    stored = store_selection(sel, converted=converted_status, no_submit_IP=no_submit_IP, reset=reset)
+    stored = store_selection(sel, converted=converted_status, no_submit_IP=no_submit_IP, reset=reset, force_unavailable=force_unavailable)
 
     try:
         db.session.commit()

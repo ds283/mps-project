@@ -3380,7 +3380,7 @@ def register_matching_tasks(celery):
 
         try:
             # generate a new MatchingAttempt record
-            new_record = MatchingAttempt(
+            new_attempt = MatchingAttempt(
                 year=old_attempt.year,
                 base_id=old_attempt.base_id,
                 base_bias=old_attempt.base_bias,
@@ -3435,14 +3435,14 @@ def register_matching_tasks(celery):
                 lp_file_id=None,
             )
 
-            db.session.add(new_record)
+            db.session.add(new_attempt)
             db.session.flush()
 
             # duplicate all matching records, and corresponding matching roles
             for old_record in old_attempt.records:
                 old_record: MatchingRecord
                 new_record = MatchingRecord(
-                    matching_id=new_record.id,
+                    matching_id=new_attempt.id,
                     selector_id=old_record.selector_id,
                     submission_period=old_record.submission_period,
                     project_id=old_record.project_id,
@@ -3464,7 +3464,7 @@ def register_matching_tasks(celery):
                         user_id=old_role.user_id,
                         role=old_role.role
                     )
-                    db.session.add(new_role)
+                    new_record.roles.append(new_role)
 
                 # duplicate any "original" roles stored with this MatchingRecord instance
                 for old_role in old_record.original_roles:
@@ -3473,14 +3473,14 @@ def register_matching_tasks(celery):
                         user_id=old_role.user_id,
                         role=old_role.role
                     )
-                    db.session.add(new_role)
+                    new_record.original_roles.append(new_role)
 
             # if this MatchingAttempt is awaiting upload of an offline-generated match, duplicate enumerations
             # and any necessary assets that we hold
-            if new_record.awaiting_upload:
+            if new_attempt.awaiting_upload:
                 for old_enum in old_attempt.enumerations:
                     new_enum = MatchingEnumeration(
-                        category=old_enum.category, enumeration=old_enum.enumeration, key=old_enum.key, key2=old_enum.key2, matching_id=old_enum.id
+                        category=old_enum.category, enumeration=old_enum.enumeration, key=old_enum.key, key2=old_enum.key2, matching_id=new_attempt.id
                     )
                     db.session.add(new_enum)
 
@@ -3525,7 +3525,7 @@ def register_matching_tasks(celery):
                     return new_asset
 
                 if old_attempt.lp_file is not None:
-                    new_record.lp_file = copy_asset(old_attempt.lp_file)
+                    new_attempt.lp_file = copy_asset(old_attempt.lp_file)
 
             db.session.commit()
 

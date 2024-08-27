@@ -3366,12 +3366,12 @@ def register_matching_tasks(celery):
         self.update_state(state="STARTED", meta={"msg": "Looking up MatchingAttempt record for id={id}".format(id=id)})
 
         try:
-            old_record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).first()
+            old_attempt: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if old_record is None:
+        if old_attempt is None:
             self.update_state(state="FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
             raise Ignore
 
@@ -3379,55 +3379,55 @@ def register_matching_tasks(celery):
         # atomic as we can make it
 
         try:
-            # generate a new MatchingRecord
+            # generate a new MatchingAttempt record
             new_record = MatchingAttempt(
-                year=old_record.year,
-                base_id=old_record.base_id,
-                base_bias=old_record.base_bias,
-                force_base=old_record.force_base,
+                year=old_attempt.year,
+                base_id=old_attempt.base_id,
+                base_bias=old_attempt.base_bias,
+                force_base=old_attempt.force_base,
                 name=new_name,
-                config_members=old_record.config_members,
+                config_members=old_attempt.config_members,
                 published=False,
                 selected=False,
                 celery_id=None,
-                finished=old_record.finished,
+                finished=old_attempt.finished,
                 celery_finished=True,
-                awaiting_upload=old_record.awaiting_upload,
-                outcome=old_record.outcome,
-                solver=old_record.solver,
-                construct_time=old_record.construct_time,
-                compute_time=old_record.compute_time,
-                include_only_submitted=old_record.include_only_submitted,
-                ignore_per_faculty_limits=old_record.ignore_per_faculty_limits,
-                ignore_programme_prefs=old_record.ignore_programme_prefs,
-                years_memory=old_record.years_memory,
-                supervising_limit=old_record.supervising_limit,
-                marking_limit=old_record.marking_limit,
-                max_marking_multiplicity=old_record.max_marking_multiplicity,
-                max_different_group_projects=old_record.max_different_group_projects,
-                max_different_all_projects=old_record.max_different_all_projects,
-                use_hints=old_record.use_hints,
-                require_to_encourage=old_record.require_to_encourage,
-                forbid_to_discourage=old_record.forbid_to_discourage,
-                encourage_bias=old_record.encourage_bias,
-                discourage_bias=old_record.discourage_bias,
-                strong_encourage_bias=old_record.strong_encourage_bias,
-                strong_discourage_bias=old_record.strong_discourage_bias,
-                bookmark_bias=old_record.bookmark_bias,
-                levelling_bias=old_record.levelling_bias,
-                supervising_pressure=old_record.supervising_pressure,
-                marking_pressure=old_record.marking_pressure,
-                CATS_violation_penalty=old_record.CATS_violation_penalty,
-                no_assignment_penalty=old_record.no_assignment_penalty,
-                intra_group_tension=old_record.intra_group_tension,
-                programme_bias=old_record.programme_bias,
-                include_matches=old_record.include_matches,
-                score=old_record.current_score,
+                awaiting_upload=old_attempt.awaiting_upload,
+                outcome=old_attempt.outcome,
+                solver=old_attempt.solver,
+                construct_time=old_attempt.construct_time,
+                compute_time=old_attempt.compute_time,
+                include_only_submitted=old_attempt.include_only_submitted,
+                ignore_per_faculty_limits=old_attempt.ignore_per_faculty_limits,
+                ignore_programme_prefs=old_attempt.ignore_programme_prefs,
+                years_memory=old_attempt.years_memory,
+                supervising_limit=old_attempt.supervising_limit,
+                marking_limit=old_attempt.marking_limit,
+                max_marking_multiplicity=old_attempt.max_marking_multiplicity,
+                max_different_group_projects=old_attempt.max_different_group_projects,
+                max_different_all_projects=old_attempt.max_different_all_projects,
+                use_hints=old_attempt.use_hints,
+                require_to_encourage=old_attempt.require_to_encourage,
+                forbid_to_discourage=old_attempt.forbid_to_discourage,
+                encourage_bias=old_attempt.encourage_bias,
+                discourage_bias=old_attempt.discourage_bias,
+                strong_encourage_bias=old_attempt.strong_encourage_bias,
+                strong_discourage_bias=old_attempt.strong_discourage_bias,
+                bookmark_bias=old_attempt.bookmark_bias,
+                levelling_bias=old_attempt.levelling_bias,
+                supervising_pressure=old_attempt.supervising_pressure,
+                marking_pressure=old_attempt.marking_pressure,
+                CATS_violation_penalty=old_attempt.CATS_violation_penalty,
+                no_assignment_penalty=old_attempt.no_assignment_penalty,
+                intra_group_tension=old_attempt.intra_group_tension,
+                programme_bias=old_attempt.programme_bias,
+                include_matches=old_attempt.include_matches,
+                score=old_attempt.current_score,
                 # note that current score becomes original score
-                supervisors=old_record.supervisors,
-                markers=old_record.markers,
-                projects=old_record.projects,
-                mean_CATS_per_project=old_record.mean_CATS_per_project,
+                supervisors=old_attempt.supervisors,
+                markers=old_attempt.markers,
+                projects=old_attempt.projects,
+                mean_CATS_per_project=old_attempt.mean_CATS_per_project,
                 creator_id=current_id,
                 creation_timestamp=datetime.now(),
                 last_edit_id=None,
@@ -3438,34 +3438,54 @@ def register_matching_tasks(celery):
             db.session.add(new_record)
             db.session.flush()
 
-            # duplicate all matching records
-            for item in old_record.records:
-                item: MatchingRecord
-                rec = MatchingRecord(
+            # duplicate all matching records, and corresponding matching roles
+            for old_record in old_attempt.records:
+                old_record: MatchingRecord
+                new_record = MatchingRecord(
                     matching_id=new_record.id,
-                    selector_id=item.selector_id,
-                    submission_period=item.submission_period,
-                    project_id=item.project_id,
-                    original_project_id=item.project_id,
-                    rank=item.rank,
-                    marker_id=item.marker_id,
-                    original_marker_id=item.marker_id,
-                    alternative=item.alternative,
-                    parent_id=item.parent_id,
-                    priority=item.priority,
+                    selector_id=old_record.selector_id,
+                    submission_period=old_record.submission_period,
+                    project_id=old_record.project_id,
+                    original_project_id=old_record.project_id,
+                    rank=old_record.rank,
+                    alternative=old_record.alternative,
+                    parent_id=old_record.parent_id,
+                    priority=old_record.priority,
+                    # TODO: remove marker_id and original_marker_id fields from MatchingRecord (they have now been replaced by MatchingRole instances)
+                    marker_id=old_record.marker_id,
+                    original_marker_id=old_record.marker_id,
                 )
-                db.session.add(rec)
+                db.session.add(new_record)
 
-            # duplicate all enumerations
-            if new_record.awaiting_upload:
-                for item in old_record.enumerations:
-                    en = MatchingEnumeration(
-                        category=item.category, enumeration=item.enumeration, key=item.key, key2=item.key2, matching_id=new_record.id
+                # duplicate any roles stored with this MatchingRecord instance
+                for old_role in old_record.roles:
+                    old_role: MatchingRole
+                    new_role = MatchingRole(
+                        user_id=old_role.user_id,
+                        role=old_role.role
                     )
-                    db.session.add(en)
+                    db.session.add(new_role)
 
+                # duplicate any "original" roles stored with this MatchingRecord instance
+                for old_role in old_record.original_roles:
+                    old_role: MatchingRole
+                    new_role = MatchingRole(
+                        user_id=old_role.user_id,
+                        role=old_role.role
+                    )
+                    db.session.add(new_role)
+
+            # if this MatchingAttempt is awaiting upload of an offline-generated match, duplicate enumerations
+            # and any necessary assets that we hold
+            if new_record.awaiting_upload:
+                for old_enum in old_attempt.enumerations:
+                    new_enum = MatchingEnumeration(
+                        category=old_enum.category, enumeration=old_enum.enumeration, key=old_enum.key, key2=old_enum.key2, matching_id=old_enum.id
+                    )
+                    db.session.add(new_enum)
+
+                # duplicate LP asset file
                 now = datetime.now()
-
                 object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
 
                 def copy_asset(old_asset):
@@ -3504,8 +3524,8 @@ def register_matching_tasks(celery):
 
                     return new_asset
 
-                if old_record.lp_file is not None:
-                    new_record.lp_file = copy_asset(old_record.lp_file)
+                if old_attempt.lp_file is not None:
+                    new_record.lp_file = copy_asset(old_attempt.lp_file)
 
             db.session.commit()
 

@@ -174,7 +174,7 @@ _personnel = """
 
 # language=jinja2
 _submissions = """
-<span class="badge bg-primary">{{ p.submissions }}/yr</span>
+<span class="badge bg-primary">{{ p.number_submissions }}/yr</span>
 {% if p.uses_marker %}
     <span class="badge bg-info">Marked</span>
 {% endif %}

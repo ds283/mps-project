@@ -10,7 +10,7 @@ being scheduled between {{ event.earliest_date }} and {{ event.latest_date }}.
 There will be approximately {{ event.number_talks }} students giving presentations based on
 projects drawn from the following:
 {%- for period in event.available_periods %}
-- {{ period.config.project_class.name }} {% if period.config.project_class.submissions > 1 -%}{{ period.display_name }}{%- endif -%}
+- {{ period.config.project_class.name }} {% if period.config.project_class.number_submissions > 1 -%}{{ period.display_name }}{%- endif -%}
 {%- endfor %}
 In order to prepare a timetable we are collecting availability information
 from faculty members, but we do not yet appear to have received your details.

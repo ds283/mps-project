@@ -26,7 +26,7 @@
         <div class="col-10">
             {% if pclass.publish %}
                 {# SUBMITTING #}
-                {% for n in range(config.submissions) %}
+                {% for n in range(config.number_submissions) %}
                     <a id="submitter_card_{{ loop.index }}"></a>
                     {{ submitter_card(config, n, today, feedback_form)  }}
                 {% endfor %}

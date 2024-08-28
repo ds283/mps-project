@@ -20,15 +20,55 @@
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'}); },
                 columns: [
                     { data: 'student',
+                        orderable: true,
+                        searchable: true,
                       render: {
                         _: 'display',
                         sort: 'sortvalue'
-                      } },
-                    {data: 'pclass'},
-                    { data: 'record1' },
-                    { data: 'record2' },
-                    { data: 'menu' }
+                      }
+                    },
+                    {
+                        data: 'pclass',
+                        orderable: true,
+                        searchable: false
+                    },
+                    {
+                        data: 'record1',
+                        orderable: false,
+                        searchable: true
+                    },
+                    {
+                        data: 'rank1',
+                        orderable: true,
+                        searchable: true,
+                        render: {
+                            _: 'display',
+                            sort: 'sortvalue',
+                            type: 'sortvalue',
+                        }
+                    },
+                    {
+                        data: 'record2',
+                        orderable: false,
+                        searchable: true
+                    },
+                    {
+                        data: 'rank2',
+                        orderable: true,
+                        searchable: true,
+                        render: {
+                            _: 'display',
+                            sort: 'sortvalue',
+                            type: 'sortvalue',
+                        }
+                    },
+                    {
+                        data: 'menu',
+                        orderable: false,
+                        searchable: false
+                    }
                 ],
+                order: [[3, 'desc']],
                 deferRender: true
             });
         });
@@ -92,8 +132,10 @@
                     <tr>
                         <th width="10%"> Student</th>
                         <th width="15%"> Project class</th>
-                        <th width="30%"> {{ record1.name }}</th>
-                        <th width="30%"> {{ record2.name }}</th>
+                        <th width="20%"> {{ record1.name }}</th>
+                        <th width="10%"> Rank #1</th>
+                        <th width="20%"> {{ record2.name }}</th>
+                        <th width="10%"> Rank #2</th>
                         <th width="15%"> Actions</th>
                     </tr>
                 </thead>

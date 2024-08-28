@@ -4987,7 +4987,7 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
         self._most_recent_config = None
 
     @property
-    def submissions(self):
+    def number_submissions(self):
         return get_count(self.periods)
 
     @property
@@ -5104,7 +5104,7 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
 
     def get_period(self, n):
         # note submission periods start at 1
-        if n <= 0 or n > self.submissions:
+        if n <= 0 or n > self.number_submissions:
             return None
 
         return self.periods.filter_by(period=n).one()
@@ -5850,8 +5850,8 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
         return self.project_class.select_in_previous_cycle
 
     @property
-    def submissions(self):
-        return self.project_class.submissions
+    def number_submissions(self):
+        return self.project_class.number_submissions
 
     @property
     def selection_open_to_all(self):
@@ -5995,7 +5995,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
         if not self.project_class.publish:
             return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
 
-        if self.submission_period > self.submissions:
+        if self.submission_period > self.number_submissions:
             return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
 
         # get submission period data for current period
@@ -6042,7 +6042,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
             return self.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
 
         # can assume period.closed at this point
-        if self.submission_period >= self.submissions:
+        if self.submission_period >= self.number_submissions:
             return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
 
         # we don't want to be in this position; we may as well advance the submission period
@@ -6286,7 +6286,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
     def get_period(self, n):
         # note submission periods start at 1
-        if n is None or n <= 0 or n > self.submissions:
+        if n is None or n <= 0 or n > self.number_submissions:
             return None
 
         return self.periods.filter_by(submission_period=n).first()
@@ -9896,12 +9896,12 @@ def _SubmittingStudent_is_valid(sid):
                 records_warnings = True
 
     if records_errors:
-        if config.submissions > 1:
+        if config.number_submissions > 1:
             errors["records"] = "Project or role assignments for some submission periods have errors"
         else:
             errors["records"] = "Project or role assignments have errors"
     elif records_warnings:
-        if config.submissions > 1:
+        if config.number_submissions > 1:
             warnings["records"] = "Project or role assignments for some submission periods have warnings"
         else:
             warnings["records"] = "Project or role assignments have warnings"
@@ -12027,7 +12027,7 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
                     count += 1
 
             # if too many, remove one
-            target = self.owner.config.submissions
+            target = self.owner.config.number_submissions
             if count >= target:
                 for item in self.owner.selections:
                     if item.id != self.id and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE:
@@ -14138,6 +14138,13 @@ class MatchingRecord(db.Model):
                     satisfied.add(item.id)
 
         return satisfied, violated
+
+    @property
+    def has_multiple_periods(self) -> bool:
+        sel: SelectingStudent = self.selector
+        config: ProjectClassConfig = sel.config
+
+        periods = config.ordered_periods
 
 
 def _delete_MatchingRecord_cache(record_id, attempt_id):

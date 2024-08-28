@@ -1546,7 +1546,7 @@ def dashboard():
                 include = True
 
             else:
-                for n in range(config.submissions):
+                for n in range(config.number_submissions):
                     period: SubmissionPeriodRecord = config.get_period(n + 1)
 
                     num_s_records = period.number_supervisor_records(current_user.id)

@@ -56,7 +56,7 @@
             {{ selector_card(data, sel_state, current_user, home_dashboard_url) }}
         {% endif %}
 
-        {% for n in range(config.submissions) %}
+        {% for n in range(config.number_submissions) %}
             {{ submitter_card(data, sub_state, n, current_user, today) }}
         {% endfor %}
     </div>

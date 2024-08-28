@@ -2434,7 +2434,7 @@ def add_period_definition(id):
         if form.has_presentation.data:
             pd = SubmissionPeriodDefinition(
                 owner_id=pclass.id,
-                period=pclass.submissions + 1,
+                period=pclass.number_submissions + 1,
                 name=form.name.data,
                 number_markers=form.number_markers.data,
                 number_moderators=form.number_moderators.data,
@@ -2455,7 +2455,7 @@ def add_period_definition(id):
         else:
             pd = SubmissionPeriodDefinition(
                 owner_id=pclass.id,
-                period=pclass.submissions + 1,
+                period=pclass.number_submissions + 1,
                 name=form.name.data,
                 number_markers=form.number_markers.data,
                 number_moderators=form.number_moderators.data,

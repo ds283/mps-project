@@ -253,7 +253,7 @@
                         {% if pane=='submit' and sub and config.uses_submission %}
                             <div class="card mt-3 mb-3 card-body bg-well">
                                 {{ project_card(config, pclass, sub, true) }}
-                                {% for n in range(config.submissions) %}
+                                {% for n in range(config.number_submissions) %}
                                     {{ submission_card(config, sub, n, today) }}
                                 {% else %}
                                     <div class="alert alert-info mt-3 mb-3">

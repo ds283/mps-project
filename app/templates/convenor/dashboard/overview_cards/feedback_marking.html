@@ -39,7 +39,7 @@
             {{ wtf.render_field(feedback_form.submit_button, button_map={'submit_button': 'outline-danger'}, button_size='sm') }}
             <a href="{{ url_for('convenor.close_feedback', id=config.id) }}"
                class="btn btn-sm btn-outline-danger">
-                {% if config.submission_period == config.submissions %}
+                {% if config.submission_period == config.number_submissions %}
                     Close feedback
                 {% else %}
                     Close feedback and move to period #{{ config.submission_period+1 }}

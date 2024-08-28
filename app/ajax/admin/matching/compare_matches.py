@@ -43,26 +43,52 @@ _pclass = """
 # language=jinja2
 _record_delta = """
 {% if rec is not none %}
-    {% if 'all' in changes or 'project' in changes or 'supervisor' in changes %}
-        <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
-            {{ project_tag(rec, false, 1, none, false) }}
-        </div>
-    {% else %}
-        <div class="d-flex flex-column gap-1 justify-content-start align-items-start"><span class="small fw-semibold text-primary">PROJECT MATCH</span></div>
-    {% endif %}
-    {% if 'all' in changes or 'marker' in changes %}
-        <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
-            {{ student_marker_tag(rec, false) }}
-        </div>
-    {% else %}
-        <div class="d-flex flex-column gap-1 justify-content-start align-items-start"><span class="small fw-semibold text-primary">MARKER MATCH</span></div>
-    {% endif %}
+    <div class="d-flex flex-column gap-2 justify-content-start align-items-start">
+        {% if 'all' in changes or 'project' in changes or 'supervisor' in changes %}
+            <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+                <span class="small fw-semibold text-secondary">PROJECT AND SUPERVISION</span>
+                {{ project_tag(rec, config.number_submissions > 1, 1, none, false) }}
+            </div>
+        {% else %}
+            <div class="d-flex flex-column gap-1 justify-content-start align-items-start"><span class="small fw-semibold text-secondary">PROJECT MATCH</span></div>
+        {% endif %}
+        {% if 'all' in changes or 'marker' in changes %}
+            <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+                <span class="small fw-semibold text-secondary">MARKING ASSIGNMENTS</span>
+                {{ student_marker_tag(rec, false) }}
+            </div>
+        {% else %}
+            <div class="d-flex flex-column gap-1 justify-content-start align-items-start"><span class="small fw-semibold text-secondary">MARKING MATCH</span></div>
+        {% endif %}
+    </div>
 {% else %}
     <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
         <span class="text-danger fw-semibold">NOT PRESENT</span>
     </div>
 {% endif %}
 """
+
+# language=jinja2
+_rank = """
+{% if rec is not none %}
+    {% if 'all' in changes or 'project' in changes %}
+        <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+            <div class="{% if rec.hi_ranked %}text-success fw-semibold{% elif rec.lo_ranked %}text-danger{% else %}text-primary{% endif %}">{{ rec.total_rank }}</div>
+            {% if rec.alternative %}<div class="small text-muted"><i class="fas fa-info-circle"></i> Alternative</div>{% endif %}
+            <div class="text-secondary small">&delta; = {{ rec.delta }}</div>
+        </div>
+    {% else %}
+        <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+            <span class="text-secondary"><i class="fas fa-ban"></i></span>
+        </div>
+    {% endif %}
+{% else %}
+    <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+        <span class="text-danger"><i class="fas fa-ban"></i></span>
+    </div>
+{% endif %}
+"""
+
 
 
 # language=jinja2
@@ -104,6 +130,10 @@ def _build_pclass_templ() -> Template:
     return env.from_string(_pclass)
 
 
+def _build_rank_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_rank)
+
 def _build_record_delta_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_record_delta)
@@ -128,6 +158,7 @@ def compare_match_data(records: RecordDeltaListType):
     student_templ: Template = _build_student_templ()
     pclass_templ: Template = _build_pclass_templ()
     record_delta_templ: Template = _build_record_delta_templ()
+    rank_templ: Template = _build_rank_templ()
     menu_templ: Template = _build_menu_templ()
 
     def get_selecting_student(pair: RecordDeltaType) -> Optional[SelectingStudent]:
@@ -151,6 +182,7 @@ def compare_match_data(records: RecordDeltaListType):
         if changes is None:
             return None
 
+        config: ProjectClassConfig = sel.config
         sd: StudentData = sel.student
         user: User = sd.user
 
@@ -167,8 +199,18 @@ def compare_match_data(records: RecordDeltaListType):
                 "sortvalue": sort_value
             },
             "pclass": render_template(pclass_templ, sel=sel, small_swatch=small_swatch),
-            "record1": render_template(record_delta_templ, rec=l, changes=changes, project_tag=project_tag, student_marker_tag=student_marker_tag),
-            "record2": render_template(record_delta_templ, rec=r, changes=changes, project_tag=project_tag, student_marker_tag=student_marker_tag),
+            "record1": render_template(record_delta_templ, rec=l, config=config, changes=changes, project_tag=project_tag,
+                                       student_marker_tag=student_marker_tag),
+            "rank1": {
+                "display": render_template(rank_templ, rec=l, changes=changes),
+                "sortvalue": l.delta if l is not None else -1
+            },
+            "record2": render_template(record_delta_templ, rec=r, config=config, changes=changes, project_tag=project_tag,
+                                       student_marker_tag=student_marker_tag),
+            "rank2": {
+                "display": render_template(rank_templ, rec=r, changes=changes),
+                "sortvalue": r.delta if r is not None else -1
+            },
             "menu": render_template(menu_templ, l=l, r=r),
         }
 

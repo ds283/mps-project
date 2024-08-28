@@ -27,6 +27,9 @@
                         {% else %}
                             {{ truncate(r.project.name, 35) }}
                         {% endif %}
+                        {% if r.project_id != r.original_project_id %}
+                            <span class="badge bg-primary">Modified</span>
+                        {% endif %}
                     {% elif label_type == 2 %} {# label for faculty view #}
                         {{ r.selector.student.user.last_name }} ({{ truncate(r.project.name, 35) }})
                     {% else %}

@@ -11,7 +11,6 @@
 from flask import render_template, current_app
 from jinja2 import Template, Environment
 
-from ...cache import cache
 from ...models import ProjectClassConfig, User, FacultyData
 
 # language=jinja2
@@ -100,7 +99,7 @@ _supervising = """
 {% if recs|length >= 1 %}
     <div class="d-flex flex-row justify-content-start gap-2"></div>
         {% for rec in recs %}
-            {{ project_tag(rec, config.submissions > 1) }}
+            {{ project_tag(rec, config.number_submissions > 1) }}
         {% endfor %}
     </div>
 {% else %}
@@ -155,7 +154,7 @@ _assessing = """
 {% if recs|length >= 1 %}
     <div class="d-flex flex-row justify-content-start gap-2"></div>
         {% for rec in recs %}
-            {{ marker_tag(rec, config.submissions > 1) }}
+            {{ marker_tag(rec, config.number_submissions > 1) }}
         {% endfor %}
     </div>
 {% else %}

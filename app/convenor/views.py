@@ -398,7 +398,7 @@ def periods(id):
 
     # get record for current submission period
     period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
-    if period is None and config.submissions > 0:
+    if period is None and config.number_submissions > 0:
         flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
         return redirect(redirect_url())
 
@@ -470,7 +470,7 @@ def capacity(id):
 
     # get record for current submission period
     period = config.periods.filter_by(submission_period=config.submission_period).first()
-    if period is None and config.submissions > 0:
+    if period is None and config.number_submissions > 0:
         flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
         return redirect(redirect_url())
 
@@ -8257,7 +8257,7 @@ def open_feedback(id):
 
     # get record for current submission period
     period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
-    if period is None and config.submissions > 0:
+    if period is None and config.number_submissions > 0:
         flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
         return redirect(redirect_url())
 
@@ -8479,7 +8479,7 @@ def test_notifications(id):
 
     # get record for current submission period
     period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
-    if period is None and config.submissions > 0:
+    if period is None and config.number_submissions > 0:
         flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
         return redirect(redirect_url())
 
@@ -8547,7 +8547,7 @@ def do_send_notifications(id):
 
     # get record for current submission period
     period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
-    if period is None and config.submissions > 0:
+    if period is None and config.number_submissions > 0:
         flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
         return redirect(redirect_url())
 
@@ -8610,7 +8610,7 @@ def do_open_feedback(id):
 
     # get record for current submission period
     period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
-    if period is None and config.submissions > 0:
+    if period is None and config.number_submissions > 0:
         flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
         return redirect(redirect_url())
 
@@ -8697,13 +8697,13 @@ def immediate_close_feedback(id):
         flash("Feedback cannot be closed at this stage in the project lifecycle.", "info")
         return redirect(redirect_url())
 
-    if config.submission_period > config.submissions:
+    if config.submission_period > config.number_submissions:
         flash('Feedback close request ignored because "{name}" ' "is already in a rollover state.".format(name=config.name), "info")
         return request.referrer
 
     # get record for current submission period
     period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
-    if period is None and config.submissions > 0:
+    if period is None and config.number_submissions > 0:
         flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
         return redirect(redirect_url())
 
@@ -8751,7 +8751,7 @@ def close_feedback(id):
         flash("Feedback cannot be closed at this stage in the project lifecycle.", "info")
         return redirect(redirect_url())
 
-    if config.submission_period > config.submissions:
+    if config.submission_period > config.number_submissions:
         flash('Feedback close request ignored because "{name}" ' "is already in a rollover state.".format(name=config.name), "info")
         return request.referrer
 
@@ -8796,7 +8796,7 @@ def do_close_feedback(id):
         flash("Feedback cannot be closed at this stage in the project lifecycle.", "info")
         return redirect(redirect_url())
 
-    if config.submission_period > config.submissions:
+    if config.submission_period > config.number_submissions:
         flash('Feedback close request ignored because "{name}" ' "is already in a rollover state.".format(name=config.name), "info")
         return request.referrer
 
@@ -8805,7 +8805,7 @@ def do_close_feedback(id):
         url = redirect_url()
 
     period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
-    if period is None and config.submissions > 0:
+    if period is None and config.number_submissions > 0:
         flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
         return redirect(redirect_url())
 

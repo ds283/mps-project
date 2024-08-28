@@ -77,8 +77,8 @@ _periods = """
     {% set style = pclass.make_CSS_style() %}
     {% set period = r.period %}
     {% set current_period = config.current_period %}
-    {% set submissions = config.submissions %}
-    <div class="bg-light p-2 mb-2 {% if submissions > 1 and period.submission_period == current_period.submission_period %}border border-info{% endif %}">
+    {% set number_submissions = config.number_submissions %}
+    <div class="bg-light p-2 mb-2 {% if number_submissions > 1 and period.submission_period == current_period.submission_period %}border border-info{% endif %}">
         {% if r.project is not none %}
             <div class="d-flex flex-row justify-content-start align-items-center gap-2">
                 {% if r.project.name|length < 70 %}
@@ -222,8 +222,8 @@ _periods = """
 {% set recs = sub.ordered_assignments.all() %}
 <div class="d-flex flex-row justify-content-start align-items-start gap-2"></div>
     {% for rec in recs %}
-        {% set submissions = rec.owner.config.submissions %}
-        {{ project_tag(rec, submissions > 1) }}
+        {% set number_submissions = rec.owner.config.number_submissions %}
+        {{ project_tag(rec, number_submissions > 1) }}
     {% else %}
         <div class="badge bg-danger">None</div>
     {% endfor %}

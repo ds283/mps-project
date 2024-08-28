@@ -208,8 +208,8 @@ def _enumerate_selectors_serialized(record):
         sel_to_number[sel.id] = n
         number_to_sel[n] = sel.id
 
-        submissions = sel.config.submissions
-        multiplicity[n] = submissions if submissions >= 1 else 1
+        number_submissions = sel.config.number_submissions
+        multiplicity[n] = number_submissions if number_submissions >= 1 else 1
 
         selector_dict[n] = sel
 
@@ -298,8 +298,8 @@ def _enumerate_selectors_primary(configs, include_only_submitted=False):
                 # TODO: account for submission periods with different numbers of markers, and submission
                 #  periods where no project needs to be assigned, e.g. the Data Science MSc with the project
                 #  proposal submission period
-                submissions = config.submissions
-                multiplicity[number] = submissions if submissions >= 1 else 1
+                number_submissions = config.number_submissions
+                multiplicity[number] = number_submissions if number_submissions >= 1 else 1
 
                 selector_dict[number] = sel
 

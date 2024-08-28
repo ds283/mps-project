@@ -16,7 +16,7 @@ from io import BytesIO
 from itertools import chain as itertools_chain
 from math import pi
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Iterable
 from urllib.parse import urlsplit
 
 from bokeh.embed import components
@@ -5150,7 +5150,8 @@ def do_match_compare(id1, id2):
         if pclass.id not in pclass_dict:
             pclass_dict[pclass.id] = pclass
 
-    pclass_values = pclass_dict.values()
+    pclass_values: Iterable[ProjectClass] = pclass_dict.values()
+    pclass_values_ids: List[int] = [p.id for p in pclass_values]
 
     # if no state filter supplied, check if one is stored in session
     if pclass_filter is None and session.get("admin_match_pclass_filter"):
@@ -5158,7 +5159,7 @@ def do_match_compare(id1, id2):
 
     flag, pclass_value = is_integer(pclass_filter)
     if flag:
-        if pclass_value not in pclass_values:
+        if pclass_value not in pclass_values_ids:
             pclass_filter = 'all'
     else:
         if pclass_filter is not None and pclass_filter not in ['all']:

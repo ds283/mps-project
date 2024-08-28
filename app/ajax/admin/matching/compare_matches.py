@@ -21,7 +21,7 @@ _student = """
 <div>
     <a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 </div>
-{{ student_offcanvas(sel, emails, none) }}
+{{ student_offcanvas(sel, emails, none, 'match comparison inspector', url_for('admin.do_match_compare', id1=l_attempt_id, id2=r_attempt_id)) }}
 """
 
 
@@ -194,7 +194,9 @@ def compare_match_data(records: RecordDeltaListType, left_attempt: MatchingAttem
                     student_templ,
                     sel=sel,
                     emails=get_match_student_emails(sel),
-                    student_offcanvas=student_offcanvas
+                    student_offcanvas=student_offcanvas,
+                    l_attempt_id=left_attempt.id,
+                    r_attempt_id=right_attempt.id,
                 ),
                 "sortvalue": sort_value
             },

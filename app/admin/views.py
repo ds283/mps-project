@@ -5135,20 +5135,6 @@ def do_match_compare(id1, id2):
         flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record2.name), "error")
         return redirect(url)
 
-    # if no state filter supplied, check if one is stored in session
-    if pclass_filter is None and session.get("admin_match_pclass_filter"):
-        pclass_filter = session["admin_match_pclass_filter"]
-
-    if pclass_filter is not None:
-        session["admin_match_pclass_filter"] = pclass_filter
-
-    # if no difference filter supplied, check if one is stored in ession
-    if diff_filter is None and session.get("admin_match_diff_filter"):
-        diff_filter = session["admin_match_diff_filter"]
-
-    if diff_filter is not None:
-        session["admin_match_diff_filter"] = diff_filter
-
     pclasses1 = record1.available_pclasses
     pclasses2 = record2.available_pclasses
 
@@ -5163,6 +5149,33 @@ def do_match_compare(id1, id2):
         pclass: ProjectClass
         if pclass.id not in pclass_dict:
             pclass_dict[pclass.id] = pclass
+
+    pclass_values = pclass_dict.values()
+
+    # if no state filter supplied, check if one is stored in session
+    if pclass_filter is None and session.get("admin_match_pclass_filter"):
+        pclass_filter = session["admin_match_pclass_filter"]
+
+    flag, pclass_value = is_integer(pclass_filter)
+    if flag:
+        if pclass_value not in pclass_values:
+            pclass_filter = 'all'
+    else:
+        if pclass_filter is not None and pclass_filter not in ['all']:
+            pclass_filter = 'all'
+
+    if pclass_filter is not None:
+        session["admin_match_pclass_filter"] = pclass_filter
+
+    # if no difference filter supplied, check if one is stored in ession
+    if diff_filter is None and session.get("admin_match_diff_filter"):
+        diff_filter = session["admin_match_diff_filter"]
+
+    if diff_filter is not None and diff_filter not in ['all', 'project', 'supervisor', 'marker', 'moderator']:
+        diff_filter = 'all'
+
+    if diff_filter is not None:
+        session["admin_match_diff_filter"] = diff_filter
 
     return render_template_context(
         "admin/match_inspector/compare.html",
@@ -5293,7 +5306,7 @@ def _build_match_changes(attempt1: MatchingAttempt, attempt2: MatchingAttempt, d
             # is the project assignment different?
             changes = []
 
-            if diff_filter == 'all' or diff_filter == 'projects':
+            if diff_filter == 'all' or diff_filter == 'project':
                 if rec1.project_id != rec2.project_id:
                     changes.append('project')
 

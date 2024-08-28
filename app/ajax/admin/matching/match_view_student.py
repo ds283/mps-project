@@ -24,7 +24,7 @@ _student = """
         <i class="fas fa-exclamation-triangle text-danger"></i>
     {% endif %}
 </div>
-{{ student_offcanvas(sel, emails, attempt_id) }}
+{{ student_offcanvas(sel, emails, attempt_id, 'student match inspector', url_for('admin.match_student_view', id=attempt_id, text=text, url=url)) }}
 {% if not sel.convert_to_submitter %}
     <div class="text-danger small">
         <i class="fas fa-exclamation-circle"></i>

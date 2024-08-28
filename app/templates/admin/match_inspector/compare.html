@@ -116,11 +116,11 @@
                             href="{{ url_for('admin.do_match_compare', id1=record1.id, id2=record2.id, pclass_filter=pclass_filter, diff_filter='all', text=text, url=url) }}">
                             All
                         </a>
-                        <a class="btn btn-sm filter-btn {% if diff_filter == 'projects' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                        <a class="btn btn-sm filter-btn {% if diff_filter == 'project' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
                            href="{{ url_for('admin.do_match_compare', id1=record1.id, id2=record2.id, pclass_filter=pclass_filter, diff_filter='project', text=text, url=url) }}">
                             Show project differences
                         </a>
-                        <a class="btn btn-sm filter-btn {% if diff_filter == 'markers' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                        <a class="btn btn-sm filter-btn {% if diff_filter == 'marker' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
                            href="{{ url_for('admin.do_match_compare', id1=record1.id, id2=record2.id, pclass_filter=pclass_filter, diff_filter='marker', text=text, url=url) }}">
                             Show marker differences
                         </a>

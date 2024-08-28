@@ -14,7 +14,7 @@ from flask import jsonify, get_template_attribute, render_template, current_app
 from jinja2 import Template, Environment
 
 from .match_view_student import get_match_student_emails
-from ....models import MatchingRecord, SelectingStudent, StudentData, User, ProjectClassConfig
+from ....models import MatchingRecord, SelectingStudent, StudentData, User, ProjectClassConfig, MatchingAttempt
 
 # language=jinja2
 _student = """
@@ -50,7 +50,7 @@ _record_delta = """
                 {{ project_tag(rec, config.number_submissions > 1, 1, none, false) }}
             </div>
         {% else %}
-            <div class="d-flex flex-column gap-1 justify-content-start align-items-start"><span class="small fw-semibold text-secondary">s>PROJECT MATCH</s></span></div>
+            <div class="d-flex flex-column gap-1 justify-content-start align-items-start"><span class="small fw-semibold text-secondary"><s>PROJECT MATCH</s></span></div>
         {% endif %}
         {% if 'all' in changes or 'marker' in changes %}
             <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
@@ -100,18 +100,18 @@ _menu = """
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         {% if l is not none and r is not none %}
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.merge_replace_records', src_id=l.id, dest_id=r.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.replace_matching_record', src_id=l.id, dest_id=r.id) }}">
                 <i class="fas fa-chevron-circle-right fa-fw"></i> Replace left to right
             </a>
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.merge_replace_records', src_id=r.id, dest_id=l.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.replace_matching_record', src_id=r.id, dest_id=l.id) }}">
                 <i class="fas fa-chevron-circle-left fa-fw"></i> Replace right to left
             </a>
         {% elif l is not none %}
-            <a class="dropdown-item d-flex gap-2" href="#">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.insert_matching_record', src_id=l.id, attempt_id=r_attempt_id) }}">
                 <i class="fas fa-chevron-circle-right fa-fw"></i> Copy to right
             </a>
         {% elif r is not none %}
-            <a class="dropdown-item d-flex gap-2" href="#">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.insert_matching_record', src_id=r.id, attempt_id=l_attempt_id) }}">
                 <i class="fas fa-chevron-circle-left fa-fw"></i> Copy to left
             </a>
         {% endif %}
@@ -148,7 +148,7 @@ RecordDeltaType = Tuple[Optional[MatchingRecord], Optional[MatchingRecord], List
 RecordDeltaListType = List[RecordDeltaType]
 
 
-def compare_match_data(records: RecordDeltaListType):
+def compare_match_data(records: RecordDeltaListType, left_attempt: MatchingAttempt, right_attempt: MatchingAttempt):
     small_swatch = get_template_attribute("swatch.html", "small_swatch")
 
     student_offcanvas = get_template_attribute("admin/matching/student_offcanvas.html", "student_offcanvas")
@@ -211,7 +211,7 @@ def compare_match_data(records: RecordDeltaListType):
                 "display": render_template(rank_templ, rec=r, changes=changes),
                 "sortvalue": r.delta if r is not None else -1
             },
-            "menu": render_template(menu_templ, l=l, r=r),
+            "menu": render_template(menu_templ, l=l, r=r, l_attempt_id=left_attempt.id, r_attempt_id=right_attempt.id),
         }
 
     data = [build_render_data(pair) for pair in records]

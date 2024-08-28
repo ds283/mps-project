@@ -4697,7 +4697,7 @@ def delete_match(id):
 
     year = get_current_year()
     if attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous year', "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
         return redirect(redirect_url())
 
     if not current_user.has_role("root") and current_user.id != attempt.creator_id:
@@ -4759,7 +4759,7 @@ def perform_delete_match(id):
 
     year = get_current_year()
     if attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous year', "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
         return redirect(url)
 
     if not current_user.has_role("root") and current_user.id != attempt.creator_id:
@@ -4814,7 +4814,7 @@ def clean_up_match(id):
 
     year = get_current_year()
     if attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous year', "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
         return redirect(redirect_url())
 
     if not attempt.finished:
@@ -4852,7 +4852,7 @@ def perform_clean_up_match(id):
 
     year = get_current_year()
     if attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous year', "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
         return redirect(url)
 
     if not attempt.finished:
@@ -4889,7 +4889,7 @@ def revert_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous year', "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
         return redirect(redirect_url())
 
     if not record.finished:
@@ -4929,7 +4929,7 @@ def perform_revert_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous year', "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -4978,7 +4978,7 @@ def duplicate_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous year.', "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle.', "info")
         return redirect(redirect_url())
 
     if not record.finished:
@@ -5035,7 +5035,7 @@ def rename_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous year', "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -5149,7 +5149,20 @@ def do_match_compare(id1, id2):
     if diff_filter is not None:
         session["admin_match_diff_filter"] = diff_filter
 
-    pclasses = record1.available_pclasses
+    pclasses1 = record1.available_pclasses
+    pclasses2 = record2.available_pclasses
+
+    pclass_dict = {}
+
+    for pclass in pclasses1:
+        pclass: ProjectClass
+        if pclass.id not in pclass_dict:
+            pclass_dict[pclass.id] = pclass
+
+    for pclass in pclasses2:
+        pclass: ProjectClass
+        if pclass.id not in pclass_dict:
+            pclass_dict[pclass.id] = pclass
 
     return render_template_context(
         "admin/match_inspector/compare.html",
@@ -5157,7 +5170,7 @@ def do_match_compare(id1, id2):
         record2=record2,
         text=text,
         url=url,
-        pclasses=pclasses,
+        pclasses=pclass_dict.values(),
         pclass_filter=pclass_filter,
         diff_filter=diff_filter,
     )
@@ -5199,22 +5212,26 @@ def do_match_compare_ajax(id1, id2):
 
     diff_filter = request.args.get("diff_filter")
 
-    # perform a symmetric comparison between the MatchingRecord instances
+    discrepant_records = _build_match_changes(attempt1, attempt2, diff_filter, flag, pclass_value)
+    return ajax.admin.compare_match_data(discrepant_records, attempt1, attempt2)
 
+
+def _build_match_changes(attempt1: MatchingAttempt, attempt2: MatchingAttempt, diff_filter: str, filter_pclasses: bool, pclass_id_value: int,
+                         include_only_common_records: bool = False):
+    # perform a symmetric comparison between the MatchingRecord instances
     # first, we need to build a dictionary of the MatchingRecord instances in each MatchingAttempt, so that we can
     # quickly perform lookups
-
     # dictionary is indexed by a pair of selector_id, submission_period
     RecordIndexType = Tuple[int, int]
     RecordDictType = Dict[RecordIndexType, MatchingRecord]
 
     def build_record_dict(attempt: MatchingAttempt) -> RecordDictType:
         # query supplied MatchingAttempt for an ordered list of records, restricting by project class if required
-        if flag:
+        if filter_pclasses:
             query = (attempt.records
                      .join(SelectingStudent, SelectingStudent.id == MatchingRecord.selector_id)
                      .join(ProjectClassConfig, ProjectClassConfig.id == SelectingStudent.config_id)
-                     .filter(ProjectClassConfig.pclass_id == pclass_value)
+                     .filter(ProjectClassConfig.pclass_id == pclass_id_value)
                      )
         else:
             query = attempt.records
@@ -5313,25 +5330,25 @@ def do_match_compare_ajax(id1, id2):
         if len(changes) > 0:
             discrepant_records.append((rec1, rec2, changes))
 
-    # iterate over keys that are only in one match or the other
-    for key in attempt1_only_keys:
-        key: RecordIndexType
-        rec: MatchingRecord = recs1[key]
+    if not include_only_common_records:
+        # iterate over keys that are only in one match or the other
+        for key in attempt1_only_keys:
+            key: RecordIndexType
+            rec: MatchingRecord = recs1[key]
 
-        discrepant_records.append((rec, None, ['all']))
+            discrepant_records.append((rec, None, ['all']))
+        for key in attempt2_only_keys:
+            key: RecordIndexType
+            rec: MatchingRecord = recs2[key]
 
-    for key in attempt2_only_keys:
-        key: RecordIndexType
-        rec: MatchingRecord = recs2[key]
+            discrepant_records.append((None, rec, ['all']))
 
-        discrepant_records.append((None, rec, ['all']))
-
-    return ajax.admin.compare_match_data(discrepant_records)
+    return discrepant_records
 
 
-@admin.route("/merge_replace_records/<int:src_id>/<int:dest_id>")
+@admin.route("/replace_matching_record/<int:src_id>/<int:dest_id>")
 @roles_accepted("faculty", "admin", "root")
-def merge_replace_records(src_id, dest_id):
+def replace_matching_record(src_id, dest_id):
     source: MatchingRecord = MatchingRecord.query.get_or_404(src_id)
     dest: MatchingRecord = MatchingRecord.query.get_or_404(dest_id)
 
@@ -5340,7 +5357,7 @@ def merge_replace_records(src_id, dest_id):
 
     year = get_current_year()
     if dest.matching_attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous year', "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
         return redirect(redirect_url())
 
     if source.selector_id != dest.selector_id:
@@ -5352,9 +5369,27 @@ def merge_replace_records(src_id, dest_id):
         return redirect(redirect_url())
 
     try:
+        # overwrite destination project assignment
         dest.project_id = source.project_id
-        dest.marker_id = source.marker_id
+
+        # overwrite alternative data
+        dest.alternative = source.alternative
+        dest.parent_id = source.parent_id
+        dest.priority = source.priority
+
+        # overwrite rank
         dest.rank = source.rank
+
+        # deep copy role assignments
+        dest.roles = []
+        for old_role in source.roles:
+            old_role: MatchingRole
+
+            new_role = MatchingRole(
+                user_id=old_role.user_id,
+                role=old_role.role,
+            )
+            dest.roles.append(new_role)
 
         dest.matching_attempt.last_edit_id = current_user.id
         dest.matching_attempt.last_edit_timestamp = datetime.now()
@@ -5362,7 +5397,74 @@ def merge_replace_records(src_id, dest_id):
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash("Can not merge matching records due to a database error. Please contact a system administrator.", "error")
+        flash("Can not replace matching record due to a database error. Please contact a system administrator.", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
+@admin.route("/insert_matching_record/<int:src_id>/<int:attempt_id>")
+@roles_accepted("faculty", "admin", "root")
+def insert_matching_record(src_id, attempt_id):
+    source_record: MatchingRecord = MatchingRecord.query.get_or_404(src_id)
+    dest_attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(attempt_id)
+
+    if not validate_match_inspector(source_record.matching_attempt) or not validate_match_inspector(dest_attempt):
+        return redirect(redirect_url())
+
+    year = get_current_year()
+    if dest_attempt.year != year:
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
+        return redirect(redirect_url())
+
+    sel: SelectingStudent = source_record.selector
+    if sel.config not in dest_attempt.config_members:
+        flash(
+            f'Cannot insert this matching record into attempt "{dest_attempt.name}" because it does not contain matches for projects of type "{sel.config.name}"',
+            'error')
+        return redirect(redirect_url())
+
+    try:
+        # insert new MatchingRecord instance
+        new_record = MatchingRecord(
+            matching_id=dest_attempt.id,
+            selector_id=source_record.selector_id,
+            submission_period=source_record.submission_period,
+            project_id=source_record.project_id,
+            original_project_id=source_record.project_id,
+            rank=source_record.rank,
+            alternative=source_record.alternative,
+            parent_id=source_record.parent_id,
+            priority=source_record.priority,
+        )
+        db.session.add(new_record)
+        db.session.flush()
+
+        # deep copy role assignments
+        new_record.roles = []
+        new_record.original_roles = []
+        for old_role in source_record.roles:
+            old_role: MatchingRole
+
+            new_role = MatchingRole(
+                user_id=old_role.user_id,
+                role=old_role.role,
+            )
+            new_record.roles.append(new_role)
+
+            new_original_role = MatchingRole(
+                user_id=old_role.user_id,
+                role=old_role.role,
+            )
+            new_record.original_roles.append(new_original_role)
+
+        dest_attempt.last_edit_id = current_user.id
+        dest_attempt.last_edit_timestamp = datetime.now()
+
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash("Can not insert matching record due to a database error. Please contact a system administrator.", "error")
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
@@ -5864,7 +5966,7 @@ def delete_match_record(attempt_id, selector_id):
 
     year = get_current_year()
     if attempt.year != year:
-        flash('Match "{name}" can no longer be modified because ' "it belongs to a previous year".format(name=attempt.name), "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=attempt.name), "info")
         return redirect(redirect_url())
 
     try:
@@ -5902,7 +6004,7 @@ def reassign_match_project(id, pid):
 
     year = get_current_year()
     if record.matching_attempt.year != year:
-        flash('Match "{name}" can no longer be modified because ' "it belongs to a previous year".format(name=record.name), "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     project: LiveProject = LiveProject.query.get_or_404(pid)
@@ -5978,7 +6080,7 @@ def reassign_match_marker(id, mid):
 
     year = get_current_year()
     if record.matching_attempt.year != year:
-        flash('Match "{name}" can no longer be modified because ' "it belongs to a previous year".format(name=record.name), "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     # check intended mid is in list of attached second markers
@@ -6024,7 +6126,7 @@ def reassign_supervisor_roles(rec_id):
 
     year = get_current_year()
     if record.matching_attempt.year != year:
-        flash('Match "{name}" can no longer be modified because ' "it belongs to a previous year".format(name=record.name), "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     text = request.args.get("text", None)
@@ -6080,7 +6182,7 @@ def publish_matching_selectors(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because ' "it belongs to a previous year".format(name=record.name), "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not record.finished:
@@ -6129,7 +6231,7 @@ def publish_matching_supervisors(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because ' "it belongs to a previous year".format(name=record.name), "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not record.finished:
@@ -6178,7 +6280,7 @@ def publish_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because ' "it belongs to a previous year".format(name=record.name), "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not record.finished:
@@ -6214,7 +6316,7 @@ def unpublish_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because ' "it belongs to a previous year".format(name=record.name), "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not record.finished:
@@ -6259,7 +6361,7 @@ def select_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because ' "it belongs to a previous year".format(name=record.name), "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not record.finished:
@@ -6327,7 +6429,7 @@ def deselect_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because ' "it belongs to a previous year".format(name=record.name), "info")
+        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not record.finished:
@@ -6352,7 +6454,8 @@ def deselect_match(id):
 def _validate_match_populate_submitters(record: MatchingAttempt, config: ProjectClassConfig):
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" cannot be used to populate submitter records because it belongs to a ' "previous year".format(name=record.name), "info")
+        flash('Match "{name}" cannot be used to populate submitter records because it belongs to a previous selection cycle'.format(name=record.name),
+              "info")
         return False
 
     if config.year != record.year:

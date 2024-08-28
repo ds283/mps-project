@@ -24,21 +24,9 @@
                         _: 'display',
                         sort: 'sortvalue'
                       } },
-                    { data: 'cohort' },
+                    {data: 'pclass'},
                     { data: 'record1' },
-                    { data: 'delta1',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'
-                      } },
                     { data: 'record2' },
-                    { data: 'delta2',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'
-                      } },
                     { data: 'menu' }
                 ],
                 deferRender: true
@@ -103,11 +91,9 @@
                 <thead>
                     <tr>
                         <th width="10%"> Student</th>
-                        <th width="15%"> Cohort</th>
-                        <th width="20%"> {{ record1.name }}</th>
-                        <th width="10%"> Delta/Rank</th>
-                        <th width="20%"> {{ record2.name }}</th>
-                        <th width="10%"> Delta/Rank</th>
+                        <th width="15%"> Project class</th>
+                        <th width="30%"> {{ record1.name }}</th>
+                        <th width="30%"> {{ record2.name }}</th>
                         <th width="15%"> Actions</th>
                     </tr>
                 </thead>

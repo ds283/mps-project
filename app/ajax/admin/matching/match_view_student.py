@@ -8,6 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from typing import List
+
 from flask import get_template_attribute, current_app, render_template
 from jinja2 import Template, Environment
 
@@ -164,6 +166,16 @@ def _build_scores_templ() -> Template:
     return env.from_string(_scores)
 
 
+def get_match_student_emails(s: SelectingStudent, show_max: int = 7) -> List[EmailLog]:
+    data: StudentData = s.student
+
+    emails: List[EmailLog] = (
+        db.session.query(EmailLog).filter(EmailLog.recipients.any(User.id == data.id)).order_by(EmailLog.send_date.desc()).limit(show_max).all()
+    )
+
+    return emails
+
+
 def student_view_data(selector_data, attempt_id, text=None, url=None):
     # selector_data is a list of ((lists of) MatchingRecord, delta-value, score-value) triples
 
@@ -176,13 +188,6 @@ def student_view_data(selector_data, attempt_id, text=None, url=None):
     student_marker_tag = get_template_attribute("admin/matching/marker_tag.html", "student_marker_tag")
 
     error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
-
-    def get_emails(s: SelectingStudent):
-        data: StudentData = s.student
-
-        emails = db.session.query(EmailLog).filter(EmailLog.recipients.any(User.id == data.id)).order_by(EmailLog.send_date.desc()).limit(7).all()
-
-        return emails
 
     student_templ: Template = _build_student_templ()
     pclass_templ: Template = _build_pclass_templ()
@@ -198,7 +203,7 @@ def student_view_data(selector_data, attempt_id, text=None, url=None):
                 student_templ,
                 sel=r[0].selector,
                 attempt_id=attempt_id,
-                emails=get_emails(r[0].selector),
+                emails=get_match_student_emails(r[0].selector),
                 valid=all([not rc.has_issues for rc in r]),
                 text=text,
                 url=url,

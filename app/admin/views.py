@@ -10,14 +10,13 @@
 
 import json
 import re
-from collections import deque
 from datetime import date, datetime, timedelta
 from functools import partial
 from io import BytesIO
 from itertools import chain as itertools_chain
 from math import pi
 from pathlib import Path
-from typing import List
+from typing import List, Dict, Tuple
 from urllib.parse import urlsplit
 
 from bokeh.embed import components
@@ -5167,32 +5166,32 @@ def do_match_compare(id1, id2):
 @admin.route("/do_match_compare_ajax/<int:id1>/<int:id2>")
 @roles_accepted("faculty", "admin", "root")
 def do_match_compare_ajax(id1, id2):
-    record1 = MatchingAttempt.query.get_or_404(id1)
-    record2 = MatchingAttempt.query.get_or_404(id2)
+    attempt1: MatchingAttempt = MatchingAttempt.query.get_or_404(id1)
+    attempt2: MatchingAttempt = MatchingAttempt.query.get_or_404(id2)
 
-    if not validate_match_inspector(record1) or not validate_match_inspector(record2):
+    if not validate_match_inspector(attempt1) or not validate_match_inspector(attempt2):
         return jsonify({})
 
-    if not record1.finished:
-        if record1.awaiting_upload:
-            flash('Can not compare match "{name}" because it is still awaiting ' "manual upload.".format(name=record1.name), "error")
+    if not attempt1.finished:
+        if attempt1.awaiting_upload:
+            flash('Can not compare match "{name}" because it is still awaiting upload of an offline solution.'.format(name=attempt1.name), "error")
         else:
-            flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record1.name), "error")
+            flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=attempt1.name), "error")
         return jsonify({})
 
-    if record1.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
-        flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record1.name), "error")
+    if attempt1.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=attempt1.name), "error")
         return jsonify({})
 
-    if not record2.finished:
-        if record2.awaiting_upload:
-            flash('Can not compare match "{name}" because it is still awaiting ' "manual upload.".format(name=record2.name), "error")
+    if not attempt2.finished:
+        if attempt2.awaiting_upload:
+            flash('Can not compare match "{name}" because it is still awaiting upload of an offline solution.'.format(name=attempt2.name), "error")
         else:
-            flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record2.name), "error")
+            flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=attempt2.name), "error")
         return jsonify({})
 
-    if not record2.solution_usable:
-        flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record2.name), "error")
+    if not attempt2.solution_usable:
+        flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=attempt2.name), "error")
         return jsonify({})
 
     pclass_filter = request.args.get("pclass_filter")
@@ -5200,49 +5199,134 @@ def do_match_compare_ajax(id1, id2):
 
     diff_filter = request.args.get("diff_filter")
 
-    # we know record2 has at least the same pclasses included as record1, although it may in fact have more
-    # (there seems no simple query to restrict record2 to have exactly the same pclasses, and anyway there might
-    # be use cases where it's useful to compare a match on a subset to a match on a larger group)
+    # perform a symmetric comparison between the MatchingRecord instances
 
-    # that means we need to work through the list of records in record2, pairing them up with records in record1
-    recs1 = deque(record1.records.order_by(MatchingRecord.selector_id.asc(), MatchingRecord.submission_period.asc()).all())
-    recs2 = deque(record2.records.order_by(MatchingRecord.selector_id.asc(), MatchingRecord.submission_period.asc()).all())
+    # first, we need to build a dictionary of the MatchingRecord instances in each MatchingAttempt, so that we can
+    # quickly perform lookups
 
-    data = []
+    # dictionary is indexed by a pair of selector_id, submission_period
+    RecordIndexType = Tuple[int, int]
+    RecordDictType = Dict[RecordIndexType, MatchingRecord]
 
-    # can assume there will be *some* data in both recs1 and recs2
-    left = recs1.popleft()
-    right = recs2.popleft()
-
-    while left is not None:
-        while right.selector_id < left.selector_id:
-            right = recs2.popleft()
-
-        if left.selector_id != right.selector_id:
-            raise RuntimeError("Unexpected discrepancy between LHS and RHS selector_id")
-
-        if left.submission_period != right.submission_period:
-            raise RuntimeError("Unexpected discrepancy between LHS and RHS submission periods")
-
-        # if the records do not agree, then add it to the list of discrepant results
-        if (
-            diff_filter == "all"
-            and (left.project_id != right.project_id or left.marker_id != right.marker_id)
-            or diff_filter == "projects"
-            and (left.project_id != right.project_id)
-            or diff_filter == "markers"
-            and (left.marker_id != right.marker_id)
-        ):
-            if not flag or pclass_value == left.selector.config.pclass_id:
-                data.append((left, right))
-
-        if len(recs1) > 0:
-            left = recs1.popleft()
-            right = recs2.popleft()
+    def build_record_dict(attempt: MatchingAttempt) -> RecordDictType:
+        # query supplied MatchingAttempt for an ordered list of records, restricting by project class if required
+        if flag:
+            query = (attempt.records
+                     .join(SelectingStudent, SelectingStudent.id == MatchingRecord.selector_id)
+                     .join(ProjectClassConfig, ProjectClassConfig.id == SelectingStudent.config_id)
+                     .filter(ProjectClassConfig.pclass_id == pclass_value)
+                     )
         else:
-            left = None
+            query = attempt.records
+        recs: List[MatchingRecord] = query.order_by(MatchingRecord.selector_id.asc(), MatchingRecord.submission_period.asc())
 
-    return ajax.admin.compare_match_data(data)
+        # convert to a dictionary, indexed by
+        rec_dict: RecordDictType = {(rec.selector_id, rec.submission_period): rec for rec in recs}
+
+        return rec_dict
+
+    recs1 = build_record_dict(attempt1)
+    recs2 = build_record_dict(attempt2)
+
+    # obtain set of keys for each group of records
+    keys1 = recs1.keys()
+    keys2 = recs2.keys()
+
+    # find records that are common to both MatchingAttempt instances
+    common_keys = keys1 & keys2
+
+    # find records that are only in attempt1 or attempt1
+    attempt1_only_keys = keys1 - common_keys
+    attempt2_only_keys = keys2 - common_keys
+
+    # discrepant_records will hold the records that differ
+    discrepant_records = []
+
+    # iterate over common_keys and check for differences between the MatchingRecord cases
+    for key in common_keys:
+        key: RecordIndexType
+        rec1: MatchingRecord = recs1[key]
+        rec2: MatchingRecord = recs2[key]
+
+        if rec1.selector_id != rec2.selector_id:
+            raise RuntimeError("do_match_compare_ajax: rec1.selector_id and rec2.selector_id do not match")
+
+        if rec1.submission_period != rec2.submission_period:
+            raise RuntimeError("do_match_compare_ajax: rec1.submission_period and rec2.submission_period do not match")
+
+        # dictionary is indexed by user_id
+        RoleDictType = Dict[int, MatchingRole]
+
+        def get_role_dict(rec: MatchingRecord, role: int) -> RoleDictType:
+            roles: List[MatchingRole] = rec.roles.filter(MatchingRole.role == role)
+            role_dict: RoleDictType = {role.user_id: role for role in roles}
+
+            return role_dict
+
+        def get_supervisor_roles(rec: MatchingRecord) -> RoleDictType:
+            return get_role_dict(rec, MatchingRole.ROLE_SUPERVISOR)
+
+        def get_marker_roles(rec: MatchingRecord) -> RoleDictType:
+            return get_role_dict(rec, MatchingRole.ROLE_MARKER)
+
+        def get_moderator_roles(rec: MatchingRecord) -> RoleDictType:
+            return get_role_dict(rec, MatchingRole.ROLE_MODERATOR)
+
+        def find_record_changes(rec1: MatchingRecord, rec2: MatchingRecord, diff_filter: str) -> List[str]:
+            # is the project assignment different?
+            changes = []
+
+            if diff_filter == 'all' or diff_filter == 'projects':
+                if rec1.project_id != rec2.project_id:
+                    changes.append('project')
+
+            # check for differing supervisor roles
+            if diff_filter == 'all' or diff_filter == 'supervisor':
+                supervisors1: RoleDictType = get_supervisor_roles(rec1)
+                supervisors2: RoleDictType = get_supervisor_roles(rec2)
+                supervisors_diff = supervisors1.keys() ^ supervisors2.keys()
+                if len(supervisors_diff) > 0:
+                    changes.append('supervisor')
+
+            # check for differing marker roles
+            if diff_filter == 'all' or diff_filter == 'marker':
+                markers1: RoleDictType = get_marker_roles(rec1)
+                markers2: RoleDictType = get_marker_roles(rec2)
+                markers_diff = markers1.keys() ^ markers2.keys()
+                if len(markers_diff) > 0:
+                    changes.append('marker')
+
+            # check for differing moderator roles
+            if diff_filter == 'all' or diff_filter == 'moderator':
+                moderators1: RoleDictType = get_moderator_roles(rec1)
+                moderators2: RoleDictType = get_moderator_roles(rec2)
+                moderators_diff = moderators1.keys() ^ moderators2.keys()
+                if len(moderators_diff) > 0:
+                    changes.append('moderator')
+
+            return changes
+
+        # test whether there is a disagreement between records
+        changes: List[str] = find_record_changes(rec1, rec2, diff_filter)
+
+        # if so, add this record pair to the discrepant pile
+        if len(changes) > 0:
+            discrepant_records.append((rec1, rec2, changes))
+
+    # iterate over keys that are only in one match or the other
+    for key in attempt1_only_keys:
+        key: RecordIndexType
+        rec: MatchingRecord = recs1[key]
+
+        discrepant_records.append((rec, None, ['all']))
+
+    for key in attempt2_only_keys:
+        key: RecordIndexType
+        rec: MatchingRecord = recs2[key]
+
+        discrepant_records.append((None, rec, ['all']))
+
+    return ajax.admin.compare_match_data(discrepant_records)
 
 
 @admin.route("/merge_replace_records/<int:src_id>/<int:dest_id>")

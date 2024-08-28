@@ -7,7 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-
+from typing import Iterable
 
 from flask_login import current_user
 from sqlalchemy import or_
@@ -261,11 +261,24 @@ def GetMatchingAttempts(year, base_id):
     return attempts
 
 
-def GetComparatorMatches(year, self_id, pclasses, is_root):
-    q = db.session.query(MatchingAttempt).filter(MatchingAttempt.year == year, MatchingAttempt.id != self_id)
+def GetComparatorMatches(year, self_id: int, pclasses: ProjectClassConfig | int | Iterable[int] | None, is_root: bool):
+    if pclasses is None:
+        _pclasses = None
+    elif isinstance(pclasses, ProjectClass):
+        _pclasses = [pclasses.id]
+    elif isinstance(pclasses, int):
+        _pclasses = [pclasses]
+    elif isinstance(pclasses, Iterable) and not isinstance(pclasses, str):
+        _pclasses = pclasses
+    else:
+        raise TypeError(f"Unexpected type '{type(pclasses)}' for argument pclasses in GetComparatorMatches")
 
-    for pid in pclasses:
-        q = q.filter(MatchingAttempt.config_members.any(pclass_id=pid))
+    # comparison is only allowed to matching attempts from the same year
+    if _pclasses is not None:
+        q = db.session.query(MatchingAttempt).filter(MatchingAttempt.year == year, MatchingAttempt.id != self_id)
+
+    # if possible project classes are specified
+    q = q.filter(MatchingAttempt.config_members.any(ProjectClassConfig.pclass_id.in_(_pclasses)))
 
     if not is_root:
         q = q.filter(MatchingAttempt.published == True)

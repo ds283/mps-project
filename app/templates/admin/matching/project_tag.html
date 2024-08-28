@@ -1,8 +1,8 @@
 {% from "macros.html" import truncate %}
 {% from "swatch.html" import small_swatch %}
 
-{% macro project_tag(r, show_period, label_type, return_url) %}
-    {% set adjustable = r.selector.has_submission_list %}
+{% macro project_tag(r, show_period, label_type, return_url, can_adjust=true) %}
+    {% set adjustable = can_adjust and r.selector.has_submission_list %}
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     {% set has_issues = r.has_issues %}

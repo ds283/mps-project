@@ -10,6 +10,7 @@
 
 import re
 from functools import partial
+from typing import List
 
 from flask_security.forms import Form
 from wtforms import (
@@ -45,7 +46,7 @@ from ..models import (
     PresentationAssessment,
     DEFAULT_ASSIGNED_MARKERS,
     DEFAULT_ASSIGNED_MODERATORS,
-    DEFAULT_STRING_LENGTH,
+    DEFAULT_STRING_LENGTH, ProjectClassConfig,
 )
 from ..shared.forms.mixins import SaveChangesMixin, PeriodPresentationsMixin
 from ..shared.forms.queries import (
@@ -1276,7 +1277,7 @@ def RenameMatchFormFactory(year):
     return RenameMatchForm
 
 
-def CompareMatchFormFactory(year, self_id, pclasses, is_root):
+def CompareMatchFormFactory(year: int, self_id: int, pclasses: ProjectClassConfig | int | List[int] | None, is_root: bool):
     class CompareMatchForm(Form):
         target = QuerySelectField("Compare to", query_factory=partial(GetComparatorMatches, year, self_id, pclasses, is_root), get_label="name")
 

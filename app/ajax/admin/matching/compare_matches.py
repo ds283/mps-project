@@ -8,46 +8,60 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from typing import List, Optional, Tuple
+
 from flask import jsonify, get_template_attribute, render_template, current_app
 from jinja2 import Template, Environment
 
+from .match_view_student import get_match_student_emails
+from ....models import MatchingRecord, SelectingStudent, StudentData, User
+
 # language=jinja2
 _student = """
-<a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
+<div>
+    <a class="text-decoration-none" href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
+</div>
+{{ student_offcanvas(sel, emails, none) }}
 """
 
 
 # language=jinja2
-_cohort = """
-{{ simple_label(sel.student.programme.short_label) }}
-{{ simple_label(sel.academic_year_label(show_details=True)) }}
-{{ simple_label(sel.student.cohort_label) }}
+_pclass = """
+{% set config = sel.config %}
+{% set swatch_colour = config.project_class.make_CSS_style() %}
+<div class="d-flex flex-row justify-content-start align-items-center gap-2">
+    {{ small_swatch(swatch_colour) }}
+    <span class="small">{{ config.name }}</span>
+</div>
+<div class="d-flex flex-row justify-content-start align-items-center gap-2 small">
+    <i class="fas fa-user-circle"></i>
+    <a class="text-decoration-none" href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a>
+</div>
 """
 
 
 # language=jinja2
-_records = """
-{% if r.project_id != c.project_id %}
-    {% set pclass = r.selector.config.project_class %}
-    {% set style = pclass.make_CSS_style()|safe %}
-    <span class="badge bg-info" {% if style %}style="{{ style }}"{% endif %}>#{{ r.submission_period }}:
-        {{ r.supervisor.user.name }} (No. {{ r.project.number }})</span>
+_record_delta = """
+{% if rec is not none %}
+    {% if 'all' in changes or 'project' in changes or 'supervisor' in changes %}
+        <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+            {{ project_tag(rec, false, 1, none, false) }}
+        </div>
+    {% else %}
+        <div class="d-flex flex-column gap-1 justify-content-start align-items-start"><span class="small fw-semibold text-primary">PROJECT MATCH</span></div>
+    {% endif %}
+    {% if 'all' in changes or 'marker' in changes %}
+        <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+            {{ student_marker_tag(rec, false) }}
+        </div>
+    {% else %}
+        <div class="d-flex flex-column gap-1 justify-content-start align-items-start"><span class="small fw-semibold text-primary">MARKER MATCH</span></div>
+    {% endif %}
 {% else %}
-    <span class="badge bg-success">PROJECT MATCH</span>
+    <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+        <span class="text-danger fw-semibold">NOT PRESENT</span>
+    </div>
 {% endif %}
-{% if r.marker_id != c.marker_id %}
-    <span class="badge bg-secondary">#{{ r.submission_period }}:
-        {{ r.marker.user.name }}</span>
-{% else %}
-    <span class="badge bg-success">MARKER MATCH</span>
-{% endif %}
-"""
-
-
-# language=jinja2
-_delta = """
-<span class="badge {% if r.hi_ranked %}bg-success{% elif r.lo_ranked %}bg-warning text-dark{% else %}bg-info{% endif %}">{{ r.rank }}</span>
-<span class="badge bg-primary">&delta; = {{ r.delta }}</span>
 """
 
 
@@ -59,12 +73,22 @@ _menu = """
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.merge_replace_records', src_id=l.id, dest_id=r.id) }}">
-            <i class="fas fa-chevron-circle-right fa-fw"></i> Replace left to right
-        </a>
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.merge_replace_records', src_id=r.id, dest_id=l.id) }}">
-            <i class="fas fa-chevron-circle-left fa-fw"></i> Replace right to left
-        </a>
+        {% if l is not none and r is not none %}
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.merge_replace_records', src_id=l.id, dest_id=r.id) }}">
+                <i class="fas fa-chevron-circle-right fa-fw"></i> Replace left to right
+            </a>
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.merge_replace_records', src_id=r.id, dest_id=l.id) }}">
+                <i class="fas fa-chevron-circle-left fa-fw"></i> Replace right to left
+            </a>
+        {% elif l is not none %}
+            <a class="dropdown-item d-flex gap-2" href="#">
+                <i class="fas fa-chevron-circle-right fa-fw"></i> Copy to right
+            </a>
+        {% elif r is not none %}
+            <a class="dropdown-item d-flex gap-2" href="#">
+                <i class="fas fa-chevron-circle-left fa-fw"></i> Copy to left
+            </a>
+        {% endif %}
     </div>
 </div>
 """
@@ -75,19 +99,14 @@ def _build_student_templ() -> Template:
     return env.from_string(_student)
 
 
-def _build_cohort_templ() -> Template:
+def _build_pclass_templ() -> Template:
     env: Environment = current_app.jinja_env
-    return env.from_string(_cohort)
+    return env.from_string(_pclass)
 
 
-def _build_records_templ() -> Template:
+def _build_record_delta_templ() -> Template:
     env: Environment = current_app.jinja_env
-    return env.from_string(_records)
-
-
-def _build_delta_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string(_delta)
+    return env.from_string(_record_delta)
 
 
 def _build_menu_templ() -> Template:
@@ -95,29 +114,64 @@ def _build_menu_templ() -> Template:
     return env.from_string(_menu)
 
 
-def compare_match_data(records):
-    simple_label = get_template_attribute("labels.html", "simple_label")
+RecordDeltaType = Tuple[Optional[MatchingRecord], Optional[MatchingRecord], List[str]]
+RecordDeltaListType = List[RecordDeltaType]
+
+
+def compare_match_data(records: RecordDeltaListType):
+    small_swatch = get_template_attribute("swatch.html", "small_swatch")
+
+    student_offcanvas = get_template_attribute("admin/matching/student_offcanvas.html", "student_offcanvas")
+    project_tag = get_template_attribute("admin/matching/project_tag.html", "project_tag")
+    student_marker_tag = get_template_attribute("admin/matching/marker_tag.html", "student_marker_tag")
 
     student_templ: Template = _build_student_templ()
-    cohort_templ: Template = _build_cohort_templ()
-    records_templ: Template = _build_records_templ()
-    delta_templ: Template = _build_delta_templ()
+    pclass_templ: Template = _build_pclass_templ()
+    record_delta_templ: Template = _build_record_delta_templ()
     menu_templ: Template = _build_menu_templ()
 
-    data = [
-        {
+    def get_selecting_student(pair: RecordDeltaType) -> Optional[SelectingStudent]:
+        if pair[0] is not None:
+            return pair[0].selector
+
+        if pair[1] is not None:
+            return pair[1].selector
+
+        return None
+
+    def build_render_data(pair: RecordDeltaType) -> Optional[dict]:
+        l: MatchingRecord = pair[0]
+        r: MatchingRecord = pair[1]
+        sel: SelectingStudent = get_selecting_student(pair)
+
+        if sel is None:
+            return None
+
+        changes = pair[2]
+        if changes is None:
+            return None
+
+        sd: StudentData = sel.student
+        user: User = sd.user
+
+        sort_value = user.last_name + user.first_name
+
+        return {
             "student": {
-                "display": render_template(student_templ, sel=l.selector),
-                "sortvalue": l.selector.student.user.last_name + l.selector.student.user.first_name,
+                "display": render_template(
+                    student_templ,
+                    sel=sel,
+                    emails=get_match_student_emails(sel),
+                    student_offcanvas=student_offcanvas
+                ),
+                "sortvalue": sort_value
             },
-            "cohort": render_template(cohort_templ, sel=l.selector, simple_label=simple_label),
-            "record1": render_template(records_templ, r=l, c=r),
-            "delta1": {"display": render_template(delta_templ, r=l), "sortvalue": l.delta},
-            "record2": render_template(records_templ, r=r, c=l),
-            "delta2": {"display": render_template(delta_templ, r=r), "sortvalue": r.delta},
+            "pclass": render_template(pclass_templ, sel=sel, small_swatch=small_swatch),
+            "record1": render_template(record_delta_templ, rec=l, changes=changes, project_tag=project_tag, student_marker_tag=student_marker_tag),
+            "record2": render_template(record_delta_templ, rec=r, changes=changes, project_tag=project_tag, student_marker_tag=student_marker_tag),
             "menu": render_template(menu_templ, l=l, r=r),
         }
-        for l, r in records
-    ]
 
-    return jsonify(data)
+    data = [build_render_data(pair) for pair in records]
+    data_stripped = [d for d in data if d is not None]
+    return jsonify(data_stripped)

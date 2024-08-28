@@ -14,7 +14,7 @@ from flask import jsonify, get_template_attribute, render_template, current_app
 from jinja2 import Template, Environment
 
 from .match_view_student import get_match_student_emails
-from ....models import MatchingRecord, SelectingStudent, StudentData, User
+from ....models import MatchingRecord, SelectingStudent, StudentData, User, ProjectClassConfig
 
 # language=jinja2
 _student = """
@@ -50,7 +50,7 @@ _record_delta = """
                 {{ project_tag(rec, config.number_submissions > 1, 1, none, false) }}
             </div>
         {% else %}
-            <div class="d-flex flex-column gap-1 justify-content-start align-items-start"><span class="small fw-semibold text-secondary">PROJECT MATCH</span></div>
+            <div class="d-flex flex-column gap-1 justify-content-start align-items-start"><span class="small fw-semibold text-secondary">s>PROJECT MATCH</s></span></div>
         {% endif %}
         {% if 'all' in changes or 'marker' in changes %}
             <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
@@ -58,12 +58,12 @@ _record_delta = """
                 {{ student_marker_tag(rec, false) }}
             </div>
         {% else %}
-            <div class="d-flex flex-column gap-1 justify-content-start align-items-start"><span class="small fw-semibold text-secondary">MARKING MATCH</span></div>
+            <div class="d-flex flex-column gap-1 justify-content-start align-items-start"><span class="small fw-semibold text-secondary"><s>MARKING MATCH</s></span></div>
         {% endif %}
     </div>
 {% else %}
     <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
-        <span class="text-danger fw-semibold">NOT PRESENT</span>
+        <span class="text-danger small fw-semibold"><s>NOT PRESENT</s></span>
     </div>
 {% endif %}
 """

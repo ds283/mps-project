@@ -8,8 +8,8 @@ student meetings over the last semester. We now have a draft of the student
 project allocation.
 
 This notification includes information only about the following project types:
-{% for config in attempt.config_members %}
--- {{ config.project_class.name }}
+{%- for config in attempt.config_members %}
+ - {{ config.project_class.name }}
 {%- endfor %}
 If you are involved in supervising other types of project, these will be advised separately.
 
@@ -17,8 +17,8 @@ The students we are proposing that you supervise are:
 {% for key in matches %}
 {%- set match_list = matches[key] -%}
 {%- set config = match_list[0].selector.config %}
--- {{ config.name }}
-convenor {{ config.convenor_name }} <{{ config.convenor_email }}>
+** {{ config.name }} **
+convenor {{ config.convenor_simple_name }} <{{ config.convenor_email }}>
 {% for item in match_list %}
 {% if config.project_class.number_submissions > 1 -%}
 {%- set period = config.project_class.get_period(item.submission_period) -%}

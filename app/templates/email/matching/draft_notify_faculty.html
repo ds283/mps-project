@@ -19,7 +19,8 @@
 {% for key in matches %}
 {%- set match_list = matches[key] -%}
 {%- set config = match_list[0].selector.config %}
-<li><strong>{{ config.name }}</strong> convenor <a href="mailto:{{ config.convenor_email }}">{{ config.convenor_name }}</a>
+    <li><strong>{{ config.name }}</strong> convenor <a
+            href="mailto:{{ config.convenor_email }}">{{ config.convenor_simple_name }}</a>
 <ol>
 {% for item in match_list %}
     {% if config.project_class.number_submissions > 1 -%}

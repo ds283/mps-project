@@ -2237,6 +2237,11 @@ class User(db.Model, UserMixin):
 
         return prefix + self.first_name + " " + self.last_name
 
+    # build a simplified name without prefixes
+    @property
+    def simple_name(self):
+        return self.first_name + " " + self.last_name
+
     @property
     def name_and_username(self):
         return self.name + " (" + self.username + ")"
@@ -5067,6 +5072,10 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     def convenor_name(self):
         return self.convenor.user.name
 
+    @property
+    def convenor_simple_name(self):
+        return self.convenor.user.simple_name
+
     def is_convenor(self, id):
         """
         Determine whether a given user 'id' is a convenor for this project class
@@ -6240,6 +6249,13 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     def convenor_name(self):
         if self.convenor is not None and self.convenor.user is not None:
             return self.convenor.user.name
+        else:
+            raise RuntimeError("convenor not set")
+
+    @property
+    def convenor_simple_name(self):
+        if self.convenor is not None and self.convenor.user is not None:
+            return self.convenor.user.simple_name
         else:
             raise RuntimeError("convenor not set")
 

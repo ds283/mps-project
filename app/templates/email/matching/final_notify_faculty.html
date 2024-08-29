@@ -2,7 +2,20 @@
 
 <p><strong>This email is sent from an automated address. Please don't reply to it directly, because your email won't reach us.</strong></p>
 
-<p>Thank you for your efforts in preparing project descriptions and accommodating student meetings in the last term.</p>
+<p>Thank you for your efforts in preparing project descriptions and accommodating student meetings over the last
+    semester.
+    We are now able to advise you of the students that you have been allocated.</p>
+
+<p>You may already have been advised of a draft allocation. This email is confirmation of the final allocation,
+    but it should not be different unless changes have been discussed with you beforehand.</p>
+
+<p>This notification includes information only about the following project types:</p>
+<ul>
+    {% for config in attempt.config_members %}
+        <li>{{ config.project_class.name }}</li>
+    {%- endfor %}
+</ul>
+<p>If you are involved in supervising other types of project, these will be advised separately.</p>
 
 <p>The students we are asking you to supervise are:</p>
 

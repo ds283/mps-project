@@ -2,9 +2,19 @@
 
 <p><strong>This email is sent from an automated address. Please don't reply to it directly, because your email won't reach us.</strong></p>
 
-<p>Thank you for your efforts in preparing project descriptions and accommodating student meetings over the last term.
+<p>Thank you for your efforts in preparing project descriptions and accommodating student meetings over the last
+    semester.
     We now have a draft of the student project allocation.</p>
 
+<p>This notification includes information only about the following project types:</p>
+<ul>
+    {% for config in attempt.config_members %}
+        <li>{{ config.project_class.name }}</li>
+    {%- endfor %}
+</ul>
+<p>If you are involved in supervising other types of project, these will be advised separately.</p>
+
+<p>The students we are proposing that you supervise are:</p>
 <ul>
 {% for key in matches %}
 {%- set match_list = matches[key] -%}

@@ -4,7 +4,18 @@ This email is sent from an automated address. Please don't reply to it
 directly, because your email won't reach us.
 
 Thank you for your efforts in preparing project descriptions and accommodating
-student meetings in the last term.
+student meetings over the last semester. We are now able to advise you of the
+students that you have been allocated.
+
+You may already have been advised of a draft allocation. This email is
+confirmation of the final allocation, but it should not be different unless
+changes have been discussed with you beforehand.
+
+This notification includes information only about the following project types:
+{% for config in attempt.config_members %}
+-- {{ config.project_class.name }}
+{%- endfor %}
+If you are involved in supervising other types of project, these will be advised separately.
 
 The students we are asking you to supervise are:
 {% for key in matches %}

@@ -1056,7 +1056,7 @@ def selectors_ajax(id):
             QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_UNAVAILABLE: {
                 "msg": "Populate (incl. unavailable)...",
                 "url": url_for("convenor.force_convert_bookmarks", sel_id=s.id, converted=0, no_submit_IP=1, force=1, reset=0, force_unavailable=1),
-            }
+            },
         }
 
     return ajax.convenor.selectors_data(data, config, quickfix_factory=_quickfixes)
@@ -1150,9 +1150,14 @@ def enrol_selectors(id):
     if prog_filter is None and session.get("convenor_sel_enroll_prog_filter"):
         prog_filter = session["convenor_sel_enroll_prog_filter"]
 
-    candidates = build_enrol_selector_candidates(
-        config, disable_programme_filter=True if isinstance(prog_filter, str) and prog_filter.lower() != "all" else False
-    )
+    prog_flag, prog_value = is_integer(prog_filter)
+
+    if not prog_flag:
+        if prog_filter not in ["all", "off"]:
+            prog_filter = "all"
+
+    disable = True if (prog_flag or (isinstance(prog_filter, str) and prog_filter.lower() == "off")) else False
+    candidates = build_enrol_selector_candidates(config, disable_programme_filter=disable)
 
     # build list of available cohorts and degree programmes
     cohorts = set()
@@ -1248,13 +1253,13 @@ def enrol_selectors_ajax(id):
     ):
         return jsonify({})
 
-    disable = True if (isinstance(prog_filter, str) and prog_filter.lower() != "all") else False
-    candidates = build_enrol_selector_candidates(config, disable_programme_filter=disable)
-
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
     prog_flag, prog_value = is_integer(prog_filter)
     year_flag, year_value = is_integer(year_filter)
+
+    disable = True if (prog_flag or (isinstance(prog_filter, str) and prog_filter.lower() == "off")) else False
+    candidates = build_enrol_selector_candidates(config, disable_programme_filter=disable)
 
     if cohort_flag:
         candidates = candidates.filter(StudentData.cohort == cohort_value)

@@ -515,9 +515,8 @@ def _build_generic_enroll_candidate(config: ProjectClassConfig, year_offset: int
     candidate_students = _build_candidates(allowed_programmes, config.student_level, first_year, last_year)
 
     # build a list of existing selecting students associated with this ProjectClassConfig instance
-    existing_students = db.session.query(StudentRecordType.student_id).filter(StudentRecordType.config_id == config.id, ~StudentRecordType.retired)
-
-    existing_students = existing_students.subquery()
+    existing_students = db.session.query(StudentRecordType.student_id).filter(StudentRecordType.config_id == config.id,
+                                                                              ~StudentRecordType.retired).subquery()
 
     # find students in candidates who are not also in selectors
     # StudentData model in this expression references the query candidate_students, which selects a list of

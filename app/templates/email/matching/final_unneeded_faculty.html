@@ -1,12 +1,25 @@
 <p>Dear {{ user.first_name }}</p>
 
-<p>This email is sent from an automated address. Please don't reply to it directly, because your email won't reach us.</p>
+<p>This email is sent from an automated address. Please don't reply to it directly, because your email won't reach
+    us.</p>
 
-<p>Thank you for your efforts in preparing project descriptions and accommodating student meetings over the last term. The final project allocation is now available, and the good news is that we have not needed to allocate you any projects to supervise next year.</p>
+<p>Thank you for your efforts in preparing project descriptions and accommodating student meetings over the last
+    semester. The final project allocation is now available, and the good news is that we have not needed to allocate
+    you any projects to supervise next year.</p>
 
-<p>There is a very small possibility that we may need to reshuffle some project allocations near the start of teaching. Hopefully this will not occur,
-but if it does, we will be in touch with you individually where relevant. Thank you for your patience during this process.</p>
+<p>This notification includes information only about the following project types:</p>
+<ul>
+    {% for config in attempt.config_members %}
+        <li>{{ config.project_class.name }}</li>
+    {%- endfor %}
+</ul>
+<p>If you are involved in supervising other types of project, these will be advised separately.</p>
+
+<p>There is a very small possibility that we may need to reshuffle some project allocations near the start of teaching.
+    Hopefully this will not occur,
+    but if it does, we will be in touch with you individually where relevant. Thank you for your patience during this
+    process.</p>
 
 <p>Best wishes<br>
-the project convenors
+    the project convenors
 </p>

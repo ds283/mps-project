@@ -4,14 +4,22 @@ This email is sent from an automated address. Please don't reply to
 it directly, because your email won't reach us.
 
 Thank you for your efforts in preparing project descriptions and accommodating
-student meetings over the last term. We now have a draft of the student
-project allocation for next academic year, {{ attempt.submit_year_a }}-{{ attempt.submit_year_b }}.
+student meetings over the last semester. We now have a draft of the student
+project allocation.
+
+This notification includes information only about the following project types:
+{%- for config in attempt.config_members %}
+ - {{ config.project_class.name }}
+{%- endfor %}
+If you are involved in supervising other types of project, these will be advised separately.
 
 At this stage you have not been allocated any projects to supervise next year.
 However, as usual, a small number of students have not yet been allocated
-projects. These situations will hopefully resolve shortly, and as part of
-this process we may contact you to discuss the possibility of supervising
-a student. Please bear with us as we work through these cases.
+projects because their progression outcomes only recently became known.
+
+These situations will hopefully be resolved shortly, and as part of this
+process we may contact you to discuss the possibility of supervising a
+student. Please bear with us as we work through these cases.
 
 Best wishes,
 the project convenors

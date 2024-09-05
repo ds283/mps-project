@@ -13041,6 +13041,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
                 and_(marker_matching_table.c.match_id == self.id, marker_matching_table.c.marker_id == FacultyData.id),
                 isouter=True,
             )
+            .filter(or_(supervisors_matching_table.c.match_id != None, marker_matching_table.c.match_id != None))
             .distinct()
         )
 

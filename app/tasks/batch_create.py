@@ -441,6 +441,7 @@ def _get_course_code(row, current_line) -> DegreeProgramme:
         "bsc theoretical physics": "F3016U",
         "bsc phys and astro (fdn)": "F3002U",
         "bsc physics and astronomy (with a foundation year)": "F3002U",
+        "bsc physics with astrophysics (with an industrial placement year)": "F3150U",
         "mphys astrophysics": "F3029U",
         "mphys astrophysics (with an industrial placement year)": "F3030U",
         "mphys physics": "F3028U",

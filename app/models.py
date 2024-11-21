@@ -5966,7 +5966,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
         # if gone live and closed, then either we are ready to match or we are ready to rollover
         if self.live and self.selection_closed:
-            if self.do_matching:
+            if self.do_matching and self.select_in_previous_cycle:
                 # check whether a matching configuration has been assigned for the current year
                 match = self.allocated_match
 

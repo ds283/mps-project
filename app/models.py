@@ -5934,7 +5934,7 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
         selector_tasks = []
         for sel in selectors:
-            tks = sel.tasks.any(and_(~ConvenorSelectorTask.complete, ~ConvenorSelectorTask.dropped, ConvenorSelectorTask.blocking)).all()
+            tks = sel.tasks.filter(and_(~ConvenorSelectorTask.complete, ~ConvenorSelectorTask.dropped, ConvenorSelectorTask.blocking)).all()
             selector_tasks.extend(tks)
 
         submitters: List[SubmittingStudent] = self.submitting_students.filter(
@@ -5943,15 +5943,15 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
         submitter_tasks = []
         for sub in submitters:
-            tks = sub.tasks.any(and_(~ConvenorSubmitterTask.complete, ~ConvenorSubmitterTask.dropped, ConvenorSubmitterTask.blocking)).all()
+            tks = sub.tasks.filter(and_(~ConvenorSubmitterTask.complete, ~ConvenorSubmitterTask.dropped, ConvenorSubmitterTask.blocking)).all()
             submitter_tasks.extend(tks)
 
-        glob: List[ConvenorGenericTask] = self.tasks.filter(
+        global_tasks: List[ConvenorGenericTask] = self.tasks.filter(
             and_(~ConvenorGenericTask.complete, ~ConvenorGenericTask.dropped, ConvenorGenericTask.blocking)).all()
 
-        tasks = {"selector": selector_tasks, "submitter": submitter_tasks, "global": glob}
+        tasks = {"selector": selector_tasks, "submitter": submitter_tasks, "global": global_tasks}
 
-        num_tasks = len(selector_tasks) + len(submitter_tasks) + len(glob)
+        num_tasks = len(selector_tasks) + len(submitter_tasks) + len(global_tasks)
 
         return tasks, num_tasks
 

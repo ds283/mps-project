@@ -7,8 +7,9 @@
     {% set number = submitter|length + selector|length + global|length %}
     {% if number > 0 %}
         <div class="mt-3">
-            {% call icon_block("exclamation-circle") %}
-                <div><strong>The following tasks must be resolved before it is possible to proceed.</strong></div>
+            {% call icon_block("exclamation-circle", icon_classes="text-danger") %}
+                <div class="text-danger"><strong>The following tasks must be resolved before it is possible to
+                    proceed.</strong></div>
                 {% if submitter|length > 0 %}
                     <div><strong>Submitters</strong></div>
                     <ul>

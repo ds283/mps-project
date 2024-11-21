@@ -5928,21 +5928,30 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
     @property
     def get_blocking_tasks(self):
-        tasks = {}
-
-        selector = self.selecting_students.filter(
+        selectors: List[SelectingStudent] = self.selecting_students.filter(
             SelectingStudent.tasks.any(and_(~ConvenorSelectorTask.complete, ~ConvenorSelectorTask.dropped, ConvenorSelectorTask.blocking))
         ).all()
 
-        submitter = self.submitting_students.filter(
+        selector_tasks = []
+        for sel in selectors:
+            tks = sel.tasks.any(and_(~ConvenorSelectorTask.complete, ~ConvenorSelectorTask.dropped, ConvenorSelectorTask.blocking)).all()
+            selector_tasks.extend(tks)
+
+        submitters: List[SubmittingStudent] = self.submitting_students.filter(
             SubmittingStudent.tasks.any(and_(~ConvenorSubmitterTask.complete, ~ConvenorSubmitterTask.dropped, ConvenorSubmitterTask.blocking))
         ).all()
 
-        glob = self.tasks.filter(and_(~ConvenorGenericTask.complete, ~ConvenorGenericTask.dropped, ConvenorGenericTask.blocking)).all()
+        submitter_tasks = []
+        for sub in submitters:
+            tks = sub.tasks.any(and_(~ConvenorSubmitterTask.complete, ~ConvenorSubmitterTask.dropped, ConvenorSubmitterTask.blocking)).all()
+            submitter_tasks.extend(tks)
 
-        tasks = {"selector": selector, "submitter": submitter, "global": glob}
+        glob: List[ConvenorGenericTask] = self.tasks.filter(
+            and_(~ConvenorGenericTask.complete, ~ConvenorGenericTask.dropped, ConvenorGenericTask.blocking)).all()
 
-        num_tasks = len(selector) + len(submitter) + len(glob)
+        tasks = {"selector": selector_tasks, "submitter": submitter_tasks, "global": glob}
+
+        num_tasks = len(selector_tasks) + len(submitter_tasks) + len(glob)
 
         return tasks, num_tasks
 

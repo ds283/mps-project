@@ -48,6 +48,7 @@
 
 {% macro pre_selections_open(offered_variants, config, home_dashboard_url) %}
     {% for desc in offered_variants %}
+        {% set pclass = config.project_class %}
         {% set project = desc.parent %}
         {% set available = project.is_offerable %}
         <div class="row vertical-top mb-1">

@@ -46,7 +46,7 @@
     </div>
 {% endmacro %}
 
-{% macro pre_selections_open(offered_variants, config, home_dashboard_url) %}
+{% macro pre_selections_open(offered_variants, config, faculty_data, home_dashboard_url) %}
     {% for desc in offered_variants %}
         {% set pclass = config.project_class %}
         {% set project = desc.parent %}
@@ -424,7 +424,7 @@
                 {{ missing_aims_notify(config, variants_missing_aims, confirm_required) }}
             {% endif %}
             {% if nproj > 0 and sel_state < config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                {{ pre_selections_open(offered_variants, config, home_dashboard_url) }}
+                {{ pre_selections_open(offered_variants, config, faculty_data, home_dashboard_url) }}
             {% endif %}
 
             {# show details about projects on the live system #}

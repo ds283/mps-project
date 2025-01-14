@@ -7,7 +7,7 @@ billiard==4.2.0
 bleach==6.1.0
 bleach-whitelist==0.0.11
 blinker==1.8.2
-bokeh==3.5.1
+bokeh==3.6.2
 boto3==1.35.7
 botocore==1.35.7
 cachelib==0.9.0
@@ -24,7 +24,7 @@ colorhash==2.0.0
 colour==0.1.5
 configparser==7.1.0
 contourpy==1.3.0
-cryptography==43.0.0
+cryptography==43.0.1
 cssmin==0.2.0
 decorator==5.1.1
 Deprecated==1.2.14
@@ -99,7 +99,7 @@ pyasn1_modules==0.4.0
 pycparser==2.22
 Pygments==2.18.0
 pyinstrument==4.7.2
-pymongo==4.8.0
+pymongo==4.10.1
 PyMuPDF==1.24.9
 PyMuPDFb==1.24.9
 PyMySQL==1.1.1
@@ -122,14 +122,14 @@ tornado==6.4.2
 tzdata==2024.1
 tzlocal==2.0.0
 url-normalize==1.4.3
-urllib3==1.26.19
+urllib3==1.26.20
 validators==0.33.0
 vine==5.1.0
 wcwidth==0.2.13
 webassets==2.0
 webencodings==0.5.1
 WebOb==1.8.8
-Werkzeug==3.0.4
+Werkzeug==3.0.6
 wrapt==1.16.0
 WTForms==3.1.2
 WTForms-Alchemy==0.18.0

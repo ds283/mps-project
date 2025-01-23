@@ -107,3 +107,60 @@
         {{ unformatted_label_impl(label_data, user_classes=user_classes, popover_text=popover_text, popover_as_tooltip=false, tag=tag, prefix=prefix, suffix=suffix) }}
     {%- endif -%}
 {% endmacro %}
+
+{% macro textonly_label_impl(label_data, user_classes=none, popover_text=none, popover_as_tooltip=false, prefix=none, suffix=none) %}
+    {% if label_data is mapping %}
+        {%- set label = label_data['label'] if 'label' in label_data else none %}
+        {%- set style = label_data['style'] if 'style' in label_data else none %}
+        {%- set type = label_data['type'] if 'type' in label_data else none %}
+        {%- set fw = label_data['fw'] if 'fw' in label_data else none %}
+        {%- set popover_str = label_data['popover'] if 'popover' in label_data else popover_text %}
+        {%- set prefix = label_data['prefix'] if 'prefix' in label_data else prefix %}
+        {%- set suffix = label_data['suffix'] if 'suffix' in label_data else suffix %}
+        {%- if popover_str is iterable and popover_str is not string %}
+            {%- set popover_str = popover_str|wrap_list('<div>', '</div>')|join -%}
+        {%- endif -%}
+        {% if type is not none %}
+            <span class="text-{{ type }} {% if fw is not none %}fw-{{ fw }}{% endif %}
+                    {% if user_classes is not none %}{{ user_classes }}{% endif %}"
+                    {%- if popover_str is not none %}{% if popover_as_tooltip %} data-bs-toggle="tooltip"
+                  data-bs-html="true" title="{{ popover_str }}"{% else %} tabindex="0" data-bs-toggle="popover"
+                  data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ popover_str }}"
+                    {% endif %}{% endif %}>
+                {%- if prefix -%}{{ prefix|safe }} {% endif -%}{{ label|safe }}{%- if suffix %}
+                    {{ suffix|safe }}{%- endif -%}
+                {%- if popover_str is not none and not popover_as_tooltip -%}
+                    <i class="ms-1 fas fa-chevron-right"></i>{%- endif -%}
+            </span>
+        {% else %}
+            <span class="text-secondary {% if fw is not none %}fw-{{ fw }}{% endif %}
+                    {% if user_classes is not none %}{{ user_classes }}{% endif %}"
+                    {%- if style is not none %} style="{{ style }}"{% endif %}
+                    {%- if popover_str is not none %}{% if popover_as_tooltip %} data-bs-toggle="tooltip"
+                  data-bs-html="true" title="{{ popover_str }}"{% else %} tabindex="0" data-bs-toggle="popover"
+                  data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ popover_str }}"
+                    {% endif %}{% endif %}>
+                {%- if prefix -%}{{ prefix|safe }} {% endif -%}{{ label|safe }}{%- if suffix %}
+                    {{ suffix|safe }}{%- endif -%}
+                {%- if popover_str is not none and not popover_as_tooltip -%}
+                    <i class="ms-1 fas fa-chevron-right"></i>{%- endif -%}
+            </span>
+        {% endif %}
+    {% elif label_data is none %}
+        <span class="text-danger {% if fw is not none %}fw-{{ fw }}{% endif %}
+                {% if user_classes is not none %}{{ user_classes }}{% endif %}">UI error</span>
+    {% else %}
+        <span class="text-danger {% if fw is not none %}fw-{{ fw }}{% endif %}
+                {% if user_classes is not none %}{{ user_classes }}{% endif %}">UI error</span>
+    {% endif %}
+{% endmacro %}
+
+{% macro textonly_label(label_data, user_classes=none, popover_text=none, popover_as_tooltip=false, prefix=none, suffix=none) %}
+    {%- if label_data is iterable and label_data is not string and label_data is not mapping -%}
+        {%- for label in label_data -%}
+            {{ textonly_label_impl(label, user_classes=user_classes, prefix=prefix, suffix=suffix) }}
+        {%- endfor -%}
+    {%- else -%}
+        {{ textonly_label_impl(label_data, user_classes=user_classes, popover_text=popover_text, popover_as_tooltip=popover_as_tooltip, prefix=prefix, suffix=suffix) }}
+    {%- endif -%}
+{% endmacro %}

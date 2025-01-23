@@ -3076,6 +3076,32 @@ class FacultyData(db.Model, EditingMetadataMixin):
         EncryptedType(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), _get_key, AesGcmEngine, "pkcs5"), default=None, nullable=True
     )
 
+    def _supervisor_pool_query(self, pclass):
+        if isinstance(pclass, ProjectClass):
+            pclass_id = pclass.id
+        elif isinstance(pclass, int):
+            pclass_id = pclass
+        else:
+            raise RuntimeError("Could not interpret pclass parameter of type {typ} in FacultyData._projects_offered_query".format(typ=type(pclass)))
+
+        return db.session.query(Project).filter(
+            Project.active == True,
+            Project.project_classes.any(id=pclass_id),
+            Project.generic == True,
+            Project.supervisors.any(id == self.id)
+        )
+
+    def projects_supervisor_pool(self, pclass):
+        return self._supervisor_pool_query(pclass)
+
+    def number_supervisor_pool(self, pclass):
+        return get_count(self._supervisor_pool_query(pclass))
+
+    def supervisor_pool_label(self, pclass):
+        n = self.number_supervisor_pool(pclass)
+
+        return {"label": "In pool for: 0", "type": "info"}
+
     def _projects_supervisable_query(self, pclass):
         if isinstance(pclass, ProjectClass):
             pclass_id = pclass.id
@@ -3103,6 +3129,14 @@ class FacultyData(db.Model, EditingMetadataMixin):
     def number_projects_supervisable(self, pclass):
         return get_count(self._projects_supervisable_query(pclass))
 
+    def projects_supervisable_label(self, pclass):
+        n = self.number_projects_supervisable(pclass)
+
+        if n == 0:
+            return {"label": "0 supervisable", "type": "danger", "fw": "semibold"}
+
+        return {"label": f"{n} supervisable", "type": "success"}
+
     def _projects_offered_query(self, pclass):
         if isinstance(pclass, ProjectClass):
             pclass_id = pclass.id
@@ -3127,9 +3161,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
         n = self.number_projects_offered(pclass)
 
         if n == 0:
-            return {"label": "0 available", "type": "danger"}
+            return {"label": "0 offered", "type": "warning", "fw": "semibold"}
 
-        return {"label": f"{n} available", "type": "success"}
+        return {"label": f"{n} offered", "type": "success"}
 
     def variants_offered(self, pclass, filter_warnings=None, filter_errors=None):
         if isinstance(pclass, ProjectClass):
@@ -3437,9 +3471,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
         num = self.number_assessor
 
         if num == 0:
-            return {"label": "Assessor for 0", "type": "secondary"}
+            return {"label": "Assessor for: 0", "type": "secondary"}
 
-        return {"label": f"Assessor for {num}", "type": "info"}
+        return {"label": f"Assessor for: {num}", "type": "info"}
 
     def _apply_assignment_filters(self, role, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
         # at most one of config_id, config, pclass_id, pclass should be defined

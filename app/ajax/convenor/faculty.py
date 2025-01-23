@@ -75,8 +75,10 @@ _golive = """
 
 # language=jinja2
 _projects = """
-{{ simple_label(d.projects_offered_label(pclass)) }}
+{{ simple_label(d.projects_supervisable_label(pclass)) }}
 {{ simple_label(d.projects_unofferable_label) }}
+{{ simple_label(d.projects_offered_label(pclass)) }}
+{{ simple_label(d.supervisor_pool_label(pclass)) }}
 {{ simple_label(d.assessor_label) }}
 """
 
@@ -144,6 +146,7 @@ def _build_menu_templ() -> Template:
 
 def faculty_data(pclass: ProjectClass, config: ProjectClassConfig, row_list: List[Tuple[User, FacultyData]]):
     simple_label = get_template_attribute("labels.html", "simple_label")
+    # textonly_label = get_template_attribute("labels.html", "textonly_label")
 
     name_templ: Template = _build_name_templ()
     enrolments_templ: Template = _build_enrolments_templ()

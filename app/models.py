@@ -3088,7 +3088,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             Project.active == True,
             Project.project_classes.any(id=pclass_id),
             Project.generic == True,
-            Project.supervisors.any(id == self.id)
+            Project.supervisors.any(id=self.id)
         )
 
     def projects_supervisor_pool(self, pclass):
@@ -3100,7 +3100,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
     def supervisor_pool_label(self, pclass):
         n = self.number_supervisor_pool(pclass)
 
-        return {"label": "In pool for: 0", "type": "info"}
+        return {"label": f"In pool for: {n}", "type": "info"}
 
     def _projects_supervisable_query(self, pclass):
         if isinstance(pclass, ProjectClass):
@@ -3117,7 +3117,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             or_(
                 and_(
                     Project.generic == True,
-                    Project.supervisors.any(id == self.id)
+                    Project.supervisors.any(id=self.id)
                 ),
                 Project.owner_id == self.id
             )

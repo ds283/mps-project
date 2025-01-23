@@ -657,7 +657,7 @@ def faculty(id):
     if state_filter is None and session.get("convenor_faculty_state_filter"):
         state_filter = session["convenor_faculty_state_filter"]
 
-    if state_filter not in ["all", "no-projects", "unofferable", "no-supervisor", "no-marker", "custom-cats"]:
+    if state_filter not in ["all", "no-projects", "unofferable", "no-supervisor", "supervisor-pool", "no-marker", "custom-cats"]:
         state_filter = "all"
 
     if state_filter is not None:
@@ -857,6 +857,9 @@ def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClass
         if state_filter == "no-supervisor" and pclass.uses_supervisor:
             return er is not None and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED and fd.number_projects_supervisable(pclass) == 0
 
+        if state_filter == "supervisor-pool" and pclass.uses_supervisor:
+            return fd.number_supervisor_pool(pclass) > 0
+
         if state_filter == "no-marker" and pclass.uses_marker:
             return er is not None and er.marker_state == EnrollmentRecord.SUPERVISOR_ENROLLED and fd.number_assessor == 0
 
@@ -866,7 +869,12 @@ def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClass
         if state_filter == "custom-cats":
             return (
                     er is not None
-                    and (er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED or er.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+                    and (
+                            er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
+                            or er.marker_state == EnrollmentRecord.MARKER_ENROLLED
+                            or er.moderator_state == EnrollmentRecord.MODERATOR_ENROLLED
+                            or er.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED
+                    )
             ) and _has_custom_CATS(fd, pclass)
 
         return True

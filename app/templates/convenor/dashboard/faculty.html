@@ -141,6 +141,10 @@
                                class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'no-supervisor' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                 Cannot be supervisor
                             </a>
+                            <a href="{{ url_for('convenor.faculty', id=pclass.id, enrol_filter=enrol_filter, state_filter='supervisor-pool') }}"
+                               class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'supervisor-pool' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                In generic supervision pool
+                            </a>
                         {% endif %}
                         {% if pclass.uses_marker %}
                             <a href="{{ url_for('convenor.faculty', id=pclass.id, enrol_filter=enrol_filter, state_filter='no-marker') }}"

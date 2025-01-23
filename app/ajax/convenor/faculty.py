@@ -76,8 +76,8 @@ _golive = """
 # language=jinja2
 _projects = """
 {{ simple_label(d.projects_supervisable_label(pclass)) }}
-{{ simple_label(d.projects_unofferable_label) }}
 {{ simple_label(d.projects_offered_label(pclass)) }}
+{{ simple_label(d.projects_unofferable_label) }}
 {{ simple_label(d.supervisor_pool_label(pclass)) }}
 {{ simple_label(d.assessor_label) }}
 """

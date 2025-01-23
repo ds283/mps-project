@@ -87,27 +87,26 @@ _name = """
 
 # language=jinja2
 _enrolments = """
-{% set f = d.get_enrollment_record(pclass_id) %}
-{% if f is not none %}
-    {{ simple_label(f.enrolled_labels) }}
+{% if er is not none %}
+    {{ simple_label(er.enrolled_labels) }}
     <div>
-        {% if f.CATS_supervision is not none %}
-            <span class="badge bg-warning text-dark">S: {{ f.CATS_supervision }} CATS</span>
+        {% if er.CATS_supervision is not none %}
+            <span class="badge bg-warning text-dark">S: {{ er.CATS_supervision }} CATS</span>
         {% else %}
             <span class="badge bg-secondary">S: Default</span>
         {% endif %}
-        {% if f.CATS_marking is not none %}
-            <span class="badge bg-warning text-dark">Mk {{ f.CATS_marking }} CATS</span>
+        {% if er.CATS_marking is not none %}
+            <span class="badge bg-warning text-dark">Mk {{ er.CATS_marking }} CATS</span>
         {% else %}
             <span class="badge bg-secondary">Mk: Default</span>
         {% endif %}
-        {% if f.CATS_moderation is not none %}
-            <span class="badge bg-warning text-dark">Mo {{ f.CATS_moderation }} CATS</span>
+        {% if er.CATS_moderation is not none %}
+            <span class="badge bg-warning text-dark">Mo {{ er.CATS_moderation }} CATS</span>
         {% else %}
             <span class="badge bg-secondary">Mo: Default</span>
         {% endif %}
-        {% if f.CATS_presentation is not none %}
-            <span class="badge bg-warning text-dark">P {{ f.CATS_presentation }} CATS</span>
+        {% if er.CATS_presentation is not none %}
+            <span class="badge bg-warning text-dark">P {{ er.CATS_presentation }} CATS</span>
         {% else %}
             <span class="badge bg-secondary">P: Default</span>
         {% endif %}
@@ -154,15 +153,15 @@ def faculty_data(pclass: ProjectClass, config: ProjectClassConfig, row_list: Lis
 
     data = [
         {
-            "name": render_template(name_templ, u=u, d=d, pclass_id=pclass.id),
+            "name": render_template(name_templ, u=u, d=fd, pclass_id=pclass.id),
             "email": '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=u.email),
             "user": u.username,
-            "enrolled": render_template(enrolments_templ, d=d, pclass_id=pclass.id, simple_label=simple_label),
-            "projects": render_template(projects_templ, d=d, pclass=pclass, simple_label=simple_label),
-            "golive": render_template(golive_templ, config=config, pclass=pclass, user=u, userdata=d),
-            "menu": render_template(menu_templ, pclass=pclass, user=u, userdata=d),
+            "enrolled": render_template(enrolments_templ, d=fd, er=er, pclass_id=pclass.id, simple_label=simple_label),
+            "projects": render_template(projects_templ, d=fd, pclass=pclass, simple_label=simple_label),
+            "golive": render_template(golive_templ, config=config, pclass=pclass, user=u, userdata=fd),
+            "menu": render_template(menu_templ, pclass=pclass, user=u, userdata=fd),
         }
-        for u, d in row_list
+        for u, fd, er in row_list
     ]
 
     return data

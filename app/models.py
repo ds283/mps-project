@@ -593,7 +593,7 @@ def ProjectConfigurationMixinFactory(
 
             return removed > 0
 
-        # table of allowed supervisors, if used
+        # table of allowed supervisors, if used (always used for generic projects)
         @declared_attr
         def supervisors(cls):
             return db.relationship(
@@ -3076,6 +3076,33 @@ class FacultyData(db.Model, EditingMetadataMixin):
         EncryptedType(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), _get_key, AesGcmEngine, "pkcs5"), default=None, nullable=True
     )
 
+    def _projects_supervisable_query(self, pclass):
+        if isinstance(pclass, ProjectClass):
+            pclass_id = pclass.id
+        elif isinstance(pclass, int):
+            pclass_id = pclass
+        else:
+            raise RuntimeError("Could not interpret pclass parameter of type {typ} in FacultyData._projects_offered_query".format(typ=type(pclass)))
+
+        # TODO: possibly needs revisiting if we continue decoupling the concept of supervisors from project owners
+        return db.session.query(Project).filter(
+            Project.active == True,
+            Project.project_classes.any(id=pclass_id),
+            or_(
+                and_(
+                    Project.generic == True,
+                    Project.supervisors.any(id == self.id)
+                ),
+                Project.owner_id == self.id
+            )
+        )
+
+    def projects_supervisable(self, pclass):
+        return self._projects_supervisable_query(pclass).all()
+
+    def number_projects_supervisable(self, pclass):
+        return get_count(self._projects_supervisable_query(pclass))
+
     def _projects_offered_query(self, pclass):
         if isinstance(pclass, ProjectClass):
             pclass_id = pclass.id
@@ -3084,7 +3111,11 @@ class FacultyData(db.Model, EditingMetadataMixin):
         else:
             raise RuntimeError("Could not interpret pclass parameter of type {typ} in FacultyData._projects_offered_query".format(typ=type(pclass)))
 
-        return db.session.query(Project).filter(Project.active == True, Project.owner_id == self.id, Project.project_classes.any(id=pclass_id))
+        return db.session.query(Project).filter(
+            Project.active == True,
+            Project.owner_id == self.id,
+            Project.project_classes.any(id=pclass_id)
+        )
 
     def projects_offered(self, pclass):
         return self._projects_offered_query(pclass).all()
@@ -7779,7 +7810,7 @@ class Project(
         if not faculty.user.active:
             return False
 
-        # determine whether this faculty member is enrolled as a second marker for any project
+        # determine whether this faculty member is enrolled as a supervisor for any project
         # class we are attached to
         return self._is_supervisor_for_at_least_one_pclass(faculty)
 

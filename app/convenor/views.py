@@ -626,20 +626,39 @@ def faculty(id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    enroll_filter = request.args.get("enroll_filter")
+    enrol_filter = request.args.get("enrol_filter")
     state_filter = request.args.get("state_filter")
 
-    if state_filter == "no-projects":
-        enroll_filter = "enrolled"
+    if state_filter in ["no-projects", "no-supervisor", "no-marker"]:
+        enrol_filter = "enrolled"
 
-    if enroll_filter is None and session.get("convenor_faculty_enroll_filter"):
-        enroll_filter = session["convenor_faculty_enroll_filter"]
+    if enrol_filter is None and session.get("convenor_faculty_enroll_filter"):
+        enrol_filter = session["convenor_faculty_enroll_filter"]
 
-    if enroll_filter is not None:
-        session["convenor_faculty_enroll_filter"] = enroll_filter
+    if enrol_filter not in [
+        "all",
+        "enrolled",
+        "not-enrolled",
+        "supv-active",
+        "supv-sabbatical",
+        "supv-exempt",
+        "mark-active",
+        "mark-sabbatical",
+        "mark-exempt",
+        "pres-active",
+        "pres-sabbatical",
+        "pres-exempt",
+    ]:
+        enrol_filter = "all"
+
+    if enrol_filter is not None:
+        session["convenor_faculty_enroll_filter"] = enrol_filter
 
     if state_filter is None and session.get("convenor_faculty_state_filter"):
         state_filter = session["convenor_faculty_state_filter"]
+
+    if state_filter not in ["all", "no-projects", "unofferable", "no-supervisor", "no-marker", "custom-cats"]:
+        state_filter = "all"
 
     if state_filter is not None:
         session["convenor_faculty_state_filter"] = state_filter
@@ -664,7 +683,7 @@ def faculty(id):
         current_year=current_year,
         faculty=faculty,
         convenor_data=data,
-        enroll_filter=enroll_filter,
+        enrol_filter=enrol_filter,
         state_filter=state_filter,
     )
 
@@ -679,7 +698,7 @@ def faculty_ajax(id):
     if not validate_is_convenor(pclass):
         return jsonify({})
 
-    enroll_filter = request.args.get("enroll_filter")
+    enrol_filter = request.args.get("enrol_filter")
     state_filter = request.args.get("state_filter")
 
     # get current configuration record for this project class
@@ -688,109 +707,107 @@ def faculty_ajax(id):
         flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
         return jsonify({})
 
-    if enroll_filter == "enrolled":
-        # build a list of only enrolled faculty, together with their FacultyData records
-        faculty_ids = db.session.query(EnrollmentRecord.owner_id).filter(EnrollmentRecord.pclass_id == id).subquery()
-
+    if enrol_filter == "enrolled":
         # get User, FacultyData pairs for this list
         base_query = (
-            db.session.query(User, FacultyData)
+            db.session.query(User, FacultyData, EnrollmentRecord)
             .filter(User.active)
             .join(FacultyData, FacultyData.id == User.id)
-            .join(faculty_ids, User.id == faculty_ids.c.owner_id)
+            .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id, EnrollmentRecord.pclass_id == pclass.id))
         )
 
-    elif enroll_filter == "not-enrolled":
-        # build a list of only enrolled faculty, together with their FacultyData records
-        faculty_ids = db.session.query(EnrollmentRecord.owner_id).filter(EnrollmentRecord.pclass_id == id).subquery()
-
+    elif enrol_filter == "not-enrolled":
         # join to main User and FacultyData records and select pairs that have no counterpart in faculty_ids
         base_query = (
-            db.session.query(User, FacultyData)
+            db.session.query(User, FacultyData, EnrollmentRecord)
             .filter(User.active)
             .join(FacultyData, FacultyData.id == User.id)
-            .join(faculty_ids, faculty_ids.c.owner_id == User.id, isouter=True)
-            .filter(faculty_ids.c.owner_id == None)
+            .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id, EnrollmentRecord.pclass_id == pclass.id), isouter=True)
+            .filter(EnrollmentRecord.id == None)
         )
 
     elif (
-        ((enroll_filter == "supv-active" or enroll_filter == "supv-sabbatical" or enroll_filter == "supv-exempt") and pclass.uses_supervisor)
-        or ((enroll_filter == "mark-active" or enroll_filter == "mark-sabbatical" or enroll_filter == "mark-exempt") and pclass.uses_marker)
-        or ((enroll_filter == "pres-active" or enroll_filter == "pres-sabbatical" or enroll_filter == "pres-exempt") and pclass.uses_presentations)
+            ((enrol_filter == "supv-active" or enrol_filter == "supv-sabbatical" or enrol_filter == "supv-exempt") and pclass.uses_supervisor)
+            or ((enrol_filter == "mark-active" or enrol_filter == "mark-sabbatical" or enrol_filter == "mark-exempt") and pclass.uses_marker)
+            or ((enrol_filter == "pres-active" or enrol_filter == "pres-sabbatical" or enrol_filter == "pres-exempt") and pclass.uses_presentations)
     ):
-        faculty_ids = db.session.query(EnrollmentRecord.owner_id).filter(EnrollmentRecord.pclass_id == id)
-
-        if enroll_filter == "supv-active":
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
-        elif enroll_filter == "supv-sabbatical":
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_SABBATICAL)
-        elif enroll_filter == "supv-exempt":
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_EXEMPT)
-        elif enroll_filter == "mark-active":
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
-        elif enroll_filter == "mark-sabbatical":
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL)
-        elif enroll_filter == "mark-exempt":
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT)
-        elif enroll_filter == "pres-active":
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)
-        elif enroll_filter == "pres-sabbatical":
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL)
-        elif enroll_filter == "pres-exempt":
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_EXEMPT)
-
-        faculty_ids_q = faculty_ids.subquery()
-
-        # get User, FacultyData pairs for this list
         base_query = (
-            db.session.query(User, FacultyData)
+            db.session.query(User, FacultyData, EnrollmentRecord)
             .filter(User.active)
             .join(FacultyData, FacultyData.id == User.id)
-            .join(faculty_ids_q, User.id == faculty_ids_q.c.owner_id)
+            .join(EnrollmentRecord, EnrollmentRecord.id == FacultyData.id)
         )
+
+        if enrol_filter == "supv-active":
+            base_query = base_query.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+        elif enrol_filter == "supv-sabbatical":
+            base_query = base_query.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_SABBATICAL)
+        elif enrol_filter == "supv-exempt":
+            base_query = base_query.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_EXEMPT)
+        elif enrol_filter == "mark-active":
+            base_query = base_query.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+        elif enrol_filter == "mark-sabbatical":
+            base_query = base_query.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL)
+        elif enrol_filter == "mark-exempt":
+            base_query = base_query.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT)
+        elif enrol_filter == "pres-active":
+            base_query = base_query.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)
+        elif enrol_filter == "pres-sabbatical":
+            base_query = base_query.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL)
+        elif enrol_filter == "pres-exempt":
+            base_query = base_query.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_EXEMPT)
 
     else:
         # build list of all active faculty, together with their FacultyData records
-        base_query = db.session.query(User, FacultyData).filter(User.active).join(FacultyData, FacultyData.id == User.id)
+        base_query = (
+            db.session.query(User, FacultyData, EnrollmentRecord)
+            .filter(User.active)
+            .join(FacultyData, FacultyData.id == User.id)
+            .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id, EnrollmentRecord.pclass_id == pclass.id), isouter=True)
+        )
 
     return _faculty_ajax_handler(base_query, pclass, config, state_filter)
 
 
 def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClassConfig, state_filter: str):
-    def search_name(row: Tuple[User, FacultyData]):
-        u, fd = row
+    def search_name(row: Tuple[User, FacultyData, EnrollmentRecord]):
+        u, fd, er = row
         u: User
         fd: FacultyData
+        er: EnrollmentRecord
 
         return u.name
 
-    def sort_name(row: Tuple[User, FacultyData]):
-        u, fd = row
+    def sort_name(row: Tuple[User, FacultyData, EnrollmentRecord]):
+        u, fd, er = row
         u: User
         fd: FacultyData
+        er: EnrollmentRecord
 
         return [u.last_name, u.first_name]
 
-    def search_email(row: Tuple[User, FacultyData]):
-        u, fd = row
+    def search_email(row: Tuple[User, FacultyData, EnrollmentRecord]):
+        u, fd, er = row
         u: User
         fd: FacultyData
+        er: EnrollmentRecord
 
         return u.email
 
-    def sort_email(row: Tuple[User, FacultyData]):
-        u, fd = row
+    def sort_email(row: Tuple[User, FacultyData, EnrollmentRecord]):
+        u, fd, er = row
         u: User
         fd: FacultyData
+        er: EnrollmentRecord
 
         return u.email
 
-    def sort_enrolled(row: Tuple[User, FacultyData]):
-        u, fd = row
+    def sort_enrolled(row: Tuple[User, FacultyData, EnrollmentRecord]):
+        u, fd, er = row
         u: User
         fd: FacultyData
+        er: EnrollmentRecord
 
-        er: EnrollmentRecord = fd.get_enrollment_record(pclass)
         if er is None:
             return 0
 
@@ -804,17 +821,19 @@ def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClass
 
         return count
 
-    def sort_golive(row: Tuple[User, FacultyData]):
-        u, fd = row
+    def sort_golive(row: Tuple[User, FacultyData, EnrollmentRecord]):
+        u, fd, er = row
         u: User
         fd: FacultyData
+        er: EnrollmentRecord
 
         return config.require_confirm and config.requests_issued and config.is_confirmation_required(fd)
 
-    def sort_projects(row: Tuple[User, FacultyData]):
-        u, fd = row
+    def sort_projects(row: Tuple[User, FacultyData, EnrollmentRecord]):
+        u, fd, er = row
         u: User
         fd: FacultyData
+        er: EnrollmentRecord
 
         return fd.number_projects_offered(pclass)
 
@@ -827,21 +846,28 @@ def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClass
     columns = {"name": name, "email": email, "enrolled": enrolled, "golive": golive, "projects": projects}
 
     def _filter(state_filter: str, pclass: ProjectClass, row):
-        u, fd = row
+        u, fd, er = row
         u: User
         fd: FacultyData
+        er: EnrollmentRecord
 
         if state_filter == "no-projects" and pclass.uses_supervisor:
-            return fd.number_projects_offered(pclass) == 0
+            return er is not None and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED and fd.number_projects_offered(pclass) == 0
+
+        if state_filter == "no-supervisor" and pclass.uses_supervisor:
+            return er is not None and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED and fd.number_projects_supervisable(pclass) == 0
 
         if state_filter == "no-marker" and pclass.uses_marker:
-            return fd.number_assessor == 0
+            return er is not None and er.marker_state == EnrollmentRecord.SUPERVISOR_ENROLLED and fd.number_assessor == 0
 
         if state_filter == "unofferable":
-            return fd.projects_unofferable > 0
+            return er is not None and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED and fd.projects_unofferable > 0
 
         if state_filter == "custom-cats":
-            return _has_custom_CATS(fd, pclass)
+            return (
+                    er is not None
+                    and (er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED or er.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+            ) and _has_custom_CATS(fd, pclass)
 
         return True
 

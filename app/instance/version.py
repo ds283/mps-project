@@ -9,7 +9,7 @@
 #
 
 # website revision number
-site_revision = '2024.2.9'
+site_revision = '2025.1.1'
 
 # website copyright dates
-site_copyright_dates = '2018–2024'
+site_copyright_dates = '2018–2025'

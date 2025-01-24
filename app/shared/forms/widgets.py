@@ -74,7 +74,7 @@ class GroupedTagSelectField(GroupedQuerySelectMultipleField):
         matched = data[0]
 
         for value, label in self.concrete_choices:
-            yield (value, label, (self.coerce, [self.get_pk(obj) for obj in matched or []]))
+            yield (value, label, (self.coerce, [self.get_pk(obj) for obj in matched or []]), {})
 
 
 class BasicTagSelectField(QuerySelectMultipleField):
@@ -136,4 +136,4 @@ class BasicTagSelectField(QuerySelectMultipleField):
         matched = data[0]
 
         for pk, obj in self._get_object_list():
-            yield (pk, self.get_label(obj), obj in matched)
+            yield (pk, self.get_label(obj), obj in matched, {})

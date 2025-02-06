@@ -1,85 +1,14 @@
-Dear {{ user.first_name }}
+Dear {{ user.first_name }},
 
-** NOTE: PROJECT SELECTION DEADLINE IS {{ deadline.strftime("%a %d %b %Y") }} **
+This is an automated message from the mpsprojects portal, which has just gone live.
 
-This email is automated. Please do not reply to it directly, because email to
-the sending address is not monitored.
+This means that you can now go ahead and start the selection process.
 
-{% if student.is_optional -%}
-You are receiving this email because you have the option to apply or enrol
-as a participant for "{{ pclass.name }}". If you are unsure whether you
-are eligible for "{{ pclass.name }}", please seek guidance from the
-project convenor whose details are given below.
+Guidelines are found on the Canvas page:
 
-If this is not relevant for you, then you need take no action and can safely
-ignore the remainder of this email.
-{%- elif student.student.programme in pclass.programmes -%}
-You are receiving this email because we are expecting you to participate in
-the "{{ pclass.name }}" module. This runs in Y{{ pclass.start_year }}, and it is now
-time to select your preferred projects. If you believe this to be incorrect,
-for example if you are not expecting to undertake this type of project, please
-contact the convenor as soon as possible. Contact details are given below.
-{%- else -%}
-You are receiving this email because you are being invited to submit project
-preferences for the "{{ pclass.name }}" module. This runs in Y{{ pclass.start_year }}.
-If you are not sure why you have been invited to submit preferences for this
-project, please contact the convenor. Contact details are given below.
-{%- endif %}
+https://canvas.sussex.ac.uk/courses/30255/pages/dissertation-and-research-proposal-selection-process
 
-This year's project list has now been published, and can be inspected
-by logging in to our web platform: https://mpsprojects.sussex.ac.uk.
+Please let us know on mps-pgtoffice@sussex.ac.uk if you need assistance.
 
-If you have used the platform before, log in with your Sussex email
-address and existing password. If not, an account has been set up for you
-using your Sussex email address and a random password that is not known to
-anyone. Use the 'Forgot password?' link to reset your password, and then
-log into the website in the usual way. If you experience log-in
-difficulties then please contact David Seery (D.Seery@sussex.ac.uk).
-
-To view the project list, log in to your account and scroll to find the
-box labelled "{{ pclass.name }}" on your dashboard.
-Now click the green button labelled "Show available projects".
-You can search the list by entering keywords or phrases in the
-search box in the top-right, or by applying filters for keywords
-and affiliations/research groups in the box labelled "Filters".
-
-Each project has a description, and a number of key facts that detail
-recommended modules, supervision arrangements and subject information.
-If you have not taken the recommended modules then you can still apply
-for the project, but you should make arrangements to discuss with the
-supervisor beforehand. Some project descriptions may include popularity
-indicators. You can use these to get some sense of how many other students
-are interested in a project, and therefore whether it is likely to be
-oversubscribed. The popularity indicators may not be available until enough
-data has been collected.
-
-Use the "bookmark" function to keep track of projects in which you
-are interested. Bookmarked projects appear on your dashboard for quick
-access, and you can drag-and-drop individual bookmarks to arrange
-them in order of preference. Once you have bookmarked enough projects
-you can submit your ranked list. You can do this as many times as you
-like before the selection deadline. We are asking you to select
-at least {{ student.number_choices }} projects to help us find a good match for everyone.
-{% if student.is_optional -%}
-
-The deadline for selections is {{ deadline.strftime("%a %d %b %Y") }}.
-You do not need to do anything else to apply for enrolment in the programme.
-If you do not submit a selection by the deadline we will assume that you
-do not wish to apply.
-{%- else -%}
-The deadline for selections is {{ deadline.strftime("%a %d %b %Y") }}.
-{%- endif %}
-
-Some projects require more background than others. In these cases the
-project supervisor may require you to obtain a signoff before
-allowing you to submit a selection containing the project. To request
-a sign-off, use the 'Request confirmation' button. You will be notified by
-email when the supervisor responds. Use the "Settings..." option
-from the drop-down menu at the top of the page to control how often
-the website contacts you by email.
-
-If you have questions or encounter difficulties, please contact the
-project convenor.
-
-{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})
-project convenor
+Best wishes,
+The DS Convening Team (James and Omar)

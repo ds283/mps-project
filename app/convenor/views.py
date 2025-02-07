@@ -735,7 +735,7 @@ def faculty_ajax(id):
             db.session.query(User, FacultyData, EnrollmentRecord)
             .filter(User.active)
             .join(FacultyData, FacultyData.id == User.id)
-            .join(EnrollmentRecord, EnrollmentRecord.id == FacultyData.id)
+            .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id, EnrollmentRecord.pclass_id == pclass.id))
         )
 
         if enrol_filter == "supv-active":

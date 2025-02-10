@@ -3764,6 +3764,10 @@ def manual_attach_project(id, configid):
     :param configid:
     :return:
     """
+    # TODO - work out what logic can be consolidated between manual_attach_project() and inject_liveproject()
+
+    # reject if desired project is not attachable
+    project: Project = Project.query.get_or_404(id)
     config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
 
     # reject user if not entitled to act as convenor
@@ -3775,14 +3779,11 @@ def manual_attach_project(id, configid):
         flash("Manual attachment of projects is only possible after Go Live for this academic year", "error")
         return redirect(redirect_url())
 
-    # reject if desired project is not attachable
-    project: Project = Project.query.get_or_404(id)
-
     if config.project_class not in project.project_classes:
         flash(
-            'Project "{p}" is not attached to "{c}". You do not have sufficient privileges to manually attach it. '
-            "Please consult with an administrator.".format(p=project.name, c=config.name),
-            "error",
+            'Could not attach LiveProject "{proj}" to project class "{pcl}" because this project '
+            "is not attached to that class.".format(proj=project.name, pcl=config.name),
+            "info",
         )
         return redirect(redirect_url())
 
@@ -11448,13 +11449,24 @@ def mark_task_dropped(tid):
     return redirect(redirect_url())
 
 
+INJECT_CURRENT_CYCLE = 1
+INJECT_PREVIOUS_CYCLE = 2
+
+
 @convenor.route("/inject_liveproject/<int:pid>/<int:pclass_id>/<int:type>")
 @roles_accepted("faculty", "admin", "root")
 def inject_liveproject(pid, pclass_id, type):
+    # differences with manual_attach_project()
+    # - manual_attach_project() can only attach projects to the currently selecting configuration. inject_liveproject()
+    #   can add a LiveProject instance to a previous cycle, if needed
+    # - inject_liveproject() does not insist that selections are live
+
+    # TODO - work out what logic can be consolidated between manual_attach_project() and inject_liveproject()
+
     project: Project = Project.query.get_or_404(pid)
     pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
-    if type not in [1, 2]:
+    if type not in [INJECT_CURRENT_CYCLE, INJECT_PREVIOUS_CYCLE]:
         flash('Could not handle request to attach LiveProject of unknown type "{type}". ' "Please contact a system administrator.".format(type=type))
         return redirect(redirect_url())
 
@@ -11475,17 +11487,18 @@ def inject_liveproject(pid, pclass_id, type):
     # check project is available for this project class
     if config.project_class not in project.project_classes:
         flash(
-            'Could not attach LiveProject "{proj}" into project class "{pcl}" because this project '
+            'Could not attach LiveProject "{proj}" to project class "{pcl}" because this project '
             "is not attached to that class.".format(proj=project.name, pcl=config.name),
             "info",
         )
         return redirect(redirect_url())
 
-    # check a counterpart LiveProject does not already exist
+    # CHECK A COUNTERPART LIVEPROJECT DOES NOT ALREADY EXIST
+
     if config.select_in_previous_cycle:
-        if type == 1:
+        if type == INJECT_CURRENT_CYCLE:
             inject_config = config
-        elif type == 2:
+        elif type == INJECT_PREVIOUS_CYCLE:
             inject_config = config.previous_config
         else:
             flash("Internal error: unexpected type in convenor.inject_liveproject. Please contact a system administrator", "error")

@@ -10,7 +10,7 @@
 from typing import Optional
 
 from flask import current_app
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 from ..database import db
 from ..models import (
@@ -62,12 +62,14 @@ def add_liveproject(
         return
 
     if number is None:
-        largest_current_number = config.live_projects.order_by(LiveProject.number.desc()).first()
+        # find largest current LiveProject number used in the database (recall numbers may not be contigious if projects have
+        # been deleted during a cycle)
+        largest_current_number = db.session.query(func.max(LiveProject.number)).filter(LiveProject.config_id == config.id).scalar()
         if largest_current_number is None:
-            # failed to get a result; estimate using the current count + 1
+            # failed to get a safe result; fall back to an estimate using the current count + 1
             number = config.live_projects.count() + 1
         else:
-            number = largest_current_number + 1
+            number = int(largest_current_number) + 1
 
     # notice that this generates a LiveProject record ONLY FOR THIS PROJECT CLASS;
     # all project classes need their own LiveProject record

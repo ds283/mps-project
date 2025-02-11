@@ -3790,8 +3790,15 @@ def manual_attach_project(id, configid):
         flash('Project "{p}" does not have a description for "{c}" and cannot be ' "attached.".format(p=project.name, c=config.name))
         return redirect(redirect_url())
 
-    # passing number=None to add_liveproject() causes it to assign its own number
-    add_liveproject(None, project, configid, autocommit=True)
+    try:
+        # passing number=None to add_liveproject() causes it to assign its own number
+        add_liveproject(None, project, configid, autocommit=True)
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash(f'Could not attach LiveProject "{project.name}" due to a database error. Please contact a system administrator', "error")
+    else:
+        flash(f'LiveProject "{project.name}" has been published to students.', "success")
 
     return redirect(redirect_url())
 
@@ -3818,11 +3825,8 @@ def attach_liveproject_other_ajax(id):
 
     # find all projects, not already attached as LiveProjects, that are not attached to
     # this project class
-    base_query = (
-        db.session.query(Project, ProjectDescription)
-        .filter(Project.active == True,
-                ~Project.project_classes.any(ProjectClass.id == pclass.id),
-                ProjectDescription.parent_id == Project.id)
+    base_query = db.session.query(Project, ProjectDescription).filter(
+        Project.active == True, ~Project.project_classes.any(ProjectClass.id == pclass.id), ProjectDescription.parent_id == Project.id
     )
 
     # get existing liveprojects attached to this config instance

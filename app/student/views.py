@@ -148,7 +148,7 @@ def dashboard():
     else:
         pclasses = ProjectClass.query.filter(ProjectClass.active == True, ProjectClass.publish == True)
 
-    # build lxist of system messages to consider displaying
+    # build list of system messages to consider displaying
     messages = []
     for message in (
             db.session.query(MessageOfTheDay)

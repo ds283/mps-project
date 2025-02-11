@@ -66,39 +66,31 @@
             </div>
         {% endif %}
         <div class="card-body">
-            <div class="row vertical-top m-1">
-                <div class="col-12">
-                    <div class="float-end">
-                        {% if fac_data is defined and fac_data is not none %}
-                            {% for pclass in message.project_classes %}
-                                {% if fac_data.is_enrolled(pclass) %}
-                                    <span class="badge bg-info">{{ pclass.name }}</span>
-                                {% endif %}
-                            {% endfor %}
+            {% if fac_data is defined and fac_data is not none %}
+                <div class="d-flex flex-row justify-content-start align-items-start gap-2 m-1">
+                    {% for pclass in message.project_classes %}
+                        {% if fac_data.is_enrolled(pclass) %}
+                            <span class="badge bg-info">{{ pclass.name }}</span>
                         {% endif %}
-                    </div>
+                    {% endfor %}
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-12">
+            {% endif %}
+            <div class="d-flex flex-row justify-content-start align-items-start m-1">
+                <div>
                     {{ message.body|bclean|blinkify|safe }}
                 </div>
             </div>
             <hr class="intro-divider">
-            <div class="row">
-                <div class="col-9">
-                    <div class="text-secondary">
-                        <small>Posted by <a class="text-decoration-none" href="mailto:{{ message.user.email }}">{{ message.user.name }}</a>
-                            on {{ message.issue_date.strftime("%a %d %b %Y %H:%M:%S") }}</small>
-                    </div>
+            <div class="d-flex flex-row justify-content-between align-items-start">
+                <div class="text-secondary">
+                    <small>Posted by <a class="text-decoration-none"
+                                        href="mailto:{{ message.user.email }}">{{ message.user.name }}</a>
+                        on {{ message.issue_date.strftime("%a %d %b %Y %H:%M:%S") }}</small>
                 </div>
-                <div class="col-3">
-                    {% if message.dismissible %}
-                        <div class="float-end">
-                            <a href="{{ url_for('admin.dismiss_message', id=message.id) }}" class="btn btn-secondary">Don't show again</a>
-                        </div>
-                    {% endif %}
-                </div>
+                {% if message.dismissible %}
+                    <a href="{{ url_for('admin.dismiss_message', id=message.id) }}"
+                       class="btn btn-sm btn-outline-secondary"><i class="fa fa-check-circle"></i> Don't show again</a>
+                {% endif %}
             </div>
         </div>
     </div>

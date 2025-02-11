@@ -251,8 +251,14 @@ def create_app():
     @security.login_context_processor
     def login_context_processor():
         # build list of system messages to consider displaying on login screen
+        # we only include those labelled as "show_login"
         messages = []
-        for message in MessageOfTheDay.query.filter_by(show_login=True).all():
+        for message in (
+                db.session.query(MessageOfTheDay)
+                        .filter(MessageOfTheDay.show_login == True)
+                        .order_by(MessageOfTheDay.issue_date.desc())
+                        .all()
+        ):
             if message.project_classes.first() is None:
                 messages.append(message)
 

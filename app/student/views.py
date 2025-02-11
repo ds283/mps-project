@@ -148,10 +148,18 @@ def dashboard():
     else:
         pclasses = ProjectClass.query.filter(ProjectClass.active == True, ProjectClass.publish == True)
 
-    # build list of system messages to consider displaying
+    # build lxist of system messages to consider displaying
     messages = []
-    for message in MessageOfTheDay.query.filter(MessageOfTheDay.show_students, ~MessageOfTheDay.dismissed_by.any(id=current_user.id)).all():
+    for message in (
+            db.session.query(MessageOfTheDay)
+                    .filter(MessageOfTheDay.show_students, ~MessageOfTheDay.dismissed_by.any(id=current_user.id))
+                    .order_by(MessageOfTheDay.issue_date.desc())
+                    .all()
+    ):
+        # if no project classes specified, always show
         include = message.project_classes.first() is None
+
+        # otherwise, include if we are enrolled in one of the specified project classes
         if not include:
             for pcl in message.project_classes:
                 if pcl in enrolled_pclasses:

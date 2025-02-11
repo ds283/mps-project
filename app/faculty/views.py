@@ -1576,7 +1576,12 @@ def dashboard():
 
     # build list of system messages to consider displaying
     messages = []
-    for message in MessageOfTheDay.query.filter(MessageOfTheDay.show_faculty, ~MessageOfTheDay.dismissed_by.any(id=current_user.id)).all():
+    for message in (
+            db.session.query(MessageOfTheDay)
+                    .filter(MessageOfTheDay.show_faculty, ~MessageOfTheDay.dismissed_by.any(id=current_user.id))
+                    .order_by(MessageOfTheDay.issue_date.desc())
+                    .all()
+    ):
         include = message.project_classes.first() is None
         if not include:
             for pcl in message.project_classes:

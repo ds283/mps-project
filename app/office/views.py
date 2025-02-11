@@ -15,7 +15,7 @@ from flask_security import current_user, roles_required
 from . import office
 from .forms import OfficeSettingsForm
 from ..database import db
-from ..models import User
+from ..models import User, MessageOfTheDay
 from ..shared.context.global_context import render_template_context
 from ..shared.context.root_dashboard import get_root_dashboard_data
 from ..shared.utils import home_dashboard, get_approval_queue_data
@@ -38,10 +38,20 @@ def dashboard():
     if pane is not None:
         session["office_dashboard_pane"] = pane
 
+    # build list of system messages to display
+    # for professionals services, we show all messages, no matter what project class
+    # they apply to
+    messages = (
+        db.session.query(MessageOfTheDay)
+        .filter(~MessageOfTheDay.dismissed_by.any(id=current_user.id))
+        .order_by(MessageOfTheDay.issue_date.desc())
+        .all()
+    )
+
     root_data = get_root_dashboard_data()
     approvals_data = get_approval_queue_data()
 
-    return render_template_context("office/dashboard.html", root_data=root_data, approvals_data=approvals_data, pane=pane)
+    return render_template_context("office/dashboard.html", messages=messages, root_data=root_data, approvals_data=approvals_data, pane=pane)
 
 
 @office.route("/settings", methods=["GET", "POST"])

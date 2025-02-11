@@ -18,7 +18,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app import ajax
 from ..database import db
-from ..models import ProjectTagGroup, ProjectTag, ResearchGroup, TransferableSkill, SkillGroup, ProjectClass, Project, ProjectClassConfig, User
+from ..models import ProjectTagGroup, ProjectTag, ResearchGroup, TransferableSkill, SkillGroup, ProjectClass, Project, ProjectClassConfig, User, \
+    ProjectLikeList, ProjectDescLikeList
 from ..tools import ServerSideSQLHandler, ServerSideInMemoryHandler
 
 
@@ -99,9 +100,11 @@ def project_list_SQL_handler(
 
     columns = {"name": name, "owner": owner}
 
+    # base_query should return a list of ProjectLike instances (Project, LiveProject)
+    # or a list of ProjectDescription like instances
     with ServerSideSQLHandler(request, base_query, columns) as handler:
 
-        def row_formatter(projects):
+        def row_formatter(projects: ProjectLikeList | ProjectDescLikeList):
             # convert project list back into a list of primary keys, so that we can
             # use cached outcomes
             if not isinstance(projects, list):

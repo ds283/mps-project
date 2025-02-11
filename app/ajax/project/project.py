@@ -8,19 +8,19 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from typing import Optional, List, Tuple
+from typing import Optional
 
 from flask import current_app, get_template_attribute, render_template
 from jinja2 import Template, Environment
+from sqlalchemy import Row
 
 from ...database import db
 from ...models import (
-    Project,
     EnrollmentRecord,
     ProjectDescription,
     User,
     ProjectClassConfig,
-    LiveProject,
+    ProjectLike, ProjectLikeList, ProjectDescLikeList,
 )
 
 # language=jinja2
@@ -506,13 +506,8 @@ def _build_menu_templ(key: str) -> Template:
     return env.from_string(_menus[key])
 
 
-_ProjectLike = Project | LiveProject
-_ProjectLikeList = List[_ProjectLike]
-_ProjectDescLikeList = List[Tuple[_ProjectLike, ProjectDescription]]
-
-
 def build_data(
-    projects: _ProjectLikeList | _ProjectDescLikeList,
+        projects: ProjectLikeList | ProjectDescLikeList,
     config: Optional[ProjectClassConfig] = None,
     current_user: Optional[User] = None,
     menu_template: Optional[str] = None,
@@ -545,7 +540,7 @@ def build_data(
         selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS if selector_lifecycle is not None else False
     )
 
-    def _process(p: _ProjectLike, d: Optional[ProjectDescription]):
+    def _process(p: ProjectLike, d: Optional[ProjectDescription]):
         if config is not None and not p.generic and p.owner is not None:
             e = db.session.query(EnrollmentRecord).filter_by(owner_id=current_user.id, pclass_id=config.pclass_id).first()
         else:
@@ -612,4 +607,4 @@ def build_data(
 
         return data
 
-    return [_process(p=p[0], d=p[1]) if isinstance(p, tuple) else _process(p=p, d=None) for p in projects]
+    return [_process(p=p[0], d=p[1]) if (isinstance(p, Row) or isinstance(p, tuple)) else _process(p=p, d=None) for p in projects]

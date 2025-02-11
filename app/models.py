@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 from os import path
 from time import time
-from typing import List, Set, Union, Optional
+from typing import List, Set, Union, Optional, Tuple
 from urllib.parse import urljoin
 from uuid import uuid4
 
@@ -17211,3 +17211,8 @@ def validate_nonce(nonce: bytes):
         return False
 
     return True
+
+
+ProjectLike = Project | LiveProject
+ProjectLikeList = List[ProjectLike]
+ProjectDescLikeList = List[Tuple[ProjectLike, ProjectDescription]]

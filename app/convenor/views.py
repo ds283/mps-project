@@ -3724,13 +3724,11 @@ def attach_liveproject_ajax(id):
     if not config.live:
         return jsonify({})
 
-    # get existing liveprojects
-    current_projects = [p.parent_id for p in config.live_projects]
-
-    # compute all active attached projects that do not have a LiveProject equivalent
+    # compute all active projects registered for this project class, that do not have a LiveProject equivalent
     base_query = pclass.projects.filter(Project.active == True)
 
-    # don't show attached projects
+    # get existing liveprojects, and remove any counterparts
+    current_projects = [p.parent_id for p in config.live_projects]
     base_query = base_query.filter(Project.id.not_in(current_projects))
 
     # restrict query to projects owned by active users, or generic projects
@@ -3820,7 +3818,12 @@ def attach_liveproject_other_ajax(id):
 
     # find all projects, not already attached as LiveProjects, that are not attached to
     # this project class
-    base_query = db.session.query(Project, ProjectDescription).filter(ProjectDescription.parent_id == Project.id).filter(Project.active == True)
+    base_query = (
+        db.session.query(Project, ProjectDescription)
+        .filter(Project.active == True,
+                ~Project.project_classes.any(ProjectClass.id == pclass.id),
+                ProjectDescription.parent_id == Project.id)
+    )
 
     # get existing liveprojects attached to this config instance
     current_projects = [p.parent_id for p in config.live_projects]
@@ -3829,7 +3832,7 @@ def attach_liveproject_other_ajax(id):
     base_query = base_query.filter(Project.id.not_in(current_projects))
 
     # don't offer to attach projects attached to this project class
-    base_query = base_query.filter(~Project.project_classes.any(ProjectClass.id == pclass.id))
+    base_query = base_query
 
     # restrict query to projects owned by active users, or generic projects
     base_query = base_query.join(User, User.id == Project.owner_id, isouter=True).filter(or_(Project.generic == True, User.active == True))

@@ -55,16 +55,23 @@
 
         {{ form.hidden_tag() }}
 
-        {{ wtf.render_field(form.show_students) }}
-        {{ wtf.render_field(form.show_faculty) }}
+<div class="card mt-3 mb-3 card-body bg-well">
+    {{ wtf.render_field(form.project_classes) }}
+    {% if form.show_login %}
+        {{ wtf.render_field(form.show_login) }}
+    {% endif %}
+</div>
 
-        {{ wtf.render_field(form.project_classes) }}
+<div class="card mt-3 mb-3 card-body bg-well">
+    <p class="form-group-heading">This message should be displayed on dashboards for</p>
+    {{ wtf.render_field(form.show_students) }}
+    {{ wtf.render_field(form.show_faculty) }}
+    {{ wtf.render_field(form.show_office) }}
+</div>
 
-        {% if form.show_login %}
-            {{ wtf.render_field(form.show_login) }}
-        {% endif %}
-
-        {{ wtf.render_field(form.dismissible) }}
+<div class="mt-3">
+    {{ wtf.render_field(form.dismissible) }}
+</div>
 
         <hr class="intro-divider">
 

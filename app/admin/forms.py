@@ -708,9 +708,11 @@ class BackupManageForm(Form):
 
 def MessageMixinFactory(query_factory, convenor_editing):
     class MessageMixin:
-        show_students = BooleanField("Display to students")
+        show_students = BooleanField("Students")
 
-        show_faculty = BooleanField("Display to faculty")
+        show_faculty = BooleanField("Faculty")
+
+        show_office = BooleanField("School Office/Professional Services")
 
         if not convenor_editing:
             show_login = BooleanField("Display on login screen if a broadcast message")

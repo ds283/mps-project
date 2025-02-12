@@ -53,6 +53,30 @@ _messages_menu = """
 </div>
 """
 
+# language=jinja2
+_show = """
+{% if m.show_login %}
+    <div class="small">
+        <i class="fas fa-check-circle text-success"></i> <span class="text-success">Login page</span>
+    </div>
+{% endif %}
+{% if m.show_students %}
+    <div class="small">
+        <i class="fas fa-check-circle text-success"></i> <span class="text-success">Students</span>
+    </div>
+{% endif %}
+{% if m.show_faculty %}
+    <div class="small">
+        <i class="fas fa-check-circle text-success"></i> <span class="text-success">Faculty</span>
+    </div>
+{% endif %}
+{% if m.show_office %}
+    <div class="small">
+        <i class="fas fa-check-circle text-success"></i> <span class="text-success">Professional Services</span>
+    </div>
+{% endif %}
+"""
+
 
 def messages_data(messages):
     data = [
@@ -60,9 +84,7 @@ def messages_data(messages):
             "poster": m.user.name,
             "email": '<a class="text-decoration-none" href="{email}">{email}</a>'.format(email=m.user.email),
             "date": {"display": m.issue_date.strftime("%a %d %b %Y %H:%M:%S"), "timestamp": m.issue_date.timestamp()},
-            "students": "Yes" if m.show_students else "No",
-            "faculty": "Yes" if m.show_faculty else "No",
-            "login": "Yes" if m.show_login else "No",
+            "show": render_template_string(_show, m=m),
             "pclass": render_template_string(_messages_pclasses, message=m),
             "title": '<a class="text-decoration-none" href="{url}">{msg}</a>'.format(msg=m.title, url=url_for("admin.edit_message", id=m.id))
             if m.title is not None and len(m.title) > 0

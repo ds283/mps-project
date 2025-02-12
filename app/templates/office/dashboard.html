@@ -4,6 +4,8 @@
 {% from "user_approver/dashboard_panel.html" import user_approver_panel %}
 {% from "project_approver/dashboard_panel.html" import project_approver_panel %}
 
+{% from "macros.html" import message_card %}
+
 {%- set is_user_approver = current_user.has_role('user_approver') -%}
 {%- set is_project_approver = current_user.has_role('project_approver') -%}
 
@@ -48,6 +50,12 @@
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
+            {% if messages %}
+                {% for message in messages %}
+                    {{ message_card(message, current_user.faculty_data) }}
+                {% endfor %}
+            {% endif %}
+
             {% if pane == 'overview' %}
                 <div class="card mt-3 mb-3 card-body bg-well">
                     {{ admin_dashboard_card(root_data) }}

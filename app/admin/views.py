@@ -3207,6 +3207,7 @@ def add_message():
             issue_date=datetime.now(),
             show_students=form.show_students.data,
             show_faculty=form.show_faculty.data,
+            show_office=form.show_office.data,
             show_login=show_login,
             dismissible=form.dismissible.data,
             title=form.title.data,
@@ -3261,6 +3262,7 @@ def edit_message(id):
 
         data.show_students = form.show_students.data
         data.show_faculty = form.show_faculty.data
+        data.show_office = form.show_office.data
         data.show_login = show_login
         data.dismissible = form.dismissible.data
         data.title = form.title.data

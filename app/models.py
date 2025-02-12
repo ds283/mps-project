@@ -12242,6 +12242,9 @@ class MessageOfTheDay(db.Model):
     # show to faculty?
     show_faculty = db.Column(db.Boolean())
 
+    # show to office/professional services?
+    show_office = db.Column(db.Boolean())
+
     # display on login screen?
     show_login = db.Column(db.Boolean())
 

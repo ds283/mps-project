@@ -43,7 +43,7 @@ def dashboard():
     # they apply to
     messages = (
         db.session.query(MessageOfTheDay)
-        .filter(~MessageOfTheDay.dismissed_by.any(id=current_user.id))
+        .filter(MessageOfTheDay.show_office, ~MessageOfTheDay.dismissed_by.any(id=current_user.id))
         .order_by(MessageOfTheDay.issue_date.desc())
         .all()
     )

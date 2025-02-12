@@ -16,7 +16,6 @@ from flask_security import current_user
 
 from ...models import EnrollmentRecord
 
-
 # language=jinja2
 _name = """
 <a class="text-decoration-none" href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
@@ -82,7 +81,7 @@ _menu = """
 
 # language=jinja2
 _pclass = """
-{{ simple_label(e.pclass.make_label() }}
+{{ simple_label(e.pclass.make_label()) }}
 """
 
 

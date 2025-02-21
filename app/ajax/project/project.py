@@ -353,7 +353,7 @@ _convenor_menu = """
             <div role="separator" class="dropdown-divider"></div>
             {% if not in_selector %} {# in_selector and in_submitter should be the same thing #}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.inject_liveproject', pid=project.id, pclass_id=pclass_id, type=1) }}">
-                    <i class="fas fa-cogs fa-fw"></i> Attach LiveProject...
+                    <i class="fas fa-cogs fa-fw"></i> Publish LiveProject...
                 </a>
             {% endif %}
         {% endif %}

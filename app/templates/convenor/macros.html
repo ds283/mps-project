@@ -1,5 +1,5 @@
 {% from "labels.html" import simple_label %}
-{% from "macros.html" import truncate %}
+{% from "macros.html" import truncate, render_formatted_student, render_formatted_project %}
 
 {% macro bookmark_projects(sel, list, nav_text, nav_url) %}
     <div class="container-fluid">
@@ -20,7 +20,7 @@
                     </div>
                     <div class="col-5">
                         <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
-                            {{ item.format_project|safe }}
+                            {{ render_formatted_project(item) }}
                         </a>
                         {% if project.is_available(sel) %}
                             <div class="text-success small"><i class="fas fa-check-circle"></i> Available to select
@@ -85,7 +85,7 @@
                 {% set sel = item.owner %} {# sel is a SelectingStudent instance #}
                 <div class="row vertical-top bookmark-table">
                     <div class="col-3">
-                        {{ item.format_name|safe }}
+                        {{ render_formatted_student(item) }}
                         {% if item.owner.convert_to_submitter %}
                             <div class="text-success small"><i class="fas fa-check-circle"></i> Convert to submitter
                             </div>
@@ -150,7 +150,7 @@
                 {% set can_delete = sel.number_selections > sel.number_choices %}
                 <div class="row vertical-top bookmark-table">
                     <div {% if show_hint %}class="col-4"{% else %}class="col-5"{% endif %}>
-                        {{ item.format_name|safe }}
+                        {{ render_formatted_student(item) }}
                         {% if item.owner.convert_to_submitter %}
                             <div class="text-success small"><i class="fas fa-check-circle"></i> Convert to submitter
                             </div>
@@ -252,7 +252,7 @@
                     </div>
                     <div {% if show_hint %}class="col-4"{% else %}class="col-5"{% endif %}>
                         <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
-                            {{ item.format_project(show_hint=show_hint)|safe }}
+                            {{ render_formatted_project(item, show_hint=show_hint) }}
                         </a>
                         {% if item.converted_from_bookmark %}
                             <div class="text-secondary rank-hint-button"><i class="fas fa-exclamation-circle"></i>

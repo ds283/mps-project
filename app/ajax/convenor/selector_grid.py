@@ -42,7 +42,7 @@ _selections = """
                     <div class="mt-1">{{ small_swatch(swatch_color) }}</div>
                 {% endif %}
                 <span class="small">
-                    {{ item.format_project()|safe }}
+                    {{ render_formatted_project(item) }}
                     {% if not project.generic and project.owner is not none %}
                         <span class="text-muted">&ndash; {{ project.owner.user.name }}</span>
                     {% else %}
@@ -144,6 +144,7 @@ def _build_selections_templ() -> Template:
 def selector_grid_data(students: List[SelectingStudent], config: ProjectClassConfig):
     simple_label = get_template_attribute("labels.html", "simple_label")
     small_swatch = get_template_attribute("swatch.html", "small_swatch")
+    render_formatted_project = get_template_attribute("macros.html", "render_formatted_project")
 
     name_templ: Template = _build_name_templ()
     programme_templ: Template = _build_programme_templ()
@@ -168,7 +169,8 @@ def selector_grid_data(students: List[SelectingStudent], config: ProjectClassCon
             "name": {"display": render_template(name_templ, sel=s), "sortstring": s.student.user.last_name + s.student.user.first_name},
             "programme": render_template(programme_templ, s=s, simple_label=simple_label),
             "cohort": {"display": render_template(cohort_templ, sel=s, simple_label=simple_label), "value": s.student.cohort},
-            "selections": {"display": render_template(selections_templ, sel=s, config=config, small_swatch=small_swatch), "sortvalue": sel_count(s)},
+            "selections": {"display": render_template(selections_templ, sel=s, config=config, small_swatch=small_swatch,
+                                                      render_formatted_project=render_formatted_project), "sortvalue": sel_count(s)},
         }
         for s in students
     ]

@@ -6865,6 +6865,49 @@ def email_selectors(configid):
     )
 
 
+@convenor.route("/email_project_bookmarkers/<int:project_id>")
+@roles_accepted("faculty", "admin", "route")
+def email_project_bookmarkers(project_id):
+    # project_id identifies a LiveProject
+    project: LiveProject = LiveProject.query.get_or_404(project_id)
+    config: ProjectClassConfig = project.config
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    to_list = [item.owner.student.user.id for item in project.bookmarks]
+
+    return redirect(
+        url_for(
+            "services.send_email",
+            url=url_for("convenor.project_bookmarks", id=project_id),
+            text="project bookmarks view",
+            to=to_list,
+        )
+    )
+
+
+@convenor.route("/email_project_selectors/<int:project_id>")
+@roles_accepted("faculty", "admin", "route")
+def email_project_selectors(project_id):
+    # project_id identifies a LiveProject
+    project: LiveProject = LiveProject.query.get_or_404(project_id)
+    config: ProjectClassConfig = project.config
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    to_list = [item.owner.student.user.id for item in project.selections]
+
+    return redirect(
+        url_for(
+            "services.send_email",
+            url=url_for("convenor.project_bookmarks", id=project_id),
+            text="project bookmarks view",
+            to=to_list,
+        )
+    )
+
 @convenor.route("/email_submitters/<int:configid>")
 @roles_accepted("faculty", "admin", "root")
 def email_submitters(configid):
@@ -7199,7 +7242,7 @@ def project_bookmarks(id):
         flash("It is not possible to view selector rankings before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/project_bookmarks.html", project=proj)
+    return render_template_context("convenor/selector/project_bookmarks.html", project=proj, student_emails=[p.owner_email for p in proj.bookmarks])
 
 
 def _demap_project(item_id):
@@ -7466,7 +7509,7 @@ def project_choices(id):
         flash("It is not possible to view project rankings before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/project_choices.html", project=proj)
+    return render_template_context("convenor/selector/project_choices.html", project=proj, student_emails=[p.owner_email for p in proj.selections])
 
 
 @convenor.route("/update_student_choices", methods=["POST"])

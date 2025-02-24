@@ -54,12 +54,9 @@
                 <div class="card-body">
                     {{ bookmark_projects(sel, sel.ordered_bookmarks, 'selector bookmarks view', url_for('convenor.selector_bookmarks', id=sel.id)) }}
                     <hr class="intro-divider" role="separator">
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="float-end">
-                                <a href="{{ url_for('convenor.add_student_bookmark', sid=sel.id) }}" class="btn btn-secondary">Add bookmark</a>
-                            </div>
-                        </div>
+                    <div class="d-flex flex-row justify-content-end align-items-start gap-2">
+                        <a href="{{ url_for('convenor.add_student_bookmark', sid=sel.id) }}"
+                           class="btn btn-sm btn-outline-secondary">Add bookmark</a>
                     </div>
                 </div>
             </div>

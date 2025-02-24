@@ -1,4 +1,4 @@
-{% from "macros.html" import truncate %}
+{% from "macros.html" import truncate, render_formatted_project %}
 {% from "swatch.html" import small_swatch %}
 
 {% macro project_tag(r, show_period, label_type, return_url, can_adjust=true) %}
@@ -41,7 +41,7 @@
                             {% set disabled = true %}{% endif %}
                         <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}"
                            {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
-                            #{{ item.rank }}: {{ item.format_project()|safe }}
+                            #{{ item.rank }}: {{ render_formatted_project(item) }}
                             {% if project.generic or project.owner is none %}
                                 (generic)
                             {% else %}

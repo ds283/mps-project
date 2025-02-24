@@ -229,8 +229,7 @@
 {% endmacro %}
 
 {% macro on_click_selector_field(field, show_label) %}
-    <div class="form-group {% if field.errors %} has-error{% endif -%}
-                               {%- if field.flags.required %} required{% endif -%}">
+    <div class="form-group {% if field.errors %} has-error{% endif %}{% if field.flags.required %} required{% endif -%}">
         {% if show_label %}
             {{ field.label(class="control-label")|safe }}
         {% endif %}
@@ -404,4 +403,37 @@
             </div>
         {% endif %}
     </div>
+{% endmacro %}
+
+{% macro render_tag(class) %}
+    {% if class|length > 0 %}
+        <i class="fas fa-fw fa-{{ class }}"></i>
+    {% endif %}
+{% endmacro %}
+
+{% macro render_formatted_student(item, show_hint=true) %}
+    {% set payload = item.format_name(show_hint=show_hint) %}
+    {% if 'email' in payload %}
+        {% if 'tag' in payload %}{{ render_tag(payload['tag']) }}{% endif %}
+        <a class="text-decoration-none" href="mailto:{{ payload['email'] }}">{{ payload['name'] }}</a>
+    {% else %}
+        {% if 'tag' in payload %}{{ render_tag(payload['tag']) }}{% endif %}
+        <span>{{ payload['name'] }}</span>
+    {% endif %}
+{% endmacro %}
+
+{% macro render_formatted_project(item, show_hint=true) %}
+    {% set payload = item.format_project(show_hint=true) %}
+    {% if 'tag' in payload %}
+        {{ render_tag(payload['tag']) }}
+    {% endif %}
+    {% if 'style' in payload %}
+        {% if payload['style'] == 'delete' %}
+            <s>{{ payload['name'] }}</s>
+        {% else %}
+            <span>{{ payload['name'] }}</span>
+        {% endif %}
+    {% else %}
+        <span>{{ payload['name'] }}</span>
+    {% endif %}
 {% endmacro %}

@@ -146,7 +146,7 @@ _desc_label = """
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
             <span class="badge bg-success"><i class="fas fa-check"></i>Approved</span>
         {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
-            <span class="badge bg-warning text-dark">Approval: Waiting</span>
+            <span class="badge bg-warning text-dark">Approval: Confirmed</span>
         {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
             <span class="badge bg-info">Approval: In progress</span>
         {% else %}

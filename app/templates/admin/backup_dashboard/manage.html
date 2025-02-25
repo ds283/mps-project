@@ -72,13 +72,13 @@
                 <div class="d-flex flex-row gap-2 justify-content-start align-items-end">
                     {{ wtf.render_field(form.weeks, form_group_class="") }}
                     {{ wtf.render_field(form.delete_age, button_map={'delete_age': 'outline-danger'}) }}
+                    <a href="{{ url_for('admin.confirm_delete_all_backups') }}" class="btn btn-outline-danger">
+                        <i class="fas fa-trash"></i> Delete all backups
+                    </a>
                 </div>
                 <div class="d-flex flow-row gap-2 justify-content-end align-items-end">
-                    <a href="{{ url_for('admin.manual_backup') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-clock-rotate-left"></i> Backup now
-                    </a>
-                    <a href="{{ url_for('admin.confirm_delete_all_backups') }}" class="btn btn-outline-danger">
-                            <i class="fas fa-trash"></i> Delete all backups
+                    <a href="{{ url_for('admin.manual_backup') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-archive"></i> Backup now
                     </a>
                 </div>
             </div>

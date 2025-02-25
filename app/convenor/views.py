@@ -1026,6 +1026,10 @@ def selectors(id):
     if match_show is not None:
         session["convenor_selectors_match_show"] = match_show
 
+    # build list of student emails for passing to local email client via mailto: list
+    selectors = _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter, match_filter, match_show)
+    emails = [s.student.user.email for s in selectors]
+
     data = get_convenor_dashboard_data(pclass, config)
 
     return render_template_context(
@@ -1040,6 +1044,7 @@ def selectors(id):
         progs=progs,
         years=sorted(years),
         matches=matches,
+        selector_emails=emails,
         match_filter=match_filter,
         match_show=match_show,
         cohort_filter=cohort_filter,
@@ -2018,6 +2023,10 @@ def submitters(id):
     if data_display is not None:
         session["convenor_submitters_data_display"] = data_display
 
+    # build list of student emails for passing to local email client via mailto: list
+    submitters = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
+    emails = [s.student.user.email for s in submitters]
+
     data = get_convenor_dashboard_data(pclass, config)
 
     return render_template_context(
@@ -2031,6 +2040,7 @@ def submitters(id):
         cohorts=sorted(cohorts),
         progs=progs,
         years=sorted(years),
+        submitter_emails=emails,
         cohort_filter=cohort_filter,
         prog_filter=prog_filter,
         state_filter=state_filter,

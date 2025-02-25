@@ -26,6 +26,16 @@
                         </div>
                     {% endif %}
                     {{ selecting_students(project, project.selections, show_hint=(lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING), show_delete=true) }}
+                    <hr class="intro-divider" role="separator">
+                    <div class="d-flex flex-row justify-content-end align-items-start gap-2">
+                        <a href="mailto:{{ student_emails|join(",") }}" class="btn btn-sm btn-outline-secondary"><i
+                                class="fas fa-envelope"></i> Email all students using local client</a>
+                        {% if is_admin or is_root or is_emailer %}
+                            <a href="{{ url_for('convenor.email_project_selectors', project_id=project.id) }}"
+                               class="btn btn-sm btn-outline-secondary"><i class="fas fa-envelope"></i> Email all
+                                students</a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 

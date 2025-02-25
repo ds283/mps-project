@@ -1,4 +1,5 @@
 {% from "swatch.html" import small_swatch, medium_swatch %}
+{% from "macros.html" import render_formatted_project %}
 
 {% macro student_offcanvas(sel, emails, attempt_id=none, return_text=none, return_url=none) %}
     {% set config = sel.config %}
@@ -53,10 +54,10 @@
                                 <div class="col-6">
                                     {% if return_text is not none and return_url is not none %}
                                         <a class="text-decoration-none"
-                                           href="{{ url_for('faculty.live_project', pid=project.id, text=return_text, url=return_url) }}">{{ item.format_project()|safe }}</a>
+                                           href="{{ url_for('faculty.live_project', pid=project.id, text=return_text, url=return_url) }}">{{ render_formatted_project(item) }}</a>
                                     {% else %}
                                         <a class="text-decoration-none"
-                                           href="{{ url_for('faculty.live_project', pid=project.id) }}">{{ item.format_project()|safe }}</a>
+                                           href="{{ url_for('faculty.live_project', pid=project.id) }}">{{ render_formatted_project(item) }}</a>
                                     {% endif %}
                                 </div>
                                 <div class="col-4">

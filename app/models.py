@@ -1240,13 +1240,13 @@ class SelectHintTypesMixin:
     SELECTION_HINT_DISCOURAGE_STRONG = 6
 
     _icons = {
-        SELECTION_HINT_NEUTRAL: "",
-        SELECTION_HINT_REQUIRE: '<i class="fas fa-check-circle fa-fw"></i>',
-        SELECTION_HINT_FORBID: '<i class="fas fa-times-circle fa-fw"></i>',
-        SELECTION_HINT_ENCOURAGE: '<i class="fas fa-plus fa-fw"></i>',
-        SELECTION_HINT_DISCOURAGE: '<i class="fas fa-minus fa-fw"></i>',
-        SELECTION_HINT_ENCOURAGE_STRONG: '<i class="fas fa-plus-circle fa-fw"></i>',
-        SELECTION_HINT_DISCOURAGE_STRONG: '<i class="fas fa-minus-circle fa-fw"></i>',
+        SELECTION_HINT_NEUTRAL: '',
+        SELECTION_HINT_REQUIRE: 'check-circle',
+        SELECTION_HINT_FORBID: 'times-circle',
+        SELECTION_HINT_ENCOURAGE: 'plus',
+        SELECTION_HINT_DISCOURAGE: 'minus',
+        SELECTION_HINT_ENCOURAGE_STRONG: 'plus-circle',
+        SELECTION_HINT_DISCOURAGE_STRONG: 'minus-circle',
     }
 
     _menu_items = {
@@ -11981,13 +11981,16 @@ class Bookmark(db.Model):
     # rank in owner's list
     rank = db.Column(db.Integer())
 
-    @property
-    def format_project(self):
-        return self.liveproject.name
+    def format_project(self, **kwargs):
+        return {'name': self.liveproject.name}
+
+    def format_name(self, **kwargs):
+        return {'name': self.owner.student.user.name,
+                'email': self.owner.student.user.email}
 
     @property
-    def format_name(self):
-        return self.owner.student.user.name
+    def owner_email(self):
+        return self.owner.student.user.email
 
 
 @listens_for(Bookmark, "before_insert")
@@ -12059,7 +12062,9 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
         record = self.liveproject.owner.get_enrollment_record(self.liveproject.config.pclass_id)
         return record is not None and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
 
-    def format_project(self, show_hint=True):
+    def format_project(self, **kwargs):
+        show_hint = kwargs.get('show_hint', True)
+
         if show_hint and self.hint in self._icons:
             tag = self._icons[self.hint]
         else:
@@ -12068,14 +12073,18 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
         if len(tag) > 0:
             tag += " "
 
+        style = ''
         if self.hint == self.SELECTION_HINT_FORBID:
-            return tag + "<s>" + self.liveproject.name + "</s>"
+            style = 'delete'
 
-        return tag + self.liveproject.name
+        return {'name': self.liveproject.name,
+                'tag': tag,
+                'style': style}
 
-    @property
-    def format_name(self):
-        if self.hint in self._icons:
+    def format_name(self, **kwargs):
+        show_hint = kwargs.get('show_hint', True)
+
+        if show_hint and self.hint in self._icons:
             tag = self._icons[self.hint]
         else:
             tag = ""
@@ -12083,7 +12092,13 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
         if len(tag) > 0:
             tag += " "
 
-        return tag + self.owner.student.user.name
+        return {'name': self.owner.student.user.name,
+                'email': self.owner.student.user.email,
+                'tag': tag}
+
+    @property
+    def owner_email(self):
+        return self.owner.student.user.email
 
     @property
     def menu_order(self):

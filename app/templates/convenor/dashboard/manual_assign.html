@@ -1,6 +1,6 @@
 {% extends "base_app.html" %}
 
-{% from "macros.html" import on_click_selector_field %}
+{% from "macros.html" import on_click_selector_field, render_formatted_project %}
 {% from "datatables.html" import import_datatables, bootstrap_spinner %}
 {% from "select2.html" import import_select2 %}
 
@@ -205,7 +205,7 @@
                                                     <div class="col-6">
                                                         <span class="badge bg-success">#{{ item.rank }}</span>
                                                         <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=item.liveproject_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
-                                                            {{ item.format_project()|safe }}
+                                                            {{ render_formatted_project(item) }}
                                                         </a>
                                                         {% if item.converted_from_bookmark %}
                                                             <span class="badge bg-warning text-dark">Bookmark</span>

@@ -89,12 +89,9 @@
                             </div>
                             {{ ranked_selection(sel, sel.ordered_selections, 'selector submission view', url_for('convenor.selector_choices', id=sel.id), show_hint=(lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING), show_delete=true) }}
                             <hr class="intro-divider" role="separator">
-                            <div class="row">
-                                <div class="col-12">
-                                    <div class="float-end">
-                                        <a href="{{ url_for('convenor.add_student_ranking', sid=sel.id) }}" class="btn btn-secondary">Add ranking</a>
-                                    </div>
-                                </div>
+                            <div class="d-flex flex-row justify-content-end align-items-start gap-2">
+                                <a href="{{ url_for('convenor.add_student_ranking', sid=sel.id) }}"
+                                   class="btn btn-sm btn-outline-secondary">Add ranking</a>
                             </div>
                         {% endif %}
                     {% else %}

@@ -1161,7 +1161,7 @@ def register_rollover_tasks(celery):
                 record.validated_id = None
                 record.validated_timestamp = None
 
-            # change projects marked as 'Rejected' back the 'Queued', except that we
+            # change projects marked as 'Rejected' back to 'Queued', except that we
             # test for the converse statement so that we pick up any stray meaningless values
             # for workflow_state
             if (

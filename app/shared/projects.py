@@ -105,8 +105,7 @@ def project_list_SQL_handler(
     with ServerSideSQLHandler(request, base_query, columns) as handler:
 
         def row_formatter(projects: ProjectLikeList | ProjectDescLikeList):
-            # convert project list back into a list of primary keys, so that we can
-            # use cached outcomes
+            # convert project list back into a list of primary keys, so that we can use cached outcomes
             if not isinstance(projects, list):
                 raise TypeError("Unexpected project list type")
 

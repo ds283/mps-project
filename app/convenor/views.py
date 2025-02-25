@@ -212,11 +212,11 @@ _desc_label = """
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
             <span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>
         {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
-            <span class="badge bg-warning text-dark">Approval: Queued</span>
+            <span class="badge bg-warning text-dark">Approval: Waiting</span>
         {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
             <span class="badge bg-info">Approval: In progress</span>
         {% else %}
-            <span class="badge bg-danger">Unknown approval state</span>
+            <span class="badge bg-danger">Approval: unknown state</span>
         {% endif %}
         {% if current_user.has_role('project_approver') and d.validated_by %}
             <div>

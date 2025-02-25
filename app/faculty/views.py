@@ -146,11 +146,11 @@ _desc_label = """
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
             <span class="badge bg-success"><i class="fas fa-check"></i>Approved</span>
         {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
-            <span class="badge bg-warning text-dark">Approval: Queued</span>
+            <span class="badge bg-warning text-dark">Approval: Waiting</span>
         {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
             <span class="badge bg-info">Approval: In progress</span>
         {% else %}
-            <span class="badge bg-danger">Unknown approval state</span>
+            <span class="badge bg-danger">Approval: unknown state</span>
         {% endif %}
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED and current_user.has_role('project_approver') and d.validated_by %}
             <div>
@@ -275,7 +275,17 @@ def remove_affiliation(groupid):
 def edit_projects():
     groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
 
-    return render_template_context("faculty/edit_projects.html", groups=groups)
+    state_filter = request.args.get('state_filter')
+
+    if state_filter is None and session.get("project_library_state_filter"):
+        state_filter = session["project_library_state_filter"]
+
+    if state_filter not in ['all', 'active', 'not-active']:
+        state_filter = "active"
+
+    session["project_library_state_filter"] = state_filter
+
+    return render_template_context("faculty/edit_projects.html", groups=groups, state_filter=state_filter)
 
 
 @faculty.route("/projects_ajax", methods=["POST"])
@@ -287,6 +297,15 @@ def projects_ajax():
     """
 
     base_query = db.session.query(Project).filter_by(owner_id=current_user.id)
+
+    state_filter = request.args.get('state_filter')
+    if state_filter not in ['all', 'active', 'not-active']:
+        state_filter = 'all'
+
+    if state_filter == 'active':
+        base_query = base_query.filter(Project.active)
+    elif state_filter == 'not-active':
+        base_query = base_query.filter(~Project.active)
 
     return project_list_SQL_handler(
         request,

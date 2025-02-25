@@ -156,7 +156,7 @@
                             </a>
                             <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='not-valid', state_filter=state_filter, active_filter=active_filter) }}"
                                class="btn btn-sm filter-btn {% if valid_filter == 'not-valid' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                                Queued
+                                Waiting confirmation
                             </a>
                             <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='reject', state_filter=state_filter, active_filter=active_filter) }}"
                                class="btn btn-sm filter-btn {% if valid_filter == 'reject' %}btn-primary{% else %}btn-outline-secondary{% endif %}">

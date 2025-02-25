@@ -32,7 +32,7 @@
             {% endcall %}
         </div>
         <div class="col-3">
-            {% call(blk) dashboard_tile("Queued", title_icon="circle", icon_state=queued_ok) %}
+            {% call(blk) dashboard_tile("Waiting", title_icon="circle", icon_state=queued_ok) %}
                 {% if blk == 'body' %}
                     <span class="fw-bold fs-1 {% if queued_ok %}text-success{% else %}text-primary{% endif %}">{{ queued }}</span>
                 {% endif %}

@@ -56,7 +56,7 @@ _projects = """
                     {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
                         <span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>
                     {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
-                        <span class="badge bg-warning text-dark">Approval: Queued</span>
+                        <span class="badge bg-warning text-dark">Approval: Waiting</span>
                     {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
                         <span class="badge bg-info">Approval: In progress</span>
                     {% else %}

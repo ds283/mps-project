@@ -152,9 +152,9 @@ _status = """
                             </span>
                         {% endif %}
                     {% elif state == desc.WORKFLOW_APPROVAL_QUEUED %}
-                        <div class="text-danger small"><i class="fas fa-circle"></i> Queued</div>
+                        <div class="text-danger small"><i class="fas fa-circle"></i> Approval: Waiting"</div>
                     {% elif state == desc.WORKFLOW_APPROVAL_REJECTED %}
-                        <div class="text-primary small"><i class="fas fa-circle"></i> In progress</div>
+                        <div class="text-primary small"><i class="fas fa-circle"></i> Approval: In progress</div>
                     {% else %}     
                         <span class="badge bg-danger">Unknown state</span>
                     {% endif %}
@@ -166,16 +166,16 @@ _status = """
                 {% if state == project.DESCRIPTIONS_APPROVED %}
                     <div class="text-success small"><i class="fas fa-check-circle"></i> Approved</div>
                 {% elif state == project.SOME_DESCRIPTIONS_QUEUED %}
-                    <div class="text-danger small"><i class="fas fa-circle"></i> Queued</div>
+                    <div class="text-danger small"><i class="fas fa-circle"></i> Approval: Waiting</div>
                 {% elif state == project.SOME_DESCRIPTIONS_REJECTED %}
-                    <div class="text-primary small"><i class="fas fa-circle"></i> In progress</div>
+                    <div class="text-primary small"><i class="fas fa-circle"></i> Approval: In progress</div>
                 {% elif state == project.SOME_DESCRIPTIONS_UNCONFIRMED %}
-                    <div class="text-secondary small"><i class="fas fa-circle"></i> Not confirmed</div>
+                    <div class="text-secondary small"><i class="fas fa-circle"></i> Approval: Not confirmed</div>
                 {% elif state == project.APPROVALS_NOT_ACTIVE %}
-                    <div class="text-danger small"><i class="fas fa-times-circle"></i> Not offerable/div>
+                    <div class="text-danger small"><i class="fas fa-times-circle"></i> Approval: Not offerable/div>
                 {% elif state == project.APPROVALS_NOT_OFFERABLE %}
                 {% else %}
-                    <span class="badge bg-danger">Unknown state</span>
+                    <span class="badge bg-danger">Approval: Unknown state</span>
                 {% endif %}
             {% endif %}
         {% else %}
@@ -200,13 +200,13 @@ _pclasses = """
 # language=jinja2
 _meetingreqd = """
 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
-    <span class="badge bg-danger">Required</span>
+    <div class="text-danger small"><i class="fas fa-check-circle"></i> Required</div>
 {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-    <span class="badge bg-warning text-dark">Optional</span>
+    <div class="text-secondary small"><i class="fas fa-circle"></i> Optional</div>
 {% elif project.meeting_reqd == project.MEETING_NONE %}
-    <span class="badge bg-success">Not required</span>
+    <div class="text-success small"><i class="fas fa-times-circle"></i> Not required</div>
 {% else %}
-    <span class="badge bg-secondary">Unknown</span>
+    <div class="text-danger small"><i class="fas fa-exclamation-triangle"></i> Unknown</div>
 {% endif %}
 """
 

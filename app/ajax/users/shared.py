@@ -7,6 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+
 from flask import current_app
 from jinja2 import Template, Environment
 
@@ -33,13 +34,13 @@ name = """
         {% endif %}
         {% set state = sd.workflow_state %}
         {% if state == sd.WORKFLOW_APPROVAL_QUEUED %}
-            <span class="badge bg-warning text-dark">Approval: Queued</span>
+            <span class="badge bg-warning text-dark">Approval: Waiting</span>
         {% elif state == sd.WORKFLOW_APPROVAL_REJECTED %}
-            <span class="badge bg-danger">Approval: Rejected</span>
+            <span class="badge bg-danger">Approval: In progress</span>
         {% elif state == sd.WORKFLOW_APPROVAL_VALIDATED %}
             <span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>
         {% else %}
-            <span class="badge bg-danger">Unknown validation</span>
+            <span class="badge bg-danger">Approval: Unknown state</span>
         {% endif %}
     {% endif %}
     {% if f %}

@@ -5,6 +5,8 @@
 
 {% from "datatables.html" import import_datatables, bootstrap_spinner %}
 
+{% if state_filter is not defined or state_filter is none %}{% set state_filter = 'active' %}{% endif %}
+
 {% block scripts %}
     {{ super() }}
     {{ import_datatables() }}
@@ -18,7 +20,8 @@
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 serverSide: true, processing: true,
                 language: {{ bootstrap_spinner() }},
-                ajax: { 'url': $SCRIPT_ROOT + '/faculty/projects_ajax',
+                ajax: {
+                    'url': $SCRIPT_ROOT + '/faculty/projects_ajax?state_filter={{ state_filter }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; }},
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'}); },
@@ -46,7 +49,8 @@
                       orderable: false },
                     { data: 'menu',
                       searchable: false,
-                      orderable: false}
+                        orderable: false
+                    }
                 ],
                 order: [[0, 'asc']]
             });
@@ -62,13 +66,32 @@
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white">My project library</div>
         <div class="card-body">
+            <div class="card mt-3 mb-3 card-body bg-well">
+                <div class="d-flex flex-column justify-content-start align-items-start gap-2">
+                    <div class="fw-semibold">Filter projects</div>
+                    <div class="d-flex flex-row justify-content-start align-items-start gap-2">
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                           href="{{ url_for('faculty.edit_projects', state_filter='all') }}">
+                            All
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'active' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                           href="{{ url_for('faculty.edit_projects', state_filter='active') }}">
+                            Active
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'not-active' %}btn-primary{% else %}btn-outline-primary{% endif %}"
+                           href="{{ url_for('faculty.edit_projects', state_filter='not-active') }}">
+                            Inactive (archived)
+                        </a>
+                    </div>
+                </div>
+            </div>
             <table id="projects-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
                     <th width="15%"> Name</th>
                     <th width="8%"> Status</th>
                     <th width="12%"> Available for</th>
-                    <th width="8%"> Meeting required?</th>
+                    <th width="8%"> Require sign-off?</th>
                     <th width="8%"> Affiliation</th>
                     <th width="15%"> Prefer degree programmes</th>
                     <th width="20%"> Transferable skills</th>

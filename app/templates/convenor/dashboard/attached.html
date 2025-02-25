@@ -116,7 +116,7 @@
                             </a>
                             <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='not-valid') }}"
                                class="btn btn-sm filter-btn {% if valid_filter == 'not-valid' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                                Queued
+                                Waiting confirmation
                             </a>
                             <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='reject') }}"
                                class="btn btn-sm filter-btn {% if valid_filter == 'reject' %}btn-primary{% else %}btn-outline-secondary{% endif %}">

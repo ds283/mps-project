@@ -23,11 +23,10 @@
                             {{ render_formatted_project(item) }}
                         </a>
                         {% if project.is_available(sel) %}
-                            <div class="text-success small"><i class="fas fa-check-circle"></i> Available to select
+                            <div class="text-success small"><i class="fas fa-check-circle"></i> Available to this student
                             </div>
                         {% else %}
-                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not yet available to
-                                select
+                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not available to this student
                             </div>
                         {% endif %}
                     </div>
@@ -104,11 +103,10 @@
                             <div class="text-secondary small"><i class="fas fa-times-circle"></i> Not submitted</div>
                         {% endif %}
                         {% if proj.is_available(item.owner) %}
-                            <div class="text-success small"><i class="fas fa-check-circle"></i> Available to select
+                            <div class="text-success small"><i class="fas fa-check-circle"></i> Available to this student
                             </div>
                         {% else %}
-                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not yet available to
-                                select
+                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not available to this student
                             </div>
                         {% endif %}
                     </div>

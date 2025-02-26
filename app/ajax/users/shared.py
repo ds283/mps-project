@@ -34,7 +34,7 @@ name = """
         {% endif %}
         {% set state = sd.workflow_state %}
         {% if state == sd.WORKFLOW_APPROVAL_QUEUED %}
-            <span class="badge bg-warning text-dark">Approval: Waiting</span>
+            <span class="badge bg-warning text-dark">Approval: Queued</span>
         {% elif state == sd.WORKFLOW_APPROVAL_REJECTED %}
             <span class="badge bg-danger">Approval: In progress</span>
         {% elif state == sd.WORKFLOW_APPROVAL_VALIDATED %}

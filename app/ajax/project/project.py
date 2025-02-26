@@ -152,7 +152,7 @@ _status = """
                             </span>
                         {% endif %}
                     {% elif state == desc.WORKFLOW_APPROVAL_QUEUED %}
-                        <div class="text-danger small"><i class="fas fa-circle"></i> Approval: Waiting</div>
+                        <div class="text-danger small"><i class="fas fa-circle"></i> Approval: Confirmed</div>
                     {% elif state == desc.WORKFLOW_APPROVAL_REJECTED %}
                         <div class="text-primary small"><i class="fas fa-circle"></i> Approval: In progress</div>
                     {% else %}     
@@ -166,7 +166,7 @@ _status = """
                 {% if state == project.DESCRIPTIONS_APPROVED %}
                     <div class="text-success small"><i class="fas fa-check-circle"></i> Approved</div>
                 {% elif state == project.SOME_DESCRIPTIONS_QUEUED %}
-                    <div class="text-danger small"><i class="fas fa-circle"></i> Approval: Waiting</div>
+                    <div class="text-danger small"><i class="fas fa-circle"></i> Approval: Confirmed</div>
                 {% elif state == project.SOME_DESCRIPTIONS_REJECTED %}
                     <div class="text-primary small"><i class="fas fa-circle"></i> Approval: In progress</div>
                 {% elif state == project.SOME_DESCRIPTIONS_UNCONFIRMED %}

@@ -1445,18 +1445,18 @@ def _create_PuLP_problem(
 
     with Timer() as mark_timer:
         # Markers can only be assigned projects for which they are in the assessor pool
-        for i in range(number_mark):
-            mark: FacultyData = mark_dict[i]
-            user: User = mark.user
-
-            for j in range(number_lp):
-                proj: LiveProject = lp_dict[j]
-
-                # recall M[(i,j)] is the allowed multiplicity (i.e. maximum number of times marker i can be assigned
-                # to mark a report from project j)
-                prob += sum(Y[(i, j, l)] for l in range(number_sel)) <= M[(i, j)], "_CM{first}{last}_C{cfg}_P{num}_mark_capacity".format(
-                    first=user.first_name, last=user.last_name, cfg=proj.config_id, num=proj.number
-                )
+        # for i in range(number_mark):
+        #     mark: FacultyData = mark_dict[i]
+        #     user: User = mark.user
+        #
+        #     for j in range(number_lp):
+        #         proj: LiveProject = lp_dict[j]
+        #
+        #         # recall M[(i,j)] is the allowed multiplicity (i.e. maximum number of times marker i can be assigned
+        #         # to mark a report from project j)
+        #         prob += sum(Y[(i, j, l)] for l in range(number_sel)) <= M[(i, j)], "_CM{first}{last}_C{cfg}_P{num}_mark_capacity".format(
+        #             first=user.first_name, last=user.last_name, cfg=proj.config_id, num=proj.number
+        #         )
 
         # Ysel[i,j] should slice Y[i,j,l] by summing over selectors l at fixed i and j
         for i in range(number_mark):
@@ -1641,14 +1641,14 @@ def _create_PuLP_problem(
             ], "_C{first}{last}_mark_CATS".format(first=user.first_name, last=user.last_name)
 
             # enforce ad-hoc per-project-class marking limits
-            for config_id in mark_pclass_limits:
-                fac_limits = mark_pclass_limits[config_id]
-                projects = lp_group_dict.get(config_id, None)
-
-                if i in fac_limits and projects is not None:
-                    prob += sum(CATS_marker[j] * Ysel[(i, j)] for j in projects) <= fac_limits[i], "_C{first}{last}_mark_CATS_config_C{cfg}".format(
-                        first=user.first_name, last=user.last_name, cfg=config_id
-                    )
+            # for config_id in mark_pclass_limits:
+            #     fac_limits = mark_pclass_limits[config_id]
+            #     projects = lp_group_dict.get(config_id, None)
+            #
+            #     if i in fac_limits and projects is not None:
+            #         prob += sum(CATS_marker[j] * Ysel[(i, j)] for j in projects) <= fac_limits[i], "_C{first}{last}_mark_CATS_config_C{cfg}".format(
+            #             first=user.first_name, last=user.last_name, cfg=config_id
+            #         )
 
     print(" -- created faculty workload constraints in time {t}".format(t=fac_work_timer.interval))
 

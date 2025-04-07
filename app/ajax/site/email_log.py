@@ -48,7 +48,7 @@ _addresses = """
         <a class="text-decoration-none" href="mailto:{{ user.email }}">{{ user.email }}</a>
     </div>
 {% else %}
-    <span class="badge bg-warning">Invalid/span>
+    <span class="badge bg-danger">Invalid</span>
 {% endfor %}
 """
 

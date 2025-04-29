@@ -74,7 +74,7 @@ _affiliation = """
 _bookmarks = """
 {% set bookmarks = project.number_bookmarks %}
 {% if bookmarks > 0 %}
-    <span class="text-primary"><i class="fas fa-bookmark"></i> <strong>{{ bookmarks }}</strong></span>
+    <div class="text-primary"><i class="fas fa-bookmark"></i> <strong>{{ bookmarks }}</strong></div>
     <a class="text-decoration-none link-secondary small" href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
        Show...
    </a>

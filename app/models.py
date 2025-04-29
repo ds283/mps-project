@@ -9221,7 +9221,14 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
     # if declined, a short justification
     decline_justification = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
-    def confirm(self):
+    # resolved/confirmed by
+    resolved_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
+    resolved_by = db.relationship("User", foreign_keys=[resolved_id], uselist=False, backref=db.backref("confirmations_resolved", lazy="dynamic"))
+
+    # add comment if required
+    comment = db.Column(db.Text())
+
+    def confirm(self, resolved_by=None, comment=None):
         if self.state != ConfirmRequest.CONFIRMED:
             self.owner.student.user.post_message(
                 'Your confirmation request for project "{name}" has been approved.'.format(name=self.project.name), "success"
@@ -9229,8 +9236,15 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
             add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_GRANTED, self)
 
         self.state = ConfirmRequest.CONFIRMED
+
         if self.response_timestamp is None:
             self.response_timestamp = datetime.now()
+
+        if resolved_by is not None:
+            self.resolved_id = resolved_by.id
+
+        if comment is not None:
+            self.comment = comment
 
         delete_notification(self.project.owner.user, EmailNotification.CONFIRMATION_REQUEST_CREATED, self)
 
@@ -9245,10 +9259,13 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
             add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_TO_PENDING, self)
 
         self.response_timestamp = None
+        self.resolved_by = None
+        self.comment = None
+
         self.state = ConfirmRequest.REQUESTED
 
-    def remove(self, notify_student: bool = False, notify_supervisor: bool = False):
-        if notify_supervisor:
+    def remove(self, notify_student: bool = False, notify_owner: bool = False):
+        if notify_owner:
             add_notification(
                 self.project.owner,
                 EmailNotification.CONFIRMATION_REQUEST_CANCELLED,
@@ -14396,7 +14413,7 @@ class PresentationAssessment(db.Model, EditingMetadataMixin, AvailabilityRequest
     # have availability requests been skipped?
     skip_availability = db.Column(db.Boolean())
 
-    # who skipped availabiluty requests?
+    # who skipped availability requests?
     availability_skipped_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
     availability_skipped_by = db.relationship("User", uselist=False, foreign_keys=[availability_skipped_id])
 

@@ -165,7 +165,7 @@ def register_selecting_tasks(celery):
 
         for req in outstanding:
             req: ConfirmRequest
-            req.confirm()
+            req.confirm(current_user)
 
         try:
             db.session.commit()
@@ -228,7 +228,7 @@ def register_selecting_tasks(celery):
 
         for req in outstanding:
             req: ConfirmRequest
-            req.remove(notify_student=True, notify_supervisor=False)
+            req.remove(notify_student=True, notify_owner=False)
             db.session.delete(req)
 
         try:

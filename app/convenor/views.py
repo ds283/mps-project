@@ -6456,7 +6456,7 @@ def confirm(sid, pid):
     if not validate_project_open(sel.config):
         return redirect(redirect_url())
 
-    if do_confirm(sel, project):
+    if do_confirm(sel, project, resolved_by=current_user, comment="Resolved by convenor action"):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
@@ -6566,7 +6566,7 @@ def project_confirm_all(pid):
 
     waiting = project.requests_waiting
     for req in waiting:
-        req.confirm()
+        req.confirm(resolved_by=current_user, comment="Resolved by convenor 'Project confirm all' action")
 
     try:
         db.session.commit()
@@ -6596,7 +6596,7 @@ def project_clear_requests(pid):
 
     waiting = project.requests_waiting
     for req in waiting:
-        req.remove(notify_student=True, notify_supervisor=False)
+        req.remove(notify_student=True, notify_owner=False)
         db.session.delete(req)
 
     try:
@@ -6627,7 +6627,7 @@ def project_remove_confirms(pid):
 
     confirmed = project.requests_confirmed
     for req in confirmed:
-        req.remove(notify_student=True, notify_supervisor=False)
+        req.remove(notify_student=True, notify_owner=False)
         db.session.delete(req)
 
     try:
@@ -6686,7 +6686,7 @@ def student_confirm_all(sid):
 
     waiting = sel.requests_waiting
     for req in waiting:
-        req.confirm()
+        req.confirm(resolved_by=current_user, comment="Resolved by convenor 'Student confirm all' action")
 
     try:
         db.session.commit()
@@ -6714,7 +6714,7 @@ def student_remove_confirms(sid):
 
     confirmed = sel.requests_confirmed
     for req in confirmed:
-        req.remove(notify_student=True, notify_supervisor=False)
+        req.remove(notify_student=True, notify_owner=False)
         db.session.delete(req)
 
     try:
@@ -6743,7 +6743,7 @@ def student_clear_requests(sid):
 
     waiting = sel.requests_waiting
     for req in waiting:
-        req.remove(notify_student=True, notify_supervisor=False)
+        req.remove(notify_student=True, notify_owner=False)
         db.session.delete(req)
 
     try:

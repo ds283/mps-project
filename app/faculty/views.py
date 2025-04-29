@@ -1820,7 +1820,7 @@ def confirm(sid, pid):
     if not validate_project_open(sel.config):
         return redirect(url_for(request.referrer))
 
-    if do_confirm(sel, project):
+    if do_confirm(sel, project, resolved_by=current_user):
         db.session.commit()
 
     return redirect(redirect_url())

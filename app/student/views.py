@@ -578,7 +578,8 @@ def add_bookmark(sid, pid):
         return redirect(redirect_url())
 
     # add bookmark
-    if not sel.is_project_bookmarked(project):
+    bookmark_data = sel.is_project_bookmarked(project)
+    if not bookmark_data.get("bookmarked"):
         bm = Bookmark(owner_id=sid, liveproject_id=pid, rank=sel.bookmarks.count() + 1)
         db.session.add(bm)
         db.session.commit()
@@ -675,7 +676,8 @@ def request_confirmation(sid, pid):
     add_notification(project.owner, EmailNotification.CONFIRMATION_REQUEST_CREATED, req, autocommit=False)
 
     # check if a bookmark already exists, and make one if not
-    if not sel.is_project_bookmarked(project):
+    bookmark_data = sel.is_project_bookmarked(project)
+    if not bookmark_data.get("bookmarked"):
         bm = Bookmark(owner_id=sid, liveproject_id=pid, rank=sel.bookmarks.count() + 1)
         db.session.add(bm)
 

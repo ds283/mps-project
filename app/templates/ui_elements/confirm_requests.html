@@ -35,6 +35,14 @@
     {% endif %}
 {% endmacro %}
 
+{% macro format_comment(req) %}
+    <div>
+        <span class="ms-1 text-muted" tabindex="0" data-bs-toggle="popover" title="Notes" data-bs-container="body"
+              data-bs-trigger="focus" data-bs-content="{{ req.comment|truncate(600) }}">Notes <i
+                class="ms-1 fas fa-chevron-right"></i></span>
+    </div>
+{% endmacro %}
+
 {% macro confirmation_request_table(requests, now, url=none, text=none, project_col="col-4", project_has_timestamps=true, student_col=none, student_has_timestamps=false, timestamps_col=none, affiliation_col="col-3", owner_col="col-3", actions_col="col-2") %}
     {% for req in requests %}
         {% set project = req.project %}
@@ -50,6 +58,9 @@
                         <div>
                             {{ format_confirm_timestamps(req, now) }}
                         </div>
+                        {% if req.comment and req.comment|length > 0 %}
+                            {{ format_comment(req) }}
+                        {% endif %}
                     {% endif %}
                 </div>
             {% endif %}
@@ -61,10 +72,18 @@
                     {% if not sel.satisfies_recommended(project) %}
                         <i class="ms-1 fas fa-exclamation-triangle text-danger"></i>
                     {% endif %}
+                    {% set selection_data = sel.is_project_selected(project) %}
+                    {% if selection_data is not none and 'submitted' in selection_data and selection_data['submitted'] %}
+                        <div class="text-success small"><i class="fas fa-check"></i> In submitted list</div>
+                    {% endif %}
+                    {% set bookmark_data = sel.is_project_bookmarked(project) %}
                     {% if student_has_timestamps %}
                         <div>
                             {{ format_confirm_timestamps(req, now) }}
                         </div>
+                        {% if req.comment and req.comment|length > 0 %}
+                            {{ format_comment(req) }}
+                        {% endif %}
                     {% endif %}
                 </div>
             {% endif %}
@@ -72,6 +91,9 @@
                 <div class="{{ timestamps_col }}">
                     {{ format_confirm_timestamps(req, now) }}
                 </div>
+                {% if req.comment and req.comment|length > 0 %}
+                    {{ format_comment(req) }}
+                {% endif %}
             {% endif %}
             {% if affiliation_col is not none %}
                 <div class="{{ affiliation_col }}">

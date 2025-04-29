@@ -9804,9 +9804,16 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
 
         if self.number_offers_accepted > 0:
             accepted_offer = self.accepted_offer
-            return proj_id == accepted_offer.liveproject.id
+            if proj_id == accepted_offer.liveproject.id:
+                return {"submitted": True, "rank": 1}
+            else:
+                return {"submitted": False}
 
-        return get_count(self.selections.filter_by(liveproject_id=proj_id)) > 0
+        selrec: SelectionRecord = self.selections.filter_by(liveproject_id=proj_id).first()
+        if selrec is None:
+            return {"submitted": False}
+
+        return {"submitted": True, "rank": selrec.rank}
 
     def is_project_bookmarked(self, proj):
         if isinstance(proj, int):
@@ -9816,7 +9823,11 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         else:
             raise RuntimeError('Could not interpret "proj" parameter of type {x}'.format(x=type(proj)))
 
-        return get_count(self.bookmarks.filter_by(liveproject_id=proj_id)) > 0
+        bkrec: Bookmark = self.bookmarks.filter_by(liveproject_id=proj_id).first()
+        if bkrec is None:
+            return {"bookmarked": False}
+
+        return {"bookmarked": True, "rank": bkrec.rank}
 
     @property
     def ordered_selections(self):

@@ -6026,7 +6026,8 @@ def reassign_match_project(id, pid):
     project: LiveProject = LiveProject.query.get_or_404(pid)
 
     if record.selector.has_submitted:
-        if record.selector.is_project_submitted(project):
+        submitted_data = record.selector.is_project_submitted(project)
+        if submitted_data.get("submitted"):
             adjust = False
 
             if project.generic:

@@ -13,19 +13,24 @@ from flask_login import current_user
 
 from app.models import ProjectClassConfig, SubmittingStudent, SubmissionRecord, SelectingStudent
 from app.shared.sqlalchemy import get_count
+from app.shared.validators import validate_is_convenor
 
 
 def verify_submitter(sub: SubmittingStudent, message: bool = False):
-    if sub.student_id != current_user.id and not current_user.has_role("admin") and not current_user.has_role("root"):
-        if message:
-            flash(
-                "You do not have permission to perform operations for this user. "
-                "If you believe this is incorrect, contract the system administrator.",
-                "error",
-            )
-        return False
+    # submitter is able to take actions for themselves
+    if sub.student_id == current_user.id:
+        return True
 
-    return True
+    # convenors and admin users are able to take actions on a student's behalf
+    if validate_is_convenor(sub.config.project_class, message=False):
+        return True
+
+    if message:
+        flash(
+            "You do not have permission to perform operations for this user. " "If you believe this is incorrect, contract the system administrator.",
+            "error",
+        )
+    return False
 
 
 def verify_submission_record(rec: SubmissionRecord, message: bool = False):
@@ -43,16 +48,22 @@ def verify_selector(sel: SelectingStudent, message=False):
     :return:
     """
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
-    if sel.student_id != current_user.id and not current_user.has_role("admin") and not current_user.has_role("root"):
-        if message:
-            flash(
-                "You do not have permission to perform operations for this user. "
-                "If you believe this is incorrect, contract the system administrator.",
-                "error",
-            )
-        return False
 
-    return True
+    # selector is able to take actions for themselves
+    if sel.student_id == current_user.id:
+        return True
+
+    # convenors and admin users are able to take actions on a student's behalf
+    if validate_is_convenor(sel.config.project_class, message=False):
+        return True
+
+    # convenor is able to take actions on a student's behalf
+    if message:
+        flash(
+            "You do not have permission to perform operations for this user. " "If you believe this is incorrect, contract the system administrator.",
+            "error",
+        )
+    return False
 
 
 def verify_view_project(config: ProjectClassConfig, project):

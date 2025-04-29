@@ -36,11 +36,41 @@
 {% endmacro %}
 
 {% macro format_comment(req) %}
-    <div>
-        <span class="ms-1 text-muted" tabindex="0" data-bs-toggle="popover" title="Notes" data-bs-container="body"
-              data-bs-trigger="focus" data-bs-content="{{ req.comment|truncate(600) }}">Notes <i
-                class="ms-1 fas fa-chevron-right"></i></span>
+    <div class="small text-muted">
+        <span class="ms-1" tabindex="0" data-bs-toggle="popover" title="Notes" data-bs-container="body"
+              data-bs-trigger="focus" data-bs-content="{{ req.comment|truncate(600) }}">
+            Notes
+            <i class="ms-1 fas fa-chevron-right"></i>
+        </span>
     </div>
+{% endmacro %}
+
+{% macro format_ranking(sel, project) %}
+    {% set submitted_data = sel.is_project_submitted(project) %}
+    {% if submitted_data is not none and 'submitted' in submitted_data and submitted_data['submitted'] %}
+        <div class="text-success small">
+            {% if 'rank' in submitted_data %}
+                <i class="fas fa-check-circle"></i> In submitted list, rank #{{ submitted_data['rank'] }}
+            {% else %}
+                <i class="fas fa-check-circle"></i> In submitted list
+            {% endif %}
+        </div>
+    {% else %}
+        {% set bookmark_data = sel.is_project_bookmarked(project) %}
+        {% if bookmark_data is not none and 'bookmarked' in bookmark_data and bookmark_data['bookmarked'] %}
+            <div class="text-secondary small">
+                {% if 'rank' in bookmark_data %}
+                    <i class="fas fa-bookmark"></i> Bookmarked, rank #{{ bookmark_data['rank'] }}
+                {% else %}
+                    <i class="fas fa-bookmark"></i> Bookmarked
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="text-danger small">
+                No matching bookmark
+            </div>
+        {% endif %}
+    {% endif %}
 {% endmacro %}
 
 {% macro confirmation_request_table(requests, now, url=none, text=none, project_col="col-4", project_has_timestamps=true, student_col=none, student_has_timestamps=false, timestamps_col=none, affiliation_col="col-3", owner_col="col-3", actions_col="col-2") %}
@@ -54,6 +84,7 @@
                        href="{{ url_for('faculty.live_project', pid=project.id, text=text, url=url) }}">
                         <strong>{{ project.name }}</strong>
                     </a>
+                    {{ format_ranking(sel, project) }}
                     {% if project_has_timestamps %}
                         <div>
                             {{ format_confirm_timestamps(req, now) }}
@@ -72,11 +103,7 @@
                     {% if not sel.satisfies_recommended(project) %}
                         <i class="ms-1 fas fa-exclamation-triangle text-danger"></i>
                     {% endif %}
-                    {% set selection_data = sel.is_project_selected(project) %}
-                    {% if selection_data is not none and 'submitted' in selection_data and selection_data['submitted'] %}
-                        <div class="text-success small"><i class="fas fa-check"></i> In submitted list</div>
-                    {% endif %}
-                    {% set bookmark_data = sel.is_project_bookmarked(project) %}
+                    {{ format_ranking(sel, project) }}
                     {% if student_has_timestamps %}
                         <div>
                             {{ format_confirm_timestamps(req, now) }}
@@ -91,6 +118,7 @@
                 <div class="{{ timestamps_col }}">
                     {{ format_confirm_timestamps(req, now) }}
                 </div>
+                {{ format_ranking(sel, project) }}
                 {% if req.comment and req.comment|length > 0 %}
                     {{ format_comment(req) }}
                 {% endif %}

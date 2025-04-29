@@ -626,7 +626,7 @@ def remove_bookmark(sid, pid):
 
 
 @student.route("/request_confirm/<int:sid>/<int:pid>")
-@roles_accepted("student", "admin", "root")
+@roles_accepted("student", "faculty", "admin", "root")
 def request_confirmation(sid, pid):
     # sid is a SelectingStudent
     sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)

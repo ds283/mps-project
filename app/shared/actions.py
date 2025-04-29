@@ -73,8 +73,6 @@ def do_confirm(sel, project, resolved_by=None, comment=None):
         return False
 
     req.confirm(resolved_by=resolved_by, comment=comment)
-    db.session.commit()
-
     return True
 
 
@@ -88,8 +86,6 @@ def do_deconfirm(sel, project):
 
     req.remove(notify_student=True, notify_owner=False)
     db.session.delete(req)
-    db.session.commit()
-
     return True
 
 
@@ -102,21 +98,14 @@ def do_deconfirm_to_pending(sel, project):
         return False
 
     req.waiting()
-    db.session.commit()
-
     return True
 
 
 def do_cancel_confirm(sel, project):
-    if not project.is_waiting(sel):
-        return False
-
     req = project.get_confirm_request(sel)
     if req is None:
         return False
 
     req.remove(notify_student=True, notify_owner=False)
     db.session.delete(req)
-    db.session.commit()
-
     return True

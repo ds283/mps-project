@@ -114,7 +114,7 @@ from ..models import (
     LiveProjectAlternative,
     ProjectAlternative,
 )
-from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
+from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.convenor_dashboard import (
     get_convenor_dashboard_data,
@@ -6467,14 +6467,14 @@ def confirm(sid, pid):
     return redirect(redirect_url())
 
 
-@convenor.route("/deconfirm/<int:sid>/<int:pid>")
+@convenor.route("/generate_confirm/<int:sid>/<int:pid>")
 @roles_accepted("faculty", "admin", "root")
-def deconfirm(sid, pid):
+def generate_confirm(sid, pid):
     # sid is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(sid)
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
 
     # pid is a LiveProject
-    project = LiveProject.query.get_or_404(pid)
+    project: LiveProject = LiveProject.query.get_or_404(pid)
 
     if not validate_is_convenor(sel.config.project_class):
         return home_dashboard()
@@ -6483,13 +6483,16 @@ def deconfirm(sid, pid):
     if not validate_project_open(sel.config):
         return redirect(redirect_url())
 
-    if do_deconfirm(sel, project):
-        try:
-            db.session.commit()
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not deconfirm request because of a database error. Please contact a system administrator", "error")
+    try:
+        req = project.make_confirm_request(
+            sel, state="confirmed", resolved_by=current_user, comment="Confirmation generated and resolved by convenor"
+        )
+        db.session.add(req)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not generate confirm request because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -7234,7 +7237,7 @@ def selector_bookmarks(id):
         flash("It is not possible to view selector rankings before the corresponding project class has gone live.", "error")
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/selector_bookmarks.html", sel=sel)
+    return render_template_context("convenor/selector/selector_bookmarks.html", sel=sel, now=datetime.now())
 
 
 @convenor.route("/project_bookmarks/<int:id>")

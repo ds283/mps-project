@@ -1180,6 +1180,8 @@ class ConfirmRequestStatesMixin:
     CONFIRMED = 1
     DECLINED = 2
 
+    _values = {"requested": REQUESTED, "confirmed": CONFIRMED}
+
 
 class SubmissionFeedbackStatesMixin:
     """
@@ -8652,14 +8654,14 @@ class LiveProject(
         if self.hidden:
             return False
 
+        # generic projects are always available
+        if self.generic:
+            return True
+
         # if student doesn't satisfy recommended modules, sign-off is required by default (whether or not
         # the project/owner settings require sign-off)
         if not sel.satisfies_recommended(self) and not self.is_confirmed(sel):
             return False
-
-        # generic projects are always available
-        if self.generic:
-            return True
 
         # if project doesn't require sign off, it is always available
         # if project owner doesn't require confirmation, it is always available
@@ -8674,11 +8676,11 @@ class LiveProject(
 
     @property
     def _is_waiting_query(self):
-        return self.confirmation_requests.filter_by(state=ConfirmRequest.REQUESTED)
+        return self.confirmation_requests.filter_by(state=ConfirmRequestStatesMixin.REQUESTED)
 
     @property
     def _is_confirmed_query(self):
-        return self.confirmation_requests.filter_by(state=ConfirmRequest.CONFIRMED)
+        return self.confirmation_requests.filter_by(state=ConfirmRequestStatesMixin.CONFIRMED)
 
     def is_waiting(self, sel):
         return get_count(self._is_waiting_query.filter_by(owner_id=sel.id)) > 0
@@ -8689,8 +8691,23 @@ class LiveProject(
     def get_confirm_request(self, sel):
         return self.confirmation_requests.filter_by(owner_id=sel.id).first()
 
-    def make_confirm_request(self, sel):
-        req = ConfirmRequest(owner_id=sel.id, project_id=self.id, state=ConfirmRequest.REQUESTED, viewed=False, request_timestamp=datetime.now())
+    def make_confirm_request(self, sel, state="requested", resolved_by=None, comment=None):
+        if state not in ConfirmRequestStatesMixin._values:
+            state = "requested"
+
+        now = datetime.now()
+        req: ConfirmRequest = ConfirmRequest(
+            owner_id=sel.id,
+            project_id=self.id,
+            state=ConfirmRequestStatesMixin._values[state],
+            viewed=False,
+            request_timestamp=now,
+            response_timestamp=None,
+            resolved_id=resolved_by.id,
+            comment=comment,
+        )
+        if state == "confirmed":
+            req.response_timestamp = now
         return req
 
     @property

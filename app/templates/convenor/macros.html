@@ -1,7 +1,35 @@
 {% from "labels.html" import simple_label %}
 {% from "macros.html" import truncate, render_formatted_student, render_formatted_project %}
+{% from "ui_elements/confirm_requests.html" import format_confirm_timestamps %}
 
-{% macro bookmark_projects(sel, list, nav_text, nav_url) %}
+{% macro format_availability(project, sel, now) %}
+    {% if project.is_available(sel) %}
+        <div class="text-success small">
+            <i class="fas fa-check-circle"></i> Available to this student
+        </div>
+    {% else %}
+        {% set req = project.get_confirm_request(sel) %}
+        <div class="text-danger small">
+            <i class="fas fa-times-circle"></i> Not available to this student
+        </div>
+        {% if req is not none %}
+            <div class="text-secondary small">
+                {{ format_confirm_timestamps(req, now) }}
+                <a class="btn btn-sm btn-outline-secondary"
+                   href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">Confirm</a>
+            </div>
+        {% else %}
+            <div class="text-secondary small">
+                No confirmation request generated
+                <a class="btn btn-sm btn-outline-secondary"
+                   href="{{ url_for('convenor.generate_confirm', sid=sel.id, pid=project.id) }}">Generate
+                    confirmation</a>
+            </div>
+        {% endif %}
+    {% endif %}
+{% endmacro %}
+
+{% macro bookmark_projects(sel, list, now, nav_text, nav_url) %}
     <div class="container-fluid">
         <div class="row vertical-top bookmark-table">
             <div class="col-1"><strong>Rank</strong></div>
@@ -22,13 +50,7 @@
                         <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
                             {{ render_formatted_project(item) }}
                         </a>
-                        {% if project.is_available(sel) %}
-                            <div class="text-success small"><i class="fas fa-check-circle"></i> Available to this student
-                            </div>
-                        {% else %}
-                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not available to this student
-                            </div>
-                        {% endif %}
+                        {{ format_availability(project, sel, now) }}
                     </div>
                     <div class="col-4">
                         {% if project.generic %}
@@ -70,7 +92,7 @@
     </div>
 {% endmacro %}
 
-{% macro bookmark_students(proj, list) %}
+{% macro bookmark_students(proj, list, now) %}
     <div class="container-fluid">
         <div class="row vertical-align bookmark-table">
             <div class="col-3"><strong>Student</strong></div>
@@ -102,13 +124,7 @@
                         {% else %}
                             <div class="text-secondary small"><i class="fas fa-times-circle"></i> Not submitted</div>
                         {% endif %}
-                        {% if proj.is_available(item.owner) %}
-                            <div class="text-success small"><i class="fas fa-check-circle"></i> Available to this student
-                            </div>
-                        {% else %}
-                            <div class="text-danger small"><i class="fas fa-times-circle"></i> Not available to this student
-                            </div>
-                        {% endif %}
+                        {{ format_availability(proj, sel, now) }}
                     </div>
                     <div class="col-3">
                         {% if sel.has_submitted %}

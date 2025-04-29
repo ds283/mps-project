@@ -66,7 +66,7 @@ from ..models import (
     SubmissionPeriodRecord,
     SubmissionRole,
 )
-from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
+from ..shared.actions import render_project, do_confirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.context.global_context import render_template_context
 from ..shared.context.root_dashboard import get_root_dashboard_data
 from ..shared.conversions import is_integer
@@ -1821,29 +1821,6 @@ def confirm(sid, pid):
         return redirect(url_for(request.referrer))
 
     if do_confirm(sel, project, resolved_by=current_user):
-        db.session.commit()
-
-    return redirect(redirect_url())
-
-
-@faculty.route("/deconfirm/<int:sid>/<int:pid>")
-@roles_required("faculty")
-def deconfirm(sid, pid):
-    # sid is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(sid)
-
-    # pid is a LiveProject
-    project = LiveProject.query.get_or_404(pid)
-
-    # verify that logged-in user is the owner of this liveproject
-    if not validate_is_project_owner(project):
-        return redirect(redirect_url())
-
-    # validate that project is open
-    if not validate_project_open(sel.config):
-        return redirect(url_for(request.referrer))
-
-    if do_deconfirm(sel, project):
         db.session.commit()
 
     return redirect(redirect_url())

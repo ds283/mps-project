@@ -71,7 +71,7 @@ _menu = """
 
 def show_confirmations(outstanding, pclass_id):
     now = datetime.now()
-    format_confirm_timestamps = get_template_attribute("macros.html", "format_confirm_timestamps")
+    format_confirm_timestamps = get_template_attribute("ui_elements/confirm_requests.html", "format_confirm_timestamps")
 
     data = [
         {

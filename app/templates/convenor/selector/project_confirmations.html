@@ -1,5 +1,7 @@
 {% extends "base_app.html" %}
 
+{% from "ui_elements/confirm_requests.html" import confirmation_request_table %}
+
 {% block title %}
     Student confirmations for {{ project.name }}
 {% endblock %}
@@ -22,134 +24,10 @@
                             <div class="col-5"><strong>Timestamps</strong></div>
                             <div class="col-2"></div>
                         </div>
-
                         <hr class="intro-divider">
-
-                        {% for req in project.requests_confirmed %}
-                            {% set sel = req.owner %}
-                            <div class="row vertical-align mb-3">
-                                <div class="col-5">
-                                    <a class="text-decoration-none link-primary"
-                                       href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
-                                    {% if not sel.satisfies_recommended(project) %}
-                                        <i class="ms-1 fas fa-exclamation-triangle text-danger"></i>
-                                    {% endif %}
-                                </div>
-                                <div class="col-5">
-                                    {% if req.request_timestamp is not none %}
-                                        <div class="text-secondary small"><i class="fas fa-calendar"></i> Request
-                                            made {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</div>
-                                    {% endif %}
-                                    {% if req.response_timestamp is not none %}
-                                        <div class="text-secondary small"><i class="fas fa-calendar"></i> Response
-                                            issued {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-                                        </div>
-                                    {% endif %}
-                                    {% if req.request_timestamp is not none and req.response_timestamp is not none %}
-                                        {% set delta = req.response_timestamp - req.request_timestamp %}
-                                        {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                        <div class="text-success small"><i
-                                                class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</div>
-                                    {% elif req.request_timestamp is not none %}
-                                        {% set delta = now - req.request_timestamp %}
-                                        {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                        <div class="text-danger small"><i class="fas fa-clock"></i> {{ delta.days }}
-                                            day{{ pl }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="col-2">
-                                    <div class="d-flex flex-row justify-content-end">
-                                        <div class="dropdown">
-                                            <a class="btn btn-sm btn-warning dropdown-toggle" data-bs-toggle="dropdown"
-                                               role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                                Deconfirm
-                                            </a>
-                                            <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end mx-0 border-0">
-                                                {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
-                                                        <i class="fas fa-clock fa-fw"></i> Make pending
-                                                    </a>
-                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deconfirm', sid=sel.id, pid=project.id) }}">
-                                                        <i class="fas fa-trash fa-fw"></i> Delete
-                                                    </a>
-                                                {% else %}
-                                                    <a class="dropdown-item d-flex gap-2 disabled">
-                                                        <i class="fas fa-clock fa-fw"></i> Make pending
-                                                    </a>
-                                                    <a class="dropdown-item d-flex gap-2 disabled">
-                                                        <i class="fas fa-trash fa-fw"></i> Delete
-                                                    </a>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-
+                        {{ confirmation_request_table(project.requests_confirmed, now, project_col=none, student_col="col-5", student_has_timestamps=false, timestamps_col="col-5", affiliation_col=none, owner_col=none, url=url_for('convenor.project_confirmations', id=project.id), text='project confirmation request list') }}
                         {% if project.number_confirmed > 0 and project.number_pending > 0%}<hr class="intro-divider">{% endif %}
-
-                        {% for req in project.requests_waiting %}
-                            {% set sel = req.owner %}
-                            <div class="row vertical-align mb-3">
-                                <div class="col-5">
-                                    <a class="text-decoration-none link-primary"
-                                       href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
-                                    {% if not sel.satisfies_recommended(project) %}
-                                        <i class="fas fa-exclamation-triangle text-danger"></i>
-                                    {% endif %}
-                                </div>
-                                <div class="col-5">
-                                    {% if req.request_timestamp is not none %}
-                                        <div class="text-secondary small"><i class="fas fa-calendar"></i> Request
-                                            made {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</div>
-                                    {% endif %}
-                                    {% if req.response_timestamp is not none %}
-                                        <div class="text-secondary small"><i class="fas fa-calendar"></i> Response
-                                            issued {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-                                        </div>
-                                    {% endif %}
-                                    {% if req.request_timestamp is not none and req.response_timestamp is not none %}
-                                        {% set delta = req.response_timestamp - req.request_timestamp %}
-                                        {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                        <div class="text-success small"><i
-                                                class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</div>
-                                    {% elif req.request_timestamp is not none %}
-                                        {% set delta = now - req.request_timestamp %}
-                                        {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-                                        <div class="text-danger small"><i class="fas fa-clock"></i> {{ delta.days }}
-                                            day{{ pl }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="col-2">
-                                    <div class="d-flex flex-row justify-content-end">
-                                        <div class="dropdown">
-                                            <a class="btn btn-sm btn-success dropdown-toggle" data-bs-toggle="dropdown"
-                                               role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                                Confirm
-                                            </a>
-                                            <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end mx-0 border-0">
-                                                {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
-                                                        <i class="fas fa-check fa-fw"></i> Confirm
-                                                    </a>
-                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
-                                                        <i class="fas fa-trash fa-fw"></i> Delete
-                                                    </a>
-                                                {% else %}
-                                                    <a class="dropdown-item d-flex gap-2 disabled">
-                                                        <i class="fas fa-check fa-fw"></i> Confirm
-                                                    </a>
-                                                    <a class="dropdown-item d-flex gap-2 disabled">
-                                                        <i class="fas fa-trash fa-fw"></i> Delete
-                                                    </a>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
+                        {{ confirmation_request_table(project.requests_waiting, now, project_col=none, student_col="col-5", student_has_timestamps=false, timestamps_col="col-5", affiliation_col=none, owner_col=none, url=url_for('convenor.project_confirmations', id=project.id), text='project confirmation request list') }}
                     </div>
                 </div>
             </div>

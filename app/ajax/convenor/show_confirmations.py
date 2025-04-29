@@ -10,7 +10,7 @@
 
 from datetime import datetime
 
-from flask import jsonify, render_template_string
+from flask import jsonify, render_template_string, get_template_attribute
 
 # language=jinja2
 _student = """
@@ -34,24 +34,7 @@ _supervisor = """
 
 # language=jinja2
 _timestamps = """
-{% if req.request_timestamp is not none %}
-    <span class="badge bg-secondary">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-{% endif %}
-{% if req.response_timestamp is not none %}
-    <span class="badge bg-secondary">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-{% endif %}
-{% if req.request_timestamp is not none and req.response_timestamp is not none %}
-    {% set delta = req.response_timestamp - req.request_timestamp %}
-    {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge bg-primary"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
-{% elif req.request_timestamp is not none %}
-    {% set delta = now - req.request_timestamp %}
-    {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge bg-danger"><i class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</span>
-{% endif %}
-{% if not req.viewed %}
-    <span class="badge bg-danger">NOT VIEWED</span>
-{% endif %}
+{{ format_confirm_timestamps(req, now) }}
 """
 
 
@@ -88,6 +71,7 @@ _menu = """
 
 def show_confirmations(outstanding, pclass_id):
     now = datetime.now()
+    format_confirm_timestamps = get_template_attribute("macros.html", "format_confirm_timestamps")
 
     data = [
         {
@@ -98,7 +82,7 @@ def show_confirmations(outstanding, pclass_id):
             "project": render_template_string(_project, req=req, pclass_id=pclass_id),
             "supervisor": render_template_string(_supervisor, req=req),
             "timestamps": {
-                "display": render_template_string(_timestamps, req=req, now=now),
+                "display": render_template_string(_timestamps, req=req, now=now, format_confirm_timestamps=format_confirm_timestamps),
                 "timestamp": req.request_timestamp.timestamp() if req.request_timestamp is not None else 0,
             },
             "menu": render_template_string(_menu, req=req),

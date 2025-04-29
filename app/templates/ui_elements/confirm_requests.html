@@ -1,0 +1,160 @@
+{% from "labels.html" import simple_label %}
+
+{% macro format_confirm_timestamps(req, now) %}
+    {% if req.request_timestamp is not none %}
+        <div class="text-secondary small">
+            <i class="fas fa-calendar"></i> requested {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+        </div>
+    {% endif %}
+    {% if req.response_timestamp is not none %}
+        <div class="text-secondary small">
+            <i class="fas fa-calendar"></i> resolved {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+            {% if req.resolved_by is not none %}
+                by <i class="fas fa-user-circle"></i> {{ req.resolved_by.name }}
+            {% endif %}
+        </div>
+    {% else %}
+        {% if req.resolved_by is not none %}
+            <div class="text-secondary small">
+                resolved by <i class="fas fa-user-circle"></i> {{ req.resolved_by.name }}
+            </div>
+        {% endif %}
+    {% endif %}
+    {% if req.request_timestamp is not none and req.response_timestamp is not none %}
+        {% set delta = req.response_timestamp - req.request_timestamp %}
+        {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
+        <div class="text-success small"><i
+                class="fas fa-clock"></i> {{ delta.days }} day{{ pl }}</div>
+    {% elif req.request_timestamp is not none %}
+        {% set delta = now - req.request_timestamp %}
+        {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
+        <div class="text-danger small"><i class="fas fa-clock"></i> waiting {{ delta.days }} day{{ pl }}</div>
+    {% endif %}
+    {% if req.state != req.CONFIRMED and req.viewed == false %}
+        <span class="badge bg-danger">Not viewed</span>
+    {% endif %}
+{% endmacro %}
+
+{% macro confirmation_request_table(requests, now, url=none, text=none, project_col="col-4", project_has_timestamps=true, student_col=none, student_has_timestamps=false, timestamps_col=none, affiliation_col="col-3", owner_col="col-3", actions_col="col-2") %}
+    {% for req in requests %}
+        {% set project = req.project %}
+        {% set sel = req.owner %}
+        <div class="row vertical-top mb-3">
+            {% if project_col is not none %}
+                <div class="{{ project_col }}">
+                    <a class="text-decoration-none link-primary"
+                       href="{{ url_for('faculty.live_project', pid=project.id, text=text, url=url) }}">
+                        <strong>{{ project.name }}</strong>
+                    </a>
+                    {% if project_has_timestamps %}
+                        <div>
+                            {{ format_confirm_timestamps(req, now) }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+            {% if student_col is not none %}
+                <div class="{{ student_col }}">
+                    <a class="text-decoration-none link-primary"
+                       href="mailto:{{ sel.student.user.email }}"><i
+                            class="fas fa-user-circle"></i> {{ sel.student.user.name }}</a>
+                    {% if not sel.satisfies_recommended(project) %}
+                        <i class="ms-1 fas fa-exclamation-triangle text-danger"></i>
+                    {% endif %}
+                    {% if student_has_timestamps %}
+                        <div>
+                            {{ format_confirm_timestamps(req, now) }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+            {% if timestamps_col is not none %}
+                <div class="{{ timestamps_col }}">
+                    {{ format_confirm_timestamps(req, now) }}
+                </div>
+            {% endif %}
+            {% if affiliation_col is not none %}
+                <div class="{{ affiliation_col }}">
+                    {% set ns = namespace(affiliation=false) %}
+                    {% if project.group %}
+                        {{ simple_label(project.group.make_label()) }}
+                        {% set ns.affiliation = true %}
+                    {% endif %}
+                    {% for tag in project.forced_group_tags %}
+                        {{ simple_label(tag.make_label(truncate(tag.name))) }}
+                        {% set ns.affiliation = true %}
+                    {% endfor %}
+                    {% if not ns.affiliation %}
+                        <div class="text-danger small"><i class="fas fa-ban"></i> No affiliation</div>
+                    {% endif %}
+                </div>
+            {% endif %}
+            {% if owner_col is not none %}
+                <div class="{{ owner_col }}">
+                    {% if project.generic %}
+                        <div class="text-primary">Generic</div>
+                    {% else %}
+                        {% if project.owner is not none %}
+                            <div><a class="text-decoration-none link-primary"
+                                    href="mailto:{{ project.owner.user.email }}">
+                                {{ project.owner.user.name }}
+                            </a></div>
+                        {% else %}
+                            <div class="text-danger"><i class="fas fa-exclamation-triangle"></i>
+                                Owner missing
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            {% endif %}
+            {% if actions_col is not none %}
+                <div class="{{ actions_col }}">
+                    <div class="d-flex flex-row justify-content-end">
+                        <div class="dropdown">
+                            <a class="btn btn-sm {% if req.state == req.CONFIRMED %}btn-success{% elif req.state == req.REQUESTED %}btn-warning{% else %}btn-secondary{% endif %} dropdown-toggle"
+                               data-bs-toggle="dropdown"
+                               role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                Actions
+                                {% if not sel.satisfies_recommended(project) %}
+                                    <i class="fas fa-exclamation-triangle text-danger"></i>
+                                {% endif %}
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end mx-0 border-0">
+                                {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                    {% if req.state == req.CONFIRMED %}
+                                        <a class="dropdown-item d-flex gap-2"
+                                           href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
+                                            <i class="fas fa-clock fa-fw"></i> Make pending
+                                        </a>
+                                    {% elif req.state == req.REQUESTED %}
+                                        <a class="dropdown-item d-flex gap-2"
+                                           href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
+                                            <i class="fas fa-check"></i> Confirm
+                                        </a>
+                                    {% endif %}
+                                    <a class="dropdown-item d-flex gap-2"
+                                       href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
+                                        <i class="fas fa-trash fa-fw"></i> Delete
+                                    </a>
+                                {% else %}
+                                    {% if req.state == req.CONFIRMED %}
+                                        <a class="dropdown-item d-flex gap-2 disabled">
+                                            <i class="fas fa-clock fa-fw"></i> Make pending
+                                        </a>
+                                    {% elif req.state == req.REQUESTED %}
+                                        <a class="dropdown-item d-flex gap-2 disabled">
+                                            <i class="fas fa-check"></i> Confirm
+                                        </a>
+                                    {% endif %}
+                                    <a class="dropdown-item d-flex gap-2 disabled">
+                                        <i class="fas fa-trash fa-fw"></i> Delete
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    {% endfor %}
+{% endmacro %}

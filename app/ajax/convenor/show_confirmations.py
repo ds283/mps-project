@@ -34,6 +34,7 @@ _supervisor = """
 
 # language=jinja2
 _timestamps = """
+{{ format_ranking(req.owner, req.project) }}
 {{ format_confirm_timestamps(req, now) }}
 """
 
@@ -71,6 +72,8 @@ _menu = """
 
 def show_confirmations(outstanding, pclass_id):
     now = datetime.now()
+
+    format_ranking = get_template_attribute("ui_elements/confirm_requests.html", "format_ranking")
     format_confirm_timestamps = get_template_attribute("ui_elements/confirm_requests.html", "format_confirm_timestamps")
 
     data = [
@@ -82,7 +85,9 @@ def show_confirmations(outstanding, pclass_id):
             "project": render_template_string(_project, req=req, pclass_id=pclass_id),
             "supervisor": render_template_string(_supervisor, req=req),
             "timestamps": {
-                "display": render_template_string(_timestamps, req=req, now=now, format_confirm_timestamps=format_confirm_timestamps),
+                "display": render_template_string(_timestamps, req=req, now=now, sel=req.owner,
+                                                  format_confirm_timestamps=format_confirm_timestamps,
+                                                  format_ranking=format_ranking,),
                 "timestamp": req.request_timestamp.timestamp() if req.request_timestamp is not None else 0,
             },
             "menu": render_template_string(_menu, req=req),

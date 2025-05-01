@@ -12150,17 +12150,17 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
         return self._menu_order
 
     def menu_item(self, number):
-        if number in self._menu_items:
-            if number in self._icons:
-                tag = self._icons[number]
+        if number not in self._menu_items:
+            return None
 
-            value = self._menu_items[number]
-            if len(tag) > 0:
-                value = tag + " " + value
+        if number in self._icons:
+            tag = self._icons[number]
 
-            return value
+        value = self._menu_items[number]
+        if len(tag) > 0:
+            return f'<i class="fas fa-fw fa-{tag}"></i> {value}'
 
-        return None
+        return value
 
     def set_hint(self, hint):
         if hint < SelectionRecord.SELECTION_HINT_NEUTRAL or hint > SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG:
@@ -12187,7 +12187,7 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
                         if count < target:
                             break
 
-        # note database has to be committed separately
+        # note: database has to be committed separately
         self.hint = hint
 
     @property

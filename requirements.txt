@@ -11,7 +11,7 @@ blinker==1.9.0
 bokeh==3.7.2
 boto3==1.38.6
 botocore==1.38.6
-cachelib==0.9.0
+cachelib==0.13.0
 cachetools==5.5.2
 celery==5.5.2
 certifi==2025.4.26
@@ -129,7 +129,7 @@ typing_extensions==4.13.2
 tzdata==2025.2
 tzlocal==2.0.0
 url-normalize==2.2.1
-urllib3==1.26.20
+urllib3==2.4.0
 validators==0.35.0
 vine==5.1.0
 wcwidth==0.2.13

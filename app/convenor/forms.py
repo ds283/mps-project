@@ -487,12 +487,12 @@ class AddSubmitterRoleForm(Form):
 
         if project is not None:
             if role_type == SubmissionRole.ROLE_MARKER:
-                if fd not in project.assessor_list:
-                    raise ValidationError(
-                        'User "{name}" is not in the assessor pool for the assigned project. '
-                        "Please select a different user to attach for this role, or select "
-                        "a different role type.".format(name=fd.user.name)
-                    )
+                # if fd not in project.assessor_list:
+                #     raise ValidationError(
+                #         'User "{name}" is not in the assessor pool for the assigned project. '
+                #         "Please select a different user to attach for this role, or select "
+                #         "a different role type.".format(name=fd.user.name)
+                #     )
 
             if role_type == SubmissionRole.ROLE_SUPERVISOR:
                 if project.generic:

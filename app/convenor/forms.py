@@ -487,6 +487,7 @@ class AddSubmitterRoleForm(Form):
 
         if project is not None:
             if role_type == SubmissionRole.ROLE_MARKER:
+                pass
                 # if fd not in project.assessor_list:
                 #     raise ValidationError(
                 #         'User "{name}" is not in the assessor pool for the assigned project. '

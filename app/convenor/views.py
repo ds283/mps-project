@@ -2689,6 +2689,11 @@ def add_role(record_id):
     form = AddSubmitterRoleForm(request.form)
     form._record = record
 
+    if len(record.supervisor_roles) == 0:
+        form.role.data = SubmissionRole.ROLE_SUPERVISOR
+    else:
+        form.role.data = SubmissionRole.ROLE_MARKER
+
     if form.validate_on_submit():
         role = SubmissionRole(
             role=form.role.data,

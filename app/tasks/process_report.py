@@ -43,8 +43,8 @@ _black = (0, 0, 0)
 _light_grey = (0.8, 0.8, 0.8)
 
 
-_dyslexic_label = "SSU have flagged this student as having a learning support package. Please refer to the marking guidelines."
-_dyspraxic_label = "SSU have flagged this student as having a specific learning difference that impacts their literacy skills. Please refer to the marking guidelines."
+_dyslexic_label = "SSU have flagged this student as having a specific learning difference that impacts their literacy skills. Please refer to the marking guidelines."
+_dyspraxic_label = "SSU have flagged this student as having a learning support package. Please refer to the marking guidelines."
 
 
 # PDF date parser borrowed from here: https://stackoverflow.com/questions/16503075/convert-creationtime-of-pdf-to-a-readable-format-in-python

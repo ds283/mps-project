@@ -113,9 +113,9 @@ class StudentDataMixin:
 
     intermitting = BooleanField("This student is currently intermitting (TWD)")
 
-    dyspraxia_sticker = BooleanField("Mark work with dyspraxia sticker", default=False)
+    dyspraxia_sticker = BooleanField("Mark work with sticker for learning support package", default=False)
 
-    dyslexia_sticker = BooleanField("Mark work with dyslexia sticker", default=False)
+    dyslexia_sticker = BooleanField("Mark work with sticker for specific learning difference", default=False)
 
 
 class RegisterOfficeForm(

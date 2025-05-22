@@ -8,11 +8,11 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-import fitz
 import datetime
 import re
-from dateutil.tz import tzutc, tzoffset
 
+import fitz
+from dateutil.tz import tzutc, tzoffset
 
 # PDF date parser borrowed from here: https://stackoverflow.com/questions/16503075/convert-creationtime-of-pdf-to-a-readable-format-in-python
 pdf_date_pattern = re.compile(
@@ -76,7 +76,7 @@ creation_date = transform_date(metadata["creationDate"])
 modified_date = transform_date(metadata["modDate"])
 
 coverpage_label = "MPhys Final Year Project cover page"
-dyslexic_label = "SSU have flagged this student as dyslexic. Before marking, please refer to the marking guidelines for dyslexic students."
+dyslexic_label = "SSU have flagged this student as having a specific learning difference. Before marking, please refer to the marking guidelines."
 
 yellow = (255 / 255, 200 / 255, 69 / 255)
 black = (0, 0, 0)

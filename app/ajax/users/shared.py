@@ -27,10 +27,10 @@ name = """
             <span class="badge bg-warning text-dark">TWD</span>
         {% endif %}
         {% if sd.dyspraxia_sticker %}
-            <span class="badge bg-primary">Dyspraxia</span>
+            <span class="badge bg-primary">SpLD</span>
         {% endif %}
         {% if sd.dyslexia_sticker %}
-            <span class="badge bg-primary">Dyslexia</span>
+            <span class="badge bg-primary">Support</span>
         {% endif %}
         {% set state = sd.workflow_state %}
         {% if state == sd.WORKFLOW_APPROVAL_QUEUED %}

@@ -10933,7 +10933,7 @@ def upload_period_attachment(pid):
                 include_marker_emails=form.include_marker_emails.data,
                 include_supervisor_emails=form.include_supervisor_emails.data,
                 description=form.description.data,
-                rank_order=get_count(record.attachments),
+                rank_order=get_count(record.attachments) + 1,
             )
 
             # uploading user has access

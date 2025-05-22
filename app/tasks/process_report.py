@@ -43,12 +43,8 @@ _black = (0, 0, 0)
 _light_grey = (0.8, 0.8, 0.8)
 
 
-_dyslexic_label = (
-    "SSU have flagged this student as dyslexic. Please refer to the guidelines on marking which can be found in the Handbook for Examiners."
-)
-_dyspraxic_label = (
-    "SSU have flagged this student as dyspraxic. Please refer to the guidelines on marking which can be found in the Handbook for Examiners."
-)
+_dyslexic_label = "SSU have flagged this student as having a learning support package. Please refer to the marking guidelines."
+_dyspraxic_label = "SSU have flagged this student as having a specific learning difference that impacts their literacy skills. Please refer to the marking guidelines."
 
 
 # PDF date parser borrowed from here: https://stackoverflow.com/questions/16503075/convert-creationtime-of-pdf-to-a-readable-format-in-python
@@ -238,7 +234,7 @@ def _attach_sticker(page, w, ytop, colour, text):
     xmargin = _sticker_margin
 
     rwidth = w - 2 * xmargin
-    rheight = _vertical_margin + 3 * _title_label_size + _vertical_margin
+    rheight = _vertical_margin + 4 * _title_label_size + _vertical_margin
 
     x0 = xmargin
     y0 = ytop + _title_label_size

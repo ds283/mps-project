@@ -114,7 +114,7 @@ python-usernames==1.0.0
 pytz==2025.2
 PyYAML==6.0.2
 redis==6.1.0
-requests==2.32.0
+requests==2.32.4
 rich==13.9.4
 rollbar==1.3.0
 rsa==4.9.1

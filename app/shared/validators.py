@@ -248,13 +248,18 @@ def validate_submission_role(role: SubmissionRole, allow_roles=None):
         flash("This operation is not permitted. Your login credentials do not match those of the provided role.", "error")
         return False
 
-    role_map = {"supervisor": SubmissionRole.ROLE_SUPERVISOR, "marker": SubmissionRole.ROLE_MARKER, "moderator": SubmissionRole.ROLE_MODERATOR}
+    role_map = {
+        "supervisor": [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+        "marker": [SubmissionRole.ROLE_MARKER],
+        "moderator": [SubmissionRole.ROLE_MODERATOR],
+    }
 
     for r in allow_roles:
         r = r.lower()
 
         if r in role_map:
-            if role.role == role_map[r]:
+            role_ids = role_map[r]
+            if role.role in role_ids:
                 return True
 
     flash(
@@ -332,7 +337,14 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool = True)
         .filter(SubmissionRecord.retired == False)
         .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
         .filter(SubmittingStudent.student_id == record.owner.student_id)
-        .filter(SubmissionRecord.roles.any(and_(SubmissionRole.user_id == current_user.id, SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR)))
+        .filter(
+            SubmissionRecord.roles.any(
+                and_(
+                    SubmissionRole.user_id == current_user.id,
+                    SubmissionRole.role._in[SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                )
+            )
+        )
     )
 
     if get_count(owner_query) > 0:

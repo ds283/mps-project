@@ -5290,14 +5290,17 @@ def _build_match_changes(attempt1: MatchingAttempt, attempt2: MatchingAttempt, d
         # dictionary is indexed by user_id
         RoleDictType = Dict[int, MatchingRole]
 
-        def get_role_dict(rec: MatchingRecord, role: int) -> RoleDictType:
-            roles: List[MatchingRole] = rec.roles.filter(MatchingRole.role == role)
-            role_dict: RoleDictType = {role.user_id: role for role in roles}
+        def get_role_dict(rec: MatchingRecord, roles: Union[int, List[int]]) -> RoleDictType:
+            if not isinstance(roles, list):
+                roles = [roles]
+
+            role_records: List[MatchingRole] = rec.roles.filter(MatchingRole.role._in[roles])
+            role_dict: RoleDictType = {role.user_id: role for role in role_records}
 
             return role_dict
 
         def get_supervisor_roles(rec: MatchingRecord) -> RoleDictType:
-            return get_role_dict(rec, MatchingRole.ROLE_SUPERVISOR)
+            return get_role_dict(rec, [MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR])
 
         def get_marker_roles(rec: MatchingRecord) -> RoleDictType:
             return get_role_dict(rec, MatchingRole.ROLE_MARKER)
@@ -6042,11 +6045,13 @@ def reassign_match_project(id, pid):
                         adjust = True
 
                         # remove any previous supervision roles and replace with a supervision role for the new project
-                        existing_supv = record.roles.filter(MatchingRole.role == MatchingRole.ROLE_SUPERVISOR).all()
+                        existing_supv = record.roles.filter(
+                            MatchingRole.role._in[MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR]
+                        ).all()
                         for item in existing_supv:
                             record.roles.remove(item)
 
-                        new_supv = MatchingRole(user_id=project.owner_id, role=MatchingRole.ROLE_SUPERVISOR)
+                        new_supv = MatchingRole(user_id=project.owner_id, role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR)
                         record.roles.add(new_supv)
 
                     else:
@@ -6161,7 +6166,7 @@ def reassign_supervisor_roles(rec_id):
         for item in record.roles:
             item: MatchingRole
 
-            if item.role == MatchingRole.ROLE_SUPERVISOR:
+            if item.role in [MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR]:
                 if not any(fd.id == item.user_id for fd in new_supv_roles):
                     record.roles.remove(item)
                 else:
@@ -6169,7 +6174,7 @@ def reassign_supervisor_roles(rec_id):
 
         for fd in new_supv_roles:
             if fd.id not in existing_roles:
-                new_item = MatchingRole(role=MatchingRole.ROLE_SUPERVISOR, user_id=fd.id)
+                new_item = MatchingRole(role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR, user_id=fd.id)
                 record.roles.add(new_item)
 
         try:
@@ -6183,7 +6188,9 @@ def reassign_supervisor_roles(rec_id):
 
     else:
         if request.method == "GET":
-            supv_roles = [x.user.faculty_data for x in record.roles if x.role == MatchingRole.ROLE_SUPERVISOR]
+            supv_roles = [
+                x.user.faculty_data for x in record.roles if x.role in [MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR]
+            ]
             assign_form.supervisors.data = supv_roles
 
     return render_template_context("admin/match_inspector/reassign_supervisor.html", form=assign_form, record=record, url=url, text=text)

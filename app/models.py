@@ -1242,13 +1242,13 @@ class SelectHintTypesMixin:
     SELECTION_HINT_DISCOURAGE_STRONG = 6
 
     _icons = {
-        SELECTION_HINT_NEUTRAL: '',
-        SELECTION_HINT_REQUIRE: 'check-circle',
-        SELECTION_HINT_FORBID: 'times-circle',
-        SELECTION_HINT_ENCOURAGE: 'plus',
-        SELECTION_HINT_DISCOURAGE: 'minus',
-        SELECTION_HINT_ENCOURAGE_STRONG: 'plus-circle',
-        SELECTION_HINT_DISCOURAGE_STRONG: 'minus-circle',
+        SELECTION_HINT_NEUTRAL: "",
+        SELECTION_HINT_REQUIRE: "check-circle",
+        SELECTION_HINT_FORBID: "times-circle",
+        SELECTION_HINT_ENCOURAGE: "plus",
+        SELECTION_HINT_DISCOURAGE: "minus",
+        SELECTION_HINT_ENCOURAGE_STRONG: "plus-circle",
+        SELECTION_HINT_DISCOURAGE_STRONG: "minus-circle",
     }
 
     _menu_items = {
@@ -1411,9 +1411,10 @@ class SubmissionRoleTypesMixin:
     ROLE_MODERATOR = 3
     ROLE_EXAM_BOARD = 4
     ROLE_EXTERNAL_EXAMINER = 5
+    ROLE_RESPONSIBLE_SUPERVISOR = 6
 
     _MIN_ROLE = ROLE_SUPERVISOR
-    _MAX_ROLE = ROLE_EXTERNAL_EXAMINER
+    _MAX_ROLE = ROLE_RESPONSIBLE_SUPERVISOR
 
     _role_labels = {
         ROLE_SUPERVISOR: "supervisor",
@@ -1422,6 +1423,7 @@ class SubmissionRoleTypesMixin:
         ROLE_MODERATOR: "moderator",
         ROLE_EXAM_BOARD: "exam board member",
         ROLE_EXTERNAL_EXAMINER: "external examiner",
+        ROLE_RESPONSIBLE_SUPERVISOR: "supervisor",
     }
 
 
@@ -1860,6 +1862,16 @@ event_roles_table = db.Table(
     "supervision_event_roles",
     db.Column("event_id", db.Integer(), db.ForeignKey("supervision_events.id"), primary_key=True),
     db.Column("submission_role_id", db.Integer(), db.ForeignKey("submission_roles.id"), primary_key=True),
+)
+
+
+# SUBMISSION AND MARKING WORKLOF
+
+# email log linking all marking emails to a SubmissionRole instance
+submission_role_emails = db.Table(
+    "submission_role_emails",
+    db.Column("role_id", db.Integer(), db.ForeignKey("submission_roles.id"), primary_key=True),
+    db.Column("email_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True),
 )
 
 
@@ -3087,10 +3099,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             raise RuntimeError("Could not interpret pclass parameter of type {typ} in FacultyData._projects_offered_query".format(typ=type(pclass)))
 
         return db.session.query(Project).filter(
-            Project.active == True,
-            Project.project_classes.any(id=pclass_id),
-            Project.generic == True,
-            Project.supervisors.any(id=self.id)
+            Project.active == True, Project.project_classes.any(id=pclass_id), Project.generic == True, Project.supervisors.any(id=self.id)
         )
 
     def projects_supervisor_pool(self, pclass):
@@ -3116,13 +3125,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return db.session.query(Project).filter(
             Project.active == True,
             Project.project_classes.any(id=pclass_id),
-            or_(
-                and_(
-                    Project.generic == True,
-                    Project.supervisors.any(id=self.id)
-                ),
-                Project.owner_id == self.id
-            )
+            or_(and_(Project.generic == True, Project.supervisors.any(id=self.id)), Project.owner_id == self.id),
         )
 
     def projects_supervisable(self, pclass):
@@ -3147,11 +3150,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         else:
             raise RuntimeError("Could not interpret pclass parameter of type {typ} in FacultyData._projects_offered_query".format(typ=type(pclass)))
 
-        return db.session.query(Project).filter(
-            Project.active == True,
-            Project.owner_id == self.id,
-            Project.project_classes.any(id=pclass_id)
-        )
+        return db.session.query(Project).filter(Project.active == True, Project.owner_id == self.id, Project.project_classes.any(id=pclass_id))
 
     def projects_offered(self, pclass):
         return self._projects_offered_query(pclass).all()
@@ -3477,7 +3476,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         return {"label": f"Assessor for: {num}", "type": "info"}
 
-    def _apply_assignment_filters(self, role, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
+    def _apply_assignment_filters(self, roles, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
         # at most one of config_id, config, pclass_id, pclass should be defined
         items = sum([int(config_id is None), int(config is None), int(pclass_id is None), int(pclass is None)])
         if items != 3:
@@ -3488,12 +3487,15 @@ class FacultyData(db.Model, EditingMetadataMixin):
                 "pclass={ty4}".format(ty1=type(config_id), ty2=type(config), ty3=type(pclass_id), ty4=type(pclass))
             )
 
+        if not isinstance(roles, list):
+            roles = [roles]
+
         query = (
             db.session.query(SubmissionRecord)
             .filter(
                 and_(
                     SubmissionRecord.retired == False,
-                    SubmissionRecord.roles.any(and_(SubmissionRole.role == role, SubmissionRole.user_id == self.id)),
+                    SubmissionRecord.roles.any(and_(SubmissionRole.role._in(roles), SubmissionRole.user_id == self.id)),
                 )
             )
             .join(LiveProject, LiveProject.id == SubmissionRecord.project_id)
@@ -3528,7 +3530,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
         Return a list of current SubmissionRecord instances for which we are supervisor
         :return:
         """
-        return self._apply_assignment_filters(SubmissionRole.ROLE_SUPERVISOR, config_id, config, pclass_id, pclass, period)
+        return self._apply_assignment_filters(
+            [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR], config_id, config, pclass_id, pclass, period
+        )
 
     def marker_assignments(self, config_id=None, config=None, pclass_id=None, pclass=None, period=None):
         """
@@ -6014,7 +6018,8 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
             submitter_tasks.extend(tks)
 
         global_tasks: List[ConvenorGenericTask] = self.tasks.filter(
-            and_(~ConvenorGenericTask.complete, ~ConvenorGenericTask.dropped, ConvenorGenericTask.blocking)).all()
+            and_(~ConvenorGenericTask.complete, ~ConvenorGenericTask.dropped, ConvenorGenericTask.blocking)
+        ).all()
 
         tasks = {"selector": selector_tasks, "submitter": submitter_tasks, "global": global_tasks}
 
@@ -6697,6 +6702,7 @@ class SubmissionPeriodRecord(db.Model):
             "presentation": SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
             "exam_board": SubmissionRole.ROLE_EXAM_BOARD,
             "external": SubmissionRole.ROLE_EXTERNAL_EXAMINER,
+            "responsible supervisor": SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
         }
         if role not in role_map:
             raise KeyError('Unknown role "{role}" in ' "SubmissionPeriodRecord._unordered_records_query()".format(role=role))
@@ -6881,7 +6887,10 @@ class SubmissionPeriodRecord(db.Model):
                     SubmissionRecord.processed_report_id != None,
                     SubmissionRecord.roles.any(
                         or_(
-                            and_(SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR, ~SubmissionRole.marking_email),
+                            and_(
+                                SubmissionRole.role._in[SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                                ~SubmissionRole.marking_email,
+                            ),
                             and_(SubmissionRole.role == SubmissionRole.ROLE_MARKER, ~SubmissionRole.marking_email),
                         )
                     ),
@@ -10361,19 +10370,21 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
     submission_id = db.Column(db.Integer(), db.ForeignKey("submission_records.id"))
     submission = db.relationship("SubmissionRecord", foreign_keys=[submission_id], uselist=False, backref=db.backref("roles", lazy="dynamic"))
 
-    # owning user (does not have to be a FacultyData instance, e.g. for external examiners)
+    # owning user (note: we link to a user record, rather than a FacultyData record, because the
+    # assigned person does not have to be a FacultyData instance, e.g. for external examiners)
     user_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
     user = db.relationship("User", foreign_keys=[user_id], uselist=False, backref=db.backref("submission_roles", lazy="dynamic"))
 
     # role identifier, drawn from SubmissionRoleTypesMixin
     role_options = [
+        (SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR, "Responsible supervisor"),
         (SubmissionRoleTypesMixin.ROLE_SUPERVISOR, "Supervisor"),
         (SubmissionRoleTypesMixin.ROLE_MARKER, "Marker"),
         (SubmissionRoleTypesMixin.ROLE_MODERATOR, "Moderator"),
         (SubmissionRoleTypesMixin.ROLE_EXAM_BOARD, "Exam board member"),
         (SubmissionRoleTypesMixin.ROLE_EXTERNAL_EXAMINER, "External examiner"),
     ]
-    role = db.Column(db.Integer(), default=SubmissionRoleTypesMixin.ROLE_SUPERVISOR, nullable=False)
+    role = db.Column(db.Integer(), default=SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR, nullable=False)
 
     @validates("role")
     def _validate_role(self, key, value):
@@ -10385,13 +10396,28 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
 
         return value
 
+    # email log associated with this role
+    email_log = db.relationship("EmailLog", secondary=submission_role_emails, lazy="dynamic")
+
     # MARKING WORKFLOW
 
-    # has a marking notification email been sent
-    marking_email = db.Column(db.Boolean(), default=False)
+    # has the report been distributed to the user owning this role, for marking?
+    marking_distributed = db.Column(db.Boolean(), default=False)
 
     # if an external marking link (e.g. to a Qualtrics form, Google form, etc.) is needed, it can be held here
     external_marking_url = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+
+    # returned mark, interpreted as out of 100%
+    grade = db.Column(db.Integer(), default=None)
+
+    # resolved weight for this score
+    weight = db.Column(db.Numeric(8, 3), default=None)
+
+    # justification for score
+    justification = db.Column(db.Text(), default=None)
+
+    # marking sign off (interpreted as approval if responsible supervisor is not writing the supervision report)
+    signed_off = db.Column(db.DateTime(), default=False)
 
     # FEEDBACK TO STUDENT
 
@@ -10442,11 +10468,11 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
 
     @property
     def feedback_state(self):
-        if self.role == SubmissionRole.ROLE_SUPERVISOR:
+        if self.role in [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]:
             return self._supervisor_feedback_state
-        elif self.role == SubmissionRole.ROLE_MARKER:
+        elif self.role in [SubmissionRole.ROLE_MARKER]:
             return self._marker_feedback_state
-        elif self.role == SubmissionRole.ROLE_MODERATOR:
+        elif self.role in [SubmissionRole.ROLE_MODERATOR]:
             return self._moderator_feedback_state
 
         return SubmissionRole.FEEDBACK_NOT_REQUIRED
@@ -10509,7 +10535,7 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
 
     @property
     def response_state(self):
-        if self.role == SubmissionRole.ROLE_SUPERVISOR:
+        if self.role in [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]:
             return self._supervisor_response_state
 
         return SubmissionRole.FEEDBACK_NOT_REQUIRED
@@ -10701,10 +10727,10 @@ def _SubmissionRecord_is_valid(sid):
 
         # 1H. WARN IF MORE MODERATORS THAN EXPECTED ASSIGNED
         if len(moderator_ids) > moderators_needed:
-            warnings[
-                ("moderators", 0)
-            ] = "More moderator roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
-                assgn=len(moderator_ids), exp=moderators_needed
+            warnings[("moderators", 0)] = (
+                "More moderator roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
+                    assgn=len(moderator_ids), exp=moderators_needed
+                )
             )
 
         # 1I. MODERATORS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
@@ -10726,9 +10752,9 @@ def _SubmissionRecord_is_valid(sid):
         if user.faculty_data is not None:
             enrolment: EnrollmentRecord = user.faculty_data.get_enrollment_record(pclass)
             if enrolment is None or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
-                errors[
-                    ("enrolment", 0)
-                ] = '"{name}" has been assigned a supervision role, but is not currently ' "enrolled for this project class".format(name=user.name)
+                errors[("enrolment", 0)] = (
+                    '"{name}" has been assigned a supervision role, but is not currently ' "enrolled for this project class".format(name=user.name)
+                )
         else:
             warnings[("enrolment", 0)] = '"{name}" has been assigned a supervision role, but is not a faculty member'
 
@@ -10738,9 +10764,9 @@ def _SubmissionRecord_is_valid(sid):
         if user.faculty_data is not None:
             enrolment: EnrollmentRecord = user.faculty_data.get_enrollment_record(pclass)
             if enrolment is None or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED:
-                errors[
-                    ("enrolment", 1)
-                ] = '"{name}" has been assigned a marking role, but is not currently ' "enrolled for this project class".format(name=user.name)
+                errors[("enrolment", 1)] = (
+                    '"{name}" has been assigned a marking role, but is not currently ' "enrolled for this project class".format(name=user.name)
+                )
         else:
             warnings[("enrolment", 1)] = '"{name}" has been assigned a marking role, but is not a faculty member'
 
@@ -10750,9 +10776,9 @@ def _SubmissionRecord_is_valid(sid):
         if user.faculty_data is not None:
             enrolment: EnrollmentRecord = user.faculty_data.get_enrollment_record(pclass)
             if enrolment is None or enrolment.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED:
-                errors[
-                    ("enrolment", 2)
-                ] = '"{name}" has been assigned a moderation role, but is not currently ' "enrolled for this project class".format(name=user.name)
+                errors[("enrolment", 2)] = (
+                    '"{name}" has been assigned a moderation role, but is not currently ' "enrolled for this project class".format(name=user.name)
+                )
         else:
             warnings[("enrolment", 2)] = '"{name}" has been assigned a moderation role, but is not a faculty member'
 
@@ -10861,8 +10887,17 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # timestamp for generation of report
     timestamp = db.Column(db.DateTime())
 
-    # is this report marked as an exemplar?
+    # is this report marked as suitable for an exemplar?
     report_exemplar = db.Column(db.Boolean(), default=False)
+
+    # is this report embargoed?
+    report_embargo = db.Column(db.DateTime(), default=None)
+
+    # is this report secret or private? (e.g. contains commercially sensitive content)
+    report_secret = db.Column(db.Boolean(), default=False)
+
+    # any comments on the report that can be exposed in the UI when offered as an exemplar
+    exampler_comment = db.Column(db.Text(), default=None)
 
     # attachments incorporated via back-reference under 'attachments' data member
 
@@ -11019,16 +11054,17 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         # roles associated with this submission always trump admin rights, even for 'root' and 'admin' users
         if current_role is not None:
-            # marker roles and moderator roles can only see exam number
-            if current_role.role == SubmissionRole.ROLE_MARKER or current_role.role == SubmissionRole.ROLE_MODERATOR:
+            # marker roles, moderator roles, exam board and external examiners can only see exam number
+            if current_role.role in [
+                SubmissionRole.ROLE_MARKER,
+                SubmissionRole.ROLE_MODERATOR,
+                SubmissionRole.ROLE_EXAM_BOARD,
+                SubmissionRole.ROLE_EXTERNAL_EXAMINER,
+            ]:
                 return self.owner.student.exam_number_label
 
-            # supervision team and external examiners can see student name
-            if (
-                current_role.role == SubmissionRole.ROLE_SUPERVISOR
-                or current_role.role == SubmissionRole.ROLE_EXTERNAL_EXAMINER
-                or current_role.role == SubmissionRole.ROLE_EXAM_BOARD
-            ):
+            # supervision team  can see student name
+            if current_role.role in [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]:
                 return {"label": self.owner.student.user.name}
 
         # root, admin, and office roles can always see student name; so can project convenor or co-convenors
@@ -11050,13 +11086,17 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         :return:
         """
         role = role.lower()
-        role_map = {"supervisor": SubmissionRole.ROLE_SUPERVISOR, "marker": SubmissionRole.ROLE_MARKER, "moderator": SubmissionRole.ROLE_MODERATOR}
+        role_map = {
+            "supervisor": [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+            "marker": [SubmissionRole.ROLE_MARKER],
+            "moderator": [SubmissionRole.ROLE_MODERATOR],
+        }
 
         if role not in role_map:
             raise KeyError('Unknown role "{role}" in SubmissionRecord.get_roles()'.format(role=role))
 
-        role_type = role_map[role]
-        return [r for r in self.roles if r.role == role_type]
+        role_ids = role_map[role]
+        return [r for r in self.roles if r.role in role_ids]
 
     def get_role_ids(self, role: str) -> Set[int]:
         """
@@ -12027,11 +12067,10 @@ class Bookmark(db.Model):
     rank = db.Column(db.Integer())
 
     def format_project(self, **kwargs):
-        return {'name': self.liveproject.name}
+        return {"name": self.liveproject.name}
 
     def format_name(self, **kwargs):
-        return {'name': self.owner.student.user.name,
-                'email': self.owner.student.user.email}
+        return {"name": self.owner.student.user.name, "email": self.owner.student.user.email}
 
     @property
     def owner_email(self):
@@ -12108,7 +12147,7 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
         return record is not None and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
 
     def format_project(self, **kwargs):
-        show_hint = kwargs.get('show_hint', True)
+        show_hint = kwargs.get("show_hint", True)
 
         if show_hint and self.hint in self._icons:
             tag = self._icons[self.hint]
@@ -12118,16 +12157,14 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
         if len(tag) > 0:
             tag += " "
 
-        style = ''
+        style = ""
         if self.hint == self.SELECTION_HINT_FORBID:
-            style = 'delete'
+            style = "delete"
 
-        return {'name': self.liveproject.name,
-                'tag': tag,
-                'style': style}
+        return {"name": self.liveproject.name, "tag": tag, "style": style}
 
     def format_name(self, **kwargs):
-        show_hint = kwargs.get('show_hint', True)
+        show_hint = kwargs.get("show_hint", True)
 
         if show_hint and self.hint in self._icons:
             tag = self._icons[self.hint]
@@ -12137,9 +12174,7 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
         if len(tag) > 0:
             tag += " "
 
-        return {'name': self.owner.student.user.name,
-                'email': self.owner.student.user.email,
-                'tag': tag}
+        return {"name": self.owner.student.user.name, "email": self.owner.student.user.email, "tag": tag}
 
     @property
     def owner_email(self):
@@ -13267,7 +13302,13 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
     def get_supervisor_records(self, fac_id):
         return (
             self.records.join(LiveProject, LiveProject.id == MatchingRecord.project_id)
-            .filter(MatchingRecord.roles.any(and_(MatchingRole.user_id == fac_id, MatchingRole.role == MatchingRole.ROLE_SUPERVISOR)))
+            .filter(
+                MatchingRecord.roles.any(
+                    and_(
+                        MatchingRole.user_id == fac_id, MatchingRole.role._in[MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR]
+                    )
+                )
+            )
             .order_by(MatchingRecord.submission_period.asc())
         )
 
@@ -13613,7 +13654,7 @@ class MatchingRole(db.Model, SubmissionRoleTypesMixin):
     user = db.relationship("User", foreign_keys=[user_id], uselist=False, backref=db.backref("matching_roles", lazy="dynamic"))
 
     # role identifier, drawn from SubmissionRoleTypesMixin
-    role = db.Column(db.Integer(), default=SubmissionRoleTypesMixin.ROLE_SUPERVISOR, nullable=False)
+    role = db.Column(db.Integer(), default=SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR, nullable=False)
 
     @validates("role")
     def _validate_role(self, key, value):
@@ -13827,10 +13868,10 @@ def _MatchingRecord_is_valid(id):
 
         # 1H. WARN IF MORE MODERATORS THAN EXPECTED ASSIGNED
         if len(moderator_ids) > moderators_needed:
-            warnings[
-                ("moderators", 0)
-            ] = "More moderator roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
-                assgn=len(moderator_ids), exp=moderators_needed
+            warnings[("moderators", 0)] = (
+                "More moderator roles are assigned than expected for this project (assigned={assgn}, expected={exp})".format(
+                    assgn=len(moderator_ids), exp=moderators_needed
+                )
             )
 
         # 1I. MODERATORS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
@@ -13871,9 +13912,9 @@ def _MatchingRecord_is_valid(id):
         if u.faculty_data is not None:
             enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
             if enrolment is None or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
-                errors[
-                    ("enrolment", 0)
-                ] = '"{name}" has been assigned a supervision role, but is not currently enrolled for this project class'.format(name=u.name)
+                errors[("enrolment", 0)] = (
+                    '"{name}" has been assigned a supervision role, but is not currently enrolled for this project class'.format(name=u.name)
+                )
         else:
             warnings[("enrolment", 0)] = '"{name}" has been assigned a supervision role, but is not a faculty member'
 
@@ -13893,9 +13934,9 @@ def _MatchingRecord_is_valid(id):
         if u.faculty_data is not None:
             enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
             if enrolment is None or enrolment.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED:
-                errors[
-                    ("enrolment", 2)
-                ] = '"{name}" has been assigned a moderation role, but is not currently enrolled for this project class'.format(name=u.name)
+                errors[("enrolment", 2)] = (
+                    '"{name}" has been assigned a moderation role, but is not currently enrolled for this project class'.format(name=u.name)
+                )
         else:
             warnings[("enrolment", 3)] = '"{name}" has been assigned a moderation role, but is not a faculty member'
 
@@ -13957,7 +13998,12 @@ def _MatchingRecord_is_valid(id):
             count = get_count(
                 attempt.records.filter(
                     MatchingRecord.project_id == project.id,
-                    MatchingRecord.roles.any(and_(MatchingRole.role == MatchingRole.ROLE_SUPERVISOR, MatchingRole.user_id == supv.id)),
+                    MatchingRecord.roles.any(
+                        and_(
+                            MatchingRole.role._in[MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                            MatchingRole.user_id == supv.id,
+                        )
+                    ),
                 )
             )
 
@@ -13966,7 +14012,12 @@ def _MatchingRecord_is_valid(id):
                 lo_rec = (
                     attempt.records.filter(
                         MatchingRecord.project_id == project.id,
-                        MatchingRecord.roles.any(and_(MatchingRole.role == MatchingRole.ROLE_SUPERVISOR, MatchingRole.user_id == supv.id)),
+                        MatchingRecord.roles.any(
+                            and_(
+                                MatchingRole.role._in[MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                                MatchingRole.user_id == supv.id,
+                            )
+                        ),
                     )
                     .order_by(MatchingRecord.selector_id.asc())
                     .first()
@@ -14148,13 +14199,17 @@ class MatchingRecord(db.Model):
         :return:
         """
         role = role.lower()
-        role_map = {"supervisor": MatchingRole.ROLE_SUPERVISOR, "marker": MatchingRole.ROLE_MARKER, "moderator": MatchingRole.ROLE_MODERATOR}
+        role_map = {
+            "supervisor": [MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR],
+            "marker": [MatchingRole.ROLE_MARKER],
+            "moderator": [MatchingRole.ROLE_MODERATOR],
+        }
 
         if role not in role_map:
             raise KeyError("Unknown role in MatchingRecord.get_roles()")
 
-        role_id = role_map[role]
-        return [role.user for role in self.roles if role.role == role_id]
+        role_ids = role_map[role]
+        return [role.user for role in self.roles if role.role in role_ids]
 
     def get_role_ids(self, role: str) -> Set[int]:
         """
@@ -15682,10 +15737,9 @@ def _ScheduleAttempt_is_valid(id):
     for rec in obj.owner.submitter_list:
         if rec.attending:
             if get_count(obj.get_student_slot(rec.submitter.owner_id)) == 0:
-                errors[
-                    ("talks", rec.submitter_id)
-                ] = 'Submitter "{name}" is enrolled in this assessment, but their talk has not been ' "scheduled".format(
-                    name=rec.submitter.owner.student.user.name
+                errors[("talks", rec.submitter_id)] = (
+                    'Submitter "{name}" is enrolled in this assessment, but their talk has not been '
+                    "scheduled".format(name=rec.submitter.owner.student.user.name)
                 )
 
         if get_count(obj.get_student_slot(rec.submitter.owner_id)) > 1:
@@ -16097,10 +16151,9 @@ def _ScheduleSlot_is_valid(id):
     for assessor in obj.assessors:
         rec = assessor.get_enrollment_record(pclass.id)
         if rec is None or (rec is not None and rec.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED):
-            errors[
-                ("enrollment", assessor.id)
-            ] = 'Assessor "{name}" is scheduled in this slot, but is not ' 'enrolled as an assessor for "{pclass}"'.format(
-                name=assessor.user.name, pclass=pclass.name
+            errors[("enrollment", assessor.id)] = (
+                'Assessor "{name}" is scheduled in this slot, but is not '
+                'enrolled as an assessor for "{pclass}"'.format(name=assessor.user.name, pclass=pclass.name)
             )
 
     # CONSTRAINT 5. ALL ASSESSORS SHOULD BE AVAILABLE FOR THIS SESSION
@@ -16202,10 +16255,11 @@ def _ScheduleSlot_is_valid(id):
                 talk_j = talks_list[j]
 
                 if talk_i.project_id == talk_j.project_id and (talk_i.project is not None and talk_i.project.dont_clash_presentations):
-                    errors[
-                        ("clash", (talk_i.id, talk_j.id))
-                    ] = 'Submitters "{name_a}" and "{name_b}" share a project ' '"{proj}" that is marked not to be co-scheduled'.format(
-                        name_a=talk_i.owner.student.user.name, name_b=talk_j.owner.student.user.name, proj=talk_i.project.name
+                    errors[("clash", (talk_i.id, talk_j.id))] = (
+                        'Submitters "{name_a}" and "{name_b}" share a project '
+                        '"{proj}" that is marked not to be co-scheduled'.format(
+                            name_a=talk_i.owner.student.user.name, name_b=talk_j.owner.student.user.name, proj=talk_i.project.name
+                        )
                     )
 
     # CONSTRAINT 11. ASSESSORS SHOULD NOT BE SCHEDULED TO BE IN TOO MANY PLACES AT THE SAME TIME

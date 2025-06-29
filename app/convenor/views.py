@@ -2690,7 +2690,7 @@ def add_role(record_id):
     form._record = record
 
     if len(record.supervisor_roles) == 0:
-        form.role.data = SubmissionRole.ROLE_SUPERVISOR
+        form.role.data = SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR
     else:
         form.role.data = SubmissionRole.ROLE_MARKER
 
@@ -9945,11 +9945,9 @@ def assign_revert(id):
     try:
         # remove any SubmissionRole instances for supervisor, marker and moderator
         rec.roles.filter(
-            or_(
-                SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR,
-                SubmissionRole.role == SubmissionRole.ROLE_MARKER,
-                SubmissionRole.role == SubmissionRole.ROLE_MODERATOR,
-            )
+            SubmissionRole.role._in[
+                SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR, SubmissionRole.ROLE_MARKER, SubmissionRole.ROLE_MODERATOR
+            ]
         ).delete()
 
         match_record: MatchingRecord = rec.matching_record
@@ -10021,7 +10019,10 @@ def assign_from_selection(id, sel_id):
             owner = rec.project.owner
             if owner is not None:
                 # remove any SubmissionRole instances which have the owner as supervisor
-                rec.roles.filter(SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.user_id == owner.id).delete()
+                rec.roles.filter(
+                    SubmissionRole.role._in[SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                    SubmissionRole.user_id == owner.id,
+                ).delete()
 
         lp = sel.liveproject
         rec.project_id = lp.id
@@ -10032,7 +10033,7 @@ def assign_from_selection(id, sel_id):
                 role = SubmissionRole(
                     submission_id=rec.id,
                     user_id=new_owner.id,
-                    role=SubmissionRole.ROLE_SUPERVISOR,
+                    role=SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
                     creator_id=current_user.id,
                     creation_timestamp=datetime.now(),
                     last_edit_id=None,
@@ -10085,13 +10086,17 @@ def assign_liveproject(id, pid):
         return redirect(redirect_url())
 
     try:
-        # remove any SubmissionRole instances which have the owner as supervisor
+        # remove any SubmissionRole instances that associate the previous project's owner as the supervisor
         if rec.project is not None and not rec.project.generic:
             owner = rec.project.owner
             if owner is not None:
-                # remove any SubmissionRole instances which have the owner as supervisor
-                rec.roles.filter(SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.user_id == owner.id).delete()
+                # remove any SubmissionRole instances that have the owner as supervisor
+                rec.roles.filter(
+                    SubmissionRole.role._in[SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                    SubmissionRole.user_id == owner.id,
+                ).delete()
 
+        # assign the new project
         rec.project_id = lp.id
 
         if not lp.generic:
@@ -10100,7 +10105,7 @@ def assign_liveproject(id, pid):
                 role = SubmissionRole(
                     submission_id=rec.id,
                     user_id=new_owner.id,
-                    role=SubmissionRole.ROLE_SUPERVISOR,
+                    role=SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
                     creator_id=current_user.id,
                     creation_timestamp=datetime.now(),
                     last_edit_id=None,
@@ -10149,7 +10154,10 @@ def deassign_project(id):
             owner = rec.project.owner
             if owner is not None:
                 # remove any SubmissionRole instances which have the owner as supervisor
-                rec.roles.filter(SubmissionRole.role == SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.user_id == owner.id).delete()
+                rec.roles.filter(
+                    SubmissionRole.role._in[SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                    SubmissionRole.user_id == owner.id,
+                ).delete()
 
         rec.project = None
         db.session.commit()

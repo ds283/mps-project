@@ -2037,11 +2037,11 @@ def _store_PuLP_solution(
                     raise RuntimeError("PuLP solution error: supervisor stack unexpectedly empty or missing")
 
                 # generate supervisor role record
-                role_supv = MatchingRole(user_id=supervisor, role=MatchingRole.ROLE_SUPERVISOR)
+                role_supv = MatchingRole(user_id=supervisor, role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR)
                 data.roles.append(role_supv)
 
                 # generate original supervisor role record (cached so we can revert later if required)
-                orig_role_supv = MatchingRole(user_id=supervisor, role=MatchingRole.ROLE_SUPERVISOR)
+                orig_role_supv = MatchingRole(user_id=supervisor, role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR)
                 data.original_roles.append(orig_role_supv)
 
             # find marker
@@ -2299,7 +2299,7 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
         for role in record.roles:
             role: MatchingRole
 
-            if role.role == MatchingRole.ROLE_SUPERVISOR:
+            if role.role in [MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR]:
                 if role.user_id not in sup_to_number:
                     print(f"Missing supervisor when reconstructing S map (User.id = {role.user_id})")
                     continue

@@ -54,7 +54,7 @@ with app.app_context():
 
     # first inspect the main table; if this does not exist or is empty
     # then we assume that the database should be repopulated
-    # (in general the table will exist but may be empty, because Flask-Migrate will already have been run
+    # (in general, the table will exist but may be empty, because Flask-Migrate will already have been run
     # by the boot script)
     if not has_table(inspector, "main_config"):
         # commit session to release any table locks; otherwise, if we are restoring from a mysqldump

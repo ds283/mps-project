@@ -18,14 +18,27 @@ from tarfile import open as tarfile_open
 from typing import Optional, List, Dict
 
 import pandas as pd
+from dateutil import parser
 from flask_migrate import upgrade
 from sqlalchemy import text, func
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.database import db
-from app.models import User, FacultyData, EnrollmentRecord
+from app.models import (
+    User,
+    FacultyData,
+    EnrollmentRecord,
+    SubmissionRecord,
+    SubmissionRole,
+    SubmissionPeriodRecord,
+    ProjectClassConfig,
+    SubmittingStudent,
+    StudentData,
+)
 from app.shared.cloud_object_store import ObjectStore, ObjectMeta
+from app.shared.conversions import is_integer
 from app.shared.scratch import ScratchFileManager
+from app.shared.utils import get_current_year
 
 
 def execute_query(app, query):
@@ -329,6 +342,7 @@ def populate_CATS_limits(app, initial_db=None):
     # import initdb ObjectStore from which we can download the CATS limits
     if initial_db is None:
         initial_db = import_module("app.initdb.initdb")
+
     init_bucket: ObjectStore = initial_db.INITDB_BUCKET
     CATS_csv: str = initial_db.INITDB_CATS_LIMITS_FILE
 
@@ -343,3 +357,250 @@ def populate_CATS_limits(app, initial_db=None):
 
         print(f'** using INITDB_CATS_LIMITS_FILE="{CATS_csv}" to set CATS limits')
         store_CATS_limits(app, init_bucket, CATS_csv)
+
+
+def store_supervisor_data(app, bucket: ObjectStore, csv_file: str | Path):
+    if isinstance(csv_file, str):
+        csv_file = Path(csv_file)
+
+    full_suffix = "".join(csv_file.suffixes)
+
+    # try to lookup a current SubmissionRole instance for this supervisor
+    current_year = get_current_year()
+
+    with ScratchFileManager(suffix=full_suffix) as scratch_path:
+        with open(scratch_path.path, mode="wb") as f:
+            data: bytes = bucket.get(str(csv_file), audit_data="store_supervisor_data")
+            f.write(data)
+
+        df = pd.read_csv(scratch_path.path, skiprows=[1, 2])
+        for index, row in df.iterrows():
+            supervisor_raw = str(row["Q2"])
+            supervisor_name = supervisor_raw.split()
+
+            student_and_project_raw = str(row["Q3"])
+            student_and_project = student_and_project_raw.split()
+
+            run_again = str(row["Q12"]).split()
+
+            grade_raw = str(row["Q6_1"])
+            flag, grade = is_integer(grade_raw)
+
+            justification = str(row["Q7"])
+            positive = str(row["Q8"])
+            to_improve = str(row["Q9"])
+
+            timestamp_str = str(row["RecordedDate"])
+            timestamp = parser.parse(timestamp_str)
+            if timestamp is None:
+                timestamp = datetime.now()
+
+            # split supervisor name into first + last
+            supv_first = supervisor_name[0]
+
+            if len(supervisor_name) == 3:
+                # assume in first initial. last form
+                if supervisor_name[1] in ["de", "De"]:
+                    supv_last = supervisor_name[1] + " " + supervisor_name[2]
+                else:
+                    supv_last = supervisor_name[2]
+            else:
+                supv_last = supervisor_name[1]
+
+            flag, candidate_number = is_integer(student_and_project[0])
+            if not flag:
+                print(f'!! Could not identify candidate number for student/project = "{student_and_project_raw}"')
+                continue
+
+            # available responses are "It's likely I will run this project again" and "I don't intend to run this project again"
+            available_exemplar = run_again[0] == "It's"
+
+            rec = (
+                db.session.query(SubmissionRole)
+                .join(SubmissionRecord, SubmissionRecord.id == SubmissionRole.submission_id)
+                .join(User, User.id == SubmissionRole.user_id)
+                .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+                .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
+                .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+                .join(StudentData, StudentData.id == SubmittingStudent.student_id)
+                .filter(
+                    SubmissionRole.role.in_([SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]),
+                    ProjectClassConfig.year == current_year,
+                    StudentData.exam_number == candidate_number,
+                    User.last_name == supv_last,
+                )
+            ).all()
+
+            if len(rec) == 0:
+                print(
+                    f'!! Could not find SubmissionRole record to match supervisor = "{supervisor_raw}" (supervisor_last = "{supv_last}"), candidate number = "{candidate_number}", student/project = "{student_and_project_raw}"'
+                )
+                continue
+
+            elif len(rec) > 1:
+                print(
+                    f'!! Multiple SubmissionRole matches found for supervisor = "{supervisor_raw}" (supervisor_last = "{supv_last}"), candidate number = "{candidate_number}", student/project = "{student_and_project_raw}"'
+                )
+                continue
+
+            rec: SubmissionRole = rec[0]
+            rec.grade = grade
+            rec.justification = justification
+            rec.positive_feedback = positive
+            rec.improvements_feedback = to_improve
+
+            rec.signed_off = timestamp
+            rec.submitted_feedback = True
+            rec.feedback_timestamp = timestamp
+
+            submission: SubmissionRecord = rec.submission
+            submission.report_exemplar = available_exemplar
+
+            # weighting not needed for supervisors
+            rec.weight = None
+
+            print(
+                f"++ Updated SubmissionRole record for supervisor = {rec.user.name}, student = {rec.submission.owner.student.name}, with grade = {rec.grade}%"
+            )
+
+    db.session.commit()
+
+
+def import_supervisor_data(app, initial_db=None):
+    # import initdb ObjectStore from which we can download the CATS limits
+    if initial_db is None:
+        initial_db = import_module("app.initdb.initdb")
+
+    init_bucket: ObjectStore = initial_db.INITDB_BUCKET
+    supervisor_CSV: str = initial_db.INITDB_SUPERVISOR_IMPORT
+
+    _wait_until_unlocked(init_bucket)
+
+    with LockFileManager(init_bucket) as lock:
+        contents = init_bucket.list(audit_data="import_supervisor_data")
+
+        if supervisor_CSV not in contents:
+            print(f'** ignored INITDB_SUPERVISOR_IMPORT="{supervisor_CSV}", which was not present in the initdb object store')
+            return
+
+        print(f'** using INITDB_SUPERVISOR_IMPORT="{supervisor_CSV}" to import supervisor marking data')
+        store_supervisor_data(app, init_bucket, supervisor_CSV)
+
+
+def store_examiner_data(app, bucket: ObjectStore, csv_file: str | Path):
+    if isinstance(csv_file, str):
+        csv_file = Path(csv_file)
+
+    full_suffix = "".join(csv_file.suffixes)
+
+    # try to lookup a current SubmissionRole instance for this supervisor
+    current_year = get_current_year()
+
+    with ScratchFileManager(suffix=full_suffix) as scratch_path:
+        with open(scratch_path.path, mode="wb") as f:
+            data: bytes = bucket.get(str(csv_file), audit_data="store_examiner_data")
+            f.write(data)
+
+        df = pd.read_csv(scratch_path.path, skiprows=[1, 2])
+        for index, row in df.iterrows():
+            examiner_raw = str(row["Q2"])
+            examiner_name = examiner_raw.split()
+
+            student_and_project_raw = str(row["Q3"])
+            student_and_project = student_and_project_raw.split()
+
+            grade_raw = str(row["Q6_1"])
+            flag, grade = is_integer(grade_raw)
+
+            justification = str(row["Q7"])
+            positive = str(row["Q8"])
+            to_improve = str(row["Q9"])
+
+            timestamp_str = str(row["RecordedDate"])
+            timestamp = parser.parse(timestamp_str)
+            if timestamp is None:
+                timestamp = datetime.now()
+
+            # split supervisor name into first + last
+            examiner_first = examiner_name[0]
+
+            if len(examiner_name) == 3:
+                # assume in first initial. last form
+                if examiner_name[1] in ["de", "De"]:
+                    examiner_last = examiner_name[1] + " " + examiner_name[2]
+                else:
+                    examiner_last = examiner_name[2]
+            else:
+                examiner_last = examiner_name[1]
+
+            flag, candidate_number = is_integer(student_and_project[0])
+            if not flag:
+                print(f'!! Could not identify candidate number for student/project = "{student_and_project_raw}"')
+                continue
+
+            rec = (
+                db.session.query(SubmissionRole)
+                .join(SubmissionRecord, SubmissionRecord.id == SubmissionRole.submission_id)
+                .join(User, User.id == SubmissionRole.user_id)
+                .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+                .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
+                .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+                .join(StudentData, StudentData.id == SubmittingStudent.student_id)
+                .filter(
+                    SubmissionRole.role.in_([SubmissionRole.ROLE_MARKER]),
+                    ProjectClassConfig.year == current_year,
+                    StudentData.exam_number == candidate_number,
+                    User.last_name == examiner_last,
+                )
+            ).all()
+
+            if len(rec) == 0:
+                print(
+                    f'!! Could not find SubmissionRole record to match examiner = "{examiner_raw}" (examiner_last = "{examiner_last}"), candidate number = "{candidate_number}", student/project = "{student_and_project_raw}"'
+                )
+                continue
+
+            elif len(rec) > 1:
+                print(
+                    f'!! Multiple SubmissionRole matches found for examiner = "{examiner_raw}" (examiner_last = "{examiner_last}"), candidate number = "{candidate_number}", student/project = "{student_and_project_raw}"'
+                )
+                continue
+
+            rec: SubmissionRole = rec[0]
+            rec.grade = grade
+            rec.justification = justification
+            rec.positive_feedback = positive
+            rec.improvements_feedback = to_improve
+
+            rec.signed_off = timestamp
+            rec.submitted_feedback = True
+            rec.feedback_timestamp = timestamp
+
+            rec.weight = 0.5
+
+            print(
+                f"++ Updated SubmissionRole record for examiner = {rec.user.name}, student = {rec.submission.owner.student.name}, with grade = {rec.grade}%"
+            )
+
+    db.session.commit()
+
+
+def import_examiner_data(app, initial_db=None):
+    # import initdb ObjectStore from which we can download the CATS limits
+    if initial_db is None:
+        initial_db = import_module("app.initdb.initdb")
+
+    init_bucket: ObjectStore = initial_db.INITDB_BUCKET
+    examiner_CSV: str = initial_db.INITDB_EXAMINER_IMPORT
+
+    _wait_until_unlocked(init_bucket)
+
+    with LockFileManager(init_bucket) as lock:
+        contents = init_bucket.list(audit_data="import_examiner_data")
+
+        if examiner_CSV not in contents:
+            print(f'** ignored INITDB_EXAMINER_IMPORT="{examiner_CSV}", which was not present in the initdb object store')
+            return
+
+        print(f'** using INITDB_EXAMINER_IMPORT="{examiner_CSV}" to import examiner marking data')
+        store_examiner_data(app, init_bucket, examiner_CSV)

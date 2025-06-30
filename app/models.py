@@ -3090,6 +3090,14 @@ class FacultyData(db.Model, EditingMetadataMixin):
         EncryptedType(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), _get_key, AesGcmEngine, "pkcs5"), default=None, nullable=True
     )
 
+    @property
+    def name(self):
+        return self.user.name
+
+    @property
+    def email(self):
+        return self.user.email
+
     def _supervisor_pool_query(self, pclass):
         if isinstance(pclass, ProjectClass):
             pclass_id = pclass.id
@@ -3495,7 +3503,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             .filter(
                 and_(
                     SubmissionRecord.retired == False,
-                    SubmissionRecord.roles.any(and_(SubmissionRole.role._in(roles), SubmissionRole.user_id == self.id)),
+                    SubmissionRecord.roles.any(and_(SubmissionRole.role.in_(roles), SubmissionRole.user_id == self.id)),
                 )
             )
             .join(LiveProject, LiveProject.id == SubmissionRecord.project_id)
@@ -4108,6 +4116,14 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
                 del self.disable_validate
 
         return value
+
+    @property
+    def name(self):
+        return self.user.name
+
+    @property
+    def email(self):
+        return self.user.email
 
     @property
     def cohort_label(self):

@@ -18,7 +18,7 @@ from sqlalchemy import text, inspect
 import gunicorn_config
 from app import create_app
 from app.database import db
-from initdb import initial_populate_database, populate_CATS_limits
+from initdb import initial_populate_database, populate_CATS_limits, import_supervisor_data, import_examiner_data
 
 
 def has_table(inspector, table_name):
@@ -62,11 +62,22 @@ with app.app_context():
         db.session.commit()
         initial_populate_database(app, inspector)
 
-    # import initdb configuration file
+    # import initdb configuration files
     initdb_module = import_module("app.initdb.initdb")
+
+    # if specified, use an uploaded CATS limit file to overwrite existing limits
     if hasattr(initdb_module, "INITDB_CATS_LIMITS_FILE") and initdb_module.INITDB_CATS_LIMITS_FILE is not None:
         db.session.commit()
         populate_CATS_limits(app, initdb_module)
+
+    # if specified, import supervisor and examiner data (usually from Qualtrics)
+    if hasattr(initdb_module, "INITDB_SUPERVISOR_IMPORT") and initdb_module.INITDB_SUPERVISOR_IMPORT is not None:
+        db.session.commit()
+        import_supervisor_data(app, initdb_module)
+
+    if hasattr(initdb_module, "INITDB_EXAMINER_IMPORT") and initdb_module.INITDB_EXAMINER_IMPORT is not None:
+        db.session.commit()
+        import_examiner_data(app, initdb_module)
 
 
 class StandaloneApplication(gunicorn.app.base.BaseApplication):

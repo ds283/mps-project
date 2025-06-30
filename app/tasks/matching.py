@@ -3780,7 +3780,7 @@ def register_matching_tasks(celery):
                     submission_id=sr.id,
                     user_id=role.user_id,
                     role=role.role,
-                    marking_email=False,
+                    marking_distributed=False,
                     positive_feedback=None,
                     improvements_feedback=None,
                     submitted_feedback=False,

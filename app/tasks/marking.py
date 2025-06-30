@@ -318,7 +318,7 @@ def register_marking_tasks(celery):
         # check which supervisors need to be sent a marking notification, if any
         for role in supervisors:
             role: SubmissionRole
-            if not role.marking_email:
+            if not role.marking_distributed:
                 filtered_supervisors: List[SubmissionRole] = [x for x in supervisors if x.id != role.id]
 
                 msg: EmailMultiAlternatives = _build_supervisor_email(
@@ -350,7 +350,7 @@ def register_marking_tasks(celery):
         # check which markers need to be sent a marking notification, if any
         for role in markers:
             role: SubmissionRole
-            if not role.marking_email:
+            if not role.marking_distributed:
                 filtered_markers: List[SubmissionRole] = [x for x in markers if x.id != role.id]
 
                 msg: EmailMultiAlternatives = _build_marker_email(
@@ -510,8 +510,8 @@ def register_marking_tasks(celery):
             self.update_state("FAILURE", meta={"msg": "Could not load SubmissionRole from database"})
             raise Ignore()
 
-        if not test and not role.marking_email:
-            role.marking_email = True
+        if not test and not role.marking_distributed:
+            role.marking_distributed = True
 
             try:
                 db.session.commit()

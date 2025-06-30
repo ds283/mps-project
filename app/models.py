@@ -6905,9 +6905,9 @@ class SubmissionPeriodRecord(db.Model):
                         or_(
                             and_(
                                 SubmissionRole.role._in[SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
-                                ~SubmissionRole.marking_email,
+                                ~SubmissionRole.marking_distributed,
                             ),
-                            and_(SubmissionRole.role == SubmissionRole.ROLE_MARKER, ~SubmissionRole.marking_email),
+                            and_(SubmissionRole.role == SubmissionRole.ROLE_MARKER, ~SubmissionRole.marking_distributed),
                         )
                     ),
                 )

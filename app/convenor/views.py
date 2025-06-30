@@ -9960,7 +9960,7 @@ def assign_revert(id):
                 submission_id=rec.id,
                 user_id=role.user_id,
                 role=role.role,
-                marking_email=False,
+                marking_distributed=False,
                 positive_feedback=None,
                 improvements_feedback=None,
                 submitted_feedback=False,

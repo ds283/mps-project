@@ -1996,32 +1996,6 @@ submitted_acr = db.Table(
     db.Column("role_id", db.Integer(), db.ForeignKey("roles.id"), primary_key=True),
 )
 
-# feedback assets
-feedback_acl = db.Table(
-    "acl_feedback",
-    db.Column("asset_id", db.Integer(), db.ForeignKey("feedback_assets.id"), primary_key=True),
-    db.Column("user_id", db.Integer(), db.ForeignKey("users.id"), primary_key=True),
-)
-
-feedback_acr = db.Table(
-    "acr_feedback",
-    db.Column("asset_id", db.Integer(), db.ForeignKey("feedback_assets.id"), primary_key=True),
-    db.Column("role_id", db.Integer(), db.ForeignKey("roles.id"), primary_key=True),
-)
-
-# project assets
-project_acl = db.Table(
-    "acl_project",
-    db.Column("asset_id", db.Integer(), db.ForeignKey("project_assets.id"), primary_key=True),
-    db.Column("user_id", db.Integer(), db.ForeignKey("users.id"), primary_key=True),
-)
-
-project_acr = db.Table(
-    "acr_project",
-    db.Column("asset_id", db.Integer(), db.ForeignKey("project_assets.id"), primary_key=True),
-    db.Column("role_id", db.Integer(), db.ForeignKey("roles.id"), primary_key=True),
-)
-
 
 ## EMAIL LOG
 
@@ -16947,62 +16921,6 @@ class SubmittedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin, AssetMi
         return "uploaded"
 
 
-class FeedbackAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin, AssetMixinFactory(feedback_acl, feedback_acr)):
-    """
-    Track generated feedback assets
-    """
-
-    __tablename__ = "feedback_assets"
-
-    # primary key
-    id = db.Column(db.Integer(), primary_key=True)
-
-    # optional license applied to this asset
-    license_id = db.Column(db.Integer(), db.ForeignKey("asset_licenses.id"), default=None)
-    license = db.relationship("AssetLicense", foreign_keys=[license_id], uselist=False, backref=db.backref("feedback_assets", lazy="dynamic"))
-
-    @classmethod
-    def get_type(cls):
-        return "FeedbackAsset"
-
-    @property
-    def number_downloads(self):
-        # 'downloads' data member provided by back reference from FeedbackAssetDownloadRecord
-        return get_count(self.downloads)
-
-    @property
-    def verb_label(self):
-        return "feedback"
-
-
-class ProjectAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin, AssetMixinFactory(project_acl, project_acr)):
-    """
-    Track generated feedback assets
-    """
-
-    __tablename__ = "project_assets"
-
-    # primary key
-    id = db.Column(db.Integer(), primary_key=True)
-
-    # optional license applied to this asset
-    license_id = db.Column(db.Integer(), db.ForeignKey("asset_licenses.id"), default=None)
-    license = db.relationship("AssetLicense", foreign_keys=[license_id], uselist=False, backref=db.backref("project_assets", lazy="dynamic"))
-
-    @classmethod
-    def get_type(cls):
-        return "ProjectAsset"
-
-    @property
-    def number_downloads(self):
-        # 'downloads' data member provided by back reference from ProjectAssetDownloadRecord
-        return get_count(self.downloads)
-
-    @property
-    def verb_label(self):
-        return "project"
-
-
 class SubmittedAssetDownloadRecord(db.Model):
     """
     Serves as a log of downloads for a particular SubmittedAsset
@@ -17042,50 +16960,6 @@ class GeneratedAssetDownloadRecord(db.Model):
     # downloaded by
     downloader_id = db.Column(db.Integer(), db.ForeignKey("users.id"), default=None)
     downloader = db.relationship("User", foreign_keys=[downloader_id], uselist=False, backref=db.backref("generated_downloads", lazy="dynamic"))
-
-    # download time
-    timestamp = db.Column(db.DateTime(), index=True)
-
-
-class FeedbackAssetDownloadRecord(db.Model):
-    """
-    Serves as a log of downloads for a particular Feedback
-    """
-
-    __tablename__ = "feedback_downloads"
-
-    # primary key id
-    id = db.Column(db.Integer(), primary_key=True)
-
-    # asset downloaded
-    asset_id = db.Column(db.Integer(), db.ForeignKey("feedback_assets.id"), default=None)
-    asset = db.relationship("FeedbackAsset", foreign_keys=[asset_id], uselist=False, backref=db.backref("downloads", lazy="dynamic"))
-
-    # downloaded by
-    downloader_id = db.Column(db.Integer(), db.ForeignKey("users.id"), default=None)
-    downloader = db.relationship("User", foreign_keys=[downloader_id], uselist=False, backref=db.backref("feedback_downloads", lazy="dynamic"))
-
-    # download time
-    timestamp = db.Column(db.DateTime(), index=True)
-
-
-class ProjectAssetDownloadRecord(db.Model):
-    """
-    Serves as a log of downloads for a particular Feedback
-    """
-
-    __tablename__ = "project_downloads"
-
-    # primary key id
-    id = db.Column(db.Integer(), primary_key=True)
-
-    # asset downloaded
-    asset_id = db.Column(db.Integer(), db.ForeignKey("project_assets.id"), default=None)
-    asset = db.relationship("ProjectAsset", foreign_keys=[asset_id], uselist=False, backref=db.backref("downloads", lazy="dynamic"))
-
-    # downloaded by
-    downloader_id = db.Column(db.Integer(), db.ForeignKey("users.id"), default=None)
-    downloader = db.relationship("User", foreign_keys=[downloader_id], uselist=False, backref=db.backref("project_downloads", lazy="dynamic"))
 
     # download time
     timestamp = db.Column(db.DateTime(), index=True)

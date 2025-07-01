@@ -7,9 +7,9 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, Optional
 from urllib.parse import quote
 
 from celery import group, chain
@@ -36,6 +36,18 @@ from ..models import (
 )
 from ..shared.asset_tools import AssetCloudAdapter
 from ..task_queue import register_task
+
+
+def report_error(msg: str, source: str, user: Optional[User]):
+    print(f"!! {source}: {msg}")
+    if user is not None:
+        user.post_message(msg, "error", autocommit=True)
+
+
+def report_info(msg: str, source: str, user: Optional[User]):
+    print(f">> {source}: {msg}")
+    if user is not None:
+        user.post_message(msg, "info", autocommit=True)
 
 
 def register_marking_tasks(celery):
@@ -109,12 +121,10 @@ def register_marking_tasks(celery):
         if mark_sent == 1:
             mark_plural = ""
 
-        user.post_message(
-            "Dispatched {supv} notification{supv_pl} to project supervisors, "
-            "and {mark} notification{mark_pl} to project "
-            "examiners.".format(supv=supv_sent, supv_pl=supv_plural, mark=mark_sent, mark_pl=mark_plural),
-            "info",
-            autocommit=True,
+        report_info(
+            f"Dispatched {supv_sent} notification{supv_plural} to project supervisors, and {mark_sent} notification{mark_plural} to examiners",
+            "notify_dispatch",
+            user,
         )
 
     def _build_supervisor_email(
@@ -520,3 +530,233 @@ def register_marking_tasks(celery):
                 raise self.retry()
 
         return {role_string: 1}
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def conflate_marks_for_period(self, period_id: int, convenor_id: Optional[int]):
+        try:
+            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if period is None:
+            self.update_state("FAILURE", meta={"msg": "Could not load SubmissionPeriodRecord from database"})
+            raise Ignore()
+
+        # set up a task group to perform conflation for each record associated with this period
+        tasks = group(conflate_marks.s(record.id, convenor_id) for record in period.submissions) | notify_period_conflation.s(period.id, convenor_id)
+
+        raise self.replace(tasks)
+
+    def sanity_check_grade(role: SubmissionRole, person: User, student: User, convenor: Optional[User]):
+        fail = False
+
+        label: str = role._role_labels[role.role].capitalize()
+        if role.grade < 0:
+            fail = True
+            report_error(
+                f"{label} {person.name} for submitter {student.name} has recorded grade < 0. This submitter has been ignored.",
+                "conflate_marks",
+                convenor,
+            )
+        if role.grade > 100:
+            fail = True
+            report_error(
+                f"{label} {person.name} for submitter {student.name} has recorded grade > 100. This submitter has been ignored.",
+                "conflate_marks",
+                convenor,
+            )
+
+        if role.weight is not None:
+            if role.weight <= 0.0:
+                fail = True
+                report_error(
+                    f"{label} {person.name} for submitter {student.name} has assigned weight < 0. This submitter has been ignored.",
+                    "conflate_marks",
+                    convenor,
+                )
+            if role.weight > 1.0:
+                fail = True
+                report_error(
+                    f"{label} {person.name} for submitter {student.name} has assigned weight > 1. This submitter has been ignored.",
+                    "conflate_marks",
+                    convenor,
+                )
+
+        return fail
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def conflate_marks(self, record_id: int, convenor_id: Optional[int]):
+        try:
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        convenor: Optional[User] = None
+        if convenor_id is not None:
+            try:
+                convenor = db.session.query(User).filter_by(id=convenor_id).first()
+            except SQLAlchemyError as e:
+                convenor = None
+
+        if record is None:
+            self.update_state("FAILURE", meta={"msg": "Could not load SubmissionRecord from database"})
+            return {"not_conflated": 1}
+
+        # TODO: allow adjustable conflation rules
+        sub: SubmittingStudent = record.owner
+        sd: StudentData = sub.student
+        student: User = sd.user
+
+        fail: bool = False
+
+        # conflate supervisor marks
+        supervisor_marks = []
+        for role in record.supervisor_roles:
+            person: User = role.user
+            if role.role == SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR:
+                if not role.signed_off:
+                    fail = True
+                    report_info(
+                        f"Warning: responsible supervisor {person.name} for submitter {student.name} has not approved. This submitter has beem ignored.",
+                        "conflate_marks",
+                        convenor,
+                    )
+
+            if role.grade is not None:
+                if role.signed_off:
+                    fail = sanity_check_grade(role, person, student, convenor)
+                    supervisor_marks.append({"grade": float(role.grade), "weight": float(role.weight) if role.weight is not None else 1.0})
+
+                else:
+                    report_info(
+                        f"Warning: supervisor {person.name} for submitter {student.name} has a recorded grade, but it is not signed off. Marks for this student have been conflated, but this supervisor has been ignored.",
+                        "conflate_marks",
+                        convenor,
+                    )
+            else:
+                if role.role != SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR:
+                    report_info(
+                        f"Warning: supervisor {person.name} for submitter {student.name} has not recorded a grade. Marks for this student have been conflated, but this supervisor has been ignored.",
+                        "conflate_marks",
+                        convenor,
+                    )
+
+        if fail:
+            return {"not_conflated": 1}
+
+        sum_weight = sum(m["weight"] for m in supervisor_marks)
+        if not 1 - 1e-5 < sum_weight < 1 + 1e-5:
+            report_error(
+                f"Supervisor weights for submitter {student.name} do not sum to 1.0 (weight total={sum_weight:.3f}. This submitter has been ignored.",
+                "conflate_marks",
+                convenor,
+            )
+            return {"not_conflated": 1}
+
+        # conflate examiner/markers
+        marker_marks = []
+        for role in record.marker_roles:
+            person: User = role.user
+            if role.grade is not None:
+                if role.signed_off:
+                    fail = sanity_check_grade(role, person, student, convenor)
+                    marker_marks.append({"grade": float(role.grade), "weight": float(role.weight) if role.weight is not None else 1.0})
+
+                else:
+                    report_info(
+                        f"Warning: marker {person.name} for submitter {student.name} has a recorded grade, but it is not signed off. Marks for this student have been conflated, but this marker has been ignored.",
+                        "conflate_marks",
+                        convenor,
+                    )
+            else:
+                report_info(
+                    f"Warning: marker {person.name} for submitter {student.name} has not recorded a grade. Marks for this student have been conflated, but this supervisor has been ignored.",
+                    "conflate_marks",
+                    convenor,
+                )
+
+        if fail:
+            return {"not_conflated": 1}
+
+        sum_weight = sum(m["weight"] for m in marker_marks)
+        if not 1 - 1e-5 < sum_weight < 1 + 1e-5:
+            report_error(
+                f"Marker weights for submitter {student.name} do not sum to 1.0 (weight total={sum_weight:.3f}. This submitter has been ignored.",
+                "conflate_marks",
+                convenor,
+            )
+            return {"not_conflated": 1}
+
+        # round up from 0.45%
+        record.supervision_grade = round(sum(m["weight"] * m["grade"] for m in supervisor_marks) + 0.05, 0)
+        record.report_grade = round(sum(m["weight"] * m["grade"] for m in marker_marks) + 0.05, 0)
+
+        record.grade_generated_id = convenor_id
+        record.grade_generated_timestamp = datetime.now()
+
+        config: ProjectClassConfig = sub.config
+        print(
+            f'>> conflate_marks: {config.abbreviation} submitted "{student.name}" was assigned supervision grade={record.supervision_grade:.1f}%, report grade={record.report_grade:.1f}%'
+        )
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        return {"conflated": 1}
+
+    @celery.task(bind=True, default_retry_delay=5)
+    def notify_period_conflation(self, result_data, period_id, convenor_id):
+        try:
+            convenor: Optional[User] = db.session.query(User).filter_by(id=convenor_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if convenor is None:
+            self.update_state("FAILURE", meta={"msg": "Could not load convenor User record from database"})
+            raise Ignore()
+
+        try:
+            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if period is None:
+            self.update_state("FAILURE", meta={"msg": "Could not load period record from database"})
+            raise Ignore()
+
+        # result data should be a list of lists
+        marks_conflated = 0
+        marks_not_conflated = 0
+
+        if result_data is not None:
+            if isinstance(result_data, list):
+                for result in result_data:
+                    if isinstance(result, dict):
+                        if "conflated" in result:
+                            marks_conflated += result["conflated"]
+                        if "not_conflated" in result:
+                            marks_not_conflated += result["not_conflated"]
+                    else:
+                        raise RuntimeError("Expected individual results to be dictionaries")
+            else:
+                raise RuntimeError("Expected result data to be a list")
+
+        conflated_plural = "s"
+        not_conflated_plural = "s"
+        if marks_conflated == 1:
+            conflated_plural = ""
+        if marks_not_conflated == 1:
+            not_conflated_plural = ""
+
+        report_info(
+            f"{period.display_name}: {marks_conflated} submitters{conflated_plural} conflated successfully, and {marks_not_conflated} submitter{not_conflated_plural} not conflated",
+            "notify_period_conflation",
+            convenor,
+        )

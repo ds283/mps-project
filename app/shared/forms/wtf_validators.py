@@ -42,6 +42,7 @@ from ...models import (
     ProjectTagGroup,
     ProjectTag,
     FeedbackAsset,
+    FeedbackRecipe,
 )
 
 _security = LocalProxy(lambda: current_app.extensions["security"])
@@ -529,7 +530,7 @@ def unique_or_original_batch_item_registration_number(batch_id, form, field):
 
 def globally_unique_feedback_asset_label(form, field):
     if FeedbackAsset.query.filter_by(label=field.data).first():
-        raise ValidationError('A feedback asset with the label "{abbv}" already exists'.format(abbv=field.data))
+        raise ValidationError('A feedback asset with the label "{label}" already exists'.format(label=field.data))
 
 
 def unique_or_original_feedback_asset_label(form, field):
@@ -537,6 +538,18 @@ def unique_or_original_feedback_asset_label(form, field):
         return
 
     return globally_unique_feedback_asset_label(form, field)
+
+
+def globally_unique_feedback_recipe_label(form, field):
+    if FeedbackRecipe.query.filter_by(label=field.data).first():
+        raise ValidationError('A feedback recipe with the label "{label}" already exists'.format(label=field.data))
+
+
+def unique_or_original_feedback_recipe_label(form, field):
+    if field.data == form.recipe.label:
+        return
+
+    return globally_unique_feedback_recipe_label(form, field)
 
 
 def valid_json(form, field):

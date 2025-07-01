@@ -103,6 +103,8 @@ from .forms import (
     ManualBackupForm,
     UploadFeedbackAssetForm,
     EditFeedbackAssetForm,
+    AddFeedbackRecipeForm,
+    EditFeedbackRecipeForm,
 )
 from ..cache import cache
 from ..database import db
@@ -161,6 +163,7 @@ from ..models import (
     BackupLabel,
     FeedbackAsset,
     TemplateTag,
+    FeedbackRecipe,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
@@ -10927,7 +10930,11 @@ def upload_feedback_asset():
                 db.session.rollback()
                 flash("Feedback asset was uploaded, but there was a database issue. Please contact an administrator.", "error")
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                return redirect(url)
+
+            return redirect(url)
+
+        else:
+            flash("No upload was supplied", "error")
 
     return render_template_context("admin/feedback/upload_feedback_asset.html", form=form, url=url)
 
@@ -10971,3 +10978,68 @@ def edit_feedback_asset(asset_id):
         form.license.data = asset_record.license
 
     return render_template_context("admin/feedback/edit_feedback_asset.html", form=form, url=url, asset=asset)
+
+
+@admin.route("/add_feedback_recipe", methods=["GET", "POST"])
+@roles_accepted("admin", "root")
+def add_feedback_recipe():
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    form = AddFeedbackRecipeForm(request.form)
+
+    if form.validate_on_submit():
+        recipe = FeedbackRecipe(
+            label=form.label.data,
+            project_classes=form.project_classes.data,
+            template=form.template.data,
+            asset_list=form.asset_list.data,
+            creator_id=current_user.id,
+            creation_timestamp=datetime.now(),
+        )
+
+        try:
+            db.session.add(recipe)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash("Could not add feedback recipe due to a database issue. Please contact an administrator.", "error")
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url)
+
+    return render_template_context("admin/feedback/add_feedback_recipe.html", form=form, url=url)
+
+
+@admin.route("/edit_feedback_recipe/<int:recipe_id>", methods=["GET", "POST"])
+@roles_accepted("admin", "root")
+def edit_feedback_recipe(recipe_id):
+    recipe: FeedbackRecipe = FeedbackRecipe.query.get_or_404(recipe_id)
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    form = EditFeedbackRecipeForm(obj=recipe)
+    form.recipe = recipe
+
+    if form.validate_on_submit():
+        recipe.label = form.label.data
+        recipe.project_classes = form.project_classes.data
+        recipe.template = form.template.data
+        recipe.asset_list = form.asset_list.data
+
+        recipe.last_edit_id = current_user.id
+        recipe.last_edit_timestamp = datetime.now()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash("Could not save changes to this recipe due to a database issue. Please contact an administrator.", "error")
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url)
+
+    return render_template_context("admin/feedback/edit_feedback_recipe.html", form=form, url=url, recipe=recipe)

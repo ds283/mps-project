@@ -44,6 +44,7 @@ from ...models import (
     ProjectTag,
     BackupLabel,
     TemplateTag,
+    FeedbackAsset,
 )
 from ...models import project_pclasses, description_pclasses, roles_to_users
 
@@ -515,3 +516,11 @@ def GetActiveTemplateTags():
 
 def BuildTemplateTagName(tag: TemplateTag):
     return tag.name
+
+
+def GetAllFeedbackTemplates():
+    return db.session.query(FeedbackAsset).filter(FeedbackAsset.is_template == True)
+
+
+def GetAllNonTemplateFeedbackAssets():
+    return db.session.query(FeedbackAsset).filter(FeedbackAsset.is_template == False)

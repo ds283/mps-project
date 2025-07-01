@@ -1,0 +1,77 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#project_classes').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select project classes for which this recipe is available...'
+            });
+            $('#template').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select a primary report template...'
+            });
+            $('#asset_list').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select other assets that should be made available...'
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Edit feedback recipe
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card border-primary mt-3 mb-3">
+                <div class="card-header bg-primary text-white">
+                    Edit feedback recipe <strong>{{ recipe.label }}</strong>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('admin.edit_feedback_recipe', recipe_id=recipe.id, url=url) }}"
+                          method="POST"
+                          enctype="multipart/form-data" name="create_form">
+                        {{ form.hidden_tag() }}
+
+                        {{ wtf.render_field(form.label) }}
+                        {{ wtf.render_field(form.project_classes) }}
+                        {{ wtf.render_field(form.template) }}
+                        {{ wtf.render_field(form.asset_list) }}
+                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                    </form>
+                </div>
+            </div>
+
+            {% if url %}
+                <div>
+                    <a class="text-decoration-none" href="{{ url }}">
+                        {% if text %}
+                            <i class="fas fa-backward"></i> Return to {{ text }}
+                        {% else %}
+                            <i class="fas fa-backward"></i> Return
+                        {% endif %}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

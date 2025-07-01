@@ -17294,7 +17294,7 @@ class FeedbackRecipe(db.Model, EditingMetadataMixin):
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
-    # for which project classes in this recipe available?
+    # for which project classes is this recipe available?
     project_classes = db.relationship(
         "ProjectClass", secondary=feedback_recipe_to_pclasses, lazy="dynamic", backref=db.backref("feedback_recipes", lazy="dynamic")
     )

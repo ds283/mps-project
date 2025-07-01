@@ -147,12 +147,17 @@ def tarfile_populate(app, bucket: ObjectStore, tarfile: str | Path):
         to: TarInfo = contents_dict["database.sql"]
         fo = tf.extractfile(to)
         if fo is None:
-            raise RuntimeError(f'!! initdb tarfile {tarfile} contains a "database.sql" object, but it did ' f"not extract correctly from the archive")
+            raise RuntimeError(f'!! initdb tarfile {tarfile} contains a "database.sql" object, but it did not extract correctly from the archive')
 
         p: subprocess.CompletedProcess = subprocess.run(["mysql", "-h", db_hostname, f"-u{user}", f"-p{password}", database], input=fo.read())
 
         if p.returncode != 0:
-            raise RuntimeError(f"!! SQL database re-population did not complete successfully")
+            print(f"!! SQL database re-population did not complete successfully: return code = {p.returncode}")
+            print(f"!!")
+            print(f"!! stdout output")
+            print(p.stdout)
+            print(f"\n!! stderr output")
+            print(p.stderr)
 
     # run Alembic upgrade
     db.session.remove()

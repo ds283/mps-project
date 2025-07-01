@@ -43,6 +43,7 @@ from ...models import (
     ProjectTagGroup,
     ProjectTag,
     BackupLabel,
+    TemplateTag,
 )
 from ...models import project_pclasses, description_pclasses, roles_to_users
 
@@ -506,3 +507,11 @@ def GetActiveBackupLabels():
 
 def BuildBackupLabelName(label: BackupLabel):
     return label.name
+
+
+def GetActiveTemplateTags():
+    return db.session.query(TemplateTag)
+
+
+def BuildTemplateTagName(tag: TemplateTag):
+    return tag.name

@@ -41,6 +41,7 @@ from ...models import (
     AssetLicense,
     ProjectTagGroup,
     ProjectTag,
+    FeedbackAsset,
 )
 
 _security = LocalProxy(lambda: current_app.extensions["security"])
@@ -462,7 +463,7 @@ def unique_or_original_license_abbreviation(form, field):
     if field.data == form.license.abbreviation:
         return
 
-    return unique_or_original_license_abbreviation(form, field)
+    return globally_unique_license_abbreviation(form, field)
 
 
 def per_license_unique_version(form, field):
@@ -524,6 +525,18 @@ def unique_or_original_batch_item_registration_number(batch_id, form, field):
         return
 
     return globally_unique_batch_item_registration_number(batch_id, form, field)
+
+
+def globally_unique_feedback_asset_label(form, field):
+    if FeedbackAsset.query.filter_by(label=field.data).first():
+        raise ValidationError('A feedback asset with the label "{abbv}" already exists'.format(abbv=field.data))
+
+
+def unique_or_original_feedback_asset_label(form, field):
+    if field.data == form.asset.label:
+        return
+
+    return globally_unique_feedback_asset_label(form, field)
 
 
 def valid_json(form, field):

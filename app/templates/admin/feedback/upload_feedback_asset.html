@@ -1,0 +1,75 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#tags').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                tags: true,
+                tokenSeparators: [',', ';'],
+                placeholder: 'Add tags for this asset...'
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Upload new feedback asset
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card border-primary mt-3 mb-3">
+                <div class="card-header bg-primary text-white">
+                    Upload new feedback asset
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('admin.upload_feedback_asset', url=url) }}" method="POST"
+                          enctype="multipart/form-data" name="upload_form">
+                        {{ form.hidden_tag() }}
+
+                        <label class="btn btn-secondary" for="file-selector">
+                            <input id="file-selector" type="file" name="asset" style="display: none;"
+                                   onchange="$('#filename-data').html(this.files[0].name); $('#target_name').val(this.files[0].name);">
+                            Select file to upload...
+                        </label>
+                        <span class="badge bg-info" id="filename-data" style="height: 24px;"></span>
+
+                        <hr class="intro-divider">
+                        {{ wtf.render_field(form.label) }}
+                        {{ wtf.render_field(form.is_template) }}
+                        {{ wtf.render_field(form.license) }}
+                        {{ wtf.render_field(form.project_classes) }}
+                        {{ wtf.render_field(form.tags) }}
+                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                    </form>
+                </div>
+            </div>
+
+            {% if url %}
+                <div>
+                    <a class="text-decoration-none" href="{{ url }}">
+                        {% if text %}
+                            <i class="fas fa-backward"></i> Return to {{ text }}
+                        {% else %}
+                            <i class="fas fa-backward"></i> Return
+                        {% endif %}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

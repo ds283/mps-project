@@ -28,6 +28,7 @@ from wtforms import (
 from wtforms.validators import InputRequired, Optional, Length, URL, NumberRange
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
+from ..documents.forms import LicenseMixin
 from ..manage_users.forms import ResearchGroupMixin
 from ..models import (
     BackupConfiguration,
@@ -46,7 +47,8 @@ from ..models import (
     PresentationAssessment,
     DEFAULT_ASSIGNED_MARKERS,
     DEFAULT_ASSIGNED_MODERATORS,
-    DEFAULT_STRING_LENGTH, ProjectClassConfig,
+    DEFAULT_STRING_LENGTH,
+    ProjectClassConfig,
 )
 from ..shared.forms.mixins import SaveChangesMixin, PeriodPresentationsMixin
 from ..shared.forms.queries import (
@@ -81,6 +83,8 @@ from ..shared.forms.queries import (
     BuildActiveFacultyName,
     GetActiveBackupLabels,
     BuildBackupLabelName,
+    GetActiveTemplateTags,
+    BuildTemplateTagName,
 )
 from ..shared.forms.widgets import BasicTagSelectField
 from ..shared.forms.wtf_validators import (
@@ -142,6 +146,8 @@ from ..shared.forms.wtf_validators import (
     unique_or_original_project_tag_group,
     globally_unique_project_tag,
     unique_or_original_project_tag,
+    globally_unique_feedback_asset_label,
+    unique_or_original_feedback_asset_label,
 )
 
 
@@ -1769,3 +1775,35 @@ class ManualBackupForm(Form, BackupMixinFactory(lock_default=True)):
     )
 
     submit = SubmitField("Backup now")
+
+
+class FeedbackAssetMixin(LicenseMixin):
+    project_classes = QuerySelectMultipleField("Available for use with project classes", query_factory=GetAllProjectClasses, get_label="name")
+
+    tags = BasicTagSelectField(
+        "Add tags to identify this asset",
+        query_factory=GetActiveTemplateTags,
+        get_label=BuildTemplateTagName,
+        description="Use tags to identify assets with specific properties, or to organize them into groups.",
+        blank_text="Add tags...",
+    )
+
+    is_template = BooleanField("This is a template that can be used to generate a feedback report", default=False)
+
+
+class UploadFeedbackAssetForm(Form, FeedbackAssetMixin):
+    label = StringField(
+        "Label",
+        description="Provide a label for this asset",
+        validators=[InputRequired(message="Please provide a label"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_feedback_asset_label],
+    )
+
+    submit = SubmitField("Upload")
+
+
+class EditFeedbackAssetForm(Form, FeedbackAssetMixin, SaveChangesMixin):
+    label = StringField(
+        "Label",
+        description="Provide a label for this asset",
+        validators=[InputRequired(message="Please provide a label"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_feedback_asset_label],
+    )

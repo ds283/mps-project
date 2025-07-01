@@ -17263,7 +17263,7 @@ class FeedbackAsset(db.Model, EditingMetadataMixin):
     label = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True)
 
     # applied tags
-    tags = db.relationship("TemplateTags", secondary=feedback_asset_to_tags, lazy="dynamic", backref=db.backref("assets", lazy="dynamic"))
+    tags = db.relationship("TemplateTag", secondary=feedback_asset_to_tags, lazy="dynamic", backref=db.backref("assets", lazy="dynamic"))
 
 
 class TemplateTag(db.Model, ColouredLabelMixin, EditingMetadataMixin):
@@ -17304,13 +17304,11 @@ class FeedbackRecipe(db.Model, EditingMetadataMixin):
 
     # primary template
     template_id = db.Column(db.Integer(), db.ForeignKey("feedback_assets.id"))
-    template = db.relationship(
-        "FeedbackTemplateAsset", foreign_keys=[template_id], uselist=False, backref=db.backref("template_recipes", lazy="dynamic")
-    )
+    template = db.relationship("FeedbackAsset", foreign_keys=[template_id], uselist=False, backref=db.backref("template_recipes", lazy="dynamic"))
 
     # other assets
     asset_list = db.relationship(
-        "FeedbackTemplateAsset", secondary=feedback_recipe_to_assets, lazy="dynamic", backref=db.backref("asset_recipes", lazy="dynamic")
+        "FeedbackAsset", secondary=feedback_recipe_to_assets, lazy="dynamic", backref=db.backref("asset_recipes", lazy="dynamic")
     )
 
 

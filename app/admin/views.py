@@ -14,7 +14,6 @@ from datetime import date, datetime, timedelta
 from functools import partial
 from io import BytesIO
 from itertools import chain as itertools_chain
-from math import pi
 from pathlib import Path
 from typing import List, Dict, Tuple, Iterable
 from urllib.parse import urlsplit
@@ -25,6 +24,7 @@ from bokeh.plotting import figure
 from celery import chain, group
 from flask import current_app, redirect, url_for, flash, request, jsonify, session, stream_with_context, abort, send_file
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
+from math import pi
 from numpy import histogram
 from sqlalchemy import or_, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -101,6 +101,8 @@ from .forms import (
     SelectMatchingYearFormFactory,
     EditBackupForm,
     ManualBackupForm,
+    UploadFeedbackAssetForm,
+    EditFeedbackAssetForm,
 )
 from ..cache import cache
 from ..database import db
@@ -157,6 +159,8 @@ from ..models import (
     PeriodAttachment,
     validate_nonce,
     BackupLabel,
+    FeedbackAsset,
+    TemplateTag,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
@@ -10845,3 +10849,113 @@ def do_move_selector(sid, dest_id):
     seq.apply_async(task_id=task_id)
 
     return redirect(url)
+
+
+def create_new_template_tags(form):
+    matched, unmatched = form.tags.data
+
+    if len(unmatched) > 0:
+        now = datetime.now()
+        for tag in unmatched:
+            new_tag = TemplateTag(name=tag, colour=None, creator_id=current_user.id, creation_timestamp=now)
+            try:
+                db.session.add(new_tag)
+                matched.append(new_tag)
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                flash(f'Could not add newly defined tag "{tag}" due to a database error. Please contact a system administrator.', "error")
+
+    return matched
+
+
+@admin.route("/upload_feedback_asset")
+@roles_accepted("admin", "root")
+def upload_feedback_asset():
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    form = UploadFeedbackAssetForm(request.form)
+
+    if form.validate_on_submit():
+        if "asset" in request.files:
+            asset_file = request.files["asset"]
+
+            # AssetUploadManager will populate most fields later
+            asset = SubmittedAsset(
+                timestamp=datetime.now(), uploaded_id=current_user.id, expiry=None, target_name=form.label.data, license=form.license.data
+            )
+
+            object_store = current_app.config.get("OBJECT_STORAGE_PROJECT")
+            with AssetUploadManager(
+                asset,
+                data=asset_file.stream.read(),
+                audit_data=f"upload_feedback_asset",
+                length=asset_file.content_length,
+                mimetype=asset_file.content_type,
+                validate_nonce=validate_nonce,
+            ) as upload_mgr:
+                pass
+
+            try:
+                db.session.add(asset)
+                db.session.flush()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                flash("Could not upload feedback asset due to a database issue. Please contact an administrator.", "error")
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                return redirect(url)
+
+            tag_list = create_new_template_tags(form)
+
+            feedback_asset = FeedbackAsset(
+                project_classes=form.project_classes.data,
+                asset_id=asset.id,
+                label=form.label.data,
+                is_template=form.is_template.data,
+                tags=tag_list,
+            )
+
+            try:
+                db.session.add(feedback_asset)
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                flash("Feedback asset was uploaded, but there was a database issue. Please contact an administrator.", "error")
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                return redirect(url)
+
+    return render_template_context("admin/feedback/upload_feedback_asset.html", form=form, url=url)
+
+
+@admin.route("/edit_feedback_asset/<int:asset_id>", methods=["GET", "POST"])
+@roles_accepted("admin", "root")
+def edit_feedback_asset(asset_id):
+    # asset id identifies a FeedbackAsset
+    asset: FeedbackAsset = FeedbackAsset.query.get_or_404(asset_id)
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    form = EditFeedbackAssetForm(obj=asset)
+    form.asset = asset
+
+    if form.validate_on_submit():
+        tag_list = create_new_template_tags(form)
+
+        asset.label = form.label.data
+        asset.project_classes = form.project_classes.data
+        asset.is_template = form.is_template.data
+        asset.tags = tag_list
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash("Could not save changes to this asset due to a database error. Please contact a system administrator.", "error")
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url)
+
+    return render_template_context("admin/feedback/edit_feedback_asset.html", form=form, url=url, asset=asset)

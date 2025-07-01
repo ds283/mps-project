@@ -160,6 +160,6 @@ def create_new_backup_labels(form):
                 matched.append(new_label)
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                flash(f'Could not add newly defined label "{label}" due to a database error. ' f"Please contact a system administrator.", "error")
+                flash(f'Could not add newly defined label "{label}" due to a database error. Please contact a system administrator.', "error")
 
     return matched

@@ -11,10 +11,9 @@
 import base64
 import os
 
+import app.shared.cloud_object_store.bucket_types as buckets
 from app.shared.cloud_object_store import ObjectStore
 from app.shared.cloud_object_store.encryption.chacha20_poly1305 import ChaCha20_Poly1305
-import app.shared.cloud_object_store.bucket_types as buckets
-
 
 # APP CONFIGURATION
 APP_NAME = "mpsprojects"
@@ -27,8 +26,8 @@ BRANDING_PUBLIC_LANDING_STRING = "Welcome to the MPS public projects list"
 # public browser
 ENABLE_PUBLIC_BROWSER = True
 
-VIDEO_EXPLAINER_PANOPTO_SERVER = "sussex.cloud.panopto.eu"
-VIDEO_EXPLAINER_PANOPTO_SESSION = "c2274660-a8f0-4f71-ba13-acd101735f7b"
+# VIDEO_EXPLAINER_PANOPTO_SERVER = "sussex.cloud.panopto.eu"
+# VIDEO_EXPLAINER_PANOPTO_SESSION = "c2274660-a8f0-4f71-ba13-acd101735f7b"
 
 # features
 BACKUP_IS_LIVE = True
@@ -115,3 +114,43 @@ _telemetry_storage_options = _base_storage_options | {
 # create ObjectStore for telemetry bucket
 OBJECT_STORAGE_TELEMETRY_URI = os.environ.get("OBJECT_STORAGE_TELEMETRY_URI")
 OBJECT_STORAGE_TELEMETRY = ObjectStore(OBJECT_STORAGE_TELEMETRY_URI, buckets.TELEMETRY_BUCKET, _telemetry_storage_options)
+
+# -- FEEDBACK BUCKET
+
+# get credentials to access feedback bucket
+OBJECT_STORAGE_FEEDBACK_ACCESS_KEY = os.environ.get("OBJECT_STORAGE_FEEDBACK_ACCESS_KEY")
+OBJECT_STORAGE_FEEDBACK_SECRET_KEY = os.environ.get("OBJECT_STORAGE_FEEDBACK_SECRET_KEY")
+
+# set up encryption pipeline for feedback bucket
+OBJECT_STORAGE_FEEDBACK_ENCRYPT_KEY = os.environ.get("OBJECT_STORAGE_FEEDBACK_ENCRYPT_KEY")
+_feedback_encrypt_key = base64.urlsafe_b64decode(OBJECT_STORAGE_FEEDBACK_ENCRYPT_KEY)
+
+_feedback_storage_options = _base_storage_options | {
+    "access_key": OBJECT_STORAGE_FEEDBACK_ACCESS_KEY,
+    "secret_key": OBJECT_STORAGE_FEEDBACK_SECRET_KEY,
+    "encryption_pipeline": ChaCha20_Poly1305(_feedback_encrypt_key),
+}
+
+# create ObjectStore for feedback bucket
+OBJECT_STORAGE_FEEDBACK_URI = os.environ.get("OBJECT_STORAGE_FEEDBACK_URI")
+OBJECT_STORAGE_FEEDBACK = ObjectStore(OBJECT_STORAGE_FEEDBACK_URI, buckets.FEEDBACK_BUCKET, _feedback_storage_options)
+
+# -- PROJECT BUCKET
+
+# get credentials to access project bucket
+OBJECT_STORAGE_PROJECT_ACCESS_KEY = os.environ.get("OBJECT_STORAGE_PROJECT_ACCESS_KEY")
+OBJECT_STORAGE_PROJECT_SECRET_KEY = os.environ.get("OBJECT_STORAGE_PROJECT_SECRET_KEY")
+
+# set up encryption pipeline for project bucket
+OBJECT_STORAGE_PROJECT_ENCRYPT_KEY = os.environ.get("OBJECT_STORAGE_PROJECT_ENCRYPT_KEY")
+_project_encrypt_key = base64.urlsafe_b64decode(OBJECT_STORAGE_PROJECT_ENCRYPT_KEY)
+
+_project_storage_options = _base_storage_options | {
+    "access_key": OBJECT_STORAGE_PROJECT_ACCESS_KEY,
+    "secret_key": OBJECT_STORAGE_PROJECT_SECRET_KEY,
+    "encryption_pipeline": ChaCha20_Poly1305(_project_encrypt_key),
+}
+
+# create ObjectStore for project bucket
+OBJECT_STORAGE_PROJECT_URI = os.environ.get("OBJECT_STORAGE_PROJECT_URI")
+OBJECT_STORAGE_PROJECT = ObjectStore(OBJECT_STORAGE_PROJECT_URI, buckets.PROJECT_BUCKET, _project_storage_options)

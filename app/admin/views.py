@@ -10916,6 +10916,8 @@ def upload_feedback_asset():
                 label=form.label.data,
                 is_template=form.is_template.data,
                 tags=tag_list,
+                creator_id=current_user.id,
+                creation_timestamp=datetime.now(),
             )
 
             try:
@@ -10935,6 +10937,7 @@ def upload_feedback_asset():
 def edit_feedback_asset(asset_id):
     # asset id identifies a FeedbackAsset
     asset: FeedbackAsset = FeedbackAsset.query.get_or_404(asset_id)
+    asset_record: SubmittedAsset = asset.asset
 
     url = request.args.get("url", None)
     if url is None:
@@ -10951,6 +10954,11 @@ def edit_feedback_asset(asset_id):
         asset.is_template = form.is_template.data
         asset.tags = tag_list
 
+        asset_record.license = form.license.data
+
+        asset.last_edit_id = current_user.id
+        asset.last_edit_timestamp = datetime.now()
+
         try:
             db.session.commit()
         except SQLAlchemyError as e:
@@ -10959,5 +10967,7 @@ def edit_feedback_asset(asset_id):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url)
+    elif request.method == "GET":
+        form.license.data = asset_record.license
 
     return render_template_context("admin/feedback/edit_feedback_asset.html", form=form, url=url, asset=asset)

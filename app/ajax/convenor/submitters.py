@@ -28,13 +28,13 @@ _periods = """
     {% if state == obj.FEEDBACK_NOT_YET %}
         {# <span class="badge bg-secondary">Feedback not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <div class="badge bg-secondary">Feedback to do</div>
+        <div class="small text-secondary">Feedback waiting</div>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <div class="badge bg-success">Feedback submitted</div>        
+        <div class="small text-success">Feedback submitted</div>        
     {% elif state == obj.FEEDBACK_ENTERED %}
-        <div class="badge bg-warning text-dark">Feedback in progress</div>        
+        <div class="small text-primary">Feedback in progress</div>        
     {% elif state == obj.FEEDBACK_LATE %}
-        <div class="badge bg-danger">Feedback late</div>
+        <div class="small text-danger">Feedback late</div>
     {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
     {% else %}
         <div class="badge bg-danger">Feedback error &ndash; unknown state</div>
@@ -45,13 +45,13 @@ _periods = """
     {% if state == obj.FEEDBACK_NOT_YET %}
         {# <span class="badge bg-secondary">Response not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <div class="badge bg-secondary">Response to do</div>
+        <div class="small text-secondary">Response waiting</div>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <div class="badge bg-success">Response submitted</div>        
+        <div class="small text-success">Response submitted</div>        
     {% elif state == obj.FEEDBACK_ENTERED %}
-        <div class="badge bg-warning text-dark">Response in progress</div>        
+        <div class="small text-primary">Response in progress</div>        
     {% elif state == obj.FEEDBACK_LATE %}
-        <div class="badge bg-danger">Response late</div>
+        <div class="small time-danger">Response late</div>
     {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
     {% else %}
         <div class="badge bg-danger">Response error &ndash; unknown state</div>
@@ -61,9 +61,12 @@ _periods = """
     {% set num_roles = roles|length %}
     {% if num_roles > 0 %}
         <div>
-            <div class="text-muted small">{{ label }}</div>
+            <div class="small fw-semibold">{{ label }}</div>
             {% for role in roles %}
-                <a class="badge text-decoration-none text-nohover-light bg-info btn-table-block" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
+                <a class="small text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
+                {% if role.grade and role.signed_off %}
+                    <div class="text-secondary fs-4">{{ role.grade|round(precision=1) }}%</div>
+                {% endif %}
                 {{ feedback_state_tag(role) }}
                 {{ response_state_tag(role) }}
             {% endfor %}
@@ -80,37 +83,55 @@ _periods = """
     {% set number_submissions = config.number_submissions %}
     <div class="bg-light p-2 mb-2 {% if number_submissions > 1 and period.submission_period == current_period.submission_period %}border border-info{% endif %}">
         {% if r.project is not none %}
-            <div class="d-flex flex-row justify-content-start align-items-center gap-2">
-                {% if r.project.name|length < 70 %}
-                    {% set proj_name = r.project.name %}
-                {% else %}
-                    {% set proj_name = r.project.name[0:70] + '...' %}
-                {% endif %}
-                <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=r.project_id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">{{ proj_name }}</a>
-                {% if r.has_issues %}
-                    <i class="fas fa-exclamation-triangle text-danger"></i>
-                {% endif %}
-                {% if r.project.generic or r.project.owner is none %}
-                    <div class="badge bg-info">GENERIC</div>
-                {% else %}
-                    <div class="small text-muted">
-                        Project owner
-                        <a href="mailto:{{ r.project.owner.user.email }}">{{ r.project.owner.user.name }}</a>
-                    </div>
-                {% endif %}
-                <div class="dropdown assignment-label">
-                    <a class="badge text-decoration-none text-nohover-light bg-secondary dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Change</a>
-                    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                        {% set disabled = period.is_feedback_open or r.student_engaged %}
-                        {% if disabled %}
-                            <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign project</a>
-                        {% else %}
-                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
-                                <i class="fas fa-folder fa-fw"></i> Assign project...
-                            </a>
-                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Deassign project</a>
+            <div class="d-flex flex-row justify-content-between align-items-start gap-2">
+                <div>
+                    {% if r.project.name|length < 70 %}
+                        {% set proj_name = r.project.name %}
+                    {% else %}
+                        {% set proj_name = r.project.name[0:70] + '...' %}
+                    {% endif %}
+                    <a class="fw-semibold text-decoration-none" href="{{ url_for('faculty.live_project', pid=r.project_id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">{{ proj_name }}</a>
+                    {% if r.has_issues %}
+                        <i class="fas fa-exclamation-triangle text-danger"></i>
+                    {% endif %}
+                    <div class="d-flex flex-row justify-content-start align-items-start gap-2">
+                        {% if r.supervision_grade %}
+                            <div>
+                                <div class="small text-muted">Supervision</div>
+                                <div class="fw-bold fs-4">{{ r.supervision_grade|round(precision=1) }}%</div>
+                            </div>
                         {% endif %}
-                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=sub.id, record_id=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"><i class="fas fa-user-circle fa-fw"></i> Edit roles...</a>
+                        {% if r.report_grade %}
+                            <div>
+                                <div class="small text-muted">Report</div>
+                                <div class="fw-bold fs-4">{{ r.report_grade|round(precision=1) }}%</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+                    {% if r.project.generic or r.project.owner is none %}
+                        <div class="small text-primary text-capitalize">Generic</div>
+                    {% else %}
+                        <div class="small">
+                            <span class="text-muted">Owner</span>
+                            <a class="fw-semibold text-decoration-none" href="mailto:{{ r.project.owner.user.email }}">{{ r.project.owner.user.name }}</a>
+                        </div>
+                    {% endif %}
+                    <div class="dropdown assignment-label">
+                        <a class="fw-semibold text-primary small text-decoration-none small dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Change</a>
+                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                            {% set disabled = period.is_feedback_open or r.student_engaged %}
+                            {% if disabled %}
+                                <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign project</a>
+                            {% else %}
+                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
+                                    <i class="fas fa-folder fa-fw"></i> Assign project...
+                                </a>
+                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Deassign project</a>
+                            {% endif %}
+                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=sub.id, record_id=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"><i class="fas fa-user-circle fa-fw"></i> Edit roles...</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -193,11 +214,11 @@ _periods = """
                                     </div>
                                 {% endfor %}
                                 {% if fns.flag and r.number_presentation_feedback == 0 %}
-                                    <div class="badge bg-danger">Feedback required</div>
+                                    <div class="small text-danger">Feedback required</div>
                                 {% endif %}
                             {% endif %}
                         {% else %}
-                            <div class="badge bg-secondary">Awaiting scheduling</div>
+                            <div class="small text-secondary">Awaiting scheduling</div>
                         {% endif %}
                     </div>
                 {% endif %}

@@ -16,7 +16,6 @@ build.sh
 database-copies
 instance
 logs
-migrate.sh
 mongodb
 mysql
 nginx

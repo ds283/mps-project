@@ -2033,6 +2033,33 @@ backup_record_to_labels = db.Table(
 )
 
 
+## FEEDBACK ASSETS
+
+feedback_asset_to_pclasses = db.Table(
+    "feedback_asset_to_pclasses",
+    db.Column("asset_id", db.Integer(), db.ForeignKey("feedback_assets.id"), primary_key=True),
+    db.Column("pclass_id", db.Integer(), db.ForeignKey("project_classes.id"), primary_key=True),
+)
+
+feedback_asset_to_tags = db.Table(
+    "feedback_asset_to_tags",
+    db.Column("asset_id", db.Integer(), db.ForeignKey("feedback_assets.id"), primary_key=True),
+    db.Column("tag_id", db.Integer(), db.ForeignKey("template_tags.id"), primary_key=True),
+)
+
+feedback_recipe_to_pclasses = db.Table(
+    "feedback_recipe_to_pclasses",
+    db.Column("recipe_id", db.Integer(), db.ForeignKey("feedback_recipes.id"), primary_key=True),
+    db.Column("pclass_id", db.Integer(), db.ForeignKey("project_classes.id"), primary_key=True),
+)
+
+feedback_recipe_to_assets = db.Table(
+    "feedback_recipe_to_assets",
+    db.Column("recipe_id", db.Integer(), db.ForeignKey("feedback_recipes.id"), primary_key=True),
+    db.Column("asset_id", db.Integer(), db.ForeignKey("feedback_assets.id"), primary_key=True),
+)
+
+
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
@@ -12045,7 +12072,7 @@ class PeriodAttachment(db.Model):
 
     # attached file
     # TODO: in the longer term, this field should be renamed to asset_id rather than attachment_id
-    attachment_id = db.Column(db.Integer(), db.ForeignKey("submitted_assets.id"), default=False)
+    attachment_id = db.Column(db.Integer(), db.ForeignKey("submitted_assets.id"), default=None)
     attachment = db.relationship(
         "SubmittedAsset", foreign_keys=[attachment_id], uselist=False, backref=db.backref("period_attachment", uselist=False)
     )
@@ -12561,6 +12588,10 @@ class BackupRecord(db.Model, BackupTypesMixin):
 
 
 class BackupLabel(db.Model, ColouredLabelMixin, EditingMetadataMixin):
+    """
+    Represents a label applied to a backup
+    """
+
     __tablename__ = "backup_labels"
 
     # unique identifier used as primary key
@@ -17204,6 +17235,83 @@ class ProjectSubmitterArticle(FormattedArticle):
     )
 
     __mapper_args__ = {"polymorphic_identity": 2}
+
+
+class FeedbackAsset(db.Model, EditingMetadataMixin):
+    """
+    Represents an uploaded asset that can be used to generate feedback reports/documents
+    """
+
+    __tablename__ = "feedback_assets"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # for which project classes is this asset available?
+    project_classes = db.relationship(
+        "ProjectClass", secondary=feedback_asset_to_pclasses, lazy="dynamic", backref=db.backref("feedback_assets", lazy="dynamic")
+    )
+
+    # link to SubmittedAsset representing this asset
+    asset_id = db.Column(db.Integer(), db.ForeignKey("submitted_assets.id"), default=None)
+    asset = db.relationship("SubmittedAsset", foreign_keys=[asset_id], uselist=False, backref=db.backref("feedback_asset", uselist=False))
+
+    # is this asset a base template?
+    is_template = db.Column(db.Boolean(), default=False)
+
+    # unique label
+    label = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True)
+
+    # applied tags
+    tags = db.relationship("TemplateTags", secondary=feedback_asset_to_tags, lazy="dynamic", backref=db.backref("assets", lazy="dynamic"))
+
+
+class TemplateTag(db.Model, ColouredLabelMixin, EditingMetadataMixin):
+    """
+    Represents a tag/label applied to a template asset
+    """
+
+    __tablename__ = "template_tags"
+
+    # unique identifier used as primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # name of label
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
+
+    def make_label(self, text=None):
+        label_text = text if text is not None else self.name
+        return self._make_label(text=label_text)
+
+
+class FeedbackRecipe(db.Model, EditingMetadataMixin):
+    """
+    Represents a recipe used to create a feedback report
+    """
+
+    __tablename__ = "feedback_recipes"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # for which project classes in this recipe available?
+    project_classes = db.relationship(
+        "ProjectClass", secondary=feedback_recipe_to_pclasses, lazy="dynamic", backref=db.backref("feedback_recipes", lazy="dynamic")
+    )
+
+    # unique label
+    label = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True)
+
+    # primary template
+    template_id = db.Column(db.Integer(), db.ForeignKey("feedback_assets.id"))
+    template = db.relationship(
+        "FeedbackTemplateAsset", foreign_keys=[template_id], uselist=False, backref=db.backref("template_recipes", lazy="dynamic")
+    )
+
+    # other assets
+    asset_list = db.relationship(
+        "FeedbackTemplateAsset", secondary=feedback_recipe_to_assets, lazy="dynamic", backref=db.backref("asset_recipes", lazy="dynamic")
+    )
 
 
 # ############################

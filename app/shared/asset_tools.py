@@ -10,8 +10,9 @@
 
 import base64
 from io import BytesIO
+from mimetypes import guess_extension
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 from uuid import uuid4
 
 import humanize
@@ -253,9 +254,9 @@ class AssetUploadManager:
         data,
         storage: ObjectStore,
         audit_data: str,
-        key=None,
-        length=None,
-        mimetype=None,
+        key: Union[str, None]=None,
+        length: Union[int, None]=None,
+        mimetype: Union[str, None]=None,
         key_attr: str = "unique_name",
         size_attr: str = "filesize",
         mimetype_attr: str = "mimetype",
@@ -271,6 +272,10 @@ class AssetUploadManager:
 
         if key is None:
             self._key = str(uuid4())
+            if mimetype is not None:
+                extension = guess_extension(mimetype, strict=False)
+                if extension is not None:
+                    self._key = self._key + extension
         else:
             self._key = key
 
@@ -337,16 +342,13 @@ class AssetUploadManager:
         if self._size_attr is not None:
             if length is None or length == 0:
                 print(
-                    f"AssetUploadManager: self._asset has zero use-supplied length; ObjectMeta reports "
-                    f"length = {humanize.naturalsize((meta.size))}"
+                    f"AssetUploadManager: self._asset has zero user-supplied length; ObjectMeta reports length = {humanize.naturalsize((meta.size))}"
                 )
                 setattr(self._asset, self._size_attr, meta.size)
 
             if "compressed_size" in put_result and put_result["compressed_size"] != meta.size:
                 print(
-                    f'AssetUploadManager: stored filesize ({put_result["compressed_size"]} bytes) '
-                    f"does not match ObjectMeta size reported from cloud "
-                    f"backend ({meta.size} bytes)."
+                    f'AssetUploadManager: stored filesize ({put_result["compressed_size"]} bytes) does not match ObjectMeta size reported from cloud backend ({meta.size} bytes).'
                 )
 
         if hasattr(self._asset, "lost"):

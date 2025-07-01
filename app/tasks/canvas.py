@@ -565,21 +565,22 @@ def register_canvas_tasks(celery):
         get_pdf_report = session.get(attachment["url"])
 
         # AssetUploadManager will populate most fields later
-        asset = SubmittedAsset(
-            timestamp=datetime.now(), uploaded_id=user_id, expiry=None, target_name=attachment["filename"], license=default_report_license
-        )
+        with db.session.no_autoflush:
+            asset = SubmittedAsset(
+                timestamp=datetime.now(), uploaded_id=user_id, expiry=None, target_name=attachment["filename"], license=default_report_license
+            )
 
-        object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
-        with AssetUploadManager(
-            asset,
-            data=get_pdf_report.content,
-            storage=object_store,
-            length=attachment["size"],
-            audit_data=f"canvas.pull_report (submission record #{rid})",
-            mimetype=attachment["content-type"],
-            validate_nonce=validate_nonce,
-        ) as upload_mgr:
-            pass
+            object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+            with AssetUploadManager(
+                asset,
+                data=get_pdf_report.content,
+                storage=object_store,
+                length=attachment["size"],
+                audit_data=f"canvas.pull_report (submission record #{rid})",
+                mimetype=attachment["content-type"],
+                validate_nonce=validate_nonce,
+            ) as upload_mgr:
+                pass
 
         adapter = AssetCloudAdapter(asset, object_store, audit_data=f"canvas.pull_report (submission record #{rid})")
 

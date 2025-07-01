@@ -25,7 +25,7 @@ from wtforms import (
     RadioField,
     ValidationError,
 )
-from wtforms.validators import InputRequired, Optional, Length, URL, NumberRange
+from wtforms.validators import InputRequired, Optional, Length, URL, NumberRange, Regexp
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..documents.forms import LicenseMixin
@@ -1795,7 +1795,12 @@ class UploadFeedbackAssetForm(Form, FeedbackAssetMixin):
     label = StringField(
         "Label",
         description="Provide a label for this asset",
-        validators=[InputRequired(message="Please provide a label"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_feedback_asset_label],
+        validators=[
+            InputRequired(message="Please provide a label"),
+                    Length(max=DEFAULT_STRING_LENGTH),
+                    Regexp(r'^[\w.]+$', message="The label should contain only letters, numbers and the underscore."),
+                    globally_unique_feedback_asset_label
+        ],
     )
 
     submit = SubmitField("Upload")
@@ -1805,5 +1810,10 @@ class EditFeedbackAssetForm(Form, FeedbackAssetMixin, SaveChangesMixin):
     label = StringField(
         "Label",
         description="Provide a label for this asset",
-        validators=[InputRequired(message="Please provide a label"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_feedback_asset_label],
+        validators=[
+            InputRequired(message="Please provide a label"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            Regexp(r'^[\w.]+$', message="The label should contain only letters, numbers and the underscore."),
+            unique_or_original_feedback_asset_label
+        ],
     )

@@ -10909,21 +10909,22 @@ def upload_period_attachment(pid):
             attachment_file = request.files["attachment"]
 
             # AssetUploadManager will populate most fields later
-            asset = SubmittedAsset(
-                timestamp=datetime.now(), uploaded_id=current_user.id, expiry=None, target_name=form.target_name.data, license=form.license.data
-            )
+            with db.session.no_autoflush:
+                asset = SubmittedAsset(
+                    timestamp=datetime.now(), uploaded_id=current_user.id, expiry=None, target_name=form.target_name.data, license=form.license.data
+                )
 
-            object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
-            with AssetUploadManager(
-                asset,
-                data=attachment_file.stream.read(),
-                storage=object_store,
-                audit_data=f"upload_period_attachment (period id #{pid})",
-                length=attachment_file.content_length,
-                mimetype=attachment_file.content_type,
-                validate_nonce=validate_nonce,
-            ) as upload_mgr:
-                pass
+                object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+                with AssetUploadManager(
+                    asset,
+                    data=attachment_file.stream.read(),
+                    storage=object_store,
+                    audit_data=f"upload_period_attachment (period id #{pid})",
+                    length=attachment_file.content_length,
+                    mimetype=attachment_file.content_type,
+                    validate_nonce=validate_nonce,
+                ) as upload_mgr:
+                    pass
 
             try:
                 db.session.add(asset)

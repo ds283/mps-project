@@ -19,6 +19,12 @@
                 tokenSeparators: [',', ';'],
                 placeholder: 'Add tags for this asset...'
             });
+            $('#project_classes').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select project classes for which this asset is available...'
+            });
         });
     </script>
 {% endblock %}

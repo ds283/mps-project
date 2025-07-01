@@ -278,21 +278,22 @@ def upload_submitter_report(sid):
             report_file = request.files["report"]
 
             # AssetUploadManager will populate most fields later
-            asset = SubmittedAsset(
-                timestamp=datetime.now(), uploaded_id=current_user.id, expiry=None, target_name=form.target_name.data, license=form.license.data
-            )
+            with db.session.no_autoflush:
+                asset = SubmittedAsset(
+                    timestamp=datetime.now(), uploaded_id=current_user.id, expiry=None, target_name=form.target_name.data, license=form.license.data
+                )
 
-            object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
-            with AssetUploadManager(
-                asset,
-                data=report_file.stream.read(),
-                storage=object_store,
-                audit_data=f"upload_submitter_report (submission record id #{sid})",
-                length=report_file.content_length,
-                mimetype=report_file.content_type,
-                validate_nonce=validate_nonce,
-            ) as upload_mgr:
-                pass
+                object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+                with AssetUploadManager(
+                    asset,
+                    data=report_file.stream.read(),
+                    storage=object_store,
+                    audit_data=f"upload_submitter_report (submission record id #{sid})",
+                    length=report_file.content_length,
+                    mimetype=report_file.content_type,
+                    validate_nonce=validate_nonce,
+                ) as upload_mgr:
+                    pass
 
             try:
                 db.session.add(asset)
@@ -648,21 +649,22 @@ def upload_submitter_attachment(sid):
             attachment_file = request.files["attachment"]
 
             # AssetUploadManager will populate most fields later
-            asset = SubmittedAsset(
-                timestamp=datetime.now(), uploaded_id=current_user.id, expiry=None, target_name=form.target_name.data, license=form.license.data
-            )
+            with db.session.no_autoflush:
+                asset = SubmittedAsset(
+                    timestamp=datetime.now(), uploaded_id=current_user.id, expiry=None, target_name=form.target_name.data, license=form.license.data
+                )
 
-            object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
-            with AssetUploadManager(
-                asset,
-                data=attachment_file.stream.read(),
-                storage=object_store,
-                audit_data=f"upload_submitter_attachment (submission record id #{sid})",
-                length=attachment_file.content_length,
-                mimetype=attachment_file.content_type,
-                validate_nonce=validate_nonce,
-            ) as upload_mgr:
-                pass
+                object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+                with AssetUploadManager(
+                    asset,
+                    data=attachment_file.stream.read(),
+                    storage=object_store,
+                    audit_data=f"upload_submitter_attachment (submission record id #{sid})",
+                    length=attachment_file.content_length,
+                    mimetype=attachment_file.content_type,
+                    validate_nonce=validate_nonce,
+                ) as upload_mgr:
+                    pass
 
             try:
                 db.session.add(asset)

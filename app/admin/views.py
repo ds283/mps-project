@@ -15,7 +15,7 @@ from functools import partial
 from io import BytesIO
 from itertools import chain as itertools_chain
 from pathlib import Path
-from typing import List, Dict, Tuple, Iterable
+from typing import List, Dict, Tuple, Iterable, Union
 from urllib.parse import urlsplit
 
 from bokeh.embed import components
@@ -10868,7 +10868,7 @@ def create_new_template_tags(form):
     return matched
 
 
-@admin.route("/upload_feedback_asset")
+@admin.route("/upload_feedback_asset", methods=["GET", "POST"])
 @roles_accepted("admin", "root")
 def upload_feedback_asset():
     url = request.args.get("url", None)
@@ -10882,20 +10882,22 @@ def upload_feedback_asset():
             asset_file = request.files["asset"]
 
             # AssetUploadManager will populate most fields later
-            asset = SubmittedAsset(
-                timestamp=datetime.now(), uploaded_id=current_user.id, expiry=None, target_name=form.label.data, license=form.license.data
-            )
+            with db.session.no_autoflush:
+                asset = SubmittedAsset(
+                    timestamp=datetime.now(), uploaded_id=current_user.id, expiry=None, target_name=form.label.data, license=form.license.data
+                )
 
-            object_store = current_app.config.get("OBJECT_STORAGE_PROJECT")
-            with AssetUploadManager(
-                asset,
-                data=asset_file.stream.read(),
-                audit_data=f"upload_feedback_asset",
-                length=asset_file.content_length,
-                mimetype=asset_file.content_type,
-                validate_nonce=validate_nonce,
-            ) as upload_mgr:
-                pass
+                object_store = current_app.config.get("OBJECT_STORAGE_PROJECT")
+                with AssetUploadManager(
+                    asset,
+                    data=asset_file.stream.read(),
+                    storage=object_store,
+                    audit_data=f"upload_feedback_asset",
+                    length=asset_file.content_length,
+                    mimetype=asset_file.content_type,
+                    validate_nonce=validate_nonce,
+                ) as upload_mgr:
+                    pass
 
             try:
                 db.session.add(asset)

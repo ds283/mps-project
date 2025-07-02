@@ -1071,14 +1071,21 @@ def register_marking_tasks(celery):
 
         generated_plural = "s"
         ignored_plural = "s"
+        ignored_were = "were"
         if reports_generated == 1:
             generated_plural = ""
         if reports_ignored == 1:
             ignored_plural = ""
+        if reports_ignored == 1:
+            ignored_were = "was"
 
+        msg = (
+            f"{period.display_name}: Used feedback report recipe '{recipe.label}' to generate {reports_generated} feedback report{generated_plural}."
+        )
+        if reports_ignored > 0:
+            msg += " " + f"{reports_ignored} submitter{ignored_plural} {ignored_were} ignored."
         report_info(
-            f"{period.display_name}: Used feedback report recipe '{recipe.label}' to generate {reports_generated} feedback report{generated_plural}. "
-            f"{reports_ignored} submitters{ignored_plural} were ignored (most likely because reports were already present).",
+            msg,
             "finalize_feedback_reports",
             convenor,
         )

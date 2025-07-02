@@ -38,7 +38,7 @@ class ScratchFileManager:
 
 # lightweight context-manager-like object that can be passed around Celery tasks without
 # incurring a large serialization/deserialization cost.
-# We store state as str rather than path, to avoid problems with serializing PosixPath instances
+# We store state as str rather than Path, to avoid problems with serializing PosixPath instances
 class ScratchGroupManager:
     def __init__(self, folder: Union[Path, str, None]):
         if folder is not None:

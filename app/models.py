@@ -17275,6 +17275,9 @@ class FeedbackAsset(db.Model, EditingMetadataMixin):
     # unique label
     label = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True)
 
+    # description
+    description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+
     # applied tags
     tags = db.relationship("TemplateTag", secondary=feedback_asset_to_tags, lazy="dynamic", backref=db.backref("assets", lazy="dynamic"))
 

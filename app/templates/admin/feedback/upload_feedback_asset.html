@@ -55,7 +55,10 @@
 
                         <hr class="intro-divider">
                         {{ wtf.render_field(form.label) }}
-                        {{ wtf.render_field(form.is_template) }}
+                        {{ wtf.render_field(form.description) }}
+                        <div class="card mt-1 mb-1 card-body bg-well">
+                            {{ wtf.render_field(form.is_template) }}
+                        </div>
                         {{ wtf.render_field(form.license) }}
                         {{ wtf.render_field(form.project_classes) }}
                         {{ wtf.render_field(form.tags) }}

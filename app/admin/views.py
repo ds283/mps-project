@@ -10917,6 +10917,7 @@ def upload_feedback_asset():
                 project_classes=form.project_classes.data,
                 asset_id=asset.id,
                 label=form.label.data,
+                description=form.description.data,
                 is_template=form.is_template.data,
                 tags=tag_list,
                 creator_id=current_user.id,
@@ -10957,6 +10958,7 @@ def edit_feedback_asset(asset_id):
         tag_list = create_new_template_tags(form)
 
         asset.label = form.label.data
+        asset.description = form.description.data
         asset.project_classes = form.project_classes.data
         asset.is_template = form.is_template.data
         asset.tags = tag_list

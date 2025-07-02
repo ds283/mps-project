@@ -1795,6 +1795,15 @@ class FeedbackAssetMixin(LicenseMixin):
 
     is_template = BooleanField("This is a template that can be used to generate a feedback report", default=False)
 
+    description = StringField(
+        "Description",
+        description="Optionally provide a short description of this asset",
+        validators=[
+            Optional(),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ]
+    )
+
 
 class UploadFeedbackAssetForm(Form, FeedbackAssetMixin):
     label = StringField(

@@ -35,6 +35,7 @@ from werkzeug.datastructures import Headers
 from werkzeug.wrappers import Response
 
 import app.ajax as ajax
+import app.shared.cloud_object_store.bucket_types as buckets
 from . import admin
 from .actions import estimate_CATS_load, availability_CSV_generator, pair_slots
 from .forms import (
@@ -10376,6 +10377,23 @@ def download_generated_asset(asset_id):
 
     filename = request.args.get("filename", None)
 
+    BUCKET_MAP = {
+        buckets.ASSETS_BUCKET: current_app.config.get("OBJECT_STORAGE_ASSETS"),
+        buckets.BACKUP_BUCKET: current_app.config.get("OBJECT_STORAGE_BACKUP"),
+        buckets.INITDB_BUCKET: current_app.config.get("OBJECT_STORAGE_INITDB"),
+        buckets.TELEMETRY_BUCKET: current_app.config.get("OBJECT_STORAGE_TELEMETRY"),
+        buckets.FEEDBACK_BUCKET: current_app.config.get("OBJECT_STORAGE_FEEDBACK"),
+        buckets.PROJECT_BUCKET: current_app.config.get("OBJECT_STORAGE_PROJECT"),
+    }
+
+    if asset.bucket not in BUCKET_MAP:
+        flash(
+            f"This object is stored in a bucket (type={asset.bucket}) which is not part of the configured storage. "
+            f"Please contact a system administrator.",
+            "error",
+        )
+        return redirect(redirect_url())
+
     # log this download
     record = GeneratedAssetDownloadRecord(asset_id=asset.id, downloader_id=current_user.id, timestamp=datetime.now())
 
@@ -10392,7 +10410,8 @@ def download_generated_asset(asset_id):
         )
         return redirect(redirect_url())
 
-    storage = AssetCloudAdapter(asset, current_app.config["OBJECT_STORAGE_ASSETS"], audit_data=f"download_generated_asset (asset id #{asset_id})")
+    object_store = BUCKET_MAP[asset.bucket]
+    storage = AssetCloudAdapter(asset, object_store, audit_data=f"download_generated_asset (asset id #{asset_id})")
     return_data = BytesIO()
     with storage.download_to_scratch() as scratch_path:
         file_path = scratch_path.path
@@ -10430,6 +10449,23 @@ def download_submitted_asset(asset_id):
 
     filename = request.args.get("filename", None)
 
+    BUCKET_MAP = {
+        buckets.ASSETS_BUCKET: current_app.config.get("OBJECT_STORAGE_ASSETS"),
+        buckets.BACKUP_BUCKET: current_app.config.get("OBJECT_STORAGE_BACKUP"),
+        buckets.INITDB_BUCKET: current_app.config.get("OBJECT_STORAGE_INITDB"),
+        buckets.TELEMETRY_BUCKET: current_app.config.get("OBJECT_STORAGE_TELEMETRY"),
+        buckets.FEEDBACK_BUCKET: current_app.config.get("OBJECT_STORAGE_FEEDBACK"),
+        buckets.PROJECT_BUCKET: current_app.config.get("OBJECT_STORAGE_PROJECT"),
+    }
+
+    if asset.bucket not in BUCKET_MAP:
+        flash(
+            f"This object is stored in a bucket (type={asset.bucket}) which is not part of the configured storage. "
+            f"Please contact a system administrator.",
+            "error",
+        )
+        return redirect(redirect_url())
+
     # log this download
     record = SubmittedAssetDownloadRecord(asset_id=asset.id, downloader_id=current_user.id, timestamp=datetime.now())
 
@@ -10446,6 +10482,7 @@ def download_submitted_asset(asset_id):
         )
         return redirect(redirect_url())
 
+    object_store = BUCKET_MAP[asset.bucket]
     storage = AssetCloudAdapter(asset, current_app.config["OBJECT_STORAGE_ASSETS"], audit_data=f"download_submitted_asset (asset id #{asset_id})")
     return_data = BytesIO()
     with storage.download_to_scratch() as scratch_path:

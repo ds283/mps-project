@@ -29,7 +29,7 @@
 <body>
 <div class="container">
     <div style="padding-top: 3ex; padding-bottom: 3ex; background-color: #e9f3ea;">
-        <div style="text-align: center;"><img src="{{ UoS_Logo }}" width="75" height="75"></div>
+        <div style="text-align: center;"><img src="{{ UoS_logo }}" width="75" height="75"></div>
         {#        <h2 style="text-align: center; font-family: helvetica; color: #dc582a;">Feedback &mdash {{ pclass_name }}</h2>#}
     </div>
     <div style="margin-top: 3ex; font-family: helvetica; font-size: 11pt;">
@@ -46,7 +46,7 @@
                 <div style="margin-top: 1ex; font-size: 12pt;">Supervision grade: {{ supervisor_grade }}%</div>
             {% endif %}
         </div>
-        {% for name, fb in supervisor_feedback %}
+        {% for name, fb in supervisor_feedback.items() %}
             {{ format_feedback(name, fb) }}
         {% endfor %}
     {% endif %}
@@ -55,7 +55,7 @@
             <h3>Examiners' reports</h3>
             <div style="margin-top: 1ex; font-size: 12pt;">Combined examiners' grade: {{ report_grade }}%</div>
         </div>
-        {% for number, fb in marker_feedback %}
+        {% for number, fb in marker_feedback.items() %}
             {{ format_feedback('Examiner' + number|string, fb) }}
         {% endfor %}
     {% endif %}

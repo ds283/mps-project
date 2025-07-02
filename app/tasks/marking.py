@@ -10,7 +10,7 @@
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
-from typing import List, Union, Optional, Dict, Iterable
+from typing import List, Union, Optional, Dict
 from urllib.parse import quote
 
 import jinja2
@@ -46,34 +46,11 @@ from ..models import (
     FeedbackReport,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetCloudScratchContextManager, AssetUploadManager
-from ..shared.scratch import ScratchFileManager
+from ..shared.scratch import ScratchFileManager, ScratchGroupManager
 from ..task_queue import register_task
 
 AssetDictionary = Dict[str, AssetCloudScratchContextManager]
 
-class TemplateAssetScratchManager:
-    def __init__(self, template_mgr: AssetCloudScratchContextManager, asset_mgrs: AssetDictionary):
-        self._template_mgr: AssetCloudScratchContextManager = template_mgr
-        self._asset_mgrs: AssetDictionary = asset_mgrs
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback) -> None:
-        self._template_mgr.__exit__(type, value, traceback)
-        for asset_mgr in self._asset_mgrs.values():
-            asset_mgr.__exit__(type, value, traceback)
-
-    @property
-    def template_path(self) -> Path:
-        return self._template_mgr.path
-
-    @property
-    def asset_list(self) -> Iterable[str]:
-        return self._asset_mgrs.keys()
-
-    def asset_path(self, key:str) -> Path:
-        return self._asset_mgrs[key].path
 
 def report_error(msg: str, source: str, user: Optional[User]):
     print(f"!! {source}: {msg}")
@@ -838,31 +815,37 @@ def register_marking_tasks(celery):
             raise Ignore()
 
         # download all assets
-        object_store = current_app.config.get("OBJECT_STORAGE_PROJECTS")
+        object_store = current_app.config.get("OBJECT_STORAGE_PROJECT")
+        mgr = ScratchGroupManager(folder=current_app.config.get("SCRATCH_FOLDER"))
 
         template_asset: FeedbackAsset = recipe.template
-        template_storage: AssetCloudAdapter = AssetCloudAdapter(template_asset.asset, object_store, audit_data="generate_feedback_reports.download_template")
-        template_scratch: AssetCloudScratchContextManager = template_storage.download_to_scratch()
+        template_storage: AssetCloudAdapter = AssetCloudAdapter(
+            template_asset.asset, object_store, audit_data="generate_feedback_reports.download_template"
+        )
+        with template_storage.download_to_scratch() as template_scratch:
+            mgr.copy("template", template_scratch.path)
 
-        feedback_assets: AssetDictionary = {}
         for asset in recipe.asset_list:
             asset: FeedbackAsset
             asset_storage: AssetCloudAdapter = AssetCloudAdapter(asset.asset, object_store, audit_data="generate_feedback_reports.download_asset")
-            feedback_assets[asset.label] = asset_storage.download_to_scratch()
-
-        mgr = TemplateAssetScratchManager(template_scratch, feedback_assets)
+            with asset_storage.download_to_scratch() as asset_scratch:
+                mgr.copy(asset.label, asset_scratch.path)
 
         tasks = group(
-            generate_feedback_report.s(record.id, recipe_id, convenor_id, mgr) for record in period.submissions
-        ) | finalize_feedback_reports.s(recipe_id, period_id, convenor_id, mgr)
+            generate_feedback_report.s(record.id, recipe_id, convenor_id, mgr.__dict__) for record in period.submissions
+        ) | finalize_feedback_reports.s(recipe_id, period_id, convenor_id, mgr.__dict__)
 
         raise self.replace(tasks)
 
     def markdown_filter(input):
         return markdown.markdown(input)
 
-    @celery.task(bind=True, default_retry_delay=30)
-    def generate_feedback_report(self, record_id: int, recipe_id: int, convenor_id: Optional[int], mgr: TemplateAssetScratchManager):
+    @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
+    def generate_feedback_report(self, record_id: int, recipe_id: int, convenor_id: Optional[int], mgrdict):
+        mgr = ScratchGroupManager(folder=None)
+        for k, v in mgrdict.items():
+            setattr(mgr, k, v)
+
         try:
             record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
@@ -877,7 +860,8 @@ def register_marking_tasks(celery):
         if record.feedback_generated:
             return {"ignored": 1}
 
-        sd: StudentData = record.student_data
+        sub: SubmittingStudent = record.owner
+        sd: StudentData = sub.student
         student: User = sd.user
         period: SubmissionPeriodRecord = record.period
         config: ProjectClassConfig = period.config
@@ -906,15 +890,15 @@ def register_marking_tasks(celery):
         template_env = jinja2.Environment(loader=template_loader)
 
         # add markdown filter to template environment
-        template_env.filters['markdown'] = markdown_filter
+        template_env.filters["markdown"] = markdown_filter
 
         # add path names for each of the assets
-        for asset_label in mgr.asset_list:
-            template_env.globals[asset_label] = mgr.asset_path(asset_label)
+        for label, path in mgr.items():
+            template_env.globals[label] = path
 
         # add variables for marking outcomes
-        template_env.globals['supervisor_grade'] = recipe.supervisor_grade
-        template_env.globals['report_grade'] = recipe.report_grade
+        template_env.globals["supervisor_grade"] = record.supervision_grade
+        template_env.globals["report_grade"] = record.report_grade
 
         supervisor_feedback = {}
         for role in record.supervisor_roles:
@@ -942,30 +926,30 @@ def register_marking_tasks(celery):
                 marker_feedback[count] = feedback
                 count += 1
 
-        template_env.globals['exam_number'] = sd.exam_number
-        template_env.globals['student_last'] = student.last_name
-        template_env.globals['student_first'] = student.first_name
-        template_env.globals['student_fullname'] = student.name
-        template_env.globals['student_email'] = student.email
-        template_env.globals['period'] = period.display_name
-        template_env.globals['pclass_name'] = pclass.name
-        template_env.globals['pclass_abbreviation'] = pclass.abbreviation
-        template_env.globals['year'] = config.year
+        template_env.globals["exam_number"] = sd.exam_number
+        template_env.globals["student_last"] = student.last_name
+        template_env.globals["student_first"] = student.first_name
+        template_env.globals["student_fullname"] = student.name
+        template_env.globals["student_email"] = student.email
+        template_env.globals["period"] = period.display_name
+        template_env.globals["pclass_name"] = pclass.name
+        template_env.globals["pclass_abbreviation"] = pclass.abbreviation
+        template_env.globals["year"] = config.year
 
         template_env.globals["supervisor_feedback"] = supervisor_feedback
         template_env.globals["marker_feedback"] = marker_feedback
 
         # read in template
-        template = template_env.get_template(str(mgr.template_path))
+        template = template_env.get_template(str(mgr.get("template")))
 
         output = template.render()
 
-        with ScratchFileManager(suffix='hmtl') as html_mgr:
-            HTML_file = open(html_mgr.path, 'w')
+        with ScratchFileManager(suffix=".html") as html_mgr:
+            HTML_file = open(html_mgr.path, "w")
             HTML_file.write(output)
             HTML_file.close()
 
-            with ScratchFileManager(suffix='pdf') as pdf_mgr:
+            with ScratchFileManager(suffix=".pdf") as pdf_mgr:
                 pdf = HTML(filename=html_mgr.path, base_url=".").write_pdf(pdf_mgr.path)
 
                 target_name = sanitize_filename(f"Feedback-{config.year}-{config.abbreviation}-{student.last_name}.pdf")
@@ -982,7 +966,7 @@ def register_marking_tasks(celery):
                         audit_data=f"generate_feedback_report ({config.abbreviation}, {student.name})",
                         length=pdf_mgr.path.stat().st_size,
                         mimetype="application/pdf",
-                        validate_none=validate_nonce,
+                        validate_nonce=validate_nonce,
                     ) as upload_mgr:
                         pass
 
@@ -1018,9 +1002,12 @@ def register_marking_tasks(celery):
                 for role in record.moderator_roles:
                     new_asset.grant_user(role.user)
 
+                if convenor is not None:
+                    new_asset.grant_user(convenor)
+
                 project: LiveProject = record.project
                 if project is not None and project.owner is not None:
-                    new_asset.grant_role(project.owner.user)
+                    new_asset.grant_user(project.owner.user)
 
                 try:
                     db.session.commit()
@@ -1029,57 +1016,72 @@ def register_marking_tasks(celery):
                     current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     raise self.retry()
 
-            return {"generated": 1}
+        return {"generated": 1}
 
-        @celery.task(bind=True, default_retry_delay=5)
-        def finalize_feedback_reports(self, result_data, period_id: int, convenor_id: Optional[int], mgr: TemplateAssetScratchManager):
+    @celery.task(bind=True, serializer="pickle", default_retry_delay=5)
+    def finalize_feedback_reports(self, result_data, recipe_id: int, period_id: int, convenor_id: Optional[int], mgrdict):
+        mgr = ScratchGroupManager(folder=None)
+        for k, v in mgrdict.items():
+            setattr(mgr, k, v)
+
+        try:
+            recipe: FeedbackRecipe = db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if recipe is None:
+            self.update_state("FAILURE", meta={"msg": "Could not load recipe record from database"})
+            raise Ignore()
+
+        try:
+            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if period is None:
+            self.update_state("FAILURE", meta={"msg": "Could not load period record from database"})
+            raise Ignore()
+
+        convenor: Optional[User] = None
+        if convenor_id is not None:
             try:
-                period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+                convenor = db.session.query(User).filter_by(id=convenor_id).first()
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
-            if period is None:
-                self.update_state("FAILURE", meta={"msg": "Could not load period record from database"})
-                raise Ignore()
+        # result data should be a list of lists
+        reports_generated = 0
+        reports_ignored = 0
 
-            convenor: Optional[User] = None
-            if convenor_id is not None:
-                try:
-                    convenor = db.session.query(User).filter_by(id=convenor_id).first()
-                except SQLAlchemyError as e:
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                    raise self.retry()
+        if result_data is not None:
+            if isinstance(result_data, list):
+                for result in result_data:
+                    if isinstance(result, dict):
+                        if "generated" in result:
+                            reports_generated += result["generated"]
+                        if "ignored" in result:
+                            reports_ignored += result["ignored"]
+                    else:
+                        raise RuntimeError("Expected individual results to be dictionaries")
+            else:
+                raise RuntimeError("Expected result data to be a list")
 
-            # result data should be a list of lists
-            reports_generated = 0
-            reports_ignored = 0
+        generated_plural = "s"
+        ignored_plural = "s"
+        if reports_generated == 1:
+            generated_plural = ""
+        if reports_ignored == 1:
+            ignored_plural = ""
 
-            if result_data is not None:
-                if isinstance(result_data, list):
-                    for result in result_data:
-                        if isinstance(result, dict):
-                            if "generated" in result:
-                                reports_generated += result["generated"]
-                            if "ignored" in result:
-                                reports_ignored += result["ignored"]
-                        else:
-                            raise RuntimeError("Expected individual results to be dictionaries")
-                else:
-                    raise RuntimeError("Expected result data to be a list")
+        report_info(
+            f"{period.display_name}: Used feedback report recipe '{recipe.label}' to generate {reports_generated} feedback report{generated_plural}. "
+            f"{reports_ignored} submitters{ignored_plural} were ignored (most likely because reports were already present).",
+            "finalize_feedback_reports",
+            convenor,
+        )
 
-            generated_plural = "s"
-            ignored_plural = "s"
-            if reports_generated == 1:
-                generated_plural = ""
-            if reports_ignored == 1:
-                ignored_plural = ""
-
-            report_info(
-                f"{period.display_name}: {reports_generated} feedback report{generated_plural} generated, and {reports_ignored} report{ignored_plural} ignored.",
-                "finalize_feedback_reports",
-                convenor,
-            )
-
-            # clean up scratch files
-            mgr.__exit__(None, None, None)
+        # clean up scratch files
+        mgr.cleanup()

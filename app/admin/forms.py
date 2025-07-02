@@ -810,6 +810,7 @@ class ScheduledTaskMixin:
         ("app.tasks.canvas.canvas_user_checkin", "Synchronize Canvas user database with submitter databases"),
         ("app.tasks.canvas.canvas_submission_checkin", "Synchronize Canvas submission availability for active submission periods"),
         ("app.tasks.marking.conflate_marks_for_period", "Conflate marks for a specified submission period"),
+        ("app.tasks.marking.generate_feedback_reports", "Generate feedback reports for a specified submission period and recipe"),
         ("app.tasks.cloud_api_audit.send_api_events_to_telemetry", "Send Cloud API audit events to telemetry object store"),
         ("celery.backend_cleanup", "Periodic Celery backend cleanup"),
     ]

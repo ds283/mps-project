@@ -619,7 +619,7 @@ def register_marking_tasks(celery):
                 if not role.signed_off:
                     fail = True
                     report_info(
-                        f"Warning: responsible supervisor {person.name} for submitter {student.name} has not approved. This submitter has beem ignored.",
+                        f"Warning: responsible supervisor {person.name} for submitter {student.name} has not approved. This submitter has been ignored.",
                         "conflate_marks",
                         convenor,
                     )

@@ -60,15 +60,17 @@ _periods = """
 {% macro roles_list(roles, label) %}
     {% set num_roles = roles|length %}
     {% if num_roles > 0 %}
-        <div>
+        <div class="d-flex flex-column justify-content-start align-items-start gap-1">
             <div class="small fw-semibold">{{ label }}</div>
             {% for role in roles %}
-                <a class="small text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
-                {% if role.grade and role.signed_off %}
-                    <div class="text-secondary fs-4">{{ role.grade|round(precision=1) }}%</div>
-                {% endif %}
-                {{ feedback_state_tag(role) }}
-                {{ response_state_tag(role) }}
+                <div>
+                    <a class="small text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
+                    {% if role.grade and role.signed_off %}
+                        <div class="text-secondary fs-4">{{ role.grade|round(precision=1) }}%</div>
+                    {% endif %}
+                    {{ feedback_state_tag(role) }}
+                    {{ response_state_tag(role) }}
+                </div>
             {% endfor %}
         </div>
     {% endif %}
@@ -109,7 +111,7 @@ _periods = """
                         {% endif %}
                     </div>
                 </div>
-                <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+                <div class="d-flex flex-row justify-content-start align-items-start gap-2">
                     {% if r.project.generic or r.project.owner is none %}
                         <div class="small text-primary text-capitalize">Generic</div>
                     {% else %}
@@ -118,8 +120,8 @@ _periods = """
                             <a class="fw-semibold text-decoration-none" href="mailto:{{ r.project.owner.user.email }}">{{ r.project.owner.user.name }}</a>
                         </div>
                     {% endif %}
-                    <div class="dropdown assignment-label">
-                        <a class="fw-semibold text-primary small text-decoration-none small dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Change</a>
+                    <div class="small dropdown assignment-label">
+                        <a class="text-primary small text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Change</a>
                         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                             {% set disabled = period.is_feedback_open or r.student_engaged %}
                             {% if disabled %}
@@ -180,18 +182,18 @@ _periods = """
                     {{ roles_list(r.moderator_roles, 'Moderator roles') }}
                 {% endif %}
                 {% if config.uses_presentations and period.has_presentation %}
-                    <div>
-                        <div class="small text-muted">Presentation</div>
+                    <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+                        <div class="small fw-semibold">Presentation</div>
                         {% if period.has_deployed_schedule %}
                             {% set slot = r.schedule_slot %}
                             <div class="dropdown assignment-label">
                                 {% if slot is not none %}
-                                    <a class="badge text-decoration-none text-nohover-dark bg-info btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                    <a class="small text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                         {{ slot.short_date_as_string }}
                                         {{ slot.session_type_string }}
                                     </a>
                                 {% else %}
-                                    <a class="badge text-decoration-none text-nohover-dark bg-warning btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                    <a class="small text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                                         Not attending
                                     </a>
                                 {% endif %}
@@ -206,7 +208,7 @@ _periods = """
                                 {% set fns = namespace(flag=false) %}
                                 {% for a in slot.assessors %}
                                     <div>
-                                        <a class="badge text-decoration-none text-nohover-light bg-info btn-table-block" href="mailto:{{ a.user.email }}">{{ a.user.name }}</a>
+                                        <a class="small text-decoration-none" href="mailto:{{ a.user.email }}">{{ a.user.name }}</a>
                                         {{ feedback_state_tag(r, r.presentation_feedback_state(a.id)) }}
                                         {% if slot.feedback_state(a.id) > slot.FEEDBACK_NOT_YET %}
                                             {% set fns.flag = true %}

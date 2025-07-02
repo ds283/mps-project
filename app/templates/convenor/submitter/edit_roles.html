@@ -116,7 +116,7 @@
                                 {{ record.project.name }}
                             </a>
                             {% if record.project.generic %}
-                                <span class="badge bg-info">GENERIC</span>
+                                <span class="small text-capitalize text-secondary">Generic</span>
                             {% elif record.project.owner is not none %}
                                 <span class="small text-muted">(project owner <a href="mailto:{{ record.project.owner.user.email }}">{{ record.project.owner.user.name }})</a></span>
                             {% endif %}

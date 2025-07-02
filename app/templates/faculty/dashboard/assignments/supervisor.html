@@ -80,7 +80,7 @@
                                 {{ rec.project.name }}
                             </a>
                             {% if rec.project.generic or rec.project.owner is none %}
-                                <span class="badge bg-info">GENERIC</span>
+                                <span class="small text-capitalize text-secondary">Generic</span>
                             {% elif rec.project.owner_id != current_user.id %}
                                 <div class="small text-muted">
                                     Owner

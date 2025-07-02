@@ -135,7 +135,7 @@
                                                     </a>
                                                 </div>
                                                 {% if item.project.generic %}
-                                                    <span class="badge bg-info">GENERIC</span>
+                                                    <span class="small text-capitalize text-secondary">Generic</span>
                                                 {% elif item.project.owner is not none %}
                                                     <span class="text-muted small">(Project owner <a href="mailto:{{ item.project.owner.user.email }}">{{ item.project.owner.user.name }}</a>)</span>
                                                 {% endif %}

@@ -1,16 +1,16 @@
 {%- macro format_feedback(label, fb) %}
-    <div style="margin-top: 2ex;">
-        <div style="font-family: helvetica; padding: 5px; background-color: #dccc9c;">
-            <div style="font-size: 12pt;"><strong>Feedback from {{ label }}</strong></div>
+    <div class="mt2">
+        <div class="helvetica-text p1 bg-light-yellow pt12">
+            <strong>Feedback from {{ label }}</strong>
         </div>
-        <div style="margin-top: 1ex; margin-left: 3ex;">
+        <div class="mt1">
             {% if 'positive' in fb %}
-                <h4 style="font-family: helvetica; font-size: 12pt;">What was done well in the project?</h4>
-                <div style="font-family: helvetica; font-size: 10pt; text-align: justify;">{{ fb['positive']|markdown|safe }}</div>
+                <div class="helvetica-text text-medium pt12">What was done well in the project?</div>
+                <div class="helvetica-text pt11 justify">{{ fb['positive']|markdown|safe }}</div>
             {% endif %}
             {% if 'improvements' in fb %}
-                <h4 style="font-family: helvetica; font-size: 12pt;">Things to consider for next time</h4>
-                <div style="font-family: helvetica; font-size: 10pt; text-align: justify;">{{ fb['improvements']|markdown|safe }}</div>
+                <div class="helvetica-text text-medium pt12">Things to consider for next time</div>
+                <div class="helvetica-text pt11 justify">{{ fb['improvements']|markdown|safe }}</div>
             {% endif %}
         </div>
     </div>
@@ -20,6 +20,138 @@
 <style>
     @page {
         size: A4;
+        margin: 2cm;
+    }
+
+    .helvetica-text {
+        font-family: Helvetica, Arial, sans-serif;
+    }
+
+    .justify {
+        text-align: justify;
+    }
+
+    .pt11 {
+        font-size: 11pt;
+    }
+
+    .pt12 {
+        font-size: 12pt;
+    }
+
+    .pt13 {
+        font-size: 13pt;
+    }
+
+    .pt16 {
+        font-size: 16pt;
+    }
+
+    .text-semibold {
+        font-weight: bold;
+    }
+
+    .text-medium {
+        font-weight: bold;
+    }
+
+    .centre {
+        text-align: center;
+    }
+
+    .img-100px {
+        width: 100px;
+        max-width: 100%;
+    }
+
+    .bg-light-green {
+        background-color: #b8d5b9;
+    }
+
+    .bg-light-blue {
+        background-color: #bcd0ef;
+    }
+
+    .bg-light-yellow {
+        background-color: #f1e4b9;
+    }
+
+    .pt1 {
+        padding-top: 1ex;
+    }
+
+    .pt2 {
+        padding-top: 2ex;
+    }
+
+    .pt3 {
+        padding-top: 3ex;
+    }
+
+    .pb1 {
+        padding-bottom: 1ex;
+    }
+
+    .pb2 {
+        padding-bottom: 2ex;
+    }
+
+    .pb3 {
+        padding-bottom: 3ex;
+    }
+
+    .p1 {
+        padding-top: 1ex;
+        padding-bottom: 1ex;
+    }
+
+    .p2 {
+        padding-top: 2ex;
+        padding-bottom: 2ex;
+    }
+
+    .p3 {
+        padding-top: 3ex;
+        padding-bottom: 3ex;
+    }
+
+    .mt1 {
+        margin-top: 1ex;
+    }
+
+    .mt2 {
+        margin-top: 2ex;
+    }
+
+    .mt3 {
+        margin-top: 3ex;
+    }
+
+    .mb1 {
+        margin-bottom: 1ex;
+    }
+
+    .mb2 {
+        margin-bottom: 2ex;
+    }
+
+    .mb3 {
+        margin-bottom: 3ex;
+    }
+
+    .m1 {
+        margin-top: 1ex;
+        margin-bottom: 1ex;
+    }
+
+    .m2 {
+        margin-top: 2ex;
+        margin-bottom: 2ex;
+    }
+
+    .m3 {
+        margin-top: 3ex;
+        margin-bottom: 3ex;
     }
 </style>
 <head lang="en">
@@ -28,22 +160,26 @@
 </head>
 <body>
 <div class="container">
-    <div style="padding-top: 3ex; padding-bottom: 3ex; background-color: #e9f3ea;">
-        <div style="text-align: center;"><img src="{{ UoS_logo }}" width="75" height="75"></div>
-        {#        <h2 style="text-align: center; font-family: helvetica; color: #dc582a;">Feedback &mdash {{ pclass_name }}</h2>#}
+    <div class="mb3">
+        <div class="centre"><img class="img-100px" src="{{ UoS_logo }}"/></div>
     </div>
-    <div style="margin-top: 3ex; font-family: helvetica; font-size: 11pt;">
-        {#        <div><strong>Candidate number:</strong> <span style="color: rgb(10,10,220)">{{ cand_no }}</span></div>#}
-        <div><strong>Student:</strong> <span style="color: rgb(10,10,220)">{{ student_fullname }}</span></div>
+    <div class="m3">
+        <div class="helvetica-text pt16 centre">{{ pclass_name }} feedback</div>
+    </div>
+    <div class="m2">
+        <div class="helvetica-text p1 pt11"><strong>Student:</strong> <span
+                style="color: rgb(10,10,220)">{{ student_fullname }}</span></div>
     </div>
     {% if supervisor_feedback|length > 0 %}
-        <div style="margin-top: 3ex;">
+        <div class="mt3">
             {% if supervisor_feedback|length > 1 %}
-                <h3>Supervision team</h3>
-                <div style="margin-top: 1ex; font-size: 12pt;">Combined supervision grade: {{ supervisor_grade }}%</div>
+                <div class="helvetica-text pt13 p2 text-semibold bg-light-blue centre">Supervision team</div>
+                <div class="helvetica-text mt1 pt11">Combined supervision
+                    grade: {{ supervisor_grade|round(precision=0) }}%
+                </div>
             {% else %}
-                <h3>Supervision</h3>
-                <div style="margin-top: 1ex; font-size: 12pt;">Supervision grade: {{ supervisor_grade }}%</div>
+                <div class="helvetica-text pt13 p2 text-semibold bg-light-blue centre">Supervision</div>
+                <div class="helvetica-text mt1 pt11">Supervision grade: {{ supervisor_grade|round(precision=0) }}%</div>
             {% endif %}
         </div>
         {% for name, fb in supervisor_feedback.items() %}
@@ -51,12 +187,12 @@
         {% endfor %}
     {% endif %}
     {% if marker_feedback|length > 0 %}
-        <div style="margin-top: 3ex;">
-            <h3>Examiners' reports</h3>
-            <div style="margin-top: 1ex; font-size: 12pt;">Combined examiners' grade: {{ report_grade }}%</div>
+        <div class="mt-3">
+            <div class="helvetica-text pt13 p2 m2 text-semibold bg-light-blue centre">Examiners reports</div>
+            <div class="helvetica-text mt1 pt11">Combined examiners grade: {{ report_grade|round(precision=0) }}%</div>
         </div>
         {% for number, fb in marker_feedback.items() %}
-            {{ format_feedback('Examiner' + number|string, fb) }}
+            {{ format_feedback('Examiner #' + number|string, fb) }}
         {% endfor %}
     {% endif %}
 </div>

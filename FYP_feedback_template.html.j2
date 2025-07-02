@@ -1,0 +1,64 @@
+{%- macro format_feedback(label, fb) %}
+    <div style="margin-top: 2ex;">
+        <div style="font-family: helvetica; padding: 5px; background-color: #dccc9c;">
+            <div style="font-size: 12pt;"><strong>Feedback from {{ label }}</strong></div>
+        </div>
+        <div style="margin-top: 1ex; margin-left: 3ex;">
+            {% if 'positive' in fb %}
+                <h4 style="font-family: helvetica; font-size: 12pt;">What was done well in the project?</h4>
+                <div style="font-family: helvetica; font-size: 10pt; text-align: justify;">{{ fb['positive']|markdown|safe }}</div>
+            {% endif %}
+            {% if 'improvements' in fb %}
+                <h4 style="font-family: helvetica; font-size: 12pt;">Things to consider for next time</h4>
+                <div style="font-family: helvetica; font-size: 10pt; text-align: justify;">{{ fb['improvements']|markdown|safe }}</div>
+            {% endif %}
+        </div>
+    </div>
+{% endmacro -%}
+<!DOCTYPE html>
+<html>
+<style>
+    @page {
+        size: A4;
+    }
+</style>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>{{ pclass_name }} feedback for {{ student_fullname }}</title>
+</head>
+<body>
+<div class="container">
+    <div style="padding-top: 3ex; padding-bottom: 3ex; background-color: #e9f3ea;">
+        <div style="text-align: center;"><img src="{{ UoS_Logo }}" width="75" height="75"></div>
+        {#        <h2 style="text-align: center; font-family: helvetica; color: #dc582a;">Feedback &mdash {{ pclass_name }}</h2>#}
+    </div>
+    <div style="margin-top: 3ex; font-family: helvetica; font-size: 11pt;">
+        {#        <div><strong>Candidate number:</strong> <span style="color: rgb(10,10,220)">{{ cand_no }}</span></div>#}
+        <div><strong>Student:</strong> <span style="color: rgb(10,10,220)">{{ student_fullname }}</span></div>
+    </div>
+    {% if supervisor_feedback|length > 0 %}
+        <div style="margin-top: 3ex;">
+            {% if supervisor_feedback|length > 1 %}
+                <h3>Supervision team</h3>
+                <div style="margin-top: 1ex; font-size: 12pt;">Combined supervision grade: {{ supervisor_grade }}%</div>
+            {% else %}
+                <h3>Supervision</h3>
+                <div style="margin-top: 1ex; font-size: 12pt;">Supervision grade: {{ supervisor_grade }}%</div>
+            {% endif %}
+        </div>
+        {% for name, fb in supervisor_feedback %}
+            {{ format_feedback(name, fb) }}
+        {% endfor %}
+    {% endif %}
+    {% if marker_feedback|length > 0 %}
+        <div style="margin-top: 3ex;">
+            <h3>Examiners' reports</h3>
+            <div style="margin-top: 1ex; font-size: 12pt;">Combined examiners' grade: {{ report_grade }}%</div>
+        </div>
+        {% for number, fb in marker_feedback %}
+            {{ format_feedback('Examiner' + number|string, fb) }}
+        {% endfor %}
+    {% endif %}
+</div>
+</body>
+</html>

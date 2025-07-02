@@ -756,7 +756,7 @@ def register_marking_tasks(celery):
             not_conflated_plural = ""
 
         report_info(
-            f"{period.display_name}: {marks_conflated} submitters{conflated_plural} conflated successfully, and {marks_not_conflated} submitter{not_conflated_plural} not conflated",
+            f"{period.display_name}: {marks_conflated} submitter{conflated_plural} conflated successfully, and {marks_not_conflated} submitter{not_conflated_plural} not conflated",
             "notify_period_conflation",
             convenor,
         )

@@ -66,7 +66,7 @@ _periods = """
                 <div>
                     <a class="small text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
                     {% if role.grade %}
-                        <div class="text-secondary fs-5 {% if role.signed_off %}text-primary{% else %}text-secondary{% endif %}">{{ role.grade|round(precision=1) }}%</div>
+                        <div class="fs-5 {% if role.signed_off %}text-primary{% else %}text-secondary{% endif %}">{{ role.grade|round(precision=1) }}%</div>
                     {% endif %}
                     {{ feedback_state_tag(role) }}
                     {{ response_state_tag(role) }}

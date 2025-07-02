@@ -9,9 +9,10 @@
 #
 from datetime import date, datetime
 from pathlib import Path
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Dict, Iterable
 from urllib.parse import quote
 
+import jinja2
 from celery import group, chain
 from celery.exceptions import Ignore
 from dateutil import parser
@@ -33,10 +34,38 @@ from ..models import (
     SubmissionAttachment,
     GeneratedAsset,
     SubmissionRole,
+    FeedbackRecipe,
+    FeedbackAsset,
 )
-from ..shared.asset_tools import AssetCloudAdapter
+from ..shared.asset_tools import AssetCloudAdapter, AssetCloudScratchContextManager
+from ..shared.scratch import ScratchFileManager
 from ..task_queue import register_task
 
+AssetDictionary = Dict[str, AssetCloudScratchContextManager]
+
+class TemplateAssetScratchManager:
+    def __init__(self, template_mgr: AssetCloudScratchContextManager, asset_mgrs: AssetDictionary):
+        self._template_mgr: AssetCloudScratchContextManager = template_mgr
+        self._asset_mgrs: AssetDictionary = asset_mgrs
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback) -> None:
+        self._template_mgr.__exit__(type, value, traceback)
+        for asset_mgr in self._asset_mgrs.values():
+            asset_mgr.__exit__(type, value, traceback)
+
+    @property
+    def template_path(self) -> Path:
+        return self._template_mgr.path
+
+    @property
+    def asset_list(self) -> Iterable[str]:
+        return self._asset_mgrs.keys()
+
+    def asset_path(self, key:str) -> Path:
+        return self._asset_mgrs[key].path
 
 def report_error(msg: str, source: str, user: Optional[User]):
     print(f"!! {source}: {msg}")
@@ -760,3 +789,166 @@ def register_marking_tasks(celery):
             "notify_period_conflation",
             convenor,
         )
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def generate_feedback_reports(self, recipe_id: int, period_id: int, convenor_id: Optional[int]):
+        try:
+            recipe: FeedbackRecipe = db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if recipe is None:
+            self.update_state("FAILURE", meta={"msg": "Could not load recipe record from database"})
+            raise Ignore()
+
+        try:
+            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if period is None:
+            self.update_state("FAILURE", meta={"msg": "Could not load period record from database"})
+            raise Ignore()
+
+        convenor: Optional[User] = None
+        if convenor_id is not None:
+            try:
+                convenor = db.session.query(User).filter_by(id=convenor_id).first()
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
+
+        config: ProjectClassConfig = period.config
+        pclass: ProjectClass = config.project_class
+
+        if pclass not in recipe.project_classes:
+            msg = f'Can not apply feedback recipe "{recipe.label}" to {period.display_name} because it is not available for use on projects of class "{pclass.name}"'
+            report_error(msg, "generate_feedback_reports", convenor)
+            self.update_state("FAILURE", meta={"msg": msg})
+            raise Ignore()
+
+        # download all assets
+        object_store = current_app.config.get("OBJECT_STORAGE_PROJECTS")
+
+        template_asset: FeedbackAsset = recipe.template
+        template_storage: AssetCloudAdapter = AssetCloudAdapter(template_asset.asset, object_store, audit_data="generate_feedback_reports.download_template")
+        template_scratch: AssetCloudScratchContextManager = template_storage.download_to_scratch()
+
+        feedback_assets: AssetDictionary = {}
+        for asset in recipe.asset_list:
+            asset: FeedbackAsset
+            asset_storage: AssetCloudAdapter = AssetCloudAdapter(asset.asset, object_store, audit_data="generate_feedback_reports.download_asset")
+            feedback_assets[asset.label] = asset_storage.download_to_scratch()
+
+        mgr = TemplateAssetScratchManager(template_scratch, feedback_assets)
+
+        tasks = group(
+            generate_feedback_report.s(record.id, recipe_id, convenor_id, mgr) for record in period.submissions)
+        ) | finalize_feedback_report_generated.s(recipe_id, period_id, convenor_id, mgr)
+
+        raise self.replace(tasks)
+
+    def markdown_filter(input):
+        return markdown.markdown(input)
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def generate_feedback_report(self, record_id: int, recipe_id: int, convenor_id: Optional[int], mgr: TemplateAssetScratchManager)
+        try:
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if record is None:
+            self.update_state("FAILURE", meta={"msg": "Could not load recipe record from database"})
+            raise Ignore()
+
+        sd: StudentData = record.student_data
+        student: User = sd.user
+        period: SubmissionPeriodRecord = record.period
+        config: ProjectClassConfig = period.config
+        pclass: ProjectClass = config.project_class
+
+        try:
+            recipe: FeedbackRecipe = db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if recipe is None:
+            self.update_state("FAILURE", meta={"msg": "Could not load recipe record from database"})
+            raise Ignore()
+
+        convenor: Optional[User] = None
+        if convenor_id is not None:
+            try:
+                convenor = db.session.query(User).filter_by(id=convenor_id).first()
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
+
+        # expect to use fully qualified path names
+        template_loader = jinja2.FileSystemLoader(searchpath="/")
+        template_env = jinja2.Environment(loader=template_loader)
+
+        # add markdown filter to template environment
+        template_env.filters['markdown'] = markdown_filter
+
+        # add path names for each of the assets
+        for asset_label in mgr.asset_list:
+            template_env.globals[asset_label] = mgr.asset_path(asset_label)
+
+        # add variables for marking outcomes
+        template_env.globals['supervisor_grade'] = recipe.supervisor_grade
+        template_env.globals['report_grade'] = recipe.report_grade
+
+        supervisor_feedback = {}
+        for role in record.supervisor_roles:
+            role: SubmissionRole
+            person: User = role.user
+            if role.submitted_feedback:
+                feedback = {}
+                if role.positive_feedback and len(role.positive_feedback) > 0:
+                    feedback["positive"] = role.positive_feedback
+                if role.improvements_feedback and len(role.improvements_feedback) > 0:
+                    feedback["improvements"] = role.improvements_feedback
+                supervisor_feedback[person.name] = feedback
+
+        marker_feedback = {}
+        count = 0
+        for role in record.marker_roles:
+            role: SubmissionRole
+            person: User = role.user
+            if role.submitted_feedback:
+                feedback = {}
+                if role.positive_feedback and len(role.positive_feedback) > 0:
+                    feedback["positive"] = role.positive_feedback
+                if role.improvements_feedback and len(role.improvements_feedback) > 0:
+                    feedback["improvements"] = role.improvements_feedback
+                marker_feedback[count] = feedback
+                count += 1
+
+        template_env.globals['exam_number'] = sd.exam_number
+        template_env.globals['student_last'] = student.last_name
+        template_env.globals['student_first'] = student.first_name
+        template_env.globals['student_fullname'] = student.name
+        template_env.globals['student_email'] = student.email
+        template_env.globals['period'] = period.display_name
+        template_env.globals['pclass_name'] = pclass.name
+        template_env.globals['pclass_abbreviation'] = pclass.abbreviation
+        template_env.globals['year'] = config.year
+
+        # read in template
+        template = template_env.get_template(str(mgr.template_path))
+
+        output = template.render()
+
+        with ScratchFileManager(suffix='hmtl') as html_mgr:
+            HTML_file = open(html_mgr.path, 'w')
+            HTML_file.write(output)
+            HTML_file.close()
+
+            with ScratchFileManager(suffix='pdf') as pdf_mgr:
+

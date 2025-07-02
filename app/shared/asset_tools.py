@@ -156,7 +156,7 @@ class AssetCloudAdapter:
     def record(self):
         return self._asset
 
-    def exists(self):
+    def exists(self) -> bool:
         blobs = self._storage.list(audit_data=self._audit_data)
         return self._key in blobs
 
@@ -190,7 +190,7 @@ class AssetCloudAdapter:
 
         return new_key, put_result
 
-    def download_to_scratch(self):
+    def download_to_scratch(self) -> AssetCloudScratchContextManager:
         scratch_folder = Path(current_app.config.get("SCRATCH_FOLDER"))
         scratch_file = str(uuid4())
         scratch_path = scratch_folder / scratch_file

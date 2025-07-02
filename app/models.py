@@ -10997,6 +10997,28 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # has the project started? Helpful for convenor and senior tutor reports
     student_engaged = db.Column(db.Boolean(), default=False)
 
+    # FEEDBACK FOR STUDENT
+
+    # has a feedback report geen generated?
+    feedback_generated = db.Column(db.Boolean(), default=False)
+
+    # who generated the feedback
+    feedback_generated_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
+    feedback_generated_by = db.relationship("User", foreign_keys=[feedback_generated_id], uselist=False)
+
+    # timestamp for feedback generation
+    feedback_generated_timestamp = db.Column(db.DateTime())
+
+    # has feedback been pushed out for this period?
+    feedback_sent = db.Column(db.Boolean(), default=False)
+
+    # who pushed the feedback?
+    feedback_push_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
+    feedback_push_by = db.relationship("User", foreign_keys=[feedback_push_id], uselist=False)
+
+    # timestamp when feedback was sent
+    feedback_push_timestamp = db.Column(db.DateTime())
+
     # STUDENT FEEDBACK
 
     # free-form feedback field
@@ -11016,19 +11038,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # 'presentation_feedback' member created by back-reference from PresentationFeedback
 
-    # FEEDBACK PUSH
-
-    # has feedback been pushed out for this period?
-    feedback_sent = db.Column(db.Boolean(), default=False)
-
-    # who pushed the feedback?
-    feedback_push_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    feedback_push_by = db.relationship("User", foreign_keys=[feedback_push_id], uselist=False)
-
-    # timestamp when feedback was sent
-    feedback_push_timestamp = db.Column(db.DateTime())
-
-    # TODO: Remove these fields
+    # TODO: Remove the fields below
 
     # OLD FIELDS, TO BE REMOVED
 

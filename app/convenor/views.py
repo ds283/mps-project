@@ -2689,11 +2689,6 @@ def add_role(record_id):
     form = AddSubmitterRoleForm(request.form)
     form._record = record
 
-    if len(record.supervisor_roles) == 0:
-        form.role.data = SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR
-    else:
-        form.role.data = SubmissionRole.ROLE_MARKER
-
     if form.validate_on_submit():
         role = SubmissionRole(
             role=form.role.data,
@@ -2714,6 +2709,11 @@ def add_role(record_id):
             flash("Could not add new role due to a database error. Please contact a system administrator", "error")
 
         return redirect(url)
+    elif request.method == "GET":
+        if len(record.supervisor_roles) == 0:
+            form.role.data = SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR
+        else:
+            form.role.data = SubmissionRole.ROLE_MARKER
 
     return render_template_context("convenor/submitter/add_role.html", form=form, record=record, period=period, config=config, sub=sub, url=url)
 

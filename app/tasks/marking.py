@@ -8,17 +8,21 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 from datetime import date, datetime
+from io import BytesIO
 from pathlib import Path
 from typing import List, Union, Optional, Dict, Iterable
 from urllib.parse import quote
 
 import jinja2
+import markdown
 from celery import group, chain
 from celery.exceptions import Ignore
 from dateutil import parser
 from flask import current_app, render_template
 from flask_mailman import EmailMultiAlternatives, EmailMessage
+from pathvalidate import sanitize_filename
 from sqlalchemy.exc import SQLAlchemyError
+from weasyprint import HTML
 
 from ..database import db
 from ..models import (
@@ -36,8 +40,12 @@ from ..models import (
     SubmissionRole,
     FeedbackRecipe,
     FeedbackAsset,
+    AssetLicense,
+    validate_nonce,
+    LiveProject,
+    FeedbackReport,
 )
-from ..shared.asset_tools import AssetCloudAdapter, AssetCloudScratchContextManager
+from ..shared.asset_tools import AssetCloudAdapter, AssetCloudScratchContextManager, AssetUploadManager
 from ..shared.scratch import ScratchFileManager
 from ..task_queue import register_task
 
@@ -845,8 +853,8 @@ def register_marking_tasks(celery):
         mgr = TemplateAssetScratchManager(template_scratch, feedback_assets)
 
         tasks = group(
-            generate_feedback_report.s(record.id, recipe_id, convenor_id, mgr) for record in period.submissions)
-        ) | finalize_feedback_report_generated.s(recipe_id, period_id, convenor_id, mgr)
+            generate_feedback_report.s(record.id, recipe_id, convenor_id, mgr) for record in period.submissions
+        ) | finalize_feedback_reports.s(recipe_id, period_id, convenor_id, mgr)
 
         raise self.replace(tasks)
 
@@ -854,7 +862,7 @@ def register_marking_tasks(celery):
         return markdown.markdown(input)
 
     @celery.task(bind=True, default_retry_delay=30)
-    def generate_feedback_report(self, record_id: int, recipe_id: int, convenor_id: Optional[int], mgr: TemplateAssetScratchManager)
+    def generate_feedback_report(self, record_id: int, recipe_id: int, convenor_id: Optional[int], mgr: TemplateAssetScratchManager):
         try:
             record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
@@ -864,6 +872,10 @@ def register_marking_tasks(celery):
         if record is None:
             self.update_state("FAILURE", meta={"msg": "Could not load recipe record from database"})
             raise Ignore()
+
+        # if a feedback report has already been generated, do nothing
+        if record.feedback_generated:
+            return {"ignored": 1}
 
         sd: StudentData = record.student_data
         student: User = sd.user
@@ -940,6 +952,9 @@ def register_marking_tasks(celery):
         template_env.globals['pclass_abbreviation'] = pclass.abbreviation
         template_env.globals['year'] = config.year
 
+        template_env.globals["supervisor_feedback"] = supervisor_feedback
+        template_env.globals["marker_feedback"] = marker_feedback
+
         # read in template
         template = template_env.get_template(str(mgr.template_path))
 
@@ -951,4 +966,120 @@ def register_marking_tasks(celery):
             HTML_file.close()
 
             with ScratchFileManager(suffix='pdf') as pdf_mgr:
+                pdf = HTML(filename=html_mgr.path, base_url=".").write_pdf(pdf_mgr.path)
 
+                target_name = sanitize_filename(f"Feedback-{config.year}-{config.abbreviation}-{student.last_name}.pdf")
+                license = db.session.query(AssetLicense).filter_by(abbreviation="Work").first()
+
+                new_asset = GeneratedAsset(timestamp=datetime.now(), expiry=None, parent_asset_id=None, target_name=target_name, license=license)
+
+                object_store = current_app.config.get("OBJECT_STORAGE_FEEDBACK")
+                with open(pdf_mgr.path, "rb") as f:
+                    with AssetUploadManager(
+                        new_asset,
+                        data=BytesIO(f.read()),
+                        storage=object_store,
+                        audit_data=f"generate_feedback_report ({config.abbreviation}, {student.name})",
+                        length=pdf_mgr.path.stat().st_size,
+                        mimetype="application/pdf",
+                        validate_none=validate_nonce,
+                    ) as upload_mgr:
+                        pass
+
+                try:
+                    db.session.add(new_asset)
+                    db.session.flush()
+                except SQLAlchemyError as e:
+                    db.session.rollback()
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    raise self.retry()
+
+                new_report = FeedbackReport(asset=new_asset)
+
+                try:
+                    db.session.add(new_asset)
+                    db.session.flush()
+                except SQLAlchemyError as e:
+                    db.session.rollback()
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    raise self.retry()
+
+                # add to the list of feedback reports for this record (there may be more than one)
+                record.feedback_reports.append(new_report)
+
+                record.feedback_generated = True
+                record.feedback_generated_by = convenor
+                record.feedback_generated_timestamp = datetime.now()
+
+                for role in record.supervisor_roles:
+                    new_asset.grant_user(role.user)
+                for role in record.marker_roles:
+                    new_asset.grant_user(role.user)
+                for role in record.moderator_roles:
+                    new_asset.grant_user(role.user)
+
+                project: LiveProject = record.project
+                if project is not None and project.owner is not None:
+                    new_asset.grant_role(project.owner.user)
+
+                try:
+                    db.session.commit()
+                except SQLAlchemyError as e:
+                    db.session.rollback()
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    raise self.retry()
+
+            return {"generated": 1}
+
+        @celery.task(bind=True, default_retry_delay=5)
+        def finalize_feedback_reports(self, result_data, period_id: int, convenor_id: Optional[int], mgr: TemplateAssetScratchManager):
+            try:
+                period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
+
+            if period is None:
+                self.update_state("FAILURE", meta={"msg": "Could not load period record from database"})
+                raise Ignore()
+
+            convenor: Optional[User] = None
+            if convenor_id is not None:
+                try:
+                    convenor = db.session.query(User).filter_by(id=convenor_id).first()
+                except SQLAlchemyError as e:
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    raise self.retry()
+
+            # result data should be a list of lists
+            reports_generated = 0
+            reports_ignored = 0
+
+            if result_data is not None:
+                if isinstance(result_data, list):
+                    for result in result_data:
+                        if isinstance(result, dict):
+                            if "generated" in result:
+                                reports_generated += result["generated"]
+                            if "ignored" in result:
+                                reports_ignored += result["ignored"]
+                        else:
+                            raise RuntimeError("Expected individual results to be dictionaries")
+                else:
+                    raise RuntimeError("Expected result data to be a list")
+
+            generated_plural = "s"
+            ignored_plural = "s"
+            if reports_generated == 1:
+                generated_plural = ""
+            if reports_ignored == 1:
+                ignored_plural = ""
+
+            report_info(
+                f"{period.display_name}: {reports_generated} feedback report{generated_plural} generated, and {reports_ignored} report{ignored_plural} ignored.",
+                "finalize_feedback_reports",
+                convenor,
+            )
+
+            # clean up scratch files
+            mgr.__exit__(None, None, None)

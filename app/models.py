@@ -1875,12 +1875,11 @@ submission_role_emails = db.Table(
 )
 
 # link feedback reports to submission records
-submission_record_to_feedback = db.Table(
-    "submission_record_to_feedback",
+submission_record_to_feedback_report = db.Table(
+    "submission_record_to_feedback_report",
     db.Column("submission_id", db.Integer(), db.ForeignKey("submission_records.id"), primary_key=True),
-    db.Column("asset_id", db.Integer(), db.ForeignKey("generated_assets.id"), primary_key=True),
+    db.Column("report_id", db.Integer(), db.ForeignKey("feedback_reports.id"), primary_key=True),
 )
-
 
 # PRESENTATIONS
 
@@ -10966,9 +10965,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # grade generation timestamp
     grade_generated_timestamp = db.Column(db.DateTime())
 
-    # feedback reports
-    feedback_reports = db.relationship("GeneratedAsset", secondary=submission_record_to_feedback, lazy="dynamic")
-
     # CANVAS SYNCHRONIZATION
 
     # is a submission available for this student?
@@ -11001,6 +10997,9 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # has a feedback report geen generated?
     feedback_generated = db.Column(db.Boolean(), default=False)
+
+    # feedback reports
+    feedback_reports = db.relationship("FeedbackReport", secondary=submission_record_to_feedback_report, lazy="dynamic", backref=db.backref("owner"))
 
     # who generated the feedback
     feedback_generated_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
@@ -17336,6 +17335,23 @@ class FeedbackRecipe(db.Model, EditingMetadataMixin):
     asset_list = db.relationship(
         "FeedbackAsset", secondary=feedback_recipe_to_assets, lazy="dynamic", backref=db.backref("asset_recipes", lazy="dynamic")
     )
+
+
+class FeedbackReport(db.Model):
+    """
+    Record data about a generated feedback report
+    """
+
+    __tablename__ = "feedback_reports"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # link to underlying asset
+    asset_id = db.Column(db.Integer(), db.ForeignKey("generated_assets.id"))
+    asset = db.relationship("GeneratedAsset", foreign_keys=[asset_id], uselist=False)
+
+    # 'owner' member set by backref to SubmissionRecord
 
 
 # ############################

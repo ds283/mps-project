@@ -509,7 +509,7 @@ def register_push_feedback_tasks(celery):
                         if "push_submitter" in result:
                             push_submitter += result["push_submitter"]
                         if "push_marker" in result:
-                            ignored += result["push_marker"]
+                            push_marker += result["push_marker"]
                         if "push_supervisor" in result:
                             push_supervisor += result["push_supervisor"]
                         if "ignored" in result:

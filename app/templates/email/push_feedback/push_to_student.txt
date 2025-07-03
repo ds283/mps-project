@@ -1,0 +1,19 @@
+Dear {{ student.first_name }} (cc supervision team)
+
+This email is automated. Please do not reply to it directly, because mail
+to the sending address is not monitored.
+
+Marks for your project have now been published and are available to you
+from Sussex Direct. However, your supervision team and examiners also
+provide more detailed feedback. Because of the way Canvas works with
+Turnitin, we cannot post this feedback there, so we are sending it
+to you directly. Please see the attached PDF document.
+
+This feedback is for:
+{{ pclass.name }} {{ period.display_name }}
+
+If you have questions, please contact the project convenor using the
+address below.
+
+{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})
+project convenor

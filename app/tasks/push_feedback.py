@@ -8,22 +8,17 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from datetime import datetime
+
+from celery import group
+from celery.exceptions import Ignore
 from flask import current_app, render_template
 from flask_mailman import EmailMultiAlternatives
-
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import SubmissionPeriodRecord, SubmissionRecord
-
+from ..models import SubmissionPeriodRecord, SubmissionRecord, ProjectClassConfig, ProjectClass, SubmissionRole, User, SubmittingStudent, StudentData
 from ..task_queue import register_task
-
-from ..shared.sqlalchemy import get_count
-
-from celery import chain, group
-from celery.exceptions import Ignore
-
-from datetime import datetime
 
 
 def register_push_feedback_tasks(celery):
@@ -47,17 +42,17 @@ def register_push_feedback_tasks(celery):
 
         notify = celery.tasks["app.tasks.utilities.email_notification"]
 
-        tasks = chain(
-            group(send_notification_email.si(r, user_id) for r in recipients if r is not None),
-            notify.s(user_id, "{n} feedback email{pl} issued", "info"),
-        )
+        # student notifications cc the supervisor
+        tasks = group(
+            send_notification_emails.s(r, user_id) for r in recipients if r is not None)
+        ) | notify_feedback_push(period_id, user_id)
 
         raise self.replace(tasks)
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_notification_email(self, record_id, user_id):
+    def send_notification_emails(self, record_id, user_id):
         try:
-            record = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -68,10 +63,29 @@ def register_push_feedback_tasks(celery):
 
         # do nothing if feedback has already been sent
         if record.feedback_sent:
-            return
+            return {'ignored': 1}
 
-        period = record.period
-        pclass = record.period.config.project_class
+        period: SubmissionPeriodRecord = record.period
+        config: ProjectClassConfig = period.config
+        pclass: ProjectClass = config.project_class
+
+        sub: SubmittingStudent = record.submitting_student
+        sd: StudentData = sub.student
+        student: User = sd.user
+
+        supervisor_emails = []
+        for role in record.supervisor_roles:
+            role: SubmissionRole
+            person: User = role.user
+            supervisor_emails.append(person.email)
+
+        marker_emails = []
+        for role in record.marker_roles:
+            role: SubmissionRole
+            person: User = role.user
+            marker_emails.append(person.email)
+
+        # STEP 1 - DISPATCH EMAIL TO STUDENT AND SUPERVISION TEAM
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         msg = EmailMultiAlternatives(
@@ -79,11 +93,10 @@ def register_push_feedback_tasks(celery):
             from_email=current_app.config["MAIL_DEFAULT_SENDER"],
             reply_to=[current_app.config["MAIL_REPLY_TO"]],
             to=[record.owner.student.user.email],
-            cc=[record.project.owner.user.email],
-            bcc=[record.marker.user.email],
+            cc=supervisor_emails,
         )
 
-        msg.body = render_template("email/push_feedback/email_push.txt", student=record.owner.student, period=period, pclass=pclass, record=record)
+        msg.body = render_template("email/push_feedback/push_to_student.txt", sub=sub, sd=sd, student=student, period=period, pclass=pclass, record=record)
 
         # register a new task in the database
         task_id = register_task(

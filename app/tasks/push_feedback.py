@@ -338,7 +338,7 @@ def register_push_feedback_tasks(celery):
             )
 
         if test_email is not None:
-            print(f">> mark_role_feedback_sent: not marking as sent because test_email={test_email}")
+            print(f">> mark_submitter_feedback_sent: not marking as sent because test_email={test_email}")
             return {"push_submitter": 1}
 
         try:

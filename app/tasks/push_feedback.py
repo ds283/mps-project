@@ -167,10 +167,6 @@ def register_push_feedback_tasks(celery):
             self.update_state("FAILURE", meta={"msg": "Could not load database records"})
             return {"error": 1}
 
-        # do nothing if feedback has already been sent
-        if record.feedback_sent:
-            return {"ignored": 1}
-
         period: SubmissionPeriodRecord = record.period
         config: ProjectClassConfig = period.config
         pclass: ProjectClass = config.project_class
@@ -178,6 +174,10 @@ def register_push_feedback_tasks(celery):
         sub: SubmittingStudent = record.owner
         sd: StudentData = sub.student
         student: User = sd.user
+
+        # do nothing if feedback has already been sent
+        if record.feedback_sent:
+            return {"ignored": 1, "source": f"push_student_feedback (student={student.name})"}
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         msg = EmailMultiAlternatives(
@@ -257,6 +257,10 @@ def register_push_feedback_tasks(celery):
                 role: SubmissionRole
                 if not role.feedback_sent and role.user_id == person_id and role.role in target_roles:
                     submitters.append(record)
+
+        if len(submitters) == 0:
+            # no work to do
+            return {"ignored": 1, "source": f"push_role_feedback (person={person_id})"}
 
         config: ProjectClassConfig = period.config
         pclass: ProjectClass = config.project_class
@@ -510,6 +514,8 @@ def register_push_feedback_tasks(celery):
                             push_supervisor += result["push_supervisor"]
                         if "ignored" in result:
                             ignored += result["ignored"]
+                            if "source" in result:
+                                print('!! notify_feedback_push: notified that a push was ignored with source: "{result["source"]}"')
                         if "error" in result:
                             error += result["error"]
                     else:

@@ -6894,16 +6894,16 @@ class SubmissionPeriodRecord(db.Model):
         return assessment.deployed_schedule
 
     @property
-    def number_submitters_pushed_feedback(self):
+    def number_submitters_feedback_pushed(self):
         return get_count(self.submissions.filter_by(feedback_sent=True))
 
     @property
-    def number_submitters_not_pushed(self):
+    def number_submitters_feedback_not_pushed(self):
         count = 0
         for record in self.submissions:
             record: SubmissionRecord
 
-            if record.has_feedback:
+            if record.has_feedback_to_push:
                 if not record.feedback_sent:
                     count += 1
                     continue
@@ -6920,6 +6920,18 @@ class SubmissionPeriodRecord(db.Model):
                 if role_available > 0:
                     count += 1
                     continue
+
+        return count
+
+    @property
+    def number_submitters_feedback_not_generated(self):
+        count = 0
+        for record in self.submissions:
+            record: SubmissionRecord
+
+            if record.has_feedback and not record.feedback_generated:
+                count += 1
+                continue
 
         return count
 
@@ -11569,7 +11581,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         if self.period.collect_project_feedback:
             allowed_roles = [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR, SubmissionRole.ROLE_MARKER]
-            return any(role.feedback_submitted for role in self.roles if role.role in allowed_roles)
+            return any(role.submitted_feedback for role in self.roles if role.role in allowed_roles)
 
         return False
 
@@ -11602,9 +11614,16 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         # otherwise, is there any feedback available from other supervision/marker roles?
         if self.period.collect_project_feedback and self.period.closed:
             allowed_roles = [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR, SubmissionRole.ROLE_MARKER]
-            return any(role.feedback_submitted for role in self.roles if role.role in allowed_roles)
+            return any(role.submitted_feedback for role in self.roles if role.role in allowed_roles)
 
         return False
+
+    @property
+    def has_feedback_to_push(self):
+        if not self.feedback_generated:
+            return False
+
+        return self.has_feedback
 
     @property
     def number_presentation_feedback(self):

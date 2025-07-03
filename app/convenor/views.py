@@ -113,6 +113,7 @@ from ..models import (
     validate_nonce,
     LiveProjectAlternative,
     ProjectAlternative,
+    FeedbackRecipe,
 )
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.asset_tools import AssetUploadManager
@@ -10658,7 +10659,7 @@ def push_feedback(id):
     # id identifies a SubmissionPeriodRecord
     period = SubmissionPeriodRecord.query.get_or_404(id)
 
-    config = period.config
+    config: ProjectClassConfig = period.config
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
@@ -10669,7 +10670,53 @@ def push_feedback(id):
     celery = current_app.extensions["celery"]
     email_task = celery.tasks["app.tasks.push_feedback.push_period"]
 
-    email_task.apply_async((id, current_user.id, False, "D.Seery@sussex.ac.uk"))
+    tk_name = f"Push feedback reports"
+    tk_description = "Send feedback reports by email for {config.name} {period.display_name}"
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
+    final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
+    error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
+
+    seq = chain(
+        init.si(task_id, tk_name), email_task.si(id, current_user.id, False, "D.Seery@sussex.ac.uk"), final.si(task_id, tk_name, current_user.id)
+    ).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async(task_id=task_id)
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/generate_feedback_reports/<int:id>")
+@roles_accepted("faculty", "admin", "root")
+def generate_feedback_reports(id):
+    # id identifies a SubmissionPeriodRecord
+    period = SubmissionPeriodRecord.query.get_or_404(id)
+
+    config = period.config
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    if not period.closed:
+        flash("It is only possible to push feedback once the submission period is closed.", "info")
+        return redirect(redirect_url())
+
+    celery = current_app.extensions["celery"]
+    generate_task = celery.tasks["app.tasks.marking.generate_feedback_reports"]
+
+    recipe = db.session.query(FeedbackRecipe).first()
+
+    tk_name = f"Generate feedback reports"
+    tk_description = "Generate feedback reports for {config.name} {period.display_name}"
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
+    final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
+    error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
+
+    seq = chain(
+        init.si(task_id, tk_name), generate_task.si(recipe.id, period.id, current_user.id), final.si(task_id, tk_name, current_user.id)
+    ).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async(task_id=task_id)
 
     return redirect(redirect_url())
 

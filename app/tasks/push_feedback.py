@@ -9,14 +9,16 @@
 #
 
 from datetime import datetime
-from flask_mailman import EmailMessage
+from typing import Optional
 
 from celery import group, chain
 from celery.exceptions import Ignore
 from flask import current_app, render_template
+from flask_mailman import EmailMessage
 from flask_mailman import EmailMultiAlternatives
 from sqlalchemy.exc import SQLAlchemyError
 
+import app.shared.cloud_object_store.bucket_types as buckets
 from .shared.utils import report_info, report_error, attach_asset_to_email_msg
 from ..database import db
 from ..models import (
@@ -35,20 +37,19 @@ from ..models import (
 from ..shared.asset_tools import AssetCloudAdapter
 from ..task_queue import register_task
 
-import app.shared.cloud_object_store.bucket_types as buckets
-
 
 def register_push_feedback_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def push_period(self, period_id, user_id, cc_convenor, test_email):
         try:
-            period = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if period is None:
             self.update_state("FAILURE", meta={"msg": "Could not load database records"})
+            print("!! push_period: ignored because cannot load SubmissionPeriodRecord")
             raise Ignore()
 
         # submitters is set of ids for SubmissionRecord instances
@@ -63,7 +64,7 @@ def register_push_feedback_tasks(celery):
         for record in period.submissions:
             record: SubmissionRecord
 
-            if record.has_feedback:
+            if record.has_feedback_to_push:
                 if not record.feedback_sent:
                     submitters.add(record.id)
 
@@ -76,43 +77,39 @@ def register_push_feedback_tasks(celery):
                         if role.role in [SubmissionRole.ROLE_MARKER]:
                             markers.add(role.user_id)
 
-        notify = celery.tasks["app.tasks.utilities.email_notification"]
+        submitter_tasks = [push_student_feedback.s(rec_id, user_id, cc_convenor, test_email) for rec_id in submitters if rec_id is not None]
+        supervisor_tasks = [
+            push_role_feedback.s(
+                supervisor_id,
+                period_id,
+                user_id,
+                [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                "push_to_supervisor",
+                "Feedback for supervision students",
+                cc_convenor,
+                test_email,
+                "push_supervisor",
+            )
+            for supervisor_id in supervisors
+            if supervisor_id is not None
+        ]
+        marker_tasks = [
+            push_role_feedback.s(
+                marker_id,
+                period_id,
+                user_id,
+                [SubmissionRole.ROLE_MARKER],
+                "push_to_marker",
+                "Examiner feedback for project students",
+                cc_convenor,
+                test_email,
+                "push_marker",
+            )
+            for marker_id in markers
+            if marker_id is not None
+        ]
 
-        # student notifications cc the supervisor
-        tasks = (
-            group(push_student_feedback.s(rec_id, user_id, test_email) for rec_id in submitters if rec_id is not None)
-            | group(
-                push_role_feedback.s(
-                    supervisor_id,
-                    period_id,
-                    user_id,
-                    [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
-                    "push_to_supervisor",
-                    "Feedback for supervision students",
-                    cc_convenor,
-                    test_email,
-                    "push_supervisor",
-                )
-                for supervisor_id in supervisors
-                if supervisor_id is not None
-            )
-            | group(
-                push_role_feedback.s(
-                    marker_id,
-                    period_id,
-                    user_id,
-                    [SubmissionRole.ROLE_MARKER],
-                    "push_to_marker",
-                    "Feedback for students you examined",
-                    cc_convenor,
-                    test_email,
-                    "push_marker",
-                )
-                for marker_id in markers
-                if marker_id is not None
-            )
-            | notify_feedback_push.s(period_id, user_id)
-        )
+        tasks = group(submitter_tasks + supervisor_tasks + marker_tasks) | notify_feedback_push.s(period_id, user_id)
 
         raise self.replace(tasks)
 
@@ -128,6 +125,8 @@ def register_push_feedback_tasks(celery):
         if not record.feedback_generated:
             return attached_documents
 
+        # bucket map must be loaded at execution time, because we don't know what configuration we will use
+        # (e.g. could even vary by which container we are running in)
         BUCKET_MAP = {
             buckets.ASSETS_BUCKET: current_app.config.get("OBJECT_STORAGE_ASSETS"),
             buckets.BACKUP_BUCKET: current_app.config.get("OBJECT_STORAGE_BACKUP"),
@@ -154,6 +153,8 @@ def register_push_feedback_tasks(celery):
                 endpoint="download_generated_asset",
             )
 
+        return attached_documents
+
     @celery.task(bind=True, default_retry_delay=30)
     def push_student_feedback(self, record_id, user_id, cc_convenor, test_email):
         try:
@@ -174,7 +175,7 @@ def register_push_feedback_tasks(celery):
         config: ProjectClassConfig = period.config
         pclass: ProjectClass = config.project_class
 
-        sub: SubmittingStudent = record.submitting_student
+        sub: SubmittingStudent = record.owner
         sd: StudentData = sub.student
         student: User = sd.user
 
@@ -183,7 +184,7 @@ def register_push_feedback_tasks(celery):
             subject="{proj}: Feedback for {name}".format(proj=pclass.name, name=period.display_name),
             from_email=current_app.config["MAIL_DEFAULT_SENDER"],
             reply_to=[current_app.config["MAIL_REPLY_TO"]],
-            to=[test_email if test_email is not None else record.owner.student.user.email],
+            to=[test_email if test_email is not None else student.email],
         )
 
         if test_email is None and cc_convenor:
@@ -221,7 +222,7 @@ def register_push_feedback_tasks(celery):
 
         send_tasks = chain(
             send_log_email.s(task_id, msg),
-            mark_submitter_feedback_sent.s(record_id, user_id),
+            mark_submitter_feedback_sent.s(record_id, user_id, test_email),
         )
 
         return self.replace(send_tasks)
@@ -229,7 +230,7 @@ def register_push_feedback_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def push_role_feedback(self, person_id, period_id, user_id, target_roles, template_name, email_subject, cc_convenor, test_email, outcome_label):
         try:
-            period: SubmissionPeriodRecord = db.session.query(SubmissionRecord).filter_by(id=period_id).first()
+            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -285,7 +286,7 @@ def register_push_feedback_tasks(celery):
         )
 
         html = render_template(
-            "email/push_feedback/{template_name}.html",
+            f"email/push_feedback/{template_name}.html",
             person=person,
             submitters=submitters,
             period=period,
@@ -307,18 +308,21 @@ def register_push_feedback_tasks(celery):
         return self.replace(send_tasks)
 
     @celery.task(bind=True, default_retry_delay=5)
-    def mark_submitter_feedback_sent(self, result_data, record_id, user_id):
+    def mark_submitter_feedback_sent(self, result_data, record_id, user_id, test_email):
         if "outcome" not in result_data:
+            print(f"!! mark_submitter_feedback_sent: no outcome in result_data (result_data={result_data})")
             return {"error": 1}
 
         outcome = result_data["outcome"]
         if outcome in ["unknown", "failure"]:
+            print(f"!! mark_submitter_feedback_sent: outcome was unknown or failure (result_data={result_data})")
             return {"error": 1}
 
         if outcome in ["no-store"]:
+            print(f"!! mark_submitter_feedback_sent: outcome was marked no-store (result_data={result_data})")
             return {"push_submitter": 1}
 
-        user: User = None
+        user: Optional[User] = None
         if user_id is not None:
             try:
                 user = db.session.query(User).filter_by(id=user_id).first()
@@ -333,6 +337,10 @@ def register_push_feedback_tasks(celery):
                 user,
             )
 
+        if test_email is not None:
+            print(f">> mark_role_feedback_sent: not marking as sent because test_email={test_email}")
+            return {"push_submitter": 1}
+
         try:
             record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
@@ -341,23 +349,24 @@ def register_push_feedback_tasks(celery):
 
         if record is None:
             self.update_state("FAILURE", meta={"msg": "Could not load database records"})
+            print("!! mark_submitter_feedback_sent: Could not load SubmissionRecord")
             data = {"error": 1}
             if "key" in result_data:
                 data = data | {"push_submitter": 1}
             return data
 
-        record.feedback_sent = True
-        record.feedback_push_id = user_id
-        record.feedback_push_timestamp = datetime.now()
-
         if "key" in result_data:
             try:
-                email: EmailLog = db.session.query(EmailLog).filter_by(id=result_data["key"]).first()
+                email: Optional[EmailLog] = db.session.query(EmailLog).filter_by(id=result_data["key"]).first()
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
             # TODO: add to an email log for this SubmissionRecord
+
+        record.feedback_sent = True
+        record.feedback_push_id = user_id
+        record.feedback_push_timestamp = datetime.now()
 
         try:
             db.session.commit()
@@ -370,13 +379,16 @@ def register_push_feedback_tasks(celery):
     @celery.task(bind=True, default_retry_delay=5)
     def mark_role_feedback_sent(self, result_data, person_id, period_id, user_id, target_roles, test_email, outcome_label):
         if "outcome" not in result_data:
+            print(f"!! mark_role_feedback_sent: no outcome in result_data (result_data={result_data})")
             return {"error": 1}
 
         outcome = result_data["outcome"]
         if outcome in ["unknown", "failure"]:
+            print(f"!! mark_role_feedback_sent: outcome was unknown or failure (result_data={result_data})")
             return {"error": 1}
 
         if outcome in ["no-store"]:
+            print(f"!! mark_role_feedback_sent: outcome was no-store (result_data={result_data})")
             return {outcome_label: 1}
 
         try:
@@ -389,7 +401,7 @@ def register_push_feedback_tasks(celery):
             self.update_state("FAILURE", meta={"msg": "Could not load database records"})
             return {"error": 1}
 
-        user: User = None
+        user: Optional[User] = None
         if user_id is not None:
             try:
                 user = db.session.query(User).filter_by(id=user_id).first()
@@ -404,20 +416,25 @@ def register_push_feedback_tasks(celery):
                 user,
             )
 
+        if test_email is not None:
+            print(f">> mark_role_feedback_sent: not marking as sent because test_email={test_email}")
+            return {outcome_label: 1}
+
         try:
-            period: SubmissionPeriodRecord = db.session.query(SubmissionRecord).filter_by(id=period_id).first()
+            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if period is None:
             self.update_state("FAILURE", meta={"msg": "Could not load database records"})
+            print("!! mark_role_feedback_sent: Could not load SubmissionRecord")
             data = {"error": 1}
             if "key" in result_data:
                 data = data | {outcome_label: 1}
             return data
 
-        email: EmailLog = None
+        email: Optional[EmailLog] = None
         if "key" in result_data:
             try:
                 email = db.session.query(EmailLog).filter_by(id=result_data["key"]).first()
@@ -458,6 +475,7 @@ def register_push_feedback_tasks(celery):
 
         if period is None:
             self.update_state("FAILURE", meta={"msg": "Could not load database records"})
+            print("!! notify_feedback_push: ignored because cannot load SubmissionPeriodRecord")
             raise Ignore()
 
         config: ProjectClassConfig = period.config
@@ -470,6 +488,7 @@ def register_push_feedback_tasks(celery):
 
         if user is None:
             self.update_state("FAILURE", meta={"msg": "Could not load User record from database"})
+            print("!! notify_feedback_push: ignored because cannot load User")
             raise Ignore()
 
         # result data should be a list of dicts
@@ -481,30 +500,25 @@ def register_push_feedback_tasks(celery):
 
         if result_data is not None:
             if isinstance(result_data, list):
-                for group_result in result_data:
-                    if group_result is not None:
-                        if isinstance(group_result, list):
-                            for result in group_result:
-                                if isinstance(result, dict):
-                                    if "push_submitter" in result:
-                                        push_submitter += result["push_submitter"]
-                                    if "push_marker" in result:
-                                        ignored += result["push_marker"]
-                                    if "push_supervisor" in result:
-                                        push_supervisor += result["push_supervisor"]
-                                    if "ignored" in result:
-                                        ignored += result["ignored"]
-                                    if "error" in result:
-                                        error += result["error"]
-                                else:
-                                    raise RuntimeError("Expected individual group results to be dictionaries")
-                        else:
-                            raise RuntimeError("Expected record result data to be a list")
+                for result in result_data:
+                    if isinstance(result, dict):
+                        if "push_submitter" in result:
+                            push_submitter += result["push_submitter"]
+                        if "push_marker" in result:
+                            ignored += result["push_marker"]
+                        if "push_supervisor" in result:
+                            push_supervisor += result["push_supervisor"]
+                        if "ignored" in result:
+                            ignored += result["ignored"]
+                        if "error" in result:
+                            error += result["error"]
+                    else:
+                        raise RuntimeError("Expected individual group results to be dictionaries")
             else:
-                raise RuntimeError("Expected group result data to be a list")
+                raise RuntimeError("Expected record result data to be a list")
 
         report_info(
-            f"Pushed feedback for {{ config.name }} {{ period.display_name }}: {{ push_submitter }} submitter, {{ push_supervisor }} supervisor, {{ push_marker }} marker, {{ ignored }} ignored, {{ error }} errors",
+            f"Pushed feedback for {config.name} {period.display_name}: {push_submitter} submitter, {push_supervisor} supervisor, {push_marker} marker, {ignored} ignored, {error} errors",
             "notify_feedback_push",
             user,
         )

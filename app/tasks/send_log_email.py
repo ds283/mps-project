@@ -25,7 +25,6 @@ from smtplib import (
 )
 
 from celery import chain
-from celery.exceptions import Ignore
 from flask import current_app
 from flask_mailman import Mail, EmailMessage
 from flask_mailman.message import sanitize_address
@@ -158,7 +157,7 @@ def register_send_log_email(celery, mail: Mail):
                 'key': log.id}
 
     @celery.task()
-    def email_success(task_id, result_data):
+    def email_success(result_data, task_id):
         if 'outcome' not in result_data:
             progress_update(task_id, TaskRecord.FAILURE, 100, "Task failed with no outcome reported", autocommit=True)
             return

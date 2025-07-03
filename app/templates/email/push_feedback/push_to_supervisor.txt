@@ -16,12 +16,12 @@ supervision students. If the size or number of attached files is too large,
 some of these may be provided as download links.
 
 These documents are for:
-{{ pclass.name }} {{ period.display_name }}
+- {{ pclass.name }} {{ period.display_name }}
 
 The students included are:
 {% for submitter in submitters %}
 - {{ submitter.owner.student.user.name }} - {{ submitter.project.name }}
-{% endfor -%}
+{% endfor %}
 
 If you have questions, please contact the project convenor using the
 address below.

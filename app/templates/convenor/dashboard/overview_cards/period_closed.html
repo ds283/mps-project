@@ -9,8 +9,9 @@
         {% endcall %}
     </div>
     {% set total = period.number_submitters %}
-    {% set pushed = period.number_submitters_pushed_feedback %}
-    {% set not_pushed = period.number_submitters_not_pushed %}
+    {% set pushed = period.number_submitters_feedback_pushed %}
+    {% set not_pushed = period.number_submitters_feedback_not_pushed %}
+    {% set not_generated = period.number_submitters_feedback_not_generated %}
     {% set supv = period.number_submitters_supervisor_feedback %}
     {% set mark = period.number_submitters_marker_feedback %}
     {% if not period.collect_project_feedback %}
@@ -53,6 +54,13 @@
                                    href="{{ url_for('convenor.push_feedback', id=period.id) }}">
                                     Push feedback
                                 </a>
+                            </div>
+                        {% endif %}
+                        {% if not_generated > 0 %}
+                            <div class="small mb-0">
+                                <span class="text-danger">{{ not_generated }} not generated.</span>
+                                <a class="text-decoration-none link-primary"
+                                   href="{{ url_for('convenor.generate_feedback_reports', id=period.id) }}">Generate</a>
                             </div>
                         {% endif %}
                     {% endif %}

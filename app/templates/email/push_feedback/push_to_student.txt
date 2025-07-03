@@ -13,10 +13,10 @@ If the size or number of attached files is too large, some of these may
 be provided as download links.
 
 This feedback is for:
-{{ pclass.name }} {{ period.display_name }}
+- {{ pclass.name }} {{ period.display_name }}
 
-If you have questions, please contact the project convenor using the
-address below.
+If you have questions or concerns, please contact the project convenor
+using the address below.
 
 {{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})
 project convenor

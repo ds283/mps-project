@@ -775,6 +775,8 @@ def register_marking_tasks(celery):
             convenor,
         )
 
+        return {"total_conflated": marks_conflated, "total_ignored": marks_not_conflated}
+
     @celery.task(bind=True, default_retry_delay=30)
     def generate_feedback_reports(self, recipe_id: int, period_id: int, convenor_id: Optional[int]):
         try:
@@ -814,26 +816,9 @@ def register_marking_tasks(celery):
             self.update_state("FAILURE", meta={"msg": msg})
             raise Ignore()
 
-        # download all assets
-        object_store = current_app.config.get("OBJECT_STORAGE_PROJECT")
-        mgr = ScratchGroupManager(folder=current_app.config.get("SCRATCH_FOLDER"))
-
-        template_asset: FeedbackAsset = recipe.template
-        template_storage: AssetCloudAdapter = AssetCloudAdapter(
-            template_asset.asset, object_store, audit_data="generate_feedback_reports.download_template"
+        tasks = group(generate_feedback_report.s(record.id, recipe_id, convenor_id) for record in period.submissions) | finalize_feedback_reports.s(
+            recipe_id, period_id, convenor_id
         )
-        with template_storage.download_to_scratch() as template_scratch:
-            mgr.copy("template", template_scratch.path)
-
-        for asset in recipe.asset_list:
-            asset: FeedbackAsset
-            asset_storage: AssetCloudAdapter = AssetCloudAdapter(asset.asset, object_store, audit_data="generate_feedback_reports.download_asset")
-            with asset_storage.download_to_scratch() as asset_scratch:
-                mgr.copy(asset.label, asset_scratch.path)
-
-        tasks = group(
-            generate_feedback_report.s(record.id, recipe_id, convenor_id, mgr.__dict__) for record in period.submissions
-        ) | finalize_feedback_reports.s(recipe_id, period_id, convenor_id, mgr.__dict__)
 
         raise self.replace(tasks)
 
@@ -841,11 +826,7 @@ def register_marking_tasks(celery):
         return markdown.markdown(input)
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
-    def generate_feedback_report(self, record_id: int, recipe_id: int, convenor_id: Optional[int], mgrdict):
-        mgr = ScratchGroupManager(folder=None)
-        for k, v in mgrdict.items():
-            setattr(mgr, k, v)
-
+    def generate_feedback_report(self, record_id: int, recipe_id: int, convenor_id: Optional[int]):
         try:
             record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
@@ -884,6 +865,28 @@ def register_marking_tasks(celery):
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
+
+        # Download all assets needed by the recipe.
+        #
+        # note, we have to do this each time we generate a report, rather than pre-downloading them, because we don't know
+        # which container this task will run on (it might not be the container that downloaded them).
+        # If we have to pay a cost for using API calls, as in a commercial cloud, then we might prefer a different solution
+        # in which we download once, and then generate all the reports on the same container
+        object_store = current_app.config.get("OBJECT_STORAGE_PROJECT")
+        mgr = ScratchGroupManager(folder=current_app.config.get("SCRATCH_FOLDER"))
+
+        template_asset: FeedbackAsset = recipe.template
+        template_storage: AssetCloudAdapter = AssetCloudAdapter(
+            template_asset.asset, object_store, audit_data="generate_feedback_reports.download_template"
+        )
+        with template_storage.download_to_scratch() as template_scratch:
+            mgr.copy("template", template_scratch.path)
+
+        for asset in recipe.asset_list:
+            asset: FeedbackAsset
+            asset_storage: AssetCloudAdapter = AssetCloudAdapter(asset.asset, object_store, audit_data="generate_feedback_reports.download_asset")
+            with asset_storage.download_to_scratch() as asset_scratch:
+                mgr.copy(asset.label, asset_scratch.path)
 
         # expect to use fully qualified path names
         template_loader = jinja2.FileSystemLoader(searchpath="/")
@@ -1016,14 +1019,13 @@ def register_marking_tasks(celery):
                     current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     raise self.retry()
 
+        # remove downloaded files from the scratch folder
+        mgr.cleanup()
+
         return {"generated": 1}
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=5)
-    def finalize_feedback_reports(self, result_data, recipe_id: int, period_id: int, convenor_id: Optional[int], mgrdict):
-        mgr = ScratchGroupManager(folder=None)
-        for k, v in mgrdict.items():
-            setattr(mgr, k, v)
-
+    def finalize_feedback_reports(self, result_data, recipe_id: int, period_id: int, convenor_id: Optional[int]):
         try:
             recipe: FeedbackRecipe = db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
         except SQLAlchemyError as e:
@@ -1090,5 +1092,4 @@ def register_marking_tasks(celery):
             convenor,
         )
 
-        # clean up scratch files
-        mgr.cleanup()
+        return {"total_generated": reports_generated, "total_ignored": reports_ignored}

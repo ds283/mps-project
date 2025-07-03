@@ -1,6 +1,6 @@
 {%- macro format_feedback(label, fb) %}
     <div class="mt2">
-        <div class="p1 bg-light-yellow pt12">
+        <div class="p1 pl1 pr1 bg-light-yellow pt12">
             <strong>Feedback from {{ label }}</strong>
         </div>
         <div class="mt1">
@@ -44,11 +44,11 @@
     }
 
     .text-semibold {
-        font-weight: bold;
+        font-weight: 600;
     }
 
     .text-medium {
-        font-weight: bold;
+        font-weight: 500;
     }
 
     .centre {
@@ -109,6 +109,14 @@
     .p3 {
         padding-top: 3ex;
         padding-bottom: 3ex;
+    }
+
+    .pl1 {
+        padding-left: 1ex;
+    }
+
+    .pr1 {
+        padding-right: 1ex;
     }
 
     .mt1 {
@@ -173,7 +181,7 @@
                     grade: {{ supervisor_grade|round(precision=0) }}%
                 </div>
             {% else %}
-                <div class="pt13 p2 text-semibold bg-light-blue centre">Supervision</div>
+                <div class="pt13 p2 m2 text-semibold bg-light-blue centre">Supervision reports</div>
                 <div class="mt1 pt11">Supervision grade: {{ supervisor_grade|round(precision=0) }}%</div>
             {% endif %}
         </div>

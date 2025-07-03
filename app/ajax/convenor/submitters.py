@@ -30,7 +30,7 @@ _periods = """
     {% elif state == obj.FEEDBACK_WAITING %}
         <div class="small text-secondary">Feedback waiting</div>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <div class="small text-success">Feedback submitted</div>        
+        # <div class="small text-success">Feedback submitted</div>        
     {% elif state == obj.FEEDBACK_ENTERED %}
         <div class="small text-primary">Feedback in progress</div>        
     {% elif state == obj.FEEDBACK_LATE %}

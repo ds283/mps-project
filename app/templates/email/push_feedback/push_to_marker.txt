@@ -1,0 +1,45 @@
+Dear {{ person.first_name }}
+
+This email is automated. Please do not reply to it directly, because mail
+to the sending address is not monitored.
+
+Many thanks for your efforts in marking project reports this year. We are
+aware there is a large marking burden at a pressured time of the academic
+year, and this is very much appreciated. Final marks are now available
+and have been published to students.
+
+Because of the way Canvas works with Turnitin, we cannot post feedback for
+yourself (and the examiners) there directly. Therefore, we are distributing
+this to students directly by email.
+
+For your records, please find attached the feedback documents for those
+students whose reports you examined. If the size or number of attached
+files is too large, some of these may be provided as download links.
+
+These documents are for:
+{{ pclass.name }} {{ period.display_name }}
+
+The students included are:
+{% for submitter in submitters %}
+- {{ submitter.owner.student.user.name }} - {{ submitter.project.name }}
+{% endfor -%}
+
+If you have questions, please contact the project convenor using the
+address below.
+
+{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})
+project convenor
+
+ATTACHMENT MANIFEST
+{% for attached, manifest_entry, description in attached_documents %}
+{{ loop.index }}. {{ manifest_entry }}
+{%- if description and description|length > 0 %}
+   {{ description|wordwrap(75) }}
+{%- endif -%}
+{%- if not attached %}
+   This file is too large to be sent as an attachment.
+   Please download using the link provided.
+{%- endif %}
+{%- else -%}
+<No documents attached>
+{% endfor -%}

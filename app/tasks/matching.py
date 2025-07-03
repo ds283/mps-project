@@ -3770,26 +3770,38 @@ def register_matching_tasks(celery):
         # submission period
 
         sr: SubmissionRecord = sub.get_assignment(period=data.submission_period)
+        period: SubmissionPeriodRecord = sr.period
+
         now = datetime.now()
 
         def set_roles(sr: SubmissionRecord):
             new_ids = []
             for role in data.roles:
                 role: MatchingRole
+                weight = 1.0
+                if role.role in [SubmissionRole.ROLE_MARKER]:
+                    weight = 1.0 / float(period.number_markers)
                 new_role = SubmissionRole(
                     submission_id=sr.id,
                     user_id=role.user_id,
                     role=role.role,
                     marking_distributed=False,
+                    external_marking_url=None,
+                    grade=None,
+                    weight=weight,
+                    justification=None,
+                    signed_off=None,
                     positive_feedback=None,
                     improvements_feedback=None,
                     submitted_feedback=False,
                     feedback_timestamp=None,
                     acknowledge_student=False,
-                    response=None,
                     submitted_response=False,
                     response_timestamp=None,
-                    creator_id=None,
+                    feedback_sent=False,
+                    feedback_push_id=None,
+                    feedback_push_timestamp=None,
+                    creator_id=current_user.id,
                     creation_timestamp=now,
                     last_edit_id=None,
                     last_edit_timestamp=None,

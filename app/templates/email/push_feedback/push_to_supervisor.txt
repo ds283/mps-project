@@ -1,19 +1,27 @@
-Dear {{ student.first_name }}
+Dear {{ person.first_name }}
 
 This email is automated. Please do not reply to it directly, because mail
 to the sending address is not monitored.
 
-Marks for your project have now been published and are available to you
-from Sussex Direct. However, your supervision team and examiners also
-provide more detailed feedback. Because of the way Canvas works with
-Turnitin, we cannot post this feedback there, so we are sending it
-to you directly. Please see the attached PDF document.
+Many thanks for your efforts in supervising project students this year,
+and providing critical feedback for them. Final marks are now available
+and have been published to students.
 
-If the size or number of attached files is too large, some of these may
-be provided as download links.
+Because of the way Canvas works with Turnitin, we cannot post feedback for
+yourself (and the examiners) there directly. Therefore, we are distributing
+this to students directly by email.
 
-This feedback is for:
+For your records, please find attached the feedback documents for your
+supervision students. If the size or number of attached files is too large,
+some of these may be provided as download links.
+
+These documents are for:
 {{ pclass.name }} {{ period.display_name }}
+
+The students included are:
+{% for submitter in submitters %}
+- {{ submitter.owner.student.user.name }} - {{ submitter.project.name }}
+{% endfor -%}
 
 If you have questions, please contact the project convenor using the
 address below.

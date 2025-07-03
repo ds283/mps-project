@@ -6937,7 +6937,7 @@ class SubmissionPeriodRecord(db.Model):
                     SubmissionRecord.roles.any(
                         or_(
                             and_(
-                                SubmissionRole.role._in[SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                                SubmissionRole.role.in_([SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]),
                                 ~SubmissionRole.marking_distributed,
                             ),
                             and_(SubmissionRole.role == SubmissionRole.ROLE_MARKER, ~SubmissionRole.marking_distributed),
@@ -10496,6 +10496,18 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
     # faculty response timestamp
     response_timestamp = db.Column(db.DateTime())
 
+    # LIFECYCLE
+
+    # has feedback been pushed out to the student for this period?
+    feedback_sent = db.Column(db.Boolean(), default=False)
+
+    # who pushed the feedback?
+    feedback_push_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
+    feedback_push_by = db.relationship("User", foreign_keys=[feedback_push_id], uselist=False)
+
+    # timestamp when feedback was sent
+    feedback_push_timestamp = db.Column(db.DateTime())
+
     @property
     def role_label(self):
         if self.role in self._role_labels:
@@ -11008,7 +11020,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # timestamp for feedback generation
     feedback_generated_timestamp = db.Column(db.DateTime())
 
-    # has feedback been pushed out for this period?
+    # has feedback been pushed out to the student for this period?
     feedback_sent = db.Column(db.Boolean(), default=False)
 
     # who pushed the feedback?
@@ -13386,7 +13398,8 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             .filter(
                 MatchingRecord.roles.any(
                     and_(
-                        MatchingRole.user_id == fac_id, MatchingRole.role._in[MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR]
+                        MatchingRole.user_id == fac_id,
+                        MatchingRole.role.in_([MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR])
                     )
                 )
             )
@@ -14081,7 +14094,7 @@ def _MatchingRecord_is_valid(id):
                     MatchingRecord.project_id == project.id,
                     MatchingRecord.roles.any(
                         and_(
-                            MatchingRole.role._in[MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                            MatchingRole.role.in_([MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR]),
                             MatchingRole.user_id == supv.id,
                         )
                     ),
@@ -14095,7 +14108,7 @@ def _MatchingRecord_is_valid(id):
                         MatchingRecord.project_id == project.id,
                         MatchingRecord.roles.any(
                             and_(
-                                MatchingRole.role._in[MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                                MatchingRole.role.in_([MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR]),
                                 MatchingRole.user_id == supv.id,
                             )
                         ),

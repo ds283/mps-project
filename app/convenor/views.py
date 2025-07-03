@@ -2690,10 +2690,32 @@ def add_role(record_id):
     form._record = record
 
     if form.validate_on_submit():
+        weight = 1.0
+        role = form.role.data
+
+        if role in [SubmissionRole.ROLE_MARKER]:
+            weight = 1.0 / float(period.number_markers)
+
         role = SubmissionRole(
-            role=form.role.data,
+            role=role,
             user=form.user.data.user,
             submission_id=record.id,
+            marking_distributed=False,
+            external_marking_url=None,
+            grade=None,
+            weight=weight,
+            justification=None,
+            signed_off=None,
+            positive_feedback=None,
+            improvements_feedback=None,
+            submitted_feedback=False,
+            feedback_timestamp=None,
+            acknowledge_student=False,
+            submitted_response=False,
+            response_timestamp=None,
+            feedback_sent=False,
+            feedback_push_id=None,
+            feedback_push_timestamp=None,
             creator_id=current_user.id,
             creation_timestamp=datetime.now(),
             last_edit_id=None,
@@ -9913,6 +9935,7 @@ def manual_assign_ajax(id):
 def assign_revert(id):
     # id is a SubmissionRecord
     rec: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
+    period: SubmissionPeriodRecord = rec.period
 
     # find the ProjectClassConfig from which we will draw the list of available LiveProjects
     # (this could be the current one or a previous one, depending on when the student selected, and whether
@@ -9945,9 +9968,12 @@ def assign_revert(id):
     try:
         # remove any SubmissionRole instances for supervisor, marker and moderator
         rec.roles.filter(
-            SubmissionRole.role._in[
-                SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR, SubmissionRole.ROLE_MARKER, SubmissionRole.ROLE_MODERATOR
-            ]
+            SubmissionRole.role.in_([
+                SubmissionRole.ROLE_SUPERVISOR,
+                SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                SubmissionRole.ROLE_MARKER,
+                SubmissionRole.ROLE_MODERATOR
+            ])
         ).delete()
 
         match_record: MatchingRecord = rec.matching_record
@@ -9956,20 +9982,32 @@ def assign_revert(id):
 
         for role in match_record.roles:
             role: MatchingRole
+
+            weight = 1.0
+            if role.role in [SubmissionRole.ROLE_MARKER]:
+                weight = 1.0 / float(period.number_markers)
+
             new_role = SubmissionRole(
                 submission_id=rec.id,
                 user_id=role.user_id,
                 role=role.role,
                 marking_distributed=False,
+                external_marking_url=None,
+                grade=None,
+                weight=weight,
+                justification=None,
+                signed_off=None,
                 positive_feedback=None,
                 improvements_feedback=None,
                 submitted_feedback=False,
                 feedback_timestamp=None,
                 acknowledge_student=False,
-                response=None,
                 submitted_response=False,
                 response_timestamp=None,
-                creator_id=None,
+                feedback_sent=False,
+                feedback_push_id=None,
+                feedback_push_timestamp=None,
+                creator_id=current_user.id,
                 creation_timestamp=now,
                 last_edit_id=None,
                 last_edit_timestamp=None,
@@ -9991,6 +10029,7 @@ def assign_revert(id):
 def assign_from_selection(id, sel_id):
     # id is a SubmissionRecord
     rec: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
+    period: SubmissionPeriodRecord = rec.period
 
     # find the ProjectClassConfig from which we will draw the list of available LiveProjects
     # (this could be the current one or a previous one, depending on when the student selected, and whether
@@ -10011,7 +10050,7 @@ def assign_from_selection(id, sel_id):
         flash("Can not reassign for {name} because the project is already marked as started".format(name=rec.period.display_name), "error")
         return redirect(redirect_url())
 
-    sel = SelectionRecord.query.get_or_404(sel_id)
+    sel: SelectionRecord = SelectionRecord.query.get_or_404(sel_id)
 
     try:
         # remove any SubmissionRole instances which have the owner as supervisor
@@ -10020,7 +10059,7 @@ def assign_from_selection(id, sel_id):
             if owner is not None:
                 # remove any SubmissionRole instances which have the owner as supervisor
                 rec.roles.filter(
-                    SubmissionRole.role._in[SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                    SubmissionRole.role.in_([SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]),
                     SubmissionRole.user_id == owner.id,
                 ).delete()
 
@@ -10030,10 +10069,27 @@ def assign_from_selection(id, sel_id):
         if not lp.generic:
             new_owner = lp.owner
             if new_owner is not None:
+                weight = 1.0
                 role = SubmissionRole(
                     submission_id=rec.id,
                     user_id=new_owner.id,
                     role=SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                    marking_distributed=False,
+                    external_marking_url=None,
+                    grade=None,
+                    weight=weight,
+                    justification=None,
+                    signed_off=None,
+                    positive_feedback=None,
+                    improvements_feedback=None,
+                    submitted_feedback=False,
+                    feedback_timestamp=None,
+                    acknowledge_student=False,
+                    submitted_response=False,
+                    response_timestamp=None,
+                    feedback_sent=False,
+                    feedback_push_id=None,
+                    feedback_push_timestamp=None,
                     creator_id=current_user.id,
                     creation_timestamp=datetime.now(),
                     last_edit_id=None,
@@ -10055,6 +10111,7 @@ def assign_from_selection(id, sel_id):
 def assign_liveproject(id, pid):
     # id is a SubmissionRecord
     rec: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
+    period: SubmissionPeriodRecord = rec.period
 
     # find the ProjectClassConfig from which we will draw the list of available LiveProjects
     # (this could be the current one or a previous one, depending on when the student selected, and whether
@@ -10075,7 +10132,7 @@ def assign_liveproject(id, pid):
         flash("Can not reassign for {name} because the project is already marked as started".format(name=rec.period.display_name), "error")
         return redirect(redirect_url())
 
-    lp = LiveProject.query.get_or_404(pid)
+    lp: LiveProject = LiveProject.query.get_or_404(pid)
 
     if lp.config_id != select_config.id:
         flash(
@@ -10092,7 +10149,7 @@ def assign_liveproject(id, pid):
             if owner is not None:
                 # remove any SubmissionRole instances that have the owner as supervisor
                 rec.roles.filter(
-                    SubmissionRole.role._in[SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                    SubmissionRole.role.in_([SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]),
                     SubmissionRole.user_id == owner.id,
                 ).delete()
 
@@ -10106,6 +10163,22 @@ def assign_liveproject(id, pid):
                     submission_id=rec.id,
                     user_id=new_owner.id,
                     role=SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                    marking_distributed=False,
+                    external_marking_url=None,
+                    grade=None,
+                    weight=weight,
+                    justification=None,
+                    signed_off=None,
+                    positive_feedback=None,
+                    improvements_feedback=None,
+                    submitted_feedback=False,
+                    feedback_timestamp=None,
+                    acknowledge_student=False,
+                    submitted_response=False,
+                    response_timestamp=None,
+                    feedback_sent=False,
+                    feedback_push_id=None,
+                    feedback_push_timestamp=None,
                     creator_id=current_user.id,
                     creation_timestamp=datetime.now(),
                     last_edit_id=None,
@@ -10155,7 +10228,7 @@ def deassign_project(id):
             if owner is not None:
                 # remove any SubmissionRole instances which have the owner as supervisor
                 rec.roles.filter(
-                    SubmissionRole.role._in[SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                    SubmissionRole.role.in_([SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]),
                     SubmissionRole.user_id == owner.id,
                 ).delete()
 
@@ -10596,7 +10669,7 @@ def push_feedback(id):
     celery = current_app.extensions["celery"]
     email_task = celery.tasks["app.tasks.push_feedback.push_period"]
 
-    email_task.apply_async((id, current_user.id))
+    email_task.apply_async((id, current_user.id, False, "D.Seery@sussex.ac.uk"))
 
     return redirect(redirect_url())
 

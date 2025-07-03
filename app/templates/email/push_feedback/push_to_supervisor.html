@@ -1,0 +1,46 @@
+<p>Dear {{ person.first_name }}</p>
+
+<p><strong>This email is automated. Please do not reply to it directly, because mail to the sending address is not monitored.</strong></p>
+
+<p>Many thanks for your efforts in supervising project students this year, and providing critical feedback for them. Final marks are now available and have been published to students.</p>
+
+<p>Because of the way Canvas works with Turnitin, we cannot post feedback for yourself (and the examiners) there directly. Therefore, we are distributing this to students directly by email.</p>
+
+<p>For your records, please find attached the feedback documents for your supervision students. If the size or number of attached files is too large, some of these may be provided as download links.</p>
+
+<p>These documents are for:</p>
+<ul>
+    <li>{{ pclass.name }} {{ period.display_name }}</li>
+</ul>
+
+<p>The students included are:</p>
+<ul>
+{% for submitter in submitters %}
+    <li><strong>{{ submitter.owner.student.user.name }}</strong> &mdash; {{ submitter.project.name }}</li>
+{% endfor -%}
+</ul>
+
+<p>If you have questions, please contact the project convenor using the address below.</p>
+
+<p>
+    <a href="mailto:{{ pclass.convenor.user.email }}">{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }}</a>
+    &mdash; project convenor
+</p>
+
+<p><strong>ATTACHMENT MANIFEST</strong></p>
+{% for attached, manifest_entry, description in attached_documents %}
+    <p>{{ loop.index }}. {{ manifest_entry }}
+        {%- if description and description|length > 0 %}
+            <ul style="line-height: 100%">
+                <li>{{ description }}</li>
+            </ul>
+        {%- endif -%}
+    {%- if not attached %}
+        <ul style="line-height: 100%">
+            <li><strong>This file is too large to be sent as an attachment.</strong> Please download using the link provided.</li>
+        </ul>
+    {%- endif %}
+    </p>
+{%- else -%}
+    <em>No documents attached</em>
+{% endfor -%}

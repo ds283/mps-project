@@ -689,7 +689,7 @@ def register_rollover_tasks(celery):
 
                 for match_rec in match_records:
                     match_rec: MatchingRecord
-                    new_period = new_config.get_period(match_rec.submission_period)
+                    new_period: SubmissionPeriodRecord = new_config.get_period(match_rec.submission_period)
 
                     if new_period is not None:
                         new_rec = SubmissionRecord(
@@ -735,19 +735,31 @@ def register_rollover_tasks(celery):
 
                         for role in match_rec.roles:
                             role: MatchingRole
+
+                            weight = 1.0
+                            if role.role in [SubmissionRole.ROLE_MARKER]:
+                                weight = 1.0 / float(new_period.number_markers)
+
                             new_role = SubmissionRole(
                                 submission_id=new_rec.id,
                                 user_id=role.user_id,
                                 role=role.role,
                                 marking_distributed=False,
+                                external_marking_url=None,
+                                grade=None,
+                                weight=weight,
+                                justification=None,
+                                signed_off=None,
                                 positive_feedback=None,
                                 improvements_feedback=None,
                                 submitted_feedback=False,
                                 feedback_timestamp=None,
                                 acknowledge_student=False,
-                                response=None,
                                 submitted_response=False,
                                 response_timestamp=None,
+                                feedback_sent=False,
+                                feedback_push_id=None,
+                                feedback_push_timestamp=None,
                                 creator_id=None,
                                 creation_timestamp=now,
                                 last_edit_id=None,
@@ -874,19 +886,30 @@ def register_rollover_tasks(celery):
 
                                 for role in old_submitter.roles:
                                     role: SubmissionRole
+                                    weight = 1.0
+                                    if role.role in [SubmissionRole.ROLE_MARKER]:
+                                        weight = 1.0 / float(new_period.number_markers)
+
                                     new_role = SubmissionRole(
                                         submission_id=new_rec.id,
                                         user_id=role.user_id,
                                         role=role.role,
                                         marking_distributed=False,
+                                        external_marking_url=None,
+                                        grade=None,
+                                        weight=weight,
+                                        justification=None,
+                                        signed_off=None,
                                         positive_feedback=None,
                                         improvements_feedback=None,
                                         submitted_feedback=False,
                                         feedback_timestamp=None,
                                         acknowledge_student=False,
-                                        response=None,
                                         submitted_response=False,
                                         response_timestamp=None,
+                                        feedback_sent=False,
+                                        feedback_push_id=None,
+                                        feedback_push_timestamp=None,
                                         creator_id=None,
                                         creation_timestamp=now,
                                         last_edit_id=None,

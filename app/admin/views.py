@@ -5310,7 +5310,7 @@ def _build_match_changes(attempt1: MatchingAttempt, attempt2: MatchingAttempt, d
             if not isinstance(roles, list):
                 roles = [roles]
 
-            role_records: List[MatchingRole] = rec.roles.filter(MatchingRole.role._in[roles])
+            role_records: List[MatchingRole] = rec.roles.filter(MatchingRole.role.in_(roles))
             role_dict: RoleDictType = {role.user_id: role for role in role_records}
 
             return role_dict
@@ -6062,7 +6062,7 @@ def reassign_match_project(id, pid):
 
                         # remove any previous supervision roles and replace with a supervision role for the new project
                         existing_supv = record.roles.filter(
-                            MatchingRole.role._in[MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR]
+                            MatchingRole.role.in_([MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR])
                         ).all()
                         for item in existing_supv:
                             record.roles.remove(item)

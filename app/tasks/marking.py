@@ -10,8 +10,7 @@
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
-from typing import List, Union, Optional, Dict
-from urllib.parse import quote
+from typing import List, Optional, Dict
 
 import jinja2
 import markdown
@@ -24,6 +23,9 @@ from pathvalidate import sanitize_filename
 from sqlalchemy.exc import SQLAlchemyError
 from weasyprint import HTML
 
+import app.shared.cloud_object_store.bucket_types as buckets
+
+from .shared.utils import report_error, report_info, attach_asset_to_email_msg
 from ..database import db
 from ..models import (
     SubmissionPeriodRecord,
@@ -50,18 +52,6 @@ from ..shared.scratch import ScratchFileManager, ScratchGroupManager
 from ..task_queue import register_task
 
 AssetDictionary = Dict[str, AssetCloudScratchContextManager]
-
-
-def report_error(msg: str, source: str, user: Optional[User]):
-    print(f"!! {source}: {msg}")
-    if user is not None:
-        user.post_message(msg, "error", autocommit=True)
-
-
-def report_info(msg: str, source: str, user: Optional[User]):
-    print(f">> {source}: {msg}")
-    if user is not None:
-        user.post_message(msg, "info", autocommit=True)
 
 
 def register_marking_tasks(celery):
@@ -96,17 +86,20 @@ def register_marking_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=5)
     def notify_dispatch(self, result_data, convenor_id):
+        if convenor_id is None:
+            return
+
         try:
-            user = db.session.query(User).filter_by(id=convenor_id).first()
+            convenor: User = db.session.query(User).filter_by(id=convenor_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if user is None:
+        if convenor is None:
             self.update_state("FAILURE", meta={"msg": "Could not load User record from database"})
             raise Ignore()
 
-        # result data should be a list of lists
+        # result data should be a list of dicts
         supv_sent = 0
         mark_sent = 0
 
@@ -138,7 +131,7 @@ def register_marking_tasks(celery):
         report_info(
             f"Dispatched {supv_sent} notification{supv_plural} to project supervisors, and {mark_sent} notification{mark_plural} to examiners",
             "notify_dispatch",
-            user,
+            convenor,
         )
 
     def _build_supervisor_email(
@@ -183,7 +176,7 @@ def register_marking_tasks(celery):
             to=[test_email if test_email is not None else user.email],
         )
 
-        if cc_convenor:
+        if test_email is None and cc_convenor:
             msg.cc = [config.convenor_email]
 
         attached_documents = _attach_documents(msg, record, filename, max_attachment, role="supervisor")
@@ -265,7 +258,7 @@ def register_marking_tasks(celery):
             to=[test_email if test_email is not None else user.email],
         )
 
-        if cc_convenor:
+        if test_email is None and cc_convenor:
             msg.cc = [config.convenor_email]
 
         attached_documents = _attach_documents(msg, record, filename, max_attachment, role="marker")
@@ -420,10 +413,18 @@ def register_marking_tasks(celery):
             raise RuntimeError("_attach_documents() called with a null processed report")
 
         # attach report or generate link for download later
-        object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+        BUCKET_MAP = {
+            buckets.ASSETS_BUCKET: current_app.config.get("OBJECT_STORAGE_ASSETS"),
+            buckets.BACKUP_BUCKET: current_app.config.get("OBJECT_STORAGE_BACKUP"),
+            buckets.INITDB_BUCKET: current_app.config.get("OBJECT_STORAGE_INITDB"),
+            buckets.TELEMETRY_BUCKET: current_app.config.get("OBJECT_STORAGE_TELEMETRY"),
+            buckets.FEEDBACK_BUCKET: current_app.config.get("OBJECT_STORAGE_FEEDBACK"),
+            buckets.PROJECT_BUCKET: current_app.config.get("OBJECT_STORAGE_PROJECT"),
+        }
+        object_store = BUCKET_MAP[report_asset.bucket]
 
         report_storage = AssetCloudAdapter(report_asset, object_store, audit_data=f"marking._attach_documents #1 (submission record #{record.id})")
-        current_size += _attach_asset(
+        current_size += attach_asset_to_email_msg(
             msg,
             report_storage,
             current_size,
@@ -441,11 +442,12 @@ def register_marking_tasks(celery):
 
                 if (role in ["marker"] and attachment.include_marker_emails) or (role in ["supervisor"] and attachment.include_supervisor_emails):
                     asset: SubmittedAsset = attachment.attachment
+                    object_store = BUCKET_MAP[asset.bucket]
                     asset_storage = AssetCloudAdapter(
                         asset, object_store, audit_data=f"marking._attach_documents #2 (submission record #{record.id})"
                     )
 
-                    current_size += _attach_asset(
+                    current_size += attach_asset_to_email_msg(
                         msg,
                         asset_storage,
                         current_size,
@@ -460,11 +462,12 @@ def register_marking_tasks(celery):
 
                 if (role in ["marker"] and attachment.include_marker_emails) or (role in ["supervisor"] and attachment.include_supervisor_emails):
                     asset: SubmittedAsset = attachment.attachment
+                    object_store = BUCKET_MAP[asset.bucket]
                     asset_storage = AssetCloudAdapter(
                         asset, object_store, audit_data=f"marking._attach_documents #3 (submission record #{record.id})"
                     )
 
-                    current_size += _attach_asset(
+                    current_size += attach_asset_to_email_msg(
                         msg,
                         asset_storage,
                         current_size,
@@ -475,50 +478,6 @@ def register_marking_tasks(celery):
                     )
 
         return attached_documents
-
-    def _attach_asset(
-        msg: EmailMessage,
-        storage: AssetCloudAdapter,
-        current_size: int,
-        attached_documents,
-        filename=None,
-        max_attached_size=None,
-        description=None,
-        endpoint="download_submitted_asset",
-    ):
-        if not storage.exists():
-            raise RuntimeError("_attach_documents() could not find asset in object store")
-
-        # get size of file to be attached, in bytes
-        asset: Union[SubmittedAsset, GeneratedAsset] = storage.record()
-        asset_size = asset.filesize
-
-        # if attachment is too large, generate a link instead
-        if max_attached_size is not None and float(current_size + asset_size) / (1024 * 1024) > max_attached_size:
-            if filename is not None:
-                try:
-                    link = "https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}?filename={fnam}".format(
-                        endpoint=endpoint, asset_id=asset.id, fnam=quote(filename)
-                    )
-                except TypeError as e:
-                    link = "https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}".format(endpoint=endpoint, asset_id=asset.id)
-                    print(f'_attach_asset: TypeError received with filename="{filename}"')
-            else:
-                link = "https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}".format(endpoint=endpoint, asset_id=asset.id)
-            attached_documents.append((False, link, description))
-            asset_size = 0
-
-        # otherwise, perform the attachment
-        else:
-            attached_name = (
-                str(filename) if filename is not None else str(asset.target_name) if asset.target_name is not None else str(asset.unique_name)
-            )
-
-            msg.attach(filename=attached_name, mimetype=asset.mimetype, content=storage.get())
-
-            attached_documents.append((True, attached_name, description))
-
-        return asset_size
 
     @celery.task(bind=True, default_retry_delay=30)
     def record_marking_email_sent(self, role_id, test, role_string):

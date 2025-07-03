@@ -85,6 +85,7 @@ ATTACHMENT MANIFEST
    {{ description|wordwrap(75) }}
 {%- endif -%}
 {%- if not attached %}
+   This file is too large to be sent as an attachment.
    Please download using the link provided.
 {%- endif %}
 {%- else -%}

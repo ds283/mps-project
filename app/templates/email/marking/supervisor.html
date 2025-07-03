@@ -56,14 +56,19 @@
 
 <p><strong>ATTACHMENT MANIFEST</strong></p>
 {% for attached, manifest_entry, description in attached_documents %}
-<p>{{ loop.index }}. {{ manifest_entry }}
-{%- if description and description|length > 0 %}
-<ul style="line-height: 100%"><li>{{ description }}</li></ul>
-{%- endif -%}
-{%- if not attached %}
-<ul style="line-height: 100%"><li>Please download using the link provided.</li></ul>
-{%- endif %}
-</p>
+    <p>{{ loop.index }}. {{ manifest_entry }}
+        {%- if description and description|length > 0 %}
+            <ul style="line-height: 100%">
+                <li>{{ description }}</li>
+            </ul>
+        {%- endif -%}
+    {%- if not attached %}
+        <ul style="line-height: 100%">
+            <li><strong>This file is too large to be sent as an attachment.</strong> Please download using the link provided.</li>
+        </ul>
+    {%- endif %}
+    </p>
 {%- else -%}
-<em>No documents attached</em>
+    <em>No documents attached</em>
 {% endfor -%}
+

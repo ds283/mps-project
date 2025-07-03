@@ -341,7 +341,7 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool = True)
             SubmissionRecord.roles.any(
                 and_(
                     SubmissionRole.user_id == current_user.id,
-                    SubmissionRole.role._in[SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                    SubmissionRole.role.in_([SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]),
                 )
             )
         )

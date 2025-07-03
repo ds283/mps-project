@@ -1,11 +1,13 @@
-<p>Dear {{ student.first_name }}</p> (cc supervision team)
+<p>Dear {{ student.first_name }}</p>
 
 <p><strong>This email is automated. Please do not reply to it directly, because mail to the sending address is not
     monitored.</strong></p>
 
 <p>Marks for your project have now been published and are available to you from Sussex Direct. However, your supervision
-    team and examiners also provide more detailed feedback. Because of the way Canvas works with Turnitin, we cannot
-    post this feedback there, so we are sending it to you directly. Please see the attached PDF document.</p>
+    team and examiners have also provided more detailed feedback. Because of the way Canvas works with Turnitin, we
+    cannot post this feedback there, so we are sending it to you directly. Please see the attached PDF document.</p>
+
+<p>If the size or number of attached files is too large, some of these may be provided as download links.</p>
 
 <p>This feedback is for:</p>
 <ul>
@@ -16,4 +18,23 @@
 
 <p>
     <a href="mailto:{{ pclass.convenor.user.email }}">{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }}</a>
-    &mdash; project convenor</p>
+    &mdash; project convenor
+</p>
+
+<p><strong>ATTACHMENT MANIFEST</strong></p>
+{% for attached, manifest_entry, description in attached_documents %}
+    <p>{{ loop.index }}. {{ manifest_entry }}
+        {%- if description and description|length > 0 %}
+            <ul style="line-height: 100%">
+                <li>{{ description }}</li>
+            </ul>
+        {%- endif -%}
+    {%- if not attached %}
+        <ul style="line-height: 100%">
+            <li><strong>This file is too large to be sent as an attachment.</strong> Please download using the link provided.</li>
+        </ul>
+    {%- endif %}
+    </p>
+{%- else -%}
+    <em>No documents attached</em>
+{% endfor -%}

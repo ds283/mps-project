@@ -6,7 +6,7 @@
         {% set ns = namespace(bgclass = '', borderclass = '', textclass = '') %}
         {% if n+1 == config.submission_period %}
             {% if period.closed %}
-                {% set ns.bgclass = 'bg-secondary' %}
+                {% set ns.bgclass = 'bg-light' %}
                 {% set ns.borderclass = 'border-secondary' %}
             {% elif period.is_feedback_open %}
                 {% set ns.bgclass = 'bg-info' %}

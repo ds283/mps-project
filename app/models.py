@@ -11059,14 +11059,9 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     feedback_generated = db.Column(db.Boolean(), default=False)
 
     # feedback reports
-    feedback_reports = db.relationship("FeedbackReport", secondary=submission_record_to_feedback_report, lazy="dynamic", backref=db.backref("owner"))
-
-    # who generated the feedback
-    feedback_generated_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    feedback_generated_by = db.relationship("User", foreign_keys=[feedback_generated_id], uselist=False)
-
-    # timestamp for feedback generation
-    feedback_generated_timestamp = db.Column(db.DateTime())
+    feedback_reports = db.relationship(
+        "FeedbackReport", secondary=submission_record_to_feedback_report, lazy="dynamic", backref=db.backref("owner", uselist=False)
+    )
 
     # has feedback been pushed out to the student for this period?
     feedback_sent = db.Column(db.Boolean(), default=False)
@@ -17413,6 +17408,13 @@ class FeedbackReport(db.Model):
     # link to underlying asset
     asset_id = db.Column(db.Integer(), db.ForeignKey("generated_assets.id"))
     asset = db.relationship("GeneratedAsset", foreign_keys=[asset_id], uselist=False)
+
+    # who generated the feedback
+    generated_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
+    generated_by = db.relationship("User", foreign_keys=[generated_id], uselist=False)
+
+    # timestamp for feedback generation
+    timestamp = db.Column(db.DateTime())
 
     # 'owner' member set by backref to SubmissionRecord
 

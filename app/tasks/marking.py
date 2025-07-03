@@ -943,7 +943,11 @@ def register_marking_tasks(celery):
                     current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     raise self.retry()
 
-                new_report = FeedbackReport(asset=new_asset)
+                new_report = FeedbackReport(
+                    asset=new_asset,
+                    generated_id=convenor_id,
+                    timestamp=datetime.now(),
+                )
 
                 try:
                     db.session.add(new_asset)
@@ -960,6 +964,7 @@ def register_marking_tasks(celery):
                 record.feedback_generated_by = convenor
                 record.feedback_generated_timestamp = datetime.now()
 
+                new_asset.grant_user(student)
                 for role in record.supervisor_roles:
                     new_asset.grant_user(role.user)
                 for role in record.marker_roles:

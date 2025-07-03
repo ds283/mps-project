@@ -36,6 +36,7 @@ from ..models import (
     AssetLicense,
     SubmittingStudent,
     validate_nonce,
+    FeedbackReport,
 )
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
@@ -47,6 +48,7 @@ ATTACHMENT_TYPE_PERIOD = 0
 ATTACHMENT_TYPE_SUBMISSION = 1
 ATTACHMENT_TYPE_UPLOADED_REPORT = 2
 ATTACHMENT_TYPE_PROCESSED_REPORT = 3
+ATTACHMENT_TYPE_FEEDBACK_REPORT = 4
 
 
 @documents.route("/submitter_documents", methods=["GET", "POST"])
@@ -767,6 +769,16 @@ def _get_attachment_asset(attach_type, attach_id):
 
         asset: GeneratedAsset = record.processed_report
         pclass: ProjectClass = record.period.config.project_class
+
+        return record, asset, pclass
+
+    if attach_type == ATTACHMENT_TYPE_FEEDBACK_REPORT:
+        record: FeedbackReport = db.session.query(FeedbackReport).filter_by(id=attach_id).first()
+        if record is None:
+            raise KeyError
+
+        asset: GeneratedAsset = record.asset
+        pclass: ProjectClass = record.owner.period.config.project_class
 
         return record, asset, pclass
 

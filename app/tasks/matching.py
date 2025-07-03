@@ -3845,8 +3845,6 @@ def register_matching_tasks(celery):
                     turnitin_publication_overlap=None,
                     turnitin_student_overlap=None,
                     feedback_generated=False,
-                    feedback_generated_id=False,
-                    feedback_generated_timestamp=False,
                     feedback_sent=False,
                     feedback_push_id=None,
                     feedback_push_timestamp=None,

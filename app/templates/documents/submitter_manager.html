@@ -375,6 +375,36 @@
                     </div>
                 {% endif %}
             </div>
+
+            {# FEEDBACK REPORTS #}
+            {% if record.feedback_reports.first() %}
+                <div class="card mt-3 mb-3 card-body bg-well">
+                    <span class="document-group-title mb-2">Feedback reports</span>
+                    <table class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th width="40%">Document</th>
+                            <th width="30%">Attributes</th>
+                            <th width="15%">License</th>
+                            <th width="15%"></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for report in record.feedback_reports %}
+                            {% set asset = report.asset %}
+                            {# students can always view feedback reports #}
+                            {% if current_user.id == report.generated_id or asset.has_access(current_user.id) %}
+                                {{ asset_line(asset, report,
+                                                  download_url=url_for('admin.download_generated_asset', asset_id=asset.id),
+                                                  acl_url=url_for('documents.attachment_acl', attach_type=4, attach_id=report.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
+                                                  log_url=url_for('documents.attachment_download_log', attach_type=4, attach_id=report.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
+                                                  deletable=false, allow_student=true, is_editable=none, admin_rights=admin_rights) }}
+                            {% endif %}
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
         </div>
     </div>
 

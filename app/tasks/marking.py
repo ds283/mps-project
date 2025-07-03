@@ -21,7 +21,8 @@ from flask import current_app, render_template
 from flask_mailman import EmailMultiAlternatives, EmailMessage
 from pathvalidate import sanitize_filename
 from sqlalchemy.exc import SQLAlchemyError
-from weasyprint import HTML
+from weasyprint import HTML, CSS
+from weasyprint.text.fonts import FontConfiguration
 
 import app.shared.cloud_object_store.bucket_types as buckets
 from .shared.utils import report_error, report_info, attach_asset_to_email_msg
@@ -915,7 +916,20 @@ def register_marking_tasks(celery):
             HTML_file.close()
 
             with ScratchFileManager(suffix=".pdf") as pdf_mgr:
-                pdf = HTML(filename=html_mgr.path, base_url=".").write_pdf(pdf_mgr.path)
+                font_config = FontConfiguration()
+                sheet = CSS(
+                    string="""
+                            body {
+                                font-family: Roboto;
+                            }
+                            """,
+                    font_config=font_config,
+                )
+                pdf = HTML(filename=html_mgr.path, base_url=".").write_pdf(
+                    pdf_mgr.path,
+                    stylesheets=["https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap", sheet],
+                    font_config=font_config,
+                )
 
                 target_name = sanitize_filename(f"Feedback-{config.year}-{config.abbreviation}-{student.last_name}.pdf")
                 license = db.session.query(AssetLicense).filter_by(abbreviation="Work").first()

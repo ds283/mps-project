@@ -1,16 +1,16 @@
 {%- macro format_feedback(label, fb) %}
     <div class="mt2">
-        <div class="helvetica-text p1 bg-light-yellow pt12">
+        <div class="p1 bg-light-yellow pt12">
             <strong>Feedback from {{ label }}</strong>
         </div>
         <div class="mt1">
             {% if 'positive' in fb %}
-                <div class="helvetica-text text-medium pt12">What was done well in the project?</div>
-                <div class="helvetica-text pt11 justify">{{ fb['positive']|markdown|safe }}</div>
+                <div class="text-medium pt12">What was done well in the project?</div>
+                <div class="pt11 justify">{{ fb['positive']|markdown|safe }}</div>
             {% endif %}
             {% if 'improvements' in fb %}
-                <div class="helvetica-text text-medium pt12">Things to consider for next time</div>
-                <div class="helvetica-text pt11 justify">{{ fb['improvements']|markdown|safe }}</div>
+                <div class="text-medium pt12">Things to consider for next time</div>
+                <div class="pt11 justify">{{ fb['improvements']|markdown|safe }}</div>
             {% endif %}
         </div>
     </div>
@@ -21,10 +21,6 @@
     @page {
         size: A4;
         margin: 2cm;
-    }
-
-    .helvetica-text {
-        font-family: Helvetica, Arial, sans-serif;
     }
 
     .justify {
@@ -164,22 +160,21 @@
         <div class="centre"><img class="img-100px" src="{{ UoS_logo }}"/></div>
     </div>
     <div class="m3">
-        <div class="helvetica-text pt16 centre">{{ pclass_name }} feedback</div>
+        <div class="pt16 centre">{{ pclass_name }} feedback</div>
     </div>
     <div class="m2">
-        <div class="helvetica-text p1 pt11"><strong>Student:</strong> <span
-                style="color: rgb(10,10,220)">{{ student_fullname }}</span></div>
+        <div class="p1 pt11"><strong>Student:</strong> {{ student_fullname }}</div>
     </div>
     {% if supervisor_feedback|length > 0 %}
         <div class="mt3">
             {% if supervisor_feedback|length > 1 %}
-                <div class="helvetica-text pt13 p2 text-semibold bg-light-blue centre">Supervision team</div>
-                <div class="helvetica-text mt1 pt11">Combined supervision
+                <div class="pt13 p2 text-semibold bg-light-blue centre">Supervision team</div>
+                <div class="mt1 pt11">Combined supervision
                     grade: {{ supervisor_grade|round(precision=0) }}%
                 </div>
             {% else %}
-                <div class="helvetica-text pt13 p2 text-semibold bg-light-blue centre">Supervision</div>
-                <div class="helvetica-text mt1 pt11">Supervision grade: {{ supervisor_grade|round(precision=0) }}%</div>
+                <div class="pt13 p2 text-semibold bg-light-blue centre">Supervision</div>
+                <div class="mt1 pt11">Supervision grade: {{ supervisor_grade|round(precision=0) }}%</div>
             {% endif %}
         </div>
         {% for name, fb in supervisor_feedback.items() %}
@@ -188,8 +183,8 @@
     {% endif %}
     {% if marker_feedback|length > 0 %}
         <div class="mt-3">
-            <div class="helvetica-text pt13 p2 m2 text-semibold bg-light-blue centre">Examiners reports</div>
-            <div class="helvetica-text mt1 pt11">Combined examiners grade: {{ report_grade|round(precision=0) }}%</div>
+            <div class="pt13 p2 m2 text-semibold bg-light-blue centre">Examiners reports</div>
+            <div class="mt1 pt11">Combined examiners grade: {{ report_grade|round(precision=0) }}%</div>
         </div>
         {% for number, fb in marker_feedback.items() %}
             {{ format_feedback('Examiner #' + number|string, fb) }}

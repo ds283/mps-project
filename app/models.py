@@ -11105,36 +11105,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     marker_id = db.Column(db.Integer(), db.ForeignKey("faculty_data.id"), default=None)
     marker = db.relationship("FacultyData", foreign_keys=[marker_id], uselist=False, backref=db.backref("marking_records", lazy="dynamic"))
 
-    # marking email sent to supervisor?
-    email_to_supervisor = db.Column(db.Boolean(), default=False)
-
-    # marking email sent to marker?
-    email_to_marker = db.Column(db.Boolean(), default=False)
-
-    # supervisor positive feedback
-    supervisor_positive = db.Column(db.Text())
-
-    # supervisor negative feedback
-    supervisor_negative = db.Column(db.Text())
-
-    # supervisor submitted?
-    supervisor_submitted = db.Column(db.Boolean())
-
-    # supervisor submission datestamp
-    supervisor_timestamp = db.Column(db.DateTime())
-
-    # marker positive feedback
-    marker_positive = db.Column(db.Text())
-
-    # marker negative feedback
-    marker_negative = db.Column(db.Text())
-
-    # marker submitted?
-    marker_submitted = db.Column(db.Boolean())
-
-    # marker submission timestamp
-    marker_timestamp = db.Column(db.DateTime())
-
     # faculty acknowledge
     acknowledge_feedback = db.Column(db.Boolean())
 

@@ -114,6 +114,8 @@ from ..models import (
     LiveProjectAlternative,
     ProjectAlternative,
     FeedbackRecipe,
+    FeedbackReport,
+    GeneratedAsset,
 )
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.asset_tools import AssetUploadManager
@@ -2334,6 +2336,55 @@ def enrol_submitter(sid, configid):
     return redirect(redirect_url())
 
 
+@convenor.route("/remove_feedback_report/<int:rec_id>")
+@roles_accepted("faculty", "admin", "root")
+def remove_feedback_report(rec_id):
+    """
+    Manually remove feedback reports from a SubmissionRecord
+    :param sid:
+    :return:
+    """
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(rec_id)
+
+    sub: SubmittingStudent = record.owner
+    config: ProjectClassConfig = sub.config
+    pclass: ProjectClass = config.project_class
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    expiry_date = datetime.now() + timedelta(days=30)
+
+    try:
+        for report in record.feedback_reports:
+            report: FeedbackReport
+            asset: GeneratedAsset = report.asset
+
+            asset.expiry = expiry_date
+            record.feedback_reports.remove(report)
+            db.session.delete(report)
+
+        record.feedback_generated = False
+        record.feedback_generated_id = None
+        record.feedback_generated_timestamp = None
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash(
+            'Could not remove feedback reports for this submitter due to a database error ("{n}"). Please contact a system administrator.'.format(
+                n=e
+            ),
+            "error",
+        )
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(url)
+
+
 @convenor.route("/delete_submitter/<int:sid>")
 @roles_accepted("faculty", "admin", "root")
 def delete_submitter(sid):
@@ -2400,7 +2451,7 @@ def do_delete_submitter(sid):
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash('Could not delete submitter due to a database error ("{n}"). Please contact a system ' "administrator.".format(n=e), "error")
+        flash('Could not delete submitter due to a database error ("{n}"). Please contact a system administrator.'.format(n=e), "error")
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)

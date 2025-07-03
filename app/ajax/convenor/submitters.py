@@ -141,9 +141,9 @@ _periods = """
                 {% if show_period %}<div class="small text-muted"><em><strong>{{ period.display_name }}</strong></em></div>{% endif %}
                 {% if sub.published %}
                     <div class="dropdown assignment-label">
-                        <a class="badge text-decoration-none {% if r.student_engaged %}bg-success text-nohover-light{% else %}bg-warning text-nohover-dark{% endif %} btn-table-block dropdown-toggle"
+                        <a class="small text-decoration-none {% if r.student_engaged %}text-success{% else %}text-secondary{% endif %} dropdown-toggle"
                             href="" role="button" aria-haspopup="true" aria-expanded="false"
-                            data-bs-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Waiting{% endif %}</a>
+                            data-bs-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Not started{% endif %}</a>
                         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                             {% if r.submission_period > config.submission_period %}
                                 <a class="dropdown-item d-flex gap-2 disabled">Submission period not yet open</a>
@@ -154,17 +154,23 @@ _periods = """
                             {% else %}
                                 {% set disabled = (config.submitter_lifecycle >= config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
                                 <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.mark_waiting', id=r.id) }}"{% endif %}>
-                                    <i class="fas fa-times fa-fw"></i> Mark as waiting
+                                    <i class="fas fa-times fa-fw"></i> Mark as not started
                                 </a>
                             {% endif %}
                         </div>
                     </div>
                     {% if r.report is not none %}
-                        <div class="badge bg-success"><i class="fas fa-check"></i> Report</div>
+                        <div class="text-success small"><i class="fas fa-check-circle"></i> Report uploaded</div>
                     {% endif %}
                     {% set number_attachments = r.number_attachments %}
                     {% if number_attachments > 0 %}
-                        <div class="badge bg-success"><i class="fas fa-check"></i> Attachments ({{ number_attachments }})</div>
+                        <div class="text-secondary small"><i class="fas fa-file"></i> {{ number_attachments }} attachments</div>
+                    {% endif %}
+                    {% if r.feedback_generated %}
+                        <div class="d-flex flex-row justify-content-start align-items-start gap-2">
+                            <div class="text-success small"><i class="fas fa-check-circle"></i> Feedback report generated</div>
+                            <a class="text-danger small" href="{{ url_for('convenor.remove_feedback_report', rec_id=r.id) }}">Remove</a>
+                        </div>
                     {% endif %}
                     {% if r.report is none and period.canvas_enabled and not period.closed and r.canvas_submission_available is true %}
                         <a class="link-success text-decoration-none small" href="{{ url_for('documents.pull_report_from_canvas', rid=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}">Pull report from Canvas...</a>

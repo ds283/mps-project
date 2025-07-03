@@ -514,8 +514,7 @@ def register_push_feedback_tasks(celery):
                             push_supervisor += result["push_supervisor"]
                         if "ignored" in result:
                             ignored += result["ignored"]
-                            if "source" in result:
-                                print('!! notify_feedback_push: notified that a push was ignored with source: "{result["source"]}"')
+                            print(f'!! notify_feedback_push: notified that a push was ignored: "{result}"')
                         if "error" in result:
                             error += result["error"]
                     else:

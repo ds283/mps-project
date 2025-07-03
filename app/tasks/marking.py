@@ -878,7 +878,7 @@ def register_marking_tasks(celery):
                 supervisor_feedback[person.name] = feedback
 
         marker_feedback = {}
-        count = 0
+        count = 1
         for role in record.marker_roles:
             role: SubmissionRole
             person: User = role.user

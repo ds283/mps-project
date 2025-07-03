@@ -24,7 +24,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from weasyprint import HTML
 
 import app.shared.cloud_object_store.bucket_types as buckets
-
 from .shared.utils import report_error, report_info, attach_asset_to_email_msg
 from ..database import db
 from ..models import (
@@ -798,6 +797,10 @@ def register_marking_tasks(celery):
 
         # if a feedback report has already been generated, do nothing
         if record.feedback_generated:
+            return {"ignored": 1}
+
+        # if this SubmissionRecord does not have feedback ready to go, do nothing
+        if not record.has_feedback:
             return {"ignored": 1}
 
         sub: SubmittingStudent = record.owner

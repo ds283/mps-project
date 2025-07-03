@@ -2372,6 +2372,8 @@ def remove_feedback_report(rec_id):
         record.feedback_generated = False
         record.feedback_generated_id = None
         record.feedback_generated_timestamp = None
+
+        db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(

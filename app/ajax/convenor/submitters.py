@@ -137,7 +137,7 @@ _periods = """
                     </div>
                 </div>
             </div>
-            <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+            <div class="d-flex flex-row justify-content-start align-items-center gap-4">
                 {% if show_period %}<div class="small text-muted"><em><strong>{{ period.display_name }}</strong></em></div>{% endif %}
                 {% if sub.published %}
                     <div class="dropdown assignment-label">
@@ -169,8 +169,13 @@ _periods = """
                     {% if r.feedback_generated %}
                         <div class="d-flex flex-row justify-content-start align-items-start gap-2">
                             <div class="text-success small"><i class="fas fa-check-circle"></i> Feedback report generated</div>
-                            <a class="text-danger small" href="{{ url_for('convenor.remove_feedback_report', rec_id=r.id) }}">Remove</a>
+                            <a class="text-danger text-decoration-none small" href="{{ url_for('convenor.remove_feedback_report', rec_id=r.id) }}">Remove</a>
                         </div>
+                        {% if r.feedback_sent %}
+                            <div class="text-success small"><i class="fas fa-check-circle"></i> Feedback sent</div>
+                        {% endif %}
+                    {% elif r.has_feedback %}
+                        <div class="text-secondary small"><i class="fas fa-check-circle"></i> Feedback ready</div>
                     {% endif %}
                     {% if r.report is none and period.canvas_enabled and not period.closed and r.canvas_submission_available is true %}
                         <a class="link-success text-decoration-none small" href="{{ url_for('documents.pull_report_from_canvas', rid=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}">Pull report from Canvas...</a>

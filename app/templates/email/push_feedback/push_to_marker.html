@@ -17,7 +17,9 @@
 <p>The students included are:</p>
 <ul>
 {% for submitter in submitters %}
-    <li><strong>{{ submitter.owner.student.user.name }}</strong> &mdash; {{ submitter.project.name }}</li>
+    <li><strong>{{ submitter.owner.student.user.name }}</strong> &mdash; {{ submitter.project.name }}
+        {% if not submitter.project.generic and submitter.project.owner is not none %}(owner
+            {{ submitter.project.owner.user.name }}){% endif %}</li>
 {% endfor -%}
 </ul>
 

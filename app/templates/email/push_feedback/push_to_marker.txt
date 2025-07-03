@@ -20,7 +20,7 @@ These documents are for:
 
 The students included are:
 {% for submitter in submitters %}
-- {{ submitter.owner.student.user.name }} - {{ submitter.project.name }}
+- {{ submitter.owner.student.user.name }} - {{ submitter.project.name }} {% if not submitter.project.generic and submitter.project.owner is not none %}(owner {{ submitter.project.owner.user.name }}){% endif %}
 {% endfor %}
 
 If you have questions, please contact the project convenor using the

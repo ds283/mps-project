@@ -20,40 +20,44 @@
             {% endif %}
 
             {% if record.period.collect_project_feedback %}
-                {% if record.period.config.uses_supervisor %}
-                    {% if record.supervisor_submitted %}
+                {% if record.period.config.uses_supervisor_feedback %}
+                    {% for role in record.supervision_roles %}
+                    {% if role.submitted_feedback %}
                         <div class="card mt-3 mb-3">
-                            <div class="card-header">Feedback from your supervisor on the project and marked report</div>
+                            <div class="card-header">Feedback from <strong>{{ role.user.name }}</strong></div>
                             <div class="card-body">
-                                <span class="dashboard-subtitle">Positive aspects</span>
-                                {{ record.supervisor_positive|latextomarkdown|markdown|bclean|blinkify|safe }}
+                                <span class="dashboard-subtitle">What was good?</span>
+                                {{ record.positive_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
                                 <hr class="intro-divider">
-                                <span class="dashboard-subtitle">Negative aspects</span>
-                                {{ record.supervisor_negative|latextomarkdown|markdown|bclean|blinkify|safe }}
+                                <span class="dashboard-subtitle">Things to consider for next time</span>
+                                {{ record.improvement_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
                             </div>
                         </div>
+                    {% endif %}
                     {% else %}
                         <div class="card mt-3 mb-3 card-body bg-well">
-                            Feedback has not yet been recorded from the project supervisor.
+                            Feedback has not yet been recorded from the supervision team.
                         </div>
                     {% endif %}
                 {% endif %}
 
-                {% if record.uses_marker_feedback %}
-                    {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
-                        <div class="card mt-3 mb-3">
-                            <div class="card-header">Feedback from the project marker on your report</div>
-                            <div class="card-body">
-                                <span class="dashboard-subtitle">Positive aspects</span>
-                                {{ record.marker_positive|latextomarkdown|markdown|bclean|blinkify|safe }}
-                                <hr class="intro-divider">
-                                <span class="dashboard-subtitle">Negative aspects</span>
-                                {{ record.marker_negative|latextomarkdown|markdown|bclean|blinkify|safe }}
-                            </div>
+            {% if record.uses_marker_feedback and preview %}
+                {% for role in record.marker_roles %}
+                {% if role.submitted_feedback %}
+                    <div class="card mt-3 mb-3">
+                        <div class="card-header">Feedback from the project marker on your report</div>
+                        <div class="card-body">
+                            <span class="dashboard-subtitle">What was good?</span>
+                            {{ record.positive_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
+                            <hr class="intro-divider">
+                            <span class="dashboard-subtitle">Things to consider for next time</span>
+                            {{ record.improvement_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
                         </div>
+                    </div>
+                {% endif %}
                     {% else %}
                         <div class="card mt-3 mb-3 card-body bg-well">
-                            Feedback has not yet been recorded from the project marker.
+                            Feedback has not yet been recorded from the project examiners.
                         </div>
                     {% endif %}
                 {% endif %}
@@ -74,10 +78,10 @@
                                 Presentation assessment feedback from <strong>{{ feedback.assessor.user.name }}</strong>
                             </div>
                             <div class="card-body">
-                                <span class="dashboard-subtitle">Positive aspects</span>
+                                <span class="dashboard-subtitle">What was good?</span>
                                 {{ feedback.positive|latextomarkdown|markdown|bclean|blinkify|safe }}
                                 <hr class="intro-divider">
-                                <span class="dashboard-subtitle">Negative aspects</span>
+                                <span class="dashboard-subtitle">Things to consider for next time</span>
                                 {{ feedback.negative|latextomarkdown|markdown|bclean|blinkify|safe }}
                             </div>
                         </div>

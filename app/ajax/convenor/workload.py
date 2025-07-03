@@ -110,22 +110,6 @@ _supervising = """
 
 # language=jinja2
 _assessing = """
-{% macro feedback_state_tag(obj, state, label) %}
-    {% if state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="badge bg-secondary">{{ label }} not yet required</span> #}
-    {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="badge bg-info">{{ label }} to do</span>
-    {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <span class="badge bg-success">{{ label }} submitted</span>        
-    {% elif state == obj.FEEDBACK_ENTERED %}
-        <span class="badge bg-warning text-dark">{{ label }} in progress</span>        
-    {% elif state == obj.FEEDBACK_LATE %}
-        <span class="badge bg-danger">{{ label }} late</span>
-    {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
-    {% else %}
-        <span class="badge bg-danger">{{ label }} error &ndash; unknown state</span>
-    {% endif %}        
-{% endmacro %}
 {% macro marker_tag(r, show_period) %}
     {% set sub = r.owner %}
     {% set config = sub.config %}
@@ -148,7 +132,6 @@ _assessing = """
                 </a>
             </div>
         </div>
-        {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}
     </div>
 {% endmacro %}
 {% if recs|length >= 1 %}

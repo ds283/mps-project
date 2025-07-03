@@ -6899,15 +6899,51 @@ class SubmissionPeriodRecord(db.Model):
 
     @property
     def number_submitters_not_pushed(self):
-        return sum([1 if x.has_feedback and not x.feedback_sent else 0 for x in self.submissions.all()])
+        count = 0
+        for record in self.submissions:
+            record: SubmissionRecord
+
+            if record.has_feedback:
+                if not record.feedback_sent:
+                    count += 1
+                    continue
+
+                role_available = 0
+                for role in record.roles:
+                    role: SubmissionRole
+
+                    if role.role in [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR, SubmissionRole.ROLE_MARKER]:
+                        if role.submitted_feedback and not role.feedback_sent:
+                            role_available = 1
+                            break
+
+                if role_available > 0:
+                    count += 1
+                    continue
+
+        return count
+
+    def _number_submitters_with_role_feedback(self, allowed_roles):
+        count = 0
+        for record in self.submissions:
+            record: SubmissionRecord
+
+            for role in record.roles:
+                role: SubmissionRole
+
+                if role.role in allowed_roles and role.submitted_feedback:
+                    count += 1
+                    break
+
+        return count
 
     @property
     def number_submitters_supervisor_feedback(self):
-        return get_count(self.submissions.filter_by(supervisor_submitted=True))
+        return self._number_submitters_with_role_feedback([SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR])
 
     @property
     def number_submitters_marker_feedback(self):
-        return get_count(self.submissions.filter_by(marker_submitted=True))
+        return self._number_submitters_with_role_feedback([SubmissionRole.ROLE_MARKER])
 
     @property
     def number_submitters_presentation_feedback(self):
@@ -11312,25 +11348,42 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         """
         return self.get_role_user("supervisor", user)
 
-    @property
-    def is_supervisor_valid(self):
-        if self.supervisor_positive is None or len(self.supervisor_positive) == 0:
-            return False
+    def _role_feedback_valid(self, roles: List[SubmissionRole]):
+        for role in roles:
+            role: SubmissionRole
 
-        if self.supervisor_negative is None or len(self.supervisor_negative) == 0:
-            return False
+            if role.positive_feedback is None or len(role.positive_feedback) == 0:
+                return False
+
+            if role.improvements_feedback is None or len(role.improvements_feedback) == 0:
+                return False
+
+        return True
+
+    def _role_feedback_submitted(self, roles: List[SubmissionRole]):
+        for role in roles:
+            role: SubmissionRole
+
+            if not role.submitted_feedback:
+                return False
 
         return True
 
     @property
-    def is_marker_valid(self):
-        if self.marker_positive is None or len(self.marker_positive) == 0:
-            return False
+    def is_supervisor_feedback_valid(self):
+        return self._role_feedback_valid(self.supervisor_roles)
 
-        if self.marker_negative is None or len(self.marker_negative) == 0:
-            return False
+    @property
+    def is_marker_feedback_valid(self):
+        return self._role_feedback_valid(self.marker_roles)
 
-        return True
+    @property
+    def is_supervisor_feedback_submitted(self):
+        return self._role_feedback_submitted(self.supervisor_roles)
+
+    @property
+    def is_marker_feedback_submitted(self):
+        return self._role_feedback_submitted(self.marker_roles)
 
     def is_presentation_assessor_valid(self, fac):
         # find ScheduleSlot to check that current user is actually required to submit feedback
@@ -11393,7 +11446,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     @property
     def is_feedback_valid(self):
-        return self.is_supervisor_valid or self.is_marker_valid
+        return self.is_supervisor_feedback_valid or self.is_marker_feedback_valid
 
     def _feedback_state(self, valid, submitted):
         period = self.period
@@ -11432,14 +11485,14 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         if not self.uses_supervisor_feedback:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
-        return self._feedback_state(self.is_supervisor_valid, self.supervisor_submitted)
+        return self._feedback_state(self.is_supervisor_feedback_valid, self.is_supervisor_feedback_submitted)
 
     @property
     def marker_feedback_state(self):
         if not self.uses_marker_feedback:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
-        return self._feedback_state(self.is_marker_valid, self.marker_submitted)
+        return self._feedback_state(self.is_marker_feedback_valid, self.is_marker_feedback_submitted)
 
     @property
     def presentation_feedback_late(self):
@@ -11515,7 +11568,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                     return True
 
         if self.period.collect_project_feedback:
-            return self.supervisor_submitted or self.marker_submitted
+            allowed_roles = [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR, SubmissionRole.ROLE_MARKER]
+            return any(role.feedback_submitted for role in self.roles if role.role in allowed_roles)
 
         return False
 
@@ -11525,6 +11579,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         Determines whether feedback should be offered to the student
         :return:
         """
+
+        # is there any presentation feedback available?
         if self.period.has_presentation and self.period.collect_presentation_feedback:
             slot = self.schedule_slot
 
@@ -11543,7 +11599,12 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                     if feedback.submitted:
                         return True
 
-        return self.period.collect_project_feedback and self.period.closed and (self.supervisor_submitted or self.marker_submitted)
+        # otherwise, is there any feedback available from other supervision/marker roles?
+        if self.period.collect_project_feedback and self.period.closed:
+            allowed_roles = [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR, SubmissionRole.ROLE_MARKER]
+            return any(role.feedback_submitted for role in self.roles if role.role in allowed_roles)
+
+        return False
 
     @property
     def number_presentation_feedback(self):

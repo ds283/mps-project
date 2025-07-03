@@ -31,15 +31,15 @@ _access = """
 {% set in_user_acl = asset.in_user_acl(user) %}
 {% set has_role_access = asset.has_role_access(user) %}
 {% if in_user_acl %}
-    <span class="badge bg-success"><i class="fas fa-check"></i> Has individual access</span>
+    <span class="text-success"><i class="fas fa-check-circle"></i> Individual access</span>
 {% elif has_role_access %}
     {% set eligible_roles = asset.get_eligible_roles(user) %}
-    <span class="badge bg-primary"><i class="fas fa-check"></i> Has role-based access</span>
+    <span class="text-primary"><i class="fas fa-check"></i> Role-based access</span>
     {% for role in eligible_roles %}
         {{ simple_label(role.make_label()) }}
     {% endfor %}
 {% else %}
-    <span class="badge bg-danger"><i class="fas fa-times"></i> No access</span>
+    <span class="text-danger"><i class="fas fa-times-circle"></i> No access</span>
 {% endif %}
 """
 

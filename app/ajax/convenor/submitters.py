@@ -137,7 +137,7 @@ _periods = """
                     </div>
                 </div>
             </div>
-            <div class="d-flex flex-row justify-content-start align-items-center gap-4">
+            <div class="d-flex flex-row justify-content-start align-items-center flex-wrap gap-2">
                 {% if show_period %}<div class="small text-muted"><em><strong>{{ period.display_name }}</strong></em></div>{% endif %}
                 {% if sub.published %}
                     <div class="dropdown assignment-label">

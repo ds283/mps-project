@@ -3675,7 +3675,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         if config.uses_moderator:
             moderate = self.moderator_assignments(config_id=config.id)
-            moderate_CATS = [x.moderating_CATS for x in moderate]
+            moderate_CATS = [x.moderation_CATS for x in moderate]
             moderate_total = sum(x for x in moderate_CATS if x is not None)
         else:
             moderate_total = 0

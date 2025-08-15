@@ -1565,17 +1565,19 @@ def _create_PuLP_problem(
                     first=mark_user.first_name, last=mark_user.last_name, sel=sel_user.id, scfg=sel.config_id, cfg=proj.config_id, num=proj.number
                 )
 
-            for idx in base_S.keys():
-                k = idx[0]
-                j = idx[1]
-
-                supv: FacultyData = sup_dict[k]
-                proj: LiveProject = lp_dict[j]
-                user: User = supv.user
-
-                prob += S[idx] == base_S[idx], "_C{first}{last}_SC{scfg}_base_supv_C{cfg}_P{num}".format(
-                    first=user.first_name, last=user.last_name, scfg=sel.config_id, cfg=proj.config_id, num=proj.number
-                )
+            # REMOVE? We don't want to force supervisior multiplicities to match the base configuration, because
+            # that prevents any extra assignments for all supervisors. So this seems misguided.
+            # for idx in base_S.keys():
+            #     k = idx[0]
+            #     j = idx[1]
+            #
+            #     supv: FacultyData = sup_dict[k]
+            #     proj: LiveProject = lp_dict[j]
+            #     user: User = supv.user
+            #
+            #     prob += S[idx] == base_S[idx], "_C{first}{last}_SC{scfg}_base_supv_C{cfg}_P{num}".format(
+            #         first=user.first_name, last=user.last_name, scfg=sel.config_id, cfg=proj.config_id, num=proj.number
+            #     )
 
     print(" -- created marker constraints in time {t}".format(t=mark_timer.interval))
 

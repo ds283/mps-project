@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-    flask_bootstrap
-    ~~~~~~~~~~~~~~
-    :copyright: (c) 2017 by Grey Li.
-    :license: MIT, see LICENSE for more details.
+flask_bootstrap
+~~~~~~~~~~~~~~
+:copyright: (c) 2017 by Grey Li.
+:license: MIT, see LICENSE for more details.
 """
 from flask import current_app, Blueprint, url_for
 from markupsafe import Markup
@@ -22,9 +22,13 @@ else:
 
 
 # central definition of used versions
-VERSION_BOOTSTRAP = "5.2.2"
-VERSION_JQUERY = "3.6.1"
+VERSION_BOOTSTRAP = "5.2.3"
+VERSION_JQUERY = "3.7.1"
 VERSION_POPPER = "2.11.6"
+
+BOOTSTRAP_JS_SHA = "sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+BOOTSTRAP_CSS_SHA = "sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
+POPPER_JS_SHA = "sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3"
 
 
 def get_table_titles(data, primary_key, primary_key_title):
@@ -62,7 +66,6 @@ class Bootstrap(object):
         app.jinja_env.globals["get_table_titles"] = get_table_titles
         app.jinja_env.add_extension("jinja2.ext.do")
         # default settings
-        app.config.setdefault("BOOTSTRAP_SERVE_LOCAL", False)
         app.config.setdefault("BOOTSTRAP_BTN_STYLE", "secondary")
         app.config.setdefault("BOOTSTRAP_BTN_SIZE", "md")
 
@@ -75,15 +78,9 @@ class Bootstrap(object):
         :param version: The version of Bootstrap.
         """
 
-        css_filename = "bootstrap.min.css"
-        serve_local = current_app.config["BOOTSTRAP_SERVE_LOCAL"]
+        bootstrap_css_cdn_filename = "bootstrap.min.css"
 
-        if serve_local:
-            href = url_for("bootstrap.static", filename="css/%s" % css_filename)
-            css = '<link rel="stylesheet" href="%s" type="text/css">' % href
-        else:
-            href = "https://cdn.jsdelivr.net/npm/bootstrap@%s/dist/css/%s" % (version, css_filename)
-            css = '<link rel="stylesheet" href="%s" type="text/css">' % href
+        css = f'<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@{version}/dist/css/{bootstrap_css_cdn_filename}" type="text/css" integrity="{BOOTSTRAP_CSS_SHA}" crossorigin="anonymous">'
         return Markup(css)
 
     @staticmethod
@@ -98,37 +95,20 @@ class Bootstrap(object):
         :param with_jquery: Include jQuery or not.
         :param with_popper: Include Popper.js or not.
         """
-        js_filename = "bootstrap.min.js"
 
-        jquery_local_filename = "jquery-{%s}.min.js" % VERSION_JQUERY
-        popper_local_filename = "popper-{%s}.min.js" % VERSION_POPPER
-
+        bootstrap_js_cdn_filename = "bootstrap.bundle.min.js"
         jquery_cdn_filename = "jquery.min.js"
         popper_cdn_filename = "popper.min.js"
 
-        serve_local = current_app.config["BOOTSTRAP_SERVE_LOCAL"]
-
-        if serve_local:
-            js = '<script src="%s"></script>' % url_for("bootstrap.static", filename="js/" + js_filename)
-        else:
-            js = '<script src="https://cdn.jsdelivr.net/npm/bootstrap@%s/dist/js/%s">' "</script>" % (version, js_filename)
+        js = f'<script src="https://cdn.jsdelivr.net/npm/bootstrap@{version}/dist/js/{bootstrap_js_cdn_filename}" integrity="{BOOTSTRAP_JS_SHA}" crossorigin="anonymous"></script>'
 
         if with_jquery:
-            if serve_local:
-                jquery = '<script src="%s"></script>' % url_for("bootstrap.static", filename=jquery_local_filename)
-            else:
-                jquery = '<script src="https://cdn.jsdelivr.net/npm/jquery@%s/dist/%s">' "</script>" % (jquery_version, jquery_cdn_filename)
+            jquery = f'<script src="https://cdn.jsdelivr.net/npm/jquery@{jquery_version}/dist/{jquery_cdn_filename}"></script>'
         else:
             jquery = ""
 
         if with_popper:
-            if serve_local:
-                popper = '<script src="%s"></script>' % url_for("bootstrap.static", filename=popper_local_filename)
-            else:
-                popper = '<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@%s/dist/umd/%s">' "</script>" % (
-                    popper_version,
-                    popper_cdn_filename,
-                )
+            popper = f'<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@{popper_version}/dist/umd/{popper_cdn_filename}" integrity="{POPPER_JS_SHA}" crossorigin="anonymous"></script>'
         else:
             popper = ""
         return Markup(

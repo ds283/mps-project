@@ -32,7 +32,7 @@
     {% endif %}
     {% if period.collect_project_feedback or (period.has_presentation and period.collect_presentation_feedback) %}
         {% set pushed_ok = pushed > 0 %}
-        {% set not_pushed_ok = not_pushed > 0 %}
+        {% set not_pushed_ok = true if not_pushed > 0 else none %}
         <div class="row gy-3 {{ topclass }}">
             <div class="col">
                 {% call(blk) dashboard_tile("Pushed", title_icon="check-circle", icon_state=pushed_ok) %}
@@ -67,8 +67,8 @@
                 {% endcall %}
             </div>
             {% if period.collect_project_feedback %}
-                {% set supv_ok = supv == total %}
-                {% set mark_ok = mark == total %}
+                {% set supv_ok = true if supv == total else none %}
+                {% set mark_ok = true if mark == total else none %}
                 <div class="col">
                     {% call(blk) dashboard_tile("Supervisors", title_icon="circle", icon_state=supv_ok) %}
                         {% if blk == 'body' %}
@@ -88,7 +88,7 @@
             {% endif %}
             {% if period.has_presentation and period.collect_presentation_feedback %}
                 {% set pres = period.number_submitters_presentation_feedback %}
-                {% set pres_ok = pres == total %}
+                {% set pres_ok = true if pres == total else none %}
                 <div class="col">
                     {% call(blk) dashboard_tile("Presentation", title_icon="circle", icon_state=mark_ok) %}
                         {% if blk == 'body' %}

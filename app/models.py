@@ -12418,6 +12418,11 @@ class CustomOffer(db.Model, EditingMetadataMixin, CustomOfferStatesMixin):
     # status of offer
     status = db.Column(db.Integer(), default=CustomOfferStatesMixin.OFFERED, nullable=False)
 
+    # for specified submission period?
+    # set to None if can be used for any period
+    period_id = db.Column(db.Integer(), db.ForeignKey("period_definitions.id"), default=None, nullable=True)
+    period = db.relationship("SubmissionPeriodDefinition", foreign_keys=[period_id], uselist=False)
+
     # document reason/explanation for offer
     comment = db.Column(db.Text())
 

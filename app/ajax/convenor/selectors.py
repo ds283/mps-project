@@ -145,7 +145,21 @@ _submitted = """
     {% if offers > 0 %}
         <div class="mt-2">
             {% for offer in sel.custom_offers_accepted %}
-                <div class="text-success small"><i class="fas fa-check-circle"></i> <strong>Accepted:</strong> {{ offer.liveproject.name }}</div>
+                <div class="small">
+                    <span class="text-success">
+                        <i class="fas fa-check-circle"></i> <span class="fw-bold">Accepted:</span>
+                    </span>
+                    <span class="text-secondary">
+                        {{ truncate(offer.liveproject.name, length=30) }}
+                    </span>
+                    <div class="text-secondary fw-semibold">
+                        {% if offer.liveproject.generic or offer.liveproject.owner is none %}
+                            (Generic)
+                        {% else %}
+                            ({{ offer.liveproject.owner.user.name }})
+                        {% endif %}
+                    </div>
+                </div>
             {% endfor %}
         </div>
     {% endif %}
@@ -180,10 +194,30 @@ _confirmations = """
 {% if offers > 0 %}
     <div>
         {% for offer in sel.custom_offers_pending %}
-            <div class="text-primary small"><strong>Offer</strong>: {{ offer.liveproject.name }}</div>
+            <div class="small">
+                <span class="text-primary fw-bold">Offer:</span>
+                <span class="text-secondary">{{ offer.liveproject.name }}</span>
+                <div class="text-secondary fw-semibold">
+                    {% if offer.liveproject.generic or offer.liveproject.owner is none %}
+                        (Generic)
+                    {% else %}
+                        ({{ offer.liveproject.owner.user.name }})
+                    {% endif %}
+                </div>
+            </div>
         {% endfor %}
         {% for offer in sel.custom_offers_declined %}
-            <div class="text-danger small"><strong>Declined</strong>: {{ offer.liveproject.name }}</div>
+            <div class="small">
+                <span class="text-danger fw-bold">Declined:</span>
+                <span class="text-secondary">{{ offer.liveproject.name }}</span>
+                <div class="text-secondary fw-semibold">
+                    {% if offer.liveproject.generic or offer.liveproject.owner is none %}
+                        (Generic)
+                    {% else %}
+                        ({{ offer.liveproject.owner.user.name }})
+                    {% endif %}
+                </div>
+            </div>
         {% endfor %}
     </div>
 {% endif %}
@@ -261,6 +295,8 @@ def selectors_data(students: List[SelectingStudent], config: ProjectClassConfig,
     simple_label = get_template_attribute("labels.html", "simple_label")
     error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
 
+    truncate = get_template_attribute("macros.html","truncate")
+
     # build and cache template strings
     name_templ: Template = _build_name_templ()
     cohort_templ: Template = _build_cohort_templ()
@@ -278,7 +314,7 @@ def selectors_data(students: List[SelectingStudent], config: ProjectClassConfig,
             "cohort": {"display": render_template(cohort_templ, sel=s, simple_label=simple_label), "value": s.student.cohort},
             "bookmarks": {"display": render_template(bookmarks_templ, sel=s), "value": s.number_bookmarks},
             "confirmations": {"display": render_template(confirmations_templ, sel=s), "value": s.number_pending + s.number_confirmed},
-            "submitted": render_template(submitted_templ, sel=s, config=config, state=state, is_valid_selection=is_valid_selection),
+            "submitted": render_template(submitted_templ, sel=s, config=config, state=state, is_valid_selection=is_valid_selection, truncate=truncate),
             "menu": render_template(menu_templ, student=s, config=config, state=state, is_admin=is_admin, is_valid_selection=is_valid_selection),
         }
 

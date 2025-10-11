@@ -141,10 +141,10 @@ _submitted = """
             Show <i class="fas fa-chevron-circle-right"></i>
         </a></div>
     {% endif %}
-    {% set offers = sel.number_offers_accepted %}
+    {% set offers = sel.number_offers_accepted() %}
     {% if offers > 0 %}
         <div class="mt-2">
-            {% for offer in sel.custom_offers_accepted %}
+            {% for offer in sel.custom_offers_accepted() %}
                 <div class="small">
                     <span class="text-success">
                         <i class="fas fa-check-circle"></i> <span class="fw-bold">Accepted:</span>
@@ -190,10 +190,10 @@ _confirmations = """
 {% else %}
     <div class="text-secondary"><i class="fas fa-times-circle"></i> None</div>
 {% endif %}
-{% set offers = sel.number_offers_pending + sel.number_offers_declined %}
+{% set offers = sel.number_offers_pending() + sel.number_offers_declined() %}
 {% if offers > 0 %}
     <div>
-        {% for offer in sel.custom_offers_pending %}
+        {% for offer in sel.custom_offers_pending() %}
             <div class="small">
                 <span class="text-primary fw-bold">Offer:</span>
                 <span class="text-secondary">{{ offer.liveproject.name }}</span>
@@ -206,7 +206,7 @@ _confirmations = """
                 </div>
             </div>
         {% endfor %}
-        {% for offer in sel.custom_offers_declined %}
+        {% for offer in sel.custom_offers_declined() %}
             <div class="small">
                 <span class="text-danger fw-bold">Declined:</span>
                 <span class="text-secondary">{{ offer.liveproject.name }}</span>

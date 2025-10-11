@@ -1138,7 +1138,7 @@ def _build_selector_data(config, cohort_filter, prog_filter, state_filter, conve
     elif state_filter == "confirmations":
         data = [rec for rec in selectors.all() if rec.number_pending > 0]
     elif state_filter == "custom":
-        data = [rec for rec in selectors.all() if rec.number_custom_offers > 0]
+        data = [rec for rec in selectors.all() if rec.number_custom_offers() > 0]
     else:
         data = selectors.all()
 
@@ -8117,16 +8117,29 @@ def edit_custom_offer(offer_id):
 @roles_accepted("faculty", "admin", "root")
 def accept_custom_offer(offer_id):
     # offer_id is a CustomOffer
-    offer = CustomOffer.query.get_or_404(offer_id)
+    offer: CustomOffer = CustomOffer.query.get_or_404(offer_id)
+    proj: LiveProject = offer.liveproject
+    sel: SelectingStudent = offer.selector
+    config: ProjectClassConfig = sel.config
+    pclass: ProjectClass = config.project_class
 
     # reject user if not a convenor for this project class
-    if not validate_is_convenor(offer.liveproject.config.project_class):
+    if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if offer.selector.number_offers_accepted > 0:
+    if sel.number_offers_accepted() >= sel.number_choices:
         flash(
-            "A custom offer has already been accepted for selector {name}. "
+            "The maximum number of custom offers have already been accepted for selector {name}. "
             "Please decline this offer before accepting a new one.".format(name=offer.selector.student.user.name),
+            "error",
+        )
+        return redirect(redirect_url())
+
+    if offer.period is not None and sel.number_offers_accepted(offer.period) > 0:
+        flash(
+            f"A custom offer has already been accepted for selector {offer.selector.student.user.name} "
+            f"in period {offer.period.display_name(config.year+1)}. "
+            f"Please decline this offer before accepting a new one.",
             "error",
         )
         return redirect(redirect_url())
@@ -8163,6 +8176,30 @@ def decline_custom_offer(offer_id):
         db.session.commit()
     except SQLAlchemyError as e:
         flash("Could not mark custom offer as declined due to a database error. Please contact a system administrator.", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/undecide_custom_offer/<int:offer_id>")
+@roles_accepted("faculty", "admin", "root")
+def undecide_custom_offer(offer_id):
+    # offer_id is a CustomOffer
+    offer = CustomOffer.query.get_or_404(offer_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(offer.liveproject.config.project_class):
+        return redirect(redirect_url())
+
+    offer.status = CustomOffer.OFFERED
+    offer.last_edit_timestamp = datetime.now()
+    offer.last_edit_id = current_user.id
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash("Could not mark custom offer as pending due to a database error. Please contact a system administrator.", "error")
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 

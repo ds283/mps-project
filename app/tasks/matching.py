@@ -14,6 +14,7 @@ from datetime import datetime
 from io import BytesIO
 from os import path
 from pathlib import Path
+from typing import List
 from uuid import uuid4
 
 import pulp
@@ -711,18 +712,19 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
 
         # if this selector has accepted an offer, we want to force assignment to that offer
         # so we include only the accepted offer in the ranking matrix
-        if sel.has_accepted_offer:
-            offer: CustomOffer = sel.accepted_offer
-            project: Project = offer.liveproject
+        if sel.has_accepted_offers():
+            offers: List[CustomOffer] = sel.accepted_offers()
+            for offer in offers:
+                project: Project = offer.liveproject
 
-            if project.id in lp_to_number:
-                ranks[project.id] = 1
-                require.add(project.id)
-            else:
-                raise RuntimeError(
-                    'Could not assign custom offer to selector "{name}" because target LiveProject '
-                    "does not exist".format(name=sel.student.user.name)
-                )
+                if project.id in lp_to_number:
+                    ranks[project.id] = 1
+                    require.add(project.id)
+                else:
+                    raise RuntimeError(
+                        'Could not assign custom offer to selector "{name}" because target LiveProject '
+                        "does not exist".format(name=sel.student.user.name)
+                    )
 
         # otherwise, we want to work through the student's entire submission list, keeping track of the ranks
         elif sel.has_submission_list:

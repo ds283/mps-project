@@ -100,7 +100,8 @@
                             <a href="{{ url_for('student.accept_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-outline-success"><i class="fas fa-check"></i> Accept</a>
                             <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-outline-danger"><i class="fas fa-times"></i> Decline</a>
                         {% elif status == offer.ACCEPTED %}
-                            <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i> Deselect</a>
+                            <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}"
+                               class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i> Decline</a>
                         {% elif status == offer.DECLINED %}
                             <a href="{{ url_for('student.accept_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-outline-success"><i class="fas fa-check"></i> Accept</a>
                         {% endif %}

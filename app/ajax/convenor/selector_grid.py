@@ -24,13 +24,15 @@ _cohort = """
 # language=jinja2
 _selections = """
 {% if sel.has_submitted %}
-    {% if sel.has_accepted_offer %}
-        {% set offer = sel.accepted_offer %}
-        {% set project = offer.liveproject %}
-        {% if project %}
-            <span class="text-success small"><i class="fas fa-check-circle"></i> <strong>Accepted:</strong> {{ project.name }} ({{ project.owner.user.last_name }})</span>
-        {% else %}
-            <span class="text-danger small"><strong>MISSING ACCEPTED PROJECT</strong></span>
+    {% if sel.has_accepted_offers() %}
+        {% set offers = sel.accepted_offers() %}
+        {% for offer in offers %}
+            {% set project = offer.liveproject %}
+            {% if project %}
+                <span class="small"><span class="text-success"><i class="fas fa-check-circle"></i> <span class="fw-bold">Accepted:</span></span> <span class="text-secondary">{{ project.name }} ({{ project.owner.user.last_name }})</span></span>
+            {% else %}
+                <span class="text-danger small"><strong>MISSING ACCEPTED PROJECT</strong></span>
+            {% endif %}
         {% endif %}
     {% else %}
         {% for item in sel.ordered_selections %}
@@ -156,8 +158,8 @@ def selector_grid_data(students: List[SelectingStudent], config: ProjectClassCon
             return 0
 
         # group 'accepted offer' students together at the top
-        if sel.has_accepted_offer:
-            return 100
+        if sel.has_accepted_offers():
+            return 100 + len(sel.accepted_offers())
 
         if sel.has_submission_list:
             return sel.number_selections

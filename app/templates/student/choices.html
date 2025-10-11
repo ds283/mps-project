@@ -18,13 +18,15 @@
                 </div>
                 <div class="card-body">
                     {% if sel.has_submitted %}
-                        {% if sel.has_accepted_offer %}
-                            {% set offer = sel.accepted_offer %}
+                        {% if sel.has_accepted_offers() %}
+                            {% set offers = sel.accepted_offers() %}
+                            {% for offer in offers %}
                             {% set project = offer.liveproject %}
                             {% if project is not none %}
                                 <div>
                                     You have accepted a custom offer for
-                                    <a class="text-decoration-none" href="{{ url_for('student.selector_view_project', sid=sel.id, pid=offer.liveproject.id, url=url_for('student.view_selection', sid=sel.id), text='submitted project selection') }}">
+                                    <a class="text-decoration-none"
+                                       href="{{ url_for('student.selector_view_project', sid=sel.id, pid=offer.liveproject.id, url=url_for('student.view_selection', sid=sel.id), text='submitted project selection') }}">
                                         <strong>{{ project.name }}</strong>
                                     </a>
                                     <i class="fas fa-user-circle"></i> {{ project.owner.user.name }}
@@ -34,6 +36,7 @@
                                     We have detected an issue with your selection.
                                     Please contact the project convenor.
                                 </div>
+                            {% endif %}
                             {% endif %}
                         {% else %}
                             <div class="alert alert-info mt-3 mb-3">

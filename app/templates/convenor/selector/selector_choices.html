@@ -63,8 +63,9 @@
                         </div>
                     {% endif %}
                     {% if sel.has_submitted %}
-                        {% if sel.has_accepted_offer %}
-                            {% set offer = sel.accepted_offer %}
+                        {% if sel.has_accepted_offers() %}
+                            {% set offers = sel.accepted_offers() %}
+                            {% for offer in offers %}
                             {% set project = offer.liveproject %}
                             {% if project is not none %}
                                 <div>
@@ -77,6 +78,7 @@
                             {% else %}
                                 <span class="badge bg-danger">MISSING ACCEPTED PROJECT</span>
                                 <p>This is an internal error. Please contact a system administrator.</p>
+                            {% endif %}
                             {% endif %}
                         {% else %}
                             <div class="card mt-3 mb-3 card-body bg-well">

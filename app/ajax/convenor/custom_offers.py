@@ -125,9 +125,15 @@ _menu = """
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.accept_custom_offer', offer_id=offer.id) }}">
                 <i class="fas fa-check fa-fw"></i> Accept
             </a>
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.undecide_custom_offer', offer_id=offer.id) }}">
+                <i class="fas fa-history"></i> Make pending
+            </a>
         {% elif status == offer.ACCEPTED %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.decline_custom_offer', offer_id=offer.id) }}">
                 <i class="fas fa-check fa-fw"></i> Decline
+            </a>
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.undecide_custom_offer', offer_id=offer.id) }}">
+                <i class="fas fa-history"></i> Make pending
             </a>
         {% endif %}        
         
@@ -144,11 +150,11 @@ _menu = """
 
 # language=jinja2
 _selector_offers = """
-{% set accepted = record.custom_offers_accepted %}
+{% set accepted = record.custom_offers_accepted() %}
 {% set num_accepted = accepted|length %}
-{% set pending = record.custom_offers_pending %}
+{% set pending = record.custom_offers_pending() %}
 {% set num_pending = pending|length %}
-{% set declined = record.custom_offers_declined %}
+{% set declined = record.custom_offers_declined() %}
 {% set num_declined = declined|length %}
 {% if num_accepted > 0 %}
     <div>
@@ -169,7 +175,7 @@ _selector_offers = """
 {% if num_declined > 0 %}
     <div>
         <span class="text-danger"><i class="fas fa-time-circle"></i> <span class="fw-semibold">Declined:</span></span>
-        {% for offer in record.custom_offers_declined %}
+        {% for offer in record.custom_offers_declined() %}
             <span class="text-secondary">{{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</span>
         {% endfor %}
     </div>
@@ -179,11 +185,11 @@ _selector_offers = """
 
 # language=jinja2
 _project_offers = """
-{% set accepted = record.custom_offers_accepted %}
+{% set accepted = record.custom_offers_accepted() %}
 {% set num_accepted = accepted|length %}
-{% set pending = record.custom_offers_pending %}
+{% set pending = record.custom_offers_pending() %}
 {% set num_pending = pending|length %}
-{% set declined = record.custom_offers_declined %}
+{% set declined = record.custom_offers_declined() %}
 {% set num_declined = declined|length %}
 {% if num_accepted > 0 %}
     <div>
@@ -204,7 +210,7 @@ _project_offers = """
 {% if num_declined > 0 %}
     <div>
         <span class="text-danger"><i class="fas fa-time-circle"></i> <span class="fw-semibold">Declined:</span></span>
-        {% for offer in record.custom_offers_declined %}
+        {% for offer in record.custom_offers_declined() %}
             <span class="text-secondary">{{ offer.selector.student.user.name }}</span>
         {% endfor %}
     </div>

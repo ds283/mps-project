@@ -96,10 +96,10 @@ _selections = """
         <div class="text-secondary"><i class="fas fa-ban"></i> None</div>
     {% endif %}
 </div>
-{% set offers = project.number_offers_accepted %}
+{% set offers = project.number_offers_accepted() %}
 {% if offers > 0 %}
     <div class="mt-2">
-        {% for offer in project.custom_offers_accepted %}
+        {% for offer in project.custom_offers_accepted() %}
             <div class="text-success small"><span class="fw-semibold"><i class="fas fa-check-circle"></i> Accepted:</span> {{ offer.selector.student.user.name }}</div>
         {% endfor %}
     </div>
@@ -121,13 +121,13 @@ _confirmations = """
         <div class="text-secondary"><i class="fas fa-ban"></i> None</div>
     {% endif %}
 </div>
-{% set offers = project.number_offers_pending + project.number_offers_declined %}
+{% set offers = project.number_offers_pending() + project.number_offers_declined() %}
 {% if offers > 0 %}
     <div class="mt-2">
-        {% for offer in project.custom_offers_pending %}
+        {% for offer in project.custom_offers_pending() %}
             <div class="text-primary small"><span class="fw-semibold">Offer:</span> {{ offer.selector.student.user.name }}</div>
         {% endfor %}
-        {% for offer in project.custom_offers_declined %}
+        {% for offer in project.custom_offers_declined() %}
             <div class="text-secondary small"><span class="fw-semibold">Declined:</span> {{ offer.selector.student.user.name }}</div>
         {% endfor %}
     </div>

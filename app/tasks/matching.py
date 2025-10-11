@@ -1348,7 +1348,7 @@ def _create_PuLP_problem(
 
                 # enforce maximum capacity for each project; each supervisor should have no more assignments than
                 # the specified project capacity
-                print(f"Supervisor: {user.first_name} {user.last_name}, config_id = {proj.config_id}, project number = {proj.number}")
+                # print(f"Supervisor: {user.first_name} {user.last_name}, config_id = {proj.config_id}, project number = {proj.number}")
                 prob += S[(k, j)] <= capacity[j] * P[(k, j)], "_CS{first}{last}_C{cfg}_P{num}_supv_capacity".format(
                     first=user.first_name, last=user.last_name, cfg=proj.config_id, num=proj.number
                 )
@@ -1929,37 +1929,6 @@ def _store_PuLP_solution(
         config: ProjectClassConfig = sel.config
         pclass: ProjectClass = config.project_class
 
-        periods = {}
-
-        # if selection occurs in previous cycle, uses period definitions from parent ProjectClass
-        if config.select_in_previous_cycle:
-            uses_supervisor = pclass.uses_supervisor
-            uses_marker = pclass.uses_marker
-
-            for pd in pclass.periods:
-                pd: SubmissionPeriodDefinition
-                periods[pd.period] = pd.number_markers
-
-        # otherwise, use current definitions from ProjectClassConfig
-        else:
-            uses_supervisor = config.uses_supervisor
-            uses_marker = config.uses_marker
-
-            for pd in config.periods:
-                pd: SubmissionPeriodRecord
-                periods[pd.submission_period] = pd.number_markers
-
-        if len(periods) != multiplicity[i]:
-            raise RuntimeError("Number of submission periods does not match expected selector multiplicity")
-
-        custom_offers_per_period = {}
-        if sel.has_accepted_offers() > 0:
-            for pd in periods:
-                offers: List[CustomOffer] = sel.accepted_offers(pd)
-
-                if len(offers) > 0:
-                    custom_offers_per_period[pd] = offers
-
         # generate list of project assignments for this selector
         assigned = []
 
@@ -1970,6 +1939,58 @@ def _store_PuLP_solution(
 
         if len(assigned) != multiplicity[i]:
             raise RuntimeError("Number of selector assignments in PuLP solution does not match expected selector multiplicity")
+
+        print(f">> Storing assigned values for selector = {sel.student.user.name}")
+        print(f">>   Assigned projects = {assigned}")
+
+        custom_offers_per_period = {}
+        markers_per_period = {}
+
+        has_custom_offers = sel.has_accepted_offers()
+
+        # if selection occurs in previous cycle, uses period definitions from parent ProjectClass
+        if config.select_in_previous_cycle:
+            uses_supervisor = pclass.uses_supervisor
+            uses_marker = pclass.uses_marker
+
+            for pd in pclass.periods:
+                pd: SubmissionPeriodDefinition
+                markers_per_period[pd.period] = pd.number_markers
+
+                if has_custom_offers:
+                    offers: List[CustomOffer] = sel.accepted_offers(pd).all()
+                    num_offers = len(offers)
+
+                    if num_offers > 0:
+                        custom_offers_per_period[pd.period] = offers
+                        print(f">>   -- Found {num_offers} custom offers for period #{pd.period}")
+                    else:
+                        print(f">>   -- Found no custom offers for period #{pd.period}")
+
+        # otherwise, use current definitions from ProjectClassConfig
+        else:
+            uses_supervisor = config.uses_supervisor
+            uses_marker = config.uses_marker
+
+            for pd in config.periods:
+                pd: SubmissionPeriodRecord
+                markers_per_period[pd.submission_period] = pd.number_markers
+
+                if has_custom_offers:
+                    offers: List[CustomOffer] = sel.accepted_offers(pd.submission_period).all()
+                    num_offers = len(offers)
+
+                    if num_offers > 0:
+                        custom_offers_per_period[pd.submission_period] = offers
+                        print(f">>   -- Found {num_offers} custom offers for period #{pd.submission_period}")
+                    else:
+                        print(f">>   -- Found no custom offers for period #{pd.submission_period}")
+
+        if len(markers_per_period) != multiplicity[i]:
+            raise RuntimeError("Number of submission periods does not match expected selector multiplicity")
+
+        print(f">>   Markers per period = {markers_per_period.items()}")
+        print(f">>   Custom offers per period = {custom_offers_per_period.items()}")
 
         while len(assigned) > 0:
             # pop a project assignment from the back of the stack
@@ -1983,6 +2004,8 @@ def _store_PuLP_solution(
             if proj_id != project.id:
                 raise RuntimeError("Inconsistent project lookup when storing PuLP solution")
 
+            print(f">>   Processing assigned project id = #{proj_id}, number = #{proj_number}, '{project.name}'")
+
             # calculate selector's rank of the assigned project
             # (this lets us work out the quality of the fit from the student's perspective)
             rk = sel.project_rank(proj_id)
@@ -1994,26 +2017,38 @@ def _store_PuLP_solution(
                     raise RuntimeError("PuLP solution assigns unranked project to selector")
 
             # DECIDE WHICH SUBMISSION PERIOD TO ASSIGN THIS PROJECT TO
-            if len(periods) == 0:
+            if len(markers_per_period) == 0:
                 raise RuntimeError("Period list is unexpectedly empty when storing PuLP solution")
 
-            period_list = sorted(list(periods))
+            period_list = sorted(list(markers_per_period.keys()))
             this_period = None
+            print(f">>   Assigning from remaining periods = {period_list}")
 
             # test whether there was a custom offer specifically for this period
             for pd, offers in custom_offers_per_period.items():
                 for offer in offers:
                     if offer.liveproject_id == proj_id:
 
+                        print(f">>   Matched custom offer id = #{offer.id} and assigned to period #{pd}")
                         if pd in period_list:
                             this_period = pd
+                            break
                         else:
                             raise RuntimeError("PuLP solution should assign project to a custom offer, but the required period is missing")
 
-            if this_period is None:
-                this_period = period_list[0]
+                if this_period is not None:
+                    break
 
-            markers_needed = periods.pop(this_period)
+            # if there were no custom offers, or none matched, then assign to first available period in order
+            # avoid assigning to periods for which there is a custom offer, because that will create
+            # a conflict
+            if this_period is None:
+                allowed_periods = [n for n in period_list if n not in custom_offers_per_period]
+                this_period = allowed_periods[0]
+                print(f">>   Assigned to vacant period #{this_period}")
+
+            markers_needed = markers_per_period.pop(this_period)
+            custom_offers_per_period.pop(this_period, None)
 
             data = MatchingRecord(
                 matching_id=record.id,

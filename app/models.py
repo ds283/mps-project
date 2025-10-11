@@ -9021,7 +9021,7 @@ class LiveProject(
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers
         if _pd is not None:
-            query = query.filter(CustomOffer.period_id == _pd.period)
+            query = query.filter(CustomOffer.period_id == _pd.id)
         return get_count(query)
 
     @property
@@ -9048,7 +9048,7 @@ class LiveProject(
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.OFFERED)
         if _pd is not None:
-            query = query.filter(CustomOffer.period_id == _pd.period)
+            query = query.filter(CustomOffer.period_id == _pd.id)
 
         query = (
             query.join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
@@ -9068,7 +9068,7 @@ class LiveProject(
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.DECLINED)
         if _pd is not None:
-            query = query.filter(CustomOffer.period_id == _pd.period)
+            query = query.filter(CustomOffer.period_id == _pd.id)
 
         query = (
             query.join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
@@ -9088,7 +9088,7 @@ class LiveProject(
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED)
         if _pd is not None:
-            query = query.filter(CustomOffer.period_id == _pd.period)
+            query = query.filter(CustomOffer.period_id == _pd.id)
 
         query = (
             query.join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
@@ -9710,14 +9710,14 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers
         if _pd is not None:
-            query = query.filter(CustomOffer.period_id == _pd.period)
+            query = query.filter(CustomOffer.period_id == _pd.id)
         return get_count(query)
 
     def _custom_offers_pending_query(self, period: SubmissionPeriodDefinitionLike = None):
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.OFFERED)
         if _pd is not None:
-            query = query.filter(CustomOffer.period_id == _pd.period)
+            query = query.filter(CustomOffer.period_id == _pd.id)
 
         query = (
             query.join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
@@ -9737,7 +9737,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.DECLINED)
         if _pd is not None:
-            query = query.filter(CustomOffer.period_id == _pd.period)
+            query = query.filter(CustomOffer.period_id == _pd.id)
 
         query = (
             query.join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
@@ -9757,7 +9757,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED)
         if _pd is not None:
-            query = query.filter(CustomOffer.period_id == _pd.period)
+            query = query.filter(CustomOffer.period_id == _pd.id)
 
         query = (
             query.join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
@@ -10057,7 +10057,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.ordered_custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED)
         if _pd is not None:
-            query = query.filter(CustomOffer.period_id == _pd.period)
+            query = query.filter(CustomOffer.period_id == _pd.id)
         return query
 
     def satisfies_recommended(self, desc):
@@ -14086,7 +14086,7 @@ def _MatchingRecord_is_valid(id):
     if obj.selector.has_accepted_offers():
         # if there was an accepted offer for this period, it should agree with the one we have
         this_period = obj.period
-        accepted_offers = obj.selector.accepted_offers(this_period)
+        accepted_offers = obj.selector.accepted_offers(this_period).all()
         if len(accepted_offers) > 0:
             offer = accepted_offers[0]
             offer_project: LiveProject = offer.liveproject
@@ -14099,7 +14099,7 @@ def _MatchingRecord_is_valid(id):
 
         # if there is only one submission period, and there is an accepted offer, it should match
         if get_count(pclass.periods) == 1:
-            accepted_offers = obj.selector.accepted_offers()
+            accepted_offers = obj.selector.accepted_offers().all()
             if len(accepted_offers) > 0:
                 offer = accepted_offers[0]
                 offer_project: LiveProject = offer.liveproject

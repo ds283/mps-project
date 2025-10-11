@@ -731,9 +731,9 @@ def faculty_ajax(id):
         )
 
     elif (
-            ((enrol_filter == "supv-active" or enrol_filter == "supv-sabbatical" or enrol_filter == "supv-exempt") and pclass.uses_supervisor)
-            or ((enrol_filter == "mark-active" or enrol_filter == "mark-sabbatical" or enrol_filter == "mark-exempt") and pclass.uses_marker)
-            or ((enrol_filter == "pres-active" or enrol_filter == "pres-sabbatical" or enrol_filter == "pres-exempt") and pclass.uses_presentations)
+        ((enrol_filter == "supv-active" or enrol_filter == "supv-sabbatical" or enrol_filter == "supv-exempt") and pclass.uses_supervisor)
+        or ((enrol_filter == "mark-active" or enrol_filter == "mark-sabbatical" or enrol_filter == "mark-exempt") and pclass.uses_marker)
+        or ((enrol_filter == "pres-active" or enrol_filter == "pres-sabbatical" or enrol_filter == "pres-exempt") and pclass.uses_presentations)
     ):
         base_query = (
             db.session.query(User, FacultyData, EnrollmentRecord)
@@ -872,13 +872,13 @@ def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClass
 
         if state_filter == "custom-cats":
             return (
-                    er is not None
-                    and (
-                            er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
-                            or er.marker_state == EnrollmentRecord.MARKER_ENROLLED
-                            or er.moderator_state == EnrollmentRecord.MODERATOR_ENROLLED
-                            or er.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED
-                    )
+                er is not None
+                and (
+                    er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
+                    or er.marker_state == EnrollmentRecord.MARKER_ENROLLED
+                    or er.moderator_state == EnrollmentRecord.MODERATOR_ENROLLED
+                    or er.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED
+                )
             ) and _has_custom_CATS(fd, pclass)
 
         return True
@@ -7001,6 +7001,7 @@ def email_project_selectors(project_id):
         )
     )
 
+
 @convenor.route("/email_submitters/<int:configid>")
 @roles_accepted("faculty", "admin", "root")
 def email_submitters(configid):
@@ -8040,7 +8041,8 @@ def create_custom_offer(sel_id, proj_id):
 
     OfferForm = CreateCustomOfferFormFactory(pclass, config.year + 1)
     form = OfferForm(request.form)
-    form.period.query = pclass.ordered_periods
+    if hasattr(form, "period"):
+        form.period.query = pclass.ordered_periods
 
     if form.validate_on_submit():
         offer = CustomOffer(
@@ -8091,7 +8093,8 @@ def edit_custom_offer(offer_id):
 
     OfferForm = EditCustomOfferFormFactory(pclass, config.year + 1)
     form = OfferForm(obj=offer)
-    form.period.query = pclass.ordered_periods
+    if hasattr(form, "period"):
+        form.period.query = pclass.ordered_periods
 
     if form.validate_on_submit():
         offer.comment = form.comment.data
@@ -10112,12 +10115,14 @@ def assign_revert(id):
     try:
         # remove any SubmissionRole instances for supervisor, marker and moderator
         rec.roles.filter(
-            SubmissionRole.role.in_([
-                SubmissionRole.ROLE_SUPERVISOR,
-                SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-                SubmissionRole.ROLE_MARKER,
-                SubmissionRole.ROLE_MODERATOR
-            ])
+            SubmissionRole.role.in_(
+                [
+                    SubmissionRole.ROLE_SUPERVISOR,
+                    SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                    SubmissionRole.ROLE_MARKER,
+                    SubmissionRole.ROLE_MODERATOR,
+                ]
+            )
         ).delete()
 
         match_record: MatchingRecord = rec.matching_record

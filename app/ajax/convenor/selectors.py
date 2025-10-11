@@ -133,6 +133,7 @@ _bookmarks = """
 
 # language=jinja2
 _submitted = """
+{% set offers_class=none %}
 {% if sel.has_submitted %}
     {% set count = sel.number_selections %}
     {% if sel.has_submission_list %}
@@ -140,28 +141,7 @@ _submitted = """
         <div><a class="text-decoration-none link-success small" href="{{ url_for('convenor.selector_choices', id=sel.id) }}">
             Show <i class="fas fa-chevron-circle-right"></i>
         </a></div>
-    {% endif %}
-    {% set offers = sel.number_offers_accepted() %}
-    {% if offers > 0 %}
-        <div class="mt-2">
-            {% for offer in sel.custom_offers_accepted() %}
-                <div class="small">
-                    <span class="text-success">
-                        <i class="fas fa-check-circle"></i> <span class="fw-bold">Accepted:</span>
-                    </span>
-                    <span class="text-secondary">
-                        {{ truncate(offer.liveproject.name, length=30) }}
-                    </span>
-                    <div class="text-secondary fw-semibold">
-                        {% if offer.liveproject.generic or offer.liveproject.owner is none %}
-                            (Generic)
-                        {% else %}
-                            ({{ offer.liveproject.owner.user.name }})
-                        {% endif %}
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
+        {% set offers_class="mt-2" %}
     {% endif %}
 {% else %}
     {% if state >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
@@ -174,6 +154,29 @@ _submitted = """
     {% else %}
         <div class="text-secondary"><i class="fas fa-ban"></i> Not yet open</div>
     {% endif %}
+    {% set offers_class="mt-2" %}
+{% endif %}
+{% set offers = sel.number_offers_accepted() %}
+{% if offers > 0 %}
+    <div {% if offers_class is not none %}class="{{ offers_class }}"{% endif %}>
+        {% for offer in sel.custom_offers_accepted() %}
+            <div class="small">
+                <span class="text-success">
+                    <i class="fas fa-check-circle"></i> <span class="fw-bold">Accepted:</span>
+                </span>
+                <span class="text-secondary">
+                    {{ truncate(offer.liveproject.name, length=30) }}
+                </span>
+                <div class="text-secondary fw-semibold">
+                    {% if offer.liveproject.generic or offer.liveproject.owner is none %}
+                        (Generic)
+                    {% else %}
+                        ({{ offer.liveproject.owner.user.name }})
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
 {% endif %}
 """
 

@@ -5430,6 +5430,22 @@ class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
         return "Submission Period #{n}".format(n=self.period)
 
 
+SubmissionPeriodDefinitionLike = Union[SubmissionPeriodDefinition, int]
+
+
+def _get_submission_period(period: SubmissionPeriodDefinitionLike, pclass: ProjectClass) -> Optional[SubmissionPeriodDefinition]:
+    if period is None:
+        return None
+
+    if isinstance(period, SubmissionPeriodDefinition):
+        return period
+
+    if isinstance(period, int):
+        return pclass.get_period(period)
+
+    raise RuntimeError(f'Could not convert identifier "{period}" to SubmissionPeriodDefinition instance')
+
+
 class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask), SelectorLifecycleStatesMixin, SubmitterLifecycleStatesMixin):
     """
     Model current configuration options for each project class
@@ -9001,8 +9017,12 @@ class LiveProject(
         return get_count(self.bookmarks)
 
     @property
-    def number_custom_offers(self, period: SubmissionPeriodDefinition = None):
-        return get_count(self.custom_offers.filter(CustomOffer.period_id == None if period is None else period.id))
+    def number_custom_offers(self, period: SubmissionPeriodDefinitionLike = None):
+        _pd = _get_submission_period(period, self.config.project_class)
+        query = self.custom_offers
+        if _pd is not None:
+            query = query.filter(CustomOffer.period_id == _pd.period)
+        return get_count(query)
 
     @property
     def number_selections(self):
@@ -9024,49 +9044,64 @@ class LiveProject(
     def requests_confirmed(self):
         return self._is_confirmed_query.all()
 
-    def _custom_offers_pending_query(self, period: SubmissionPeriodDefinition = None):
-        return (
-            self.custom_offers.filter(CustomOffer.status == CustomOffer.OFFERED, CustomOffer.period_id == None if period is None else period.id)
-            .join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
+    def _custom_offers_pending_query(self, period: SubmissionPeriodDefinitionLike = None):
+        _pd = _get_submission_period(period, self.config.project_class)
+        query = self.custom_offers.filter(CustomOffer.status == CustomOffer.OFFERED)
+        if _pd is not None:
+            query = query.filter(CustomOffer.period_id == _pd.period)
+
+        query = (
+            query.join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
             .join(StudentData, StudentData.id == SelectingStudent.student_id)
             .join(User, User.id == StudentData.id)
             .order_by(User.last_name.asc(), User.first_name.asc())
         )
+        return query
 
-    def custom_offers_pending(self, period: SubmissionPeriodDefinition = None):
+    def custom_offers_pending(self, period: SubmissionPeriodDefinitionLike = None):
         return self._custom_offers_pending_query(period).all()
 
-    def number_offers_pending(self, period: SubmissionPeriodDefinition = None):
+    def number_offers_pending(self, period: SubmissionPeriodDefinitionLike = None):
         return get_count(self._custom_offers_pending_query(period))
 
-    def _custom_offers_declined_query(self, period: SubmissionPeriodDefinition = None):
-        return (
-            self.custom_offers.filter(CustomOffer.status == CustomOffer.DECLINED, CustomOffer.period_id == None if period is None else period.id)
-            .join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
+    def _custom_offers_declined_query(self, period: SubmissionPeriodDefinitionLike = None):
+        _pd = _get_submission_period(period, self.config.project_class)
+        query = self.custom_offers.filter(CustomOffer.status == CustomOffer.DECLINED)
+        if _pd is not None:
+            query = query.filter(CustomOffer.period_id == _pd.period)
+
+        query = (
+            query.join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
             .join(StudentData, StudentData.id == SelectingStudent.student_id)
             .join(User, User.id == StudentData.id)
             .order_by(User.last_name.asc(), User.first_name.asc())
         )
+        return query
 
-    def custom_offers_declined(self, period: SubmissionPeriodDefinition = None):
+    def custom_offers_declined(self, period: SubmissionPeriodDefinitionLike = None):
         return self._custom_offers_declined_query(period).all()
 
-    def number_offers_declined(self, period: SubmissionPeriodDefinition = None):
+    def number_offers_declined(self, period: SubmissionPeriodDefinitionLike = None):
         return get_count(self._custom_offers_declined_query(period))
 
-    def _custom_offers_accepted_query(self, period: SubmissionPeriodDefinition = None):
-        return (
-            self.custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED, CustomOffer.period_id == (None if period is None else period.id))
-            .join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
+    def _custom_offers_accepted_query(self, period: SubmissionPeriodDefinitionLike = None):
+        _pd = _get_submission_period(period, self.config.project_class)
+        query = self.custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED)
+        if _pd is not None:
+            query = query.filter(CustomOffer.period_id == _pd.period)
+
+        query = (
+            query.join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
             .join(StudentData, StudentData.id == SelectingStudent.student_id)
             .join(User, User.id == StudentData.id)
             .order_by(User.last_name.asc(), User.first_name.asc())
         )
+        return query
 
-    def custom_offers_accepted(self, period: SubmissionPeriodDefinition = None):
+    def custom_offers_accepted(self, period: SubmissionPeriodDefinitionLike = None):
         return self._custom_offers_accepted_query(period).all()
 
-    def number_offers_accepted(self, period: SubmissionPeriodDefinition = None):
+    def number_offers_accepted(self, period: SubmissionPeriodDefinitionLike = None):
         return get_count(self._custom_offers_accepted_query(period))
 
     def format_popularity_label(self, popover=False):
@@ -9671,55 +9706,74 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
     def number_selections(self):
         return get_count(self.selections)
 
-    def number_custom_offers(self, period: SubmissionPeriodDefinition = None):
-        return get_count(self.custom_offers.filter(CustomOffer.period_id == None if period is None else period.id))
+    def number_custom_offers(self, period: SubmissionPeriodDefinitionLike = None):
+        _pd = _get_submission_period(period, self.config.project_class)
+        query = self.custom_offers
+        if _pd is not None:
+            query = query.filter(CustomOffer.period_id == _pd.period)
+        return get_count(query)
 
-    def _custom_offers_pending_query(self, period: SubmissionPeriodDefinition = None):
-        return (
-            self.custom_offers.filter(CustomOffer.status == CustomOffer.OFFERED, CustomOffer.period_id == None if period is None else period.id)
-            .join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
+    def _custom_offers_pending_query(self, period: SubmissionPeriodDefinitionLike = None):
+        _pd = _get_submission_period(period, self.config.project_class)
+        query = self.custom_offers.filter(CustomOffer.status == CustomOffer.OFFERED)
+        if _pd is not None:
+            query = query.filter(CustomOffer.period_id == _pd.period)
+
+        query = (
+            query.join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
             .join(StudentData, StudentData.id == SelectingStudent.student_id)
             .join(User, User.id == StudentData.id)
             .order_by(User.last_name.asc(), User.first_name.asc())
         )
+        return query
 
-    def custom_offers_pending(self, period: SubmissionPeriodDefinition = None):
+    def custom_offers_pending(self, period: SubmissionPeriodDefinitionLike = None):
         return self._custom_offers_pending_query(period).all()
 
-    def number_offers_pending(self, period: SubmissionPeriodDefinition = None):
+    def number_offers_pending(self, period: SubmissionPeriodDefinitionLike = None):
         return get_count(self._custom_offers_pending_query(period))
 
-    def _custom_offers_declined_query(self, period: SubmissionPeriodDefinition = None):
-        return (
-            self.custom_offers.filter(CustomOffer.status == CustomOffer.DECLINED, CustomOffer.period_id == None if period is None else period.id)
-            .join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
+    def _custom_offers_declined_query(self, period: SubmissionPeriodDefinitionLike = None):
+        _pd = _get_submission_period(period, self.config.project_class)
+        query = self.custom_offers.filter(CustomOffer.status == CustomOffer.DECLINED)
+        if _pd is not None:
+            query = query.filter(CustomOffer.period_id == _pd.period)
+
+        query = (
+            query.join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
             .join(StudentData, StudentData.id == SelectingStudent.student_id)
             .join(User, User.id == StudentData.id)
             .order_by(User.last_name.asc(), User.first_name.asc())
         )
+        return query
 
-    def custom_offers_declined(self, period: SubmissionPeriodDefinition = None):
+    def custom_offers_declined(self, period: SubmissionPeriodDefinitionLike = None):
         return self._custom_offers_declined_query(period).all()
 
-    def number_offers_declined(self, period: SubmissionPeriodDefinition = None):
+    def number_offers_declined(self, period: SubmissionPeriodDefinitionLike = None):
         return get_count(self._custom_offers_declined_query(period))
 
-    def _custom_offers_accepted_query(self, period: SubmissionPeriodDefinition = None):
-        return (
-            self.custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED, CustomOffer.period_id == (None if period is None else period.id))
-            .join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
+    def _custom_offers_accepted_query(self, period: SubmissionPeriodDefinitionLike = None):
+        _pd = _get_submission_period(period, self.config.project_class)
+        query = self.custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED)
+        if _pd is not None:
+            query = query.filter(CustomOffer.period_id == _pd.period)
+
+        query = (
+            query.join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id)
             .join(StudentData, StudentData.id == SelectingStudent.student_id)
             .join(User, User.id == StudentData.id)
             .order_by(User.last_name.asc(), User.first_name.asc())
         )
+        return query
 
-    def custom_offers_accepted(self, period: SubmissionPeriodDefinition = None):
+    def custom_offers_accepted(self, period: SubmissionPeriodDefinitionLike = None):
         return self._custom_offers_accepted_query(period).all()
 
-    def number_offers_accepted(self, period: SubmissionPeriodDefinition = None):
+    def number_offers_accepted(self, period: SubmissionPeriodDefinitionLike = None):
         return get_count(self._custom_offers_accepted_query(period))
 
-    def has_accepted_offer(self, period: SubmissionPeriodDefinition = None):
+    def has_accepted_offers(self, period: SubmissionPeriodDefinitionLike = None):
         return self.number_offers_accepted(period) > 0
 
     @property
@@ -9891,10 +9945,12 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         Determine whether a submission has been made
         :return:
         """
-        # have made a selection if have accepted a custom offer
-        if self.has_accepted_offers():
-            accepted_offers = self.accepted_offers()
-            return len(accepted_offers) == self.number_choices
+        # have made a selection if have accepted a sufficient number of custom offers
+        number_accepted_offers = self.number_offers_accepted()
+        if number_accepted_offers > 0:
+            number_periods = get_count(self.config.project_class.periods)
+            if number_accepted_offers >= number_periods:
+                return True
 
         # have made a selection if submitted a list of choices:
         if self.has_submission_list:
@@ -9997,10 +10053,12 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
 
         return data
 
-    def accepted_offers(self, period: SubmissionPeriodDefinition = None):
-        return self.ordered_custom_offers.filter(
-            CustomOffer.status == CustomOffer.ACCEPTED, CustomOffer.period_id == None if period is None else period.id
-        )
+    def accepted_offers(self, period: SubmissionPeriodDefinitionLike = None):
+        _pd = _get_submission_period(period, self.config.project_class)
+        query = self.ordered_custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED)
+        if _pd is not None:
+            query = query.filter(CustomOffer.period_id == _pd.period)
+        return query
 
     def satisfies_recommended(self, desc):
         if get_count(desc.modules) == 0:

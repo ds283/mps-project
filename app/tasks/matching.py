@@ -1952,6 +1952,14 @@ def _store_PuLP_solution(
         if len(periods) != multiplicity[i]:
             raise RuntimeError("Number of submission periods does not match expected selector multiplicity")
 
+        custom_offers_per_period = {}
+        if sel.has_accepted_offers() > 0:
+            for pd in periods:
+                offers: List[CustomOffer] = sel.accepted_offers(pd)
+
+                if len(offers) > 0:
+                    custom_offers_per_period[pd] = offers
+
         # generate list of project assignments for this selector
         assigned = []
 
@@ -1971,7 +1979,6 @@ def _store_PuLP_solution(
                 raise RuntimeError("PuLP solution references unexpected LiveProject instance")
 
             proj_id: int = number_to_lp[proj_number]
-
             project: LiveProject = lp_dict[proj_number]
             if proj_id != project.id:
                 raise RuntimeError("Inconsistent project lookup when storing PuLP solution")
@@ -1986,11 +1993,26 @@ def _store_PuLP_solution(
                 if alt_data is None:
                     raise RuntimeError("PuLP solution assigns unranked project to selector")
 
-            # decide which submission period to assign this project to
+            # DECIDE WHICH SUBMISSION PERIOD TO ASSIGN THIS PROJECT TO
             if len(periods) == 0:
                 raise RuntimeError("Period list is unexpectedly empty when storing PuLP solution")
+
             period_list = sorted(list(periods))
-            this_period = period_list[0]
+            this_period = None
+
+            # test whether there was a custom offer specifically for this period
+            for pd, offers in custom_offers_per_period.items():
+                for offer in offers:
+                    if offer.liveproject_id == proj_id:
+
+                        if pd in period_list:
+                            this_period = pd
+                        else:
+                            raise RuntimeError("PuLP solution should assign project to a custom offer, but the required period is missing")
+
+            if this_period is None:
+                this_period = period_list[0]
+
             markers_needed = periods.pop(this_period)
 
             data = MatchingRecord(

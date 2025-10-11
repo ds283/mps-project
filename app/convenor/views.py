@@ -54,7 +54,7 @@ from .forms import (
     EditProjectSupervisorsFactory,
     EditLiveProjectSupervisorsFactory,
     DuplicateProjectForm,
-    CreateCustomOfferForm,
+    CreateCustomOfferFormFactory,
 )
 from ..admin.forms import LevelSelectorForm
 from ..database import db
@@ -8002,6 +8002,7 @@ def create_new_offer(sel_id, proj_id):
     # proj_id is a LiveProject
     proj: LiveProject = LiveProject.query.get_or_404(proj_id)
     config: ProjectClassConfig = proj.config
+    pclass: ProjectClass = config.project_class
 
     # sel_id is a SelectingStudent
     sel: SelectingStudent = SelectingStudent.query.get_or_404(sel_id)
@@ -8033,17 +8034,22 @@ def create_new_offer(sel_id, proj_id):
         )
         return redirect(url)
 
-    form = CreateCustomOfferForm(request.form)
+    OfferForm = CreateCustomOfferFormFactory(pclass, config.year + 1)
+    form = OfferForm(request.form)
+    form.period.query = pclass.ordered_periods
 
     if form.validate_on_submit():
         offer = CustomOffer(
             liveproject_id=proj.id,
             selector_id=sel.id,
             status=CustomOffer.OFFERED,
+            period=None,
             comment=form.comment.data,
             creator_id=current_user.id,
             creation_timestamp=datetime.now(),
         )
+        if hasattr(form, "period"):
+            offer.period = form.period.data
 
         try:
             db.session.add(offer)

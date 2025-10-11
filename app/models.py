@@ -5238,10 +5238,14 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
 
         return self.periods.filter_by(period=n).one()
 
+    @property
+    def ordered_periods(self):
+        return self.periods.order_by(SubmissionPeriodDefinition.period.asc())
+
     def module_available(self, module_id):
         # the module should be at an FHEQ level which is less than or equal to our starting level
 
-        # all modules are availabel for PGR or PGT
+        # all modules are available for PGR or PGT
         if self.student_level == self.LEVEL_UG:
             # check if module's start level maps to our starting year
             # note that the FHEQ numerical level (3, 4, 5, 6, 7) maps to undergraduate years as year = level-3,

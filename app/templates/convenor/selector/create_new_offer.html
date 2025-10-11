@@ -21,6 +21,9 @@
                           method="POST" name="create_form">
                         {{ form.hidden_tag() }}
 
+                        {% if form.period is defined %}
+                            {{ wtf.render_field(form.period) }}
+                        {% endif %}
                         {{ wtf.render_field(form.comment) }}
 
                         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}

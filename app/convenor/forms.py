@@ -577,12 +577,19 @@ class DuplicateProjectForm(
     submit = SubmitField("Duplicate project")
 
 
-class CreateCustomOfferForm(Form):
-    comment = TextAreaField(
-        "Comment",
-        render_kw={"rows": 3},
-        description="Please enter a brief explanation or justification for this offer",
-        validators=[InputRequired(message="A brief comment is required to help document the reason this offer has been made")],
-    )
+def CreateCustomOfferFormFactory(pclass: ProjectClassConfig, year: int):
+    class CreateCustomOfferForm(Form):
+        comment = TextAreaField(
+            "Comment",
+            render_kw={"rows": 3},
+            description="Please enter a brief explanation or justification for this offer",
+            validators=[InputRequired(message="A brief comment is required to help document the reason this offer has been made")],
+        )
 
-    submit = SubmitField("Create new custom offer")
+        submit = SubmitField("Create new custom offer")
+
+        if pclass.number_submissions > 1:
+            period = QuerySelectField("Preferred submission period", blank_text="No preferred period", allow_blank=True,
+                                       get_label=lambda d: d.display_name(year))
+
+    return CreateCustomOfferForm

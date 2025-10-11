@@ -14,10 +14,10 @@
                 <div class="card-header bg-primary text-white">
                     Add new custom offer for <i class="fas fa-user-circle"></i>
                     <strong>{{ sel.student.user.name }}</strong>
-                    and project <strong>{{ proj.name }}</strong>
+                    and project <strong>{{ offer.liveproject.name }}</strong>
                 </div>
                 <div class="card-body">
-                    <form action="{{ url_for('convenor.create_new_offer', sel_id=sel.id, proj_id=proj.id, url=url) }}"
+                    <form action="{{ url_for('convenor.create_custom_offer', sel_id=sel.id, proj_id=proj.id, url=url) }}"
                           method="POST" name="create_form">
                         {{ form.hidden_tag() }}
 

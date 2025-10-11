@@ -577,8 +577,8 @@ class DuplicateProjectForm(
     submit = SubmitField("Duplicate project")
 
 
-def CreateCustomOfferFormFactory(pclass: ProjectClassConfig, year: int):
-    class CreateCustomOfferForm(Form):
+def _CustomOfferFormMixinFactory(pclass: ProjectClassConfig, year: int):
+    class CustomOfferFormMixin(Form):
         comment = TextAreaField(
             "Comment",
             render_kw={"rows": 3},
@@ -586,10 +586,27 @@ def CreateCustomOfferFormFactory(pclass: ProjectClassConfig, year: int):
             validators=[InputRequired(message="A brief comment is required to help document the reason this offer has been made")],
         )
 
+        if pclass.number_submissions > 1:
+            period = QuerySelectField(
+                "Preferred submission period", blank_text="No preferred period", allow_blank=True, get_label=lambda d: d.display_name(year)
+            )
+
+    return CustomOfferFormMixin
+
+
+def CreateCustomOfferFormFactory(pclass: ProjectClassConfig, year: int):
+    mixin = _CustomOfferFormMixinFactory(pclass, year)
+
+    class CreateCustomOfferForm(mixin):
         submit = SubmitField("Create new custom offer")
 
-        if pclass.number_submissions > 1:
-            period = QuerySelectField("Preferred submission period", blank_text="No preferred period", allow_blank=True,
-                                       get_label=lambda d: d.display_name(year))
-
     return CreateCustomOfferForm
+
+
+def EditCustomOfferFormFactory(pclass: ProjectClassConfig, year: int):
+    mixin = _CustomOfferFormMixinFactory(pclass, year)
+
+    class EditCustomOfferForm(mixin, SaveChangesMixin):
+        pass
+
+    return EditCustomOfferForm

@@ -7,8 +7,11 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from typing import List
 
-from flask import render_template_string, jsonify, get_template_attribute
+from flask import render_template_string, jsonify, get_template_attribute, url_for
+
+from app.models import LiveProject, CustomOffer, SelectingStudent
 
 # language=jinja2
 _student = """
@@ -20,10 +23,17 @@ _student = """
         <span class="badge bg-secondary">Not submitted</span>
     {% endif %}
 </div>
-{% if offer is defined and offer.comment is not none and offer.comment|length > 0 %}
-    <div class="mt-2 text-muted small">
-        <span tabindex="0" data-bs-toggle="popover" title="Offer notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ offer.comment|truncate(600) }}">Notes <i class="ms-1 fas fa-chevron-right"></i></span>
-    </div>
+{% if offer is defined %}
+    {% if offer.period is not none %}
+        <div class="text-primary small">
+            {{ offer.period.display_name(sel.config.year+1) }}
+        </div>
+    {% endif %}
+    {% if offer.comment is not none and offer.comment|length > 0 %}
+        <div class="mt-2 text-muted small">
+            <span tabindex="0" data-bs-toggle="popover" title="Offer notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ offer.comment|truncate(600) }}">Notes <i class="ms-1 fas fa-chevron-right"></i></span>
+        </div>
+    {% endif %}
 {% endif %}
 """
 
@@ -33,10 +43,17 @@ _project = """
 <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=proj.id, url=url_for('convenor.selector_custom_offers', sel_id=sel.id), text='selector custom offers') }}">
     {{ proj.name }}
 </a>
-{% if offer is defined and offer.comment is not none and offer.comment|length > 0 %}
-    <div class="mt-2 text-muted small">
-        <span tabindex="0" data-bs-toggle="popover" title="Offer notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ offer.comment|truncate(600) }}">Notes <i class="ms-1 fas fa-chevron-right"></i></span>
-    </div>
+{% if offer is defined %}
+    {% if offer.period is not none %}
+        <div class="text-primary small">
+            {{ offer.period.display_name(sel.config.year+1) }}
+        </div>
+    {% endif %}
+    {% if offer.comment is not none and offer.comment|length > 0 %}
+        <div class="mt-2 text-muted small">
+            <span tabindex="0" data-bs-toggle="popover" title="Offer notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ offer.comment|truncate(600) }}">Notes <i class="ms-1 fas fa-chevron-right"></i></span>
+        </div>
+    {% endif %}
 {% endif %}
 """
 
@@ -113,7 +130,10 @@ _menu = """
                 <i class="fas fa-check fa-fw"></i> Decline
             </a>
         {% endif %}        
-    
+        
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_custom_offer', offer_id=offer.id, url=url) }}">
+            <i class="fas fa-pencil-alt fa-fw"></i> Edit...
+        </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.delete_custom_offer', offer_id=offer.id) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
@@ -124,36 +144,78 @@ _menu = """
 
 # language=jinja2
 _selector_offers = """
-{% for offer in record.custom_offers_accepted %}
-    <div class="text-success"><i class="fas fa-check-circle"></i> <span class="fw-semibold">Accepted:</span> {{ offer.liveproject.name }} ({{offer.liveproject.owner.user.last_name }})</div>
-{% endfor %}
-{% for offer in record.custom_offers_pending %}
-    <div class="text-primary"><i class="fas fa-history"></i> <span class="fw-semibold">Offer:</span> {{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</div>
-{% endfor %}
-{% for offer in record.custom_offers_declined %}
-    <div class="text-danger"><i class="fas fa-time-circle"></i> <span class="fw-semibold">Declined:</span> {{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</div>
-{% endfor %}
+{% set accepted = record.custom_offers_accepted %}
+{% set num_accepted = accepted|length %}
+{% set pending = record.custom_offers_pending %}
+{% set num_pending = pending|length %}
+{% set declined = record.custom_offers_declined %}
+{% set num_declined = declined|length %}
+{% if num_accepted > 0 %}
+    <div>
+        <span class="text-success"><i class="fas fa-check-circle"></i> <span class="fw-semibold">Accepted:</span></span>
+        {% for offer in accepted %}
+            <span class="text-secondary">{{ offer.liveproject.name }} ({{offer.liveproject.owner.user.name }})</span>
+        {% endfor %}
+    </div>
+{% endif %}
+{% if num_pending > 0 %}
+    <div>
+        <span class="text-primary"><i class="fas fa-history"></i> <span class="fw-semibold">Offer:</span></span>
+        {% for offer in pending %}
+            <span class="text-secondary">{{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</span>
+        {% endfor %}
+    </div>
+{% endif %}
+{% if num_declined > 0 %}
+    <div>
+        <span class="text-danger"><i class="fas fa-time-circle"></i> <span class="fw-semibold">Declined:</span></span>
+        {% for offer in record.custom_offers_declined %}
+            <span class="text-secondary">{{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</span>
+        {% endfor %}
+    </div>
+{% endif %}
 """
 
 
 # language=jinja2
 _project_offers = """
-{% for offer in record.custom_offers_accepted %}
-    <div class="text-success"><i class="fas fa-check-circle"></i> <span class="fw-semibold">Accepted:</span> {{ offer.selector.student.user.name }}</div>
-{% endfor %}
-{% for offer in record.custom_offers_pending %}
-    <div class="text-primary"><i class="fas fa-history"></i> <span class="fw-semibold">Offer:</span> {{ offer.selector.student.user.name }}</div>
-{% endfor %}
-{% for offer in record.custom_offers_declined %}
-    <div class="text-danger"><i class="fas fa-time-circle"></i> <span class="fw-semibold">Declined:</span> {{ offer.selector.student.user.name }}</div>
-{% endfor %}
+{% set accepted = record.custom_offers_accepted %}
+{% set num_accepted = accepted|length %}
+{% set pending = record.custom_offers_pending %}
+{% set num_pending = pending|length %}
+{% set declined = record.custom_offers_declined %}
+{% set num_declined = declined|length %}
+{% if num_accepted > 0 %}
+    <div>
+        <span class="text-success"><i class="fas fa-check-circle"></i> <span class="fw-semibold">Accepted:</span></span>
+        {% for offer in accepted %}
+            <span class="text-secondary">{{ offer.selector.student.user.name }}</span>
+        {% endfor %}
+    </div>
+{% endif %}
+{% if num_pending > 0 %}
+    <div>
+        <span class="text-primary"><i class="fas fa-history"></i> <span class="fw-semibold">Offer:</span></span>
+        {% for offer in pending %}
+            <span class="text-secondary">{{ offer.selector.student.user.name }}</span>
+        {% endfor %}
+    </div>
+{% endif %}
+{% if num_declined > 0 %}
+    <div>
+        <span class="text-danger"><i class="fas fa-time-circle"></i> <span class="fw-semibold">Declined:</span></span>
+        {% for offer in record.custom_offers_declined %}
+            <span class="text-secondary">{{ offer.selector.student.user.name }}</span>
+        {% endfor %}
+    </div>
+{% endif %}
 """
 
 
 # language=jinja2
 _sel_actions = """
 <div class="d-flex flex-row justify-content-end">
-    <a href="{{ url_for('convenor.create_new_offer', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.selector_custom_offers', sel_id=sel.id)) }}"
+    <a href="{{ url_for('convenor.create_custom_offer', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.selector_custom_offers', sel_id=sel.id)) }}"
        class="btn btn-sm btn-outline-primary">
        <i class="fas fa-plus"></i> Create offer
     </a>
@@ -164,7 +226,7 @@ _sel_actions = """
 # language=jinja2
 _proj_actions = """
 <div class="d-flex flex-row justify-content-end">
-    <a href="{{ url_for('convenor.create_new_offer', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.project_custom_offers', proj_id=project.id)) }}"
+    <a href="{{ url_for('convenor.create_custom_offer', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.project_custom_offers', proj_id=project.id)) }}"
        class="btn btn-sm btn-outline-primary">
        <i class="fas fa-plus"></i> Create offer
     </a>
@@ -172,7 +234,7 @@ _proj_actions = """
 """
 
 
-def project_offer_data(items):
+def project_offer_data(proj: LiveProject, items: List[CustomOffer]):
     data = [
         {
             "student": {
@@ -187,7 +249,7 @@ def project_offer_data(items):
                 "display": render_template_string(_status, offer=item),
                 "sortvalue": "{x}_{y}".format(x=item.status, y=item.last_edit_timestamp.timestamp() if item.last_edit_timestamp is not None else 0),
             },
-            "menu": render_template_string(_menu, offer=item),
+            "menu": render_template_string(_menu, offer=item, url=url_for('convenor.project_custom_offers', proj_id=proj.id)),
         }
         for item in items
     ]
@@ -195,7 +257,7 @@ def project_offer_data(items):
     return jsonify(data)
 
 
-def student_offer_data(items):
+def student_offer_data(sel: SelectingStudent, items: List[CustomOffer]):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
     data = [
@@ -215,7 +277,7 @@ def student_offer_data(items):
                 "display": render_template_string(_status, offer=item),
                 "sortvalue": "{x}_{y}".format(x=item.status, y=item.last_edit_timestamp.timestamp() if item.last_edit_timestamp is not None else 0),
             },
-            "menu": render_template_string(_menu, offer=item),
+            "menu": render_template_string(_menu, offer=item, url=url_for('convenor.selector_custom_offers', sel_id=sel.id)),
         }
         for item in items
     ]

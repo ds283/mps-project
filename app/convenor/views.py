@@ -55,6 +55,7 @@ from .forms import (
     EditLiveProjectSupervisorsFactory,
     DuplicateProjectForm,
     CreateCustomOfferFormFactory,
+    EditCustomOfferFormFactory,
 )
 from ..admin.forms import LevelSelectorForm
 from ..database import db
@@ -7879,7 +7880,7 @@ def project_custom_offers_ajax(proj_id):
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         return jsonify({})
 
-    return ajax.convenor.project_offer_data(proj.ordered_custom_offers.all())
+    return ajax.convenor.project_offer_data(proj, proj.ordered_custom_offers.all())
 
 
 @convenor.route("/selector_custom_offers/<int:sel_id>")
@@ -7914,7 +7915,7 @@ def selector_custom_offers_ajax(sel_id):
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
         return jsonify({})
 
-    return ajax.convenor.student_offer_data(sel.ordered_custom_offers.all())
+    return ajax.convenor.student_offer_data(sel, sel.ordered_custom_offers.all())
 
 
 @convenor.route("/new_selector_offer/<int:sel_id>")
@@ -7998,7 +7999,7 @@ def new_project_offer_ajax(proj_id):
 
 @convenor.route("/create_new_offer/<int:sel_id>/<int:proj_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
-def create_new_offer(sel_id, proj_id):
+def create_custom_offer(sel_id, proj_id):
     # proj_id is a LiveProject
     proj: LiveProject = LiveProject.query.get_or_404(proj_id)
     config: ProjectClassConfig = proj.config
@@ -8009,6 +8010,9 @@ def create_new_offer(sel_id, proj_id):
 
     url = request.args.get("url", None)
     if url is None:
+        # in theory would be more natural to default to the custom offer view,
+        # but we could have arrived here from the project or selector route, and we
+        # don't know which is which
         url = url_for("convenor.selectors", id=config.pclass_id)
 
     # check project and selector belong to the same project class
@@ -8061,7 +8065,52 @@ def create_new_offer(sel_id, proj_id):
 
         return redirect(url)
 
-    return render_template_context("convenor/selector/create_new_offer.html", form=form, sel=sel, proj=proj, config=config, url=url)
+    return render_template_context("convenor/selector/create_custom_offer.html", form=form, sel=sel, proj=proj, config=config, url=url)
+
+
+@convenor.route("/edit_custom_offer/<int:offer_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_custom_offer(offer_id):
+    # offer_id is a CustomOffer instances
+    offer: CustomOffer = CustomOffer.query.get_or_404(offer_id)
+    proj: LiveProject = offer.liveproject
+    config: ProjectClassConfig = proj.config
+    pclass: ProjectClass = config.project_class
+    sel: SelectingStudent = offer.selector
+
+    url = request.args.get("url", None)
+    if url is None:
+        # in theory would be more natural to default to the custom offer view,
+        # but we could have arrived here from the project or selector route, and we
+        # don't know which is which
+        url = url_for("convenor.selectors", id=config.pclass_id)
+
+    # reject user if not a convenor (or other suitable administrator) for this project class
+    if not validate_is_convenor(proj.config.project_class):
+        return redirect(redirect_url())
+
+    OfferForm = EditCustomOfferFormFactory(pclass, config.year + 1)
+    form = OfferForm(obj=offer)
+    form.period.query = pclass.ordered_periods
+
+    if form.validate_on_submit():
+        offer.comment = form.comment.data
+        if hasattr(form, "period"):
+            offer.period = form.period.data
+
+        offer.last_edit_id = current_user.id
+        offer.last_edit_timestamp = datetime.now()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash("Could not save edited custom offer due to a database error. Please contact a system administrator", "error")
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            db.session.rollback()
+
+        return redirect(url)
+
+    return render_template_context("convenor/selector/edit_custom_offer.html", form=form, offer=offer, url=url)
 
 
 @convenor.route("/accept_custom_offer/<int:offer_id>")

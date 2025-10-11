@@ -27,13 +27,15 @@
                             ({{ supervisors[0].last_name }})
                         {% endif %}
                     {% elif label_type == 2 %} {# label for faculty view #}
-                        {{ r.selector.student.user.last_name }} ({{ truncate(r.project.name, 35) }})
+                        {{ r.selector.student.user.first_name }} {{ r.selector.student.user.last_name }} (
+                        {{ truncate(r.project.name, 25) }})
                     {% else %}
                         {{ truncate(r.project.name, 35) }}
                     {% endif %}
                 </a>
                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
-                    <div class="dropdown-header small">Quick reassignment</div>
+                    <div class="dropdown-header small">Quick reassignment
+                        for {{ r.selector.student.user.first_name }} {{ r.selector.student.user.last_name }}</div>
                     {% for item in list %}
                         {% set disabled = false %}
                         {% set project = item.liveproject %}
@@ -61,9 +63,16 @@
             </div>
         {% else %}
             <span class="{% if has_issues %}text-danger{% else %}text-primary{% endif %} small">
-                {{ truncate(r.project.name, 35) }}
-                {% if supervisors|length > 0 %}
-                    ({{ supervisors[0].last_name }})
+                {% if label_type == 1 %} {# label for student view #}
+                    {{ truncate(r.project.name, 35) }}
+                    {% if supervisors|length > 0 %}
+                        ({{ supervisors[0].last_name }})
+                    {% endif %}
+                {% elif label_type == 2 %} {# label for faculty view #}
+                    {{ r.selector.student.user.first_name }} {{ r.selector.student.user.last_name }} (
+                    {{ truncate(r.project.name, 25) }})
+                {% else %}
+                    {{ truncate(r.project.name, 35) }}
                 {% endif %}
             </span>
         {% endif %}

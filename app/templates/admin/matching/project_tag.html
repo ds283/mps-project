@@ -27,8 +27,7 @@
                             ({{ supervisors[0].last_name }})
                         {% endif %}
                     {% elif label_type == 2 %} {# label for faculty view #}
-                        {{ r.selector.student.user.first_name }} {{ r.selector.student.user.last_name }} (
-                        {{ truncate(r.project.name, 25) }})
+                        {{ r.selector.student.user.first_name }} {{ r.selector.student.user.last_name }} ({{ truncate(r.project.name, 25) }})
                     {% else %}
                         {{ truncate(r.project.name, 35) }}
                     {% endif %}
@@ -69,8 +68,7 @@
                         ({{ supervisors[0].last_name }})
                     {% endif %}
                 {% elif label_type == 2 %} {# label for faculty view #}
-                    {{ r.selector.student.user.first_name }} {{ r.selector.student.user.last_name }} (
-                    {{ truncate(r.project.name, 25) }})
+                    {{ r.selector.student.user.first_name }} {{ r.selector.student.user.last_name }} ({{ truncate(r.project.name, 25) }})
                 {% else %}
                     {{ truncate(r.project.name, 35) }}
                 {% endif %}

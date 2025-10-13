@@ -11,18 +11,17 @@
 import base64
 import itertools
 from datetime import datetime
-from distutils.util import strtobool
 from functools import partial
 from io import BytesIO
 from os import path
 from pathlib import Path
 from typing import Tuple, Dict, List
-from uuid import uuid4
 
 import pulp
 import pulp.apis as pulp_apis
 from celery import group, chain
 from celery.exceptions import Ignore
+from distutils.util import strtobool
 from flask import current_app, render_template
 from flask_mailman import EmailMultiAlternatives
 from sqlalchemy.exc import SQLAlchemyError
@@ -51,6 +50,7 @@ from ..models import (
     SubmissionRole,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
+from ..shared.scratch import ScratchFileManager
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
 from ..task_queue import progress_update, register_task
@@ -1031,7 +1031,7 @@ def _process_PuLP_solution(
     return record.score
 
 
-def _send_offline_email(celery, record, user, lp_asset, mps_asset):
+def _send_offline_email(celery, record, user, lp_asset):
     send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
 
     msg = EmailMultiAlternatives(
@@ -1046,10 +1046,8 @@ def _send_offline_email(celery, record, user, lp_asset, mps_asset):
     # TODO: will be problems when generated LP/MPS files are too large; should instead send a download link
     object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
     lp_storage: AssetCloudAdapter = AssetCloudAdapter(lp_asset, object_store, audit_data="scheduling._send_offline_email #1")
-    mps_storage: AssetCloudAdapter = AssetCloudAdapter(mps_asset, object_store, audit_data="scheduling._send_offline_email #2")
 
     msg.attach(filename=str("schedule.lp"), mimetype=lp_asset.mimetype, content=lp_storage.get())
-    msg.attach(filename=str("schedule.mps"), mimetype=mps_asset.mimetype, content=mps_storage.get())
 
     # register a new task in the database
     task_id = register_task(msg.subject, description="Email to {r}".format(r=", ".join(msg.to)))
@@ -1057,16 +1055,10 @@ def _send_offline_email(celery, record, user, lp_asset, mps_asset):
 
 
 def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
-    scratch_folder = Path(current_app.config.get("SCRATCH_FOLDER"))
-
-    lp_name = str(uuid4())
-    lp_path = scratch_folder / lp_name
-
-    prob.writeLP(lp_path)
-
     now = datetime.now()
+    object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
 
-    def make_asset(name, source_path: Path, target_name: str):
+    def make_asset(source_path: Path, target_name: str):
         # AssetUploadManager will populate most fields later
         asset = GeneratedAsset(timestamp=now, expiry=None, target_name=target_name, parent_asset_id=None, license_id=None)
 
@@ -1090,10 +1082,10 @@ def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
 
         return asset
 
-    lp_asset = make_asset(lp_name, lp_path, "schedule.lp")
-
-    # delete unneded temporary files
-    lp_path.unlink()
+    with ScratchFileManager(suffix="lp") as mgr:
+        lp_path: Path = mgr.path
+        prob.writeLP(lp_path)
+        lp_asset = make_asset(lp_path, "schedule.lp")
 
     # write new assets to database, so they get a valid primary key
     db.session.flush()
@@ -1343,7 +1335,7 @@ def register_scheduling_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        # _send_offline_email(celery, record, user, lp_asset, mps_asset)
+        _send_offline_email(celery, record, user, lp_asset)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Storing schedule details for later processing...", autocommit=True)
 

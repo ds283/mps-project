@@ -14,6 +14,7 @@ from datetime import date, datetime, timedelta
 from functools import partial
 from io import BytesIO
 from itertools import chain as itertools_chain
+from math import pi
 from pathlib import Path
 from typing import List, Dict, Tuple, Iterable, Union
 from urllib.parse import urlsplit
@@ -24,7 +25,6 @@ from bokeh.plotting import figure
 from celery import chain, group
 from flask import current_app, redirect, url_for, flash, request, jsonify, session, stream_with_context, abort, send_file
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
-from math import pi
 from numpy import histogram
 from sqlalchemy import or_, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -5503,6 +5503,40 @@ def insert_matching_record(src_id, attempt_id):
     return redirect(redirect_url())
 
 
+@admin.route("/match_export_excel/<int:matching_id>")
+@roles_accepted("faculty", "admin", "root")
+def match_export_excel(matching_id):
+    record: MatchingAttempt = MatchingAttempt.query.get_or_404(matching_id)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Match "{name}" is not yet available for export because it is still awaiting manual upload.'.format(name=record.name), "error")
+        else:
+            flash('Match "{name}" is not yet available for export because it has not yet completed.'.format(name=record.name), "error")
+        return redirect(redirect_url())
+
+    if not record.solution_usable:
+        flash('Match "{name}" is not available for export because it did not yield a useable solution'.format(name=record.name), "error")
+        return redirect(redirect_url())
+
+    if not validate_match_inspector(record):
+        return redirect(redirect_url())
+
+    task_id = register_task(
+        f'Export matching attempt "{record.name}" to Excel',
+        owner=current_user,
+        description=f'Export matching attempt "{record.name}" to Excel and send by email',
+    )
+
+    celery = current_app.extensions["celery"]
+    task = celery.tasks["app.tasks.matching.send_excel_report_by_email"]
+
+    task.apply_async(args=(matching_id, current_user.id, task_id), task_id=task_id)
+    flash(f'An Excel report for "{record.name}" is being generated. It will be delivered by email when it is available.')
+
+    return redirect(redirect_url())
+
+
 @admin.route("/match_student_view/<int:id>")
 @roles_accepted("faculty", "admin", "root")
 def match_student_view(id):
@@ -5516,7 +5550,7 @@ def match_student_view(id):
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Match "{name}" is not available for inspection because it did not yield an optimal solution'.format(name=record.name), "error")
+        flash('Match "{name}" is not available for inspection because it did not yield a useable solution'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not validate_match_inspector(record):

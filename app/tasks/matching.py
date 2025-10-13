@@ -10,12 +10,11 @@
 
 import base64
 import itertools
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 from os import path
 from pathlib import Path
 from typing import List
-from uuid import uuid4
 
 import pulp
 import pulp.apis as pulp_apis
@@ -23,6 +22,7 @@ from celery import group, chain
 from celery.exceptions import Ignore
 from flask import current_app, render_template, render_template_string
 from flask_mailman import EmailMultiAlternatives
+from pandas import DataFrame
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -53,8 +53,10 @@ from ..models import (
     Project,
     LiveProjectAlternative,
     StudentData,
+    DegreeProgramme,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
+from ..shared.scratch import ScratchFileManager
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
 from ..shared.utils import get_current_year
@@ -2730,7 +2732,7 @@ def _process_PuLP_solution(
     return record.score
 
 
-def _send_offline_email(celery, record: MatchingAttempt, user, lp_asset: GeneratedAsset, mps_asset: GeneratedAsset):
+def _send_offline_email(celery, record: MatchingAttempt, user: User, lp_asset: GeneratedAsset):
     send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
 
     msg = EmailMultiAlternatives(
@@ -2745,10 +2747,8 @@ def _send_offline_email(celery, record: MatchingAttempt, user, lp_asset: Generat
     # TODO: will be problems when generated LP/MPS files are too large; should instead send a download link
     object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
     lp_storage: AssetCloudAdapter = AssetCloudAdapter(lp_asset, object_store, audit_data="matching._send_offline_email #1")
-    mps_storage: AssetCloudAdapter = AssetCloudAdapter(mps_asset, object_store, audit_data="matching._send_offline_email #2")
 
     msg.attach(filename=str("schedule.lp"), mimetype=lp_asset.mimetype, content=lp_storage.get())
-    msg.attach(filename=str("schedule.mps"), mimetype=mps_asset.mimetype, content=mps_storage.get())
 
     # register a new task in the database
     task_id = register_task(msg.subject, description="Email to {r}".format(r=", ".join(msg.to)))
@@ -2756,18 +2756,10 @@ def _send_offline_email(celery, record: MatchingAttempt, user, lp_asset: Generat
 
 
 def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
-    scratch_folder = Path(current_app.config.get("SCRATCH_FOLDER"))
-
-    lp_name = str(uuid4())
-    lp_path = scratch_folder / lp_name
-
-    prob.writeLP(lp_path)
-
     now = datetime.now()
-
     object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
 
-    def make_asset(name, source_path: Path, target_name: str):
+    def make_asset(source_path: Path, target_name: str):
         # AssetUploadManager will populate most fields later
         asset = GeneratedAsset(timestamp=now, expiry=None, target_name=target_name, parent_asset_id=None, license_id=None)
 
@@ -2790,10 +2782,10 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
 
         return asset
 
-    lp_asset = make_asset(lp_name, lp_path, "matching.lp")
-
-    # delete unneded temporary files
-    lp_path.unlink()
+    with ScratchFileManager(suffix="lp") as mgr:
+        lp_path: Path = mgr.path
+        prob.writeLP(lp_path)
+        lp_asset = make_asset(lp_path, "matching.lp")
 
     # write new assets to database, so they get a valid primary key
     db.session.flush()
@@ -3083,7 +3075,7 @@ def register_matching_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        # _send_offline_email(celery, record, user, lp_asset, mps_asset)
+        _send_offline_email(celery, record, user, lp_asset)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Storing matching details for later processing...", autocommit=True)
 
@@ -3862,7 +3854,7 @@ def register_matching_tasks(celery):
                     feedback_sent=False,
                     feedback_push_id=None,
                     feedback_push_timestamp=None,
-                    creator_id=current_user.id,
+                    creator_id=user.id,
                     creation_timestamp=now,
                     last_edit_id=None,
                     last_edit_timestamp=None,
@@ -3958,3 +3950,203 @@ def register_matching_tasks(celery):
 
         payload.update({"actions": actions})
         return payload
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def send_excel_report_by_email(self, matching_id, user_id, task_id):
+        self.update_state(state="STARTED", meta={"msg": "Looking up MatchingAttempt record for id={id}".format(id=matching_id)})
+        progress_update(task_id, TaskRecord.RUNNING, 10, "Looking up database records...", autocommit=True)
+
+        try:
+            user: User = db.session.query(User).filter_by(id=user_id).first()
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if user is None:
+            self.update_state(state="FAILURE", meta={"msg": "Could not load owning User record"})
+            raise Ignore()
+
+        if record is None:
+            self.update_state("FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
+            raise Ignore()
+
+        self.update_state("STARTED", meta={"msg": "Writing .xlsx report"})
+        progress_update(task_id, TaskRecord.RUNNING, 50, "Writing .xlsx report...", autocommit=True)
+
+        try:
+            xlsx_asset: GeneratedAsset = _export_matching_as_excel(record, user)
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        self.update_state("STARTED", meta={"msg": "Sending .xlsx report by email"})
+
+        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
+        now = datetime.now()
+
+        msg = EmailMultiAlternatives(
+            subject=f"Excel report for matching attempt {record.name} at {now.strftime('%Y-%m-%d %H:%M:%S')}",
+            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
+            reply_to=[current_app.config["MAIL_REPLY_TO"]],
+            to=[user.email],
+        )
+
+        msg.body = render_template("email/matching/notify_excel_report.txt", name=record.name, user=user)
+
+        # TODO: will be problems when generated LP/MPS files are too large; should instead send a download link
+        object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+        xlsx_storage: AssetCloudAdapter = AssetCloudAdapter(xlsx_asset, object_store, audit_data="matching._send_excel_report_by_email #1")
+
+        msg.attach(filename=xlsx_asset.target_name, mimetype=xlsx_asset.mimetype, content=xlsx_storage.get())
+
+        # register a new task in the database
+        task_id = register_task(msg.subject, description="Email to {r}".format(r=", ".join(msg.to)))
+
+        self.update_state("STARTED", meta={"msg": "Handoff to email dispatch task"})
+
+        send_tasks = chain(
+            send_log_email.s(task_id, msg),
+            notify_excel_file_sent.s(matching_id, user_id, task_id),
+        )
+
+        self.update_state("SUCCESS", meta={"msg": ".xlsx report generation complete"})
+        progress_update(task_id, TaskRecord.SUCCESS, 100, ".xlsx report generation complete", autocommit=True)
+
+        return self.replace(send_tasks)
+
+    @celery.task(bind=True, default_retry_delay=5)
+    def notify_excel_file_sent(self, result_data, matching_id, user_id, task_id):
+        # result_data not currently used
+        self.update_state("STARTED", meta={"msg": "Notify user that Excel report has been generated"})
+        progress_update(task_id, TaskRecord.SUCCESS, 100, "Excel report sent by email", autocommit=False)
+
+        try:
+            user: User = db.session.query(User).filter_by(id=user_id).first()
+            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if user is None:
+            self.update_state(state="FAILURE", meta={"msg": "Could not load owning User record"})
+            raise Ignore()
+
+        if record is None:
+            self.update_state("FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
+            raise Ignore()
+
+        self.update_state("STARTED", meta={"msg": "Post message to user"})
+        user.post_message(f'An Excel report for matching "{record.name}" has been sent by email to {user.email}', "success", autocommit=False)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        self.update_state("SUCCESS", meta={"msg": "Task complete"})
+
+    def _export_matching_as_excel(record: MatchingAttempt, user: User):
+        now = datetime.now()
+        expiry = now + timedelta(weeks=4)
+        object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+
+        def make_asset(source_path: Path, target_name: str):
+            # AssetUploadManager will populate most fields later
+            asset = GeneratedAsset(timestamp=now, expiry=expiry, target_name=target_name, parent_asset_id=None, license_id=None)
+
+            size = source_path.stat().st_size
+
+            with open(source_path, "rb") as f:
+                with AssetUploadManager(
+                    asset,
+                    data=BytesIO(f.read()),
+                    storage=object_store,
+                    audit_data=f"matching._export_matching_as_excel (matching attempt #{record.id})",
+                    length=size,
+                    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    validate_nonce=validate_nonce,
+                ) as upload_mgr:
+                    pass
+
+            asset.grant_user(user)
+            db.session.add(asset)
+
+            return asset
+
+        with ScratchFileManager(suffix=".xlsx") as mgr:
+            records = []
+
+            for item in record.records:
+                item: MatchingRecord
+                sel: SelectingStudent = item.selector
+                sd: StudentData = sel.student
+                su: User = sd.user
+                programme: DegreeProgramme = sd.programme
+                proj: LiveProject = item.project
+                config: ProjectClassConfig = sel.config
+                ofd: FacultyData = proj.owner
+                ou: User = None if ofd is None else ofd.user
+
+                data = {
+                    "selector_last": su.last_name,
+                    "selector_first": su.first_name,
+                    "selector_full_name": su.name,
+                    "selector_email": su.email,
+                    "programme": programme.short_name,
+                    "cohort": sd.cohort,
+                    "academic_year": sd.academic_year,
+                    "intermitting": sd.intermitting,
+                    "bookmarks": sel.number_bookmarks,
+                    "selections": sel.number_selections,
+                    "custom_offers": sel.number_custom_offers(),
+                    "custom_offers_accepted": sel.custom_offers_accepted(),
+                    "custom_offers_declined": sel.custom_offers_declined(),
+                    "custom_offers_pending": sel.custom_offers_pending(),
+                    "is_optional": sel.is_optional,
+                    "is_valid_selection": sel.is_valid_selection,
+                    "project_class": config.abbreviation,
+                    "allocated_project": proj.name,
+                    "generic": proj.generic or proj.owner is None,
+                    "owner_last": None if ou is None else ou.last_name,
+                    "owner_first": None if ou is None else ou.first_name,
+                    "owner_full_name": None if ou is None else ou.name,
+                    "owner_email": None if ou is None else ou.email,
+                    "rank": item.rank,
+                    "is_alternative": item.alternative,
+                    "priority": None if not item.alternative else item.priority,
+                }
+
+                label_numbers = {}
+                for role in item.roles.order_by(MatchingRole.role):
+                    role: MatchingRole
+                    ud: User = role.user
+
+                    label = MatchingRole._role_labels[role.role]
+                    if label not in label_numbers:
+                        label_numbers[label] = 0
+
+                    label_numbers[label] += 1
+                    num = label_numbers[label]
+
+                    data.update(
+                        {
+                            f"{label}_{num}_last": ud.last_name,
+                            f"{label}_{num}_first": ud.first_name,
+                            f"{label}_{num}_full_name": ud.name,
+                            f"{label}_{num}_email": ud.email,
+                        }
+                    )
+
+                records.append(data)
+
+            df = DataFrame.from_records(records)
+
+            output_path = mgr.path
+            df.to_excel(output_path, sheet_name=f'Matching "{record.name}"', index=False)
+            xlsx_asset = make_asset(output_path, f"Matching_{record.name}-{now.strftime("%Y-%m-%d_%H:%M:%S")}")
+
+        db.session.commit()
+        return xlsx_asset

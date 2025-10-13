@@ -46,7 +46,7 @@ class MongoDBAuditBackend(AuditBackend):
         # obtain audit records from MongoDB
         cursor = self._collection.find(filter=filter_data, projection={"_id": False})
 
-        # get Pandas to ingest these records and product a dataframe
+        # get Pandas to ingest these records and produce a dataframe
         return DataFrame(cursor)
 
     def delete_audit_records(self, latest: datetime = None) -> None:

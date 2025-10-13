@@ -1,0 +1,7 @@
+For attention of: {{ user.name }}
+
+This is an automated email from the MPS
+project management web app at https://mpsprojects.sussex.ac.uk.
+
+Please find attached your requested Excel report for the matching attempt
+"{{ name }}".

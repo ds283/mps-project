@@ -54,11 +54,11 @@ _selections = """
                     <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> From bookmark</span>
                 {% endif %}
             </span>
-            <div class="dropdown">
+            <div class="small dropdown">
                 {% set has_hint = item.has_hint %}
-                <a class="ms-2 btn btn-xs {% if has_hint %}btn-info{% else %}btn-outline-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                <a class="ms-2 {% if has_hint %}link-primary{% else %}link-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
                     {% if has_hint %}
-                        Has hint
+                        Change hint
                     {% else %}
                         Set hint
                     {% endif %}

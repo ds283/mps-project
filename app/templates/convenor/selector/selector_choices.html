@@ -64,38 +64,38 @@
                     {% endif %}
                     {% if sel.has_submitted %}
                         {% if sel.has_accepted_offers() %}
-                            {% set offers = sel.accepted_offers() %}
-                            {% for offer in offers %}
-                                {% set project = offer.liveproject %}
-                                {% if project is not none %}
-                                    <div>
-                                        <span class="text-success"><i class="fas fa-check-circle"></i> <span
-                                                class="fw-bold">Accepted</span></span>
-                                        <span class="text-secondary">
-                                            custom offer for
-                                            <span class="fw-semibold">{{ project.name }}</span>,
-                                            owned by
-                                            <i class="fas fa-user-circle"></i> {{ project.owner.user.name }}
-                                        </span>
-                                    </div>
-                                {% else %}
-                                    <span class="badge bg-danger">MISSING ACCEPTED PROJECT</span>
-                                    <p>This is an internal error. Please contact a system administrator.</p>
-                                {% endif %}
-                            {% endfor %}
-                        {% endif %}
-                        <div class="card mt-3 mb-3 card-body bg-well">
-                            {% if sel.submission_time %}
-                                <div>
-                                    Last submission received at
-                                    <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
-                                    {% if sel.submission_IP %}
-                                        from IP address
-                                        <strong>{{ sel.submission_IP }}</strong>
+                            <div class="alert alert-success">
+                                {% set offers = sel.accepted_offers() %}
+                                {% for offer in offers %}
+                                    {% set project = offer.liveproject %}
+                                    {% if project is not none %}
+                                        <div>
+                                            <span class="text-success"><i class="fas fa-check-circle"></i> <span
+                                                    class="fw-bold">Accepted</span></span>
+                                            <span class="text-secondary">
+                                                custom offer for
+                                                <span class="fw-semibold">{{ project.name }}</span>,
+                                                owned by
+                                                <i class="fas fa-user-circle"></i> {{ project.owner.user.name }}
+                                            </span>
+                                        </div>
+                                    {% else %}
+                                        <span class="badge bg-danger">MISSING ACCEPTED PROJECT</span>
+                                        <p>This is an internal error. Please contact a system administrator.</p>
                                     {% endif %}
-                                </div>
-                            {% endif %}
-                        </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if sel.submission_time %}
+                            <div class="alert alert-secondary">
+                                Last submission received at
+                                <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
+                                {% if sel.submission_IP %}
+                                    from IP address
+                                    <strong>{{ sel.submission_IP }}</strong>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                         {{ ranked_selection(sel, sel.ordered_selections, 'selector submission view', url_for('convenor.selector_choices', id=sel.id), show_hint=(lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING), show_delete=true) }}
                         <hr class="intro-divider" role="separator">
                         <div class="d-flex flex-row justify-content-end align-items-start gap-2">

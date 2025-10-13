@@ -33,54 +33,53 @@ _selections = """
             {% else %}
                 <span class="text-danger small"><strong>MISSING ACCEPTED PROJECT</strong></span>
             {% endif %}
-        {% endif %}
-    {% else %}
-        {% for item in sel.ordered_selections %}
-            {% set project = item.liveproject %}
-            <div class="d-flex flex-row justify-content-start align-items-start gap-1">
-                <span class="small">#{{ item.rank }}</span>
-                {% if project.group %}
-                    {% set swatch_color = project.group.make_CSS_style() %}
-                    <div class="mt-1">{{ small_swatch(swatch_color) }}</div>
-                {% endif %}
-                <span class="small">
-                    {{ render_formatted_project(item) }}
-                    {% if not project.generic and project.owner is not none %}
-                        <span class="text-muted">&ndash; {{ project.owner.user.name }}</span>
-                    {% else %}
-                        <span class="fw-semibold text-uppercase text-info">Generic</span>
-                    {% endif %}
-                    {% if item.converted_from_bookmark %}
-                        <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> From bookmark</span>
-                    {% endif %}
-                </span>
-                <div class="dropdown">
-                    {% set has_hint = item.has_hint %}
-                    <a class="ms-2 btn btn-xs {% if has_hint %}btn-info{% else %}btn-outline-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                        {% if has_hint %}
-                            Has hint
-                        {% else %}
-                            Set hint
-                        {% endif %}
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
-                        {% set menu_items = item.menu_order %}
-                        {% for mi in menu_items %}
-                            {% if mi is string %}
-                                <div role="separator" class="dropdown-divider"></div>
-                                <div class="dropdown-header">{{ mi }}</div>
-                            {% elif mi is number %}
-                                {% set disabled = (mi == item.hint) %}
-                                <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
-                                    {{ item.menu_item(mi)|safe }}
-                                </a>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
         {% endfor %}
     {% endif %}
+    {% for item in sel.ordered_selections %}
+        {% set project = item.liveproject %}
+        <div class="d-flex flex-row justify-content-start align-items-start gap-1">
+            <span class="small">#{{ item.rank }}</span>
+            {% if project.group %}
+                {% set swatch_color = project.group.make_CSS_style() %}
+                <div class="mt-1">{{ small_swatch(swatch_color) }}</div>
+            {% endif %}
+            <span class="small">
+                {{ render_formatted_project(item) }}
+                {% if not project.generic and project.owner is not none %}
+                    <span class="text-muted">&ndash; {{ project.owner.user.name }}</span>
+                {% else %}
+                    <span class="fw-semibold text-uppercase text-info">Generic</span>
+                {% endif %}
+                {% if item.converted_from_bookmark %}
+                    <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> From bookmark</span>
+                {% endif %}
+            </span>
+            <div class="dropdown">
+                {% set has_hint = item.has_hint %}
+                <a class="ms-2 btn btn-xs {% if has_hint %}btn-info{% else %}btn-outline-secondary{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                    {% if has_hint %}
+                        Has hint
+                    {% else %}
+                        Set hint
+                    {% endif %}
+                </a>
+                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 small">
+                    {% set menu_items = item.menu_order %}
+                    {% for mi in menu_items %}
+                        {% if mi is string %}
+                            <div role="separator" class="dropdown-divider"></div>
+                            <div class="dropdown-header">{{ mi }}</div>
+                        {% elif mi is number %}
+                            {% set disabled = (mi == item.hint) %}
+                            <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
+                                {{ item.menu_item(mi)|safe }}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
 {% else %}
     <div class="d-flex flex-row justify-content-start align-items-center gap-2">
         {% if sel.number_bookmarks > 0 %}
@@ -159,7 +158,7 @@ def selector_grid_data(students: List[SelectingStudent], config: ProjectClassCon
 
         # group 'accepted offer' students together at the top
         if sel.has_accepted_offers():
-            return 100 + len(sel.accepted_offers())
+            return 100 + sel.number_offers_accepted()
 
         if sel.has_submission_list:
             return sel.number_selections

@@ -4001,13 +4001,13 @@ def register_matching_tasks(celery):
         msg.attach(filename=xlsx_asset.target_name, mimetype=xlsx_asset.mimetype, content=xlsx_storage.get())
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description="Email to {r}".format(r=", ".join(msg.to)))
+        send_task_id = register_task(msg.subject, description="Email to {r}".format(r=", ".join(msg.to)))
 
         self.update_state("STARTED", meta={"msg": "Handoff to email dispatch task"})
 
         send_tasks = chain(
-            send_log_email.s(task_id, msg),
-            notify_excel_file_sent.s(matching_id, user_id, task_id),
+            send_log_email.s(send_task_id, msg),
+            notify_excel_file_sent.s(matching_id, user_id, send_task_id),
         )
 
         self.update_state("SUCCESS", meta={"msg": ".xlsx report generation complete"})
@@ -4096,18 +4096,19 @@ def register_matching_tasks(celery):
                     "selector_full_name": su.name,
                     "selector_email": su.email,
                     "programme": programme.short_name,
+                    "project_class": config.abbreviation,
+                    "submission_period": item.submission_period,
                     "cohort": sd.cohort,
                     "academic_year": sd.academic_year,
                     "intermitting": sd.intermitting,
                     "bookmarks": sel.number_bookmarks,
                     "selections": sel.number_selections,
                     "custom_offers": sel.number_custom_offers(),
-                    "custom_offers_accepted": sel.custom_offers_accepted(),
-                    "custom_offers_declined": sel.custom_offers_declined(),
-                    "custom_offers_pending": sel.custom_offers_pending(),
+                    "custom_offers_accepted": sel.number_offers_accepted(),
+                    "custom_offers_declined": sel.number_offers_declined(),
+                    "custom_offers_pending": sel.number_offers_pending(),
                     "is_optional": sel.is_optional,
-                    "is_valid_selection": sel.is_valid_selection,
-                    "project_class": config.abbreviation,
+                    "is_valid_selection": sel.is_valid_selection[0],
                     "allocated_project": proj.name,
                     "generic": proj.generic or proj.owner is None,
                     "owner_last": None if ou is None else ou.last_name,

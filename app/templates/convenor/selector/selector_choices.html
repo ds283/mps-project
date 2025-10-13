@@ -66,36 +66,42 @@
                         {% if sel.has_accepted_offers() %}
                             {% set offers = sel.accepted_offers() %}
                             {% for offer in offers %}
-                            {% set project = offer.liveproject %}
-                            {% if project is not none %}
-                                <div>
-                                    {{ sel.student.user.name }} has accepted a custom offer for
-                                    the project
-                                    <strong>{{ project.name }}</strong>
-                                    supervised by
-                                    <i class="fas fa-user-circle"></i> {{ project.owner.user.name }}
-                                </div>
-                            {% else %}
-                                <span class="badge bg-danger">MISSING ACCEPTED PROJECT</span>
-                                <p>This is an internal error. Please contact a system administrator.</p>
-                            {% endif %}
-                            {% endif %}
-                        {% else %}
-                            <div class="card mt-3 mb-3 card-body bg-well">
+                                {% set project = offer.liveproject %}
+                                {% if project is not none %}
+                                    <div>
+                                        <span class="text-success"><i class="fas fa-check-circle"></i> <span
+                                                class="fw-bold">Accepted</span></span>
+                                        <span class="text-secondary">
+                                            custom offer for
+                                            <span class="fw-semibold">{{ project.name }}</span>,
+                                            owned by
+                                            <i class="fas fa-user-circle"></i> {{ project.owner.user.name }}
+                                        </span>
+                                    </div>
+                                {% else %}
+                                    <span class="badge bg-danger">MISSING ACCEPTED PROJECT</span>
+                                    <p>This is an internal error. Please contact a system administrator.</p>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        <div class="card mt-3 mb-3 card-body bg-well">
+                            {% if sel.submission_time %}
                                 <div>
                                     Last submission received at
                                     <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
-                                    from IP address
-                                    <strong>{{ sel.submission_IP }}</strong>
+                                    {% if sel.submission_IP %}
+                                        from IP address
+                                        <strong>{{ sel.submission_IP }}</strong>
+                                    {% endif %}
                                 </div>
-                            </div>
-                            {{ ranked_selection(sel, sel.ordered_selections, 'selector submission view', url_for('convenor.selector_choices', id=sel.id), show_hint=(lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING), show_delete=true) }}
-                            <hr class="intro-divider" role="separator">
-                            <div class="d-flex flex-row justify-content-end align-items-start gap-2">
-                                <a href="{{ url_for('convenor.add_student_ranking', sid=sel.id) }}"
-                                   class="btn btn-sm btn-outline-secondary">Add ranking</a>
-                            </div>
-                        {% endif %}
+                            {% endif %}
+                        </div>
+                        {{ ranked_selection(sel, sel.ordered_selections, 'selector submission view', url_for('convenor.selector_choices', id=sel.id), show_hint=(lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING), show_delete=true) }}
+                        <hr class="intro-divider" role="separator">
+                        <div class="d-flex flex-row justify-content-end align-items-start gap-2">
+                            <a href="{{ url_for('convenor.add_student_ranking', sid=sel.id) }}"
+                               class="btn btn-sm btn-outline-secondary">Add ranking</a>
+                        </div>
                     {% else %}
                         No preferences have been received for this student.
                     {% endif %}

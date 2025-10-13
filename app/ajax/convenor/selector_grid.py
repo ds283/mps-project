@@ -25,15 +25,17 @@ _cohort = """
 _selections = """
 {% if sel.has_submitted %}
     {% if sel.has_accepted_offers() %}
-        {% set offers = sel.accepted_offers() %}
-        {% for offer in offers %}
-            {% set project = offer.liveproject %}
-            {% if project %}
-                <span class="small"><span class="text-success"><i class="fas fa-check-circle"></i> <span class="fw-bold">Accepted:</span></span> <span class="text-secondary">{{ project.name }} ({{ project.owner.user.last_name }})</span></span>
-            {% else %}
-                <span class="text-danger small"><strong>MISSING ACCEPTED PROJECT</strong></span>
-            {% endif %}
-        {% endfor %}
+        <div class="alert alert-success p-1">
+            {% set offers = sel.accepted_offers() %}
+            {% for offer in offers %}
+                {% set project = offer.liveproject %}
+                {% if project %}
+                    <div class="small"><span class="text-success"><i class="fas fa-check-circle"></i> <span class="fw-bold">Accepted:</span></span> <span class="text-secondary">{{ project.name }} ({{ project.owner.user.last_name }})</span></div>
+                {% else %}
+                    <div class="text-danger small"><strong>MISSING ACCEPTED PROJECT</strong></div>
+                {% endif %}
+            {% endfor %}
+        </div>
     {% endif %}
     {% for item in sel.ordered_selections %}
         {% set project = item.liveproject %}

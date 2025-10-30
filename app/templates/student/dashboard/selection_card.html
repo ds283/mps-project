@@ -165,32 +165,33 @@
 {% if sel.has_accepted_offers() %}
     {% set offers = sel.accepted_offers() %}
     {% for offer in offers %}
-    {% set project = offer.liveproject %}
-    <div class="alert alert-success mt-3 mb-3">
-        {% call icon_block("check-circle") %}
-            <div><strong>You have accepted a custom offer.</strong></div>
-            {% if project is not none %}
-                <div class="mt-1">
-                    You have accepted an offer for the project
-                    <a class="text-decoration-none"
-                       href="{{ url_for('student.selector_view_project', sid=sel.id, pid=offer.liveproject.id, url=url_for('student.dashboard'), text='home dashboard') }}">
-                        <strong>{{ project.name }}</strong>
-                    </a>
-                    supervised by
-                    <i class="fas fa-user-circle"></i> {{ project.owner.user.name }}.
-                </div>
-                <div class="mt-1">
-                    If you prefer to change your decision, you can decline this project
-                    at any point up to the deadline.
-                </div>
-            {% else %}
-                <div class="mt-1">
-                    We have detected an issue with your selection.
-                    Please contact the project convenor.
-                </div>
-            {% endif %}
-        {% endcall %}
-    </div>
+        {% set project = offer.liveproject %}
+        <div class="alert alert-success mt-3 mb-3">
+            {% call icon_block("check-circle") %}
+                <div><strong>You have accepted a custom offer.</strong></div>
+                {% if project is not none %}
+                    <div class="mt-1">
+                        You have accepted an offer for the project
+                        <a class="text-decoration-none"
+                           href="{{ url_for('student.selector_view_project', sid=sel.id, pid=offer.liveproject.id, url=url_for('student.dashboard'), text='home dashboard') }}">
+                            <strong>{{ project.name }}</strong>
+                        </a>
+                        supervised by
+                        <i class="fas fa-user-circle"></i> {{ project.owner.user.name }}.
+                    </div>
+                    <div class="mt-1">
+                        If you prefer to change your decision, you can decline this project
+                        at any point up to the deadline.
+                    </div>
+                {% else %}
+                    <div class="mt-1">
+                        We have detected an issue with your selection.
+                        Please contact the project convenor.
+                    </div>
+                {% endif %}
+            {% endcall %}
+        </div>
+    {% endfor %}
 {% endif %}
     {% else %}
         {% if sel.has_submitted %}

@@ -10308,6 +10308,7 @@ def assign_liveproject(id, pid):
         if not lp.generic:
             new_owner = lp.owner
             if new_owner is not None:
+                weight = 1.0
                 role = SubmissionRole(
                     submission_id=rec.id,
                     user_id=new_owner.id,

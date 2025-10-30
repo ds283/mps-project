@@ -136,7 +136,7 @@ class AssetCloudAdapter:
             bucket = getattr(self._asset, "bucket")
             store_bucket = self._storage.database_key
             if bucket != store_bucket:
-                raise RuntimeError(f"AssetCloudAdapter: asset was stored in bucket #{bucket}, but the " f"object storage is #{store_bucket}")
+                raise RuntimeError(f"AssetCloudAdapter: asset was stored in bucket #{bucket}, but object storage is #{store_bucket}")
 
         if self._encryption is not None and self._encryption != encryptions.ENCRYPTION_NONE:
             if not self._storage_encrypted:

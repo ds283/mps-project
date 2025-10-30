@@ -109,7 +109,12 @@ class AmazonS3CloudStorageDriver:
                 extra_args["ContinuationToken"] = continuation_token
 
             response = self._storage.list_objects_v2(Bucket=self._bucket_name, **extra_args)
-            contents = response["Contents"]
+            try:
+                contents = response["Contents"]
+            except KeyError:
+                print(f'** Warning: object store AmazonS3CloudStorageDriver: No contents found for bucket "{self._bucket_name}", prefix="{prefix_str}" | current data = {data}')
+                return data
+
             data.update({str(obj["Key"]): self.head(obj["Key"]) for obj in contents})
 
             is_truncated = response["IsTruncated"]

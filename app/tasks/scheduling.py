@@ -1064,7 +1064,6 @@ def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
 
         size = source_path.stat().st_size
 
-        object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
         with open(source_path, "rb") as f:
             with AssetUploadManager(
                 asset,

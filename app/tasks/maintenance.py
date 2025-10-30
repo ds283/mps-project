@@ -535,9 +535,9 @@ def register_maintenance_tasks(celery):
         submitted_records = _collect_expirable_assets(self, SubmittedAsset)
 
         tasks = (
-            [asset_test_expiry.s(r.id, GeneratedAsset, "OBJECT_STORAGE_ASSETS") for r in generated_records]
-            + [asset_test_expiry.s(r.id, TemporaryAsset, "OBJECT_STORAGE_ASSETS") for r in temporary_records]
-            + [asset_test_expiry.s(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in submitted_records]
+            [asset_test_expiry.s(r.id, GeneratedAsset) for r in generated_records]
+            + [asset_test_expiry.s(r.id, TemporaryAsset) for r in temporary_records]
+            + [asset_test_expiry.s(r.id, SubmittedAsset) for r in submitted_records]
         )
 
         raise self.replace(group(*tasks))
@@ -555,9 +555,9 @@ def register_maintenance_tasks(celery):
         submitted_records = _collect_all_assets(self, SubmittedAsset)
 
         tasks = (
-            [asset_test_lost.s(r.id, GeneratedAsset, "OBJECT_STORAGE_ASSETS") for r in generated_records]
-            + [asset_test_lost.s(r.id, TemporaryAsset, "OBJECT_STORAGE_ASSETS") for r in temporary_records]
-            + [asset_test_lost.s(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in submitted_records]
+            [asset_test_lost.s(r.id, GeneratedAsset) for r in generated_records]
+            + [asset_test_lost.s(r.id, TemporaryAsset) for r in temporary_records]
+            + [asset_test_lost.s(r.id, SubmittedAsset) for r in submitted_records]
         )
 
         raise self.replace(
@@ -568,7 +568,7 @@ def register_maintenance_tasks(celery):
     def asset_check_unattached(self, notify_email):
         submitted_records = _collect_all_assets(self, SubmittedAsset)
 
-        tasks = [asset_test_attached.si(r.id, SubmittedAsset, "OBJECT_STORAGE_ASSETS") for r in submitted_records]
+        tasks = [asset_test_attached.si(r.id, SubmittedAsset) for r in submitted_records]
 
         raise self.replace(
             group(*tasks)
@@ -576,7 +576,7 @@ def register_maintenance_tasks(celery):
         )
 
     @celery.task(bind=True, default_retry_delay=30, serializer="pickle")
-    def asset_test_expiry(self, id, RecordType, storage_key: str):
+    def asset_test_expiry(self, id, RecordType):
         try:
             record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
         except SQLAlchemyError as e:
@@ -596,8 +596,13 @@ def register_maintenance_tasks(celery):
 
         asset_type = RecordType.get_type()
 
+        bucket_type = record.bucket
+        bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
+        if bucket_type not in bucket_map:
+            raise RuntimeError(f"Asset #{id} of type {RecordType} requires bucket type {bucket_type}, but this is not available in the object store")
+
         storage = AssetCloudAdapter(
-            record, current_app.config.get(storage_key), audit_data=f'maintenance.asset_test_expiry (record type="{asset_type}", record id #{id})'
+            record, bucket_map[bucket_type], audit_data=f'maintenance.asset_test_expiry (record type="{asset_type}", record id #{id})'
         )
         try:
             storage.delete()
@@ -616,7 +621,7 @@ def register_maintenance_tasks(celery):
         return asset_name
 
     @celery.task(bind=True, default_retry_delay=30, serializer="pickle")
-    def asset_test_lost(self, id, RecordType, storage_key: str):
+    def asset_test_lost(self, id, RecordType):
         try:
             record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
         except SQLAlchemyError as e:
@@ -633,8 +638,13 @@ def register_maintenance_tasks(celery):
 
         asset_type = RecordType.get_type()
 
+        bucket_type = record.bucket
+        bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
+        if bucket_type not in bucket_map:
+            raise RuntimeError(f"Asset #{id} of type {RecordType} requires bucket type {bucket_type}, but this is not available in the object store")
+
         storage = AssetCloudAdapter(
-            record, current_app.config.get(storage_key), audit_data=f'maintenance.asset_test_lost (record type="{asset_type}", record id #{id})'
+            record, bucket_map[bucket_type], audit_data=f'maintenance.asset_test_lost (record type="{asset_type}", record id #{id})'
         )
 
         # check if asset exists in the object store
@@ -645,7 +655,7 @@ def register_maintenance_tasks(celery):
         return {"type": f"{asset_type}", "id": record.id, "name": asset_name}
 
     @celery.task(bind=True, default_retry_delay=30, serializer="pickle")
-    def asset_test_attached(self, id, RecordType, storage_key: str):
+    def asset_test_attached(self, id, RecordType):
         try:
             record: RecordType = db.session.query(RecordType).filter_by(id=id).first()
         except SQLAlchemyError as e:
@@ -750,8 +760,13 @@ def register_maintenance_tasks(celery):
         if asset is None:
             raise Ignore()
 
-        object_store: ObjectStore = current_app.config.get("OBJECT_STORAGE_ASSETS")
         asset_type = RecordType.get_type()
+
+        bucket_type = asset.bucket
+        bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
+        if bucket_type not in bucket_map:
+            raise RuntimeError(f"Asset #{id} of type {RecordType} requires bucket type {bucket_type}, but this is not available in the object store")
+        object_store = bucket_map[bucket_type]
 
         # ensure object is encrypted, if storage supports that
         if object_store.encrypted and asset.encryption == encryptions.ENCRYPTION_NONE:

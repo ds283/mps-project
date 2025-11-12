@@ -6211,6 +6211,24 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
 
         return ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
 
+    def rollover_ready(self, current_year: Optional[int]) -> bool:
+        if current_year is None:
+            current_year = _get_current_year()
+
+        selector_status = self.selector_lifecycle
+        submitter_status = self.submitter_lifecycle
+
+        if self.year >= current_year:
+            return False
+
+        if selector_status != SelectorLifecycleStatesMixin.SELECTOR_LIFECYCLE_READY_ROLLOVER:
+            return False
+
+        if submitter_status != SubmitterLifecycleStatesMixin.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+            return False
+
+        return True
+
     @property
     def allocated_match(self):
         return self.matching_attempts.filter_by(selected=True).first()

@@ -86,7 +86,7 @@
                 {% set bounded = cdata['is_bounded'] %}
                 {% set selector_lifecycle = config.selector_lifecycle %}
                 {% set submitter_lifecycle = config.submitter_lifecycle %}
-                {% set rollover_ready = selector_lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER and submitter_lifecycle == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER and config.year < current_year %}
+                {% set rollover_ready = config.rollover_ready(current_year) %}
                 {% set pclass = config.project_class %}
                 {% set published = pclass.publish %}
                 <div class="row vertical-top mt-2">

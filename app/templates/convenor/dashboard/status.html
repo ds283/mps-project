@@ -4,7 +4,7 @@
 {% from "icon_block.html" import icon_block %}
 {% from "datepicker.html" import import_datepicker %}
 
-{% from "convenor/dashboard/overview_cards/rollover.html" import rollover_card %}
+{% from "convenor/dashboard/overview_cards/rollover.html" import rollover_card, rollover_not_yet_card %}
 {% from "convenor/dashboard/overview_cards/issue_confirmations.html" import issue_confirmations %}
 {% from "convenor/dashboard/overview_cards/waiting_confirmations.html" import waiting_confirmations %}
 {% from "convenor/dashboard/overview_cards/golive.html" import golive %}
@@ -160,8 +160,10 @@
             </div>
 
             {# offer rollover of academic year if available #}
-            {% if config.year < current_year %}
+            {% if config.rollover_ready(current_year) %}
                 {{ rollover_card(current_year, pclass, config) }}
+            {% elif config.year < current_year %}
+                {{ rollover_not_yet_card(current_year, pclass, config) }}
             {% endif %}
 
             {% if pclass.publish %}

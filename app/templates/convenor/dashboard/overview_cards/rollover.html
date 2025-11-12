@@ -1,6 +1,36 @@
 {% from "icon_block.html" import icon_block %}
 {% from "convenor/dashboard/overview_cards/blocking_task_list.html" import blocking_task_list %}
 
+{% macro rollover_not_yet_card(current_year, pclass, config) %}
+    {% set selector_lifecycle = config.selector_lifecycle %}
+    {% set submitter_lifecycle = config.submitter_lifecycle %}
+    <div class="card border-danger mt-3 mb-3">
+        <div class="card-header bg-danger text-white"><strong>Rollover of academic year not yet available</strong></div>
+        <div class="card-body">
+            <div>
+                {% call icon_block("exclamation-circle", icon_classes="text-danger") %}
+                    <div class="text-danger ">
+                        Rollover of the academic year to {{ current_year }}&ndash;{{ current_year+1 }}
+                        has been made available by an administrator, but is not yet available for this project
+                        class.
+                    </div>
+                {% endcall %}
+            </div>
+            {% if selector_lifecycle != config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
+                <div class="mt-1 small fw-semibold text-secondary">
+                    &mdash; Some selector activities are not yet complete
+                </div>
+            {% endif %}
+            {% if submitter_lifecycle != config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
+                <div class="mt-1 small fw-semibold text-secondary">
+                    &mdash; Some submitter activities are not yet complete
+                </div>
+            {% endif %}
+            {{ blocking_task_list(config.get_blocking_tasks[0]) }}
+        </div>
+    </div>
+{% endmacro %}
+
 {% macro rollover_card(current_year, pclass, config) %}
     <div id="rollover-panel" class="card border-danger mt-3 mb-3 collapse show" aria-expanded="true">
         <div class="card-header bg-danger text-white"><strong>Rollover of academic year available</strong></div>

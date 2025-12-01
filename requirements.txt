@@ -58,7 +58,7 @@ Flask-Security-Too==5.6.2
 Flask-SQLAlchemy==3.1.1
 Flask-WTF==1.2.2
 flower==2.0.1
-fonttools==4.60.1
+fonttools==4.61.0
 google-api-core==2.28.1
 google-auth==2.43.0
 google-cloud-core==2.5.0

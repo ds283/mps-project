@@ -153,7 +153,7 @@ typing_extensions==4.15.0
 tzdata==2025.2
 tzlocal==2.0.0
 url-normalize==2.2.1
-urllib3==2.5.0
+urllib3==2.6.3
 validators==0.35.0
 vine==5.1.0
 waitress==3.0.2

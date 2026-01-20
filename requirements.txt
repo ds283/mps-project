@@ -9,7 +9,7 @@ black==25.11.0
 bleach==6.3.0
 bleach-whitelist==0.0.11
 blinker==1.9.0
-bokeh==3.8.1
+bokeh==3.8.2
 boto3==1.42.0
 botocore==1.41.6
 brotli==1.2.0

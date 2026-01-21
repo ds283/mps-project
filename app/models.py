@@ -17163,6 +17163,37 @@ class GeneratedAssetDownloadRecord(db.Model):
     timestamp = db.Column(db.DateTime(), index=True)
 
 
+class DownloadCentreItem(db.Model):
+    """
+    Model an element in a user's download centre
+    """
+
+    __tablename__ = "download_centre_item"
+
+    # primary key ids
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # user id
+    user_id = db.Column(db.Integer(), db.ForeignKey("users.id"), default=None)
+    user = db.relationship("User", foreign_keys=[id], backref=db.backref("download_centre_items", uselist=False))
+
+    # generated asset item
+    asset_id = db.Column(db.Integer(), db.ForeignKey("generated_assets.id"), default=None)
+    asset = db.relationship("GeneratedAsset", foreign_keys=[asset_id], uselist=False, backref=db.backref("download_centre_items", lazy="dynamic"))
+
+    # generated time
+    generated_at = db.Column(db.DateTime(), index=True, default=None)
+
+    # last downloaded time
+    last_downloaded_at = db.Column(db.DateTime(), index=True, default=None)
+
+    # expiry time (optional)
+    expire_at = db.Column(db.DateTime(), index=True, default=None)
+
+    # total number of downloads
+    number_downloads = db.Column(db.Integer(), default=0)
+
+
 class AssetLicense(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     """
     Model a license for distributing content

@@ -315,6 +315,11 @@ def register_availability_tasks(celery):
             "email/scheduling/availability_request.txt", event=a_record.assessment, deadline=deadline, user=a_record.faculty.user
         )
 
+        html = render_template(
+            "email/scheduling/availability_request.html", event=a_record.assessment, deadline=deadline, user=a_record.faculty.user
+        )
+        msg.attach_alternative(html, "text/html")
+
         # register a new task in the database
         task_id = register_task(msg.subject, description="Send availability request email to {r}".format(r=", ".join(msg.to)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)

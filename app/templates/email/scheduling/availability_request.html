@@ -1,0 +1,37 @@
+<p>Dear {{ user.first_name }}</p>
+
+<p><strong>This email is sent from an automated address. Please don't reply to it directly, because your mail won't
+    reach us.</strong></p>
+
+<p>
+    {% if event.earliest_date == event.latest_date -%}
+        A project presentation event is being scheduled on {{ event.earliest_date }}.
+    {% else -%}
+        A project presentation event is being scheduled between {{ event.earliest_date }} and {{ event.latest_date }}.
+    {% endif -%}
+    There will be approximately {{ event.number_talks }} students giving presentations based on projects drawn from the
+    following:
+<ul>
+    {%- for period in event.available_periods %}
+        <li>{{ period.config.project_class.name }}
+            {% if period.config.project_class.number_submissions > 1 -%}{{ period.display_name }}{%- endif -%}</li>
+    {%- endfor %}
+</ul>
+In order to prepare a programme we would like to ask for your availability between these dates.
+</p>
+
+<p>To do so, please log in to the project management web app at <a href="https:://mpsprojects.sussex.ac.uk">https:://mpsprojects.sussex.ac.uk</a>.
+    You should see an information request box highlighted in red at the top of the page. It would be very helpful if you
+    could provide your response by {{ deadline.strftime("%a %d %b %Y") }}.</p>
+
+<p>This presentation event is being organized by <a
+        href="mailto:{{ event.created_by.email }}">{{ event.created_by.first_name }} {{ event.created_by.last_name }}</a>.
+    Please direct queries to this address.</p>
+
+<p>Thank you for your help,
+    {% for fac in event.convenor_list -%}
+        <br><a href="mailto:{{ fac.user.email }}">{{ fac.user.first_name }} {{ fac.user.last_name }}</a>
+    {% endfor -%}
+    {%- set pl = 's' -%}
+    {%- if event.convenor_list|length == 1 -%}{%- set pl = '' -%}{%- endif -%}
+    <br>(the project convenor{{ pl }})</p>

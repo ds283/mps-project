@@ -13511,7 +13511,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
                 MatchingRecord.roles.any(
                     and_(
                         MatchingRole.user_id == fac_id,
-                        MatchingRole.role.in_([MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR])
+                        MatchingRole.role.in_([MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR]),
                     )
                 )
             )
@@ -15131,15 +15131,25 @@ def _PresentationSession_is_valid(id):
             and_(
                 PresentationSession.date == obj.date,
                 PresentationSession.session_type == obj.session_type,
-                or_(PresentationSession.name == None, PresentationSession.label == obj.name),
+                or_(PresentationSession.name == None, PresentationSession.name == obj.name),
             )
         )
     )
 
     if count != 1:
         lo_rec = (
-            obj.owner.sessions.filter_by(date=obj.date, session_type=obj.session_type)
-            .order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc())
+            obj.owner.sessions.filter(
+                and_(
+                    PresentationSession.date == obj.date,
+                    PresentationSession.session_type == obj.session_type,
+                    or_(PresentationSession.name == None, PresentationSession.name == obj.name),
+                )
+            )
+            .order_by(
+                PresentationSession.date.asc(),
+                PresentationSession.session_type.asc(),
+                PresentationSession.name.asc(),
+            )
             .first()
         )
 

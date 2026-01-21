@@ -15577,7 +15577,7 @@ class PresentationSession(db.Model, EditingMetadataMixin, PresentationSessionTyp
     )
 
     # label for this session
-    label = db.Column(db.String(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")))
+    name = db.Column(db.String(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")))
 
     # session date
     date = db.Column(db.Date())

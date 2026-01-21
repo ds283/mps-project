@@ -7372,21 +7372,28 @@ def add_session(id):
     if form.validate_on_submit():
         sess = PresentationSession(
             owner_id=assessment.id,
-            label=form.label.data,
+            name=form.name.data,
             date=form.date.data,
             session_type=form.session_type.data,
             rooms=form.rooms.data,
             creator_id=current_user.id,
             creation_timestamp=datetime.now(),
         )
-        db.session.add(sess)
-        db.session.commit()
 
-        # add this session to all attendance data records attached for this assessment
-        celery = current_app.extensions["celery"]
-        adjust_task = celery.tasks["app.tasks.availability.session_added"]
+        try:
+            db.session.add(sess)
+            db.session.commit()
 
-        adjust_task.apply_async(args=(sess.id, assessment.id))
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash("Could not add new session due to a database error. Please contact a system administrator.", "error")
+
+        else:
+            # add this session to all attendance data records attached for this assessment
+            celery = current_app.extensions["celery"]
+            adjust_task = celery.tasks["app.tasks.availability.session_added"]
+
+            adjust_task.apply_async(args=(sess.id, assessment.id))
 
         return redirect(url_for("admin.assessment_manage_sessions", id=id))
 
@@ -7417,7 +7424,7 @@ def edit_session(id):
     form.session = sess
 
     if form.validate_on_submit():
-        sess.label = form.label.data
+        sess.name = form.name.data
         sess.date = form.date.data
         sess.session_type = form.session_type.data
         sess.rooms = form.rooms.data
@@ -7425,7 +7432,12 @@ def edit_session(id):
         sess.last_edit_id = current_user.id
         sess.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash("Could not save edited session data due to a database error. Please contact a system administrator.", "error")
 
         return redirect(url_for("admin.assessment_manage_sessions", id=sess.owner_id))
 

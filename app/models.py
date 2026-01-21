@@ -15129,9 +15129,11 @@ def _PresentationSession_is_valid(id):
     count = get_count(
         obj.owner.sessions.filter(
             and_(
-                PresentationSession.date==obj.date,
-                PresentationSession.session_type==obj.session_type,
-                or_(PresentationSession.name==None, PresentationSession.label==obj.name)))
+                PresentationSession.date == obj.date,
+                PresentationSession.session_type == obj.session_type,
+                or_(PresentationSession.name == None, PresentationSession.label == obj.name),
+            )
+        )
     )
 
     if count != 1:

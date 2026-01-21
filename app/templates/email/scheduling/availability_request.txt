@@ -1,9 +1,10 @@
+{%- set single_date = (event.earliest_date == event.latest_date) -%}
 Dear {{ user.first_name }}
 
 This email is sent from an automated address. Please don't reply to it
 directly, because your mail won't reach us.
 
-{% if event.earliest_date == event.latest_date -%}
+{% if single_date -%}
 A project presentation event is being scheduled on {{ event.earliest_date }}.
 {% else -%}
 A project presentation event is being scheduled between {{ event.earliest_date }}
@@ -14,8 +15,13 @@ based on projects drawn from the following:
 {%- for period in event.available_periods %}
 - {{ period.config.project_class.name }} {% if period.config.project_class.number_submissions > 1 -%}{{ period.display_name }}{%- endif -%}
 {%- endfor %}
+{% if single_date -%}
+In order to prepare a programme we would like to ask for your availability
+on this date.
+{% else -%}
 In order to prepare a programme we would like to ask for your availability
 between these dates.
+{% endif -%}
 
 To do so, please log in to the project management web app at
 https:://mpsprojects.sussex.ac.uk. You should see an information request box

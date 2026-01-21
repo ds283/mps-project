@@ -15576,6 +15576,9 @@ class PresentationSession(db.Model, EditingMetadataMixin, PresentationSessionTyp
         backref=db.backref("sessions", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
+    # label for this session
+    label = db.Column(db.String(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")))
+
     # session date
     date = db.Column(db.Date())
 
@@ -15623,6 +15626,9 @@ class PresentationSession(db.Model, EditingMetadataMixin, PresentationSessionTyp
     @property
     def session_type_label(self):
         if self.session_type in PresentationSession.SESSION_TO_TEXT:
+            if self.label is not None:
+                return {"label": f"{self.label} ({self.session_type_string})", "style": None}
+
             return {"label": f"{self.session_type_string}", "style": None}
 
         return {"label": "Unknown", "type": "danger"}

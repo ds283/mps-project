@@ -7372,6 +7372,7 @@ def add_session(id):
     if form.validate_on_submit():
         sess = PresentationSession(
             owner_id=assessment.id,
+            label=form.label.data,
             date=form.date.data,
             session_type=form.session_type.data,
             rooms=form.rooms.data,
@@ -7416,6 +7417,7 @@ def edit_session(id):
     form.session = sess
 
     if form.validate_on_submit():
+        sess.label = form.label.data
         sess.date = form.date.data
         sess.session_type = form.session_type.data
         sess.rooms = form.rooms.data

@@ -56,6 +56,7 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
+{{ wtf.render_field(form.label) }}
 {{ date_field(form.date, 'datepicker1') }}
         {{ wtf.render_field(form.session_type) }}
         {{ wtf.render_field(form.rooms) }}

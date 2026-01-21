@@ -1354,6 +1354,8 @@ def EditPresentationAssessmentFormFactory(year, assessment: PresentationAssessme
 
 
 class SessionMixin:
+    label = StringField("Session label", validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
+
     date = DateTimeField("Date", format="%d/%m/%Y", validators=[InputRequired()], description="Specify the date for this session")
 
     session_type = SelectField("Session type", choices=session_choices, coerce=int)

@@ -17181,7 +17181,7 @@ class DownloadCentreItem(db.Model):
 
     # user id
     user_id = db.Column(db.Integer(), db.ForeignKey("users.id"), default=None)
-    user = db.relationship("User", foreign_keys=[id], backref=db.backref("download_centre_items", uselist=False))
+    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("download_centre_items", uselist=False))
 
     # generated asset item
     asset_id = db.Column(db.Integer(), db.ForeignKey("generated_assets.id"), default=None)

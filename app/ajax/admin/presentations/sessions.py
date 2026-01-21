@@ -97,35 +97,35 @@ _menu = """
 _availability = """
 {% set lifecycle = s.owner.availability_lifecycle %}
 {% if lifecycle <= s.owner.AVAILABILITY_NOT_REQUESTED %}
-    <span class="badge bg-secondary">Not yet requested</span>
+    <span class="small text-secondary">Not yet requested</span>
 {% else %}
     {% if lifecycle == s.owner.AVAILABILITY_SKIPPED %}
-        <span class="badge bg-info">Availability skipped</span>
+        <span class="small text-secondary">Availability skipped</span>
     {% endif %}
     {% set fac_available = s.number_available_faculty %}
     {% set fac_ifneeded = s.number_ifneeded_faculty %}
     {% set fac_unavailable = s.number_unavailable_faculty %}
     {% if fac_available > 0 or fac_ifneeded > 0 %}
-        <div>
-            <span class="badge bg-success">{{ fac_available }} available</span>
+        <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+            <span class="small text-success">{{ fac_available }} available</span>
             {% if fac_ifneeded > 0 %}
-                <span class="badge bg-warning text-dark">{{ fac_ifneeded }} if-needed</span>
+                <span class="small text-secondary">{{ fac_ifneeded }} if-needed</span>
             {% endif %}
             {% if fac_unavailable > 0 %}
-                <span class="badge bg-danger">{{ fac_unavailable }} unavailable</span>
+                <span class="small text-danger">{{ fac_unavailable }} unavailable</span>
             {% endif %}
-            <span class="badge bg-info">Total {{ fac_available + fac_ifneeded }}</span>
+            <span class="small text-secondary">Total {{ fac_available + fac_ifneeded }}</span>
         </div>
     {% else %}
-        <span class="badge bg-danger">No availability</span>
+        <span class="small fw-semibold text-danger">No availability</span>
     {% endif %}
     {% set sub_unavailable = s.number_unavailable_submitters %}
     {% if sub_unavailable > 0 %}
         {% set pl = 's' %}
         {% if sub_unavailable == 1 %}{% set pl = '' %}{% endif %}
-        <span class="badge bg-danger">{{ sub_unavailable }} submitter{{ pl }} unavailable</span>
+        <span class="small text-danger">{{ sub_unavailable }} submitter{{ pl }} unavailable</span>
     {% else %}
-        <span class="badge bg-primary">All submitters available</span>
+        <span class="small text-primary">All submitters available</span>
     {% endif %}
 {% endif %}
 """
@@ -133,7 +133,7 @@ _availability = """
 
 # language=jinja2
 _session = """
-{{ unformatted_label(s.session_type_label) }}
+{{ unformatted_label(s.session_type_label, user_classes="fw-semibold text-secondary") }}
 """
 
 

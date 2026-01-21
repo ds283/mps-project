@@ -15629,7 +15629,7 @@ class PresentationSession(db.Model, EditingMetadataMixin, PresentationSessionTyp
     @property
     def label(self):
         if self.name is not None:
-            return self.make_label(f"{self.name} ({self.short_data_as_strong}) {self.session_type_string}")
+            return self.make_label(f"{self.name} ({self.short_date_as_string}) {self.session_type_string}")
 
         return self.make_label(self.short_date_as_string + " " + self.session_type_string)
 
@@ -15645,8 +15645,6 @@ class PresentationSession(db.Model, EditingMetadataMixin, PresentationSessionTyp
     def session_type_string(self):
         if self.session_type in PresentationSession.SESSION_TO_TEXT:
             type_string = PresentationSession.SESSION_TO_TEXT[self.session_type]
-            if self.name is not None:
-                return f"{self.name} ({type_string})"
             return type_string
 
         return "<unknown>"

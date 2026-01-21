@@ -22,37 +22,37 @@ _name = """
 {% if a.has_issues %}
     <i class="fas fa-exclamation-triangle text-danger"></i>
 {% endif %}
-<div class="mt-1">
+<div class="mt-1 d-flex flex-column justify-content-start align-items-start">
     {% if a.is_deployed %}
-        <span class="badge bg-success"><i class="fas fa-check"></i> Deployed</span>
+        <span class="small bg-success"><i class="fas fa-check"></i> Deployed</span>
     {% endif %}
     {% if not a.is_feedback_open %}
-        <span class="badge bg-success">Feedback closed</span>
+        <span class="small text-success">Feedback closed</span>
     {% endif %}
     {% if state == a.AVAILABILITY_NOT_REQUESTED %}
-        <span class="badge bg-secondary">Availability not requested</span>
+        <span class="small text-secondary">Availability not requested</span>
     {% elif state == a.AVAILABILITY_REQUESTED %}
-        <span class="badge bg-success">Availability requested</span>
+        <span class="small text-secondary">Availability requested</span>
         {% set num_outstanding = a.availability_outstanding_count %}
         {% if num_outstanding > 0 %}
-            <span class="badge bg-info">{{ num_outstanding }} outstanding</span>
+            <span class="small text-secondary">{{ num_outstanding }} outstanding</span>
         {% endif %}
     {% elif state == a.AVAILABILITY_CLOSED %}
-        <span class="badge bg-primary">Availability closed</span>
+        <span class="small bg-primary">Availability closed</span>
     {% elif state == a.AVAILABILITY_SKIPPED %}
-        <span class="badge bg-primary">Availability skipped</span>
+        <span class="small text-secondary">Availability skipped</span>
     {% else %}
-        <span class="badge bg-danger">Unknown lifecycle state</span>
+        <span class="small fw-semibold text-danger">Unknown lifecycle state</span>
     {% endif %}
     {% set sessions = a.number_sessions %}
     {% set pl = 's' %}{% if sessions == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge bg-info">{{ sessions }} session{{ pl }}</span>
+    <span class="small text-secondary">{{ sessions }} session{{ pl }}</span>
     {% set slots = a.number_slots %}
     {% set pl = 's' %}{% if slots == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge bg-info">{{ slots }} slot{{ pl }}</span>
+    <span class="small text-secondary">{{ slots }} slot{{ pl }}</span>
     {% set schedules = a.number_schedules %}
     {% set pl = 's' %}{% if schedules == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge bg-info">{{ schedules }} schedule{{ pl }}</span>
+    <span class="small text-secondary">{{ schedules }} schedule{{ pl }}</span>
 </div>
 """
 
@@ -60,25 +60,24 @@ _name = """
 # language=jinja2
 _periods = """
 {% for period in a.submission_periods %}
-    <div style="display: inline-block;">
-        {{ simple_label(period.label) }}
-        {% set num = period.number_projects %}
+    <div style="d-flex flex-column gap-1 justify-content-start align-items-start">
+        {{ unformatted_label(period.label, user_classes="fw-semibold text-secondary", tag="div") }}
+        {% set num = period.number_submitters %}
         {% set pl = 's' %}
         {% if num == 1 %}{% set pl = '' %}{% endif %}
-        <span class="badge bg-info">{{ num }} project{{ pl }}</span>
+        <span class="small text-muted">{{ num }} presentation{{ pl }}</span>
     </div>
 {% endfor %}
 {% set total = a.number_talks %}
 {% set missing = a.number_not_attending %}
 {% if total > 0 or missing > 0 %}
-    <p></p>
-    {% set pl = 's' %}{% if total == 1 %}{% set p = '' %}{% endif %}
-    <span class="badge bg-primary">{{ total }} presentation{{ pl }}</span>
-    {% if missing > 0 %}
-        <span class="badge bg-warning text-dark">{{ missing }} not attending</span>
-    {% else %}
-        <span class="badge bg-success">{{ missing }} not attending</span>
-    {% endif %}
+    <div class="mt-1 d-flex flex-column gap-1 justify-content-start align-items-start">
+        {% set pl = 's' %}{% if total == 1 %}{% set p = '' %}{% endif %}
+        <span class="small text-primary"><span class="fw-semibold">{{ total }}</span> total presentation{{ pl }}</span>
+        {% if missing > 0 %}
+            <span class="small text-danger"><span class="fw-semibold">{{ missing }}</span> not attending</span>
+        {% endif %}
+    </div>
 {% endif %}
 """
 
@@ -86,22 +85,24 @@ _periods = """
 # language=jinja2
 _sessions = """
 {% set sessions = a.ordered_sessions.all() %}
-{% for session in sessions %}
-    {% if a.requested_availability %}
-        <div style="display: inline-block;">
-            {{ simple_label(session.label) }}
-            {% set available = session.number_available_faculty %}
-            {% set ifneeded = session.number_ifneeded_faculty %}
-            <span class="badge bg-info">{{ available }}{% if ifneeded > 0 %}(+{{ ifneeded }}){% endif %} available</span>
-        </div>
-    {% else %}
-        {{ simple_label(session.label) }}
-    {% endif %}
-{% endfor %}
+<div class="d-flex flex-column gap-2 justify-content-start align-items-start">
+    {% for session in sessions %}
+        {% if a.requested_availability %}
+            <div style="d-flex flex-row gap-2 justify-content-start align-items-start">
+                <span><i class="fas fa-calendar text-success"></i> {{ unformatted_label(session.label, user_classes="text-secondary fw-semibold") }}</span>
+                {% set available = session.number_available_faculty %}
+                {% set ifneeded = session.number_ifneeded_faculty %}
+                <span class="small text-secondary"><span class="fw-semibold">{{ available }}{% if ifneeded > 0 %}(+{{ ifneeded }}){% endif %}</span> available</span>
+            </div>
+        {% else %}
+            <span><i class="fas fa-calendar text-success"></i> {{ unformatted_label(session.label, user_classes="text-secondary") }}</span>
+        {% endif %}
+    {% endfor %}
+</div>
 {% if a.has_issues %}
     {% set errors = a.errors %}
     {% set warnings = a.warnings %}
-    <div class="mt-1">
+    <div class="mt-1 d-flex flex-column justify-content-start align-items-start">
         {% if errors|length == 1 %}
             <span class="badge bg-danger">1 error</span>
         {% elif errors|length > 1 %}
@@ -210,7 +211,7 @@ def _build_menu_templ() -> Template:
 
 
 def presentation_assessments_data(assessments):
-    simple_label = get_template_attribute("labels.html", "simple_label")
+    unformatted_label = get_template_attribute("labels.html", "unformatted_label")
 
     name_templ: Template = _build_name_templ()
     periods_templ: Template = _build_periods_templ()
@@ -220,8 +221,8 @@ def presentation_assessments_data(assessments):
     data = [
         {
             "name": render_template(name_templ, a=a),
-            "periods": render_template(periods_templ, a=a, simple_label=simple_label),
-            "sessions": render_template(sessions_templ, a=a, simple_label=simple_label),
+            "periods": render_template(periods_templ, a=a, unformatted_label=unformatted_label),
+            "sessions": render_template(sessions_templ, a=a, unformatted_label=unformatted_label),
             "menu": render_template(menu_templ, a=a),
         }
         for a in assessments

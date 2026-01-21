@@ -34,31 +34,43 @@
                                 class="fas fa-times"></i> Set all Not available</a>
                     </div>
                     <div class="row vertical-top event-table">
-                        <div class="col-4"><strong>Date</strong></div>
-                        <div class="col-1"><strong>Session</strong></div>
-                        <div class="col-7"></div>
+                        <div class="col-3"><strong>Date</strong></div>
+                        <div class="col-4"><strong>Session</strong></div>
+                        <div class="col-5"></div>
                     </div>
 
                     <form action="{{ url_for('faculty.set_availability', id=assessment.id, url=url, text=text) }}" method="POST" name="availability_form">
                         {{ form.hidden_tag() }}
                         {% for session in assessment.ordered_sessions %}
                             <div class="row vertical-align event-table">
-                                <div class="col-4">{{ session.date.strftime("%a %d %b %Y") }}</div>
-                                <div class="col-1">{{ unformatted_label(session.session_type_label) }}</div>
-                                <div class="col-7">
-                                    <div class="float-end">
+                                <div class="col-3"><i class="fas fa-calendar text-success"></i> <span
+                                        class="fw-semibold text-primary">{{ session.date.strftime("%a %d %b %Y") }}</span>
+                                </div>
+                                <div class="col-4">{{ unformatted_label(session.label) }}</div>
+                                <div class="col-5">
+                                    <div class="d-flex flex-row justify-content-end align-items-center gap-2">
                                     {% if session.faculty_available(current_user.id) %}
-                                        <a class="btn btn-success btn-sm btn-table-block"><i class="fas fa-check"></i> Available</a>
-                                        <a href="{{ url_for('faculty.session_ifneeded', sess_id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block">If needed</a>
-                                        <a href="{{ url_for('faculty.session_unavailable', sess_id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block"><i class="fas fa-times"></i> Not available</a>
+                                        <a class="btn btn-success btn-sm"><i class="fas fa-check"></i> Available</a>
+                                        <a href="{{ url_for('faculty.session_ifneeded', sess_id=session.id) }}"
+                                           class="btn btn-outline-secondary btn-sm">If needed</a>
+                                        <a href="{{ url_for('faculty.session_unavailable', sess_id=session.id) }}"
+                                           class="btn btn-outline-secondary btn-sm"><i class="fas fa-times"></i> Not
+                                            available</a>
                                     {% elif session.faculty_ifneeded(current_user.id) %}
-                                        <a href="{{ url_for('faculty.session_available', sess_id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block"><i class="fas fa-check"></i> Available</a>
-                                        <a class="btn btn-warning btn-sm btn-table-block">If needed</a>
-                                        <a href="{{ url_for('faculty.session_unavailable', sess_id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block"><i class="fas fa-times"></i> Not available</a>
+                                        <a href="{{ url_for('faculty.session_available', sess_id=session.id) }}"
+                                           class="btn btn-outline-secondary btn-sm"><i class="fas fa-check"></i>
+                                            Available</a>
+                                        <a class="btn btn-warning btn-sm">If needed</a>
+                                        <a href="{{ url_for('faculty.session_unavailable', sess_id=session.id) }}"
+                                           class="btn btn-outline-secondary btn-sm"><i class="fas fa-times"></i> Not
+                                            available</a>
                                     {% else %}
-                                        <a href="{{ url_for('faculty.session_available', sess_id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block"><i class="fas fa-check"></i> Available</a>
-                                        <a href="{{ url_for('faculty.session_ifneeded', sess_id=session.id) }}" class="btn btn-outline-secondary btn-sm btn-table-block">If needed</a>
-                                        <a class="btn btn-danger btn-sm btn-table-block"><i class="fas fa-times"></i> Not available</a>
+                                        <a href="{{ url_for('faculty.session_available', sess_id=session.id) }}"
+                                           class="btn btn-outline-secondary btn-sm"><i class="fas fa-check"></i>
+                                            Available</a>
+                                        <a href="{{ url_for('faculty.session_ifneeded', sess_id=session.id) }}"
+                                           class="btn btn-outline-secondary btn-sm">If needed</a>
+                                        <a class="btn btn-danger btn-sm"><i class="fas fa-times"></i> Not available</a>
                                     {% endif %}
                                     </div>
                                 </div>
@@ -75,9 +87,12 @@
                         {% if form.confirm %}
                             <div class="mt-3 alert alert-success">
                                 {% call icon_block("check-circle") %}
-                                    <strong>Please confirm your responses.</strong>
+                                    <strong>When you are ready, please confirm your responses.</strong>
                                     <div class="mt-1">
-                                        It is still possible to make changes up to the deadline.
+                                        Once you have confirmed, it is still possible to make changes up to the
+                                        deadline.
+                                        Choose <span class="fw-semibold">Change availability...</span> from your
+                                        account drop-down menu above.
                                     </div>
                                     <div class="mt-2">
                                         {{ wtf.render_field(form.confirm, button_map={'confirm': 'success'}) }}

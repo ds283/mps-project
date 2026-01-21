@@ -32,10 +32,10 @@ _name = """
     {% if state == a.AVAILABILITY_NOT_REQUESTED %}
         <span class="small text-secondary">Availability not requested</span>
     {% elif state == a.AVAILABILITY_REQUESTED %}
-        <span class="small text-secondary">Availability requested</span>
+        <span><i class="fas fa-check-circle text-success"></i> <span class="small text-secondary">Availability requested</span></span>
         {% set num_outstanding = a.availability_outstanding_count %}
         {% if num_outstanding > 0 %}
-            <span class="small text-secondary">{{ num_outstanding }} outstanding</span>
+            <span class="small text-secondary">{{ num_outstanding }} outstanding requests</span>
         {% endif %}
     {% elif state == a.AVAILABILITY_CLOSED %}
         <span class="small bg-primary">Availability closed</span>
@@ -92,7 +92,7 @@ _sessions = """
                 <span><i class="fas fa-calendar text-success"></i> {{ unformatted_label(session.label, user_classes="text-secondary fw-semibold") }}</span>
                 {% set available = session.number_available_faculty %}
                 {% set ifneeded = session.number_ifneeded_faculty %}
-                <span class="small text-secondary"><span class="fw-semibold">{{ available }}{% if ifneeded > 0 %}(+{{ ifneeded }}){% endif %}</span> available</span>
+                <span class="small text-success"><span class="fw-semibold">{{ available }}{% if ifneeded > 0 %}(+{{ ifneeded }}){% endif %}</span> available</span>
             </div>
         {% else %}
             <span><i class="fas fa-calendar text-success"></i> {{ unformatted_label(session.label, user_classes="text-secondary") }}</span>

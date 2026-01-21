@@ -432,7 +432,7 @@ def FacultySettingsFormFactory(user=None, current_user=None, enable_canvas=False
 def AvailabilityFormFactory(include_confirm=False):
     class AvailabilityForm(Form):
         comment = TextAreaField(
-            "Please let us know if there is anything you would like taken into account when creating the schedule",
+            "Please let us know if there is anything that should be taken into account when creating the schedule",
             render_kw={"rows": 5},
             validators=[Optional()],
         )

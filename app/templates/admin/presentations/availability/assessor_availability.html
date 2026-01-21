@@ -35,17 +35,19 @@
                         </div>
                     </div>
                     <div class="row vertical-top event-table">
-                        <div class="col-4"><strong>Date</strong></div>
-                        <div class="col-1"><strong>Session</strong></div>
-                        <div class="col-7"></div>
+                        <div class="col-3"><strong>Date</strong></div>
+                        <div class="col-4"><strong>Session</strong></div>
+                        <div class="col-5"></div>
                     </div>
 
                     {% for session in assessment.ordered_sessions %}
                         <div class="row vertical-align event-table">
-                            <div class="col-4">{{ session.date.strftime("%a %d %b %Y") }}</div>
-                            <div class="col-1">{{ unformatted_label(session.session_type_label) }}</div>
-                            <div class="col-7">
-                                <div class="float-end">
+                            <div class="col-3"><i class="fas fa-calendar text-success"></i> <span
+                                    class="fw-semibold text-primary">{{ session.date.strftime("%a %d %b %Y") }}</span>
+                            </div>
+                            <div class="col-4">{{ unformatted_label(session.label) }}</div>
+                            <div class="col-5">
+                                <div class="d-flex flex-row justify-content-end align-items-center gap-2">
                                 {% if session.faculty_available(assessor.id) %}
                                     <a class="btn btn-success btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fas fa-check"></i> Available</a>
                                     <a {% if editable %}href="{{ url_for('admin.assessor_ifneeded', sess_id=session.id, f_id=assessor.id) }}"{% endif %} class="btn btn-outline-secondary btn-sm btn-table-block {% if not editable %}disabled{% endif %}">If needed</a>

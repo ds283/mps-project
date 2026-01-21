@@ -14789,7 +14789,11 @@ class PresentationAssessment(db.Model, EditingMetadataMixin, AvailabilityRequest
 
     @property
     def ordered_sessions(self):
-        return self.sessions.order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc())
+        return self.sessions.order_by(
+            PresentationSession.date.asc(),
+            PresentationSession.session_type.asc(),
+            PresentationSession.name.asc(),
+        )
 
     @property
     def number_sessions(self):
@@ -15120,9 +15124,15 @@ def _PresentationSession_is_valid(id):
     if obj.date.weekday() >= 5:
         errors["weekday"] = "Session scheduled on a weekend"
 
-    # CONSTRAINT 2 - only one session should be scheduled per morning/afternoon on a fixed date
-    # check how many sessions are assigned to this date and morning/afternoon
-    count = get_count(obj.owner.sessions.filter_by(date=obj.date, session_type=obj.session_type))
+    # CONSTRAINT 2 - if multiple sessions are scheduled on the same morning/afternoon then they need to have
+    # distinguishing labels
+    count = get_count(
+        obj.owner.sessions.filter(
+            and_(
+                PresentationSession.date==obj.date,
+                PresentationSession.session_type==obj.session_type,
+                or_(PresentationSession.name==None, PresentationSession.label==obj.name)))
+    )
 
     if count != 1:
         lo_rec = (
@@ -15622,14 +15632,17 @@ class PresentationSession(db.Model, EditingMetadataMixin, PresentationSessionTyp
     @property
     def session_type_string(self):
         if self.session_type in PresentationSession.SESSION_TO_TEXT:
-            return PresentationSession.SESSION_TO_TEXT[self.session_type]
+            type_string = PresentationSession.SESSION_TO_TEXT[self.session_type]
+            if self.name is not None:
+                return f"{self.name} ({type_string})"
+            return type_string
 
         return "<unknown>"
 
     @property
     def session_type_label(self):
         if self.session_type in PresentationSession.SESSION_TO_TEXT:
-            return {"label": f"{self.session_type_string}", "style": None}
+            return {"label": self.session_type_string, "style": None}
 
         return {"label": "Unknown", "type": "danger"}
 

@@ -1,7 +1,7 @@
 {% extends "base_app.html" %}
 {% import "bootstrap/form.html" as wtf %}
 
-{% from "labels.html" import simple_label %}
+{% from "labels.html" import unformatted_label %}
 {% from "icon_block.html" import icon_block %}
 
 {% block title %}
@@ -44,7 +44,7 @@
                         {% for session in assessment.ordered_sessions %}
                             <div class="row vertical-align event-table">
                                 <div class="col-4">{{ session.date.strftime("%a %d %b %Y") }}</div>
-                                <div class="col-1">{{ simple_label(session.session_type_label) }}</div>
+                                <div class="col-1">{{ unformatted_label(session.session_type_label) }}</div>
                                 <div class="col-7">
                                     <div class="float-end">
                                     {% if session.faculty_available(current_user.id) %}

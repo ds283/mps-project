@@ -69,8 +69,9 @@ def register_availability_tasks(celery):
             # previously we only considered faculty who were in the assessor list for at least one project running in
             # at least one submission period, but this is too restrictive.
             # We should enrol all active users who are currently signed up for presentation assessment.
-            assessors  = (
-                db.session.query(FacultyData).join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id)
+            assessors = (
+                db.session.query(FacultyData)
+                .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id)
                 .join(User, User.id == FacultyData.id)
                 .filter(
                     User.active == True,

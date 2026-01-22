@@ -1,0 +1,71 @@
+{% extends "base_app.html" %}
+{% import "bootstrap/form.html" as wtf %}
+
+{% from "labels.html" import unformatted_label %}
+{% from "icon_block.html" import icon_block %}
+
+{% block title %}
+    Confirm my availability for {{ assessment.name }}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            {% if url and text %}
+                <div class="top-return-link">
+                    <a class="text-decoration-none" href="{{ url }}">
+                        <i class="fas fa-backward"></i> {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+
+            <div class="card border-primary mt-3 mb-3">
+                <div class="card-header bg-primary text-white">
+                    Confirm availability for assessment event <i class="fas fa-calendar"></i>
+                    <strong>{{ assessment.name }}</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row vertical-top event-table">
+                        <div class="col-3"><strong>Date</strong></div>
+                        <div class="col-4"><strong>Session</strong></div>
+                        <div class="col-5"></div>
+                    </div>
+
+                    {% for session in assessment.ordered_sessions %}
+                        <div class="row vertical-align event-table">
+                            <div class="col-3"><i class="fas fa-calendar text-success"></i> <span
+                                    class="fw-semibold text-primary">{{ session.date.strftime("%a %d %b %Y") }}</span>
+                            </div>
+                            <div class="col-4">{{ unformatted_label(session.label) }}</div>
+                            <div class="col-5">
+                                <div class="d-flex flex-row justify-content-end align-items-center gap-2">
+                                    {% if session.submitter_available(submitter.id) %}
+                                        <a class="btn btn-success btn-sm"><i class="fas fa-check"></i> Available</a>
+                                        <a href="{{ url_for('student.set_unavailable', session_id=session.id, submitter_id=submitter.id) }}"
+                                           class="btn btn-outline-secondary btn-sm"><i class="fas fa-times"></i> Not
+                                            available</a>
+                                    {% else %}
+                                        <a href="{{ url_for('student.set_available', session_id=session.id, submitter_id=submitter.id) }}"
+                                           class="btn btn-outline-secondary btn-sm"><i class="fas fa-check"></i>
+                                            Available</a>
+                                        <a class="btn btn-danger btn-sm"><i class="fas fa-times"></i> Not available</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if url and text %}
+                <div>
+                    <a class="text-decoration-none" href="{{ url }}">
+                        <i class="fas fa-backward"></i> {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

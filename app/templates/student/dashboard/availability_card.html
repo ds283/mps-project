@@ -1,0 +1,32 @@
+{% macro availability_card(student) %}
+    <div class="card border-danger mt-3 mb-3">
+        <div class="card-header bg-danger text-white"><strong>Please confirm your availability</strong></div>
+        <div class="card-body">
+            <p>Please let us know whether you are available for the following assessment events.</p>
+            <div class="row vertical-top event-table">
+                <div class="col-4"><strong>Event</strong></div>
+                <div class="col-4"><strong>Organizer</strong></div>
+                <div class="col-4"></div>
+            </div>
+            {% for assessment, submission_record in student.active_availability_events %}
+                <div class="row vertical-align event-table">
+                    <div class="col-4">
+                        <a class="text-decoration-none"
+                           href="{{ url_for('student.set_availability', assessment_id=assessment.id, submitter_id=submission_record.id, url=home_dashboard_url, text='Return to dashboard') }}">{{ assessment.name }}</a>
+                    </div>
+                    <div class="col-4">
+                        <a class="text-decoration-none"
+                           href="mailto:{{ assessment.created_by.email }}">{{ assessment.created_by.name }}</a>
+                    </div>
+                    <div class="col-4">
+                        <div class="d-flex flex-row justify-content-end align-items-start gap-1">
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="{{ url_for('student.set_availability', assessment_id=assessment.id, submitter_id=submission_record.id, url=home_dashboard_url, text='Return to dashboard') }}">Confirm
+                                my availability</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endmacro %}

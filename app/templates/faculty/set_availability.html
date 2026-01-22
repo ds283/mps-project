@@ -5,7 +5,7 @@
 {% from "icon_block.html" import icon_block %}
 
 {% block title %}
-    Set availability for {{ assessment.name }}
+    Set my availability for {{ assessment.name }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -22,7 +22,8 @@
 
             <div class="card border-primary mt-3 mb-3">
                 <div class="card-header bg-primary text-white">
-                    Set availability for assessment event <strong>{{ assessment.name }}</strong>
+                    Set availability for assessment event <i class="fas fa-calendar"></i>
+                    <strong>{{ assessment.name }}</strong>
                 </div>
                 <div class="card-body">
                     <div class="mt-1 mb-3 d-flex flex-row justify-content-end align-content-center gap-2">

@@ -47,10 +47,12 @@ from ..models import (
     StudentData,
     DegreeProgramme,
     DegreeType,
+    PresentationAssessment,
+    PresentationSession,
 )
 from ..shared.context.global_context import render_template_context
-from ..shared.utils import home_dashboard, home_dashboard_url, get_count, redirect_url
-from ..shared.validators import validate_is_convenor, validate_submission_viewable
+from ..shared.utils import home_dashboard, home_dashboard_url, get_count, redirect_url, get_current_year
+from ..shared.validators import validate_is_convenor, validate_submission_viewable, validate_using_assessment, validate_assessment
 from ..task_queue import register_task
 from ..tools import ServerSideSQLHandler
 
@@ -1132,6 +1134,118 @@ def submit_feedback(id):
     record.student_feedback_submitted = True
     record.student_feedback_timestamp = datetime.now()
     db.session.commit()
+
+    return redirect(redirect_url())
+
+
+@student.route("/set_availability/<int:assessment_id>/<int:submitter_id>")
+@roles_accepted("student")
+def set_availability(assessment_id, submitter_id):
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    assessment = PresentationAssessment.query.get_or_404(assessment_id)
+    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(submitter_id)
+
+    owner: SubmittingStudent = submission_record.owner
+
+    if not owner.student.id == current_user.id:
+        flash("You do not have permission to set availability for this assessment.", "error")
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    current_year = get_current_year()
+    if not validate_assessment(assessment, current_year=current_year):
+        return redirect(redirect_url())
+
+    if not assessment.requested_availability:
+        flash("Cannot set availability for this assessment because it has not yet been opened", "info")
+        return redirect(redirect_url())
+
+    if assessment.availability_closed:
+        flash("Cannot set availability for this assessment because it has been closed", "info")
+        return redirect(redirect_url())
+
+    return render_template_context("student/set_availability.html", assessment=assessment, submitter=submission_record, url=url, text=text)
+
+@student.route("/set_available/<int:session_id>/<int:submitter_id>")
+@roles_accepted("student")
+def set_available(session_id, submitter_id):
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    session: PresentationSession = PresentationSession.query.get_or_404(session_id)
+    assessment: PresentationAssessment = session.owner
+    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(submitter_id)
+
+    owner: SubmittingStudent = submission_record.owner
+
+    if not owner.student.id == current_user.id:
+        flash("You do not have permission to set availability for this assessment.", "error")
+        return redirect(redirect_url())
+
+    current_year = get_current_year()
+    if not validate_assessment(assessment, current_year=current_year):
+        return redirect(redirect_url())
+
+    if not assessment.requested_availability and not assessment.skip_availability:
+        flash("Cannot set availability for this assessment because availability collection has not yet been opened", "info")
+        return redirect(redirect_url())
+
+    if assessment.availability_closed:
+        flash("Cannot set availability for this session because its parent assessment has been closed", "info")
+        return redirect(redirect_url())
+
+    session.submitter_make_available(submission_record)
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not save changes due to a database error. Please contact a system administrator", "error")
+
+    return redirect(redirect_url())
+
+
+@student.route("/set_unavailable//<int:session_id>/<int:submitter_id>")
+@roles_accepted("student")
+def set_unavailable(session_id, submitter_id):
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    session: PresentationSession = PresentationSession.query.get_or_404(session_id)
+    assessment: PresentationAssessment = session.owner
+    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(submitter_id)
+
+    owner: SubmittingStudent = submission_record.owner
+
+    if not owner.student.id == current_user.id:
+        flash("You do not have permission to set availability for this assessment.", "error")
+        return redirect(redirect_url())
+
+    current_year = get_current_year()
+    if not validate_assessment(assessment, current_year=current_year):
+        return redirect(redirect_url())
+
+    if not assessment.requested_availability and not assessment.skip_availability:
+        flash("Cannot set availability for this assessment because availability collection has not yet been opened", "info")
+        return redirect(redirect_url())
+
+    if assessment.availability_closed:
+        flash("Cannot set availability for this session because its parent assessment has been closed", "info")
+        return redirect(redirect_url())
+
+    session.submitter_make_unavailable(submission_record)
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not save changes due to a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 

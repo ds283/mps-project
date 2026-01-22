@@ -2457,24 +2457,24 @@ def set_availability(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    data = PresentationAssessment.query.get_or_404(id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
     current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not data.requested_availability:
+    if not assessment.requested_availability:
         flash("Cannot set availability for this assessment because it has not yet been opened", "info")
         return redirect(redirect_url())
 
-    if data.availability_closed:
+    if assessment.availability_closed:
         flash("Cannot set availability for this assessment because it has been closed", "info")
         return redirect(redirect_url())
 
-    include_confirm = data.is_faculty_outstanding(current_user.id)
+    include_confirm = assessment.is_faculty_outstanding(current_user.id)
     AvailabilityForm = AvailabilityFormFactory(include_confirm)
     form = AvailabilityForm(request.form)
 
@@ -2483,10 +2483,10 @@ def set_availability(id):
         if len(comment) == 0:
             comment = None
 
-        data.faculty_set_comment(current_user.faculty_data, comment)
+        assessment.faculty_set_comment(current_user.faculty_data, comment)
 
         if hasattr(form, "confirm") and form.confirm:
-            record = data.assessor_list.filter_by(faculty_id=current_user.id, confirmed=False).first()
+            record = assessment.assessor_list.filter_by(faculty_id=current_user.id, confirmed=False).first()
             if record is not None:
                 record.confirmed = True
                 record.confirmed_timestamp = datetime.now()
@@ -2499,14 +2499,20 @@ def set_availability(id):
         else:
             raise RuntimeError("Unknown submit button in faculty.set_availability")
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not save changes due to a database error. Please contact a system administrator', "error")
+
         return home_dashboard()
 
     else:
         if request.method == "GET":
-            form.comment.data = data.faculty_get_comment(current_user.faculty_data)
+            form.comment.data = assessment.faculty_get_comment(current_user.faculty_data)
 
-    return render_template_context("faculty/set_availability.html", form=form, assessment=data, url=url, text=text)
+    return render_template_context("faculty/set_availability.html", form=form, assessment=assessment, url=url, text=text)
 
 
 @faculty.route("/session_available/<int:sess_id>")
@@ -2515,23 +2521,29 @@ def session_available(sess_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    assessment: PresentationAssessment = PresentationSession.query.get_or_404(sess_id)
+    session: PresentationSession = PresentationSession.query.get_or_404(sess_id)
+    assessment: PresentationAssessment = session.owner
 
     current_year = get_current_year()
-    if not validate_assessment(assessment.owner, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
         flash("Cannot set availability for this assessment because availability collection has not yet been opened", "info")
         return redirect(redirect_url())
 
-    if assessment.owner.availability_closed:
+    if assessment.availability_closed:
         flash("Cannot set availability for this session because its parent assessment has been closed", "info")
         return redirect(redirect_url())
 
-    assessment.faculty_make_available(current_user.faculty_data)
+    session.faculty_make_available(current_user.faculty_data)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not save changes due to a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -2542,11 +2554,11 @@ def session_ifneeded(sess_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    sess: PresentationSession = PresentationSession.query.get_or_404(sess_id)
-    assessment: PresentationAssessment = sess.owner
+    session: PresentationSession = PresentationSession.query.get_or_404(sess_id)
+    assessment: PresentationAssessment = session.owner
 
     current_year = get_current_year()
-    if not validate_assessment(sess.owner, current_year=current_year):
+    if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
@@ -2557,9 +2569,14 @@ def session_ifneeded(sess_id):
         flash("Cannot set availability for this session because its parent assessment has been closed", "info")
         return redirect(redirect_url())
 
-    sess.faculty_make_ifneeded(current_user.faculty_data)
+    session.faculty_make_ifneeded(current_user.faculty_data)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not save changes due to a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 
@@ -2570,11 +2587,11 @@ def session_unavailable(sess_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    sess: PresentationSession = PresentationSession.query.get_or_404(sess_id)
-    assessment: PresentationAssessment = sess.owner
+    session: PresentationSession = PresentationSession.query.get_or_404(sess_id)
+    assessment: PresentationAssessment = session.owner
 
     current_year = get_current_year()
-    if not validate_assessment(sess.owner, current_year=current_year):
+    if not validate_assessment(session.owner, current_year=current_year):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
@@ -2585,9 +2602,14 @@ def session_unavailable(sess_id):
         flash("Cannot set availability for this session because its parent assessment has been closed", "info")
         return redirect(redirect_url())
 
-    sess.faculty_make_unavailable(current_user.faculty_data)
+    session.faculty_make_unavailable(current_user.faculty_data)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not save changes due to a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
 

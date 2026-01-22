@@ -6,6 +6,7 @@
 
 {% from "student/dashboard/selection_card.html" import selection_card with context %}
 {% from "student/dashboard/submission_card.html" import submission_card with context %}
+{% from "student/dashboard/availability_card.html" import availability_card with context %}
 {% from "macros.html" import message_card %}
 {% from "icon_block.html" import icon_block %}
 
@@ -236,6 +237,10 @@
                 {% for message in messages %}
                     {{ message_card(message, enrolled_classes) }}
                 {% endfor %}
+            {% endif %}
+
+            {% if current_user.student_data.has_active_availability_events %}
+                {{ availability_card(current_user.student_data) }}
             {% endif %}
 
             {% set ns = namespace(display=0) %}

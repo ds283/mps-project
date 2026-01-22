@@ -4313,6 +4313,34 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
             .order_by(ProjectClass.name.asc())
         )
 
+    @property
+    def active_availability_events(self):
+        return (
+            db.session.query(PresentationAssessment, SubmissionRecord)
+            .join(SubmitterAttendanceData,
+                  and_(
+                      SubmitterAttendanceData.assessment_id == PresentationAssessment.id,
+                  )
+            )
+            .join(SubmissionRecord,
+                  SubmissionRecord.id == SubmitterAttendanceData.submitter_id,
+            )
+            .join(SubmittingStudent,
+                  SubmittingStudent.id == SubmissionRecord.owner_id
+            )
+            .filter(
+                      PresentationAssessment.year == _get_current_year(),
+                      PresentationAssessment.availability_closed == False,
+                      SubmissionRecord.retired == False,
+                      SubmittingStudent.student_id == self.id,
+            )
+            .order_by(PresentationAssessment.name.asc())
+        )
+
+    @property
+    def has_active_availability_events(self):
+        return get_count(self.active_availability_events) > 0
+
     def maintenance(self):
         edited = False
 
@@ -15425,7 +15453,7 @@ class SubmitterAttendanceData(db.Model):
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
-    # submitted for whom this attendance record exists
+    # submitter for whom this attendance record exists
     submitter_id = db.Column(db.Integer(), db.ForeignKey("submission_records.id"))
     submitter = db.relationship(
         "SubmissionRecord",

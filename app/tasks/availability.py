@@ -65,21 +65,21 @@ def register_availability_tasks(celery):
 
         # build list of eligible assessors for each submission period included in this assessment,
         # and merge into assessor_ids if required.
-        # Notice that we use everyone who is suitably enrolled, *not* just faculty who are in the union of
-        # the assessor lists for all attached projects.
         for period in assessment.submission_periods:
-            assessors = (
-                period.assessors_list.join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id)
+            # previously we only considered faculty who were in the assessor list for at least one project running in
+            # at least one submission period, but this is too restrictive.
+            # We should enrol all active users who are currently signed up for presentation assessment.
+            assessors  = (
+                db.session.query(FacultyData).join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id)
+                .join(User, User.id == FacultyData.id)
                 .filter(
+                    User.active == True,
                     EnrollmentRecord.pclass_id == period.config.pclass_id,
                     EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED,
                 )
                 .all()
             )
-
-            for assessor in assessors:
-                if assessor.user.active and assessor.id not in assessor_ids:
-                    assessor_ids.add(assessor.id)
+            assessor_ids.update([assessor.id for assessor in assessors])
 
         if skip_availability:
             assessor_tasks = group(attach_assessment_assessor.s(data_id, a_id) | assessor_email_sink.s() for a_id in assessor_ids)

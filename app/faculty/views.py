@@ -2504,7 +2504,7 @@ def set_availability(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash('Could not save changes due to a database error. Please contact a system administrator', "error")
+            flash("Could not save changes due to a database error. Please contact a system administrator", "error")
 
         return home_dashboard()
 

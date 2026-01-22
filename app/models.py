@@ -4317,22 +4317,22 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     def active_availability_events(self):
         return (
             db.session.query(PresentationAssessment, SubmissionRecord)
-            .join(SubmitterAttendanceData,
-                  and_(
-                      SubmitterAttendanceData.assessment_id == PresentationAssessment.id,
-                  )
+            .join(
+                SubmitterAttendanceData,
+                and_(
+                    SubmitterAttendanceData.assessment_id == PresentationAssessment.id,
+                ),
             )
-            .join(SubmissionRecord,
-                  SubmissionRecord.id == SubmitterAttendanceData.submitter_id,
+            .join(
+                SubmissionRecord,
+                SubmissionRecord.id == SubmitterAttendanceData.submitter_id,
             )
-            .join(SubmittingStudent,
-                  SubmittingStudent.id == SubmissionRecord.owner_id
-            )
+            .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
             .filter(
-                      PresentationAssessment.year == _get_current_year(),
-                      PresentationAssessment.availability_closed == False,
-                      SubmissionRecord.retired == False,
-                      SubmittingStudent.student_id == self.id,
+                PresentationAssessment.year == _get_current_year(),
+                PresentationAssessment.availability_closed == False,
+                SubmissionRecord.retired == False,
+                SubmittingStudent.student_id == self.id,
             )
             .order_by(PresentationAssessment.name.asc())
         )

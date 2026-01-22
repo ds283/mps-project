@@ -1170,6 +1170,7 @@ def set_availability(assessment_id, submitter_id):
 
     return render_template_context("student/set_availability.html", assessment=assessment, submitter=submission_record, url=url, text=text)
 
+
 @student.route("/set_available/<int:session_id>/<int:submitter_id>")
 @roles_accepted("student")
 def set_available(session_id, submitter_id):

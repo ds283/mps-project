@@ -6881,6 +6881,7 @@ class SubmissionPeriodRecord(db.Model):
     def projects_list(self):
         records = self.submissions.subquery()
 
+        # find all distinct projects in this submission period
         return db.session.query(LiveProject).join(records, records.c.project_id == LiveProject.id).distinct()
 
     @property
@@ -6891,6 +6892,7 @@ class SubmissionPeriodRecord(db.Model):
     def assessors_list(self):
         projects = self.projects_list.subquery()
 
+        # find all faculty who are assessors for at least one project in this submission period
         assessors = db.session.query(live_assessors.c.faculty_id).join(projects, projects.c.id == live_assessors.c.project_id).distinct().subquery()
 
         return db.session.query(FacultyData).join(assessors, assessors.c.faculty_id == FacultyData.id)
@@ -14813,7 +14815,7 @@ class PresentationAssessment(db.Model, EditingMetadataMixin, AvailabilityRequest
 
     @property
     def number_talks(self):
-        return sum(p.number_projects for p in self.submission_periods)
+        return sum(p.number_submitters for p in self.submission_periods)
 
     @property
     def number_not_attending(self):

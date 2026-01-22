@@ -18,10 +18,10 @@ based on projects drawn from the following:
 {% if single_date -%}
 In order to prepare a programme we would like to ask for your availability
 on this date.
-{% else -%}
+{%- else -%}
 In order to prepare a programme we would like to ask for your availability
 between these dates.
-{% endif -%}
+{%- endif %}
 
 To do so, please log in to the project management web app at
 https:://mpsprojects.sussex.ac.uk. You should see an information request box

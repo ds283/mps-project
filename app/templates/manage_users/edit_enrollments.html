@@ -61,10 +61,13 @@
                                     {% endif %}
                                 {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
                                     <span class="text-danger"><i
-                                            class="fa fa-times-circle"></i> Supervisor exempt</span>
+                                            class="fas fa-times-circle"></i> Supervisor exempt</span>
                                     {% if record.supervisor_comment and record.supervisor_comment|length > 0 %}
                                         <div class="text-muted small">{{ record.supervisor_comment }}</div>
                                     {% endif %}
+                                {% else %}
+                                    <span class="text-danger"><i
+                                            class="fas fa-exclamation-circle"></i> Unknown status</span>
                                 {% endif %}
                             </div>
                             <div class="col-3">
@@ -77,10 +80,13 @@
                                         <span class="text-muted small">{{ record.marker_comment }}</span>
                                     {% endif %}
                                 {% elif record.marker_state == record.MARKER_EXEMPT %}
-                                    <span class="text-danger"><i class="fa fa-times-circle"></i> Marker exempt</span>
+                                    <span class="text-danger"><i class="fas fa-times-circle"></i> Marker exempt</span>
                                     {% if record.marker_comment and record.marker_comment|length > 0 %}
                                         <span class="text-muted small">{{ record.marker_comment }}</span>
                                     {% endif %}
+                                {% else %}
+                                    <span class="text-danger"><i
+                                            class="fas fa-exclamation-circle"></i> Unknown status</span>
                                 {% endif %}
                             </div>
                             <div class="col-1">

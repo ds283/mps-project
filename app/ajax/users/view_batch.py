@@ -16,40 +16,40 @@ from ...models import StudentBatchItem
 
 # language=jinja2
 _name = """
-<div>
-    {{ item.first_name }} {{ item.last_name }}
+<div class="d-flex flex-column justify-content-start align-items-left gap-1">
+    <div>{{ item.first_name }} {{ item.last_name }}</div>
     {% if item.registration_number is not none %}
-        <span class="badge bg-info">Registration #{{ item.registration_number }}</span>
+        <span class="text-secondary small">Registration #{{ item.registration_number }}</span>
+    {% endif %}
+    {% if item.existing_record is not none %}
+        <span class="text-success small"><i class="fas fa-check-circle"></i> Matches {{ item.existing_record.user.name }} {{ item.existing_record.cohort }}</span>
+    {% endif %}
+    {% if item.dont_convert %}
+        <span class="text-danger small"><i class="fas fa-times"></i> Import disabled</span>
+    {% endif %}
+    {% if item.intermitting %}
+        <div><span class="badge bg-danger">TWD</span></div>
     {% endif %}
     {% set warnings = item.warnings %}
     {% set w_length = warnings|length %}
     {% if w_length == 1 %}
-        <span class="badge bg-warning text-dark">1 warning</span>
+        <span class="text-warning small"><i class="fas fa-exclamation-circle"></i> 1 warning</span>
     {% elif w_length > 1 %}
-        <span class="badge bg-warning text-dark">{{ w_length }} warnings</span>
+        <span class="text-warning small"><i class="fas fa-exclamation-circle"></i> {{ w_length }} warnings</span>
     {% else %}
         {% if item.existing_record is none %}
-            <span class="badge bg-success"><i class="fas fa-plus-circle"></i> New</span>
+            <div><span class="badge bg-success"><i class="fas fa-plus-circle"></i> New</span></div>
         {% else %}
-            <span class="badge bg-success"><i class="fas fa-check"></i> Safe to import</span>
+            <span class="text-success small "><i class="fas fa-check-circle"></i> Safe to import</span>
         {% endif %}
     {% endif %}
 </div>
-<div class="mt-1">
-    {% if item.existing_record is not none %}
-        <span class="badge bg-success"><i class="fas fa-check"></i> Matches {{ item.existing_record.user.name }} {{ item.existing_record.cohort }}</span>
-    {% endif %}
-    {% if item.intermitting %}
-        <span class="badge bg-danger">TWD</span>
-    {% endif %}
-    {% if item.dont_convert %}
-        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Import disabled</span>
-    {% endif %}
-</div>
 {% if w_length > 0 %}
-    {% for w in warnings %}
-        <div class="text-danger small">{{ w }}</div>
-    {% endfor %}
+    <div class="mt-1 d-flex flex-column justify-content-start align-items-start">
+        {% for w in warnings %}
+            <span class="text-danger small">{{ w }}</span>
+        {% endfor %}
+    </div>
 {% endif %}
 """
 

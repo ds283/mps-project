@@ -1,6 +1,8 @@
 {% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
+{% from "icon_block.html" import icon_block %}
+{% from "swatch.html" import small_swatch, medium_swatch %}
 
 {% block title %}
     {{ title }}
@@ -14,43 +16,115 @@
     <div class="card mt-3 mb-3">
         <div class="card-body">
             {% if data and data.enrollments and project_classes %}
-                <h4>
-                <div style="display: flex; flex-wrap: wrap;">
-                    {% for pclass in project_classes %}
-                        {% if data.is_enrolled(pclass) %}
-                            {% set record = data.get_enrollment_record(pclass) %}
-                            {% set style = pclass.make_CSS_style() %}
-                            <div class="dropdown">
-                                <button class="btn {% if style %}btn-secondary{% else %}btn-success{% endif %} selection-label dropdown-toggle"
-                                        {% if style %}style="{{ style }}"{% endif %}
-                                        type="button" data-bs-toggle="dropdown">
-                                    {{ pclass.name }}
-                                </button>
-                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                                    <div class="dropdown-header">Admin</div>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.remove_enrollment', userid=user.id, pclassid=pclass.id) }}">
-                                        <i class="fas fa-trash fa-fw"></i> Remove enrolment
-                                    </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.edit_enrollment', id=record.id, url=url_for('manage_users.edit_enrollments', id=record.owner_id, pane=pane), pane=pane) }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Edit enrolment
-                                    </a>
-                                    <div role="separator" class="dropdown-divider"></div>
-                                    <div class="dropdown-header">Operations</div>
-                                    {% set disable = record.marker_state != record.MARKER_ENROLLED and record.presentations_state != record.PRESENTATIONS_ENROLLED %}
-                                    <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disable %}href="{{  url_for('manage_users.enroll_projects_assessor', id=record.id, pclassid=pclass.id) }}"{% endif %}>
-                                        <i class="fas fa-cogs fa-fw"></i> Make assessor for all projects
-                                    </a>
-                                    <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disable %}href="{{  url_for('manage_users.enroll_liveprojects_assessor', id=record.id, pclassid=pclass.id) }}"{% endif %}>
-                                        <i class="fas fa-cogs fa-fw"></i> Make assessor for this year's live projects
-                                    </a>
+                <div class="row vertical-top mb-3">
+                    <div class="col-5"><strong>Project class</strong></div>
+                    <div class="col-3"><strong>Supervisor status</strong></div>
+                    <div class="col-3"><strong>Marker status</strong></div>
+                </div>
+                {% for pclass in project_classes %}
+                    {% if data.is_enrolled(pclass) %}
+                        {% set record = data.get_enrollment_record(pclass) %}
+                        {% set swatch_colour = pclass.make_CSS_style() %}
+                        <div class="row vertical-top mb-3">
+                            <div class="col-5">
+                                <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+                                    <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+                                        {{ medium_swatch(swatch_colour) }}
+                                        <span class="ms-2 text-primary fw-semibold">{{ pclass.name }}</span>
+                                    </div>
+                                    {% if record.creation_timestamp %}
+                                        <div class="text-muted small">
+                                            Created at
+                                            {{ record.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                                            by <i class="fas fa-user-circle"></i> <a class="text-decoration-none"
+                                                                                     href="mailto:{{ record.created_by.email }}">{{ record.created_by.name }}</a>
+                                        </div>
+                                    {% endif %}
+                                    {% if record.last_edit_timestamp %}
+                                        <div class="text-muted small">
+                                            Last edited at
+                                            {{ record.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                                            by <i class="fas fa-user-circle"></i> <a class="text-decoration-none"
+                                                                                     href="mailto:{{ record.last_edited_by.email }}">{{ record.last_edited_by.name }}</a>
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-                </h4>
+                            <div class="col-3">
+                                {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
+                                    <span class="text-success"><i
+                                            class="fas fa-check-circle"></i> Supervisor enrolled</span>
+                                {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
+                                    <span class="text-secondary"><i class="fas fa-check-circle"></i> Supervisor sabbatical/buyout</span>
+                                    {% if record.supervisor_comment and record.supervisor_comment|length > 0 %}
+                                        <div class="text-muted small">{{ record.supervisor_comment }}</div>
+                                    {% endif %}
+                                {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
+                                    <span class="text-danger"><i
+                                            class="fa fa-times-circle"></i> Supervisor exempt</span>
+                                    {% if record.supervisor_comment and record.supervisor_comment|length > 0 %}
+                                        <div class="text-muted small">{{ record.supervisor_comment }}</div>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="col-3">
+                                {% if record.marker_state == record.MARKER_ENROLLED %}
+                                    <span class="text-success"><i
+                                            class="fas fa-check-circle"></i> Marker enrolled</span>
+                                {% elif record.marker_state == record.MARKER_SABBATICAL %}
+                                    <span class="text-secondary"><i class="fas fa-check-circle"></i> Marker sabbatical/buyout</span>
+                                    {% if record.marker_comment and record.marker_comment|length > 0 %}
+                                        <span class="text-muted small">{{ record.marker_comment }}</span>
+                                    {% endif %}
+                                {% elif record.marker_state == record.MARKER_EXEMPT %}
+                                    <span class="text-danger"><i class="fa fa-times-circle"></i> Marker exempt</span>
+                                    {% if record.marker_comment and record.marker_comment|length > 0 %}
+                                        <span class="text-muted small">{{ record.marker_comment }}</span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="col-1">
+                                <div class="d-flex flex-row justify-content-end align-items-center">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-secondary dropdown-toggle" type="button"
+                                                data-bs-toggle="dropdown">
+                                            Actions
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                                            <div class="dropdown-header">Admin</div>
+                                            <a class="dropdown-item d-flex gap-2"
+                                               href="{{ url_for('manage_users.remove_enrollment', userid=user.id, pclassid=pclass.id) }}">
+                                                <i class="fas fa-trash fa-fw"></i> Remove enrolment
+                                            </a>
+                                            <a class="dropdown-item d-flex gap-2"
+                                               href="{{ url_for('manage_users.edit_enrollment', id=record.id, url=url_for('manage_users.edit_enrollments', id=record.owner_id, pane=pane), pane=pane) }}">
+                                                <i class="fas fa-cogs fa-fw"></i> Edit enrolment
+                                            </a>
+                                            <div role="separator" class="dropdown-divider"></div>
+                                            <div class="dropdown-header">Operations</div>
+                                            {% set disable = record.marker_state != record.MARKER_ENROLLED and record.presentations_state != record.PRESENTATIONS_ENROLLED %}
+                                            <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}"
+                                               {% if not disable %}href="{{ url_for('manage_users.enroll_projects_assessor', id=record.id, pclassid=pclass.id) }}"{% endif %}>
+                                                <i class="fas fa-cogs fa-fw"></i> Make assessor for all projects
+                                            </a>
+                                            <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}"
+                                               {% if not disable %}href="{{ url_for('manage_users.enroll_liveprojects_assessor', id=record.id, pclassid=pclass.id) }}"{% endif %}>
+                                                <i class="fas fa-cogs fa-fw"></i> Make assessor for this year's live
+                                                projects
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
             {% else %}
-                <p>No current enrolments</p>
+                <div class="alert alert-info mt-2 mb-2">
+                    {% call icon_block("info-circle") %}
+                        <div><strong>No current enrolments.</strong></div>
+                    {% endcall %}
+                </div>
             {% endif %}
         </div>
         <div class="card-footer">
@@ -66,7 +140,11 @@
                 {% endfor %}
                 </h4>
             {% else %}
-                <p>No available project classes</p>
+                <div class="alert alert-info mt-2 mb-2">
+                    {% call icon_block("info-circle") %}
+                        <div><strong>No available project classes.</strong></div>
+                    {% endcall %}
+                </div>
             {% endif %}
         </div>
     </div>

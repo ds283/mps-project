@@ -14670,7 +14670,6 @@ def _MatchingRecord_roles_remove_handler(target, value, initiator):
 @cache.memoize()
 def _PresentationAssessment_is_valid(id):
     obj = db.session.query(PresentationAssessment).filter_by(id=id).one()
-    print(f'Validating PresentationAssessment "{obj.name}"')
 
     errors = {}
     warnings = {}
@@ -14710,21 +14709,20 @@ def _PresentationAssessment_is_valid(id):
 
     # CONSISTENCY CHECK 1 - students should be available for at least one session
     if lifecycle >= PresentationAssessment.AVAILABILITY_REQUESTED:
-        print("Validating all students available")
         unavailable_students = {}
-        submission_records = {}
+        attendance_data = {}
         for sess in obj.sessions:
-            for sr in sess.unavailable_submitters:
-                sr: SubmissionRecord
-                unavailable_students.setdefault(sess.id, set()).add(sr.id)
+            for sat in sess.unavailable_submitters:
+                unavailable_students.setdefault(sess.id, set()).add(sat.id)
 
-                if sr.id not in submission_records:
-                    submission_records[sr.id] = sr
+                if sat.id not in attendance_data:
+                    attendance_data[sat.id] = sat
 
-        not_available = set.intersection(*unavailable_students.values())
+        not_available = set.intersection(*(unavailable_students.values()))
         for sr_id in not_available:
-            sr = submission_records[sr_id]
-            sd = sr.owner.student
+            sat = attendance_data[sr_id]
+            sd = sat.submitter.owner.student
+            print(f'Submitter "{sd.user.name}" is not available for any session')
             warnings[("submitters_notavailable", sr_id)] = f'Submitter "{sd.user.name}" is not available for any session'
 
     if len(errors) > 0:

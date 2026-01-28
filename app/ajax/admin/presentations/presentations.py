@@ -125,9 +125,9 @@ _sessions = """
         {% if warnings|length > 0 %}
             {% for item in warnings %}
                 {% if loop.index <= 10 %}
-                    <div class="text-warning small">Warning: {{ item }}</div>
+                    <div class="text-secondary small">Warning: {{ item }}</div>
                 {% elif loop.index == 11 %}
-                    <div class="text-warning small">Further warnings suppressed...</div>
+                    <div class="text-secondary small">Further warnings suppressed...</div>
                 {% endif %}
             {% endfor %}
         {% endif %}

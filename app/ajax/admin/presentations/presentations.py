@@ -32,15 +32,15 @@ _name = """
     {% if state == a.AVAILABILITY_NOT_REQUESTED %}
         <span class="small text-secondary">Availability not requested</span>
     {% elif state == a.AVAILABILITY_REQUESTED %}
-        <span><i class="fas fa-check-circle text-success"></i> <span class="small text-secondary">Availability requested</span></span>
+        <span class="small text-success"><i class="fas fa-check-circle"></i> Availability requested</span>
         {% set num_outstanding = a.availability_outstanding_count %}
         {% if num_outstanding > 0 %}
             <span class="small text-secondary">{{ num_outstanding }} outstanding requests</span>
         {% endif %}
     {% elif state == a.AVAILABILITY_CLOSED %}
-        <span class="small bg-primary">Availability closed</span>
+        <span class="small text-secondary"><i class="fas fa-check-circle"></i> Availability closed</span>
     {% elif state == a.AVAILABILITY_SKIPPED %}
-        <span class="small text-secondary">Availability skipped</span>
+        <span class="small text-secondary"><i class="fas fa-times-circle"></i> Availability skipped</span>
     {% else %}
         <span class="small fw-semibold text-danger">Unknown lifecycle state</span>
     {% endif %}

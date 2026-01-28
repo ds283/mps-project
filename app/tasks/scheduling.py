@@ -1108,7 +1108,7 @@ def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
 
         return asset
 
-    with ScratchFileManager(suffix="lp") as mgr:
+    with ScratchFileManager(suffix=".lp") as mgr:
         lp_path: Path = mgr.path
         prob.writeLP(lp_path)
         lp_asset = make_asset(lp_path, "schedule.lp")

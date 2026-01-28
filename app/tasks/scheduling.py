@@ -67,7 +67,7 @@ NumberToTalkMap = Dict[int, int]
 TalkDictMap = Dict[int, SubmissionRecord]
 
 
-def _enumerate_talks(schedule, read_serialized=False) -> Tuple[int, TalkToNumberMap, NumberToTalkMap, TalkDictMap]:
+def _enumerate_talks(schedule: ScheduleAttempt, read_serialized: bool=False) -> Tuple[int, TalkToNumberMap, NumberToTalkMap, TalkDictMap]:
     # schedule is a ScheduleAttempt instance
     talk_to_number: TalkToNumberMap = {}
     number_to_talk: NumberToTalkMap = {}
@@ -78,6 +78,9 @@ def _enumerate_talks(schedule, read_serialized=False) -> Tuple[int, TalkToNumber
     # minus any students who are not attending the main event and need to
     # be scheduled into the make-up event.
     if not read_serialized:
+        if len(schedule.owner.schedulable_talks) == 0:
+            raise RuntimeError(f'No schedulable talks found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")')
+
         talks = enumerate(schedule.owner.schedulable_talks)
 
     else:
@@ -90,6 +93,7 @@ def _enumerate_talks(schedule, read_serialized=False) -> Tuple[int, TalkToNumber
             .all()
         )
 
+    n = 0
     for n, p in talks:
         talk_to_number[p.id] = n
         number_to_talk[n] = p.id
@@ -99,7 +103,7 @@ def _enumerate_talks(schedule, read_serialized=False) -> Tuple[int, TalkToNumber
     return n + 1, talk_to_number, number_to_talk, talk_dict
 
 
-def _enumerate_assessors(schedule, read_serialized=False):
+def _enumerate_assessors(schedule: ScheduleAttempt, read_serialized: bool=False):
     # schedule is a ScheduleAttempt instance
     assessor_to_number = {}
     number_to_assessor = {}
@@ -110,6 +114,9 @@ def _enumerate_assessors(schedule, read_serialized=False):
     # the .assessor_list property returns a list of AssessorAttendanceData instances,
     # one for each assessor who has been invited to attend
     if not read_serialized:
+        if len(schedule.owner.ordered_assessors) == 0:
+            raise RuntimeError(f'No assessors found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")')
+
         assessors = enumerate(schedule.owner.ordered_assessors)
 
     else:
@@ -122,6 +129,7 @@ def _enumerate_assessors(schedule, read_serialized=False):
             .all()
         )
 
+    n = 0
     for n, a in assessors:
         assessor_to_number[a.faculty_id] = n
         number_to_assessor[n] = a.faculty_id
@@ -134,7 +142,7 @@ def _enumerate_assessors(schedule, read_serialized=False):
     return n + 1, assessor_to_number, number_to_assessor, assessor_dict, assessor_limits
 
 
-def _enumerate_periods(schedule, read_serialized=False):
+def _enumerate_periods(schedule: ScheduleAttempt, read_serialized: bool=False):
     # schedule is a ScheduleAttempt instance
     period_to_number = {}
     number_to_period = {}
@@ -142,6 +150,9 @@ def _enumerate_periods(schedule, read_serialized=False):
     period_dict = {}
 
     if not read_serialized:
+        if len(schedule.owner.available_periods) == 0:
+            raise RuntimeError(f'No periods found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")')
+
         periods = enumerate(schedule.owner.available_periods)
 
     else:
@@ -154,6 +165,7 @@ def _enumerate_periods(schedule, read_serialized=False):
             .all()
         )
 
+    n = 0
     for n, p in periods:
         period_to_number[p.id] = n
         number_to_period[n] = p.id
@@ -163,7 +175,7 @@ def _enumerate_periods(schedule, read_serialized=False):
     return n + 1, period_to_number, number_to_period, period_dict
 
 
-def _enumerate_slots(schedule, read_serialized=False):
+def _enumerate_slots(schedule: ScheduleAttempt, read_serialized: bool=False):
     # schedule is a ScheduleAttempt instance
     slot_to_number = {}
     number_to_slot = {}
@@ -171,6 +183,9 @@ def _enumerate_slots(schedule, read_serialized=False):
     slot_dict = {}
 
     if not read_serialized:
+        if len(schedule.ordered_slots) == 0:
+            raise RuntimeError(f'No slots found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")')
+
         slots = enumerate(schedule.ordered_slots)
 
     else:
@@ -183,6 +198,7 @@ def _enumerate_slots(schedule, read_serialized=False):
             .all()
         )
 
+    n = 0
     for n, s in slots:
         slot_to_number[s.id] = n
         number_to_slot[n] = s.id
@@ -843,34 +859,34 @@ def _initialize(self, record, read_serialized=False):
     try:
         with Timer() as talk_timer:
             number_talks, talk_to_number, number_to_talk, talk_dict = _enumerate_talks(record, read_serialized=read_serialized)
-        print(" -- enumerated talks in time {s}".format(s=talk_timer.interval))
+        print(f" -- enumerated {number_talks} talks in time {talk_timer.interval:.5g} s")
 
         with Timer() as assessor_timer:
             number_assessors, assessor_to_number, number_to_assessor, assessor_dict, assessor_limits = _enumerate_assessors(
                 record, read_serialized=read_serialized
             )
-        print(" -- enumerated assessors in time {s}".format(s=assessor_timer.interval))
+        print(f" -- enumerated {number_assessors} assessors in time {assessor_timer.interval:.5g} s")
 
         with Timer() as periods_timer:
             number_periods, period_to_number, number_to_period, period_dict = _enumerate_periods(record, read_serialized=read_serialized)
-        print(" -- enumerated periods in time {s}".format(s=periods_timer.interval))
+        print(f" -- enumerated {number_periods} periods in time {periods_timer.interval:.5g} s")
 
         with Timer() as slots_timer:
             number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(record, read_serialized=read_serialized)
-        print(" -- enumerated slots in time {s}".format(s=slots_timer.interval))
+        print(f" -- enumerated {number_slots} slots in time {slots_timer.interval:.5g} s")
 
         # build faculty availability and 'ifneeded' cost matrix
         with Timer() as fac_avail_timer:
             A: AvailabilityMatrix
             C: AvailabilityMatrix
             A, C = _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict)
-        print(" -- computed faculty availabilities in time {s}".format(s=fac_avail_timer.interval))
+        print(f" -- computed faculty availabilities in time {fac_avail_timer.interval:.5g} s")
 
         # build submitter availability matrix
         with Timer() as sub_avail_timer:
             B: AvailabilityMatrix
             B = _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict)
-        print(" -- computed submitter availabilities in time {s}".format(s=sub_avail_timer.interval))
+        print(f" -- computed submitter availabilities in time {sub_avail_timer.interval:.5g} s")
 
     except SQLAlchemyError as e:
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1175,7 +1191,7 @@ def register_scheduling_tasks(celery):
                 partial(_generate_minimize_objective, C),
             )
 
-        print(" -- creation complete in time {t}".format(t=create_time.interval))
+        print(f" -- creation complete in time {create_time.interval:.5g} s")
 
         return _execute_live(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots, talk_dict, assessor_dict, slot_dict)
 
@@ -1254,7 +1270,7 @@ def register_scheduling_tasks(celery):
                 print(" -- new slots are not allowed; disallowing use of any slots not present in original schedule")
                 _forbid_unused_slots(prob, X, Y, number_assessors, number_talks, slot_dict, old_record)
 
-        print(" -- creation complete in time {t}".format(t=create_time.interval))
+        print(f" -- creation complete in time {create_time.interval:.5g} s")
 
         record.solver = ScheduleAttempt.SOLVER_CBC_PACKAGED
         return _execute_live(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots, talk_dict, assessor_dict, slot_dict)
@@ -1324,7 +1340,7 @@ def register_scheduling_tasks(celery):
                 partial(_generate_minimize_objective, C),
             )
 
-        print(" -- creation complete in time {t}".format(t=create_time.interval))
+        print(f" -- creation complete in time {create_time.interval:.5g} s")
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP file...", autocommit=True)
 
@@ -1418,7 +1434,7 @@ def register_scheduling_tasks(celery):
                     partial(_generate_minimize_objective, C),
                 )
 
-            print(" -- creation complete in time {t}".format(t=create_time.interval))
+            print(f" -- creation complete in time {create_time.interval:.5g} s")
 
             # ScheduleEnumeration records will be purged during normal database maintenance cycle,
             # so there is no need to delete them explicitly here

@@ -51,42 +51,47 @@
                                 </div>
                             </div>
                             <div class="col-3">
-                                {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
-                                    <span class="text-success"><i
-                                            class="fas fa-check-circle"></i> Supervisor enrolled</span>
-                                {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                                    <span class="text-secondary"><i class="fas fa-check-circle"></i> Supervisor sabbatical/buyout</span>
-                                    {% if record.supervisor_comment and record.supervisor_comment|length > 0 %}
-                                        <div class="text-muted small">{{ record.supervisor_comment }}</div>
+                                {% if pclass.uses_supervisor %}
+                                    {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
+                                        <span class="text-success"><i
+                                                class="fas fa-check-circle"></i> Supervisor enrolled</span>
+                                    {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
+                                        <span class="text-secondary"><i class="fas fa-check-circle"></i> Supervisor sabbatical/buyout</span>
+                                        {% if record.supervisor_comment and record.supervisor_comment|length > 0 %}
+                                            <div class="text-muted small">{{ record.supervisor_comment }}</div>
+                                        {% endif %}
+                                    {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
+                                        <span class="text-danger"><i
+                                                class="fas fa-times-circle"></i> Supervisor exempt</span>
+                                        {% if record.supervisor_comment and record.supervisor_comment|length > 0 %}
+                                            <div class="text-muted small">{{ record.supervisor_comment }}</div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-danger"><i
+                                                class="fas fa-exclamation-circle"></i> Unknown status</span>
                                     {% endif %}
-                                {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                                    <span class="text-danger"><i
-                                            class="fas fa-times-circle"></i> Supervisor exempt</span>
-                                    {% if record.supervisor_comment and record.supervisor_comment|length > 0 %}
-                                        <div class="text-muted small">{{ record.supervisor_comment }}</div>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="text-danger"><i
-                                            class="fas fa-exclamation-circle"></i> Unknown status</span>
                                 {% endif %}
                             </div>
                             <div class="col-3">
-                                {% if record.marker_state == record.MARKER_ENROLLED %}
-                                    <span class="text-success"><i
-                                            class="fas fa-check-circle"></i> Marker enrolled</span>
-                                {% elif record.marker_state == record.MARKER_SABBATICAL %}
-                                    <span class="text-secondary"><i class="fas fa-check-circle"></i> Marker sabbatical/buyout</span>
-                                    {% if record.marker_comment and record.marker_comment|length > 0 %}
-                                        <span class="text-muted small">{{ record.marker_comment }}</span>
+                                {% if pclass.uses_marker %}
+                                    {% if record.marker_state == record.MARKER_ENROLLED %}
+                                        <span class="text-success"><i
+                                                class="fas fa-check-circle"></i> Marker enrolled</span>
+                                    {% elif record.marker_state == record.MARKER_SABBATICAL %}
+                                        <span class="text-secondary"><i class="fas fa-check-circle"></i> Marker sabbatical/buyout</span>
+                                        {% if record.marker_comment and record.marker_comment|length > 0 %}
+                                            <span class="text-muted small">{{ record.marker_comment }}</span>
+                                        {% endif %}
+                                    {% elif record.marker_state == record.MARKER_EXEMPT %}
+                                        <span class="text-danger"><i
+                                                class="fas fa-times-circle"></i> Marker exempt</span>
+                                        {% if record.marker_comment and record.marker_comment|length > 0 %}
+                                            <span class="text-muted small">{{ record.marker_comment }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-danger"><i
+                                                class="fas fa-exclamation-circle"></i> Unknown status</span>
                                     {% endif %}
-                                {% elif record.marker_state == record.MARKER_EXEMPT %}
-                                    <span class="text-danger"><i class="fas fa-times-circle"></i> Marker exempt</span>
-                                    {% if record.marker_comment and record.marker_comment|length > 0 %}
-                                        <span class="text-muted small">{{ record.marker_comment }}</span>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="text-danger"><i
-                                            class="fas fa-exclamation-circle"></i> Unknown status</span>
                                 {% endif %}
                             </div>
                             <div class="col-1">

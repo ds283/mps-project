@@ -14670,6 +14670,7 @@ def _MatchingRecord_roles_remove_handler(target, value, initiator):
 @cache.memoize()
 def _PresentationAssessment_is_valid(id):
     obj = db.session.query(PresentationAssessment).filter_by(id=id).one()
+    print(f'Validating PresentationAssessment "{obj.name}"')
 
     errors = {}
     warnings = {}
@@ -14690,22 +14691,41 @@ def _PresentationAssessment_is_valid(id):
             # check whether each schedule validates individually
             if schedule.has_issues:
                 if schedule.has_errors:
-                    warnings[("scheduling", schedule.id)] = "Schedule {name} has validation errors".format(name=schedule.name)
+                    warnings[("scheduling", schedule.id)] = 'Schedule "{name}" has validation errors'.format(name=schedule.name)
                 elif schedule.has_warnings:
                     warnings[("scheduling", schedule.id)] = 'Schedule "{name}" has validation warnings'.format(name=schedule.name)
 
-    # CONSTRAINT 3 - if availability requested, number of assessors should be nonzero
+    # CONSTRAINT 3 - if availability was requested, number of assessors should be nonzero
     lifecycle = obj.availability_lifecycle
     if lifecycle >= PresentationAssessment.AVAILABILITY_REQUESTED and get_count(obj.assessors_query) == 0:
         errors[("presentations", 0)] = "Number of attached assessors is zero or unset"
 
-    # CONSTRAINT 4 - if availabilty requested, number of talks should be nonzero
+    # CONSTRAINT 4 - if availability was requested, number of talks should be nonzero
     if lifecycle >= PresentationAssessment.AVAILABILITY_REQUESTED and (obj.number_talks is None or obj.number_talks == 0):
         errors[("presentations", 1)] = "Number of attached presentations is zero or unset"
 
-    # CONSTRAINT 5 - if availability requested, number of talks should be larger than number not attending
+    # CONSTRAINT 5 - if availability was requested, number of talks should be larger than number not attending
     if lifecycle >= PresentationAssessment.AVAILABILITY_REQUESTED and (obj.number_not_attending > obj.number_talks):
         errors[("presentations", 2)] = "Number of non-attending students exceeds or equals total number"
+
+    # CONSISTENCY CHECK 1 - students should be available for at least one session
+    if lifecycle >= PresentationAssessment.AVAILABILITY_REQUESTED:
+        print("Validating all students available")
+        unavailable_students = {}
+        submission_records = {}
+        for sess in obj.sessions:
+            for sr in sess.unavailable_submitters:
+                sr: SubmissionRecord
+                unavailable_students.setdefault(sess.id, set()).add(sr.id)
+
+                if sr.id not in submission_records:
+                    submission_records[sr.id] = sr
+
+        not_available = set.intersection(*unavailable_students.values())
+        for sr_id in not_available:
+            sr = submission_records[sr_id]
+            sd = sr.owner.student
+            warnings[("submitters_notavailable", sr_id)] = f'Submitter "{sd.user.name}" is not available for any session'
 
     if len(errors) > 0:
         return False, errors, warnings

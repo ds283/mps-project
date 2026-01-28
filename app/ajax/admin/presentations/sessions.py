@@ -95,39 +95,41 @@ _menu = """
 
 # language=jinja2
 _availability = """
-{% set lifecycle = s.owner.availability_lifecycle %}
-{% if lifecycle <= s.owner.AVAILABILITY_NOT_REQUESTED %}
-    <span class="small text-secondary">Not yet requested</span>
-{% else %}
-    {% if lifecycle == s.owner.AVAILABILITY_SKIPPED %}
-        <span class="small text-secondary">Availability skipped</span>
-    {% endif %}
-    {% set fac_available = s.number_available_faculty %}
-    {% set fac_ifneeded = s.number_ifneeded_faculty %}
-    {% set fac_unavailable = s.number_unavailable_faculty %}
-    {% if fac_available > 0 or fac_ifneeded > 0 %}
-        <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
-            <span class="small text-success">{{ fac_available }} available</span>
-            {% if fac_ifneeded > 0 %}
-                <span class="small text-secondary">{{ fac_ifneeded }} if-needed</span>
-            {% endif %}
-            {% if fac_unavailable > 0 %}
-                <span class="small text-danger">{{ fac_unavailable }} unavailable</span>
-            {% endif %}
-            <span class="small text-secondary">Total {{ fac_available + fac_ifneeded }}</span>
-        </div>
+<div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+    {% set lifecycle = s.owner.availability_lifecycle %}
+    {% if lifecycle <= s.owner.AVAILABILITY_NOT_REQUESTED %}
+        <span class="small text-secondary">Not yet requested</span>
     {% else %}
-        <span class="small fw-semibold text-danger">No availability</span>
+        {% if lifecycle == s.owner.AVAILABILITY_SKIPPED %}
+            <span class="small text-secondary">Availability skipped</span>
+        {% endif %}
+        {% set fac_available = s.number_available_faculty %}
+        {% set fac_ifneeded = s.number_ifneeded_faculty %}
+        {% set fac_unavailable = s.number_unavailable_faculty %}
+        {% if fac_available > 0 or fac_ifneeded > 0 %}
+            <div class="d-flex flex-row gap-1 justify-content-left align-items-start">
+                <span class="small text-success">{{ fac_available }} available</span>
+                {% if fac_ifneeded > 0 %}
+                    <span class="small text-secondary">|</span><span class="small text-secondary">{{ fac_ifneeded }} if-needed</span>
+                {% endif %}
+                {% if fac_unavailable > 0 %}
+                    <span class="small text-secondary">|</span><span class="small text-danger">{{ fac_unavailable }} unavailable</span>
+                {% endif %}
+                <span class="small text-secondary">|</span><span class="small text-secondary">Total {{ fac_available + fac_ifneeded }}</span>
+            </div>
+        {% else %}
+            <span class="small fw-semibold text-danger">No availability</span>
+        {% endif %}
+        {% set sub_unavailable = s.number_unavailable_submitters %}
+        {% if sub_unavailable > 0 %}
+            {% set pl = 's' %}
+            {% if sub_unavailable == 1 %}{% set pl = '' %}{% endif %}
+            <span class="small text-danger">{{ sub_unavailable }} submitter{{ pl }} unavailable</span>
+        {% else %}
+            <span class="small text-primary">All submitters available</span>
+        {% endif %}
     {% endif %}
-    {% set sub_unavailable = s.number_unavailable_submitters %}
-    {% if sub_unavailable > 0 %}
-        {% set pl = 's' %}
-        {% if sub_unavailable == 1 %}{% set pl = '' %}{% endif %}
-        <span class="small text-danger">{{ sub_unavailable }} submitter{{ pl }} unavailable</span>
-    {% else %}
-        <span class="small text-primary">All submitters available</span>
-    {% endif %}
-{% endif %}
+</div>
 """
 
 

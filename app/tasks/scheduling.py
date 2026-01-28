@@ -67,7 +67,7 @@ NumberToTalkMap = Dict[int, int]
 TalkDictMap = Dict[int, SubmissionRecord]
 
 
-def _enumerate_talks(schedule: ScheduleAttempt, read_serialized: bool=False) -> Tuple[int, TalkToNumberMap, NumberToTalkMap, TalkDictMap]:
+def _enumerate_talks(schedule: ScheduleAttempt, read_serialized: bool = False) -> Tuple[int, TalkToNumberMap, NumberToTalkMap, TalkDictMap]:
     # schedule is a ScheduleAttempt instance
     talk_to_number: TalkToNumberMap = {}
     number_to_talk: NumberToTalkMap = {}
@@ -103,7 +103,7 @@ def _enumerate_talks(schedule: ScheduleAttempt, read_serialized: bool=False) -> 
     return n + 1, talk_to_number, number_to_talk, talk_dict
 
 
-def _enumerate_assessors(schedule: ScheduleAttempt, read_serialized: bool=False):
+def _enumerate_assessors(schedule: ScheduleAttempt, read_serialized: bool = False):
     # schedule is a ScheduleAttempt instance
     assessor_to_number = {}
     number_to_assessor = {}
@@ -142,7 +142,7 @@ def _enumerate_assessors(schedule: ScheduleAttempt, read_serialized: bool=False)
     return n + 1, assessor_to_number, number_to_assessor, assessor_dict, assessor_limits
 
 
-def _enumerate_periods(schedule: ScheduleAttempt, read_serialized: bool=False):
+def _enumerate_periods(schedule: ScheduleAttempt, read_serialized: bool = False):
     # schedule is a ScheduleAttempt instance
     period_to_number = {}
     number_to_period = {}
@@ -175,7 +175,7 @@ def _enumerate_periods(schedule: ScheduleAttempt, read_serialized: bool=False):
     return n + 1, period_to_number, number_to_period, period_dict
 
 
-def _enumerate_slots(schedule: ScheduleAttempt, read_serialized: bool=False):
+def _enumerate_slots(schedule: ScheduleAttempt, read_serialized: bool = False):
     # schedule is a ScheduleAttempt instance
     slot_to_number = {}
     number_to_slot = {}
@@ -832,18 +832,27 @@ def _store_PuLP_solution(X, Y, record: ScheduleAttempt, number_talks, number_ass
     record.slots = store_slots
 
 
-def _create_slots(self, record):
+def _create_slots(self, record: ScheduleAttempt):
     # add database records for each available slot (meaning a combination of session+room);
     # the ones we don't use will be cleaned up later
+    print(f' -- creating slots for ScheduleAttempt {record.id} (presentation="{record.owner.name}")')
+
+    count = 0
     for sess in record.owner.sessions:
         sess: PresentationSession
+        print(f' -- ## creating slots for session "{sess.name}"')
 
         for room in sess.rooms:
             room: Room
+            print(f' -- ## ## creating slots for room "{room.name}", max occupancy = {room.maximum_occupancy}')
 
-            for s in range(1, room.maximum_occupancy):
-                slot = ScheduleSlot(owner_id=record.id, session_id=sess.id, occupancy_label=s, room_id=room.id)
+            if room.maximum_occupancy == 0:
+                print(f' !! WARNING: room "{room.name}" has maximum occupancy = 0 and will not be used')
+
+            for s in range(0, room.maximum_occupancy):
+                slot = ScheduleSlot(owner_id=record.id, session_id=sess.id, occupancy_label=s+1, room_id=room.id)
                 db.session.add(slot)
+                count += 1
 
     try:
         db.session.commit()
@@ -851,6 +860,8 @@ def _create_slots(self, record):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         raise self.retry()
+    else:
+        print(f' -- created {count} slots')
 
 
 def _initialize(self, record, read_serialized=False):
@@ -1136,7 +1147,7 @@ def register_scheduling_tasks(celery):
         self.update_state(state="STARTED", meta={"msg": "Looking up ScheduleAttempt record for id={id}".format(id=id)})
 
         try:
-            record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
+            record: ScheduleAttempt = db.session.query(ScheduleAttempt).filter_by(id=id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

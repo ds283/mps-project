@@ -7,7 +7,7 @@ We now have a draft of the assessment timetable, and we would like to ask you
 to cover the following sessions:
 
 {% for slot in slots -%}
-{{ slot.date_as_string }} {{ slot.session_type_string }} in {{ slot.room_full_name }} ({{ slot.pclass.abbreviation }}, {{ slot.session_details }})
+{{ slot.label_as_string }} in {{ slot.room_full_name }} ({{ slot.pclass.abbreviation }}, {{ slot.session_details }})
 {% for talk in slot.talks -%}
   -  {{ talk.owner.student.user.name }}  (supervisor {{ talk.project.owner.user.name }})
 {% endfor %}

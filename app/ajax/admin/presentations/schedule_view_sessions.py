@@ -22,7 +22,7 @@ _name = """
 </div>
 {% if s.is_empty %}
     <div class="mt-1">
-        <a href="btn btn-sm btn-outline-danger" href="{{ url_for('admin.schedule_delete_slot', id=s.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
+        <a class="btn btn-sm btn-outline-danger" href="{{ url_for('admin.schedule_delete_slot', id=s.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
             Delete slot
         </a>
     </div>
@@ -150,7 +150,7 @@ def schedule_view_sessions(slots, record, url=None, text=None):
     data = [
         {
             "session": {
-                "display": render_template_string(_name, s=s, simple_label=simple_label),
+                "display": render_template_string(_name, s=s, rec=record, back_url=url, back_text=text, simple_label=simple_label),
                 "sortvalue": s.session.date.isoformat() + ("-AA" if s.session.session_type == PresentationSession.MORNING_SESSION else "-BB"),
             },
             "room": render_template_string(_room, s=s),

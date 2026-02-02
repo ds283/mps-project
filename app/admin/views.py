@@ -9674,9 +9674,8 @@ def schedule_view_faculty_ajax(id):
 
 
 @admin.route("/schedule_delete_slot/<int:id>")
-@admin.route("/schedule_adjust_assessors/<int:id>")
 @roles_accepted("root", "admin", "faculty")
-def schedule_adjust_assessors(id):
+def schedule_delete_slot(id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 

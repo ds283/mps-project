@@ -16681,7 +16681,7 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
 
     @property
     def is_empty(self):
-        return get_count(self._talks) == 0
+        return get_count(self.talks) == 0
 
     @property
     def has_issues(self):
@@ -16745,6 +16745,10 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
     @property
     def session_type_string(self):
         return self.session.session_type_string
+
+    @property
+    def label_as_string(self):
+        return self.session.label["label"]
 
     @property
     def room_full_name(self):

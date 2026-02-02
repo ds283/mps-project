@@ -9175,11 +9175,11 @@ def publish_schedule(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for publication because it is still awaiting ' "manual upload.".format(name=record.name),
+                'Schedule "{name}" is not yet available for publication because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for publication because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash('Schedule "{name}" is not yet available for publication because it has not yet terminated.'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
@@ -9294,13 +9294,12 @@ def publish_schedule_assessors(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for sharing with assessors because it is still awaiting '
-                "manual upload.".format(name=record.name),
+                'Schedule "{name}" is not yet available for sharing with assessors because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for sharing with assessors because it has not yet ' "terminated.".format(name=record.name),
+                'Schedule "{name}" is not yet available for sharing with assessors because it has not yet terminated.'.format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
@@ -9338,22 +9337,22 @@ def deploy_schedule(id):
 
     if record.owner.is_deployed:
         flash(
-            'The assessment "{name}" already has a deployed schedule. Only one schedule can be ' "deployed at a time.".format(name=record.owner.name),
+            'The assessment "{name}" already has a deployed schedule. Only one schedule can be deployed at a time.'.format(name=record.owner.name),
             "info",
         )
 
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for deployment because it is still awaiting ' "manual upload.".format(name=record.name),
+                'Schedule "{name}" is not yet available for deployment because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for deployment because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash('Schedule "{name}" is not yet available for deployment because it has not yet terminated.'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" did not yield an optimal solution and is not available for ' "deployment.".format(name=record.name), "info")
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for deployment.'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     record.deployed = True
@@ -9377,15 +9376,15 @@ def undeploy_schedule(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for undeployment because it is still awaiting ' "manual upload.".format(name=record.name),
+                'Schedule "{name}" is not yet available for undeployment because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for undeployment because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash('Schedule "{name}" is not yet available for undeployment because it has not yet terminated.'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" did not yield an optimal solution and is not available for ' "deployment.".format(name=record.name), "info")
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for deployment.'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not record.is_revokable:
@@ -9418,15 +9417,15 @@ def schedule_view_sessions(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for inspection because it is still awaiting ' "manual upload.".format(name=record.name),
+                'Schedule "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for inspection because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash('Schedule "{name}" is not yet available for inspection because it has not yet terminated.'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" is not available for inspection ' "because it did not yield an optimal solution.".format(name=record.name), "info")
+        flash('Schedule "{name}" is not available for inspection because it did not yield an optimal solution.'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -9476,15 +9475,15 @@ def schedule_view_faculty(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for inspection because it is still awaiting ' "manual upload.".format(name=record.name),
+                'Schedule "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for inspection because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash('Schedule "{name}" is not yet available for inspection because it has not yet terminated.'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" is not available for inspection ' "because it did not yield an optimal solution.".format(name=record.name), "info")
+        flash('Schedule "{name}" is not available for inspection because it did not yield an optimal solution.'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -9687,15 +9686,15 @@ def schedule_adjust_assessors(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for inspection because it is still awaiting ' "manual upload.".format(name=record.name),
+                'Schedule "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for inspection because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash('Schedule "{name}" is not yet available for inspection because it has not yet terminated.'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" is not available for inspection ' "because it did not yield an optimal solution.".format(name=record.name), "info")
+        flash('Schedule "{name}" is not available for inspection because it did not yield an optimal solution.'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -9780,15 +9779,15 @@ def schedule_attach_assessor(slot_id, fac_id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for inspection because it is still awaiting ' "manual upload.".format(name=record.name),
+                'Schedule "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for inspection because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash('Schedule "{name}" is not yet available for inspection because it has not yet terminated.'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" is not available for inspection ' "because it did not yield an optimal solution.".format(name=record.name), "info")
+        flash('Schedule "{name}" is not available for inspection because it did not yield an optimal solution.'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -9829,13 +9828,13 @@ def schedule_remove_assessor(slot_id, fac_id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting ' "manual upload.".format(name=record.name), "error")
+            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(name=record.name), "error")
         else:
-            flash('Schedule "{name}" cannot yet be adjusted because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash('Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" cannot yet be adjusted ' "because it did not yield an optimal solution.".format(name=record.name), "info")
+        flash('Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -9876,13 +9875,13 @@ def schedule_adjust_submitter(slot_id, talk_id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting ' "manual upload.".format(name=record.name), "error")
+            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(name=record.name), "error")
         else:
-            flash('Schedule "{name}" cannot yet be adjusted because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash('Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" cannot yet be adjusted ' "because it did not yield an optimal solution.".format(name=record.name), "info")
+        flash('Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -9949,7 +9948,7 @@ def schedule_move_submitter(old_id, new_id, talk_id):
     record: ScheduleAttempt = old_slot.owner  # = ScheduleAttempt
 
     if old_slot.owner_id != new_slot.owner_id:
-        flash("Cannot move specified talk because destination slot does not belong to the same" "ScheduleAttempt instance.", "error")
+        flash("Cannot move specified talk because destination slot does not belong to the same ScheduleAttempt instance.", "error")
         return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
@@ -9957,13 +9956,13 @@ def schedule_move_submitter(old_id, new_id, talk_id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting ' "manual upload.".format(name=record.name), "error")
+            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(name=record.name), "error")
         else:
-            flash('Schedule "{name}" cannot yet be adjusted because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash('Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" cannot yet be adjusted ' "because it did not yield an optimal solution.".format(name=record.name), "info")
+        flash('Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -10005,13 +10004,13 @@ def schedule_move_room(slot_id, room_id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting ' "manual upload.".format(name=record.name), "error")
+            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(name=record.name), "error")
         else:
-            flash('Schedule "{name}" cannot yet be adjusted because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash('Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" cannot yet be adjusted ' "because it did not yield an optimal solution.".format(name=record.name), "info")
+        flash('Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(name=record.name), "info")
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -10112,12 +10111,12 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
     if not source_schedule.finished:
         if source_schedule.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for merging because it is still awaiting ' "manual upload.".format(name=source_schedule.name),
+                'Schedule "{name}" is not yet available for merging because it is still awaiting manual upload.'.format(name=source_schedule.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for merging because it has not yet ' "terminated.".format(name=source_schedule.name), "error"
+                'Schedule "{name}" is not yet available for merging because it has not yet terminated.'.format(name=source_schedule.name), "error"
             )
         return redirect(redirect_url())
 
@@ -10132,12 +10131,12 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
     if target_schedule is not None and not target_schedule.finished:
         if target_schedule.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for merging because it is still awaiting ' "manual upload.".format(name=target_schedule.name),
+                'Schedule "{name}" is not yet available for merging because it is still awaiting manual upload.'.format(name=target_schedule.name),
                 "error",
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for merging because it has not yet ' "terminated.".format(name=target_schedule.name), "error"
+                'Schedule "{name}" is not yet available for merging because it has not yet terminated.'.format(name=target_schedule.name), "error"
             )
         return redirect(redirect_url())
 

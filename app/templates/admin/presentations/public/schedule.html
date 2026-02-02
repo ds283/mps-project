@@ -59,7 +59,9 @@
                                 </div>
                                 <div class="col-5">
                                     <div class="float-end">
-                                        {{ simple_label(slot.pclass.make_label()) }}
+                                        {% if slot.pclass is not none %}
+                                            {{ simple_label(slot.pclass.make_label()) }}
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>

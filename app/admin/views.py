@@ -9673,6 +9673,40 @@ def schedule_view_faculty_ajax(id):
     return ajax.admin.schedule_view_faculty(assessors, record, url=url, text=text)
 
 
+@admin.route("/schedule_delete_slot/<int:id>")
+@admin.route("/schedule_adjust_assessors/<int:id>")
+@roles_accepted("root", "admin", "faculty")
+def schedule_adjust_assessors(id):
+    if not validate_using_assessment():
+        return redirect(redirect_url())
+
+    slot: ScheduleSlot = ScheduleSlot.query.get_or_404(id)
+    record: ScheduleAttempt = slot.owner  # = ScheduleAttempt
+
+    if not validate_assessment(record.owner):
+        return redirect(redirect_url())
+
+    if not validate_schedule_inspector(record):
+        return redirect(redirect_url())
+
+    if not slot.is_empty:
+        flash('This schedule slot cannot be deleted because it is not empty.', 'error')
+        return redirect(redirect_url())
+
+    try:
+        db.session.delete(slot)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash(
+            "Could not remove this session because of a database error. "
+            "Please contact a system administrator".format(number=asset_id),
+            "error",
+        )
+
+    return redirect(redirect_url())
+
+
 @admin.route("/schedule_adjust_assessors/<int:id>")
 @roles_accepted("root", "admin", "faculty")
 def schedule_adjust_assessors(id):

@@ -16680,6 +16680,10 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
         return flag
 
     @property
+    def is_empty(self):
+        return get_count(self._talks) == 0
+
+    @property
     def has_issues(self):
         if not self._validated:
             check = self.is_valid

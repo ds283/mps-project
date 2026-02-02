@@ -415,7 +415,7 @@ def ScheduleSessionQuery(schedule_id):
 
 
 def BuildScheduleSessionLabel(session):
-    return session.label['label']
+    return session.label["label"]
 
 
 def GetMaskableRoles(user_id):

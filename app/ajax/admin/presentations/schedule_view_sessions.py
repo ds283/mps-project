@@ -14,9 +14,18 @@ from ....models import PresentationSession
 
 # language=jinja2
 _name = """
-{{ simple_label(s.session.label) }}
-{% if s.has_issues %}
-    <i class="fas fa-exclamation-triangle text-danger"></i>
+<div>
+    {{ simple_label(s.session.label) }}
+    {% if s.has_issues %}
+        <i class="fas fa-exclamation-triangle text-danger"></i>
+    {% endif %}
+</div>
+{% if s.is_empty %}
+    <div class="mt-1">
+        <a href="btn btn-sm btn-outline-danger" href="{{ url_for('admin.schedule_delete_slot', id=s.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
+            Delete slot
+        </a>
+    </div>
 {% endif %}
 """
 

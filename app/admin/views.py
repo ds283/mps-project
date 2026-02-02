@@ -9294,7 +9294,9 @@ def publish_schedule_assessors(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for sharing with assessors because it is still awaiting manual upload.'.format(name=record.name),
+                'Schedule "{name}" is not yet available for sharing with assessors because it is still awaiting manual upload.'.format(
+                    name=record.name
+                ),
                 "error",
             )
         else:
@@ -10115,9 +10117,7 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
                 "error",
             )
         else:
-            flash(
-                'Schedule "{name}" is not yet available for merging because it has not yet terminated.'.format(name=source_schedule.name), "error"
-            )
+            flash('Schedule "{name}" is not yet available for merging because it has not yet terminated.'.format(name=source_schedule.name), "error")
         return redirect(redirect_url())
 
     if not source_schedule.solution_usable:
@@ -10135,9 +10135,7 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
                 "error",
             )
         else:
-            flash(
-                'Schedule "{name}" is not yet available for merging because it has not yet terminated.'.format(name=target_schedule.name), "error"
-            )
+            flash('Schedule "{name}" is not yet available for merging because it has not yet terminated.'.format(name=target_schedule.name), "error")
         return redirect(redirect_url())
 
     if target_schedule is not None and not target_schedule.solution_usable:

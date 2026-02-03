@@ -67,17 +67,17 @@ _status = """
 
 # language=jinja2
 _timestamp = """
-Created by
-<a class="text-decoration-none" href="mailto:{{ s.created_by.email }}">{{ s.created_by.name }}</a>
-on
-{% if s.creation_timestamp is not none %}
-    {{ s.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-{% else %}
-    <span class="badge bg-secondary">Unknown</span>
-{% endif %}
+<div class="mt-2 text-muted small">
+    Created by <i class="fas fa-user-circle"></i>
+    <a class="text-decoration-none" href="mailto:{{ s.created_by.email }}">{{ s.created_by.name }}</a>
+    {% if s.creation_timestamp is not none %}
+        {{ s.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+    {% endif %}
+</div>
+</div>
 {% if s.last_edited_by is not none %}
-    <div class="mt-1 text-muted">
-        Last edited by <i class="fas fa-user-circle"></i> 
+    <div class="mt-2 text-muted small">
+        Last edited by <i class="fas fa-user-circle"></i>
         <a class="text-decoration-none" href="mailto:{{ s.last_edited_by.email }}">{{ s.last_edited_by.name }}</a>
         {% if s.last_edit_timestamp is not none %}
             {{ s.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
@@ -90,9 +90,9 @@ on
 # language=jinja2
 _score = """
 {% if s.solution_usable %}
-    <span class="badge bg-success">Score {{ s.score }}</span>
+    <div class="text-success"><i class="fas fa-circle"></i> Original score {{ s.score }}</div>
 {% else %}
-    <span class="badge bg-secondary">Invalid</span>
+    <div class="text-danger fw-semibold"><i class="fas fa-times-circle"></i> Invalid</div>
 {% endif %}
 """
 

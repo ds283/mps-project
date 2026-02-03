@@ -15,25 +15,27 @@ _name = """
 <a class="text-decoration-none" href="mailto:{{ a.faculty.user.email }}">{{ a.faculty.user.name }}</a>
 <div>
     {% if a.confirmed %}
-        <span class="badge bg-success">Confirmed</span>
+        <span class="small text-success"><i class="fas fa-check-circle"></i> Confirmed</span>
     {% else %}
-        <span class="badge bg-danger">Not confirmed</span>
+        <span class="small text-danger"><i class="fas fa-times-circle"></i> Not confirmed</span>
     {% endif %}
     {% if slot.session.faculty_ifneeded(a.faculty_id) %}
-        <span class="badge bg-warning text-dark">If needed</span>
+        <span class="small text-secondary">If needed</span>
+    {% endif %}
+</div>
+<div class="d-flex flex-column gap-1 justify-content-start align-items-start">
+    {% if slot.assessor_has_overlap(a.faculty_id) %}
+        <span class="small text-success"><i class="fas fa-check"></i> Pool overlap</span>
+    {% else %}
+        <span class="small text-danger"><i class="fas fa-times"></i> No pool overlap</span>
+    {% endif %}
+    {% if slot.assessor_makes_valid(a.faculty_id) %}
+        <span class="small text-success"><i class="fas fa-check"></i> Makes valid</span>
     {% endif %}
     {% set rec = slot.owner %}
     {% set count = rec.get_number_faculty_slots(a.faculty_id) %}
     {% set pl = 's' %}{% if count == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge bg-info">{{ count }} session{{ pl }}</span>
-    {% if slot.assessor_has_overlap(a.faculty_id) %}
-        <span class="badge bg-success"><i class="fas fa-check"></i> Pool overlap</span>
-    {% else %}
-        <span class="badge bg-danger"><i class="fas fa-times"></i> No pool overlap</span>
-    {% endif %}
-    {% if slot.assessor_makes_valid(a.faculty_id) %}
-        <span class="badge bg-success"><i class="fas fa-check"></i> Makes valid</span>
-    {% endif %}
+    <span class="small text-primary"><span class="fw-semibold">{{ count }}</span> session{{ pl }}</span>
 </div>
 """
 

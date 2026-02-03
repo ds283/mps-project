@@ -24,7 +24,7 @@ _name = """
 {% endif %}
 <div class="mt-1 d-flex flex-column justify-content-start align-items-start">
     {% if a.is_deployed %}
-        <span class="small bg-success"><i class="fas fa-check"></i> Deployed</span>
+        <span class="small text-success"><i class="fas fa-check"></i> Deployed</span>
     {% endif %}
     {% if not a.is_feedback_open %}
         <span class="small text-success">Feedback closed</span>

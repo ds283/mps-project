@@ -25,12 +25,12 @@ _name = """
 </div>
 <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
     {% if slot.assessor_has_overlap(a.faculty_id) %}
-        <span class="small text-success"><i class="fas fa-check"></i> Pool overlap</span>
+        <span class="small text-success"><i class="fas fa-check-circle"></i> Pool overlap</span>
     {% else %}
-        <span class="small text-danger"><i class="fas fa-times"></i> No pool overlap</span>
+        <span class="small text-danger"><i class="fas fa-times-circle"></i> No pool overlap</span>
     {% endif %}
     {% if slot.assessor_makes_valid(a.faculty_id) %}
-        <span class="small text-success"><i class="fas fa-check"></i> Makes valid</span>
+        <span class="small text-success"><i class="fas fa-check-circle"></i> Makes valid</span>
     {% endif %}
     {% set rec = slot.owner %}
     {% set count = rec.get_number_faculty_slots(a.faculty_id) %}
@@ -147,11 +147,11 @@ def assign_assessor_data(assessors, slot, url=None, text=None):
             "name": {"display": render_template_string(_name, a=a, slot=slot), "sortstring": a.faculty.user.last_name + a.faculty.user.first_name},
             "sessions": {
                 "display": render_template_string(_sessions, a=a, slots=slots, url=url, text=text, simple_label=simple_label),
-                "sortvalue": len(slots),
+                "sortvalue": score,
             },
             "menu": render_template_string(_menu, a=a, slot=slot),
         }
-        for a, slots in assessors
+        for a, slots, score in assessors
     ]
 
     return jsonify(data)

@@ -9768,14 +9768,15 @@ def schedule_assign_assessors_ajax(id):
     candidates = []
     pclass: ProjectClass = slot.pclass
 
-    for item in record.owner.ordered_assessors:
+    for assessor in record.owner.ordered_assessors:
+        assessor: AssessorAttendanceData
         # candidate assessors should be available in this slot
-        if slot.session.faculty_available(item.faculty_id) or slot.session.faculty_ifneeded(item.faculty_id):
+        if slot.session.faculty_available(assessor.faculty_id) or slot.session.faculty_ifneeded(assessor.faculty_id):
             is_candidate = True
 
             if pclass is not None:
                 # assessors should also be enrolled for the project class corresponding to this slot
-                enrolment = item.faculty.get_enrollment_record(pclass.id)
+                enrolment = assessor.faculty.get_enrollment_record(pclass.id)
                 available = enrolment is not None and enrolment.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED
 
                 if not available:
@@ -9784,7 +9785,7 @@ def schedule_assign_assessors_ajax(id):
             # check whether this faculty has any existing assignments in this session
             num_existing = get_count(
                 db.session.query(ScheduleSlot).filter(
-                    ScheduleSlot.owner_id == record.id, ScheduleSlot.session_id == slot.session_id, ScheduleSlot.assessors.any(id=item.faculty_id)
+                    ScheduleSlot.owner_id == record.id, ScheduleSlot.session_id == slot.session_id, ScheduleSlot.assessors.any(id=assessor.faculty_id)
                 )
             )
 
@@ -9793,8 +9794,17 @@ def schedule_assign_assessors_ajax(id):
                 is_candidate = False
 
             if is_candidate:
-                slots = record.get_faculty_slots(item.faculty_id).all()
-                candidates.append((item, slots))
+                slots: List[ScheduleSlot] = record.get_faculty_slots(assessor.faculty_id).all()
+
+                score = len(slots)
+
+                if not assessor.confirmed:
+                    score += 10000
+
+                if not slot.assessor_has_overlap(assessor.faculty_id):
+                    score += 100
+
+                candidates.append((assessor, slots, score))
 
     return ajax.admin.assign_assessor_data(candidates, slot, url=url, text=text)
 

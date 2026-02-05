@@ -9968,7 +9968,7 @@ def schedule_assign_submitter_ajax(slot_id, talk_id):
     text = request.args.get("text", None)
     url = request.args.get("url", None)
 
-    pclass = slot.pclass
+    pclass: ProjectClass = slot.pclass
 
     def check_valid(s):
         if s.pclass is not None and pclass is not None:

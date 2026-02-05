@@ -112,7 +112,7 @@ platformdirs==4.5.1
 prometheus_client==0.24.1
 prompt_toolkit==3.0.52
 proto-plus==1.27.0
-protobuf==6.33.4
+protobuf==6.33.5
 psutil==7.2.1
 PuLP==3.3.0
 pyasn1==0.6.2

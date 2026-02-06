@@ -16774,13 +16774,17 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
         if tk is None:
             return "missing data"
 
-        period = tk.period
-        if self.session.session_type == PresentationSession.MORNING_SESSION:
-            return period.morning_session
-        elif self.session.session_type == PresentationSession.AFTERNOON_SESSION:
-            return period.afternoon_session
+        # TODO: needs fixing. Temporaily ignore. We now have more than one morning and afternoon session,
+        #  so the old system no longer works
+        return ""
 
-        return "unknown session type"
+        # period = tk.period
+        # if self.session.session_type == PresentationSession.MORNING_SESSION:
+        #     return period.morning_session
+        # elif self.session.session_type == PresentationSession.AFTERNOON_SESSION:
+        #     return period.afternoon_session
+        #
+        # return "unknown session type"
 
     @property
     def assessor_CATS(self):

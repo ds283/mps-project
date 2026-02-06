@@ -16450,14 +16450,15 @@ def _ScheduleSlot_is_valid(id):
             )
 
     # CONSTRAINT 4. ASSESSORS SHOULD BE ENROLLED FOR THIS PROJECT CLASS
-    pclass = obj.pclass
-    for assessor in obj.assessors:
-        rec = assessor.get_enrollment_record(pclass.id)
-        if rec is None or (rec is not None and rec.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED):
-            errors[("enrollment", assessor.id)] = (
-                'Assessor "{name}" is scheduled in this slot, but is not '
-                'enrolled as an assessor for "{pclass}"'.format(name=assessor.user.name, pclass=pclass.name)
-            )
+    pclass: ProjectClass = obj.pclass
+    if pclass is not None:
+        for assessor in obj.assessors:
+            rec = assessor.get_enrollment_record(pclass.id)
+            if rec is None or (rec is not None and rec.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED):
+                errors[("enrollment", assessor.id)] = (
+                    'Assessor "{name}" is scheduled in this slot, but is not '
+                    'enrolled as an assessor for "{pclass}"'.format(name=assessor.user.name, pclass=pclass.name)
+                )
 
     # CONSTRAINT 5. ALL ASSESSORS SHOULD BE AVAILABLE FOR THIS SESSION
     for assessor in obj.assessors:

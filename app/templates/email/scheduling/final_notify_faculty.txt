@@ -1,16 +1,22 @@
+{%- set single_date = (event.earliest_date == event.latest_date) -%}
 Dear {{ user.first_name }}
 
-You are receiving this email because you are participating in an upcoming
-presentation assessment taking place between {{ event.earliest_date }} and
+{% if single_date -%}
+Thank you for entering your availability to assess the project presentation
+event taking place on {{ event.earliest_date }}.
+{%- else -%}
+Thank you for entering your availability to assess the project presentation
+event taking place between {{ event.earliest_date }} and {{ event.latest_date }}.
 {{ event.latest_date }}.
+{%- endif %}
 
 The final timetable for this event is now available. Unless you have already
 been contacted to discuss changes, there should be no variation compared to the
-draft timetable you have already received. You have been scheduled to cover
-the following sessions:
+draft timetable you have already received. The sessions we are asking you to
+cover are:
 
 {% for slot in slots -%}
-{{ slot.label_as_string }} in {{ slot.room_full_name }} ({{ slot.pclass.abbreviation }}, {{ slot.session_details }})
+{{ slot.label_as_string }} in {{ slot.room_full_name }} ({{ slot.pclass.abbreviation }})
 {% for talk in slot.talks -%}
   -  {{ talk.owner.student.user.name }}  (supervisor {{ talk.project.owner.user.name }})
 {% endfor %}

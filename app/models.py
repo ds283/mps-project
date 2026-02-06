@@ -16767,27 +16767,6 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
         return talk.period
 
     @property
-    def session_details(self):
-        if get_count(self.talks) == 0:
-            return "missing data"
-
-        tk = self.talks.first()
-        if tk is None:
-            return "missing data"
-
-        # TODO: needs fixing. Temporaily ignore. We now have more than one morning and afternoon session,
-        #  so the old system no longer works
-        return ""
-
-        # period = tk.period
-        # if self.session.session_type == PresentationSession.MORNING_SESSION:
-        #     return period.morning_session
-        # elif self.session.session_type == PresentationSession.AFTERNOON_SESSION:
-        #     return period.afternoon_session
-        #
-        # return "unknown session type"
-
-    @property
     def assessor_CATS(self):
         # assume all scheduled talks are in the same project class
         talk = self.talks.first()

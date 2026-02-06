@@ -1,13 +1,20 @@
+{%- set single_date = (event.earliest_date == event.latest_date) -%}
 Dear {{ user.first_name }}
 
+{% if single_date -%}
+Thank you for entering your availability to assess the project presentation
+event taking place on {{ event.earliest_date }}.
+{%- else -%}
 Thank you for entering your availability to assess the project presentation
 event taking place between {{ event.earliest_date }} and {{ event.latest_date }}.
+{{ event.latest_date }}.
+{%- endif %}
 
 We now have a draft of the assessment timetable, and we would like to ask you
 to cover the following sessions:
 
 {% for slot in slots -%}
-{{ slot.label_as_string }} in {{ slot.room_full_name }} ({{ slot.pclass.abbreviation }}, {{ slot.session_details }})
+{{ slot.label_as_string }} in {{ slot.room_full_name }} ({{ slot.pclass.abbreviation }})
 {% for talk in slot.talks -%}
   -  {{ talk.owner.student.user.name }}  (supervisor {{ talk.project.owner.user.name }})
 {% endfor %}

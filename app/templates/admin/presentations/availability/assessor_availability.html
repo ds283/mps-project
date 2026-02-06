@@ -26,6 +26,14 @@
                     Set <i class="fas fa-user-circle"></i> <strong>{{ assessor.user.name }}</strong> availability for assessment event <strong>{{ assessment.name }}</strong>
                 </div>
                 <div class="card-body">
+                    {% if assessment.availability_closed %}
+                        <div class="alert alert-info">
+                            {% call icon_block("info-circle") %}
+                                <div><strong>Collection of availability data for this assessment is now closed.</strong>
+                                </div>
+                            {% endcall %}
+                        </div>
+                    {% endif %}
                     <div class="row">
                         <div class="col-12">
                             <div class="float-end">

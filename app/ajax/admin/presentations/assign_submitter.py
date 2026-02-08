@@ -13,10 +13,12 @@ from jinja2 import Template, Environment
 
 # language=jinja2
 _name = """
-{{ simple_label(s.session.label) }}
-{% if s.has_issues %}
-    <i class="fas fa-exclamation-triangle text-danger"></i>
-{% endif %}
+<div class="d-flex flex-row justify-content-start align-items-start gap-2">
+    <span class="small fw-semibold">{{ s.session.label_as_string }}</span>
+    {% if s.has_issues %}
+        <i class="fas fa-exclamation-triangle text-danger"></i>
+    {% endif %}
+</div>
 """
 
 
@@ -29,33 +31,33 @@ _room = """
 # language=jinja2
 _assessors = """
 {% set rec = s.owner %}
-{% for assessor in s.assessors %}
-    <div>
-        <div class="dropdown schedule-assign-button" style="display: inline-block;">
-            <a class="badge text-decoration-none text-nohover-light bg-secondary" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                {{ assessor.user.name }}
-                {% set count = rec.get_number_faculty_slots(assessor.id) %}
-                ({{ count }})
-            </a>
-            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url, text=text) }}">
-                    Reassign assessors...
+<div class="d-flex flex-column justify-content-start align-items-start">
+    {% for assessor in s.assessors %}
+        <div>
+            <div class="dropdown">
+                <a class="badge text-decoration-none text-nohover-light bg-secondary text-light" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                    {{ assessor.user.name }}
+                    {% set count = rec.get_number_faculty_slots(assessor.id) %}
+                    ({{ count }})
                 </a>
+                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url, text=text) }}">
+                        Reassign assessors...
+                    </a>
+                </div>
             </div>
+            {% if s.session.faculty_ifneeded(assessor.id) %}
+                <span class="badge bg-warning text-dark">If needed</span>
+            {% elif s.session.faculty_unavailable(assessor.id) %}
+                <i class="fas fa-exclamation-triangle text-danger"></i>
+            {% endif %}
         </div>
-        {% if s.session.faculty_ifneeded(assessor.id) %}
-            <span class="badge bg-warning text-dark">If needed</span>
-        {% elif s.session.faculty_unavailable(assessor.id) %}
-            <i class="fas fa-exclamation-triangle text-danger"></i>
-        {% endif %}
-    </div>
-{% endfor %}
-<div>
-{% if s.presenter_has_overlap(t) %}
-    <span class="badge bg-success"><i class="fas fa-check"></i> Pool overlap</span>
-{% else %}
-    <span class="badge bg-danger"><i class="fas fa-times"></i> No pool overlap</span>
-{% endif %}
+    {% endfor %}
+    {% if s.presenter_has_overlap(t) %}
+        <span class="small text-success"><i class="fas fa-check-circle"></i> Pool overlap</span>
+    {% else %}
+        <span class="small text-danger"><i class="fas fa-times-circle"></i> No pool overlap</span>
+    {% endif %}
 </div>
 """
 
@@ -127,7 +129,7 @@ _talks = """
 
 # language=jinja2
 _menu = """
-<div class="float-end">
+<div class="d-flex flex-row justify-content-end align-items-start">
     <a href="{{ url_for('admin.schedule_move_submitter', old_id=old_slot.id, new_id=new_slot.id, talk_id=talk.id, url=back_url, text=back_text) }}" class="btn btn-outline-secondary btn-sm">
         <i class="fas fa-arrow-alt-circle-right"></i> Move
     </a>

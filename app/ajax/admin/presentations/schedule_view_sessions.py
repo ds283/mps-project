@@ -14,8 +14,8 @@ from ....models import PresentationSession
 
 # language=jinja2
 _name = """
-<div>
-    {{ simple_label(s.session.label) }}
+<div class="d-flex flex-row justify-content-start align-items-start gap-2">
+    <span class="small fw-semibold">{{ s.session.label_as_string }}</span>
     {% if s.has_issues %}
         <i class="fas fa-exclamation-triangle text-danger"></i>
     {% endif %}

@@ -3,6 +3,7 @@
 {% from "datatables.html" import import_datatables %}
 {% from "error_block.html" import error_block_inline, error_block_popover %}
 {% from "labels.html" import simple_label %}
+{% from "swatch.html" import small_swatch %}
 
 {% block scripts %}
     {{ super() }}
@@ -99,20 +100,28 @@
                             {% for talk in slot.talks %}
                                 <div class="row vertical-align final-selection-table">
                                     <div class="col-3">
-                                        {% set style = talk.pclass.make_CSS_style() %}
-                                        <div class="dropdown schedule-assign-button" style="display: inline-block;">
-                                            <a class="badge text-decoration-none text-nohover-light {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                                {{ talk.owner.student.user.name }}
-                                            </a>
-                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">
-                                                    Reassign presentation...
+                                        <div class="d-flex flex-row justify-content-start align-items-center gap-1">
+                                            {% set swatch_style = talk.pclass.make_CSS_style() %}
+                                            {% if swatch_style %}
+                                                {{ small_swatch(swatch_style) }}
+                                            {% endif %}
+                                            <div class="dropdown schedule-assign-button">
+                                                <a class="link-secondary text-decoration-none text-nohover dropdown"
+                                                   data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true"
+                                                   aria-expanded="false">
+                                                    {{ talk.owner.student.user.name }}
                                                 </a>
+                                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                                                    <a class="dropdown-item d-flex gap-2"
+                                                       href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">
+                                                        Reassign presentation...
+                                                    </a>
+                                                </div>
                                             </div>
+                                            {% if slot.session.submitter_unavailable(talk.id) %}
+                                                <i class="fas fa-exclamation-triangle text-danger"></i>
+                                            {% endif %}
                                         </div>
-                                        {% if slot.session.submitter_unavailable(talk.id) %}
-                                            <i class="fas fa-exclamation-triangle text-danger"></i>
-                                        {% endif %}
                                     </div>
                                     <div class="col-5">
                                         <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=talk.project_id, url=url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text), text='reassign presentation view') }}">{{ talk.project.name }}</a>

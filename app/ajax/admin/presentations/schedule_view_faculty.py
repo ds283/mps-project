@@ -12,12 +12,12 @@ from flask import render_template_string, jsonify, get_template_attribute
 
 # language=jinja2
 _name = """
-<a class="text-decoration-none" href="mailto:{{ a.faculty.user.email }}">{{ a.faculty.user.name }}</a>
-<div>
+<div class="d-flex flex-column justify-content-start align-items-start gap-2">
+    <a class="text-decoration-none" href="mailto:{{ a.faculty.user.email }}">{{ a.faculty.user.name }}</a>
     {% if a.confirmed %}
-        <span class="badge bg-success">Confirmed</span>
+        <span class="small text-success"><i class="fas fa-check-circle"></i> Confirmed</span>
     {% else %}
-        <span class="badge bg-danger">Not confirmed</span>
+        <span class="small text-danger"><i class="fas fa-times-circle"></i> Not confirmed</span>
     {% endif %}
     {% if a.assigned_limit is not none %}
         <span class="badge bg-primary">Assignment limit {{ a.assigned_limit }}</span>
@@ -31,43 +31,53 @@ _name = """
 
 # language=jinja2
 _sessions = """
-{% for slot in slots %}
-    <div style="display: inline-block; margin-bottom:2px; margin-right:2px;">
-        <div class="dropdown schedule-assign-button" style="display: inline-block;">
-            <a class="badge text-decoration-none text-nohover-light bg-secondary dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                {{ slot.session.label_as_string }}
-            </a>
-            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_assessors', id=slot.id, url=url_for('admin.schedule_view_faculty', id=rec.id, url=back_url, text=back_text), text='schedule inspector faculty view') }}">
-                    Reassign assessors...
-                </a>
-            </div>
-        </div>
-        {{ simple_label(slot.room.label) }}
-        {% if slot.has_issues %}
-            <i class="fas fa-exclamation-triangle text-danger"></i>
-        {% endif %}
-        &emsp;
-        {% for talk in slot.talks %}
-            <div class="dropdown schedule-assign-button" style="display: inline-block;">
-                {% set style = talk.pclass.make_CSS_style() %}
-                <a class="badge text-decoration-none text-nohover-light {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                    {{ talk.owner.student.user.name }}
-                </a>
-                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url_for('admin.schedule_view_faculty', id=rec.id, url=back_url, text=back_text), text='schedule inspector faculty view') }}">
-                        Reassign presentation...
-                    </a>
+<div class="d-flex flex-column justify-content-start align-items-start gap-3">
+    {% for slot in slots %}
+        <div class="bg-light p-2 w-100">
+            <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+                <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+                    <span class="fw-semibold">{{ slot.session.label_as_string }}</span>
+                    {{ simple_label(slot.room.label) }}
+                    {% if slot.has_issues %}
+                        <i class="fas fa-exclamation-triangle text-danger"></i>
+                    {% endif %}
+                    <div class="dropdown">
+                        <a class="badge text-decoration-none text-nohover bg-secondary text-light dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                            Edit
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_assessors', id=slot.id, url=url_for('admin.schedule_view_faculty', id=rec.id, url=back_url, text=back_text), text='schedule inspector faculty view') }}">
+                                Reassign assessors...
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex flex-row justify-content-start align-items-start gap-2">
+                    {% for talk in slot.talks %}
+                        <div>
+                            <div class="dropdown schedule-assign-button">
+                                {% set style = talk.pclass.make_CSS_style() %}
+                                <a class="badge text-decoration-none text-nohover-light {% if style %}bg-secondary{% else %}bg-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                                    {{ talk.owner.student.user.name }}
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url_for('admin.schedule_view_faculty', id=rec.id, url=back_url, text=back_text), text='schedule inspector faculty view') }}">
+                                        Reassign presentation...
+                                    </a>
+                                </div>
+                            </div>
+                            {% if slot.session.submitter_unavailable(talk.id) %}
+                                <i class="fas fa-exclamation-triangle text-danger"></i>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
                 </div>
             </div>
-            {% if slot.session.submitter_unavailable(talk.id) %}
-                <i class="fas fa-exclamation-triangle text-danger"></i>
-            {% endif %}
-        {% endfor %}
-    </div>
-{% else %}
-    <span class="badge bg-secondary">No assignment</span>
-{% endfor %}
+        </div>
+    {% else %}
+        <span class="small text-danger"><i class="fas fa-times-circle"></i> No assignment</span>
+    {% endfor %}
+</div>
 """
 
 

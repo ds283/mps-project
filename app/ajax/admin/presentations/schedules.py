@@ -45,11 +45,11 @@ _status = """
     {% endif %}
     <p></p>
     {% if s.published and current_user.has_role('root') %}
-        <span class="badge bg-primary"><i class="fas fa-check"></i> Published</span>
+        <span class="badge text-primary"><i class="fas fa-check-circle"></i> Published</span>
         (<a class="text-decoration-none" href="{{ url_for('admin.view_schedule', tag=s.tag) }}">public link</a>)
     {% endif %}
     {% if s.deployed and current_user.has_role('root') %}
-        <span class="badge bg-success"><i class="fas fa-check"></i> Deployed</span>
+        <span class="badge text-success"><i class="fas fa-check-circle"></i> Deployed</span>
         (<a class="text-decoration-none" href="{{ url_for('admin.view_schedule', tag=s.tag) }}">public link</a>)
     {% endif %}
 {% else %}

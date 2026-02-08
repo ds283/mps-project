@@ -72,14 +72,12 @@ _global_name = """
 # language=jinja2
 _project_name = """
 {% if p is none %}
-    <span class="badge bg-secondary">No project assigned</span>
+    <span class="text-danger"><i class="fas fa-times-circle"></i> No project assigned</span>
 {% else %}
-    <div>
-        <a class="text-decoration-none" href="{{ dest_url }}">{{ p.name }}</a>
-    </div>
-    <div>
-        <a class="badge text-decoration-none text-nohover-dark bg-info" href="{{ url_for('convenor.attach_assessors', id=p.parent_id, pclass_id=p.config.pclass_id, url=url, text=text) }}">
-            {% set assessors = p.number_assessors %}
+    <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+        <a class="link-primary text-decoration-none" href="{{ dest_url }}">{{ p.name }}</a>
+        <a class="small link-secondary text-decoration-none" href="{{ url_for('convenor.attach_assessors', id=p.parent_id, pclass_id=p.config.pclass_id, url=url, text=text) }}">
+            {%- set assessors = p.number_assessors -%}
             {{ assessors }} assessor{%- if assessors != 1 -%}s{%- endif -%}
         </a>
     </div>

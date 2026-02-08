@@ -135,7 +135,7 @@ _availability = """
 
 # language=jinja2
 _session = """
-{{ unformatted_label(s.session_type_label, user_classes="fw-semibold text-secondary") }}
+<span class="text-secondary">{{ s.name }}</span>
 """
 
 
@@ -177,7 +177,7 @@ def assessment_sessions_data(sessions):
     data = [
         {
             "date": {"display": render_template(date_templ, s=s), "timestamp": calendar.timegm(s.date.timetuple())},
-            "session": render_template(session_templ, s=s, unformatted_label=unformatted_label),
+            "name": render_template(session_templ, s=s),
             "rooms": render_template(rooms_templ, s=s, simple_label=simple_label),
             "availability": render_template(availability_templ, s=s),
             "menu": render_template(menu_templ, s=s),

@@ -14712,17 +14712,17 @@ def _PresentationAssessment_is_valid(id):
         unavailable_students = {}
         attendance_data = {}
         for sess in obj.sessions:
-            for sat in sess.unavailable_submitters:
-                unavailable_students.setdefault(sess.id, set()).add(sat.id)
+            unavailable_students[sess.id] = set()
+            for sub in sess.unavailable_submitters:
+                unavailable_students[sess.id].add(sub.id)
 
-                if sat.id not in attendance_data:
-                    attendance_data[sat.id] = sat
+                if sub.id not in attendance_data:
+                    attendance_data[sub.id] = sub
 
         not_available = set.intersection(*(unavailable_students.values()))
         for sr_id in not_available:
-            sat = attendance_data[sr_id]
-            sd = sat.submitter.owner.student
-            print(f'Submitter "{sd.user.name}" is not available for any session')
+            sub = attendance_data[sr_id]
+            sd = sub.submitter.owner.student
             warnings[("submitters_notavailable", sr_id)] = f'Submitter "{sd.user.name}" is not available for any session'
 
     if len(errors) > 0:

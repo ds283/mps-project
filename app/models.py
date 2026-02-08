@@ -16589,7 +16589,9 @@ def _ScheduleSlot_is_valid(id):
 
         if count > 0:
             for slot in q.all():
-                errors[("assessors", (talk.id, slot.id))] = f'"{talk.owner.student.user.name}" is also scheduled in session {slot.session.label_as_string} {slot.room.full_name}'
+                errors[("assessors", (talk.id, slot.id))] = (
+                    f'"{talk.owner.student.user.name}" is also scheduled in session {slot.session.label_as_string} {slot.room.full_name}'
+                )
 
     if len(errors) > 0:
         return False, errors, warnings

@@ -386,9 +386,7 @@ def _forbid_unused_slots(prob, X, Y, number_assessors, number_talks, slot_dict, 
         present = get_count(db.session.query(ScheduleSlot).filter_by(owner_id=old_record.id, session_id=slot.session_id, room_id=slot.room_id)) > 0
 
         if not present:
-            print(
-                f"-- removing slot: session = {slot.session.label_as_string} {slot.room.full_name}"
-            )
+            print(f"-- removing slot: session = {slot.session.label_as_string} {slot.room.full_name}")
             for i in range(number_talks):
                 prob += X[(i, k)] == 0
 

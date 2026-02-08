@@ -168,9 +168,8 @@ _presentations = """
         <div {% if loop.index < loop.length %}class="mb-2"{% endif %}>
             <div class="dropdown assignment-label">
                 <a class="badge text-decoration-none text-nohover-light bg-info text-dark btn-table-block dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                    {{ slot.short_date_as_string }}
-                    {{ slot.session_type_string }}
-                    {{ slot.room_full_name }}
+                    {{ slot.session.label_as_string }}
+                    {{ slot.room.full_name }}
                 </a>
                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                     {% for rec in slot.talks %}

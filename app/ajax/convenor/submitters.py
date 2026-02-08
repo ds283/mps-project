@@ -200,8 +200,7 @@ _periods = """
                             <div class="dropdown assignment-label">
                                 {% if slot is not none %}
                                     <a class="small text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                        {{ slot.short_date_as_string }}
-                                        {{ slot.session_type_string }}
+                                        {{ slot.session.label_as_string }}
                                     </a>
                                 {% else %}
                                     <a class="small text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">

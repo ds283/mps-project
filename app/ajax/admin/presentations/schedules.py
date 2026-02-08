@@ -126,57 +126,69 @@ _name = """
 
 # language=jinja2
 _info = """
-<span class="badge bg-info">Assignments &le; {{ s.assessor_assigned_limit }}</span>
-<span class="badge bg-info">Session multiplicity &le; {{ s.assessor_multiplicity_per_session }}</span>
-<span class="badge bg-info">If-needed cost {{ s.if_needed_cost }}</span>
-<span class="badge bg-info">Levelling tension {{ s.levelling_tension }}</span>
+<div class="d-flex flex-row justify-content-start align-items-start gap-2">
+    <span class="small text-primary">Assignments &le; <strong>{{ s.assessor_assigned_limit }}</strong></span>
+    <span class="small text-secondary">|</span>
+    <span class="small text-primary">Session multiplicity &le; <strong>{{ s.assessor_multiplicity_per_session }}</strong></span>
+    <span class="small text-secondary">|</span>
+    <span class="small text-primary">If-needed cost <strong>{{ s.if_needed_cost }}</strong></span>
+    <span class="small text-secondary">|</span>
+    <span class="small text-primary">Levelling tension <strong>{{ s.levelling_tension }}</strong></span>
 {% if s.ignore_coscheduling %}
-    <span class="badge bg-warning text-dark">Ignore coscheduling</span>
+    <span class="small text-secondary">|</span>
+    <span class="small text-danger">Ignore coscheduling</span>
 {% endif %}
+</div>
+<div class="mt-2 d-flex flex-row justify-content-start align-items-start gap-2">
 {% if s.all_assessors_in_pool == s.ALL_IN_POOL %}
-    <span class="badge bg-info">Assessors in pool</span>
+    <span class="small text-primary">Assessors in pool</span>
 {% elif s.all_assessors_in_pool == s.AT_LEAST_ONE_IN_POOL %}
-    <span class="badge bg-secondary">&ge; 1 assessor in pool</span>
+    <span class="small text-primary">&ge; 1 assessor in pool</span>
 {% elif s.all_assessors_in_pool == s.ALL_IN_RESEARCH_GROUP %}
-    <span class="badge bg-secondary">Assessors in group</span>
+    <span class="small text-primary">Assessors in group</span>
 {% elif s.all_assessors_in_pool == s. AT_LEAST_ONE_IN_RESEARCH_GROUP %}
-    <span class="badge bg-secondary">&ge; 1 assessor in group</span>
+    <span class="small text-primary">&ge; 1 assessor in group</span>
 {% else %}
     <span class="badge bg-danger">Unknown pool setting</span>
 {% endif %}
+</div>
 {% if s.finished and s.solution_usable %}
-    <p></p>
-    {% set value = s.number_slots %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge bg-primary">Uses {{ value }} slot{{ pl }}</span>
-    {% set value = s.number_sessions %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge bg-primary">Uses {{ value }} session{{ pl }}</span>
-    {% set value = s.number_rooms %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge bg-primary">Uses {{ value }} room{{ pl }}</span>
-    {% set value = s.number_buildings %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
-    <span class="badge bg-primary">Uses {{ value }} building{{ pl }}</span>
-    {% set value = s.number_ifneeded %}
-    {% if value == 0 %}
-        <span class="badge bg-success">Uses 0 if-needed</span>
-    {% else %}
-        <span class="badge bg-warning text-dark">Uses {{ value }} if-needed</span>
-    {% endif %}
+    <div class="mt-2 d-flex flex-row justify-content-start align-items start gap-2">
+        {% set value = s.number_slots %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
+        <span class="small text-secondary">Uses {{ value }} slot{{ pl }}</span>
+        {% set value = s.number_sessions %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
+        <span class="small text-secondary">|</span>
+        <span class="small text-secondary">Uses {{ value }} session{{ pl }}</span>
+        {% set value = s.number_rooms %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
+        <span class="small text-secondary">|</span>
+        <span class="small text-secondary">Uses {{ value }} room{{ pl }}</span>
+        {% set value = s.number_buildings %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
+        <span class="small text-secondary">|</span>
+        <span class="small text-secondary">Uses {{ value }} building{{ pl }}</span>
+        {% set value = s.number_ifneeded %}
+        <span class="small text-secondary">|</span>
+        <span class="small text-secondary">Uses 0 if-needed</span>
+    </div>
 {% endif %}
-<p><p>
-<span class="badge bg-success">Solver {{ s.solver_name }}</span>
+<div class="mt-2 d-flex flex-row justify-content-start align-items-start gap-2">
+    <span class="text-success"><i class="fas fa-check-circle"></i> Solver {{ s.solver_name }}</span>
+</div>
 {% if s.has_issues %}
-    {% set errors = s.errors %}
-    {% set warnings = s.warnings %}
-    <div class="mt-1">
-        {% if errors|length == 1 %}
-            <span class="badge bg-danger">1 error</span>
-        {% elif errors|length > 1 %}
-            <span class="badge bg-danger">{{ errors|length }} errors</span>
-        {% endif %}
-        {% if warnings|length == 1 %}
-            <span class="badge bg-warning text-dark">1 warning</span>
-        {% elif warnings|length > 1 %}
-            <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
-        {% endif %}
+    <div class="mt-2 d-flex flex-column justify-content-start align-items-start gap-1">
+        <div class="d-flex flex-row justify-content-start align-items-start gap-2">
+            {% set errors = s.errors %}
+            {% set warnings = s.warnings %}
+            {% if errors|length == 1 %}
+                <span class="badge bg-danger">1 error</span>
+            {% elif errors|length > 1 %}
+                <span class="badge bg-danger">{{ errors|length }} errors</span>
+            {% endif %}
+            {% if warnings|length == 1 %}
+                <span class="badge bg-warning text-dark">1 warning</span>
+            {% elif warnings|length > 1 %}
+                <span class="badge bg-warning text-dark">{{ warnings|length }} warnings</span>
+            {% endif %}
+        </div>
         {% if errors|length > 0 %}
             {% for item in errors %}
                 {% if loop.index <= 10 %}

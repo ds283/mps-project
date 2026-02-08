@@ -387,9 +387,7 @@ def _forbid_unused_slots(prob, X, Y, number_assessors, number_talks, slot_dict, 
 
         if not present:
             print(
-                "-- removing slot: session = {session} {type} {room}".format(
-                    session=slot.session.short_date_as_string, type=slot.session.session_type_string, room=slot.room.full_name
-                )
+                f"-- removing slot: session = {slot.session.label_as_string} {slot.room.full_name}"
             )
             for i in range(number_talks):
                 prob += X[(i, k)] == 0

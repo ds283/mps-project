@@ -55,12 +55,14 @@ _session_actions = """
 # language=jinja2
 _confirmed = """
 {% if rec.confirmed %}
-    <span class="badge bg-primary">Yes</span>
-    {% if rec.confirmed_timestamp is not none %}
-        <span class="badge bg-info">{{ rec.confirmed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-    {% endif %}
+    <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+        <span class="text-success"><i class="fas fa-check-circle"></i> Confirmed</span>
+        {% if rec.confirmed_timestamp is not none %}
+            <span class="small text-secondary">Confirmed at {{ rec.confirmed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+        {% endif %}
+    </div>
 {% else %}
-    <span class="badge bg-warning text-dark">No</span>
+    <span class="text-danger"><i class="fas fa-check-circle"></i> Not confirmed</span>
 {% endif %}
 """
 
@@ -94,7 +96,7 @@ _assessor_actions = """
 # language=jinja2
 _comment = """
 {% if rec.comment is not none and rec.comment|length > 0 %}
-    {{ rec.comment }}
+    <span class="small text-secondary">{{ rec.comment }}</span>
 {% else %}
     <span class="badge bg-secondary">None</span>
 {% endif %}
@@ -111,30 +113,26 @@ _availability = """
 
 # language=jinja2
 _name = """
-<a class="text-decoration-none" href="mailto:{{ rec.faculty.user.email }}">{{ rec.faculty.user.name }}</a>
-{% set has_block = false %}
-{% if rec.assigned_limit is not none %}{% set has_block = true %}{% endif %}
-{% if rec.request_email_sent %}{% set has_block = true %}{% endif %}
-{% if rec.reminder_email_sent %}{% set has_block = true %}{% endif %}
-{% if has_block %}
-    <div>
-        {% if rec.assigned_limit is not none %}
-            <span class="badge bg-primary">Assignment limit {{ rec.assigned_limit }}</span>
+<div class="d-flex flex-column justify-content-start align-items-start gap-2">
+    <a class="text-decoration-none" href="mailto:{{ rec.faculty.user.email }}">{{ rec.faculty.user.name }}</a>
+    {% if rec.request_email_sent %}
+        <span class="small text-secondary"><i class="fas fa-envelope"></i> Invite sent
+        {% if rec.request_timestamp is not none %}
+            {{ rec.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
         {% endif %}
-        {% if rec.request_email_sent %}
-            <span class="badge bg-info"><i class="fas fa-envelope"></i> Invite sent</span>
-            {% if rec.request_timestamp is not none %}
-                <span class="badge bg-secondary">{{ rec.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-            {% endif %}
+        </span>
+    {% endif %}
+    {% if rec.reminder_email_sent %}
+        <span class="small text-secondary"><i class="fas fa-envelope"></i> Reminder sent
+        {% if rec.last_reminder_timestamp is not none %}
+            {{ rec.last_reminder_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
         {% endif %}
-        {% if rec.reminder_email_sent %}
-            <span class="badge bg-info"><i class="fas fa-envelope"></i> Reminder sent</span>
-            {% if rec.last_reminder_timestamp is not none %}
-                <span class="badge bg-secondary">{{ rec.last_reminder_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-            {% endif %}
-        {% endif %}        
-    </div>
-{% endif %}
+        </span>
+    {% endif %}        
+    {% if rec.assigned_limit is not none %}
+        <span class="badge bg-primary">Assignment limit {{ rec.assigned_limit }}</span>
+    {% endif %}
+</div>
 """
 
 

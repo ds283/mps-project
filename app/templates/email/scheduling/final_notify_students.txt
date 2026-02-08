@@ -15,7 +15,7 @@ been contacted to discuss changes, there should be no variation compared to
 the draft timetable you have already received. Your presentation has been
 scheduled on:
 
-{{ slot.label_as_string }} in {{ slot.room_full_name }}
+{{ slot.session.label_as_string }} in {{ slot.room.full_name }}
 Assessors:
 {% for assessor in slot.assessors -%}
 {{ assessor.user.name }}

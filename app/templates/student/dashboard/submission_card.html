@@ -167,9 +167,7 @@
                                 {% set slot = period.get_student_presentation_slot(sub.id) %}
                                 <div class="dashboard-subtitle pt-1 pb-1">{{ schedule.event_name }}</div>
                                 {% if slot is not none %}
-                                    <span class="badge bg-primary">{{ slot.date_as_string }}</span>
-                                    <span class="badge bg-info">{{ slot.session_type_string }}</span>
-                                    <span class="badge bg-info">{{ slot.room_full_name }}</span>
+                                    <span class="text-secondary">{{ slot.session.label_as_string }} {{ slot.room.full_name }}</span>
                                     {% for assessor in slot.assessors %}
                                         <span class="badge bg-secondary">{{ assessor.user.name }}</span>
                                     {% else %}

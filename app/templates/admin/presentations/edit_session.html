@@ -38,7 +38,7 @@
 
 {% block formtitle %}
     {% if sess %}
-        Edit session <strong>{{ assessment.date_as_string }}</strong> of
+        Edit session <strong>{{ sess.date_as_string }}</strong> of
         assessment event <strong>{{ assessment.name }}</strong>
     {% else %}
         Add session to assessment event <strong>{{ assessment.name }}</strong>

@@ -47,7 +47,8 @@
     </div>
 
     <div class="card border-primary mt-3 mb-3">
-        <div class="card-header bg-primary text-white">Assessor availability for assessment event <strong>{{ assessment.name }}</strong>, session <strong>{{ sess.short_date_as_string }} {{ sess.session_type_string }}</strong></div>
+        <div class="card-header bg-primary text-white">Assessor availability for assessment event
+            <strong>{{ assessment.name }}</strong>, session <strong>{{ sess.label_as_string }}</strong></div>
         <div class="card-body">
             <div class="card mt-3 mb-3 card-body bg-well">
                 <div class="row">
@@ -78,8 +79,8 @@
                     <tr>
                         <th width="25%"> Name</th>
                         <th width="35%"> Comment</th>
-                        <th width="15%"> Confirmed</th>
-                        <th width="25%"> Availability</th>
+                        <th width="20%"> Confirmed</th>
+                        <th width="20%"> Availability</th>
                     </tr>
                 </thead>
             </table>

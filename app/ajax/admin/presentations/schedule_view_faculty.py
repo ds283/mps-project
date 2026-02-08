@@ -35,7 +35,7 @@ _sessions = """
     <div style="display: inline-block; margin-bottom:2px; margin-right:2px;">
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
             <a class="badge text-decoration-none text-nohover-light bg-secondary dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                {{ slot.session.short_date_as_string }} {{ slot.session.session_type_string }}
+                {{ slot.session.label_as_string }}
             </a>
             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.schedule_adjust_assessors', id=slot.id, url=url_for('admin.schedule_view_faculty', id=rec.id, url=back_url, text=back_text), text='schedule inspector faculty view') }}">

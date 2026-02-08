@@ -78,10 +78,9 @@
                         <div class="card-header">Current allocation</div>
                         <div class="card-body">
                             <p>
-                                <strong>{{ slot.session.date_as_string }}</strong>
-                                {{ slot.session.session_type_string }}
+                                <strong>{{ slot.session.label_as_string }}</strong>
                                 &ndash;
-                                <strong>{{ slot.room_full_name }}</strong>
+                                <strong>{{ slot.room.full_name }}</strong>
                                 {% if slot.has_issues %}
                                     <i class="fas fa-exclamation-triangle text-danger"></i>
                                 {% endif %}
@@ -133,10 +132,9 @@
                             <div class="card-body">
                                 <div class="row vertical-align final-selection-table">
                                     <div class="col-10">
-                                        <strong>{{ original_slot.session.date_as_string }}</strong>
-                                        {{ original_slot.session.session_type_string }}
+                                        <strong>{{ original_slot.session.label_as_string }}</strong>
                                         &ndash;
-                                        <strong>{{ original_slot.room_full_name }}</strong>
+                                        <strong>{{ original_slot.room.full_name }}</strong>
                                     </div>
                                     <div class="col-2">
                                         <div class="float-end">

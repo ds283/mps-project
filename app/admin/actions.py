@@ -155,7 +155,7 @@ def availability_CSV_generator(assessment):
 
     headings = ["Name", "Confirmed"]
     for s in sessions:
-        headings.append(s.short_date_as_string + " " + s.session_type_string)
+        headings.append(s.label_as_string)
     headings.append("Comment")
 
     w.writerow(headings)

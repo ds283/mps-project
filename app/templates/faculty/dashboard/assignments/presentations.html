@@ -14,11 +14,10 @@
             {% for slot in records %}
                 {% if slot.belongs_to(period) %}
                     {% set ns.count = ns.count + 1 %}
-                    <p>
-                        <span class="badge bg-info">{{ slot.date_as_string }}</span>
-                        <span class="badge bg-info">{{ slot.session_type_string }}</span>
-                        <span class="badge bg-info">{{ slot.room_full_name }}</span>
-                    </p>
+                    <div class="d-flex flex-row justify-content-start align-items-start gap-2">
+                        <span class="text-primary">{{ slot.session.label_as_string }}</span>
+                        <span class="text-primary">{{ slot.room.full_name }}</span>
+                    </div>
                     <table class="table table-striped">
                         <thead>
                             <tr>

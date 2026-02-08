@@ -14679,9 +14679,9 @@ def _PresentationAssessment_is_valid(id):
         # check whether each session validates individually
         if sess.has_issues:
             if sess.has_errors:
-                errors[("sessions", sess.id)] = "Session {date} has validation errors".format(date=sess.short_date_as_string)
+                errors[("sessions", sess.id)] = f"Session {sess.label_as_string} has validation errors"
             elif sess.has_warnings:
-                warnings[("sessions", sess.id)] = "Session {date} has validation warnings".format(date=sess.short_date_as_string)
+                warnings[("sessions", sess.id)] = f"Session {sess.label_as_string} has validation warnings"
 
     # CONSTRAINT 2 - schedules should satisfy their own consistency rules
     # if any schedule exists which validates, don't raise concerns
@@ -15676,33 +15676,30 @@ class PresentationSession(db.Model, EditingMetadataMixin, PresentationSessionTyp
 
     @property
     def label(self):
-        if self.name is not None:
-            return self.make_label(f"{self.name} ({self.short_date_as_string}) {self.session_type_string}")
+        return self.make_label(self.label_as_string)
 
-        return self.make_label(self.short_date_as_string + " " + self.session_type_string)
+    @property
+    def label_as_string(self) -> str:
+        if self.name is not None:
+            return f"{self.name} ({self._short_date_as_string}) {self._session_type_string}"
+
+        return f"{self._short_date_as_string} {self._session_type_string}"
 
     @property
     def date_as_string(self):
         return self.date.strftime("%a %d %b %Y")
 
     @property
-    def short_date_as_string(self):
+    def _short_date_as_string(self):
         return self.date.strftime("%d/%m/%Y")
 
     @property
-    def session_type_string(self):
+    def _session_type_string(self):
         if self.session_type in PresentationSession.SESSION_TO_TEXT:
             type_string = PresentationSession.SESSION_TO_TEXT[self.session_type]
             return type_string
 
         return "<unknown>"
-
-    @property
-    def session_type_label(self):
-        if self.session_type in PresentationSession.SESSION_TO_TEXT:
-            return {"label": self.session_type_string, "style": None}
-
-        return {"label": "Unknown", "type": "danger"}
 
     @property
     def is_valid(self):
@@ -16027,14 +16024,10 @@ def _ScheduleAttempt_is_valid(id):
         # check whether each slot validates individually
         if slot.has_issues:
             for n, e in enumerate(slot.errors):
-                errors[("slots", (slot.id, n))] = "{date} {session} {room}: {err}".format(
-                    date=slot.short_date_as_string, session=slot.session_type_string, room=slot.room_full_name, err=e
-                )
+                errors[("slots", (slot.id, n))] = f"{slot.session.label_as_string} {slot.room.full_name}: {e}"
 
             for n, w in enumerate(slot.warnings):
-                warnings[("slots", (slot.id, n))] = "{date} {session} {room}: {warn}".format(
-                    date=slot.short_date_as_string, session=slot.session_type_string, room=slot.room_full_name, warn=w
-                )
+                warnings[("slots", (slot.id, n))] = f"{slot.session.label_as_string} {slot.room.full_name}: {w}"
 
     # CONSTRAINT 2. EVERY TALK SHOULD HAVE BEEN SCHEDULED IN EXACTLY ONE SLOT
     for rec in obj.owner.submitter_list:
@@ -16580,14 +16573,7 @@ def _ScheduleSlot_is_valid(id):
         if count > attempt.assessor_multiplicity_per_session - 1:
             session: PresentationSession = obj.session
             errors[("assessors", assessor.id)] = (
-                'Assessor "{name}" is scheduled too many times in session '
-                "{date} {session} (maximum multiplicity = "
-                "{max}".format(
-                    name=assessor.user.name,
-                    date=session.short_date_as_string,
-                    session=session.session_type_string,
-                    max=attempt.assessor_multiplicity_per_session,
-                )
+                f'Assessor "{assessor.user.name}" is scheduled too many times in session {session.label_as_string} (maximum multiplicity = {attempt.assessor_multiplicity_per_session}'
             )
 
     # CONSTRAINT 12. TALKS SHOULD BE SCHEDULED IN ONLY ONE SLOT
@@ -16603,9 +16589,7 @@ def _ScheduleSlot_is_valid(id):
 
         if count > 0:
             for slot in q.all():
-                errors[("assessors", (talk.id, slot.id))] = '"{name}" is also scheduled in session {date} {session} ' "{room}".format(
-                    name=talk.owner.student.user.name, date=slot.short_date_as_string, session=slot.session_type_string, room=slot.room_full_name
-                )
+                errors[("assessors", (talk.id, slot.id))] = f'"{talk.owner.student.user.name}" is also scheduled in session {slot.session.label_as_string} {slot.room.full_name}'
 
     if len(errors) > 0:
         return False, errors, warnings
@@ -16734,22 +16718,6 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
 
     def is_submitter(self, sub_id):
         return get_count(self.talks.filter_by(id=sub_id)) > 0
-
-    @property
-    def date_as_string(self):
-        return self.session.date_as_string
-
-    @property
-    def short_date_as_string(self):
-        return self.session.short_date_as_string
-
-    @property
-    def session_type_string(self):
-        return self.session.session_type_string
-
-    @property
-    def label_as_string(self):
-        return self.session.label["label"]
 
     @property
     def room_full_name(self):

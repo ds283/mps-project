@@ -132,7 +132,7 @@
                                 {% for session in sessions %}
                                     <a class="btn btn-sm filter-btn {% if session_filter == session.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}"
                                         href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room_filter, session_filter=session.id, text=text, url=url) }}">
-                                        {{ session.short_date_as_string }} ({{ session.session_type_string }})
+                                        {{ session.label_as_string }})
                                     </a>
                                 {% endfor %}
                             </div>

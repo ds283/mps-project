@@ -14,8 +14,8 @@ from flask import jsonify, get_template_attribute, current_app, render_template
 from jinja2 import Template, Environment
 
 # language=jinja2
-_date = """
-{{ s.date_as_string }}
+_datelabel = """
+{{ s.label_as_string }}
 {% if s.has_issues %}
     <i class="fas fa-exclamation-triangle text-danger"></i>
     {% set errors = s.errors %}
@@ -133,20 +133,9 @@ _availability = """
 """
 
 
-# language=jinja2
-_session = """
-<span class="text-secondary">{{ s.name }}</span>
-"""
-
-
-def _build_date_templ() -> Template:
+def _build_datelabel_templ() -> Template:
     env: Environment = current_app.jinja_env
-    return env.from_string(_date)
-
-
-def _build_session_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string(_session)
+    return env.from_string(_datelabel)
 
 
 def _build_rooms_templ() -> Template:
@@ -168,16 +157,14 @@ def assessment_sessions_data(sessions):
     simple_label = get_template_attribute("labels.html", "simple_label")
     unformatted_label = get_template_attribute("labels.html", "unformatted_label")
 
-    date_templ: Template = _build_date_templ()
-    session_templ: Template = _build_session_templ()
+    datelabel_templ: Template = _build_datelabel_templ()
     rooms_templ: Template = _build_rooms_templ()
     availability_templ: Template = _build_availability_templ()
     menu_templ: Template = _build_menu_templ()
 
     data = [
         {
-            "date": {"display": render_template(date_templ, s=s), "timestamp": calendar.timegm(s.date.timetuple())},
-            "name": render_template(session_templ, s=s),
+            "datelabel": {"display": render_template(datelabel_templ, s=s), "timestamp": calendar.timegm(s.date.timetuple())},
             "rooms": render_template(rooms_templ, s=s, simple_label=simple_label),
             "availability": render_template(availability_templ, s=s),
             "menu": render_template(menu_templ, s=s),

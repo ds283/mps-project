@@ -1209,7 +1209,7 @@ def register_scheduling_tasks(celery):
 
         self.update_state(
             state="STARTED",
-            meta={"msg": "Looking up ScheduleAttempt records for new_id={new_id}, old_id={old_id}"}.format(new_id=new_id, old_id=old_id),
+            meta={"msg": f"Looking up ScheduleAttempt records for new_id={new_id}, old_id={old_id}"},
         )
 
         try:

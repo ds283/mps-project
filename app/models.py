@@ -6956,6 +6956,7 @@ class SubmissionPeriodRecord(db.Model):
         if num_deployed == 0:
             return None
 
+        # TODO: deployed_schedule should return a list, allowing multiple schedules to be deployed
         return deployed[-1]
         #
         # raise RuntimeError("Too many assessments deployed for this submission period")

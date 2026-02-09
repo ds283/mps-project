@@ -8877,11 +8877,12 @@ class LiveProject(
             viewed=False,
             request_timestamp=now,
             response_timestamp=None,
-            resolved_id=resolved_by.id,
+            resolved_id=resolved_by.id if resolved_by is not None else None,
             comment=comment,
         )
         if state == "confirmed":
             req.response_timestamp = now
+
         return req
 
     @property

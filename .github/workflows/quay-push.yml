@@ -25,21 +25,3 @@ jobs:
           image-name: ${{ env.image_name }}
           input-context: "."
           input-docker-file: "./Dockerfile"
-
-  build-cronjob:
-    env:
-      image_name: mc-kubectl
-    environment: deployment
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Save docker image
-        uses: ./.github/actions/save-docker-image
-        with:
-          registry-server: ${{ secrets.REGISTRY_SERVER }}
-          registry-namespace: ${{ secrets.REGISTRY_NAMESPACE }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
-          registry-token: ${{ secrets.REGISTRY_TOKEN }}
-          image-name: ${{ env.image_name }}
-          input-context: "{{defaultContext}}:Deployments/suex-enginfprojects-prod/manual-manifests/backup/util"
-          input-docker-file: "./Dockerfile"

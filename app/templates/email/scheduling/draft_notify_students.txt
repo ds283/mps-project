@@ -22,10 +22,9 @@ Assessors:
 {% for assessor in slot.assessors -%}
 {{ assessor.user.name }}
 {% endfor %}
-Morning sessions run from {{ period.morning_session }}, and afternoon sessions from {{ period.afternoon_session }}.
 The format for your talk is {{ period.talk_format }}.
 
-The other presenters in your session will be:
+The presenters in your session will be:
 
 {% for talk in slot.talks -%}
 {{ talk.owner.student.user.name }}

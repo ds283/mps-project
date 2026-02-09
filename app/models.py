@@ -6950,8 +6950,6 @@ class SubmissionPeriodRecord(db.Model):
             return None
 
         assessments: List[PresentationAssessment] = self.presentation_assessments.all()
-        num_deployed = sum(1 for a in assessments if a.is_deployed)
-
         deployed = [a.deployed_schedule for a in assessments if a.is_deployed]
 
         num_deployed = len(deployed)

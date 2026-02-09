@@ -6957,10 +6957,10 @@ class SubmissionPeriodRecord(db.Model):
         num_deployed = len(deployed)
         if num_deployed == 0:
             return None
-        elif num_deployed == 1:
-            return deployed[0]
 
-        raise RuntimeError("Too many assessments deployed for this submission period")
+        return deployed[-1]
+        #
+        # raise RuntimeError("Too many assessments deployed for this submission period")
 
     @property
     def number_submitters_feedback_pushed(self):

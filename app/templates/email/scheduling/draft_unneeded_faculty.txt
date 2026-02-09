@@ -1,7 +1,14 @@
+{%- set single_date = (event.earliest_date == event.latest_date) -%}
 Dear {{ user.first_name }}
 
+{% if single_date -%}
+Thank you for entering your availability to assess the project presentation
+event taking place on {{ event.earliest_date }}.
+{%- else -%}
 Thank you for entering your availability to assess the project presentation
 event taking place between {{ event.earliest_date }} and {{ event.latest_date }}.
+{{ event.latest_date }}.
+{%- endif %}
 
 We now have a draft of the assessment timetable. As things stand, we hope not
 to have to ask you to assess any sessions in the event. This may change as

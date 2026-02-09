@@ -1,8 +1,14 @@
+{%- set single_date = (event.earliest_date == event.latest_date) -%}
 Dear {{ user.first_name }}
 
-You are receiving this email because you are participating in an upcoming
-presentation assessment taking place between {{ event.earliest_date }} and
+{% if single_date -%}
+Thank you for entering your availability to assess the project presentation
+event taking place on {{ event.earliest_date }}.
+{%- else -%}
+Thank you for entering your availability to assess the project presentation
+event taking place between {{ event.earliest_date }} and {{ event.latest_date }}.
 {{ event.latest_date }}.
+{%- endif %}
 
 The final timetable for this event is now available, and the good news is that
 we do not need to ask you to assess any sessions in the event.

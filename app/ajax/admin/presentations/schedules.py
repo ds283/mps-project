@@ -126,7 +126,7 @@ _name = """
 
 # language=jinja2
 _info = """
-<div class="d-flex flex-row justify-content-start align-items-start gap-2">
+<div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
     <span class="small text-primary">Assignments &le; <strong>{{ s.assessor_assigned_limit }}</strong></span>
     <span class="small text-secondary">|</span>
     <span class="small text-primary">Session multiplicity &le; <strong>{{ s.assessor_multiplicity_per_session }}</strong></span>
@@ -139,7 +139,7 @@ _info = """
     <span class="small text-danger">Ignore coscheduling</span>
 {% endif %}
 </div>
-<div class="mt-2 d-flex flex-row justify-content-start align-items-start gap-2">
+<div class="mt-2 d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
 {% if s.all_assessors_in_pool == s.ALL_IN_POOL %}
     <span class="small text-primary">Assessors in pool</span>
 {% elif s.all_assessors_in_pool == s.AT_LEAST_ONE_IN_POOL %}
@@ -153,7 +153,7 @@ _info = """
 {% endif %}
 </div>
 {% if s.finished and s.solution_usable %}
-    <div class="mt-2 d-flex flex-row justify-content-start align-items start gap-2">
+    <div class="mt-2 d-flex flex-row flex-wrap justify-content-start align-items start gap-2">
         {% set value = s.number_slots %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
         <span class="small text-secondary">Uses {{ value }} slot{{ pl }}</span>
         {% set value = s.number_sessions %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
@@ -170,12 +170,12 @@ _info = """
         <span class="small text-secondary">Uses 0 if-needed</span>
     </div>
 {% endif %}
-<div class="mt-2 d-flex flex-row justify-content-start align-items-start gap-2">
+<div class="mt-2 d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
     <span class="text-success"><i class="fas fa-check-circle"></i> Solver {{ s.solver_name }}</span>
 </div>
 {% if s.has_issues %}
     <div class="mt-2 d-flex flex-column justify-content-start align-items-start gap-1">
-        <div class="d-flex flex-row justify-content-start align-items-start gap-2">
+        <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
             {% set errors = s.errors %}
             {% set warnings = s.warnings %}
             {% if errors|length == 1 %}

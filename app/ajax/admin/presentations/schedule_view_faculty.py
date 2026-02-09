@@ -35,7 +35,7 @@ _sessions = """
     {% for slot in slots %}
         <div class="bg-light p-2 w-100">
             <div class="d-flex flex-column justify-content-start align-items-start gap-1">
-                <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+                <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2">
                     <span class="fw-semibold">{{ slot.session.label_as_string }}</span>
                     {{ simple_label(slot.room.label) }}
                     {% if slot.has_issues %}
@@ -52,7 +52,7 @@ _sessions = """
                         </div>
                     </div>
                 </div>
-                <div class="d-flex flex-row justify-content-start align-items-start gap-2">
+                <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
                     {% for talk in slot.talks %}
                         <div>
                             <div class="dropdown schedule-assign-button">

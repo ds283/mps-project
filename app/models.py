@@ -6934,32 +6934,33 @@ class SubmissionPeriodRecord(db.Model):
         if not self.has_presentation:
             return False
 
-        count = get_count(self.presentation_assessments)
+        assessments: List[PresentationAssessment] = self.presentation_assessments.all()
+        num_deployed = sum(1 for a in assessments if a.is_deployed)
 
-        if count > 1:
-            raise RuntimeError("Too many assessments attached to this submission period")
-
-        if count == 0:
+        if num_deployed == 0:
             return False
+        elif num_deployed == 1:
+            return True
 
-        assessment = self.presentation_assessments.one()
-        return assessment.is_deployed
+        raise RuntimeError("Too many assessments deployed for this submission period")
 
     @property
     def deployed_schedule(self):
         if not self.has_presentation:
             return None
 
-        count = get_count(self.presentation_assessments)
+        assessments: List[PresentationAssessment] = self.presentation_assessments.all()
+        num_deployed = sum(1 for a in assessments if a.is_deployed)
 
-        if count > 1:
-            raise RuntimeError("Too many assessments attached to this submission period")
+        deployed = [a.deployed_schedule for a in assessments if a.is_deployed]
 
-        if count == 0:
+        num_deployed = len(deployed)
+        if num_deployed == 0:
             return None
+        elif num_deployed == 1:
+            return deployed[0]
 
-        assessment = self.presentation_assessments.one()
-        return assessment.deployed_schedule
+        raise RuntimeError("Too many assessments deployed for this submission period")
 
     @property
     def number_submitters_feedback_pushed(self):

@@ -16078,6 +16078,11 @@ class ScheduleAttempt(db.Model, PuLPMixin, EditingMetadataMixin, AssessorPoolCho
     # tag
     tag = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
 
+    # redirect tag (used to redirect earlier links that might have been published).
+    # We use an explicit text field rather than linking to a ScheduleAttempt instance so that
+    # the attempt we redirect to can mutate if needed, while the redirect tag stays the same
+    redirect_tag = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+
     # flag whether this attempt has been published to convenors for comments or editing
     published = db.Column(db.Boolean())
 

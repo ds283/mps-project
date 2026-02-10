@@ -14,7 +14,6 @@ from datetime import date, datetime, timedelta
 from functools import partial
 from io import BytesIO
 from itertools import chain as itertools_chain
-from math import pi
 from pathlib import Path
 from typing import List, Dict, Tuple, Iterable, Union
 from urllib.parse import urlsplit
@@ -25,6 +24,7 @@ from bokeh.plotting import figure
 from celery import chain, group
 from flask import current_app, redirect, url_for, flash, request, jsonify, session, stream_with_context, abort, send_file
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
+from math import pi
 from numpy import histogram
 from sqlalchemy import or_, update
 from sqlalchemy.exc import SQLAlchemyError
@@ -10833,9 +10833,13 @@ def upload_match(match_id):
 
 @admin.route("/view_schedule/<string:tag>", methods=["GET", "POST"])
 def view_schedule(tag):
-    schedule = db.session.query(ScheduleAttempt).filter_by(tag=tag).first()
+    schedule: ScheduleAttempt = db.session.query(ScheduleAttempt).filter_by(tag=tag).first()
     if schedule is None:
         abort(404)
+
+    # TODO: need UI for setting redirect_tag
+    if schedule.redirect_tag is not None:
+        return redirect(url_for('admin.view_schedule', tag=schedule.redirect_tag))
 
     # deployed schedules are automatically unpublished, so we should allow public viewing if either flag is set
     if not (schedule.published or schedule.deployed):

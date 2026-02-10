@@ -410,7 +410,7 @@ def ScheduleSessionQuery(schedule_id):
     return (
         db.session.query(PresentationSession)
         .join(sessions, sessions.c.session_id == PresentationSession.id)
-        .order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc())
+        .order_by(PresentationSession.date.asc(), PresentationSession.name.asc(), PresentationSession.session_type.asc())
     )
 
 

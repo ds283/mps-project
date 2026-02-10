@@ -18,7 +18,13 @@
             <div class="col-10">
                 <div class="event-title">{{ event.name }}</div>
                 <hr class="intro-divider">
-                <div class="event-subheader">{{ event.earliest_date }}&mdash;{{ event.latest_date }}</div>
+                <div class="event-subheader">
+                    {% if event.earliest_date == event.latest_date %}
+                        {{ event.earliest_date }}
+                    {% else %}
+                        {{ event.earliest_date }}&mdash;{{ event.latest_date }}
+                    {% endif %}
+                </div>
                 <div class="card mt-3 mb-3 card-body bg-well" style="margin-top: 18px;">
                     <form action="{{ url_for('admin.view_schedule', tag=schedule.tag) }}" method="POST" name="display_form">
                         {{ form.hidden_tag() }}
@@ -35,10 +41,8 @@
                                     </div>
                                 </div>
                                 <div class="col-5">
-                                    <div class="float-end">
-                                        <div class="slot-title">
-                                            {{ slot.room.full_name }}
-                                        </div>
+                                    <div class="d-flex flex-row justify-content-end align-items-start">
+                                        <span class="slot-title">{{ slot.room.full_name }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -46,16 +50,15 @@
                         <div>
                             <div class="row vertical-top">
                                 <div class="col-7">
-                                    <ol class="breadcrumb">
+                                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-2">
                                         {% for assessor in slot.assessors %}
-                                            <li>
-                                                <a class="text-decoration-none" href="mailto:{{ assessor.user.name }}">{{ assessor.user.name }}</a>
-                                            </li>
+                                            <a class="text-decoration-none"
+                                               href="mailto:{{ assessor.user.name }}">{{ assessor.user.name }}</a>
                                         {% endfor %}
-                                    </ol>
+                                    </div>
                                 </div>
                                 <div class="col-5">
-                                    <div class="float-end">
+                                    <div class="d-flex flex-row justify-content-end align-items-start">
                                         {% if slot.pclass is not none %}
                                             {{ simple_label(slot.pclass.make_label()) }}
                                         {% endif %}
@@ -83,15 +86,17 @@
                         </div>
                     </div>
                 {% endfor %}
-                <div style="text-align: right;">
-                    Last revised by
-                    {% if schedule.last_edit_id is none or schedule.last_edit_timestamp is none %}
-                        {{ schedule.created_by.name }}
-                        {{ schedule.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-                    {% else %}
-                        {{ schedule.last_edited_by.name }}
-                        {{ schedule.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-                    {% endif %}
+                <div class="small d-flex flex-row flex-wrap justify-content-end align-items-start">
+                    <span>
+                        Last revised by
+                        {% if schedule.last_edit_id is none or schedule.last_edit_timestamp is none %}
+                            {{ schedule.created_by.name }}
+                            {{ schedule.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                        {% else %}
+                            {{ schedule.last_edited_by.name }}
+                            {{ schedule.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                        {% endif %}
+                    </span>
                 </div>
             </div>
             <div class="col-1"></div>

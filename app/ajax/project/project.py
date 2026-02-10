@@ -25,63 +25,76 @@ from ...models import (
 
 # language=jinja2
 _name = """
-{% set desc_issues = desc is not none and desc.has_issues %}
-{% set project_issues = project is not none and project.has_issues %}
-{% set has_issues = desc_issues or project_issues %}
-{% if project.active and has_issues %}
-    <i class="fas fa-exclamation-triangle text-danger"></i>
-{% endif %}
-<a class="text-decoration-none" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
-    {{ project.name }}{%- if desc is not none -%}/{{ desc.label }}{%- endif %}
-</a>
-{% if project.active %}
-<div class="mt-1">
-    <div>
-        {% if current_user is not none and project.has_new_comments(current_user) %}
-            <span class="badge bg-warning text-dark">New comments</span>
-        {% endif %}
-        {% if in_selector %}
-            <span class="badge bg-primary" data-bs-toggle="tooltip" title="A version of this project is live for students who are selecting in the current cycle">SELECTING</span>
-        {% endif %}
-        {% if in_submitter %}
-            <span class="badge bg-primary" data-bs-toggle="tooltip" title="A version of this project is live and can be assigned for students who are submitting in the current cycle">SUBMITTING</span>
-        {% endif %}
-        {% if is_running %}
-            <span class="badge bg-success" data-bs-toggle="tooltip" title="One or more students are submitters for this project in the current cycle">RUNNING</span>
-        {% endif %} 
-        {% if desc is none %}
-            {% set num = project.num_descriptions %}
-            {% if num > 0 %}
-                {% set pl = 's' %}{% if num == 1 %}{% set pl = '' %}{% endif %}
-                <span class="badge bg-info">{{ num }} variant{{ pl }}</span>
-            {% endif %}
-        {% endif %}
-        {% set num = project.number_alternatives %}
-        {% if num > 0 %}
-            {% set pl = 's' %}{% if num == 1 %}{% set pl = '' %}{% endif %}
-            <span class="badge bg-success">{{ num }} alternative{{ pl }}</span>
+{%- set desc_issues = desc is not none and desc.has_issues -%}
+{%- set project_issues = project is not none and project.has_issues -%}
+{%- set has_issues = desc_issues or project_issues -%}
+<div class="d-flex flex-column justify-content-start align-items-start gap-1">
+    <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-1">
+        <a class="text-decoration-none {% if project.active and has_issues %}link-danger{% else %}link-primary{% endif %}" href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
+            {{ project.name }}
+        </a>
+        {%- if project.active and has_issues -%}
+            <i class="fas fa-exclamation-triangle text-danger"></i>
         {% endif %}
     </div>
-    {% if name_labels %}
-        <div>
-            {% for pclass in project.project_classes %}
-                {% if pclass.active %}
-                    {% set style = pclass.make_CSS_style() %}
-                    <a class="badge text-decoration-none text-nohover-dark bg-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
-                {% endif %}
-            {% else %}
-                <span class="badge bg-danger">No project classes</span>
-            {% endfor %}
-        </div>
-    {% endif %}
-    {% if show_errors %}
-        {% if desc_issues %}
-            {{ error_block_popover(desc.errors, desc.warnings) }}
-        {% elif project_issues %}
-            {{ error_block_popover(project.errors, project.warnings) }}
+    {% if desc is not none %}
+        <span class="small text-secondary"><span class="fw-semibold">Variant:</span> {{ desc.label }}</span>
+    {% else %}
+        {%- set num = project.num_descriptions -%}
+        {% if num > 0 %}
+            {% set pl = 's' %}{% if num == 1 %}{% set pl = '' %}{% endif %}
+            <span class="small text-secondary">{{ num }} variant{{ pl }}</span>
         {% endif %}
     {% endif %}
-{% endif %}
+    {%- set num = project.number_alternatives -%}
+    {% if num > 0 %}
+        {% set pl = 's' %}{% if num == 1 %}{% set pl = '' %}{% endif %}
+        <span class="small text-secondary">{{ num }} alternative{{ pl }}</span>
+    {% endif %}
+    {% if project.active %}
+        <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-1 small">
+            {% if current_user is not none and project.has_new_comments(current_user) %}
+                <span class="badge bg-warning text-dark">New comments</span>
+            {% endif %}
+            {% if in_selector %}
+                <span class="badge bg-primary" data-bs-toggle="tooltip" title="A version of this project is live for students who are selecting in the current cycle">SELECTING</span>
+            {% endif %}
+            {% if in_submitter %}
+                <span class="badge bg-primary" data-bs-toggle="tooltip" title="A version of this project is live and can be assigned for students who are submitting in the current cycle">SUBMITTING</span>
+            {% endif %}
+            {% if is_running %}
+                <span class="badge bg-success" data-bs-toggle="tooltip" title="One or more students are submitters for this project in the current cycle">RUNNING</span>
+            {% endif %} 
+        </div>
+        {% if name_labels %}
+            <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-1">
+                {% for pclass in project.project_classes %}
+                    {% if pclass.active %}
+                        {% set style = pclass.make_CSS_style() %}
+                        <a class="badge text-decoration-none text-nohover-dark bg-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
+                    {% endif %}
+                {% else %}
+                    <span class="small text-danger"><i class="fas fa-times-circle"></i> No project classes</span>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if show_errors %}
+                {% if desc_issues %}
+                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-start small gap-1">
+                        <span>Variant issues</span>
+                        {{ error_block_popover(desc.errors, desc.warnings) }}
+                    </div>
+                {% endif %}
+                {% if project_issues %}
+                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-start small gap-1">
+                        <span>Project issues</span>
+                        {{ error_block_popover(project.errors, project.warnings) }}
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
 """
 
 

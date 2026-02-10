@@ -7644,29 +7644,29 @@ def _Project_is_offerable(pid):
     # classes that uses research groups
     if project.generic or project.group is None:
         if get_count(project.project_classes.filter(ProjectClass.advertise_research_group)) > 0:
-            errors["groups"] = "No affiliation/research group associated with project"
+            errors["groups"] = "No affiliation or research group associated with project"
 
     else:
         if not project.group.active:
-            errors["groups"] = "The project's affiliation group is not active"
+            errors["groups"] = "The project's assigned affiliation or research group is not active"
 
     # CONSTRAINT 3. For each attached project class, we should have enough assessors.
     # Also, there should be a project description
     for pclass in project.project_classes:
         if pclass.uses_marker and pclass.number_assessors is not None and project.number_assessors(pclass) < pclass.number_assessors:
-            errors[("pclass-assessors", pclass.id)] = "Too few assessors assigned for '{name}'".format(name=pclass.name)
+            errors[("pclass-assessors", pclass.id)] = f"Too few assessors assigned for '{pclass.name}'"
 
         desc = project.get_description(pclass)
         if desc is None:
-            errors[("pclass-descriptions", pclass.id)] = "No project description assigned for '{name}'".format(name=pclass.name)
+            errors[("pclass-descriptions", pclass.id)] = f"No project description assigned for '{pclass.name}'"
 
     # CONSTRAINT 4. All attached project descriptions should validate individually
     for desc in project.descriptions:
         if desc.has_issues:
             if not desc.is_valid:
-                errors[("descriptions", desc.id)] = 'Variant "{label}" has validation errors'.format(label=desc.label)
+                errors[("descriptions", desc.id)] = f'Variant "{desc.label}" has validation errors'
             else:
-                warnings[("descriptions", desc.id)] = 'Variant "{label}" has validation warnings'.format(label=desc.label)
+                warnings[("descriptions", desc.id)] = f'Variant "{desc.label}" has validation warnings'
 
     # CONSTRAINT 5. For Generic projects, there should be a nonempty supervisor pool
     if project.generic:

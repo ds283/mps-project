@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 RUN apt-get update && apt-get install -qq -y build-essential gcc gfortran mariadb-client mysqltuner libssl-dev libjpeg-dev zlib1g-dev libglpk-dev libpango1.0-dev glpk-utils coinor-cbc git pkg-config swig wget libcairo2-dev libmagic1 --no-install-recommends
 

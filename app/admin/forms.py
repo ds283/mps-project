@@ -327,7 +327,7 @@ class ProjectClassMixin:
         description="Assessors are used to assign markers, moderators and presentation assessors. "
         "Significantly more than one assessor is required per project to allow "
         "sufficient flexibility during matching.",
-        validators=[NotOptionalIf("do_matching"), NumberRange(min=1, message="At least one assessor is required")],
+        validators=[NotOptionalIf("do_matching"), NumberRange(min=0, message="Required number of assessors cannot be zero")],
     )
 
     use_project_hub = BooleanField(

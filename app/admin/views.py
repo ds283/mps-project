@@ -9194,8 +9194,17 @@ def publish_schedule(id):
         flash('Schedule "{name}" is deployed and is not available to be published.'.format(name=record.name), "info")
         return redirect(redirect_url())
 
-    record.published = True
-    db.session.commit()
+    try:
+        record.published = True
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash(
+            f'Could not publish schedule "{record.name}" because of a database error. '
+            'Please contact a system administrator',
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -9214,23 +9223,32 @@ def unpublish_schedule(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for unpublication because it is still awaiting ' "manual upload.".format(name=record.name),
+                f'Schedule "{record.name}" is not yet available for unpublication because it is still awaiting ' "manual upload.",
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for unpublication because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash(f'Schedule "{record.name}" is not yet available for unpublication because it has not yet ' "terminated.", "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            'Schedule "{name}" did not yield an optimal solution and is not available for use. '
-            "It cannot be shared with convenors.".format(name=record.name),
+            f'Schedule "{record.name}" did not yield an optimal solution and is not available for use. '
+            'It cannot be shared with convenors.',
             "info",
         )
         return redirect(redirect_url())
 
-    record.published = False
-    db.session.commit()
+    try:
+        record.published = False
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash(
+            f'Could not unpublish schedule "{record.name}" because of a database error. '
+            'Please contact a system administrator',
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -9339,27 +9357,36 @@ def deploy_schedule(id):
 
     if record.owner.is_deployed:
         flash(
-            'The assessment "{name}" already has a deployed schedule. Only one schedule can be deployed at a time.'.format(name=record.owner.name),
+            f'The assessment "{record.name}" already has a deployed schedule. Only one schedule can be deployed at a time.',
             "info",
         )
 
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for deployment because it is still awaiting manual upload.'.format(name=record.name),
+                f'Schedule "{record.name}" is not yet available for deployment because it is still awaiting manual upload.',
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for deployment because it has not yet terminated.'.format(name=record.name), "error")
+            flash(f'Schedule "{record.name}" is not yet available for deployment because it has not yet terminated.', "info")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" did not yield an optimal solution and is not available for deployment.'.format(name=record.name), "info")
+        flash(f'Schedule "{record.name}" did not yield an optimal solution and is not available for deployment.', "info")
         return redirect(redirect_url())
 
-    record.deployed = True
-    record.published = False
-    db.session.commit()
+    try:
+        record.deployed = True
+        record.published = False
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash(
+            f'Could not deploy schedule "{record.name}" because of a database error. '
+            'Please contact a system administrator',
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -9378,26 +9405,34 @@ def undeploy_schedule(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for undeployment because it is still awaiting manual upload.'.format(name=record.name),
+                f'Schedule "{record.name}" is not yet available for undeployment because it is still awaiting manual upload.',
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for undeployment because it has not yet terminated.'.format(name=record.name), "error")
+            flash(f'Schedule "{record.name}" is not yet available for undeployment because it has not yet terminated.', "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" did not yield an optimal solution and is not available for deployment.'.format(name=record.name), "info")
+        flash(f'Schedule "{record.name}" did not yield an optimal solution and is not available for deployment.', "info")
         return redirect(redirect_url())
 
     if not record.is_revokable:
         flash(
-            'Schedule "{name}" is not revokable. This may be because some scheduled slots are in '
-            "the past, or because some feedback has already been entered.".format(name=record.name),
+            f'Schedule "{record.name}" is not revokable. This may be because some scheduled slots are in the past, or because some feedback has already been entered.',
             "error",
         )
 
-    record.deployed = False
-    db.session.commit()
+    try:
+        record.deployed = False
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash(
+            f'Could not revoke deployment of schedule "{record.name}" because of a database error. '
+            'Please contact a system administrator',
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -9419,15 +9454,15 @@ def schedule_view_sessions(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name),
+                f'Schedule "{record.name}" is not yet available for inspection because it is still awaiting manual upload.',
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for inspection because it has not yet terminated.'.format(name=record.name), "error")
+            flash(f'Schedule "{record.name}" is not yet available for inspection because it has not yet terminated.', "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" is not available for inspection because it did not yield an optimal solution.'.format(name=record.name), "info")
+        flash(f'Schedule "{record.name}" is not available for inspection because it did not yield an optimal solution.', "info")
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -9477,15 +9512,16 @@ def schedule_view_faculty(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name),
+                f'Schedule "{record.name}" is not yet available for inspection because it is still awaiting manual upload.',
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for inspection because it has not yet terminated.'.format(name=record.name), "error")
+            flash(f'Schedule "{record.name}" is not yet available for inspection because it has not yet terminated.', "error")
+
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" is not available for inspection because it did not yield an optimal solution.'.format(name=record.name), "info")
+        flash(f'Schedule "{record.name}" is not available for inspection because it did not yield an optimal solution.', "info")
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -9696,10 +9732,11 @@ def schedule_delete_slot(id):
         db.session.delete(slot)
         db.session.commit()
     except SQLAlchemyError as e:
+        db.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
             "Could not remove this session because of a database error. "
-            "Please contact a system administrator".format(number=asset_id),
+            "Please contact a system administrator",
             "error",
         )
 
@@ -9721,15 +9758,15 @@ def schedule_adjust_assessors(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name),
+                f'Schedule "{record.name}" is not yet available for inspection because it is still awaiting manual upload.',
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for inspection because it has not yet terminated.'.format(name=record.name), "error")
+            flash(f'Schedule "{record.name}" is not yet available for inspection because it has not yet terminated.', "error")
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" is not available for inspection because it did not yield an optimal solution.'.format(name=record.name), "info")
+        flash(f'Schedule "{record.name}" is not available for inspection because it did not yield an optimal solution.', "info")
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -9842,19 +9879,30 @@ def schedule_attach_assessor(slot_id, fac_id):
         flash("The specified faculty member is not attached to this assessment", "error")
         return redirect(redirect_url())
 
-    item = record.owner.assessors_query.filter(AssessorAttendanceData.faculty_id == fac_id).first()
+    item: AssessorAttendanceData = record.owner.assessors_query.filter(AssessorAttendanceData.faculty_id == fac_id).first()
 
     if item is None:
         flash("Could not attach this faculty member due to a database error", "error")
         return redirect(redirect_url())
 
     if get_count(slot.assessors.filter_by(id=item.faculty_id)) == 0:
-        slot.assessors.append(item.faculty)
+        fac: FacultyData = item.faculty
+        user: User = fac.user
+        slot.assessors.append(fac)
 
         record.last_edit_id = current_user.id
         record.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash(
+                f'Could not attach assessor "{user.name}" to this slot in schedule "{record.name}" because of a database error. '
+                'Please contact a system administrator',
+                "error",
+            )
 
     return redirect(redirect_url())
 

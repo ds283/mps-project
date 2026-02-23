@@ -10570,6 +10570,7 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
         (SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR, "Responsible supervisor"),
         (SubmissionRoleTypesMixin.ROLE_SUPERVISOR, "Supervisor"),
         (SubmissionRoleTypesMixin.ROLE_MARKER, "Marker"),
+        (SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR, "Presentation assessor"),
         (SubmissionRoleTypesMixin.ROLE_MODERATOR, "Moderator"),
         (SubmissionRoleTypesMixin.ROLE_EXAM_BOARD, "Exam board member"),
         (SubmissionRoleTypesMixin.ROLE_EXTERNAL_EXAMINER, "External examiner"),
@@ -11761,7 +11762,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     @property
     def assessor_CATS(self):
         # TODO: consider whether we really need this method
-        return self.project.CATS_assessor
+        return self.project.CATS_presentation
 
     @property
     def schedule_slot(self):

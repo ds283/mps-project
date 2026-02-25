@@ -43,6 +43,7 @@ from ...models import (
     ProjectTag,
     FeedbackAsset,
     FeedbackRecipe,
+    FacultyBatchItem,
 )
 
 _security = LocalProxy(lambda: current_app.extensions["security"])
@@ -526,6 +527,30 @@ def unique_or_original_batch_item_registration_number(batch_id, form, field):
         return
 
     return globally_unique_batch_item_registration_number(batch_id, form, field)
+
+
+def globally_unique_faculty_batch_item_userid(batch_id, form, field):
+    if FacultyBatchItem.query.filter_by(parent_id=batch_id, user_id=field.data).first():
+        raise ValidationError("{name} is already in use as a user id for this batch import".format(name=field.data))
+
+
+def unique_or_original_faculty_batch_item_userid(batch_id, form, field):
+    if field.data == form.batch_item.user_id:
+        return
+
+    return globally_unique_faculty_batch_item_userid(batch_id, form, field)
+
+
+def globally_unique_faculty_batch_item_email(batch_id, form, field):
+    if FacultyBatchItem.query.filter_by(parent_id=batch_id, email=field.data).first():
+        raise ValidationError("{name} is already in use as an email address for this batch import".format(name=field.data))
+
+
+def unique_or_original_faculty_batch_item_email(batch_id, form, field):
+    if field.data == form.batch_item.email:
+        return
+
+    return globally_unique_faculty_batch_item_email(batch_id, form, field)
 
 
 def globally_unique_feedback_asset_label(form, field):

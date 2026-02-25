@@ -43,6 +43,8 @@ from app.shared.forms.wtf_validators import (
     globally_unique_registration_number,
     unique_or_original_registration_number,
     unique_or_original_batch_item_registration_number,
+    unique_or_original_faculty_batch_item_userid,
+    unique_or_original_faculty_batch_item_email,
 )
 
 
@@ -221,12 +223,16 @@ class UploadBatchCreateStudentsForm(Form):
 
     current_year = IntegerField(
         "Please specify the academic year that should be used to interpret imported year-of-course values",
-        description="For academic year N/N+1, please enter N. For example, for 2023/24 please "
-        "enter 2023. This information is needed to correctly "
+        description="For academic year N/N+1, please enter N. For example, for 2025/26 please "
+        "enter 2025. This information is needed to correctly "
         "compute student cohorts from the imported year-of-course data.",
         validators=[InputRequired("An reference academic year is required")],
     )
 
+    submit = SubmitField("Upload user list")
+
+
+class UploadBatchCreateFacultyForm(Form):
     submit = SubmitField("Upload user list")
 
 
@@ -274,6 +280,44 @@ def EditStudentBatchItemFormFactory(batch):
         intermitting = BooleanField("Currently intermitting")
 
     return EditStudentBatchItemForm
+
+
+def EditFacultyBatchItemFormFactory(batch):
+    class EditFacultyBatchItemForm(Form, SaveChangesMixin):
+        user_id = StringField(
+            "User id",
+            validators=[
+                InputRequired("User id is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+                partial(unique_or_original_faculty_batch_item_userid, batch.id),
+            ],
+        )
+
+        email = StringField(
+            "Email address",
+            validators=[
+                InputRequired("Email address is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+                EmailValidation(verify=True),
+                partial(unique_or_original_faculty_batch_item_email, batch.id),
+            ],
+        )
+
+        last_name = StringField("Last name", validators=[InputRequired("Last name is required"), Length(max=DEFAULT_STRING_LENGTH)])
+
+        first_name = StringField("First name", validators=[InputRequired("First name is required"), Length(max=DEFAULT_STRING_LENGTH)])
+
+        office = StringField("Office", validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
+
+        CATS_supervision = IntegerField("Supervision CATS", validators=[Optional(), value_is_nonnegative])
+
+        CATS_marking = IntegerField("Marking CATS", validators=[Optional(), value_is_nonnegative])
+
+        CATS_moderation = IntegerField("Moderation CATS", validators=[Optional(), value_is_nonnegative])
+
+        CATS_presentation = IntegerField("Presentation CATS", validators=[Optional(), value_is_nonnegative])
+
+    return EditFacultyBatchItemForm
 
 
 class EnrollmentRecordMixin:

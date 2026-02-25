@@ -2792,36 +2792,38 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
     return lp_asset
 
 
-def _store_enumeration_details(
-    record, number_to_sel, number_to_lp, number_to_sup, number_to_mark, lp_group_dict, sup_pclass_limits, mark_pclass_limits
-):
+def _store_enumeration_details(record, data: InitializationData):
     def write_out(label, block):
         for number in block:
-            data = MatchingEnumeration(matching_id=record.id, enumeration=number, key=block[number], category=label)
-            db.session.add(data)
+            data_rec = MatchingEnumeration(matching_id=record.id, enumeration=number, key=block[number], category=label)
+            db.session.add(data_rec)
 
-    write_out(MatchingEnumeration.SELECTOR, number_to_sel)
-    write_out(MatchingEnumeration.LIVEPROJECT, number_to_lp)
-    write_out(MatchingEnumeration.SUPERVISOR, number_to_sup)
-    write_out(MatchingEnumeration.MARKER, number_to_mark)
+    write_out(MatchingEnumeration.SELECTOR, data.selector_data.number_to_selector)
+    write_out(MatchingEnumeration.LIVEPROJECT, data.project_data.number_to_project)
+    write_out(MatchingEnumeration.SUPERVISOR, data.supervisor_data.number_to_faculty)
+    write_out(MatchingEnumeration.MARKER, data.marker_data.number_to_faculty)
 
-    for config_id in lp_group_dict:
-        lps = lp_group_dict[config_id]
+    for config_id in data.project_data.group_dict:
+        lps = data.project_data.group_dict[config_id]
 
         for lp_id in lps:
-            data = MatchingEnumeration(matching_id=record.id, enumeration=lp_id, key=config_id, category=MatchingEnumeration.LIVEPROJECT_GROUP)
-            db.session.add(data)
+            data_rec = MatchingEnumeration(
+                matching_id=record.id, enumeration=lp_id, key=config_id, category=MatchingEnumeration.LIVEPROJECT_GROUP
+            )
+            db.session.add(data_rec)
 
     def write_limits(label, limit_dict):
         for config_id in limit_dict:
             limits = limit_dict[config_id]
 
             for fac_number in limits:
-                data = MatchingEnumeration(matching_id=record.id, enumeration=fac_number, key=config_id, key2=limits[fac_number], category=label)
-                db.session.add(data)
+                data_rec = MatchingEnumeration(
+                    matching_id=record.id, enumeration=fac_number, key=config_id, key2=limits[fac_number], category=label
+                )
+                db.session.add(data_rec)
 
-    write_limits(MatchingEnumeration.SUPERVISOR_LIMITS, sup_pclass_limits)
-    write_limits(MatchingEnumeration.MARKER_LIMITS, mark_pclass_limits)
+    write_limits(MatchingEnumeration.SUPERVISOR_LIMITS, data.supervisor_data.enrolment_limit)
+    write_limits(MatchingEnumeration.MARKER_LIMITS, data.marker_data.enrolment_limit)
 
     # allow exception to propgate up to calling function
     db.session.commit()
@@ -2908,9 +2910,7 @@ def register_matching_tasks(celery):
         progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Storing matching details for later processing...", autocommit=True)
 
         try:
-            _store_enumeration_details(
-                record, data.selector_data.number_to_selector, data.project_data.number_to_project, data.supervisor_data.number_to_faculty, data.marker_data.number_to_faculty, data.project_data.group_dict, data.supervisor_data.enrolment_limit, data.marker_data.enrolment_pclass_limit
-            )
+            _store_enumeration_details(record, data)
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

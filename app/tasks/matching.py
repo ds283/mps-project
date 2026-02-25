@@ -2539,14 +2539,7 @@ def _build_base_XYS(record: MatchingAttempt, data: InitializationData) -> BaseDa
     return BaseData(base_X=base_X, base_Y=base_Y, base_S=base_S, has_base_match=has_base_match)
 
 
-def _execute_live(
-    self,
-    record,
-    data: InitializationData,
-    pulp_data: PuLPProblem,
-    base_data: BaseData,
-    create_time,
-):
+def _execute_live(self, record, init_data: InitializationData, base_data: BaseData, pulp_problem: PuLPProblem, create_time):
     print("Solving PuLP problem for project matching")
 
     progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...", autocommit=True)
@@ -2554,7 +2547,7 @@ def _execute_live(
     with Timer() as solve_time:
         record.awaiting_upload = False
 
-        prob = pulp_data.problem
+        prob = pulp_problem.problem
 
         if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
             status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=True, timeLimit=3600, gapRel=0.25))
@@ -2571,27 +2564,10 @@ def _execute_live(
         else:
             status = prob.solve()
 
-    return _process_PuLP_solution(
-        self,
-        record,
-        status,
-        solve_time,
-        data,
-        pulp_data,
-        base_data,
-        create_time,
-    )
+    return _process_PuLP_solution(self, record, status, solve_time, init_data, base_data, pulp_problem, create_time)
 
 
-def _execute_from_solution(
-    self,
-    file,
-    record,
-    data: InitializationData,
-    pulp_data: PuLPProblem,
-    base_data: BaseData,
-    create_time,
-):
+def _execute_from_solution(self, file, record, init_data: InitializationData, base_data: BaseData, pulp_problem: PuLPProblem, create_time):
     print('Processing PuLP solution from "{name}"'.format(name=file))
 
     if not path.exists(file):
@@ -2605,7 +2581,7 @@ def _execute_from_solution(
     with Timer() as solve_time:
         record.awaiting_upload = False
 
-        prob = pulp_data.problem
+        prob = pulp_problem.problem
         wasNone, dummyVar = prob.fixObjective()
 
         if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
@@ -2640,16 +2616,7 @@ def _execute_from_solution(
         prob.restoreObjective(wasNone, dummyVar)
         prob.solver = solver
 
-    return _process_PuLP_solution(
-        self,
-        record,
-        status,
-        solve_time,
-        data,
-        pulp_data,
-        base_data,
-        create_time,
-    )
+    return _process_PuLP_solution(self, record, status, solve_time, init_data, base_data, pulp_problem, create_time)
 
 
 def _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user: User):
@@ -2703,16 +2670,8 @@ def _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user: User
     progress_update(task_id, TaskRecord.SUCCESS, 100, "Matching task complete", autocommit=True)
 
 
-def _process_PuLP_solution(
-    self,
-    record,
-    output,
-    solve_time,
-    data: InitializationData,
-    pulp_data: PuLPProblem,
-    base_data: BaseData,
-    create_time,
-):
+def _process_PuLP_solution(self, record, output, solve_time, init_data: InitializationData, base_data: BaseData, pulp_problem: PuLPProblem,
+                           create_time):
     state = pulp.LpStatus[output]
 
     if state == "Optimal":
@@ -2721,7 +2680,7 @@ def _process_PuLP_solution(
         # we don't just read the objective function out directly, because we don't want to include
         # contributions from the levelling and slack terms.
         # We don't account for biasing terms coming from a base match.
-        score = _build_score_function(data, pulp_data, base_data, 1.0)
+        score = _build_score_function(init_data, pulp_problem, base_data, 1.0)
         record.score = pulp.value(score)
 
         record.construct_time = create_time.interval
@@ -2731,7 +2690,7 @@ def _process_PuLP_solution(
 
         try:
             # note _store_PuLP_solution does not do a commit by itself
-            _store_PuLP_solution(pulp_data, record, data)
+            _store_PuLP_solution(pulp_problem, record, init_data)
             db.session.commit()
 
         except SQLAlchemyError as e:
@@ -2890,18 +2849,11 @@ def register_matching_tasks(celery):
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
-            pulp_data: PuLPProblem = _create_PuLP_problem(data, base_data, record)
+            pulp_problem: PuLPProblem = _create_PuLP_problem(data, base_data, record)
 
         print(" -- creation complete in time {t}".format(t=create_time.interval))
 
-        score = _execute_live(
-            self,
-            record,
-            data,
-            pulp_data,
-            base_data,
-            create_time,
-        )
+        score = _execute_live(self, record, data, base_data, pulp_problem, create_time)
 
         if record.created_by is not None:
             if record.is_valid:
@@ -2939,14 +2891,14 @@ def register_matching_tasks(celery):
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
-            pulp_data: PuLPProblem = _create_PuLP_problem(data, base_data, record)
+            pulp_problem: PuLPProblem = _create_PuLP_problem(data, base_data, record)
 
         print(" -- creation complete in time {t}".format(t=create_time.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP file...", autocommit=True)
 
         try:
-            lp_asset = _write_LP_MPS_files(record, pulp_data.problem, user)
+            lp_asset = _write_LP_MPS_files(record, pulp_problem.problem, user)
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -3003,19 +2955,11 @@ def register_matching_tasks(celery):
 
                 progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
-                pulp_data: PuLPProblem = _create_PuLP_problem(data, base_data, record)
+                pulp_problem: PuLPProblem = _create_PuLP_problem(data, base_data, record)
 
             print(" -- creation complete in time {t}".format(t=create_time.interval))
 
-            soln = _execute_from_solution(
-                self,
-                scratch_path.path,
-                record,
-                data,
-                pulp_data,
-                base_data,
-                create_time,
-            )
+            soln = _execute_from_solution(self, scratch_path.path, record, data, base_data, pulp_problem, create_time)
 
             if record.created_by is not None:
                 if record.is_valid:

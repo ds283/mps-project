@@ -143,6 +143,17 @@ InitializationData = namedtuple(
 )
 
 
+BaseData = namedtuple(
+    "BaseData",
+    [
+        "base_X",
+        "base_Y",
+        "base_S",
+        "has_base_match",
+    ],
+)
+
+
 _match_success = """
 <div><strong>Matching task {{ name }} has completed successfully.</strong></div>
 <div class="mt-2">This page does not auto-update.
@@ -2441,7 +2452,7 @@ def _initialize(self, record: MatchingAttempt, read_serialized: bool=False) -> I
     )
 
 
-def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_number):
+def _build_base_XYS(record: MatchingAttempt, data: InitializationData) -> BaseData:
     base_X = set()
     base_Y = {}
     base_S = {}
@@ -2451,7 +2462,12 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
 
     if record.base is None:
         print(f"-- no base in use for this match (record.base_id = {record.base_id})")
-        return base_X, base_Y, base_S, has_base_match
+        return BaseData(base_X=base_X, base_Y=base_Y, base_S=base_S, has_base_match=has_base_match)
+
+    sel_to_number = data.selector_data.selector_to_number
+    lp_to_number = data.project_data.project_to_number
+    sup_to_number = data.supervisor_data.faculty_to_number
+    mark_to_number = data.marker_data.faculty_to_number
 
     for record in base.records:
         record: MatchingRecord
@@ -2531,7 +2547,7 @@ def _build_base_XYS(record, sel_to_number, lp_to_number, sup_to_number, mark_to_
                     )
                 )
 
-    return base_X, base_Y, base_S, has_base_match
+    return BaseData(base_X=base_X, base_Y=base_Y, base_S=base_S, has_base_match=has_base_match)
 
 
 def _execute_live(
@@ -2978,7 +2994,7 @@ def register_matching_tasks(celery):
         with Timer() as create_time:
             data: InitializationData = _initialize(self, record)
 
-            base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, data.selector_data.selector_to_number, data.project_data.proj_to_number, data.supervisor_data.faculty_to_number, data.marker_data.faculty_to_number)
+            base_data: BaseData = _build_base_XYS(record, data)
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
@@ -2989,10 +3005,10 @@ def register_matching_tasks(celery):
                 data.W,
                 data.P,
                 data.cstr,
-                base_X,
-                base_Y,
-                base_S,
-                has_base_match,
+                base_data.base_X,
+                base_data.base_Y,
+                base_data.base_S,
+                base_data.has_base_match,
                 record.force_base,
                 data.CATS_supervisor,
                 data.CATS_marker,
@@ -3078,7 +3094,7 @@ def register_matching_tasks(celery):
         with Timer() as create_time:
             data: InitializationData = _initialize(self, record)
 
-            base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, data.selector_data.selector_to_number, data.project_data.proj_to_number, data.supervisor_data.faculty_to_number, data.marker_data.faculty_to_number)
+            base_data: BaseData = _build_base_XYS(record, data)
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
@@ -3089,10 +3105,10 @@ def register_matching_tasks(celery):
                 data.W,
                 data.P,
                 data.cstr,
-                base_X,
-                base_Y,
-                base_S,
-                has_base_match,
+                base_data.base_X,
+                base_data.base_Y,
+                base_data.base_S,
+                base_data.has_base_match,
                 record.force_base,
                 data.CATS_supervisor,
                 data.CATS_marker,
@@ -3176,7 +3192,7 @@ def register_matching_tasks(celery):
             with Timer() as create_time:
                 data: InitializationData = _initialize(self, record, read_serialized=True)
 
-                base_X, base_Y, base_S, has_base_match = _build_base_XYS(record, data.selector_data.selector_to_number, data.project_data.proj_to_number, data.supervisor_data.faculty_to_number, data.marker_data.faculty_to_number)
+                base_data: BaseData = _build_base_XYS(record, data)
 
                 progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
@@ -3187,10 +3203,10 @@ def register_matching_tasks(celery):
                     data.W,
                     data.P,
                     data.cstr,
-                    base_X,
-                    base_Y,
-                    base_S,
-                    has_base_match,
+                    base_data.base_X,
+                    base_data.base_Y,
+                    base_data.base_S,
+                    base_data.has_base_match,
                     record.force_base,
                     data.CATS_supervisor,
                     data.CATS_marker,

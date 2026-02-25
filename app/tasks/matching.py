@@ -80,7 +80,7 @@ SelectorEnumeration = namedtuple(
         "number_to_selector",
         "multiplicity",
         "dict",
-    ]
+    ],
 )
 
 LiveProjectEnumeration = namedtuple(
@@ -94,7 +94,7 @@ LiveProjectEnumeration = namedtuple(
         "capacity",
         "dict",
         "group_dict",
-    ]
+    ],
 )
 
 SupervisorEnumeration = namedtuple(
@@ -106,7 +106,7 @@ SupervisorEnumeration = namedtuple(
         "global_limit",
         "enrolment_limit",
         "dict",
-    ]
+    ],
 )
 
 MarkerEnumeration = namedtuple(
@@ -312,15 +312,11 @@ def _enumerate_selectors_serialized(record: MatchingAttempt) -> SelectorEnumerat
         selector_dict[n] = sel
 
     return SelectorEnumeration(
-        number=n + 1,
-        selector_to_number=sel_to_number,
-        number_to_selector=number_to_sel,
-        multiplicity=multiplicity,
-        dict=selector_dict
+        number=n + 1, selector_to_number=sel_to_number, number_to_selector=number_to_sel, multiplicity=multiplicity, dict=selector_dict
     )
 
 
-def _enumerate_selectors_primary(configs: List[ProjectClassConfig], include_only_submitted: bool=False) -> SelectorEnumeration:
+def _enumerate_selectors_primary(configs: List[ProjectClassConfig], include_only_submitted: bool = False) -> SelectorEnumeration:
     number = 0
     sel_to_number = {}
     number_to_sel = {}
@@ -410,15 +406,11 @@ def _enumerate_selectors_primary(configs: List[ProjectClassConfig], include_only
                 number += 1
 
     return SelectorEnumeration(
-        number=number,
-        selector_to_number=sel_to_number,
-        number_to_selector=number_to_sel,
-        multiplicity=multiplicity,
-        dict=selector_dict
+        number=number, selector_to_number=sel_to_number, number_to_selector=number_to_sel, multiplicity=multiplicity, dict=selector_dict
     )
 
 
-def _enumerate_liveprojects(record: MatchingAttempt, configs: List[ProjectClassConfig], read_serialized: bool=False):
+def _enumerate_liveprojects(record: MatchingAttempt, configs: List[ProjectClassConfig], read_serialized: bool = False):
     """
     Build a list of LiveProjects belonging to projects that participate in automatic
     matching, and assign them to consecutive numbers beginning at 0.
@@ -495,7 +487,7 @@ def _enumerate_liveprojects_serialized(record: MatchingAttempt) -> LiveProjectEn
         CATS_marker=CATS_marker,
         capacity=capacity,
         dict=project_dict,
-        group_dict=project_group_dict
+        group_dict=project_group_dict,
     )
 
 
@@ -578,7 +570,7 @@ def _enumerate_liveprojects_primary(configs: List[ProjectClassConfig]) -> LivePr
     )
 
 
-def _enumerate_supervising_faculty(record: MatchingAttempt, configs: List[ProjectClassConfig], read_serialized: bool=False):
+def _enumerate_supervising_faculty(record: MatchingAttempt, configs: List[ProjectClassConfig], read_serialized: bool = False):
     """
     Build a list of active, enrolled supervising faculty belonging to projects that
     participate in automatic matching, and assign them to consecutive numbers beginning at zero
@@ -706,7 +698,7 @@ def _enumerate_supervising_faculty_primary(configs: List[ProjectClassConfig]) ->
     )
 
 
-def _enumerate_marking_faculty(record: MatchingAttempt, configs: List[ProjectClassConfig], read_serialized: bool=False) -> MarkerEnumeration:
+def _enumerate_marking_faculty(record: MatchingAttempt, configs: List[ProjectClassConfig], read_serialized: bool = False) -> MarkerEnumeration:
     """
     Build a list of active, enrolled 2nd-marking faculty belonging to projects that
     participate in automatic matching, and assign them to consecutive numbers beginning at zero
@@ -1305,7 +1297,9 @@ def _create_PuLP_problem(
         # who are assigned)
         # value = number of times assigned to this project. Can't be negative.
         with Timer() as S_timer:
-            S = _pulp_dicts("S", itertools.product(range(data.supervisor_data.number), range(data.project_data.number)), cat=pulp.LpInteger, lowBound=0)
+            S = _pulp_dicts(
+                "S", itertools.product(range(data.supervisor_data.number), range(data.project_data.number)), cat=pulp.LpInteger, lowBound=0
+            )
         print(" ** created S[k,j] ({num} elements) matrix in time {t}".format(t=S_timer.interval, num=len(S)))
 
         # SUMMARY DECISION VARIABLES FOR SUPERVISORS
@@ -1334,7 +1328,11 @@ def _create_PuLP_problem(
         # 0 = marker not assigned to this selector/project pair
         # 1 = marker assigned to this selector/project pair
         with Timer() as Y_timer:
-            Y = _pulp_dicts("Y", itertools.product(range(data.marker_data.number), range(data.project_data.number), range(data.selector_data.number)), cat=pulp.LpBinary)
+            Y = _pulp_dicts(
+                "Y",
+                itertools.product(range(data.marker_data.number), range(data.project_data.number), range(data.selector_data.number)),
+                cat=pulp.LpBinary,
+            )
         print(" ** created Y[i,j,l] ({num} elements) matrix in time {t}".format(t=Y_timer.interval, num=len(Y)))
 
         # SUMMARY DECISION VARIABLES FOR MARKERS
@@ -2335,7 +2333,7 @@ def _create_marker_PuLP_problem(mark_dict, submit_dict, mark_CATS_dict, config):
     return prob, Y
 
 
-def _initialize(self, record: MatchingAttempt, read_serialized: bool=False) -> InitializationData:
+def _initialize(self, record: MatchingAttempt, read_serialized: bool = False) -> InitializationData:
     progress_update(record.celery_id, TaskRecord.RUNNING, 5, "Collecting information...", autocommit=True)
 
     try:
@@ -2401,7 +2399,9 @@ def _initialize(self, record: MatchingAttempt, read_serialized: bool=False) -> I
 
         # build student ranking matrix
         with Timer() as rank_timer:
-            R, W, cstr = _build_ranking_matrix(selector_data.number, selector_data.dict, project_data.number, project_data.project_to_number, project_data.dict, record)
+            R, W, cstr = _build_ranking_matrix(
+                selector_data.number, selector_data.dict, project_data.number, project_data.project_to_number, project_data.dict, record
+            )
         print(" -- built student ranking matrix in time {s}".format(s=rank_timer.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 18, "Building marker compatibility matrix...", autocommit=True)
@@ -2409,7 +2409,9 @@ def _initialize(self, record: MatchingAttempt, read_serialized: bool=False) -> I
         # build marker compatibility matrix
         with Timer() as mark_matrix_timer:
             mm = record.max_marking_multiplicity
-            M, marker_valence = _build_marking_matrix(marker_data.number, marker_data.dict, project_data.number, project_data.dict, mm if mm >= 1 else 1)
+            M, marker_valence = _build_marking_matrix(
+                marker_data.number, marker_data.dict, project_data.number, project_data.dict, mm if mm >= 1 else 1
+            )
         print(" -- built marking compatibility matrix in time {s}".format(s=mark_matrix_timer.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 19, "Building project-to-supervisor mapping matrix...", autocommit=True)
@@ -2670,8 +2672,9 @@ def _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user: User
     progress_update(task_id, TaskRecord.SUCCESS, 100, "Matching task complete", autocommit=True)
 
 
-def _process_PuLP_solution(self, record, output, solve_time, init_data: InitializationData, base_data: BaseData, pulp_problem: PuLPProblem,
-                           create_time):
+def _process_PuLP_solution(
+    self, record, output, solve_time, init_data: InitializationData, base_data: BaseData, pulp_problem: PuLPProblem, create_time
+):
     state = pulp.LpStatus[output]
 
     if state == "Optimal":
@@ -2807,9 +2810,7 @@ def _store_enumeration_details(record, data: InitializationData):
         lps = data.project_data.group_dict[config_id]
 
         for lp_id in lps:
-            data_rec = MatchingEnumeration(
-                matching_id=record.id, enumeration=lp_id, key=config_id, category=MatchingEnumeration.LIVEPROJECT_GROUP
-            )
+            data_rec = MatchingEnumeration(matching_id=record.id, enumeration=lp_id, key=config_id, category=MatchingEnumeration.LIVEPROJECT_GROUP)
             db.session.add(data_rec)
 
     def write_limits(label, limit_dict):
@@ -2817,9 +2818,7 @@ def _store_enumeration_details(record, data: InitializationData):
             limits = limit_dict[config_id]
 
             for fac_number in limits:
-                data_rec = MatchingEnumeration(
-                    matching_id=record.id, enumeration=fac_number, key=config_id, key2=limits[fac_number], category=label
-                )
+                data_rec = MatchingEnumeration(matching_id=record.id, enumeration=fac_number, key=config_id, key2=limits[fac_number], category=label)
                 db.session.add(data_rec)
 
     write_limits(MatchingEnumeration.SUPERVISOR_LIMITS, data.supervisor_data.enrolment_limit)
@@ -3246,19 +3245,13 @@ def register_matching_tasks(celery):
                 # duplicate any roles stored with this MatchingRecord instance
                 for old_role in old_record.roles:
                     old_role: MatchingRole
-                    new_role = MatchingRole(
-                        user_id=old_role.user_id,
-                        role=old_role.role
-                    )
+                    new_role = MatchingRole(user_id=old_role.user_id, role=old_role.role)
                     new_record.roles.append(new_role)
 
                 # duplicate any "original" roles stored with this MatchingRecord instance
                 for old_role in old_record.original_roles:
                     old_role: MatchingRole
-                    new_role = MatchingRole(
-                        user_id=old_role.user_id,
-                        role=old_role.role
-                    )
+                    new_role = MatchingRole(user_id=old_role.user_id, role=old_role.role)
                     new_record.original_roles.append(new_role)
 
             # if this MatchingAttempt is awaiting upload of an offline-generated match, duplicate enumerations

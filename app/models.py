@@ -9582,7 +9582,10 @@ class ConfirmRequest(db.Model, ConfirmRequestStatesMixin):
             self.response_timestamp = datetime.now()
 
         if resolved_by is not None:
-            self.resolved_id = resolved_by.id
+            if isinstance(resolved_by, int):
+                self.resolved_id = resolved_by
+            elif isinstance(resolved_by, User):
+                self.resolved_id = resolved_by.id
 
         if comment is not None:
             self.comment = comment

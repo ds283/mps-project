@@ -1879,7 +1879,7 @@ def approve_outstanding_confirms(pid):
     tk_description = "Approve all outstanding confirmation requests"
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
-    approve_task.apply_async(args=(task_id, config.id), task_id=task_id)
+    approve_task.apply_async(args=(task_id, config.id, current_user.id), task_id=task_id)
 
     return redirect(redirect_url())
 

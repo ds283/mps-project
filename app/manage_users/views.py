@@ -819,7 +819,7 @@ def batch_create_users():
 
     batches = db.session.query(StudentBatch).all()
 
-    return render_template_context("manage_users/users_dashboard/batch_create.html", form=form, pane="batch", batches=batches)
+    return render_template_context("manage_users/users_dashboard/batch_create_students.html", form=form, pane="batch", batches=batches)
 
 
 @manage_users.route("/terminate_batch/<int:batch_id>")
@@ -966,7 +966,7 @@ def view_batch_data(batch_id):
     if filter is not None:
         session["manage_users_batch_view_filter"] = filter
 
-    return render_template_context("manage_users/users_dashboard/view_batch.html", record=record, batch_id=batch_id, filter=filter)
+    return render_template_context("manage_users/users_dashboard/view_student_batch.html", record=record, batch_id=batch_id, filter=filter)
 
 
 @manage_users.route("/view_batch_data_ajax/<int:batch_id>", methods=["POST"])
@@ -1085,7 +1085,7 @@ def edit_batch_item(item_id):
 
         return redirect(url_for("manage_users.view_batch_data", batch_id=record.parent.id))
 
-    return render_template_context("manage_users/users_dashboard/edit_batch_item.html", form=form, record=record, title="Edit batch item")
+    return render_template_context("manage_users/users_dashboard/edit_student_batch_item.html", form=form, record=record, title="Edit batch item")
 
 
 @manage_users.route("/mark_batch_item_convert/<int:item_id>")

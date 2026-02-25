@@ -114,7 +114,7 @@ def register_selecting_tasks(celery):
         )
 
     @celery.task(bind=True, default_retry_delay=10)
-    def approve_outstanding_confirms(self, task_id: str, config_id: int):
+    def approve_outstanding_confirms(self, task_id: str, config_id: int, approver_id: int):
         post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 10, "Initializing task...")
 
         try:
@@ -165,7 +165,7 @@ def register_selecting_tasks(celery):
 
         for req in outstanding:
             req: ConfirmRequest
-            req.confirm(current_user)
+            req.confirm(approver_id)
 
         try:
             db.session.commit()

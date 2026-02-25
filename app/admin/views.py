@@ -3870,7 +3870,7 @@ def manage_backups():
     if type_filter is None:
         type_filter = session.get("admin_backup_type_filter")
 
-    if type_filter is not None and type_filter not in ["all", "scheduled", "rollover", "golive", "close", "confirm", "batch"]:
+    if type_filter is not None and type_filter not in ["all", "scheduled", "rollover", "golive", "close", "confirm", "batch-student", "batch-faculty"]:
         type_filter = "all"
 
     if type_filter is not None:
@@ -3926,8 +3926,8 @@ def manage_backups_ajax():
         base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_CLOSE_FALLBACK)
     elif type_filter == "confirm":
         base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_ISSUE_CONFIRM_FALLBACK)
-    elif type_filter == "batch":
-        base_query = base_query.filter(BackupRecord.type == BackupRecord.BATCH_IMPORT_FALLBACK)
+    elif type_filter == "batch-student":
+        base_query = base_query.filter(BackupRecord.type == BackupRecord.BATCH_STUDENT_IMPORT_FALLBACK)
 
     if property_filter == "labels":
         base_query = base_query.filter(BackupRecord.labels.any(BackupLabel.id != None))

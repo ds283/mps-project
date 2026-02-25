@@ -819,7 +819,7 @@ def batch_create_students():
 
     batches = db.session.query(StudentBatch).all()
 
-    return render_template_context("manage_users/users_dashboard/batch_create_students.html", form=form, pane="batch", batches=batches)
+    return render_template_context("manage_users/users_dashboard/batch_create_students.html", form=form, pane="batch-student", batches=batches)
 
 
 @manage_users.route("/terminate_batch/<int:batch_id>")
@@ -1134,7 +1134,7 @@ def import_student_batch(batch_id):
     work = chain(
         backup.si(
             current_user.id,
-            type=BackupRecord.BATCH_IMPORT_FALLBACK,
+            type=BackupRecord.BATCH_STUDENT_IMPORT_FALLBACK,
             tag="batch_import",
             description="Rollback snapshot for batch import " '"{name}"'.format(name=record.name),
         ),

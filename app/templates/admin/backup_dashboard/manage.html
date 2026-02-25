@@ -115,9 +115,13 @@
                            class="btn btn-sm filter-btn {% if type_filter=='confirm' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Issue confirmations
                         </a>
-                        <a href="{{ url_for('admin.manage_backups', type_filter='batch', property_filter=property_filter) }}"
-                           class="btn btn-sm filter-btn {% if type_filter=='batch' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                            Batch student import
+                        <a href="{{ url_for('admin.manage_backups', type_filter='batch-student', property_filter=property_filter) }}"
+                           class="btn btn-sm filter-btn {% if type_filter=='batch-student' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Student import
+                        </a>
+                        <a href="{{ url_for('admin.manage_backups', type_filter='batch-faculty', property_filter=property_filter) }}"
+                           class="btn btn-sm filter-btn {% if type_filter=='batch-faculty' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            Faculty import
                         </a>
                     </div>
                 </div>

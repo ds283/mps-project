@@ -6337,16 +6337,14 @@ def adjust_selection_deadline(configid):
             try:
                 db.session.commit()
                 flash(
-                    'The deadline for student selections for "{proj}" has been successfully changed '
-                    "to {deadline}.".format(proj=config.name, deadline=config.live_deadline.strftime("%a %d %b %Y")),
+                    'The deadline for student selections for "{proj}" has been successfully changed to {deadline}.'.format(proj=config.name, deadline=config.live_deadline.strftime("%a %d %b %Y")),
                     "success",
                 )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 flash(
-                    'Could not adjust selection deadline for "{proj}" due to database error. '
-                    "Please contact a system administrator".format(proj=config.name),
+                    'Could not adjust selection deadline for "{proj}" due to database error. Please contact a system administrator.'.format(proj=config.name),
                     "error",
                 )
 
@@ -6466,9 +6464,7 @@ def submit_student_selection(sel_id):
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         flash(
-            "Project choices for this selector have been successfully stored. "
-            "A confirmation email has been sent to the selector's registered email address "
-            "and cc'd to you.",
+            "Project choices for this selector have been successfully stored. A confirmation email has been sent to the selector's registered email address (and copied to you).",
             "info",
         )
 

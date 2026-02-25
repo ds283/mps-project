@@ -153,6 +153,16 @@ BaseData = namedtuple(
     ],
 )
 
+PuLPProblem = namedtuple(
+    "PuLPProblem",
+    [
+        "problem",
+        "X",
+        "Y",
+        "S",
+    ],
+)
+
 
 _match_success = """
 <div><strong>Matching task {{ name }} has completed successfully.</strong></div>
@@ -1889,7 +1899,7 @@ def _create_PuLP_problem(
 
     print(" -- created workload levelling objectives in time {t}".format(t=level_timer.interval))
 
-    return prob, X, Y, S
+    return PuLPProblem(problem=prob, X=X, Y=Y, S=S)
 
 
 def _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, number_mark, base_X, base_Y, base_S, has_base_match, base_bias):
@@ -2998,7 +3008,7 @@ def register_matching_tasks(celery):
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
-            prob, X, Y, S = _create_PuLP_problem(
+            pulp_data: PuLPProblem = _create_PuLP_problem(
                 data.R,
                 data.M,
                 data.marker_valence,
@@ -3039,10 +3049,10 @@ def register_matching_tasks(celery):
         score = _execute_live(
             self,
             record,
-            prob,
-            X,
-            Y,
-            S,
+            pulp_data.problem,
+            pulp_data.X,
+            pulp_data.Y,
+            pulp_data.S,
             data.W,
             data.R,
             create_time,
@@ -3098,7 +3108,7 @@ def register_matching_tasks(celery):
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
-            prob, X, Y, S = _create_PuLP_problem(
+            pulp_data: PuLPProblem = _create_PuLP_problem(
                 data.R,
                 data.M,
                 data.marker_valence,
@@ -3139,7 +3149,7 @@ def register_matching_tasks(celery):
         progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP file...", autocommit=True)
 
         try:
-            lp_asset = _write_LP_MPS_files(record, prob, user)
+            lp_asset = _write_LP_MPS_files(record, pulp_data.problem, user)
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -3196,7 +3206,7 @@ def register_matching_tasks(celery):
 
                 progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
-                prob, X, Y, S = _create_PuLP_problem(
+                pulp_data: PuLPProblem = _create_PuLP_problem(
                     data.R,
                     data.M,
                     data.marker_valence,
@@ -3238,10 +3248,10 @@ def register_matching_tasks(celery):
                 self,
                 scratch_path.path,
                 record,
-                prob,
-                X,
-                Y,
-                S,
+                pulp_data.problem,
+                pulp_data.X,
+                pulp_data.Y,
+                pulp_data.S,
                 data.W,
                 data.R,
                 create_time,

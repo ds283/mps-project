@@ -1,0 +1,59 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+
+{% block title %}
+    Edit batch import record
+{% endblock %}
+
+{% block formtitle %}
+    {% if record %}
+        Edit batch import record for <i class="fas fa-user-circle"></i>
+        <strong>{{ record.first_name }} {{ record.last_name }}</strong>
+    {% else %}
+        Edit batch import record
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('manage_users.edit_faculty_batch_item', item_id=record.id) }}" method="POST"
+          name="batch_item_form">
+        {{ form.hidden_tag() }}
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(form.email) }}
+            {{ wtf.render_field(form.user_id) }}
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(form.first_name) }}
+            {{ wtf.render_field(form.last_name) }}
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(form.office) }}
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            <div class="row">
+                <div class="col-6">
+                    {{ wtf.render_field(form.CATS_supervision) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(form.CATS_marking) }}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-6">
+                    {{ wtf.render_field(form.CATS_moderation) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(form.CATS_presentation) }}
+                </div>
+            </div>
+        </div>
+
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}

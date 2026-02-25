@@ -37,7 +37,9 @@ from .forms import (
     EditFacultyForm,
     EditStudentForm,
     UploadBatchCreateStudentsForm,
+    UploadBatchCreateFacultyForm,
     EditStudentBatchItemFormFactory,
+    EditFacultyBatchItemFormFactory,
     EnrollmentRecordForm,
     AddRoleForm,
     EditRoleForm,
@@ -48,6 +50,8 @@ from ..models import (
     User,
     FacultyData,
     StudentData,
+    FacultyBatch,
+    FacultyBatchItem,
     StudentBatch,
     StudentBatchItem,
     EnrollmentRecord,
@@ -819,7 +823,220 @@ def batch_create_students():
 
     batches = db.session.query(StudentBatch).all()
 
-    return render_template_context("manage_users/users_dashboard/batch_create_students.html", form=form, pane="batch-student", batches=batches)
+    return render_template_context("manage_users/users_dashboard/batch_create_students.html", form=form, pane="batch-students", batches=batches)
+
+
+@manage_users.route("/batch_create_faculty", methods=["GET", "POST"])
+@roles_accepted("manage_users", "root")
+def batch_create_faculty():
+    form = UploadBatchCreateFacultyForm(request.form)
+
+    if form.validate_on_submit():
+        if "batch_list" in request.files:
+            batch_file = request.files["batch_list"]
+
+            # generate new filename for upload
+            incoming_filename = Path(batch_file.filename)
+            extension = incoming_filename.suffix.lower()
+
+            if extension in (".csv"):
+                now = datetime.now()
+                asset = TemporaryAsset(timestamp=now, expiry=now + timedelta(days=1))
+
+                object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+                with AssetUploadManager(
+                    asset,
+                    data=batch_file.stream.read(),
+                    storage=object_store,
+                    audit_data=f"batch_create_faculty",
+                    length=batch_file.content_length,
+                    validate_nonce=validate_nonce,
+                ) as upload_mgr:
+                    pass
+
+                asset.grant_user(current_user)
+
+                tk_name = "Process faculty batch user list '{name}'".format(name=incoming_filename)
+                tk_description = "Batch import faculty from a CSV file"
+                uuid = register_task(tk_name, owner=current_user, description=tk_description)
+
+                record = FacultyBatch(
+                    name=batch_file.filename,
+                    owner_id=current_user.id,
+                    celery_id=uuid,
+                    celery_finished=False,
+                    success=False,
+                    converted=False,
+                    timestamp=datetime.now(),
+                    total_lines=None,
+                    interpreted_lines=None,
+                    report=None,
+                )
+
+                try:
+                    db.session.add(asset)
+                    db.session.add(record)
+                    db.session.commit()
+                except SQLAlchemyError as e:
+                    flash("Could not upload faculty batch user list due to a database issue. Please contact an administrator.", "error")
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    return redirect(url_for("manage_users.batch_create_faculty"))
+
+                celery = current_app.extensions["celery"]
+
+                init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
+                final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
+                error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
+
+                batch_task = celery.tasks.get("app.tasks.batch_create.faculty")
+                if batch_task is None:
+                    flash("The faculty batch import task is not yet implemented.", "error")
+                    return redirect(url_for("manage_users.batch_create_faculty"))
+
+                work = batch_task.si(record.id, asset.id)
+
+                seq = chain(init.si(uuid, tk_name), work, final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
+                seq.apply_async(task_id=uuid)
+
+                return redirect(url_for("manage_users.batch_create_faculty"))
+
+            else:
+                flash("Expected faculty batch list to have extension .csv", "error")
+
+    batches = db.session.query(FacultyBatch).all()
+
+    return render_template_context("manage_users/users_dashboard/batch_create_faculty.html", form=form, pane="batch-faculty", batches=batches)
+
+
+@manage_users.route("/delete_faculty_batch/<int:batch_id>")
+@roles_accepted("manage_users", "root")
+def delete_faculty_batch(batch_id):
+    """
+    Delete a batch faculty file
+    :param batch_id:
+    :return:
+    """
+    record: FacultyBatch = FacultyBatch.query.get_or_404(batch_id)
+
+    if not record.celery_finished:
+        flash('Can not delete batch creation task for "{name}" because it has not yet ' "finished".format(name=record.name), "error")
+        return redirect(redirect_url())
+
+    title = "Delete faculty account import"
+    panel_title = "Delete faculty account import <strong>{name}</strong>".format(name=record.name)
+
+    action_url = url_for("manage_users.perform_delete_faculty_batch", batch_id=batch_id, url=request.referrer)
+    message = (
+        "<p>Please confirm that you wish to delete the faculty account import task "
+        "<strong>{name}</strong>.</p>"
+        "<p>This action cannot be undone.</p>".format(name=record.name)
+    )
+    submit_label = "Delete"
+
+    return render_template_context(
+        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+    )
+
+
+@manage_users.route("/perform_delete_faculty_batch/<int:batch_id>")
+@roles_accepted("manage_users", "root")
+def perform_delete_faculty_batch(batch_id):
+    record: FacultyBatch = FacultyBatch.query.get_or_404(batch_id)
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = url_for("manage_users.batch_create_faculty")
+
+    if not record.celery_finished:
+        flash('Can not delete faculty account import task "{name}" because it has not yet finished'.format(name=record.name), "error")
+        return redirect(redirect_url())
+
+    try:
+        db.session.query(FacultyBatchItem).filter_by(parent_id=record.id).delete()
+
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash(
+            'Can not delete faculty account import task "{name}" due to a database error. '
+            "Please contact a system administrator.".format(name=record.name),
+            "error",
+        )
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+    else:
+        flash('Faculty account import task "{name}" has been deleted.'.format(name=record.name), "info")
+
+
+    return redirect(url)
+
+
+@manage_users.route("/terminate_faculty_batch/<int:batch_id>")
+@roles_accepted("manage_users", "root")
+def terminate_faculty_batch(batch_id):
+    """
+    Terminate read-in of a batch faculty file
+    :param batch_id:
+    :return:
+    """
+    record: FacultyBatch = FacultyBatch.query.get_or_404(batch_id)
+
+    if record.celery_finished:
+        flash('Can not terminate import "{name}" because it has finished'.format(name=record.name), "error")
+        return redirect(redirect_url())
+
+    title = "Terminate faculty account import"
+    panel_title = "Terminate faculty account import <strong>{name}</strong>".format(name=record.name)
+
+    action_url = url_for("manage_users.perform_terminate_faculty_batch", batch_id=batch_id, url=request.referrer)
+    message = (
+        "<p>Please confirm that you wish to terminate the faculty account import task "
+        "<strong>{name}</strong>.</p>"
+        "<p>This action cannot be undone.</p>".format(name=record.name)
+    )
+    submit_label = "Terminate batch create"
+
+    return render_template_context(
+        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+    )
+
+
+@manage_users.route("/perform_terminate_faculty_batch/<int:batch_id>")
+@roles_accepted("manage_users", "root")
+def perform_terminate_faculty_batch(batch_id):
+    record: FacultyBatch = FacultyBatch.query.get_or_404(batch_id)
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = url_for("manage_users.batch_create_faculty")
+
+    if record.celery_finished:
+        flash('Can not terminate import "{name}" because it has finished'.format(name=record.name), "error")
+        return redirect(url)
+
+    celery = current_app.extensions["celery"]
+    celery.control.revoke(record.celery_id, terminate=True, signal="SIGUSR1")
+
+    try:
+        if not record.celery_finished:
+            progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+
+        db.session.query(StudentBatchItem).filter_by(parent_id=record.id).delete()
+
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash(
+            'Can not terminate batch user creation task "{name}" due to a database error. '
+            "Please contact a system administrator.".format(name=record.name),
+            "error",
+        )
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+    else:
+        flash('Batch import "{name}" has been terminated.'.format(name=record.name), "info")
+
+    return redirect(url)
 
 
 @manage_users.route("/terminate_batch/<int:batch_id>")
@@ -833,15 +1050,15 @@ def terminate_student_batch(batch_id):
     record: StudentBatch = StudentBatch.query.get_or_404(batch_id)
 
     if record.celery_finished:
-        flash('Can not terminate batch read-in for "{name}" because it has finished'.format(name=record.name), "error")
+        flash('Can not terminate import "{name}" because it has finished'.format(name=record.name), "error")
         return redirect(redirect_url())
 
-    title = "Terminate batch user creation"
-    panel_title = "Terminate batch user creation for <strong>{name}</strong>".format(name=record.name)
+    title = "Terminate student account import"
+    panel_title = "Terminate student account import <strong>{name}</strong>".format(name=record.name)
 
     action_url = url_for("manage_users.perform_terminate_student_batch", batch_id=batch_id, url=request.referrer)
     message = (
-        "<p>Please confirm that you wish to terminate the batch user creation task "
+        "<p>Please confirm that you wish to terminate the student account import task "
         "<strong>{name}</strong>.</p>"
         "<p>This action cannot be undone.</p>".format(name=record.name)
     )
@@ -862,7 +1079,7 @@ def perform_terminate_student_batch(batch_id):
         url = url_for("manage_users.batch_create_students")
 
     if record.celery_finished:
-        flash('Can not terminate batch read-in for "{name}" because it has finished'.format(name=record.name), "error")
+        flash('Can not terminate import "{name}" because it has finished'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     celery = current_app.extensions["celery"]
@@ -876,7 +1093,6 @@ def perform_terminate_student_batch(batch_id):
 
         db.session.delete(record)
         db.session.commit()
-
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -885,6 +1101,8 @@ def perform_terminate_student_batch(batch_id):
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+    else:
+        flash('Batch import "{name}" has been terminated.'.format(name=record.name), "info")
 
     return redirect(url)
 
@@ -903,16 +1121,16 @@ def delete_student_batch(batch_id):
         flash('Can not delete batch creation task for "{name}" because it has not yet ' "finished".format(name=record.name), "error")
         return redirect(redirect_url())
 
-    title = "Delete batch user creation task"
-    panel_title = "Delete batch user creation for <strong>{name}</strong>".format(name=record.name)
+    title = "Delete student account import"
+    panel_title = "Delete student account import <strong>{name}</strong>".format(name=record.name)
 
     action_url = url_for("manage_users.perform_delete_student_batch", batch_id=batch_id, url=request.referrer)
     message = (
-        "<p>Please confirm that you wish to delete the batch user creation task "
+        "<p>Please confirm that you wish to delete the student account import task "
         "<strong>{name}</strong>.</p>"
         "<p>This action cannot be undone.</p>".format(name=record.name)
     )
-    submit_label = "Delete batch data"
+    submit_label = "Delete"
 
     return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
@@ -929,7 +1147,7 @@ def perform_delete_student_batch(batch_id):
         url = url_for("manage_users.batch_create_students")
 
     if not record.celery_finished:
-        flash('Can not delete batch creation task for "{name}" because it has not yet ' "finished".format(name=record.name), "error")
+        flash('Can not delete student account import task "{name}" because it has not yet finished'.format(name=record.name), "error")
         return redirect(redirect_url())
 
     try:
@@ -946,6 +1164,8 @@ def perform_delete_student_batch(batch_id):
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+    else:
+        flash('Student account import task "{name}" has been deleted.'.format(name=record.name), "info")
 
     return redirect(url)
 
@@ -967,6 +1187,25 @@ def view_student_batch_data(batch_id):
         session["manage_users_batch_view_filter"] = filter
 
     return render_template_context("manage_users/users_dashboard/view_student_batch.html", record=record, batch_id=batch_id, filter=filter)
+
+
+@manage_users.route("/view_faculty_batch_data/<int:batch_id>")
+@roles_accepted("manage_users", "root")
+def view_faculty_batch_data(batch_id):
+    record: FacultyBatch = FacultyBatch.query.get_or_404(batch_id)
+
+    filter = request.args.get("filter")
+
+    if filter is None and session.get("manage_users_faculty_batch_view_filter"):
+        filter = session["manage_users_faculty_batch_view_filter"]
+
+    if filter not in ["all", "new", "modified", "both"]:
+        filter = "all"
+
+    if filter is not None:
+        session["manage_users_faculty_batch_view_filter"] = filter
+
+    return render_template_context("manage_users/users_dashboard/view_faculty_batch.html", record=record, batch_id=batch_id, filter=filter)
 
 
 @manage_users.route("/view_batch_data_ajax/<int:batch_id>", methods=["POST"])
@@ -1037,6 +1276,58 @@ def view_student_batch_data_ajax(batch_id):
         return handler.build_payload(ajax.users.build_view_batch_data)
 
 
+@manage_users.route("/view_faculty_batch_data_ajax/<int:batch_id>", methods=["POST"])
+@roles_accepted("manage_users", "root")
+def view_faculty_batch_data_ajax(batch_id):
+    record: FacultyBatch = FacultyBatch.query.get_or_404(batch_id)
+
+    filter = request.args.get("filter")
+
+    base_query = db.session.query(FacultyBatchItem).filter_by(parent_id=record.id)
+
+    def search_name(row: FacultyBatchItem):
+        return row.first_name + " " + row.last_name
+
+    def sort_name(row: FacultyBatchItem):
+        return [row.last_name, row.first_name]
+
+    def search_user(row: FacultyBatchItem):
+        return row.user_id
+
+    def sort_user(row: FacultyBatchItem):
+        return row.user_id
+
+    def search_email(row: FacultyBatchItem):
+        return row.email
+
+    def sort_email(row: FacultyBatchItem):
+        return row.email
+
+    name = {"search": search_name, "order": sort_name}
+    user = {"search": search_user, "order": sort_user}
+    email = {"search": search_email, "order": sort_email}
+
+    columns = {"name": name, "user": user, "email": email}
+
+    def _filter(filter: str, row: FacultyBatchItem):
+        if filter == "new":
+            return row.existing_record is None
+
+        if filter == "modified":
+            return row.existing_record is not None and len(row.warnings) > 0
+
+        if filter == "both":
+            if row.existing_record is None:
+                return True
+
+            return len(row.warnings) > 0
+
+        return True
+
+    with ServerSideInMemoryHandler(request, base_query, columns, row_filter=partial(_filter, filter)) as handler:
+        return handler.build_payload(ajax.users.build_view_faculty_batch_data)
+
+
 @manage_users.route("/edit_batch_item/<int:item_id>", methods=["GET", "POST"])
 @roles_accepted("manage_users", "root")
 def edit_student_batch_item(item_id):
@@ -1084,6 +1375,85 @@ def edit_student_batch_item(item_id):
         db.session.commit()
 
         return redirect(url_for("manage_users.view_student_batch_data", batch_id=record.parent.id))
+
+
+@manage_users.route("/edit_faculty_batch_item/<int:item_id>", methods=["GET", "POST"])
+@roles_accepted("manage_users", "root")
+def edit_faculty_batch_item(item_id):
+    record: FacultyBatchItem = FacultyBatchItem.query.get_or_404(item_id)
+
+    EditFacultyBatchItemForm = EditFacultyBatchItemFormFactory(record.parent)
+    form = EditFacultyBatchItemForm(obj=record)
+    form.batch_item = record
+
+    if form.validate_on_submit():
+        record.user_id = form.user_id.data
+        record.email = form.email.data
+        record.last_name = form.last_name.data
+        record.first_name = form.first_name.data
+        record.office = form.office.data
+        record.CATS_supervision = form.CATS_supervision.data
+        record.CATS_marking = form.CATS_marking.data
+        record.CATS_moderation = form.CATS_moderation.data
+        record.CATS_presentation = form.CATS_presentation.data
+
+        if record.existing_record is None:
+            condition_list = literal(False)
+            if record.user_id is not None:
+                condition_list = or_(condition_list, User.username == record.user_id)
+            if record.email is not None:
+                condition_list = or_(condition_list, User.email == record.email)
+
+            match = db.session.query(FacultyData).join(User, User.id == FacultyData.id).filter(condition_list).first()
+            if match is not None:
+                record.existing_id = match.id
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash("Could not save changes to faculty batch item due to a database issue. Please contact an administrator.", "error")
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for("manage_users.view_faculty_batch_data", batch_id=record.parent_id))
+
+    return render_template_context(
+        "manage_users/users_dashboard/edit_faculty_batch_item.html", form=form, record=record, batch_id=record.parent_id
+    )
+
+
+@manage_users.route("/mark_faculty_batch_item_convert/<int:item_id>")
+@roles_accepted("manage_users", "root")
+def mark_faculty_batch_item_convert(item_id):
+    record: FacultyBatchItem = FacultyBatchItem.query.get_or_404(item_id)
+
+    record.dont_convert = False
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash("Could not mark faculty batch item for conversion due to a database issue. Please contact an administrator.", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(url_for("manage_users.view_faculty_batch_data", batch_id=record.parent_id))
+
+
+@manage_users.route("/mark_faculty_batch_item_dont_convert/<int:item_id>")
+@roles_accepted("manage_users", "root")
+def mark_faculty_batch_item_dont_convert(item_id):
+    record: FacultyBatchItem = FacultyBatchItem.query.get_or_404(item_id)
+
+    record.dont_convert = True
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash("Could not mark faculty batch item not for conversion due to a database issue. Please contact an administrator.", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(url_for("manage_users.view_faculty_batch_data", batch_id=record.parent_id))
 
     return render_template_context("manage_users/users_dashboard/edit_student_batch_item.html", form=form, record=record, title="Edit batch item")
 
@@ -1136,7 +1506,50 @@ def import_student_batch(batch_id):
             current_user.id,
             type=BackupRecord.BATCH_STUDENT_IMPORT_FALLBACK,
             tag="batch_import",
-            description="Rollback snapshot for batch import " '"{name}"'.format(name=record.name),
+            description='Rollback snapshot for student account creation "{name}"'.format(name=record.name),
+        ),
+        work_group,
+        import_finalize.s(record.id, current_user.id),
+    ).on_error(import_error.si(current_user.id))
+
+    seq = chain(init.si(uuid, tk_name), work, final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
+    seq.apply_async(task_id=uuid)
+
+    return redirect(redirect_url())
+
+
+@manage_users.route("/import_faculty_batch/<int:batch_id>")
+@roles_accepted("manage_users", "root")
+def import_faculty_batch(batch_id):
+    record = FacultyBatch.query.get_or_404(batch_id)
+
+    tk_name = 'Import faculty batch user list "{name}"'.format(name=record.name)
+    tk_description = "Batch import faculty from a CSV file"
+    uuid = register_task(tk_name, owner=current_user, description=tk_description)
+
+    celery = current_app.extensions["celery"]
+
+    init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
+    final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
+    error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
+
+    import_batch_item = celery.tasks.get("app.tasks.batch_create.import_faculty_batch_item")
+    import_finalize = celery.tasks.get("app.tasks.batch_create.import_faculty_finalize")
+    import_error = celery.tasks.get("app.tasks.batch_create.import_faculty_error")
+
+    if import_batch_item is None or import_finalize is None or import_error is None:
+        flash("The faculty batch import tasks are not yet implemented.", "error")
+        return redirect(redirect_url())
+
+    backup = celery.tasks["app.tasks.backup.backup"]
+
+    work_group = group(import_batch_item.si(item.id, current_user.id) for item in record.items)
+    work = chain(
+        backup.si(
+            current_user.id,
+            type=BackupRecord.BATCH_FACULTY_IMPORT_FALLBACK,
+            tag="faculty_batch_import",
+            description='Rollback snapshot for faculty account creation "{name}"'.format(name=record.name),
         ),
         work_group,
         import_finalize.s(record.id, current_user.id),

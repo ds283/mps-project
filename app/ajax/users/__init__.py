@@ -12,3 +12,4 @@ from .accounts import build_accounts_data
 from .faculty import build_faculty_data
 from .students import build_student_data
 from .view_student_batch import build_view_batch_data
+from .view_faculty_batch import build_view_faculty_batch_data

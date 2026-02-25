@@ -1,0 +1,165 @@
+{% extends "manage_users/users_dashboard/nav.html" %}
+
+{% block title %}
+    Batch import faculty
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card border-primary mt-3 mb-3">
+                <div class="card-header bg-primary text-white">
+                    Upload faculty list for batch user import
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('manage_users.batch_create_faculty') }}" method="POST"
+                          enctype="multipart/form-data" name="batch_create_form">
+                        {{ form.hidden_tag() }}
+
+                        <label class="btn btn-secondary" for="file-selector">
+                            <input id="file-selector" type="file" name="batch_list" style="display: none;"
+                                   onchange="$('#filename-data').html(this.files[0].name)">
+                            Select file...
+                        </label>
+                        <span class="badge bg-info" id="filename-data"></span>
+
+                        <div class="mt-3">
+                            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% for batch in batches %}
+                <div class="card mt-3 mb-3 card-body bg-well">
+                    <div class="batch-name">
+                        {% if batch.celery_finished and batch.success %}
+                            <a href="{{ url_for('manage_users.view_faculty_batch_data', batch_id=batch.id) }}"
+                               class="text-decoration-none">{{ batch.name }}</a>
+                        {% else %}
+                            {{ batch.name }}
+                        {% endif %}
+                    </div>
+                    <div class="row vertical-top mb-3">
+                        <div class="col-4">
+                            <div>
+                                {% if not batch.celery_finished %}
+                                    <span class="badge bg-info">In progress</span>
+                                {% else %}
+                                    {% if batch.success %}
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Processed</span>
+                                    {% else %}
+                                        <span class="badge bg-danger"><i class="fas fa-times"></i> Failed</span>
+                                    {% endif %}
+                                    {% if batch.converted %}
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Converted</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Not converted</span>
+                                    {% endif %}
+                                    {% if batch.report and batch.report|length > 0 %}
+                                        <div class="text-muted small mt-1">
+                                            <span tabindex="1" data-bs-toggle="popover" title="Processing report"
+                                                  data-bs-container="body" data-bs-trigger="focus"
+                                                  data-bs-content="{{ batch.report }}">
+                                                View import report <i class="ms-1 fas fa-chevron-right"></i>
+                                            </span>
+                                        </div>
+                                    {% else %}
+                                        <div class="text-muted small mt-1">
+                                            An import report was not generated
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div>
+                                {% if batch.timestamp %}
+                                    <div class="text-muted small">
+                                        Imported
+                                        {% if batch.owner %}
+                                            by <i class="fas fa-user-circle"></i>
+                                            <a class="text-decoration-none"
+                                               href="mailto:{{ batch.owner.email }}">{{ batch.owner.name }}</a>
+                                        {% endif %}
+                                        on {{ batch.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                                    </div>
+                                {% endif %}
+                                {% if batch.success %}
+                                    <div class="text-muted small mt-1">
+                                        Total lines: {{ batch.total_lines }} |
+                                        {% if batch.interpreted_lines < batch.total_lines %}
+                                            Ignored lines: {{ batch.total_lines - batch.interpreted_lines }}
+                                        {% else %}
+                                            All lines processed
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                                <div class="mt-1 text-muted small">
+                                    <ul>
+                                        {% if batch.celery_finished %}
+                                            <li><strong>{{ batch.number_items }} items processed
+                                                {% if not batch.converted %}but not yet imported{% endif %}</strong>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="d-flex align-content-start justify-content-end gap-2">
+                                {% if not batch.celery_finished %}
+                                    <a href="{{ url_for('manage_users.terminate_faculty_batch', batch_id=batch.id) }}"
+                                       class="btn btn-sm btn-danger">
+                                        Terminate
+                                    </a>
+                                {% else %}
+                                    {% if batch.converted %}
+                                        <a class="disabled btn btn-sm btn-outline-success">
+                                            Workflow complete
+                                        </a>
+                                        <a href="{{ url_for('manage_users.delete_faculty_batch', batch_id=batch.id) }}"
+                                           class="btn btn-sm btn-outline-warning">
+                                            Delete
+                                        </a>
+                                    {% elif batch.success %}
+                                        <a href="{{ url_for('manage_users.view_faculty_batch_data', batch_id=batch.id) }}"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            View records
+                                        </a>
+                                        <a href="{{ url_for('manage_users.import_faculty_batch', batch_id=batch.id) }}"
+                                           class="btn btn-sm btn-outline-primary">
+                                            Import
+                                        </a>
+                                        <a href="{{ url_for('manage_users.delete_faculty_batch', batch_id=batch.id) }}"
+                                           class="btn btn-sm btn-outline-danger">
+                                            Delete
+                                        </a>
+                                    {% else %}
+                                        <a class="disabled btn btn-sm btn-danger">
+                                            Not usable
+                                        </a>
+                                        <a href="{{ url_for('manage_users.delete_faculty_batch', batch_id=batch.id) }}"
+                                           class="btn btn-sm btn-outline-warning">
+                                            Delete
+                                        </a>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="card mt-3 mb-3 card-body bg-well">
+                    <div class="row vertical-top">
+                        <div class="col-12">
+                            No batches currently being processed.
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

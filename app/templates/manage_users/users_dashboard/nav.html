@@ -25,5 +25,11 @@
                 Import students
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {% if pane == 'batch-faculty' %}active{% endif %}"
+               href="{{ url_for('manage_users.batch_create_faculty') }}">
+                Import faculty
+            </a>
+        </li>
     </ul>
 {% endblock %}

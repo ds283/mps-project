@@ -202,7 +202,7 @@ class ResearchGroupMixin:
     )
 
 
-class UploadBatchCreateForm(Form):
+class UploadBatchCreateStudentsForm(Form):
     trust_cohort = BooleanField(
         "Trust imported cohort information",
         default=False,

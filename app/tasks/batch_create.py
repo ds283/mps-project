@@ -126,7 +126,7 @@ _batch_import_report_body = """
 _batch_import_success = """
 <div><strong>Successfully imported batch list {{ name }}.</strong></div>
 <div class="mt-2">This page does not auto-update.
-Please click <a href="{{ url_for('manage_users.batch_create_users') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the batch import details.</div>
+Please click <a href="{{ url_for('manage_users.batch_create_students') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the batch import details.</div>
 """
 
 # language=jinja2
@@ -134,7 +134,7 @@ _batch_import_warn = """
 <div><strong>Batch list {{ name }} was imported, but some lines were skipped.</strong></div>
 <div class="mt-2">Please audit the processed items to ensure all required students are present. Missing students may need to be imported manually.</div>
 <div class="mt-2">This page does not auto-update.
-Please click <a href="{{ url_for('manage_users.batch_create_users') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the batch import details.</div>
+Please click <a href="{{ url_for('manage_users.batch_create_students') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the batch import details.</div>
 """
 
 

@@ -36,7 +36,7 @@ from .forms import (
     EditOfficeForm,
     EditFacultyForm,
     EditStudentForm,
-    UploadBatchCreateForm,
+    UploadBatchCreateStudentsForm,
     EditStudentBatchItemFormFactory,
     EnrollmentRecordForm,
     AddRoleForm,
@@ -729,8 +729,8 @@ def remove_CATS_limits(fac_id):
 
 @manage_users.route("/batch_create_users", methods=["GET", "POST"])
 @roles_accepted("manage_users", "root")
-def batch_create_users():
-    form = UploadBatchCreateForm(request.form)
+def batch_create_students():
+    form = UploadBatchCreateStudentsForm(request.form)
 
     if form.validate_on_submit():
         if "batch_list" in request.files:
@@ -754,7 +754,7 @@ def batch_create_users():
                     asset,
                     data=batch_file.stream.read(),
                     storage=object_store,
-                    audit_data=f"batch_create_users",
+                    audit_data=f"batch_create_students",
                     length=batch_file.content_length,
                     validate_nonce=validate_nonce,
                 ) as upload_mgr:
@@ -790,7 +790,7 @@ def batch_create_users():
                 except SQLAlchemyError as e:
                     flash("Could not upload batch user list due to a database issue. Please contact an administrator.", "error")
                     current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                    return redirect(url_for("manage_users.batch_create_users"))
+                    return redirect(url_for("manage_users.batch_create_students"))
 
                 celery = current_app.extensions["celery"]
 
@@ -805,7 +805,7 @@ def batch_create_users():
                 seq = chain(init.si(uuid, tk_name), work, final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
                 seq.apply_async(task_id=uuid)
 
-                return redirect(url_for("manage_users.batch_create_users"))
+                return redirect(url_for("manage_users.batch_create_students"))
 
             else:
                 flash("Expected batch list to have extension .csv", "error")
@@ -824,7 +824,7 @@ def batch_create_users():
 
 @manage_users.route("/terminate_batch/<int:batch_id>")
 @roles_accepted("manage_users", "root")
-def terminate_batch(batch_id):
+def terminate_student_batch(batch_id):
     """
     Terminate read-in of a batch student file
     :param batch_id:
@@ -839,7 +839,7 @@ def terminate_batch(batch_id):
     title = "Terminate batch user creation"
     panel_title = "Terminate batch user creation for <strong>{name}</strong>".format(name=record.name)
 
-    action_url = url_for("manage_users.perform_terminate_batch", batch_id=batch_id, url=request.referrer)
+    action_url = url_for("manage_users.perform_terminate_student_batch", batch_id=batch_id, url=request.referrer)
     message = (
         "<p>Please confirm that you wish to terminate the batch user creation task "
         "<strong>{name}</strong>.</p>"
@@ -854,12 +854,12 @@ def terminate_batch(batch_id):
 
 @manage_users.route("/perform_terminate_batch/<int:batch_id>")
 @roles_accepted("manage_users", "root")
-def perform_terminate_batch(batch_id):
+def perform_terminate_student_batch(batch_id):
     record: StudentBatch = StudentBatch.query.get_or_404(batch_id)
 
     url = request.args.get("url", None)
     if url is None:
-        url = url_for("manage_users.batch_create_users")
+        url = url_for("manage_users.batch_create_students")
 
     if record.celery_finished:
         flash('Can not terminate batch read-in for "{name}" because it has finished'.format(name=record.name), "error")
@@ -891,7 +891,7 @@ def perform_terminate_batch(batch_id):
 
 @manage_users.route("/delete_batch/<int:batch_id>")
 @roles_accepted("manage_users", "root")
-def delete_batch(batch_id):
+def delete_student_batch(batch_id):
     """
     Delete a batch student create job
     :param batch_id:
@@ -906,7 +906,7 @@ def delete_batch(batch_id):
     title = "Delete batch user creation task"
     panel_title = "Delete batch user creation for <strong>{name}</strong>".format(name=record.name)
 
-    action_url = url_for("manage_users.perform_delete_batch", batch_id=batch_id, url=request.referrer)
+    action_url = url_for("manage_users.perform_delete_student_batch", batch_id=batch_id, url=request.referrer)
     message = (
         "<p>Please confirm that you wish to delete the batch user creation task "
         "<strong>{name}</strong>.</p>"
@@ -921,12 +921,12 @@ def delete_batch(batch_id):
 
 @manage_users.route("/perform_delete_batch/<int:batch_id>")
 @roles_accepted("manage_users", "root")
-def perform_delete_batch(batch_id):
+def perform_delete_student_batch(batch_id):
     record: StudentBatch = StudentBatch.query.get_or_404(batch_id)
 
     url = request.args.get("url", None)
     if url is None:
-        url = url_for("manage_users.batch_create_users")
+        url = url_for("manage_users.batch_create_students")
 
     if not record.celery_finished:
         flash('Can not delete batch creation task for "{name}" because it has not yet ' "finished".format(name=record.name), "error")
@@ -952,7 +952,7 @@ def perform_delete_batch(batch_id):
 
 @manage_users.route("/view_batch_data/<int:batch_id>")
 @roles_accepted("manage_users", "root")
-def view_batch_data(batch_id):
+def view_student_batch_data(batch_id):
     record: StudentBatch = StudentBatch.query.get_or_404(batch_id)
 
     filter = request.args.get("filter")
@@ -971,7 +971,7 @@ def view_batch_data(batch_id):
 
 @manage_users.route("/view_batch_data_ajax/<int:batch_id>", methods=["POST"])
 @roles_accepted("manage_users", "root")
-def view_batch_data_ajax(batch_id):
+def view_student_batch_data_ajax(batch_id):
     record: StudentBatch = StudentBatch.query.get_or_404(batch_id)
 
     filter = request.args.get("filter")
@@ -1039,7 +1039,7 @@ def view_batch_data_ajax(batch_id):
 
 @manage_users.route("/edit_batch_item/<int:item_id>", methods=["GET", "POST"])
 @roles_accepted("manage_users", "root")
-def edit_batch_item(item_id):
+def edit_student_batch_item(item_id):
     record: StudentBatchItem = StudentBatchItem.query.get_or_404(item_id)
 
     EditStudentBatchItemForm = EditStudentBatchItemFormFactory(record)
@@ -1083,14 +1083,14 @@ def edit_batch_item(item_id):
 
         db.session.commit()
 
-        return redirect(url_for("manage_users.view_batch_data", batch_id=record.parent.id))
+        return redirect(url_for("manage_users.view_student_batch_data", batch_id=record.parent.id))
 
     return render_template_context("manage_users/users_dashboard/edit_student_batch_item.html", form=form, record=record, title="Edit batch item")
 
 
 @manage_users.route("/mark_batch_item_convert/<int:item_id>")
 @roles_accepted("manage_users", "root")
-def mark_batch_item_convert(item_id):
+def mark_student_batch_item_convert(item_id):
     item: StudentBatchItem = StudentBatchItem.query.get_or_404(item_id)
 
     item.dont_convert = False
@@ -1101,7 +1101,7 @@ def mark_batch_item_convert(item_id):
 
 @manage_users.route("/mark_batch_item_dont_convert/<int:item_id>")
 @roles_accepted("manage_users", "root")
-def mark_batch_item_dont_convert(item_id):
+def mark_student_batch_item_dont_convert(item_id):
     item: StudentBatchItem = StudentBatchItem.query.get_or_404(item_id)
 
     item.dont_convert = True
@@ -1112,7 +1112,7 @@ def mark_batch_item_dont_convert(item_id):
 
 @manage_users.route("/import_batch/<int:batch_id>")
 @roles_accepted("manage_users", "root")
-def import_batch(batch_id):
+def import_student_batch(batch_id):
     record = StudentBatch.query.get_or_404(batch_id)
 
     tk_name = 'Import batch user list "{name}"'.format(name=record.name)

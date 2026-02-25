@@ -13,7 +13,8 @@
                     Upload student list for batch user import
                 </div>
                 <div class="card-body">
-                    <form action="{{ url_for('manage_users.batch_create_users') }}" method="POST" enctype="multipart/form-data" name="batch_create_form">
+                    <form action="{{ url_for('manage_users.batch_create_students') }}" method="POST"
+                          enctype="multipart/form-data" name="batch_create_form">
                         {{ form.hidden_tag() }}
 
                         <label class="btn btn-secondary" for="file-selector">
@@ -41,7 +42,8 @@
                 <div class="card mt-3 mb-3 card-body bg-well">
                     <div class="batch-name">
                         {% if batch.celery_finished and batch.success %}
-                            <a href="{{ url_for('manage_users.view_batch_data', batch_id=batch.id) }}" class="text-decoration-none">{{ batch.name }}</a>
+                            <a href="{{ url_for('manage_users.view_student_batch_data', batch_id=batch.id) }}"
+                               class="text-decoration-none">{{ batch.name }}</a>
                         {% else %}
                             {{ batch.name }}
                         {% endif %}
@@ -124,7 +126,8 @@
                         <div class="col-4">
                             <div class="d-flex align-content-start justify-content-end gap-2">
                                 {% if not batch.celery_finished %}
-                                    <a href="{{ url_for('manage_users.terminate_batch', batch_id=batch.id) }}" class="btn btn-sm btn-danger">
+                                    <a href="{{ url_for('manage_users.terminate_student_batch', batch_id=batch.id) }}"
+                                       class="btn btn-sm btn-danger">
                                         Terminate
                                     </a>
                                 {% else %}
@@ -132,24 +135,29 @@
                                         <a class="disabled btn btn-sm btn-outline-success">
                                             Workflow complete
                                         </a>
-                                        <a href="{{ url_for('manage_users.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-warning">
+                                        <a href="{{ url_for('manage_users.delete_student_batch', batch_id=batch.id) }}"
+                                           class="btn btn-sm btn-outline-warning">
                                             Delete
                                         </a>
                                     {% elif batch.success %}
-                                        <a href="{{ url_for('manage_users.view_batch_data', batch_id=batch.id) }}" class="btn btn-sm btn-outline-secondary">
+                                        <a href="{{ url_for('manage_users.view_student_batch_data', batch_id=batch.id) }}"
+                                           class="btn btn-sm btn-outline-secondary">
                                             View records
                                         </a>
-                                        <a href="{{ url_for('manage_users.import_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <a href="{{ url_for('manage_users.import_student_batch', batch_id=batch.id) }}"
+                                           class="btn btn-sm btn-outline-primary">
                                             Import
                                         </a>
-                                        <a href="{{ url_for('manage_users.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-danger">
+                                        <a href="{{ url_for('manage_users.delete_student_batch', batch_id=batch.id) }}"
+                                           class="btn btn-sm btn-outline-danger">
                                             Delete
                                         </a>
                                     {% else %}
                                         <a class="disabled btn btn-sm btn-danger">
                                             Not usable
                                         </a>
-                                        <a href="{{ url_for('manage_users.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-outline-warning">
+                                        <a href="{{ url_for('manage_users.delete_student_batch', batch_id=batch.id) }}"
+                                           class="btn btn-sm btn-outline-warning">
                                             Delete
                                         </a>
                                     {% endif %}

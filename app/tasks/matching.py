@@ -2569,27 +2569,10 @@ def _build_base_XYS(record: MatchingAttempt, data: InitializationData) -> BaseDa
 def _execute_live(
     self,
     record,
-    prob,
-    X,
-    Y,
-    S,
-    W,
-    R,
+    data: InitializationData,
+    pulp_data: PuLPProblem,
+    base_data: BaseData,
     create_time,
-    number_sel,
-    number_to_sel,
-    number_lp,
-    number_to_lp,
-    number_sup,
-    number_to_sup,
-    number_mark,
-    number_to_mark,
-    sel_dict,
-    lp_dict,
-    sup_dict,
-    mark_dict,
-    multiplicity,
-    mean_CATS_per_project,
 ):
     print("Solving PuLP problem for project matching")
 
@@ -2597,6 +2580,8 @@ def _execute_live(
 
     with Timer() as solve_time:
         record.awaiting_upload = False
+
+        prob = pulp_data.problem
 
         if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
             status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=True, timeLimit=3600, gapRel=0.25))
@@ -2618,26 +2603,10 @@ def _execute_live(
         record,
         status,
         solve_time,
-        X,
-        Y,
-        S,
-        W,
-        R,
+        data,
+        pulp_data,
+        base_data,
         create_time,
-        number_sel,
-        number_to_sel,
-        number_lp,
-        number_to_lp,
-        number_sup,
-        number_to_sup,
-        number_mark,
-        number_to_mark,
-        multiplicity,
-        sel_dict,
-        sup_dict,
-        mark_dict,
-        lp_dict,
-        mean_CATS_per_project,
     )
 
 
@@ -2645,27 +2614,10 @@ def _execute_from_solution(
     self,
     file,
     record,
-    prob,
-    X,
-    Y,
-    S,
-    W,
-    R,
+    data: InitializationData,
+    pulp_data: PuLPProblem,
+    base_data: BaseData,
     create_time,
-    number_sel,
-    number_to_sel,
-    number_lp,
-    number_to_lp,
-    number_sup,
-    number_to_sup,
-    number_mark,
-    number_to_mark,
-    sel_dict,
-    lp_dict,
-    sup_dict,
-    mark_dict,
-    multiplicity,
-    mean_CATS_per_project,
 ):
     print('Processing PuLP solution from "{name}"'.format(name=file))
 
@@ -2679,6 +2631,8 @@ def _execute_from_solution(
     #  and handle it gracefully (or fix it on the fly)
     with Timer() as solve_time:
         record.awaiting_upload = False
+
+        prob = pulp_data.problem
         wasNone, dummyVar = prob.fixObjective()
 
         if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
@@ -2718,26 +2672,10 @@ def _execute_from_solution(
         record,
         status,
         solve_time,
-        X,
-        Y,
-        S,
-        W,
-        R,
+        data,
+        pulp_data,
+        base_data,
         create_time,
-        number_sel,
-        number_to_sel,
-        number_lp,
-        number_to_lp,
-        number_sup,
-        number_to_sup,
-        number_mark,
-        number_to_mark,
-        multiplicity,
-        sel_dict,
-        sup_dict,
-        mark_dict,
-        lp_dict,
-        mean_CATS_per_project,
     )
 
 
@@ -2797,26 +2735,10 @@ def _process_PuLP_solution(
     record,
     output,
     solve_time,
-    X,
-    Y,
-    S,
-    W,
-    R,
+    data: InitializationData,
+    pulp_data: PuLPProblem,
+    base_data: BaseData,
     create_time,
-    number_sel,
-    number_to_sel,
-    number_lp,
-    number_to_lp,
-    number_sup,
-    number_to_sup,
-    number_mark,
-    number_to_mark,
-    multiplicity,
-    sel_dict,
-    sup_dict,
-    mark_dict,
-    lp_dict,
-    mean_CATS_per_project,
 ):
     state = pulp.LpStatus[output]
 
@@ -2826,7 +2748,22 @@ def _process_PuLP_solution(
         # we don't just read the objective function out directly, because we don't want to include
         # contributions from the levelling and slack terms.
         # We don't account for biasing terms coming from a base match.
-        score = _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, number_mark, set(), {}, set(), set(), 1.0)
+        score = _build_score_function(
+            data.R,
+            data.W,
+            pulp_data.X,
+            pulp_data.Y,
+            pulp_data.S,
+            data.project_data.number,
+            data.selector_data.number,
+            data.supervisor_data.number,
+            data.marker_data.number,
+            base_data.base_X,
+            base_data.base_Y,
+            base_data.base_S,
+            base_data.has_base_match,
+            1.0,
+        )
         record.score = pulp.value(score)
 
         record.construct_time = create_time.interval
@@ -2837,24 +2774,24 @@ def _process_PuLP_solution(
         try:
             # note _store_PuLP_solution does not do a commit by itself
             _store_PuLP_solution(
-                X,
-                Y,
-                S,
+                pulp_data.X,
+                pulp_data.Y,
+                pulp_data.S,
                 record,
-                number_sel,
-                number_to_sel,
-                number_lp,
-                number_to_lp,
-                number_sup,
-                number_to_sup,
-                number_mark,
-                number_to_mark,
-                multiplicity,
-                sel_dict,
-                sup_dict,
-                mark_dict,
-                lp_dict,
-                mean_CATS_per_project,
+                data.selector_data.number,
+                data.selector_data.number_to_selector,
+                data.project_data.number,
+                data.project_data.number_to_project,
+                data.supervisor_data.number,
+                data.supervisor_data.number_to_faculty,
+                data.marker_data.number,
+                data.marker_data.number_to_faculty,
+                data.selector_data.multiplicity,
+                data.selector_data.dict,
+                data.supervisor_data.dict,
+                data.marker_data.dict,
+                data.project_data.dict,
+                data.mean_CATS_per_project,
             )
             db.session.commit()
 
@@ -3021,27 +2958,10 @@ def register_matching_tasks(celery):
         score = _execute_live(
             self,
             record,
-            pulp_data.problem,
-            pulp_data.X,
-            pulp_data.Y,
-            pulp_data.S,
-            data.W,
-            data.R,
+            data,
+            pulp_data,
+            base_data,
             create_time,
-            data.selector_data.number,
-            data.selector_data.number_to_selelector,
-            data.project_data.number,
-            data.project_data.number_to_project,
-            data.supervisor_data.number,
-            data.supervisor_data.number_to_faculty,
-            data.marker_data.number,
-            data.marker_data.number_to_faculty,
-            data.selector_data.dict,
-            data.project_data.dict,
-            data.supervisor_data.dict,
-            data.marker_data.dict,
-            data.selector_data.multiplicity,
-            data.mean_CATS_per_project,
         )
 
         if record.created_by is not None:
@@ -3152,27 +3072,10 @@ def register_matching_tasks(celery):
                 self,
                 scratch_path.path,
                 record,
-                pulp_data.problem,
-                pulp_data.X,
-                pulp_data.Y,
-                pulp_data.S,
-                data.W,
-                data.R,
+                data,
+                pulp_data,
+                base_data,
                 create_time,
-                data.selector_data.number,
-                data.selector_data.number_to_selector,
-                data.project_data.number,
-                data.project_data.number_to_project,
-                data.supervisor_data.number,
-                data.supervisor_data.number_to_faculty,
-                data.marker_data_data.number,
-                data.marker_data.number_to_faculty,
-                data.selector_data.dict,
-                data.project_data.dict,
-                data.supervisor_data.dict,
-                data.marker_data.dict,
-                data.selector_data.multiplicity,
-                data.mean_CATS_per_project,
             )
 
             if record.created_by is not None:

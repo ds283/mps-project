@@ -3099,7 +3099,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
     # don't clash presentations by default?
     dont_clash_presentations = db.Column(db.Boolean(), default=True)
 
-    # CAPACITY
+    # CAPACITY LIMITS FOR THIS FACULTY MEMBER
 
     # supervision CATS capacity
     CATS_supervision = db.Column(db.Integer())

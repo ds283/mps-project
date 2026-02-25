@@ -10,6 +10,7 @@
 
 import base64
 import itertools
+from collections import namedtuple
 from datetime import datetime, timedelta
 from io import BytesIO
 from os import path
@@ -70,6 +71,56 @@ FALLBACK_DEFAULT_MODERATOR_CATS = 3
 UNBOUNDED_SUPERVISING_CAPACITY = 100
 UNBOUNDED_MARKING_CAPACITY = 100
 
+# named tuples to capture large return values from some function
+SelectorEnumeration = namedtuple(
+    "SelectorEnumeration",
+    [
+        "number",
+        "selector_to_number",
+        "number_to_selector",
+        "multiplicity",
+        "dict",
+    ]
+)
+
+LiveProjectEnumeration = namedtuple(
+    "LiveProjectEnumeration",
+    [
+        "number",
+        "project_to_number",
+        "number_to_project",
+        "CATS_supervisor",
+        "CATS_marker",
+        "capacity",
+        "dict",
+        "group_dict",
+    ]
+)
+
+SupervisorEnumeration = namedtuple(
+    "SupervisorEnumeration",
+    [
+        "number",
+        "faculty_to_number",
+        "number_to_faculty",
+        "global_limit",
+        "enrolment_limit",
+        "dict",
+    ]
+)
+
+MarkerEnumeration = namedtuple(
+    "MarkerEnumeration",
+    [
+        "number",
+        "faculty_to_number",
+        "number_to_faculty",
+        "global_limit",
+        "enrolment_limit",
+        "dict",
+    ]
+)
+
 
 _match_success = """
 <div><strong>Matching task {{ name }} has completed successfully.</strong></div>
@@ -93,11 +144,12 @@ Please click <a href="{{ url_for('admin.manage_matching') }}" onclick="setTimeou
 """
 
 
-def _find_mean_project_CATS(configs):
+def _find_mean_project_CATS(configs: List[ProjectClassConfig]):
     CATS_total = 0
     number = 0
 
     for config in configs:
+        config: ProjectClassConfig
         if config.uses_supervisor and config.CATS_supervision is not None:
             CATS_total += config.CATS_supervision
             number += 1
@@ -171,7 +223,7 @@ def _pulp_dicts(
     return d
 
 
-def _enumerate_selectors(record, configs, read_serialized=False):
+def _enumerate_selectors(record: MatchingAttempt, configs: List[ProjectClassConfig], read_serialized=False):
     """
     Build a list of SelectingStudents who belong to projects that participate in automatic
     matching, and assign them to consecutive numbers beginning at 0.
@@ -187,7 +239,7 @@ def _enumerate_selectors(record, configs, read_serialized=False):
     return _enumerate_selectors_primary(configs, include_only_submitted=record.include_only_submitted)
 
 
-def _enumerate_selectors_serialized(record):
+def _enumerate_selectors_serialized(record: MatchingAttempt) -> SelectorEnumeration:
     sel_to_number = {}
     number_to_sel = {}
 
@@ -204,6 +256,7 @@ def _enumerate_selectors_serialized(record):
         .all()
     )
 
+    n = 0
     for n, sel in records:
         n: int
         sel: SelectingStudent
@@ -216,10 +269,16 @@ def _enumerate_selectors_serialized(record):
 
         selector_dict[n] = sel
 
-    return n + 1, sel_to_number, number_to_sel, multiplicity, selector_dict
+    return SelectorEnumeration(
+        number=n + 1,
+        selector_to_number=sel_to_number,
+        number_to_selector=number_to_sel,
+        multiplicity=multiplicity,
+        dict=selector_dict
+    )
 
 
-def _enumerate_selectors_primary(configs, include_only_submitted=False):
+def _enumerate_selectors_primary(configs: List[ProjectClassConfig], include_only_submitted: bool=False) -> SelectorEnumeration:
     number = 0
     sel_to_number = {}
     number_to_sel = {}
@@ -258,7 +317,7 @@ def _enumerate_selectors_primary(configs, include_only_submitted=False):
             sel: SelectingStudent
 
             # decide what to do with this selector
-            attach = False
+            attach: bool = False
 
             if sel.has_submitted:
                 # always count selectors who have submitted choices or accepted custom offers
@@ -308,10 +367,16 @@ def _enumerate_selectors_primary(configs, include_only_submitted=False):
 
                 number += 1
 
-    return number, sel_to_number, number_to_sel, multiplicity, selector_dict
+    return SelectorEnumeration(
+        number=number,
+        selector_to_number=sel_to_number,
+        number_to_selector=number_to_sel,
+        multiplicity=multiplicity,
+        dict=selector_dict
+    )
 
 
-def _enumerate_liveprojects(record, configs, read_serialized=False):
+def _enumerate_liveprojects(record: MatchingAttempt, configs: List[ProjectClassConfig], read_serialized: bool=False):
     """
     Build a list of LiveProjects belonging to projects that participate in automatic
     matching, and assign them to consecutive numbers beginning at 0.
@@ -326,7 +391,7 @@ def _enumerate_liveprojects(record, configs, read_serialized=False):
     return _enumerate_liveprojects_primary(configs)
 
 
-def _enumerate_liveprojects_serialized(record):
+def _enumerate_liveprojects_serialized(record: MatchingAttempt) -> LiveProjectEnumeration:
     lp_to_number = {}
     number_to_lp = {}
 
@@ -347,6 +412,7 @@ def _enumerate_liveprojects_serialized(record):
         .all()
     )
 
+    n = 0
     for n, lp in records:
         n: int
         lp: LiveProject
@@ -379,10 +445,19 @@ def _enumerate_liveprojects_serialized(record):
 
         project_group_dict[record.key].append(record.enumeration)
 
-    return n + 1, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict, project_group_dict
+    return LiveProjectEnumeration(
+        number=n + 1,
+        project_to_number=lp_to_number,
+        number_to_project=number_to_lp,
+        CATS_supervisor=CATS_supervisor,
+        CATS_marker=CATS_marker,
+        capacity=capacity,
+        dict=project_dict,
+        group_dict=project_group_dict
+    )
 
 
-def _enumerate_liveprojects_primary(configs):
+def _enumerate_liveprojects_primary(configs: List[ProjectClassConfig]) -> LiveProjectEnumeration:
     number = 0
     lp_to_number = {}
     number_to_lp = {}
@@ -396,6 +471,7 @@ def _enumerate_liveprojects_primary(configs):
     project_group_dict = {}  # mapping from config.id to list of LiveProject.ids associated with it
 
     for config in configs:
+        config: ProjectClassConfig
         # get LiveProject instances that belong to this config instance and are associated with
         # a supervisor who is still enrolled
         # (e.g. enrolment status may have changed since the projects went live)
@@ -448,10 +524,19 @@ def _enumerate_liveprojects_primary(configs):
 
                 number += 1
 
-    return number, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict, project_group_dict
+    return LiveProjectEnumeration(
+        number=number,
+        project_to_number=lp_to_number,
+        number_to_project=number_to_lp,
+        CATS_supervisor=CATS_supervisor,
+        CATS_marker=CATS_marker,
+        capacity=capacity,
+        dict=project_dict,
+        group_dict=project_group_dict,
+    )
 
 
-def _enumerate_supervising_faculty(record, configs, read_serialized=False):
+def _enumerate_supervising_faculty(record: MatchingAttempt, configs: List[ProjectClassConfig], read_serialized: bool=False):
     """
     Build a list of active, enrolled supervising faculty belonging to projects that
     participate in automatic matching, and assign them to consecutive numbers beginning at zero
@@ -465,12 +550,12 @@ def _enumerate_supervising_faculty(record, configs, read_serialized=False):
     return _enumerate_supervising_faculty_primary(configs)
 
 
-def _enumerate_supervising_faculty_serialized(record):
+def _enumerate_supervising_faculty_serialized(record: MatchingAttempt) -> SupervisorEnumeration:
     fac_to_number = {}
     number_to_fac = {}
 
-    limit = {}  # map from faculty number to global supervision CATS limit
-    config_limits = {}  # map from config.id to (map from faculty number to local supervision CATS limit)
+    global_limit = {}  # map from faculty number to global supervision CATS limit
+    enrolment_limit = {}  # map from config.id to (map from faculty number to local supervision CATS limit)
 
     fac_dict = {}
 
@@ -484,6 +569,7 @@ def _enumerate_supervising_faculty_serialized(record):
         .all()
     )
 
+    n = 0
     for n, fac in records:
         n: int
         fac: FacultyData
@@ -492,7 +578,7 @@ def _enumerate_supervising_faculty_serialized(record):
         number_to_fac[n] = fac.id
 
         lim = fac.CATS_supervision
-        limit[n] = lim if lim is not None and lim > 0 else 0
+        global_limit[n] = lim if lim is not None and lim > 0 else 0
 
         fac_dict[n] = fac
 
@@ -503,27 +589,35 @@ def _enumerate_supervising_faculty_serialized(record):
 
         config_id = record.key
         fac_number = record.enumeration
-        limit = record.key2
+        lim = record.key2
 
-        if config_id not in config_limits:
-            config_limits[config_id] = {}
+        if config_id not in enrolment_limit:
+            enrolment_limit[config_id] = {}
 
-        config_limits[config_id][fac_number] = limit
+        enrolment_limit[config_id][fac_number] = lim
 
-    return n + 1, fac_to_number, number_to_fac, limit, fac_dict, config_limits
+    return SupervisorEnumeration(
+        number=n + 1,
+        faculty_to_number=fac_to_number,
+        number_to_faculty=number_to_fac,
+        global_limit=global_limit,
+        enrolment_limit=enrolment_limit,
+        dict=fac_dict,
+    )
 
 
-def _enumerate_supervising_faculty_primary(configs):
+def _enumerate_supervising_faculty_primary(configs: List[ProjectClassConfig]) -> SupervisorEnumeration:
     number = 0
     fac_to_number = {}
     number_to_fac = {}
 
-    limit = {}  # map from faculty number to global supervision CATS limit
-    config_limits = {}  # map from config.id to (map from faculty number to local supervision CATS limit)
+    global_limit = {}  # map from faculty number to global supervision CATS limit
+    enrolment_limit = {}  # map from config.id to (map from faculty number to local supervision CATS limit)
 
     fac_dict = {}
 
     for config in configs:
+        config: ProjectClassConfig
         # get EnrollmentRecord instances for this project class
         records = (
             db.session.query(EnrollmentRecord)
@@ -534,7 +628,7 @@ def _enumerate_supervising_faculty_primary(configs):
             .all()
         )
 
-        config_limits[config.id] = {}
+        enrolment_limit[config.id] = {}
 
         # what gets written into our tables are links to the corresponding FacultyData instances
         for rec in records:
@@ -545,20 +639,32 @@ def _enumerate_supervising_faculty_primary(configs):
                 fac_to_number[fac.id] = number
                 number_to_fac[number] = fac.id
 
+                # lim is the global CATS supervision limit for this faculty
+                # TODO: at the moment, we don't treat this quite properly, because we apply the limit
+                #  just to this single matching
                 lim = fac.CATS_supervision
-                limit[number] = lim if lim is not None and lim > 0 else 0
+                global_limit[number] = lim if lim is not None and lim > 0 else 0
 
                 fac_dict[number] = fac
 
                 number += 1
 
+            # EnrollmentRecord.CATS_supervision is the supervision limit
+            # for a specific project type/class
             if rec.CATS_supervision is not None:
-                config_limits[config.id][fac_to_number[fac.id]] = rec.CATS_supervision
+                enrolment_limit[config.id][fac_to_number[fac.id]] = rec.CATS_supervision
 
-    return number, fac_to_number, number_to_fac, limit, fac_dict, config_limits
+    return SupervisorEnumeration(
+        number=number,
+        faculty_to_number=fac_to_number,
+        number_to_faculty=number_to_fac,
+        global_limit=global_limit,
+        enrolment_limit=enrolment_limit,
+        dict=fac_dict,
+    )
 
 
-def _enumerate_marking_faculty(record, configs, read_serialized=False):
+def _enumerate_marking_faculty(record: MatchingAttempt, configs: List[ProjectClassConfig], read_serialized: bool=False) -> MarkerEnumeration:
     """
     Build a list of active, enrolled 2nd-marking faculty belonging to projects that
     participate in automatic matching, and assign them to consecutive numbers beginning at zero
@@ -572,12 +678,12 @@ def _enumerate_marking_faculty(record, configs, read_serialized=False):
     return _enumerate_marking_faculty_primary(configs)
 
 
-def _enumerate_marking_faculty_serialized(record):
+def _enumerate_marking_faculty_serialized(record: MatchingAttempt) -> MarkerEnumeration:
     fac_to_number = {}
     number_to_fac = {}
 
-    limit = {}  # map from faculty number to global marking CATS limit
-    config_limits = {}  # map from config.id to (map from faculty number to local marking CATS limit)
+    global_limit = {}  # map from faculty number to global marking CATS limit
+    enrolment_limits = {}  # map from config.id to (map from faculty number to local marking CATS limit)
 
     fac_dict = {}
 
@@ -591,6 +697,7 @@ def _enumerate_marking_faculty_serialized(record):
         .all()
     )
 
+    n = 0
     for n, fac in records:
         n: int
         fac: FacultyData
@@ -599,7 +706,7 @@ def _enumerate_marking_faculty_serialized(record):
         number_to_fac[n] = fac.id
 
         lim = fac.CATS_marking
-        limit[n] = lim if lim is not None and lim > 0 else 0
+        global_limit[n] = lim if lim is not None and lim > 0 else 0
 
         fac_dict[n] = fac
 
@@ -610,23 +717,30 @@ def _enumerate_marking_faculty_serialized(record):
 
         config_id = record.key
         fac_number = record.enumeration
-        limit = record.key2
+        lim = record.key2
 
-        if config_id not in config_limits:
-            config_limits[config_id] = {}
+        if config_id not in enrolment_limits:
+            enrolment_limits[config_id] = {}
 
-        config_limits[config_id][fac_number] = limit
+        enrolment_limits[config_id][fac_number] = lim
 
-    return n + 1, fac_to_number, number_to_fac, limit, fac_dict, config_limits
+    return MarkerEnumeration(
+        number=n + 1,
+        faculty_to_number=fac_to_number,
+        number_to_faculty=number_to_fac,
+        global_limit=global_limit,
+        enrolment_limit=enrolment_limits,
+        dict=fac_dict,
+    )
 
 
-def _enumerate_marking_faculty_primary(configs):
+def _enumerate_marking_faculty_primary(configs: List[ProjectClassConfig]) -> MarkerEnumeration:
     number = 0
     fac_to_number = {}
     number_to_fac = {}
 
-    limit = {}  # map from faculty number to global marking CATS limit
-    config_limits = {}  # map from config.id to (map from faculty number to local marking CATS limit)
+    global_limit = {}  # map from faculty number to global marking CATS limit
+    enrolment_limit = {}  # map from config.id to (map from faculty number to local marking CATS limit)
 
     fac_dict = {}
 
@@ -641,7 +755,7 @@ def _enumerate_marking_faculty_primary(configs):
             .all()
         )
 
-        config_limits[config.id] = {}
+        enrolment_limit[config.id] = {}
 
         # what gets written into our tables are links to the corresponding FacultyData instances
         for rec in records:
@@ -653,16 +767,23 @@ def _enumerate_marking_faculty_primary(configs):
                 number_to_fac[number] = fac.id
 
                 lim = fac.CATS_marking
-                limit[number] = lim if lim is not None and lim > 0 else 0
+                global_limit[number] = lim if lim is not None and lim > 0 else 0
 
                 fac_dict[number] = fac
 
                 number += 1
 
             if rec.CATS_marking is not None:
-                config_limits[config.id][fac_to_number[fac.id]] = rec.CATS_marking
+                enrolment_limit[config.id][fac_to_number[fac.id]] = rec.CATS_marking
 
-    return number, fac_to_number, number_to_fac, limit, fac_dict, config_limits
+    return MarkerEnumeration(
+        number=number,
+        faculty_to_number=fac_to_number,
+        number_to_faculty=number_to_fac,
+        global_limit=global_limit,
+        enrolment_limit=enrolment_limit,
+        dict=fac_dict,
+    )
 
 
 def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict, record: MatchingAttempt):
@@ -1250,7 +1371,7 @@ def _create_PuLP_problem(
 
         # we subtract off a penalty for all 'elastic' variables with a high coefficient, to discourage violation
         # of CATS limits except where really necessary; notice that these elastic variables are measured in
-        # units of CATS, not projects, so the coefficents really are large
+        # units of CATS, not projects, so the coefficients really are large
         elastic_CATS_penalty = abs(CATS_violation_penalty) * (
             sum(sup_elastic_CATS[i] for i in range(number_sup)) + sum(mark_elastic_CATS[i] for i in range(number_mark))
         )
@@ -2193,7 +2314,7 @@ def _create_marker_PuLP_problem(mark_dict, submit_dict, mark_CATS_dict, config):
     return prob, Y
 
 
-def _initialize(self, record, read_serialized=False):
+def _initialize(self, record: MatchingAttempt, read_serialized: bool=False):
     progress_update(record.celery_id, TaskRecord.RUNNING, 5, "Collecting information...", autocommit=True)
 
     try:

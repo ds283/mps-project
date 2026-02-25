@@ -1223,39 +1223,9 @@ def _floatify(item):
 
 
 def _create_PuLP_problem(
-    R,
-    M,
-    marker_valence,
-    W,
-    P,
-    cstr,
-    base_X,
-    base_Y,
-    base_S,
-    has_base_match,
-    force_base,
-    CATS_supervisor,
-    CATS_marker,
-    capacity,
-    sup_limits,
-    sup_pclass_limits,
-    mark_limits,
-    mark_pclass_limits,
-    multiplicity,
-    number_lp,
-    number_mark,
-    number_sel,
-    number_sup,
-    record,
-    sel_dict,
-    sup_dict,
-    mark_dict,
-    lp_dict,
-    lp_group_dict,
-    sup_only_numbers,
-    mark_only_numbers,
-    sup_and_mark_numbers,
-    mean_CATS_per_project,
+    data: InitializationData,
+    base_data: BaseData,
+    record: MatchingAttempt,
 ):
     """
     Generate a PuLP problem to find an optimal assignment of projects+markers to students
@@ -1272,7 +1242,43 @@ def _create_PuLP_problem(
     no_assignment_penalty = _floatify(record.no_assignment_penalty)
     base_bias = _floatify(record.base_bias)
 
-    mean_CATS_per_project = _floatify(mean_CATS_per_project)
+    number_sel = data.selector_data.number
+    number_lp = data.project_data.number
+    number_sup = data.supervisor_data.number
+    number_mark = data.marker_data.number
+
+    sel_dict = data.selector_data.dict
+    lp_dict = data.project_data.dict
+    sup_dict = data.supervisor_data.dict
+    mark_dict = data.marker_data.dict
+
+    R = data.R
+    M = data.M
+    W = data.W
+    P = data.P
+    cstr = data.cstr
+    marker_valence = data.marker_valence
+
+    base_X = base_data.base_X
+    base_Y = base_data.base_Y
+    base_S = base_data.base_S
+    has_base_match = base_data.has_base_match
+
+    force_base = record.force_base
+    multiplicity = data.selector_data.multiplicity
+    capacity = data.project_data.capacity
+    sup_limits = data.supervisor_data.global_limit
+    sup_pclass_limits = data.supervisor_data.enrolment_limit
+    mark_limits = data.marker_data.global_limit
+    mark_pclass_limits = data.marker_data.enrolment_limit
+    lp_group_dict = data.project_data.group_dict
+    CATS_supervisor = data.project_data.CATS_supervisor
+    CATS_marker = data.project_data.CATS_marker
+    sup_only_numbers = data.sup_only_numbers
+    mark_only_numbers = data.mark_only_numbers
+    sup_and_mark_numbers = data.sup_and_mark_numbers
+
+    mean_CATS_per_project = _floatify(data.mean_CATS_per_project)
 
     # generate PuLP problem
     prob: pulp.LpProblem = pulp.LpProblem(record.name, pulp.LpMaximize)
@@ -1288,7 +1294,7 @@ def _create_PuLP_problem(
         # 1 = selector assigned to project
 
         with Timer() as X_timer:
-            X = _pulp_dicts("X", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
+            X = _pulp_dicts("X", itertools.product(range(data.selector_data.number), range(data.project_data.number)), cat=pulp.LpBinary)
         print(" ** created X[i,j] matrix ({num} elements) in time {t}".format(t=X_timer.interval, num=len(X)))
 
         # SUPERVISOR DECISION VARIABLES
@@ -1299,21 +1305,21 @@ def _create_PuLP_problem(
         # who are assigned)
         # value = number of times assigned to this project. Can't be negative.
         with Timer() as S_timer:
-            S = _pulp_dicts("S", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpInteger, lowBound=0)
+            S = _pulp_dicts("S", itertools.product(range(data.supervisor_data.number), range(data.project_data.number)), cat=pulp.LpInteger, lowBound=0)
         print(" ** created S[k,j] ({num} elements) matrix in time {t}".format(t=S_timer.interval, num=len(S)))
 
         # SUMMARY DECISION VARIABLES FOR SUPERVISORS
 
         # boolean version of S indicating whether a supervisor has any assignments to a particular project
         with Timer() as ss_timer:
-            ss = _pulp_dicts("ss", itertools.product(range(number_sup), range(number_lp)), cat=pulp.LpBinary)
+            ss = _pulp_dicts("ss", itertools.product(range(data.supervisor_data.number), range(data.project_data.number)), cat=pulp.LpBinary)
         print(" ** created ss[k,j] ({num} elements) matrix in time {t}".format(t=ss_timer.interval, num=len(ss)))
 
         # generate auxiliary variables that track whether a given supervisor has any projects assigned or not
         # 0 = none assigned
         # 1 = at least one assigned (obtained by biasing the optimizer to produce this from the objective function)
         with Timer() as Z_timer:
-            Z = _pulp_dicts("Z", range(number_sup), cat=pulp.LpBinary)
+            Z = _pulp_dicts("Z", range(data.supervisor_data.number), cat=pulp.LpBinary)
         print(" ** created Z[k] ({num} elements) matrix in time {t}".format(t=Z_timer.interval, num=len(Z)))
 
         # MARKER DECISION VARIABLES
@@ -1328,7 +1334,7 @@ def _create_PuLP_problem(
         # 0 = marker not assigned to this selector/project pair
         # 1 = marker assigned to this selector/project pair
         with Timer() as Y_timer:
-            Y = _pulp_dicts("Y", itertools.product(range(number_mark), range(number_lp), range(number_sel)), cat=pulp.LpBinary)
+            Y = _pulp_dicts("Y", itertools.product(range(data.marker_data.number), range(data.project_data.number), range(data.selector_data.number)), cat=pulp.LpBinary)
         print(" ** created Y[i,j,l] ({num} elements) matrix in time {t}".format(t=Y_timer.interval, num=len(Y)))
 
         # SUMMARY DECISION VARIABLES FOR MARKERS
@@ -3008,41 +3014,7 @@ def register_matching_tasks(celery):
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
-            pulp_data: PuLPProblem = _create_PuLP_problem(
-                data.R,
-                data.M,
-                data.marker_valence,
-                data.W,
-                data.P,
-                data.cstr,
-                base_data.base_X,
-                base_data.base_Y,
-                base_data.base_S,
-                base_data.has_base_match,
-                record.force_base,
-                data.CATS_supervisor,
-                data.CATS_marker,
-                data.project_data.capacity,
-                data.supervisor_data.global_limit,
-                data.supervisor_data.enrolment_limit,
-                data.marker_data.global_limit,
-                data.marker_data.enrolment_limit,
-                data.selector_data.multiplicity,
-                data.project_data.number,
-                data.marker_data.number,
-                data.selector_data.number,
-                data.supevisor_data.number,
-                record,
-                data.selector_data.dict,
-                data.supervisor_data.dict,
-                data.marker_data.dict,
-                data.project_data.dict,
-                data.project_data.group_dict,
-                data.sup_only_numbers,
-                data.mark_only_numbers,
-                data.sup_and_mark_numbers,
-                data.mean_CATS_per_project,
-            )
+            pulp_data: PuLPProblem = _create_PuLP_problem(data, base_data, record)
 
         print(" -- creation complete in time {t}".format(t=create_time.interval))
 
@@ -3108,41 +3080,7 @@ def register_matching_tasks(celery):
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
-            pulp_data: PuLPProblem = _create_PuLP_problem(
-                data.R,
-                data.M,
-                data.marker_valence,
-                data.W,
-                data.P,
-                data.cstr,
-                base_data.base_X,
-                base_data.base_Y,
-                base_data.base_S,
-                base_data.has_base_match,
-                record.force_base,
-                data.CATS_supervisor,
-                data.CATS_marker,
-                data.project_data.capacity,
-                data.supervisor_data.global_limit,
-                data.supervisor_data.enrolment_limit,
-                data.marker_data.global_limit,
-                data.marker_data.enrolment_limit,
-                data.selector_data.multiplicity,
-                data.project_data.number,
-                data.marker_data.number,
-                data.selector_data.number,
-                data.supevisor_data.number,
-                record,
-                data.selector_data.dict,
-                data.supervisor_data.dict,
-                data.marker_data.dict,
-                data.project_data.dict,
-                data.project_data.group_dict,
-                data.sup_only_numbers,
-                data.mark_only_numbers,
-                data.sup_and_mark_numbers,
-                data.mean_CATS_per_project,
-            )
+            pulp_data: PuLPProblem = _create_PuLP_problem(data, base_data, record)
 
         print(" -- creation complete in time {t}".format(t=create_time.interval))
 
@@ -3206,41 +3144,7 @@ def register_matching_tasks(celery):
 
                 progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
 
-                pulp_data: PuLPProblem = _create_PuLP_problem(
-                    data.R,
-                    data.M,
-                    data.marker_valence,
-                    data.W,
-                    data.P,
-                    data.cstr,
-                    base_data.base_X,
-                    base_data.base_Y,
-                    base_data.base_S,
-                    base_data.has_base_match,
-                    record.force_base,
-                    data.CATS_supervisor,
-                    data.CATS_marker,
-                    data.project_data.capacity,
-                    data.supervisor_data.global_limit,
-                    data.supervisor_data.enrolment_limit,
-                    data.marker_data.global_limit,
-                    data.marker_data.enrolment_limit,
-                    data.selector_data.multiplicity,
-                    data.project_data.number,
-                    data.marker_data.number,
-                    data.selector_data.number,
-                    data.supevisor_data.number,
-                    record,
-                    data.selector_data.dict,
-                    data.supervisor_data.dict,
-                    data.marker_data.dict,
-                    data.project_data.dict,
-                    data.project_data.group_dict,
-                    data.sup_only_numbers,
-                    data.mark_only_numbers,
-                    data.sup_and_mark_numbers,
-                    data.mean_CATS_per_project,
-                )
+                pulp_data: PuLPProblem = _create_PuLP_problem(data, base_data, record)
 
             print(" -- creation complete in time {t}".format(t=create_time.interval))
 

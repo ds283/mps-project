@@ -1428,7 +1428,7 @@ def _create_PuLP_problem(
         no_assignment_penalty = 2.0 * abs(no_assignment_penalty) * sum(1 - Z[i] for i in range(number_sup))
 
         prob += (
-            _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, number_mark, base_X, base_Y, base_S, has_base_match, base_bias)
+            _build_score_function(data, PuLPProblem(problem=None, X=X, Y=Y, S=S), base_data, base_bias)
             - group_levelling_term
             - global_levelling_term
             - marking_bias
@@ -1908,13 +1908,13 @@ def _create_PuLP_problem(
     return PuLPProblem(problem=prob, X=X, Y=Y, S=S)
 
 
-def _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, number_mark, base_X, base_Y, base_S, has_base_match, base_bias):
+def _build_score_function(data: InitializationData, pulp_data: PuLPProblem, base_data: BaseData, base_bias):
     # generate score function, used as a component of the maximization objective
     objective = 0
 
     fbase_bias = None
 
-    if len(base_X) > 0 or len(base_Y) > 0 or len(base_S) > 0:
+    if len(base_data.base_X) > 0 or len(base_data.base_Y) > 0 or len(base_data.base_S) > 0:
         if base_bias is None:
             raise RuntimeError("base_bias = None in _build_score_function")
         else:
@@ -1922,133 +1922,106 @@ def _build_score_function(R, W, X, Y, S, number_lp, number_sel, number_sup, numb
             print("-- using base bias of {f}".format(f=fbase_bias))
 
     # reward the solution for assigning students to highly ranked projects:
-    for i in range(number_sel):
-        base_match_exists = i in has_base_match
+    for i in range(data.selector_data.number):
+        base_match_exists = i in base_data.has_base_match
         if base_match_exists:
             print("-- using base match data for selector {n}".format(n=i))
 
-        for j in range(number_lp):
+        for j in range(data.project_data.number):
             idx = (i, j)
 
             if base_match_exists:
                 # an assignment for selector i was present in the base, but we don't know whether it was for
                 # this project.
 
-                if idx in base_X:
+                if idx in base_data.base_X:
                     # an assignment to this project *was* already in the base, so bias it to be present here
-                    objective += fbase_bias * X[idx]
+                    objective += fbase_bias * pulp_data.X[idx]
                 else:
                     # an assignment to this project was *not* already in the base, so bias it to be absent here
-                    objective += fbase_bias * (1 - X[idx])
+                    objective += fbase_bias * (1 - pulp_data.X[idx])
             else:
                 # no assignment for selector i was present in the base
 
-                if R[idx] > 0:
+                if data.R[idx] > 0:
                     # score is 1/rank of assigned project, weighted
-                    objective += X[idx] * W[idx] / R[idx]
+                    objective += pulp_data.X[idx] * data.W[idx] / data.R[idx]
 
     # bias towards any marking choices from base match
-    if len(base_Y) > 0:
-        for i in range(number_mark):
-            for j in range(number_lp):
-                for l in range(number_sel):
+    if len(base_data.base_Y) > 0:
+        for i in range(data.marker_data.number):
+            for j in range(data.project_data.number):
+                for l in range(data.selector_data.number):
                     idx = (i, j, l)
 
-                    if idx in base_Y:
+                    if idx in base_data.base_Y:
                         # bias Y assignment towards the multiplicity found in the base
-                        m = base_Y[idx]
-                        objective += fbase_bias * (Y[idx] - int(m))
+                        m = base_data.base_Y[idx]
+                        objective += fbase_bias * (pulp_data.Y[idx] - int(m))
                     else:
                         # bias Y assignment towards Y = 0
-                        objective += fbase_bias * (1 - Y[idx])
+                        objective += fbase_bias * (1 - pulp_data.Y[idx])
 
     # bias towards any supervising choices from base match
-    if len(base_S) > 0:
-        for k in range(number_sup):
-            for j in range(number_lp):
+    if len(base_data.base_S) > 0:
+        for k in range(data.supervisor_data.number):
+            for j in range(data.project_data.number):
                 idx = (k, j)
 
-                if idx in base_S:
+                if idx in base_data.base_S:
                     # bias S assignment towards the multiplicity found in the base
-                    m = base_S[idx]
-                    objective += fbase_bias * (S[idx] - int(m))
+                    m = base_data.base_S[idx]
+                    objective += fbase_bias * (pulp_data.S[idx] - int(m))
                 else:
                     # bias Y assignment towards S=0
-                    objective += fbase_bias * (1 - S[idx])
+                    objective += fbase_bias * (1 - pulp_data.S[idx])
 
     return objective
 
 
 def _store_PuLP_solution(
-    X,
-    Y,
-    S,
+    pulp_data: PuLPProblem,
     record: MatchingAttempt,
-    number_sel,
-    number_to_sel,
-    number_lp,
-    number_to_lp,
-    number_sup,
-    number_to_sup,
-    number_mark,
-    number_to_mark,
-    multiplicity,
-    sel_dict,
-    sup_dict,
-    mark_dict,
-    lp_dict,
-    mean_CATS_per_project,
+    data: InitializationData,
 ):
     """
     Store a matching satisfying all the constraints of the pulp problem
-    :param number_to_sup:
-    :param S:
-    :param number_sup:
-    :param prob:
-    :param record:
-    :param number_sel:
-    :param number_to_sel:
-    :param number_lp:
-    :param number_to_lp:
-    :param number_mark:
-    :param number_to_mark:
-    :return:
     """
 
     # store configuration data
     with Timer() as config_timer:
-        for item in sup_dict.values():
+        for item in data.supervisor_data.dict.values():
             if item not in record.supervisors:
                 record.supervisors.append(item)
 
-        for item in mark_dict.values():
+        for item in data.marker_data.dict.values():
             if item not in record.markers:
                 record.markers.append(item)
 
-        for item in lp_dict.values():
+        for item in data.project_data.dict.values():
             if item not in record.projects:
                 record.projects.append(item)
 
     print(" ** updated MatchingAttempt configuration data in time {t}".format(t=config_timer.interval))
 
-    record.mean_CATS_per_project = mean_CATS_per_project
+    record.mean_CATS_per_project = data.mean_CATS_per_project
 
     # generate dictionary of supervisor assignments: we map each project id to a list of supervisors
     with Timer() as sup_timer:
         supervisors = {}
-        for j in range(number_lp):
-            proj_id = number_to_lp[j]
+        for j in range(data.project_data.number):
+            proj_id = data.project_data.number_to_project[j]
             if proj_id in supervisors:
                 raise RuntimeError("PuLP solution has inconsistent supervisor assignment")
 
             assigned = {}
 
-            for k in range(number_sup):
-                S[(k, j)].round()
+            for k in range(data.supervisor_data.number):
+                pulp_data.S[(k, j)].round()
                 # get multiplicity m with which supervisor k is assigned to project j
-                m = pulp.value(S[(k, j)])
+                m = pulp.value(pulp_data.S[(k, j)])
                 if m > 0:
-                    assigned.update({number_to_sup[k]: m})
+                    assigned.update({data.supervisor_data.number_to_faculty[k]: m})
 
             supervisors[proj_id] = assigned
 
@@ -2058,26 +2031,26 @@ def _store_PuLP_solution(
     markers = {}
 
     with Timer() as mark_timer:
-        for j in range(number_lp):
-            proj_id = number_to_lp[j]
+        for j in range(data.project_data.number):
+            proj_id = data.project_data.number_to_project[j]
             if proj_id in markers:
                 raise RuntimeError("Marker entry already exists when storing PuLP marker assignment")
 
             assigned = {}
 
-            for l in range(number_sel):
-                sel_id = number_to_sel[l]
+            for l in range(data.selector_data.number):
+                sel_id = data.selector_data.number_to_selector[l]
                 if sel_id in assigned:
                     raise RuntimeError("Selector entry already exists when storing PuLP marker assignment")
 
                 sel_marker = set()
 
-                for i in range(number_mark):
-                    Y[(i, j, l)].round()
-                    m = pulp.value(Y[(i, j, l)])
+                for i in range(data.marker_data.number):
+                    pulp_data.Y[(i, j, l)].round()
+                    m = pulp.value(pulp_data.Y[(i, j, l)])
 
                     if m > 0:
-                        sel_marker.add(number_to_mark[i])
+                        sel_marker.add(data.marker_data.number_to_faculty[i])
 
                 assigned[sel_id] = sel_marker
 
@@ -2086,13 +2059,13 @@ def _store_PuLP_solution(
     print(" ** parsed marker decision variables in time {t}".format(t=mark_timer.interval))
 
     # loop through all selectors that participated in the matching, generating matching records for each one
-    for i in range(number_sel):
-        if i not in sel_dict:
+    for i in range(data.selector_data.number):
+        if i not in data.selector_data.dict:
             raise RuntimeError("PuLP solution references unexpected SelectingStudent instance")
 
-        sel_id: int = number_to_sel[i]
+        sel_id: int = data.selector_data.number_to_selector[i]
 
-        sel: SelectingStudent = sel_dict[i]
+        sel: SelectingStudent = data.selector_data.dict[i]
         if sel.id != sel_id:
             raise RuntimeError("Inconsistent selector lookup when storing PuLP solution")
 
@@ -2103,12 +2076,12 @@ def _store_PuLP_solution(
         # generate list of project assignments for this selector
         assigned = []
 
-        for j in range(number_lp):
-            X[(i, j)].round()
-            if pulp.value(X[(i, j)]) == 1:
+        for j in range(data.project_data.number):
+            pulp_data.X[(i, j)].round()
+            if pulp.value(pulp_data.X[(i, j)]) == 1:
                 assigned.append(j)
 
-        if len(assigned) != multiplicity[i]:
+        if len(assigned) != data.selector_data.multiplicity[i]:
             raise RuntimeError("Number of selector assignments in PuLP solution does not match expected selector multiplicity")
 
         print(f">> Storing assigned values for selector = {sel.student.user.name}")
@@ -2157,7 +2130,7 @@ def _store_PuLP_solution(
                     else:
                         print(f">>   -- Found no custom offers for period #{pd.submission_period}")
 
-        if len(markers_per_period) != multiplicity[i]:
+        if len(markers_per_period) != data.selector_data.multiplicity[i]:
             raise RuntimeError("Number of submission periods does not match expected selector multiplicity")
 
         print(f">>   Markers per period = {markers_per_period.items()}")
@@ -2167,11 +2140,11 @@ def _store_PuLP_solution(
             # pop a project assignment from the back of the stack
             proj_number: int = assigned.pop()
 
-            if proj_number not in lp_dict:
+            if proj_number not in data.project_data.dict:
                 raise RuntimeError("PuLP solution references unexpected LiveProject instance")
 
-            proj_id: int = number_to_lp[proj_number]
-            project: LiveProject = lp_dict[proj_number]
+            proj_id: int = data.project_data.number_to_project[proj_number]
+            project: LiveProject = data.project_data.dict[proj_number]
             if proj_id != project.id:
                 raise RuntimeError("Inconsistent project lookup when storing PuLP solution")
 
@@ -2221,9 +2194,9 @@ def _store_PuLP_solution(
             markers_needed = markers_per_period.pop(this_period)
             custom_offers_per_period.pop(this_period, None)
 
-            data = MatchingRecord(
+            data_rec = MatchingRecord(
                 matching_id=record.id,
-                selector_id=number_to_sel[i],
+                selector_id=data.selector_data.number_to_selector[i],
                 project_id=proj_id,
                 original_project_id=proj_id,
                 submission_period=this_period,
@@ -2232,7 +2205,7 @@ def _store_PuLP_solution(
                 parent_id=None if alt_data is None else alt_data["project"].id,
                 priority=None if alt_data is None else alt_data["priority"],
             )
-            db.session.add(data)
+            db.session.add(data_rec)
             db.session.flush()
 
             # ASSIGN ROLES (IF USED)
@@ -2270,11 +2243,11 @@ def _store_PuLP_solution(
 
                 # generate supervisor role record
                 role_supv = MatchingRole(user_id=supervisor, role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR)
-                data.roles.append(role_supv)
+                data_rec.roles.append(role_supv)
 
                 # generate original supervisor role record (cached so we can revert later if required)
                 orig_role_supv = MatchingRole(user_id=supervisor, role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR)
-                data.original_roles.append(orig_role_supv)
+                data_rec.original_roles.append(orig_role_supv)
 
             # find marker
             if uses_marker:
@@ -2296,11 +2269,11 @@ def _store_PuLP_solution(
 
                     # generate marker role record
                     role_mark = MatchingRole(user_id=marker, role=MatchingRole.ROLE_MARKER)
-                    data.roles.append(role_mark)
+                    data_rec.roles.append(role_mark)
 
                     # generate original marker role record (cached so we can revert later if required)
                     orig_role_mark = MatchingRole(user_id=marker, role=MatchingRole.ROLE_MARKER)
-                    data.original_roles.append(orig_role_mark)
+                    data_rec.original_roles.append(orig_role_mark)
 
                     markers_needed -= 1
 
@@ -2748,22 +2721,7 @@ def _process_PuLP_solution(
         # we don't just read the objective function out directly, because we don't want to include
         # contributions from the levelling and slack terms.
         # We don't account for biasing terms coming from a base match.
-        score = _build_score_function(
-            data.R,
-            data.W,
-            pulp_data.X,
-            pulp_data.Y,
-            pulp_data.S,
-            data.project_data.number,
-            data.selector_data.number,
-            data.supervisor_data.number,
-            data.marker_data.number,
-            base_data.base_X,
-            base_data.base_Y,
-            base_data.base_S,
-            base_data.has_base_match,
-            1.0,
-        )
+        score = _build_score_function(data, pulp_data, base_data, 1.0)
         record.score = pulp.value(score)
 
         record.construct_time = create_time.interval
@@ -2773,26 +2731,7 @@ def _process_PuLP_solution(
 
         try:
             # note _store_PuLP_solution does not do a commit by itself
-            _store_PuLP_solution(
-                pulp_data.X,
-                pulp_data.Y,
-                pulp_data.S,
-                record,
-                data.selector_data.number,
-                data.selector_data.number_to_selector,
-                data.project_data.number,
-                data.project_data.number_to_project,
-                data.supervisor_data.number,
-                data.supervisor_data.number_to_faculty,
-                data.marker_data.number,
-                data.marker_data.number_to_faculty,
-                data.selector_data.multiplicity,
-                data.selector_data.dict,
-                data.supervisor_data.dict,
-                data.marker_data.dict,
-                data.project_data.dict,
-                data.mean_CATS_per_project,
-            )
+            _store_PuLP_solution(pulp_data, record, data)
             db.session.commit()
 
         except SQLAlchemyError as e:

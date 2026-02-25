@@ -71,7 +71,7 @@
         <div class="card-body">
             {% set has_pclasses = (pclasses is not none and pclasses|length > 0) %}
             {% set has_groups = (groups is not none and groups|length > 0) %}
-            {% if has_pclasses or has_groups %}
+            {% if has_pclasses or has_groups or filter_CATS %}
                 <div class="card mt-3 mb-3 card-body bg-well">
                     {% set needs_hrule = false %}
                     {% if has_pclasses %}
@@ -124,6 +124,15 @@
                             </a>
                         </div>
                     </div>
+                </div>
+            {% endif %}
+
+            {% if filter_CATS %}
+                <div class="d-flex flex-row justify-content-end align-items-end gap-2">
+                    <a href="{{ url_for('manage_users.remove_all_CATS_limits', pclass=pclass_filter, group=group_filter, CATS='1') }}"
+                       class="btn btn-sm btn-outline-primary top-row-button">
+                        <i class="fas fa-trash"></i> Remove CATS limits
+                    </a>
                 </div>
             {% endif %}
 

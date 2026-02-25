@@ -36,36 +36,50 @@ _enrolled = """
 
 # language=jinja2
 _settings = """
+<div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
+    <span class="badge bg-primary">Default capacity {{ f.project_capacity }}</span>
+    {% if f.enforce_capacity %}
+        <div class="small">
+            <i class="fas fa-check-circle text-success"></i>
+            <span class="text-secondary">Enforce capacity</span>
+        </div>
+    {% endif %}
+</div>
 {% if f.sign_off_students %}
-    <span class="badge bg-info">Require meetings</span>
-{% endif %}
-<span class="badge bg-primary">Default capacity {{ f.project_capacity }}</span>
-{% if f.enforce_capacity %}
-    <span class="badge bg-info">Enforce capacity</span>
+    <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-1">
+        <div class="small">
+            <i class="fas fa-check-circle text-success"></i>
+            <span class="text-secondary">Require meetings</span>
+        </div>
+    </div>
 {% endif %}
 {% if f.show_popularity %}
-    <span class="badge bg-info">Show popularity</span>
+    <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-1">
+        <div class="small">
+            <i class="fas fa-check-circle text-success"></i>
+            <span class="text-secondary">Show popularity</span>
+        </div>
+    </div>
 {% endif %}
-<p>
-{% if f.CATS_supervision is not none %}
-    <span class="badge bg-warning text-dark">S: {{ f.CATS_supervision }} CATS</span>
-{% else %}
-    <span class="badge bg-secondary">S: Default CATS</span>
-{% endif %}
-{% if f.CATS_marking is not none %}
-    <span class="badge bg-warning text-dark">Mk {{ f.CATS_marking }} CATS</span>
-{% else %}
-    <span class="badge bg-secondary">Mk: Default CATS</span>
-{% endif %}
-{% if f.CATS_moderation is not none %}
-    <span class="badge bg-warning text-dark">Mo {{ f.CATS_moderation }} CATS</span>
-{% else %}
-    <span class="badge bg-secondary">Mo: Default</span>
-{% endif %}
-{% if f.CATS_presentation is not none %}
-    <span class="badge bg-warning text-dark">P {{ f.CATS_presentation }} CATS</span>
-{% else %}
-    <span class="badge bg-secondary">P: Default CATS</span>
+{% if f.CATS_supervision is not none or f.CATS_marking is not none or f.CATS_moderation is not none or f.CATS_presentation is not none %}
+    <div class="small fw-semibold mt-1">CATS limits</div>
+    <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 mt-1 small">
+        {% if f.CATS_supervision is not none %}
+            <span class="text-primary">S: {{ f.CATS_supervision }} CATS</span>
+        {% endif %}
+        {% if f.CATS_marking is not none %}
+            <span class="text-primary">Mk: {{ f.CATS_marking }} CATS</span>
+        {% endif %}
+        {% if f.CATS_moderation is not none %}
+            <span class="text-primary">Mo: {{ f.CATS_moderation }} CATS</span>
+        {% endif %}
+        {% if f.CATS_presentation is not none %}
+            <span class="text-primary">P: {{ f.CATS_presentation }} CATS</span>
+        {% endif %}
+    </div>
+    <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-1 mt-1 small">
+        <a class="btn btn-sm btn-outline-secondary small" href="{{ url_for('manage_users.remove_CATS_limits', fac_id=f.id) }}"><i class="fas fa-trash"></i> Reset limits</a>
+    </div>
 {% endif %}
 """
 

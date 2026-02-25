@@ -662,6 +662,71 @@ def users_faculty_ajax():
         return handler.build_payload(partial(ajax.users.build_faculty_data, current_user))
 
 
+@manage_users.route("/remove_all_CATS_limits", methods=["GET"])
+@roles_accepted("manage_users", "root")
+def remove_all_CATS_limits():
+    group_filter = request.args.get("group")
+    pclass_filter = request.args.get("pclass")
+    filter_CATS_pre = request.args.get("CATS")
+
+    base_query = db.session.query(FacultyData)
+
+    flag, group_value = is_integer(group_filter)
+    if flag:
+        base_query = base_query.filter(FacultyData.affiliations.any(id=group_value))
+
+    flag, pclass_value = is_integer(pclass_filter)
+    if flag:
+        base_query = base_query.filter(FacultyData.enrollments.any(pclass_id=pclass_value))
+
+    flag, filter_CATS = is_boolean(filter_CATS_pre)
+    if flag and filter_CATS:
+        base_query = base_query.filter(
+            or_(
+                FacultyData.CATS_supervision != None,
+                FacultyData.CATS_marking != None,
+                FacultyData.CATS_moderation != None,
+                FacultyData.CATS_presentation != None,
+            )
+        )
+
+    try:
+        base_query.update({FacultyData.CATS_supervision: None,
+                           FacultyData.CATS_marking: None,
+                           FacultyData.CATS_moderation: None,
+                           FacultyData.CATS_presentation: None})
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash("Could not remove CATS limits due to a database issue. Please contact an administrator.", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+    else:
+        flash("All CATS limits have been removed successfully.", "success")
+
+    return redirect(redirect_url())
+
+
+@manage_users.route("/remove_CATS_limits/<int:fac_id>", methods=["GET"])
+@roles_accepted("manage_users", "root")
+def remove_CATS_limits(fac_id):
+    fac: FacultyData = FacultyData.query.get_or_404(fac_id)
+
+    try:
+        fac.CATS_supervision = None
+        fac.CATS_marking = None
+        fac.CATS_moderation = None
+        fac.CATS_presentation = None
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash(f'Could not remove CATS limits for faculty member "{fac.user.name}" due to a database issue. Please contact an administrator.', "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+    else:
+        flash(f'CATS limits have been removed successfully for faculty member "{fac.user.name}".', "success")
+
+    return redirect(redirect_url())
+
+
 @manage_users.route("/batch_create_users", methods=["GET", "POST"])
 @roles_accepted("manage_users", "root")
 def batch_create_users():
@@ -1026,7 +1091,7 @@ def edit_batch_item(item_id):
 @manage_users.route("/mark_batch_item_convert/<int:item_id>")
 @roles_accepted("manage_users", "root")
 def mark_batch_item_convert(item_id):
-    item = StudentBatchItem.query.get_or_404(item_id)
+    item: StudentBatchItem = StudentBatchItem.query.get_or_404(item_id)
 
     item.dont_convert = False
     db.session.commit()
@@ -1037,7 +1102,7 @@ def mark_batch_item_convert(item_id):
 @manage_users.route("/mark_batch_item_dont_convert/<int:item_id>")
 @roles_accepted("manage_users", "root")
 def mark_batch_item_dont_convert(item_id):
-    item = StudentBatchItem.query.get_or_404(item_id)
+    item: StudentBatchItem = StudentBatchItem.query.get_or_404(item_id)
 
     item.dont_convert = True
     db.session.commit()

@@ -4433,7 +4433,7 @@ class StudentBatch(db.Model):
 
 class StudentBatchItem(db.Model):
     """
-    Model an individual element in the batch import of student accounts
+    Model an individual record in a batch import of student accounts
     """
 
     __tablename__ = "batch_student_items"
@@ -4571,33 +4571,172 @@ class StudentBatchItem(db.Model):
             return w
 
         if self.first_name is not None and self.existing_record.user.first_name != self.first_name:
-            w.append('Current first name "{name}"'.format(name=self.existing_record.user.first_name))
+            w.append(f'Current first name "{self.existing_record.user.first_name}"')
 
         if self.last_name is not None and self.existing_record.user.last_name != self.last_name:
-            w.append('Current last name "{name}"'.format(name=self.existing_record.user.last_name))
+            w.append(f'Current last name "{self.existing_record.user.last_name}"')
 
         if self.user_id is not None and self.existing_record.user.username != self.user_id:
-            w.append('Current user id "{user}"'.format(user=self.existing_record.user.username))
+            w.append(f'Current user id "{self.existing_record.user.username}"')
 
         if self.email is not None and self.existing_record.user.email != self.email:
-            w.append('Current email "{email}"'.format(email=self.existing_record.user.email))
+            w.append(f'Current email "{self.existing_record.user.email}"')
 
         if self.registration_number is not None and self.existing_record.registration_number != self.registration_number:
-            w.append('Current registration number "{num}"'.format(num=self.existing_record.registration_number))
+            w.append(f'Current registration number "{self.existing_record.registration_number}"')
 
         if self.cohort is not None and self.existing_record.cohort != self.cohort:
-            w.append("Current cohort {cohort}".format(cohort=self.existing_record.cohort))
+            w.append(f"Current cohort {self.existing_record.cohort}")
 
         if self.foundation_year is not None and self.existing_record.foundation_year != self.foundation_year:
-            w.append("Current foundation year flag ({flag})".format(flag=str(self.existing_record.foundation_year)))
+            w.append(f"Current foundation year flag ({str(self.existing_record.foundation_year)})")
 
         if self.repeated_years is not None and self.existing_record.repeated_years != self.repeated_years:
-            w.append("Current repeated years ({num})".format(num=self.existing_record.repeated_years))
+            w.append(f"Current repeated years ({self.existing_record.repeated_years})")
 
         if self.programme_id is not None and self.existing_record.programme_id != self.programme_id:
-            w.append('Current degree programme "{prog}"'.format(prog=self.existing_record.programme.full_name))
+            w.append(f'Current degree programme "{self.existing_record.programme.full_name}"')
 
         return w
+
+
+class FacultyBatch(db.Model):
+    """
+    Model a batch import of faculty accounts
+    """
+    
+    __tablename__ = "batch_faculty"
+    
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+    
+    # original filename
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True)
+
+    # importing user
+    owner_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
+    owner = db.relationship("User", foreign_keys=[owner_id], uselist=False, backref=db.backref("student_batch_imports", lazy="dynamic"))
+
+    # celery task UUID
+    celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+
+    # is the celery read-in task finished?
+    celery_finished = db.Column(db.Boolean(), default=False)
+
+    # did we succeed in interpreting the uploaded file?
+    success = db.Column(db.Boolean(), default=False)
+
+    # has this batch been converted to user accounts?
+    converted = db.Column(db.Boolean(), default=False)
+
+    # generation timestamp
+    timestamp = db.Column(db.DateTime())
+
+    # total lines read from the file
+    total_lines = db.Column(db.Integer())
+
+    # total lines that could be correctly interpreted
+    interpreted_lines = db.Column(db.Integer())
+
+    # cached import report
+    report = db.Column(db.Text())
+
+    @property
+    def number_items(self):
+        return get_count(self.items)
+
+
+class FacultyBatchItem(db.Model):
+    """
+    Model an individual record in a batch import of faculty accounts 
+    """
+    
+    __tablename__ = "batch_faculty_items"
+    
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # parent StudentBatch instance
+    parent_id = db.Column(db.Integer(), db.ForeignKey("batch_faculty.id"))
+    parent = db.relationship(
+        "FacultyBatch", foreign_keys=[parent_id], uselist=False, backref=db.backref("items", lazy="dynamic", cascade="all, delete, delete-orphan")
+    )
+
+    # optional link to an existing FacultyData instance
+    existing_id = db.Column(db.Integer(), db.ForeignKey("faculty_data.id"))
+    existing_record = db.relationship("FacultyData", foreign_keys=[existing_id], uselist=False, backref=db.backref("counterparts", lazy="dynamic"))
+
+    # user_id
+    user_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+
+    # first name
+    first_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+
+    # last or family name
+    last_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+
+    # email address
+    email = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+
+    # office
+    office = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+    
+
+    # CAPACITY LIMITS FOR THIS FACULTY MEMBER
+
+    # supervision CATS capacity
+    CATS_supervision = db.Column(db.Integer())
+
+    # marking CATS capacity
+    CATS_marking = db.Column(db.Integer())
+
+    # moderation CATS capacity
+    CATS_moderation = db.Column(db.Integer())
+
+    # presentation assessment CATS capacity
+    CATS_presentation = db.Column(db.Integer())
+
+    # METADATA
+
+    # flag as "don't convert to user"
+    dont_convert = db.Column(db.Boolean(), default=False)
+
+    @property
+    def warnings(self):
+        w = []
+
+        if self.existing_record is None:
+            return w
+
+        if self.first_name is not None and self.existing_record.user.first_name != self.first_name:
+            w.append(f'Current first name "{self.existing_record.user.first_name}"')
+
+        if self.last_name is not None and self.existing_record.user.last_name != self.last_name:
+            w.append(f'Current last name "{self.existing_record.user.last_name}"')
+
+        if self.user_id is not None and self.existing_record.user.username != self.user_id:
+            w.append(f'Current user id "{self.existing_record.user.username}"')
+
+        if self.email is not None and self.existing_record.user.email != self.email:
+            w.append(f'Current email "{self.existing_record.user.email}"')
+
+        if self.office is not None and self.existing_record.office != self.office:
+            w.append(f'Current office "{self.existing_record.office}"')
+
+        if self.CATS_supervision is not None and self.existing_record.CATS_supervision != self.CATS_supervision:
+            w.append(f"Current supervision CATS {self.existing_record.CATS_supervision}")
+
+        if self.CATS_marking is not None and self.existing_record.CATS_marking != self.CATS_marking:
+            w.append(f"Current marking CATS {self.existing_record.CATS_marking}")
+
+        if self.CATS_moderation is not None and self.existing_record.CATS_moderation != self.CATS_moderation:
+            w.append(f"Current moderation CATS {self.existing_record.CATS_moderation}")
+
+        if self.CATS_presentation is not None and self.existing_record.CATS_presentation != self.CATS_presentation:
+            w.append(f"Current presentation CATS {self.existing_record.CATS_presentation}")
+
+        return w
+
 
 
 class DegreeType(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLevelsMixin):

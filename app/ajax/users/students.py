@@ -36,7 +36,7 @@ def build_student_data(current_user: User, students: List[StudentData]):
     return [
         {
             "name": render_template(name_templ, u=sd.user, simple_label=simple_label),
-            "active": render_template(active_templ, u=sd.user, simple_label=simple_label),
+            "active": render_template(active_templ, u=sd.user),
             "programme": render_template(programme_templ, s=sd, simple_label=simple_label),
             "cohort": render_template(cohort_templ, s=sd, simple_label=simple_label),
             "acadyear": render_template(academic_year_templ, s=sd, simple_label=simple_label),

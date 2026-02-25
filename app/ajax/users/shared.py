@@ -153,7 +153,11 @@ menu = """
 
 # language=jinja2
 active = """
-{{ simple_label(u.active_label) }}
+{% if u.active %}
+    <div class="d-flex flex-row justify-content-start align-items-center gap-1 text-success"><i class="fas fa-check-circle"></i> Active</span>
+{% else %}
+    <div class="d-flex flex-row justify-content-start align-items-center gap-1 text-secondary"><i class="fas fa-times-circle"></i> Inactive</span>
+{% endif %}
 """
 
 # language=jinja2

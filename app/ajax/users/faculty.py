@@ -28,7 +28,11 @@ _enrolled = """
 {% for record in f.enrollments %}
     {% set pclass = record.pclass %}
     {% if pclass.active and pclass.publish %}
-        {{ simple_label(pclass.make_label()) }}
+        {% set swatch_colour = pclass.make_CSS_style() %}
+        <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+            {{ small_swatch(swatch_colour) }}
+            <span class="small">{{ pclass.name }}</span>
+        </div>
     {% endif %}
 {% endfor %}
 """
@@ -37,7 +41,7 @@ _enrolled = """
 # language=jinja2
 _settings = """
 <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
-    <span class="badge bg-primary">Default capacity {{ f.project_capacity }}</span>
+    <span class="small fw-semibold text-primary">Default capacity {{ f.project_capacity }}</span>
     {% if f.enforce_capacity %}
         <div class="small">
             <i class="fas fa-check-circle text-success"></i>
@@ -108,15 +112,16 @@ def build_faculty_data(current_user: User, faculty: List[FacultyData]):
     menu_templ: Template = build_menu_templ()
 
     simple_label = get_template_attribute("labels.html", "simple_label")
+    small_swatch = get_template_attribute("swatch.html", "small_swatch")
 
     return [
         {
             "name": render_template(name_templ, u=fd.user, f=fd, simple_label=simple_label),
-            "active": render_template(active_templ, u=fd.user, simple_label=simple_label),
+            "active": render_template(active_templ, u=fd.user),
             "office": fd.office,
             "settings": render_template(settings_templ, f=fd),
             "affiliation": render_template(affiliation_templ, f=fd, simple_label=simple_label),
-            "enrolled": render_template(enrolled_templ, f=fd, simple_label=simple_label),
+            "enrolled": render_template(enrolled_templ, f=fd, small_swatch=small_swatch),
             "menu": render_template(menu_templ, user=fd.user, cuser=current_user, pane="faculty"),
         }
         for fd in faculty

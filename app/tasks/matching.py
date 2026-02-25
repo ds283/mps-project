@@ -223,7 +223,7 @@ def _pulp_dicts(
     return d
 
 
-def _enumerate_selectors(record: MatchingAttempt, configs: List[ProjectClassConfig], read_serialized=False):
+def _enumerate_selectors(record: MatchingAttempt, configs: List[ProjectClassConfig], read_serialized=False) -> SelectorEnumeration:
     """
     Build a list of SelectingStudents who belong to projects that participate in automatic
     matching, and assign them to consecutive numbers beginning at 0.
@@ -2328,45 +2328,49 @@ def _initialize(self, record: MatchingAttempt, read_serialized: bool=False):
         # get lists of selectors and liveprojects, together with auxiliary data such as
         # multiplicities (for selectors) and CATS assignments (for projects)
         with Timer() as sel_timer:
-            number_sel, sel_to_number, number_to_sel, multiplicity, sel_dict = _enumerate_selectors(record, configs, read_serialized=read_serialized)
-        print(" -- enumerated {n} selectors in time {s}".format(n=number_sel, s=sel_timer.interval))
+            selector_data: SelectorEnumeration = _enumerate_selectors(record, configs, read_serialized=read_serialized)
+            # number_sel, sel_to_number, number_to_sel, multiplicity, sel_dict = _enumerate_selectors(record, configs, read_serialized=read_serialized)
+        print(" -- enumerated {n} selectors in time {s}".format(n=selector_data.number, s=sel_timer.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 8, "Enumerating LiveProject records...", autocommit=True)
 
         with Timer() as lp_timer:
-            number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, lp_dict, lp_group_dict = _enumerate_liveprojects(
-                record, configs, read_serialized=read_serialized
-            )
-        print(" -- enumerated {n} LiveProjects in time {s}".format(n=number_lp, s=lp_timer.interval))
+            project_data: LiveProjectEnumeration = _enumerate_liveprojects(record, configs, read_serialized=read_serialized)
+            # number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, lp_dict, lp_group_dict = _enumerate_liveprojects(
+            #     record, configs, read_serialized=read_serialized
+            # )
+        print(" -- enumerated {n} LiveProjects in time {s}".format(n=project_data.number, s=lp_timer.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 10, "Enumerating supervising faculty...", autocommit=True)
 
         # get supervising faculty and marking faculty lists
         with Timer() as sup_timer:
-            number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict, sup_pclass_limits = _enumerate_supervising_faculty(record, configs)
-        print(" -- enumerated {n} supervising faculty in time {s}".format(n=number_sup, s=sup_timer.interval))
+            supervisor_data: SupervisorEnumeration = _enumerate_supervising_faculty(record, configs)
+            # number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict, sup_pclass_limits = _enumerate_supervising_faculty(record, configs)
+        print(" -- enumerated {n} supervising faculty in time {s}".format(n=supervisor_data.number, s=sup_timer.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 12, "Enumerating marking faculty...", autocommit=True)
 
         with Timer() as mark_timer:
-            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict, mark_pclass_limits = _enumerate_marking_faculty(record, configs)
-        print(" -- enumerated {n} marking faculty in time {s}".format(n=number_mark, s=mark_timer.interval))
+            marker_data: MarkerEnumeration = _enumerate_marking_faculty(record, configs)
+            # number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict, mark_pclass_limits = _enumerate_marking_faculty(record, configs)
+        print(" -- enumerated {n} marking faculty in time {s}".format(n=marker_data.number, s=mark_timer.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 14, "Partioning faculty roles...", autocommit=True)
 
         with Timer() as partition_timer:
             # partition faculty into supervisors, markers and supervisors+markers
-            supervisors = sup_to_number.keys()
-            markers = mark_to_number.keys()
+            supervisors = supervisor_data.faculty_to_number.keys()
+            markers = marker_data.faculty_to_number.keys()
 
             # we can apply set operations to the key views that are returned
             sup_only = supervisors - markers
             mark_only = markers - supervisors
             sup_and_mark = supervisors & markers
 
-            sup_only_numbers = {sup_to_number[x] for x in sup_only}
-            mark_only_numbers = {mark_to_number[x] for x in mark_only}
-            sup_and_mark_numbers = {(sup_to_number[x], mark_to_number[x]) for x in sup_and_mark}
+            sup_only_numbers = {supervisor_data.faculty_to_number[x] for x in sup_only}
+            mark_only_numbers = {marker_data.faculty_to_number[x] for x in mark_only}
+            sup_and_mark_numbers = {(supervisor_data.faculty_to_number[x], marker_data.faculty_to_number[x]) for x in sup_and_mark}
         print(" -- partitioned faculty in time {s}".format(s=partition_timer.interval))
         print("    :: {n} faculty are supervising only".format(n=len(sup_only_numbers)))
         print("    :: {n} faculty are marking only".format(n=len(mark_only_numbers)))
@@ -2376,7 +2380,7 @@ def _initialize(self, record: MatchingAttempt, read_serialized: bool=False):
 
         # build student ranking matrix
         with Timer() as rank_timer:
-            R, W, cstr = _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict, record)
+            R, W, cstr = _build_ranking_matrix(selector_data.number, selector_data.dict, project_data.number, project_data.project_to_number, project_data.dict, record)
         print(" -- built student ranking matrix in time {s}".format(s=rank_timer.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 18, "Building marker compatibility matrix...", autocommit=True)
@@ -2384,14 +2388,14 @@ def _initialize(self, record: MatchingAttempt, read_serialized: bool=False):
         # build marker compatibility matrix
         with Timer() as mark_matrix_timer:
             mm = record.max_marking_multiplicity
-            M, marker_valence = _build_marking_matrix(number_mark, mark_dict, number_lp, lp_dict, mm if mm >= 1 else 1)
+            M, marker_valence = _build_marking_matrix(marker_data.number, marker_data.dict, project_data.number, project_data.dict, mm if mm >= 1 else 1)
         print(" -- built marking compatibility matrix in time {s}".format(s=mark_matrix_timer.interval))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 19, "Building project-to-supervisor mapping matrix...", autocommit=True)
 
         with Timer() as sup_mapping_timer:
             # build project-to-supervisor mapping
-            P = _build_project_supervisor_matrix(number_lp, lp_dict, number_sup, sup_dict)
+            P = _build_project_supervisor_matrix(project_data.number, project_data.dict, supervisor_data.number, supervisor_data.dict)
         print(" -- built project-to-supervisor mapping matrix in time {s}".format(s=sup_mapping_timer.interval))
 
     except SQLAlchemyError as e:
@@ -2399,35 +2403,35 @@ def _initialize(self, record: MatchingAttempt, read_serialized: bool=False):
         raise self.retry()
 
     return (
-        number_sel,
-        number_lp,
-        number_sup,
-        number_mark,
-        sel_to_number,
-        lp_to_number,
-        sup_to_number,
-        mark_to_number,
-        number_to_sel,
-        number_to_lp,
-        number_to_sup,
-        number_to_mark,
-        sel_dict,
-        lp_dict,
-        lp_group_dict,
-        sup_dict,
-        mark_dict,
+        selector_data.number,
+        project_data.number,
+        supervisor_data.number,
+        marker_data.number,
+        selector_data.faculty_to_number,
+        project_data.project_to_number,
+        supervisor_data.faculty_to_number,
+        marker_data.faculty_to_number,
+        selector_data.number_to_faculty,
+        project_data.number_to_project,
+        supervisor_data.number_to_faculty,
+        marker_data.number_to_faculty,
+        selector_data.dict,
+        project_data.dict,
+        project_data.group_dict,
+        supervisor_data.dict,
+        marker_data.dict,
         sup_only_numbers,
         mark_only_numbers,
         sup_and_mark_numbers,
-        sup_limits,
-        sup_pclass_limits,
-        mark_limits,
-        mark_pclass_limits,
-        multiplicity,
-        capacity,
+        supervisor_data.global_limit,
+        supervisor_data.enrolment_limit,
+        marker_data.global_limit,
+        marker_data.enrolment_limit,
+        selector_data.multiplicity,
+        project_data.capacity,
         mean_CATS_per_project,
-        CATS_supervisor,
-        CATS_marker,
+        project_data.CATS_supervisor,
+        project_data.CATS_marker,
         R,
         W,
         cstr,

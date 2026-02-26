@@ -563,8 +563,8 @@
                                     </a>
                                 {% endif %}
                                 {% if current_user.number_download_items > 0 %}
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('download_center') }}">
-                                        <i class="fas fa-download fa-fw"></i> Download center...
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('home.download_centre') }}">
+                                        <i class="fas fa-download fa-fw"></i> Download centre...
                                     </a>
                                 {% endif %}
                                 <a class="dropdown-item d-flex gap-2" href="{{ url_for_security('change_password') }}">

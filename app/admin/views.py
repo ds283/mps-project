@@ -11110,9 +11110,9 @@ def assets_ajax():
         asset, _ = row
         return getattr(asset, "target_name", None) or ""
 
-    def _asset_type(row):
-        _, asset_type = row
-        return asset_type
+    def _file_size(row):
+        asset, _ = row
+        return asset.filesize
 
     def _mimetype(row):
         asset, _ = row
@@ -11126,16 +11126,22 @@ def assets_ajax():
         asset, _ = row
         return asset.expiry
 
+    def _timestamp_order(row):
+        asset, _ = row
+        return asset.timestamp
+
     target_name = {"search": _target_name, "order": _target_name}
-    asset_type = {"search": _asset_type, "order": _asset_type}
     mimetype = {"search": _mimetype, "order": _mimetype}
+    filesize = {"order": _file_size}
     comment = {"search": _comment, "order": _comment}
     expiry = {"order": _expiry_order}
+    timestamp = {"order": _timestamp_order}
 
     columns = {
         "target_name": target_name,
-        "type": asset_type,
+        "timestamp": timestamp,
         "mimetype": mimetype,
+        "filesize": filesize,
         "comment": comment,
         "expiry": expiry,
     }
@@ -11173,6 +11179,41 @@ def asset_remove_expiry(asset_type, asset_id):
         flash("Could not remove expiry date because of a database error. Please contact a system administrator.", "error")
 
     return redirect(redirect_url())
+
+
+@admin.route("/asset_add_expiry/<string:asset_type>/<int:asset_id>")
+@roles_required("admin", "root")
+def asset_add_expiry(asset_type, asset_id):
+    """
+    Add an expiry date to an asset
+    :param asset_type: 'generated', 'temporary', or 'submitted'
+    :param asset_id: primary key of the asset
+    :return:
+    """
+    if asset_type == "generated":
+        asset = GeneratedAsset.query.get_or_404(asset_id)
+    elif asset_type == "temporary":
+        asset = TemporaryAsset.query.get_or_404(asset_id)
+    elif asset_type == "submitted":
+        asset = SubmittedAsset.query.get_or_404(asset_id)
+    else:
+        flash("Unknown asset type '{t}'.".format(t=asset_type), "error")
+        return redirect(redirect_url())
+
+    if asset.expiry is not None:
+        return redirect(redirect_url())
+
+    asset.expiry = datetime.now() + timedelta(days=7)
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not add expiry date because of a database error. Please contact a system administrator.", "error")
+
+    return redirect(redirect_url())
+
 
 
 @admin.route("/upload_feedback_asset", methods=["GET", "POST"])

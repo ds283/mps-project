@@ -8,30 +8,57 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, get_template_attribute
+from flask import render_template_string, get_template_attribute
 
 import app.shared.cloud_object_store.bucket_types as buckets
 
 # language=jinja2
 _target = """
-{% if target_name is not none %}
-    <a class="text-secondary text-decoration-none fw-semibold" href="{{ url_for('admin.download_generated_asset', asset_id=asset.id) }}">{{ target_name|truncate(40) }}</a>
-{% else %}
-    <div class="text-secondary"><i class="fas fa-ban"></i> None</div>
-{% endif %}
+<div class="d-flex flex-column justify-content-start align-items-start gap-2">
+    {% if target_name is not none %}
+        <a class="text-secondary text-decoration-none fw-semibold" href="{{ url_for('admin.download_generated_asset', asset_id=asset.id) }}">{{ target_name|truncate(40) }}</a>
+    {% else %}
+        <div class="text-secondary"><i class="fas fa-ban"></i> No target name</div>
+    {% endif %}
+    <div class="d-flex flex-row justify-content-start align-items-center flex-wrap gap-1">
+        {% if asset_type == 'GeneratedAsset' %}
+            <span class="text-primary fw-semibold">Generated</span>
+        {% elif asset_type == 'TemporaryAsset' %}
+            <span class="text-primary fw-semibold">Temporary</span>
+        {% elif asset_type == 'SubmittedAsset' %}
+            <span class="text-primary fw-semibold">Submitted</span>
+        {% else %}
+            <div class="text-secondary small"><i class="fas fa-ban"></i> Unknown</div>
+        {% endif %}
+    </div>
+    {% if number_downloads is not none and number_downloads > 0 %}
+        <div class="d-flex flex-row justify-content-start align-items-center flex-wrap gap-1">
+            <span class="small text-secondary">Downloads: {{ number_downloads }}</span>
+        </div>
+    {% endif %}
+    <div class="d-flex flex-row justify-content-start align-items-center flex-wrap gap-1 small">
+        {% if encrypted %}
+            <span class="badge bg-info"><i class="fas fa-lock"></i> Encrypted</span>
+        {% else %}
+            <span class="badge bg-secondary"><i class="fas fa-lock-open"></i> Not encrypted</span>
+        {% endif %}
+        {% if compressed %}
+            <span class="badge bg-info"><i class="fas fa-compress"></i> Compressed</span>
+        {% else %}
+            <span class="badge bg-secondary"><i class="fas fa-expand"></i> Not compressed</span>
+        {% endif %}
+        {% if lost %}
+            <span class="badge bg-danger"><i class="fas fa-skull-crossbones"></i> Lost</span>
+        {% endif %}
+        {% if unattached %}
+            <span class="badge bg-danger"><i class="fas fa-skull-crossbones"></i> Unattached</span>
+        {% endif %}
+    </div>
+</div>
 """
 
 # language=jinja2
 _type_badge = """
-{% if asset_type == 'GeneratedAsset' %}
-    <span class="text-primary fw-semibold">Generated</span>
-{% elif asset_type == 'TemporaryAsset' %}
-    <span class="text-primary fw-semibold">Temporary</span>
-{% elif asset_type == 'SubmittedAsset' %}
-    <span class="text-primary fw-semibold">Submitted</span>
-{% else %}
-    <div class="text-secondary small"><i class="fas fa-ban"></i> Unknown</div>
-{% endif %}
 """
 
 # language=jinja2
@@ -53,17 +80,16 @@ _expiry = """
 """
 
 # language=jinja2
+_timestamp = """
+{% if timestamp is not none %}
+    <div class="text-primary small"><i class="fas fa-calendar"></i> {{ timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</div>
+{% else %}
+    <div class="text-secondary small"><i class="fas fa-ban"></i> No timestamp</div>
+{% endif %}
+"""
+
+# language=jinja2
 _flags = """
-{% if encrypted %}
-    <span class="badge bg-info"><i class="fas fa-lock"></i> Encrypted</span>
-{% else %}
-    <span class="badge bg-secondary"><i class="fas fa-lock-open"></i> Not encrypted</span>
-{% endif %}
-{% if compressed %}
-    <span class="badge bg-info"><i class="fas fa-compress"></i> Compressed</span>
-{% else %}
-    <span class="badge bg-secondary"><i class="fas fa-expand"></i> Not compressed</span>
-{% endif %}
 """
 
 # language=jinja2
@@ -100,8 +126,8 @@ _menu_generated = """
                 <i class="fas fa-calendar-times fa-fw"></i> Remove expiry
             </a>
         {% else %}
-            <a class="dropdown-item d-flex gap-2 disabled">
-                <i class="fas fa-calendar-times fa-fw"></i> No expiry set
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.asset_add_expiry', asset_type='generated', asset_id=asset.id) }}">
+                <i class="fas fa-calendar-times fa-fw"></i> Expire in 7 days
             </a>
         {% endif %}
     </div>
@@ -123,8 +149,8 @@ _menu_submitted = """
                 <i class="fas fa-calendar-times fa-fw"></i> Remove expiry
             </a>
         {% else %}
-            <a class="dropdown-item d-flex gap-2 disabled">
-                <i class="fas fa-calendar-times fa-fw"></i> No expiry set
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.asset_add_expiry', asset_type='submitted', asset_id=asset.id) }}">
+                <i class="fas fa-calendar-times fa-fw"></i> Expire in 7 days
             </a>
         {% endif %}
     </div>
@@ -143,8 +169,8 @@ _menu_temporary = """
                 <i class="fas fa-calendar-times fa-fw"></i> Remove expiry
             </a>
         {% else %}
-            <a class="dropdown-item d-flex gap-2 disabled">
-                <i class="fas fa-calendar-times fa-fw"></i> No expiry set
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.asset_add_expiry', asset_type='temporary', asset_id=asset.id) }}">
+                <i class="fas fa-calendar-times fa-fw"></i> Expire in 7 days
             </a>
         {% endif %}
     </div>
@@ -162,14 +188,17 @@ def _build_row(asset, asset_type: str, simple_label, truncate):
     human_size = asset.human_file_size if has_download_data else None
     bucket_val = asset.bucket if has_download_data else None
     comment = asset.comment if has_download_data else None
+
     encrypted = getattr(asset, 'encryption', False)
     compressed = getattr(asset, 'compressed', False)
+    lost = getattr(asset, 'lost', False)
+    unattached = getattr(asset, 'unattached', False)
+    number_downloads = getattr(asset, 'number_downloads', None)
 
-    target_html = render_template_string(_target, target_name=target_name, asset=asset, truncate=truncate)
-    type_html = render_template_string(_type_badge, asset_type=asset_type)
+    target_html = render_template_string(_target, target_name=target_name, asset_type=asset_type,  encrypted=encrypted, compressed=compressed, lost=lost, unattached=unattached, number_downloads=number_downloads, asset=asset, truncate=truncate)
     license_html = render_template_string(_license, license=license_obj, simple_label=simple_label)
     expiry_html = render_template_string(_expiry, expiry=asset.expiry)
-    flags_html = render_template_string(_flags, encrypted=encrypted, compressed=compressed)
+    timestamp_html = render_template_string(_timestamp, timestamp=asset.timestamp)
     bucket_html = render_template_string(
         _bucket,
         bucket=bucket_val,
@@ -190,7 +219,7 @@ def _build_row(asset, asset_type: str, simple_label, truncate):
 
     return {
         "id": asset.id,
-        "type": type_html,
+        "timestamp": timestamp_html,
         "license": license_html,
         "expiry": expiry_html,
         "mimetype": mimetype if mimetype else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>',
@@ -198,7 +227,6 @@ def _build_row(asset, asset_type: str, simple_label, truncate):
         "filesize": human_size if human_size else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>',
         "bucket": bucket_html,
         "comment": comment if comment else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>',
-        "flags": flags_html,
         "menu": menu_html,
     }
 

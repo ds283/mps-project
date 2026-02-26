@@ -35,9 +35,9 @@
                         searchable: true
                     },
                     {
-                        data: 'type',
+                        data: 'timestamp',
                         orderable: true,
-                        searchable: true
+                        searchable: false
                     },
                     {
                         data: 'license',
@@ -62,11 +62,6 @@
                     {
                         data: 'bucket',
                         orderable: true,
-                        searchable: false
-                    },
-                    {
-                        data: 'flags',
-                        orderable: false,
                         searchable: false
                     },
                     {
@@ -101,14 +96,13 @@
             <table id="assets-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
-                    <th width="12%"> Target name</th>
-                    <th width="8%"> Type</th>
-                    <th width="8%"> License</th>
+                    <th width="16%"> Target name</th>
+                    <th width="10%"> Timestamp</th>
+                    <th width="10%"> License</th>
                     <th width="10%"> Expiry</th>
                     <th width="11%"> MIME type</th>
                     <th width="10%"> File size</th>
-                    <th width="8%"> Bucket</th>
-                    <th width="10%"> Flags</th>
+                    <th width="10%"> Bucket</th>
                     <th width="13%"> Comment</th>
                     <th width="10%"> Actions</th>
                 </tr>

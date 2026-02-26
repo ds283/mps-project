@@ -2422,6 +2422,10 @@ class User(db.Model, UserMixin):
             EmailNotification.timestamp
         )
 
+    @property
+    def number_download_items(self) -> int:
+        return get_count(self.download_centre_items)
+
 
 @listens_for(User.roles, "remove")
 def _User_role_remove_handler(target, value, initiator):
@@ -17365,7 +17369,7 @@ class DownloadCentreItem(db.Model):
 
     # user id
     user_id = db.Column(db.Integer(), db.ForeignKey("users.id"), default=None)
-    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("download_centre_items", uselist=False))
+    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("download_centre_items"))
 
     # generated asset item
     asset_id = db.Column(db.Integer(), db.ForeignKey("generated_assets.id"), default=None)

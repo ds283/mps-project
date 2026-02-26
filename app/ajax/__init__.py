@@ -10,6 +10,7 @@
 
 from . import admin
 from . import convenor
+from . import home
 from . import project
 from . import site
 from . import student

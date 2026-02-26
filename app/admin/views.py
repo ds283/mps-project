@@ -11060,6 +11060,61 @@ def create_new_template_tags(form):
     return matched
 
 
+@admin.route("/inspect_assets")
+@roles_required("admin", "root")
+def inspect_assets():
+    """
+    View to inspect all GeneratedAsset, TemporaryAsset, and SubmittedAsset records
+    :return:
+    """
+    return render_template_context("admin/inspect_assets.html")
+
+
+@admin.route("/assets_ajax")
+@roles_required("admin", "root")
+def assets_ajax():
+    """
+    AJAX data point for asset inspection view
+    :return:
+    """
+    generated = db.session.query(GeneratedAsset).all()
+    temporary = db.session.query(TemporaryAsset).all()
+    submitted = db.session.query(SubmittedAsset).all()
+
+    return ajax.admin.assets_data(generated, temporary, submitted)
+
+
+@admin.route("/asset_remove_expiry/<string:asset_type>/<int:asset_id>")
+@roles_required("admin", "root")
+def asset_remove_expiry(asset_type, asset_id):
+    """
+    Remove the expiry date from an asset
+    :param asset_type: 'generated', 'temporary', or 'submitted'
+    :param asset_id: primary key of the asset
+    :return:
+    """
+    if asset_type == "generated":
+        asset = GeneratedAsset.query.get_or_404(asset_id)
+    elif asset_type == "temporary":
+        asset = TemporaryAsset.query.get_or_404(asset_id)
+    elif asset_type == "submitted":
+        asset = SubmittedAsset.query.get_or_404(asset_id)
+    else:
+        flash("Unknown asset type '{t}'.".format(t=asset_type), "error")
+        return redirect(redirect_url())
+
+    asset.expiry = None
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not remove expiry date because of a database error. Please contact a system administrator.", "error")
+
+    return redirect(redirect_url())
+
+
 @admin.route("/upload_feedback_asset", methods=["GET", "POST"])
 @roles_accepted("admin", "root")
 def upload_feedback_asset():

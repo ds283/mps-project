@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from .assets import assets_data
 from .buildings import buildings_data
 from .degree_programmes import degree_programmes_data
 from .degree_types import degree_types_data

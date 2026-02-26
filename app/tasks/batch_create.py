@@ -9,6 +9,7 @@
 #
 
 import csv
+from collections import namedtuple
 from datetime import datetime
 from functools import total_ordering
 from typing import Optional, Tuple, List
@@ -23,7 +24,8 @@ from sqlalchemy.sql.functions import func
 
 from app.manage_users.actions import register_user
 from ..database import db
-from ..models import TemporaryAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData, AssetLicense
+from ..models import TemporaryAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData, AssetLicense, FacultyBatch, FacultyBatchItem, \
+    FacultyData
 from ..shared.asset_tools import AssetCloudAdapter
 from ..task_queue import progress_update
 
@@ -36,8 +38,8 @@ OUTCOME_ERROR = 5
 BATCH_IMPORT_LIFETIME_SECONDS = 24 * 60 * 60
 
 # language=jinja2
-_batch_import_report_header = """
-<div><strong>Some student entries did not import correctly.</strong></div>
+_student_batch_import_report_header = """
+<div><strong>Some student account entries did not import correctly.</strong></div>
 <div class="mt-2">Please review these entries and re-import the batch list if needed,
 after making any necessary changes.</div>
 <div class="mt-1">This report is saved with the batch record, so you may refresh the page
@@ -45,7 +47,7 @@ without losing access to it.</div>
 """
 
 # language=jinja2
-_batch_import_report_body = """
+_student_batch_import_report_body = """
 <div class="mt-2 small">
     <ul>
         {% if yearNone|length > 0 %}
@@ -123,23 +125,60 @@ _batch_import_report_body = """
 """
 
 # language=jinja2
-_batch_import_success = """
-<div><strong>Successfully imported batch list {{ name }}.</strong></div>
+_student_batch_import_success = """
+<div><strong>Successfully imported{{ name }}.</strong></div>
 <div class="mt-2">This page does not auto-update.
-Please click <a href="{{ url_for('manage_users.batch_create_students') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the batch import details.</div>
+Please click <a href="{{ url_for('manage_users.batch_create_students') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the import details.</div>
 """
 
 # language=jinja2
-_batch_import_warn = """
-<div><strong>Batch list {{ name }} was imported, but some lines were skipped.</strong></div>
+_student_batch_import_warn = """
+<div><strong>{{ name }} was imported, but some lines were skipped.</strong></div>
 <div class="mt-2">Please audit the processed items to ensure all required students are present. Missing students may need to be imported manually.</div>
 <div class="mt-2">This page does not auto-update.
-Please click <a href="{{ url_for('manage_users.batch_create_students') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the batch import details.</div>
+Please click <a href="{{ url_for('manage_users.batch_create_students') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the import details.</div>
+"""
+
+# language=jinja2
+_faculty_batch_import_report_header = """
+<div><strong>Some faculty account entries did not import correctly.</strong></div>
+<div class="mt-2">Please review these entries and re-import the batch list if needed,
+after making any necessary changes.</div>
+<div class="mt-1">This report is saved with the batch record, so you may refresh the page
+without losing access to it.</div>
+"""
+
+# language=jinja2
+_faculty_batch_import_report_body = """
+<div class="mt-2 small">
+    {% if ignored_lines|length > 0 %}
+        <ul>
+            {% for item in yearNone %}
+                <li>{{ item|string }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</div>
+"""
+
+# language=jinja2
+_student_batch_import_success = """
+<div><strong>Successfully imported{{ name }}.</strong></div>
+<div class="mt-2">This page does not auto-update.
+Please click <a href="{{ url_for('manage_users.batch_create_faculty') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the import details.</div>
+"""
+
+# language=jinja2
+_student_batch_import_warn = """
+<div><strong>{{ name }} was imported, but some lines were skipped.</strong></div>
+<div class="mt-2">Please audit the processed items to ensure all required students are present. Missing students may need to be imported manually.</div>
+<div class="mt-2">This page does not auto-update.
+Please click <a href="{{ url_for('manage_users.batch_create_faculty') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the import details.</div>
 """
 
 
 @total_ordering
-class SkipRow(Exception):
+class StudentSkipRow(Exception):
     """Report an exception associated with processing a single row"""
 
     def __init__(
@@ -232,7 +271,116 @@ class SkipRow(Exception):
             return True
 
 
-def _overwrite_record(item: StudentBatchItem) -> int:
+@total_ordering
+class FacultySkipRow(Exception):
+    """Report an exception associated with processing a single row"""
+
+    def __init__(self, line_number: int, user: str = None, first_name: str = None, last_name: str = None, email: str = None, reason: str = None):
+        self.line_number = line_number
+        self.user = user
+        self.first_name = first_name
+        self.last_name = last_name
+        self.email = email
+        self.reason = reason
+
+    def __str__(self):
+        value = ""
+
+        if self.last_name is not None:
+            if self.first_name is not None:
+                value += f"{self.first_name} {self.last_name}"
+            else:
+                value += f"{self.last_name}"
+
+        if self.email is not None:
+            if len(value) == 0:
+                value = f"<{self.email}>"
+            else:
+                value += f" <{self.email}>"
+        elif self.user is not None:
+            if len(value) == 0:
+                value = f"<{self.user}>"
+            else:
+                value += f" <{self.user}>"
+
+        if self.reason is not None:
+            if len(value) == 0:
+                value = f"<line #{self.line_number}>: {self.reason}"
+            else:
+                value += f": {self.reason}"
+
+        if len(value) == 0:
+            value = f"<line #{self.line_number}>: no further details"
+
+        return value
+
+    def __eq__(self, other):
+        return self.line_number == other.line_number
+
+    def __lt__(self, other):
+        if self.last_name is None:
+            return True
+
+        if other.last_name is None:
+            return False
+
+        if self.last_name < other.last_name:
+            return True
+
+        if self.first_name is None:
+            return True
+
+        if other.first_name is None:
+            return False
+
+        if self.first_name < other.first_name:
+            return True
+
+        if self.user is None:
+            return True
+
+        if other.user is None:
+            return False
+
+        if self.user < other.user:
+            return True
+
+
+def _faculty_overwrite_record(item: FacultyBatchItem) -> int:
+    faculty_record: FacultyData = item.existing_record
+    user_record: User = faculty_record.user
+
+    if item.first_name is not None and user_record.first_name != item.first_name:
+        user_record.first_name = item.first_name
+
+    if item.last_name is not None and user_record.last_name != item.last_name:
+        user_record.last_name = item.last_name
+
+    if item.user_id is not None and user_record.username != item.user_id:
+        user_record.username = item.user_id
+
+    if item.email is not None and user_record.email != item.email:
+        user_record.email = item.email
+
+    if item.office is not None and faculty_record.office != item.office:
+        faculty_record.office = item.office
+
+    if item.CATS_supervision is not None and faculty_record.CATS_supervision != item.CATS_supervision:
+        faculty_record.CATS_supervision = item.CATS_supervision
+
+    if item.CATS_marking is not None and faculty_record.CATS_marking != item.CATS_marking:
+        faculty_record.CATS_marking = item.CATS_marking
+
+    if item.CATS_moderation is not None and faculty_record.CATS_moderation != item.CATS_moderation:
+        faculty_record.CATS_moderation = item.CATS_moderation
+
+    if item.CATS_presentation is not None and faculty_record.CATS_presentation != item.CATS_presentation:
+        faculty_record.CATS_presentation = item.CATS_presentation
+
+    return OUTCOME_MERGED
+
+
+def _student_overwrite_record(item: StudentBatchItem) -> int:
     student_record: StudentData = item.existing_record
     user_record: User = student_record.user
 
@@ -272,12 +420,56 @@ def _overwrite_record(item: StudentBatchItem) -> int:
     student_record.workflow_state = StudentData.WORKFLOW_APPROVAL_VALIDATED
 
     # delete validation sentinel
-    del student_record.disable_validate
+    if hasattr(student_record, "disable_validate"):
+        del student_record.disable_validate
 
     return OUTCOME_MERGED
 
 
-def _create_record(item, user_id) -> int:
+def _faculty_create_record(item: FacultyBatchItem, user_id) -> int:
+    faculty_lic = current_app.config["FACULTY_DEFAULT_LICENSE"]
+    faculty_default = db.session.query(AssetLicense).filter_by(abbreviation=faculty_lic).first()
+
+    user: User = register_user(
+        first_name=item.first_name,
+        last_name=item.last_name,
+        username=item.user_id,
+        email=item.email,
+        roles=["faculty"],
+        random_password=True,
+        ask_confirm=False,
+        default_license=faculty_default,
+    )
+
+    # create new faculty record
+    data = FacultyData(
+        id=user.id,
+        affiliations=[],
+        office=item.office,
+        academic_title=1,
+        use_academic_title=True,
+        sign_off_students=True,
+        project_capacity=2,
+        enforce_capacity=True,
+        show_popularity=True,
+        dont_clash_presentations=True,
+        CATS_supervision=item.CATS_supervision,
+        CATS_marking=item.CATS_marking,
+        CATS_moderation=item.CATS_moderation,
+        CATS_presentation=item.CATS_presentation,
+        canvas_API_token=None,
+        creator_id=user_id,
+        creation_timestamp=datetime.now(),
+    )
+
+    # exceptions will be caught in parent
+    db.session.add(data)
+    db.session.flush()
+
+    return OUTCOME_CREATED
+
+
+def _student_create_record(item: StudentBatchItem, user_id) -> int:
     student_lic = current_app.config["STUDENT_DEFAULT_LICENSE"]
     student_default = db.session.query(AssetLicense).filter_by(abbreviation=student_lic).first()
 
@@ -317,17 +509,19 @@ def _create_record(item, user_id) -> int:
     return OUTCOME_CREATED
 
 
-def _get_name(row, current_line) -> Tuple[str, str]:
+## GENERIC IMPORT HELPERS
+
+def _get_name(row, current_line, SkipRecordType) -> Tuple[str, str]:
     if "name" not in row:
-        print("## skipping row {row} because could not determine student name".format(row=current_line))
-        raise SkipRow(current_line, reason="could not determine student's name")
+        print("## skipping row {row} because could not determine user's name".format(row=current_line))
+        raise StudentSkipRow(current_line, reason="could not determine user's name")
 
     name = row["name"]
     name_parts = [x.strip() for x in name.split(",") if len(x) > 0]
 
     if len(name_parts) == 0:
         print("## skipping row {row} because name contained no parts".format(row=current_line))
-        raise SkipRow(current_line, reason="could not process parts of student's name")
+        raise SkipRecordType(current_line, reason="could not process parts of user's name")
 
     if len(name_parts) >= 2:
         last_name_parts = [x.strip() for x in name_parts[0].split(" ") if len(x) > 0]
@@ -339,7 +533,7 @@ def _get_name(row, current_line) -> Tuple[str, str]:
 
         if len(last_name_parts) == 0 or len(first_name_parts) == 0:
             print("## skipping row {row} because cannot identify one or both of first and last name".format(row=current_line))
-            raise SkipRow(current_line, reason="could not identify one or both of student's first and last name")
+            raise SkipRecordType(current_line, reason="could not identify one or both of user's first and last name")
 
         last_name = " ".join(last_name_parts)
         first_name = first_name_parts[0]
@@ -350,7 +544,7 @@ def _get_name(row, current_line) -> Tuple[str, str]:
 
     if len(last_name_parts) == 0:
         print("## skipping row {row} because cannot identify last name".format(row=current_line))
-        raise SkipRow(current_line, reason=f"could not identify student's last name (imported name='{name}')")
+        raise SkipRecordType(current_line, reason=f"could not identify user's last name (imported name='{name}')")
 
     last_name = " ".join(last_name_parts)
     first_name = "<Unknown>"
@@ -358,7 +552,7 @@ def _get_name(row, current_line) -> Tuple[str, str]:
     return first_name, last_name
 
 
-def _get_username(row, current_line) -> str:
+def _get_username(row, current_line, SkipRecordType) -> str:
     if "username" in row:
         return row["username"]
 
@@ -372,9 +566,22 @@ def _get_username(row, current_line) -> str:
         userid, _, _ = email.partition("@")
         return userid
 
-    print("## skipping row {row} because could not extract userid".format(row=current_line))
-    raise SkipRow(current_line, reason="could not extract student's userid")
+    print("## skipping row {row} because could not extract user id".format(row=current_line))
+    raise SkipRecordType(current_line, reason="could not extract user's userid")
 
+
+def _get_email(row, current_line, SkipRecordType) -> str:
+    if "email address" in row:
+        return row["email address"]
+
+    if "email" in row:
+        return row["email"]
+
+    print("## skipping row {row} because could not extract email address".format(row=current_line))
+    raise SkipRecordType(current_line, reason="could not extract user's email address")
+
+
+## STUDENT-SPECIFIC IMPORT HELPERS
 
 def _get_intermitting(row, current_line) -> Optional[bool]:
     if "student status" in row:
@@ -396,17 +603,6 @@ def _get_registration_number(row, current_line) -> Optional[int]:
     return None
 
 
-def _get_email(row, current_line) -> str:
-    if "email address" in row:
-        return row["email address"]
-
-    if "email" in row:
-        return row["email"]
-
-    print("## skipping row {row} because could not extract email address".format(row=current_line))
-    raise SkipRow(current_line, reason="could not extract student's email address")
-
-
 def _get_course_year(row, current_line) -> int:
     if "year of course" in row:
         return int(row["year of course"])
@@ -415,7 +611,7 @@ def _get_course_year(row, current_line) -> int:
         return int(row["year"])
 
     print("## skipping row {row} because could not extract course year".format(row=current_line))
-    raise SkipRow(current_line, reason="could not extract student's year-of-course")
+    raise StudentSkipRow(current_line, reason="could not extract student's year-of-course")
 
 
 def _get_cohort(row, current_line) -> int:
@@ -427,7 +623,7 @@ def _get_cohort(row, current_line) -> int:
         return parse(row["cohort"]).year
 
     print("## skipping row {row} because could not extract start date/cohort".format(row=current_line))
-    raise SkipRow(current_line, reason="could not extract student's start date or cohort")
+    raise StudentSkipRow(current_line, reason="could not extract student's start date or cohort")
 
 
 def _get_course_code(row, current_line) -> DegreeProgramme:
@@ -501,7 +697,7 @@ def _get_course_code(row, current_line) -> DegreeProgramme:
     elif "course code" in row:
         reason += f" (imported course code = '{row['course code']})"
 
-    raise SkipRow(current_line, reason=reason)
+    raise StudentSkipRow(current_line, reason=reason)
 
 
 def _guess_year_data(
@@ -527,19 +723,19 @@ def _guess_year_data(
     # validate input types
     if not isinstance(cohort, int):
         print("!! ERROR: expected cohort to be an integer, but received {type}".format(type=type(cohort)))
-        raise SkipRow(current_line, reason="student's cohort value did not decode to an integer")
+        raise StudentSkipRow(current_line, reason="student's cohort value did not decode to an integer")
 
     if not isinstance(year_of_course, int):
         print("!! ERROR: expected year_of_course to be an integer, but received {type}".format(type=type(year_of_course)))
-        raise SkipRow(current_line, reason="student's year-of-course value did not decode to an integer")
+        raise StudentSkipRow(current_line, reason="student's year-of-course value did not decode to an integer")
 
     if not isinstance(current_year, int):
         print("!! ERROR: expected current_year to be an integer, but received {type}".format(type=type(current_year)))
-        raise SkipRow(current_line, reason="student's computed current year did not decode to an integer")
+        raise StudentSkipRow(current_line, reason="student's computed current year did not decode to an integer")
 
     if fyear_hint is not None and not isinstance(fyear_hint, bool):
         print("!! ERROR: expected fyear to be a bool, but received {type}".format(type=type(fyear_hint)))
-        raise SkipRow(current_line, reason="student's foundation year flag had a value that could not be interpreted")
+        raise StudentSkipRow(current_line, reason="student's foundation year flag had a value that could not be interpreted")
 
     fyear_shift = 1 if programme.foundation_year else 0
     estimated_year_of_course = current_year - cohort + 1 - fyear_shift
@@ -555,7 +751,7 @@ def _guess_year_data(
             "!! ERROR: estimated year of course is negative: current_year={cy}, cohort={ch}, "
             "FY={fy}".format(cy=current_year, ch=cohort, fy=fyear_shift)
         )
-        raise SkipRow(current_line, reason="student's estimated year of course was negative")
+        raise StudentSkipRow(current_line, reason="student's estimated year of course was negative")
 
     # set up empty dictionary return object
     rval = {}
@@ -592,7 +788,7 @@ def _guess_year_data(
                 reason += (
                     f" (note: this student belongs to programme '{programme.full_name}' which has a year out " f"in Y{programme.year_out_value})"
                 )
-            raise SkipRow(current_line, reason=reason)
+            raise StudentSkipRow(current_line, reason=reason)
 
     if difference >= 1 and fyear_shift == 0 and fyear_hint:
         difference = difference - 1
@@ -603,7 +799,37 @@ def _guess_year_data(
     return rval
 
 
-def _match_existing_student(current_line, username, email) -> (bool, StudentData):
+## FACULTY-SPECIFIC IMPORT HELPERS
+
+def _get_office(row, current_line) -> Optional[bool]:
+    if "office" in row:
+        return row["office"]
+
+    return None
+
+CATS_data = namedtuple(
+    "CATS_data",
+    [
+        "supervision",
+        "marking",
+        "moderating",
+        "presentation",
+    ]
+)
+
+def _get_CATS(row, current_line) -> CATS_data:
+    supervision = row.get("supervision", None)
+    marking = row.get("marking", None)
+    moderating = row.get("moderating", None)
+    presentation = row.get("presentation", None)
+
+    return CATS_data(supervision, marking, moderating, presentation)
+
+
+## MATCHING HELPERS
+
+
+def _match_existing_student(current_line, username, email) -> Optional[Tuple[bool, StudentData]]:
     # test whether we can find an existing student record with this email address.
     # if we can, check whether it is a student account.
     # If not, there's not much we can do
@@ -616,7 +842,7 @@ def _match_existing_student(current_line, username, email) -> (bool, StudentData
     if existing_record is not None:
         if not existing_record.has_role("student"):
             print("## skipping row {row} because matched to existing user that is not a student".format(row=current_line))
-            raise SkipRow(current_line, reason=f"imported values matched to an existing user " f"'{existing_record.name}' that is not a student")
+            raise StudentSkipRow(current_line, reason=f"imported values matched to an existing user " f"'{existing_record.name}' that is not a student")
 
         if existing_record.email.lower() != email.lower():
             dont_convert = True
@@ -624,11 +850,61 @@ def _match_existing_student(current_line, username, email) -> (bool, StudentData
     return dont_convert, existing_record.student_data if existing_record is not None else None
 
 
+def _match_existing_faculty(current_line, username, email) -> Optional[Tuple[bool, FacultyData]]:
+    # test whether we can find an existing faculty record with this email address.
+    # if we can, check whether it is a faculty account.
+    # If not, there's not much we can do
+    dont_convert = False
+
+    existing_record = (
+        db.session.query(User).filter(or_(func.lower(User.email) == func.lower(email), func.lower(User.username) == func.lower(username))).first()
+    )
+
+    if existing_record is not None:
+        if not existing_record.has_role("faculty"):
+            print("## skipping row {row} because matched to existing user that is not a faculty member".format(row=current_line))
+            raise FacultySkipRow(current_line, reason=f"imported values matched to an existing user " f"'{existing_record.name}' that is not a faculty member")
+
+        if existing_record.email.lower() != email.lower():
+            dont_convert = True
+
+    return dont_convert, existing_record.faculty_data if existing_record is not None else None
+
+
+def _perform_expiry_check(self, record_id, BatchType, BatchItemType):
+    try:
+        record = db.session.query(BatchType).filter_by(id=record_id).first()
+    except SQLAlchemyError as e:
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        raise self.retry()
+
+    if record is None:
+        self.update_state(state="FAILURE", meta={"msg": "Could not load database records"})
+        raise Ignore()
+
+    # if imported successfully and not yet converted, don't expire
+    if record.success and not record.converted:
+        return
+
+    now = datetime.now()
+    age = now - record.timestamp
+
+    if age.total_seconds() > BATCH_IMPORT_LIFETIME_SECONDS:
+        try:
+            # cascade is set to delete all items, but do it by hand anwyay
+            db.session.query(BatchItemType).filter_by(parent_id=record.id).delete()
+            db.session.delete(record)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+
 def register_batch_create_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
-    def students(self, record_id, asset_id, current_year):
+    def faculty(self, record_id, asset_id):
         try:
-            record: StudentBatch = db.session.query(StudentBatch).filter_by(id=record_id).first()
+            record: FacultyBatch = db.session.query(FacultyBatch).filter_by(id=record_id).first()
             asset: TemporaryAsset = db.session.query(TemporaryAsset).filter_by(id=asset_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -637,14 +913,15 @@ def register_batch_create_tasks(celery):
         if record is None or asset is None:
             self.update_state(state="FAILURE", meta={"msg": "Could not load database records"})
 
-            record.celery_finished = True
-            record.success = False
+            if record is not None:
+                record.celery_finished = True
+                record.success = False
 
-            try:
-                db.session.commit()
-            except SQLAlchemyError as e:
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
+                try:
+                    db.session.commit()
+                except SQLAlchemyError as e:
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    raise self.retry()
 
             raise RuntimeError("Could not load database records")
 
@@ -672,19 +949,252 @@ def register_batch_create_tasks(celery):
 
                     try:
                         # username and email are first things to extract
-                        username = _get_username(row, current_line)
+                        username = _get_username(row, current_line, FacultySkipRow)
 
-                        email = _get_email(row, current_line)
+                        email = _get_email(row, current_line, FacultySkipRow)
+
+                        # try to match this data to an existing record
+                        dont_convert, existing_record = _match_existing_faculty(current_line, username, email)
+
+                        # get name and break into comma-separated parts
+                        first_name, last_name = _get_name(row, current_line, FacultySkipRow)
+
+                        try:
+                            office = _get_office(row, current_line)
+                            CATS = _get_CATS(row, current_line)
+
+                            item = FacultyBatchItem(
+                                parent_id=record.id,
+                                user_id=username,
+                                first_name=first_name,
+                                last_name=last_name,
+                                email=email,
+                                office=office,
+                                CATS_supervision=CATS.supervision,
+                                CATS_marking=CATS.marking,
+                                CATS_moderating=CATS.moderating,
+                                CATS_presentation=CATS.presentation,
+                                dont_convert=dont_convert,
+                            )
+
+                            interpreted_lines += 1
+
+                            try:
+                                db.session.add(item)
+                            except SQLAlchemyError as e:
+                                raise FacultySkipRow(current_line, reason="Internal database error")
+
+                        except FacultySkipRow as e:
+                            # populate with values extracted from list
+                            if e.user is None:
+                                e.user = username
+
+                            if e.first_name is None:
+                                e.first_name = first_name
+
+                            if e.last_name is None:
+                                e.last_name = last_name
+
+                            if e.email is None:
+                                e.email = email
+
+                            raise e
+
+                    except FacultySkipRow as e:
+                        ignored_lines.append(e)
+                        print(f">> SUMMARY: skipped line {str(e)}")
+
+        progress_update(record.celery_id, TaskRecord.RUNNING, 90, "Finalizing import...", autocommit=False)
+
+        record.total_lines = current_line
+        record.interpreted_lines = interpreted_lines
+        record.celery_finished = True
+        record.success = True
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if len(ignored_lines) > 0:
+            message_string = render_template_string(_faculty_batch_import_success, name=record.name)
+            record.owner.post_message(message_string, "info", autocommit=False)
+
+            report_string = _faculty_batch_import_report_header + render_template_string(_student_batch_import_report_body, ignored=ignored_lines)
+            record.owner.post_message(report_string, "warning", autocommit=True)
+
+            record.report = report_string
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                # report the exception but otherwise allow it to pass silently
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        elif current_line == interpreted_lines:
+            message_string = render_template_string(_faculty_batch_import_success, name=record.name)
+            record.owner.post_message(message_string, "success", autocommit=True)
+        else:
+            message_string = render_template_string(_faculty_batch_import_warn, name=record.name)
+            record.owner.post_message(message_string, "info", autocommit=True)
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def import_faculty_batch_item(self, item_id, user_id):
+        try:
+            item: FacultyBatchItem = db.session.query(FacultyBatchItem).filter_by(id=item_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if item is None:
+            self.update_state(state="FAILURE", meta={"msg": "Could not load database records"})
+            return OUTCOME_FAILED
+
+        if item.dont_convert:
+            return OUTCOME_IGNORED
+
+        try:
+            if item.existing_record is not None:
+                result = _faculty_overwrite_record(item)
+            else:
+                result = _faculty_create_record(item, user_id)
+
+            # delete this item
+            item.parent.items.remove(item)
+            db.session.delete(item)
+
+            db.session.commit()
+
+        except (SQLAlchemyError, IntegrityError) as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        except ValueError as e:
+            # encountered a validation error while merging or creating a record
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            return OUTCOME_ERROR
+
+        return result
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def import_faculty_finalize(self, result_data, record_id, user_id):
+        try:
+            record: FacultyBatch = db.session.query(FacultyBatch).filter_by(id=record_id).first()
+            user: User = db.session.query(User).filter_by(id=user_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if record is None or user is None:
+            self.update_state(state="FAILURE", meta={"msg": "Could not load database records"})
+            raise Ignore()
+
+        num_created = sum([1 for x in result_data if x == OUTCOME_CREATED])
+        num_merged = sum([1 for x in result_data if x == OUTCOME_MERGED])
+        num_failed = sum([1 for x in result_data if x == OUTCOME_FAILED])
+        num_ignored = sum([1 for x in result_data if x == OUTCOME_IGNORED])
+        num_errors = sum([1 for x in result_data if x == OUTCOME_ERROR])
+
+        user.post_message(
+            "Faculty account import complete: {created} created, {merged} merged, "
+            "{errors} errors, {failed} failed, "
+            "{ignored} ignored".format(created=num_created, merged=num_merged, failed=num_failed, ignored=num_ignored, errors=num_errors),
+            "info" if num_failed == 0 and num_errors == 0 else "error",
+            autocommit=False,
+        )
+
+        if num_errors == 0 and num_failed == 0:
+            record.converted = True
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def import_faculty_error(self, user_id):
+        try:
+            user: User = db.session.query(User).filter_by(id=user_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if user is None:
+            self.update_state(state="FAILURE", meta={"msg": "Could not load database records"})
+            raise Ignore()
+
+        user.post_message("Errors occurred during faculty account import", "error", autocommit=True)
+
+        # raise new exception; will be caught by error handler on mark_user_task_failed()
+        raise RuntimeError("Import process failed with an error")
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def students(self, record_id, asset_id, current_year):
+        try:
+            record: StudentBatch = db.session.query(StudentBatch).filter_by(id=record_id).first()
+            asset: TemporaryAsset = db.session.query(TemporaryAsset).filter_by(id=asset_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if record is None or asset is None:
+            self.update_state(state="FAILURE", meta={"msg": "Could not load database records"})
+
+            if record is not None:
+                record.celery_finished = True
+                record.success = False
+
+                try:
+                    db.session.commit()
+                except SQLAlchemyError as e:
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    raise self.retry()
+
+            raise RuntimeError("Could not load database records")
+
+        progress_update(record.celery_id, TaskRecord.RUNNING, 10, "Inspecting uploaded user list...", autocommit=True)
+
+        object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+        storage = AssetCloudAdapter(asset, object_store, audit_data=f"batch_create.students (student batch id #{record_id})")
+        with storage.download_to_scratch() as scratch_path:
+            with open(scratch_path.path, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+
+                # force column headers to lower case
+                reader.fieldnames = [name.lower() for name in reader.fieldnames]
+
+                progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Reading uploaded user list...", autocommit=True)
+
+                current_line = 0
+                interpreted_lines = 0
+
+                ignored_lines = []
+
+                # in Python >= 3.6, row is an OrderedDict
+                for row in reader:
+                    current_line += 1
+
+                    try:
+                        # username and email are first things to extract
+                        username = _get_username(row, current_line, StudentSkipRow)
+
+                        email = _get_email(row, current_line, StudentSkipRow)
                         # ignore cases where the email address is 'INTERMITTING' or 'RESITTING'
                         if email.lower() == "intermitting" or email.lower() == "resitting":
                             print('## skipping row "{user}" because email is "{email}"'.format(user=username, email=email))
-                            raise SkipRow(current_line, user=username, reason=f'email labelled as "{email}"')
+                            raise StudentSkipRow(current_line, user=username, reason=f'email labelled as "{email}"')
 
                         # try to match this data to an existing record
                         dont_convert, existing_record = _match_existing_student(current_line, username, email)
 
                         # get name and break into comma-separated parts
-                        first_name, last_name = _get_name(row, current_line)
+                        first_name, last_name = _get_name(row, current_line, StudentSkipRow)
                         intermitting = _get_intermitting(row, current_line)
                         registration_number = _get_registration_number(row, current_line)
                         year_of_course = _get_course_year(row, current_line)
@@ -694,7 +1204,7 @@ def register_batch_create_tasks(celery):
 
                             if year_of_course == 0 and record.ignore_Y0:
                                 print('## skipping row "{user}" because Y0 students are being ignored'.format(user=username))
-                                raise SkipRow(current_line, reason="Ignoring Y0 students in this batch")
+                                raise StudentSkipRow(current_line, reason="Ignoring Y0 students in this batch")
 
                             # attempt to deduce whether a foundation year or repeated years have been involved
                             if existing_record is None:
@@ -742,7 +1252,7 @@ def register_batch_create_tasks(celery):
                             try:
                                 db.session.add(item)
                             except SQLAlchemyError as e:
-                                raise SkipRow(current_line, reason="Internal database error")
+                                raise StudentSkipRow(current_line, reason="Internal database error")
 
                             if item.academic_year is None:
                                 if not item.programme.year_out or year_of_course != item.programme.year_out_value:
@@ -750,7 +1260,7 @@ def register_batch_create_tasks(celery):
                                         "!! ERROR: computed academic year is None, but imported year of course "
                                         "does not match the specified year-out value for this programme"
                                     )
-                                    raise SkipRow(
+                                    raise StudentSkipRow(
                                         current_line,
                                         reason="This student is expected to be on a year out, but the imported"
                                         "year-of-course data does not match the specified year-out"
@@ -772,12 +1282,12 @@ def register_batch_create_tasks(celery):
                                             ry=repeated_years,
                                         )
                                     )
-                                    raise SkipRow(
+                                    raise StudentSkipRow(
                                         current_line,
                                         reason=f"Computed academic year Y{item.academic_year} does not match "
                                         f"the imported year-of-course value Y{year_of_course}",
                                     )
-                        except SkipRow as e:
+                        except StudentSkipRow as e:
                             # populate with values extracted from list
                             if e.user is None:
                                 e.user = username
@@ -796,7 +1306,7 @@ def register_batch_create_tasks(celery):
 
                             raise e
 
-                    except SkipRow as e:
+                    except StudentSkipRow as e:
                         ignored_lines.append(e)
                         print(f">> SUMMARY: skipped line {str(e)}")
 
@@ -848,11 +1358,11 @@ def register_batch_create_tasks(celery):
             year4.sort()
             yearN.sort()
 
-            message_string = render_template_string(_batch_import_success, name=record.name)
+            message_string = render_template_string(_student_batch_import_success, name=record.name)
             record.owner.post_message(message_string, "info", autocommit=False)
 
-            report_string = _batch_import_report_header + render_template_string(
-                _batch_import_report_body, yearNone=yearNone, year1=year1, year2=year2, year3=year3, year4=year4, yearN=yearN
+            report_string = _student_batch_import_report_header + render_template_string(
+                _student_batch_import_report_body, yearNone=yearNone, year1=year1, year2=year2, year3=year3, year4=year4, yearN=yearN
             )
             record.owner.post_message(report_string, "warning", autocommit=True)
 
@@ -865,14 +1375,14 @@ def register_batch_create_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         elif current_line == interpreted_lines:
-            message_string = render_template_string(_batch_import_success, name=record.name)
+            message_string = render_template_string(_student_batch_import_success, name=record.name)
             record.owner.post_message(message_string, "success", autocommit=True)
         else:
-            message_string = render_template_string(_batch_import_warn, name=record.name)
+            message_string = render_template_string(_student_batch_import_warn, name=record.name)
             record.owner.post_message(message_string, "info", autocommit=True)
 
     @celery.task(bind=True, default_retry_delay=30)
-    def import_batch_item(self, item_id, user_id):
+    def import_student_batch_item(self, item_id, user_id):
         try:
             item: StudentBatchItem = db.session.query(StudentBatchItem).filter_by(id=item_id).first()
         except SQLAlchemyError as e:
@@ -888,9 +1398,9 @@ def register_batch_create_tasks(celery):
 
         try:
             if item.existing_record is not None:
-                result = _overwrite_record(item)
+                result = _student_overwrite_record(item)
             else:
-                result = _create_record(item, user_id)
+                result = _student_create_record(item, user_id)
 
             # delete this item
             item.parent.items.remove(item)
@@ -912,7 +1422,7 @@ def register_batch_create_tasks(celery):
         return result
 
     @celery.task(bind=True, default_retry_delay=30)
-    def import_finalize(self, result_data, record_id, user_id):
+    def import_student_finalize(self, result_data, record_id, user_id):
         try:
             record: StudentBatch = db.session.query(StudentBatch).filter_by(id=record_id).first()
             user: User = db.session.query(User).filter_by(id=user_id).first()
@@ -931,7 +1441,7 @@ def register_batch_create_tasks(celery):
         num_errors = sum([1 for x in result_data if x == OUTCOME_ERROR])
 
         user.post_message(
-            "Batch import is complete: {created} created, {merged} merged, "
+            "Student account import complete: {created} created, {merged} merged, "
             "{errors} errors, {failed} failed, "
             "{ignored} ignored".format(created=num_created, merged=num_merged, failed=num_failed, ignored=num_ignored, errors=num_errors),
             "info" if num_failed == 0 and num_errors == 0 else "error",
@@ -949,7 +1459,7 @@ def register_batch_create_tasks(celery):
             raise self.retry()
 
     @celery.task(bind=True, default_retry_delay=30)
-    def import_error(self, user_id):
+    def import_student_error(self, user_id):
         try:
             user: User = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
@@ -960,7 +1470,7 @@ def register_batch_create_tasks(celery):
             self.update_state(state="FAILURE", meta={"msg": "Could not load database records"})
             raise Ignore()
 
-        user.post_message("Errors occurred during batch import", "error", autocommit=True)
+        user.post_message("Errors occurred during student account import", "error", autocommit=True)
 
         # raise new exception; will be caught by error handler on mark_user_task_failed()
         raise RuntimeError("Import process failed with an error")
@@ -968,39 +1478,22 @@ def register_batch_create_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def garbage_collection(self):
         try:
-            records: List[StudentBatch] = db.session.query(StudentBatch).filter_by(celery_finished=True).all()
+            student_records: List[StudentBatch] = db.session.query(StudentBatch).filter_by(celery_finished=True).all()
+            faculty_records: List[FacultyBatch] = db.session.query(FacultyBatch).filter_by(celery_finished=True).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        expiry = group(check_expiry.si(r.id) for r in records)
-        expiry.apply_async()
+        expire_students = [check_student_batch_expiry.si(r.id) for r in student_records]
+        expire_faculty = [check_faculty_batch_expiry.si(r.id) for r in faculty_records]
+        expiry = group(expire_students + expire_faculty)
+
+        return self.replace(expiry)
 
     @celery.task(bind=True, default_retry_delay=30)
-    def check_expiry(self, record_id):
-        try:
-            record: StudentBatch = db.session.query(StudentBatch).filter_by(id=record_id).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
+    def check_student_batch_expiry(self, record_id):
+        _perform_expiry_check(self, record_id, StudentBatch, StudentBatchItem)
 
-        if record is None:
-            self.update_state(state="FAILURE", meta={"msg": "Could not load database records"})
-            raise Ignore()
-
-        # if imported successfully and not yet converted, don't expire
-        if record.success and not record.converted:
-            return
-
-        now = datetime.now()
-        age = now - record.timestamp
-
-        if age.total_seconds() > BATCH_IMPORT_LIFETIME_SECONDS:
-            try:
-                # cascade is set to delete all items, but do it by hand anwyay
-                db.session.query(StudentBatchItem).filter_by(parent_id=record.id).delete()
-                db.session.delete(record)
-                db.session.commit()
-            except SQLAlchemyError as e:
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
+    @celery.task(bind=True, default_retry_delay=30)
+    def check_faculty_batch_expiry(self, record_id):
+        _perform_expiry_check(self, record_id, FacultyBatch, FacultyBatchItem)

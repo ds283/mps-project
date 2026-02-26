@@ -1495,9 +1495,9 @@ def import_student_batch(batch_id):
     final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
     error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-    import_batch_item = celery.tasks["app.tasks.batch_create.import_batch_item"]
-    import_finalize = celery.tasks["app.tasks.batch_create.import_finalize"]
-    import_error = celery.tasks["app.tasks.batch_create.import_error"]
+    import_batch_item = celery.tasks["app.tasks.batch_create.import_student_batch_item"]
+    import_finalize = celery.tasks["app.tasks.batch_create.import_student_finalize"]
+    import_error = celery.tasks["app.tasks.batch_create.import_student_error"]
     backup = celery.tasks["app.tasks.backup.backup"]
 
     work_group = group(import_batch_item.si(item.id, current_user.id) for item in record.items)

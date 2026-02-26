@@ -1102,7 +1102,7 @@ def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
         asset.grant_user(user)
         db.session.add(asset)
 
-        download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user)
+        download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user, description=f'LP file generated for schedule attempt "{record.name}"')
         db.session.add(download_item)
 
         return asset
@@ -1659,7 +1659,7 @@ def register_scheduling_tasks(celery):
                     new_asset.access_control_roles = old_asset.access_control_roles
                     db.session.add(new_asset)
 
-                    download_item: DownloadCentreItem = DownloadCentreItem._build(asset=new_asset, user=current_id)
+                    download_item: DownloadCentreItem = DownloadCentreItem._build(asset=new_asset, user=current_id, description=f'Copy generated for "{new_name}" (original was "{old_record.name}")')
                     db.session.add(download_item)
 
                     return new_asset

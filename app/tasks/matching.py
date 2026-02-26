@@ -2775,7 +2775,7 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
         asset.grant_user(user)
         db.session.add(asset)
 
-        download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user)
+        download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user, description=f'LP file generated for matching attempt "{record.name}"')
         db.session.add(download_item)
 
         return asset
@@ -3304,7 +3304,7 @@ def register_matching_tasks(celery):
                     new_asset.access_control_roles = old_asset.access_control_roles
                     db.session.add(new_asset)
 
-                    download_item: DownloadCentreItem = DownloadCentreItem._build(asset=new_asset, user=current_id)
+                    download_item: DownloadCentreItem = DownloadCentreItem._build(asset=new_asset, user=current_id, description=f'Copy generated for "{new_name}" (original was "{old_asset.name}")')
                     db.session.add(download_item)
 
                     return new_asset
@@ -3807,7 +3807,7 @@ def register_matching_tasks(celery):
             asset.grant_user(user)
             db.session.add(asset)
 
-            download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user)
+            download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user, description=f'Excel report for matching attempt "{record.name}"')
             db.session.add(download_item)
 
             return asset

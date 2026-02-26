@@ -20,8 +20,14 @@ from ...models import DownloadCentreItem
 # language=jinja2
 _name = """
 {% if item.asset is not none %}
-    <div class="fw-semibold">{{ item.asset.target_name if item.asset.target_name else '(unnamed)' }}</div>
-    {% if item.asset.comment %}
+    {% if item.asset.target_name is not none and item.asset.target_name|length > 0 %}
+        <div class="text-secondary fw-semibold">{{ item.asset.target_name }}</div>
+    {% else %}
+        <div class="text-muted"><i class="fas fa-ban"></i> {{ item.asset.name }}</div>
+    {% endif %}
+    {% if item.description is not none and item.description|length > 0 %}
+        <div class="text-muted small mt-1">{{ item.description }}</div>
+    {% elif item.asset.comment %}
         <div class="text-muted small mt-1">{{ item.asset.comment }}</div>
     {% endif %}
 {% else %}
@@ -32,11 +38,11 @@ _name = """
 # language=jinja2
 _generated = """
 {% if item.generated_at is not none %}
-    <span data-bs-toggle="tooltip" title="{{ item.generated_at.strftime('%a %d %b %Y %H:%M:%S') }}">
-        {{ item.generated_at.strftime('%d %b %Y') }}
+    <span class="text-primary small" data-bs-toggle="tooltip" title="{{ item.generated_at.strftime('%a %d %b %Y %H:%M:%S') }}">
+        <i class="fas fa-calendar"></i> {{ item.generated_at.strftime('%d %b %Y') }}
     </span>
 {% else %}
-    <span class="text-secondary">Unknown</span>
+    <span class="text-secondary small">Unknown</span>
 {% endif %}
 """
 
@@ -47,12 +53,12 @@ _expiry = """
     {% if item.expire_at < now %}
         <span class="badge bg-danger">Expired</span>
     {% else %}
-        <span data-bs-toggle="tooltip" title="{{ item.expire_at.strftime('%a %d %b %Y %H:%M:%S') }}">
-            {{ item.expire_at.strftime('%d %b %Y') }}
+        <span class="text-primary small" data-bs-toggle="tooltip" title="{{ item.expire_at.strftime('%a %d %b %Y %H:%M:%S') }}">
+            <i class="fas fa-calendar"></i> {{ item.expire_at.strftime('%d %b %Y') }}
         </span>
     {% endif %}
 {% else %}
-    <span class="text-secondary"><i class="fas fa-infinity"></i> No expiry</span>
+    <span class="text-secondary small"><i class="fas fa-infinity"></i> No expiry</span>
 {% endif %}
 """
 
@@ -67,7 +73,7 @@ _size = """
 
 # language=jinja2
 _downloads = """
-<span class="badge bg-secondary">{{ item.number_downloads }}</span>
+<span class="text-secondary fw-semibold">{{ item.number_downloads }}</span>
 {% if item.last_downloaded_at is not none %}
     <div class="text-muted small mt-1">
         Last: <span data-bs-toggle="tooltip" title="{{ item.last_downloaded_at.strftime('%a %d %b %Y %H:%M:%S') }}">

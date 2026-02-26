@@ -17387,9 +17387,12 @@ class DownloadCentreItem(db.Model):
     # total number of downloads
     number_downloads = db.Column(db.Integer(), default=0)
 
+    # text description
+    description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+
 
     @classmethod
-    def _build(cls, asset: GeneratedAsset, user: Union[int, User]):
+    def _build(cls, asset: GeneratedAsset, user: Union[int, User], description: Optional[str]=None):
         if asset is None:
             raise RuntimeError(f"asset must not be None in DownloadCentreItem._build")
 
@@ -17409,6 +17412,7 @@ class DownloadCentreItem(db.Model):
             last_downloaded_at=None,
             expire_at=asset.expiry,
             number_downloads=0,
+            description=description,
         )
 
 

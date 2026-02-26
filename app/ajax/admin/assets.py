@@ -162,7 +162,7 @@ def _build_row(asset, asset_type: str, simple_label, truncate):
     human_size = asset.human_file_size if has_download_data else None
     bucket_val = asset.bucket if has_download_data else None
     comment = asset.comment if has_download_data else None
-    encrypted = getattr(asset, 'encrypted', False)
+    encrypted = getattr(asset, 'encryption', False)
     compressed = getattr(asset, 'compressed', False)
 
     target_html = render_template_string(_target, target_name=target_name, asset=asset, truncate=truncate)

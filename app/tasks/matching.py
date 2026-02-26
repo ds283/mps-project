@@ -23,7 +23,7 @@ from celery import group, chain
 from celery.exceptions import Ignore
 from flask import current_app, render_template, render_template_string
 from flask_mailman import EmailMultiAlternatives
-from pandas import DataFrame
+from pandas import DataFrame, ExcelWriter
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -3873,7 +3873,16 @@ def register_matching_tasks(celery):
             df = DataFrame.from_records(records)
 
             output_path = mgr.path
-            df.to_excel(output_path, sheet_name=f'Matching "{record.name}"', index=False)
+            sheet_name = f'Matching "{record.name}"'
+            if len(sheet_name) > 31:
+                sheet_name = sheet_name[:31]
+            sheet_name = sheet_name.replace("[", "(")
+            sheet_name = sheet_name.replace("]", ")")
+            sheet_name = sheet_name.replace(":", "-")
+            sheet_name = sheet_name.replace("*", "-")
+            sheet_name = sheet_name.replace("?", "-")
+            sheet_name = sheet_name.replace("/", "-")
+            df.to_excel(output_path, sheet_name=sheet_name, index=False)
             xlsx_asset = make_asset(output_path, f"Matching_{record.name}-{now.strftime("%Y-%m-%d_%H:%M:%S")}")
 
         db.session.commit()

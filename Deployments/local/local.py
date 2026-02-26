@@ -154,3 +154,13 @@ _project_storage_options = _base_storage_options | {
 # create ObjectStore for project bucket
 OBJECT_STORAGE_PROJECT_URI = os.environ.get("OBJECT_STORAGE_PROJECT_URI")
 OBJECT_STORAGE_PROJECT = ObjectStore(OBJECT_STORAGE_PROJECT_URI, buckets.PROJECT_BUCKET, _project_storage_options)
+
+
+# set up bucket map
+OBJECT_STORAGE_BUCKETS = {
+    buckets.ASSETS_BUCKET: OBJECT_STORAGE_ASSETS,
+    buckets.BACKUP_BUCKET: OBJECT_STORAGE_BACKUP,
+    buckets.TELEMETRY_BUCKET: OBJECT_STORAGE_TELEMETRY,
+    buckets.FEEDBACK_BUCKET: OBJECT_STORAGE_FEEDBACK,
+    buckets.PROJECT_BUCKET: OBJECT_STORAGE_PROJECT,
+}

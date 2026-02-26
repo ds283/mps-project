@@ -47,7 +47,7 @@ from ..models import (
     ResearchGroup,
     ProjectClassConfig,
     validate_nonce,
-    SubmissionRole,
+    SubmissionRole, DownloadCentreItem,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.scratch import ScratchFileManager
@@ -1102,6 +1102,9 @@ def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
         asset.grant_user(user)
         db.session.add(asset)
 
+        download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user)
+        db.session.add(download_item)
+
         return asset
 
     with ScratchFileManager(suffix=".lp") as mgr:
@@ -1655,6 +1658,9 @@ def register_scheduling_tasks(celery):
                     new_asset.access_control_list = old_asset.access_control_list
                     new_asset.access_control_roles = old_asset.access_control_roles
                     db.session.add(new_asset)
+
+                    download_item: DownloadCentreItem = DownloadCentreItem._build(asset=new_asset, user=current_id)
+                    db.session.add(download_item)
 
                     return new_asset
 

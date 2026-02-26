@@ -89,7 +89,7 @@ _menu = """
             {% set expired = item.expire_at is not none and item.expire_at < now %}
             {% if not expired %}
                 <a class="dropdown-item d-flex gap-2"
-                   href="{{ url_for('admin.download_generated_asset', asset_id=item.asset.id) }}">
+                   href="{{ url_for('admin.download_generated_asset', asset_id=item.asset.id, download_item_id=item.id) }}">
                     <i class="fas fa-download fa-fw"></i> Download
                 </a>
             {% else %}

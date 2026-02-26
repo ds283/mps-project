@@ -17369,7 +17369,7 @@ class DownloadCentreItem(db.Model):
 
     # user id
     user_id = db.Column(db.Integer(), db.ForeignKey("users.id"), default=None)
-    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("download_centre_items"))
+    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("download_centre_items", lazy="dynamic"))
 
     # generated asset item
     asset_id = db.Column(db.Integer(), db.ForeignKey("generated_assets.id"), default=None)
@@ -17386,6 +17386,30 @@ class DownloadCentreItem(db.Model):
 
     # total number of downloads
     number_downloads = db.Column(db.Integer(), default=0)
+
+
+    @classmethod
+    def _build(cls, asset: GeneratedAsset, user: Union[int, User]):
+        if asset is None:
+            raise RuntimeError(f"asset must not be None in DownloadCentreItem._build")
+
+        if user is None:
+            raise RuntimeError(f"user must not be None in DownloadCentreItem._build")
+
+        user_id: int
+        if isinstance(user, int):
+            user_id = user
+        elif isinstance(user, User):
+            user_id = user.id
+
+        return cls(
+            user_id=user_id,
+            asset_id=asset.id,
+            generated_at=datetime.now(),
+            last_downloaded_at=None,
+            expire_at=asset.expiry,
+            number_downloads=0,
+        )
 
 
 class AssetLicense(db.Model, ColouredLabelMixin, EditingMetadataMixin):

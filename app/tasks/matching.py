@@ -54,7 +54,7 @@ from ..models import (
     Project,
     LiveProjectAlternative,
     StudentData,
-    DegreeProgramme,
+    DegreeProgramme, DownloadCentreItem,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.scratch import ScratchFileManager
@@ -2775,6 +2775,9 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
         asset.grant_user(user)
         db.session.add(asset)
 
+        download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user)
+        db.session.add(download_item)
+
         return asset
 
     with ScratchFileManager(suffix=".lp") as mgr:
@@ -3301,6 +3304,9 @@ def register_matching_tasks(celery):
                     new_asset.access_control_roles = old_asset.access_control_roles
                     db.session.add(new_asset)
 
+                    download_item: DownloadCentreItem = DownloadCentreItem._build(asset=new_asset, user=current_id)
+                    db.session.add(download_item)
+
                     return new_asset
 
                 if old_attempt.lp_file is not None:
@@ -3782,7 +3788,7 @@ def register_matching_tasks(celery):
 
         def make_asset(source_path: Path, target_name: str):
             # AssetUploadManager will populate most fields later
-            asset = GeneratedAsset(timestamp=now, expiry=expiry, target_name=target_name, parent_asset_id=None, license_id=None)
+            asset: GeneratedAsset = GeneratedAsset(timestamp=now, expiry=expiry, target_name=target_name, parent_asset_id=None, license_id=None)
 
             size = source_path.stat().st_size
 
@@ -3800,6 +3806,9 @@ def register_matching_tasks(celery):
 
             asset.grant_user(user)
             db.session.add(asset)
+
+            download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user)
+            db.session.add(download_item)
 
             return asset
 

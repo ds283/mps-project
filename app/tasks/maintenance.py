@@ -47,7 +47,7 @@ from ..models import (
     validate_nonce,
     SubmittingStudent,
     SelectingStudent,
-    PopularityRecord,
+    PopularityRecord, DownloadCentreItem,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetCloudScratchContextManager, AssetUploadManager
 from ..shared.cloud_object_store import ObjectStore
@@ -611,6 +611,12 @@ def register_maintenance_tasks(celery):
             pass
 
         try:
+            # remove any user download centre items for this asset
+            if hasattr(record, "download_centre_items"):
+                for item in record.download_centre_items:
+                    item: DownloadCentreItem
+                    db.session.delete(item)
+
             db.session.delete(record)
             db.session.commit()
         except SQLAlchemyError as e:

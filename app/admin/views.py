@@ -164,7 +164,7 @@ from ..models import (
     BackupLabel,
     FeedbackAsset,
     TemplateTag,
-    FeedbackRecipe,
+    FeedbackRecipe, DownloadCentreItem,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
@@ -10530,6 +10530,13 @@ def download_generated_asset(asset_id):
         return redirect(redirect_url())
 
     # log this download
+    download_item_id = request.args.get("download_item_id", None)
+    if download_item_id is not None:
+        download_item: DownloadCentreItem = DownloadCentreItem.query.get_or_404(download_item_id)
+
+        download_item.last_downloaded_at = datetime.now()
+        download_item.number_downloads += 1
+
     record = GeneratedAssetDownloadRecord(asset_id=asset.id, downloader_id=current_user.id, timestamp=datetime.now())
 
     try:

@@ -4573,16 +4573,16 @@ class StudentBatchItem(db.Model):
             return w
 
         if self.first_name is not None and self.existing_record.user.first_name != self.first_name:
-            w.append(f'Current first name "{self.existing_record.user.first_name}"')
+            w.append(f'Current first name "{self.existing_record.user.first_name}" (imported "{self.first_name}")')
 
         if self.last_name is not None and self.existing_record.user.last_name != self.last_name:
-            w.append(f'Current last name "{self.existing_record.user.last_name}"')
+            w.append(f'Current last name "{self.existing_record.user.last_name}" (imported "{self.last_name}")')
 
         if self.user_id is not None and self.existing_record.user.username != self.user_id:
-            w.append(f'Current user id "{self.existing_record.user.username}"')
+            w.append(f'Current user id "{self.existing_record.user.username}" (imported "{self.username}")')
 
         if self.email is not None and self.existing_record.user.email != self.email:
-            w.append(f'Current email "{self.existing_record.user.email}"')
+            w.append(f'Current email "{self.existing_record.user.email}" (imported "{self.email}")')
 
         if self.registration_number is not None and self.existing_record.registration_number != self.registration_number:
             w.append(f'Current registration number "{self.existing_record.registration_number}"')
@@ -4711,31 +4711,31 @@ class FacultyBatchItem(db.Model):
             return w
 
         if self.first_name is not None and self.existing_record.user.first_name != self.first_name:
-            w.append(f'Current first name "{self.existing_record.user.first_name}"')
+            w.append(f'Current first name "{self.existing_record.user.first_name}" (imported "{self.first_name}")')
 
         if self.last_name is not None and self.existing_record.user.last_name != self.last_name:
-            w.append(f'Current last name "{self.existing_record.user.last_name}"')
+            w.append(f'Current last name "{self.existing_record.user.last_name}" (imported "{self.last_name}")')
 
         if self.user_id is not None and self.existing_record.user.username != self.user_id:
-            w.append(f'Current user id "{self.existing_record.user.username}"')
+            w.append(f'Current user id "{self.existing_record.user.username}" (imported "{self.username}")')
 
         if self.email is not None and self.existing_record.user.email != self.email:
-            w.append(f'Current email "{self.existing_record.user.email}"')
+            w.append(f'Current email "{self.existing_record.user.email}" (imported "{self.email}")')
 
         if self.office is not None and self.existing_record.office != self.office:
-            w.append(f'Current office "{self.existing_record.office}"')
+            w.append(f'Current office "{self.existing_record.office}" (imported "{self.office}")')
 
         if self.CATS_supervision is not None and self.existing_record.CATS_supervision != self.CATS_supervision:
-            w.append(f"Current supervision CATS {self.existing_record.CATS_supervision}")
+            w.append(f"Current supervision CATS {' = default' if self.existing_record.CATS_supervision is None else self.existing_record.CATS_supervision}")
 
         if self.CATS_marking is not None and self.existing_record.CATS_marking != self.CATS_marking:
-            w.append(f"Current marking CATS {self.existing_record.CATS_marking}")
+            w.append(f"Current marking CATS {' = default' if self.existing_record.CATS_marking is None else self.existing_record.CATS_marking}")
 
         if self.CATS_moderation is not None and self.existing_record.CATS_moderation != self.CATS_moderation:
-            w.append(f"Current moderation CATS {self.existing_record.CATS_moderation}")
+            w.append(f"Current moderation CATS {' = default' if self.existing_record.CATS_moderation is None else self.existing_record.CATS_moderation}")
 
         if self.CATS_presentation is not None and self.existing_record.CATS_presentation != self.CATS_presentation:
-            w.append(f"Current presentation CATS {self.existing_record.CATS_presentation}")
+            w.append(f"Current presentation CATS {' = default' if self.existing_record.CATS_presentation is None else self.existing_record.CATS_presentation}")
 
         return w
 

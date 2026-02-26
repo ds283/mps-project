@@ -13,6 +13,25 @@ from ...models import FacultyBatchItem
 _name = """
 <div class="d-flex flex-column justify-content-start align-items-left gap-1">
     <div>{{ item.first_name }} {{ item.last_name }}</div>
+    {% if item.CATS_supervision is not none or item.CATS_marking is not none or item.CATS_moderation is not none or item.CATS_presentation is not none %}
+        <div>
+            <div class="small fw-semibold">CATS limits</div>
+            <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 mt-1 small">
+                {% if item.CATS_supervision is not none %}
+                    <span class="text-primary">S: {{ item.CATS_supervision }} CATS</span>
+                {% endif %}
+                {% if item.CATS_marking is not none %}
+                    <span class="text-primary">Mk: {{ item.CATS_marking }} CATS</span>
+                {% endif %}
+                {% if item.CATS_moderation is not none %}
+                    <span class="text-primary">Mo: {{ item.CATS_moderation }} CATS</span>
+                {% endif %}
+                {% if item.CATS_presentation is not none %}
+                    <span class="text-primary">P: {{ item.CATS_presentation }} CATS</span>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
     {% if item.existing_record is not none %}
         <span class="text-success small"><i class="fas fa-check-circle"></i> Matches {{ item.existing_record.user.name }}</span>
     {% endif %}

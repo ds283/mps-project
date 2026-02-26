@@ -162,14 +162,14 @@ _faculty_batch_import_report_body = """
 """
 
 # language=jinja2
-_student_batch_import_success = """
-<div><strong>Successfully imported{{ name }}.</strong></div>
+_faculty_batch_import_success = """
+<div><strong>Successfully imported {{ name }}.</strong></div>
 <div class="mt-2">This page does not auto-update.
 Please click <a href="{{ url_for('manage_users.batch_create_faculty') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the import details.</div>
 """
 
 # language=jinja2
-_student_batch_import_warn = """
+_faculty_batch_import_warn = """
 <div><strong>{{ name }} was imported, but some lines were skipped.</strong></div>
 <div class="mt-2">Please audit the processed items to ensure all required students are present. Missing students may need to be imported manually.</div>
 <div class="mt-2">This page does not auto-update.
@@ -350,17 +350,17 @@ def _faculty_overwrite_record(item: FacultyBatchItem) -> int:
     faculty_record: FacultyData = item.existing_record
     user_record: User = faculty_record.user
 
-    if item.first_name is not None and user_record.first_name != item.first_name:
-        user_record.first_name = item.first_name
-
-    if item.last_name is not None and user_record.last_name != item.last_name:
-        user_record.last_name = item.last_name
-
-    if item.user_id is not None and user_record.username != item.user_id:
-        user_record.username = item.user_id
-
-    if item.email is not None and user_record.email != item.email:
-        user_record.email = item.email
+    # if item.first_name is not None and user_record.first_name != item.first_name:
+    #     user_record.first_name = item.first_name
+    #
+    # if item.last_name is not None and user_record.last_name != item.last_name:
+    #     user_record.last_name = item.last_name
+    #
+    # if item.user_id is not None and user_record.username != item.user_id:
+    #     user_record.username = item.user_id
+    #
+    # if item.email is not None and user_record.email != item.email:
+    #     user_record.email = item.email
 
     if item.office is not None and faculty_record.office != item.office:
         faculty_record.office = item.office
@@ -552,7 +552,7 @@ def _get_name(row, current_line, SkipRecordType) -> Tuple[str, str]:
     return first_name, last_name
 
 
-def _get_username(row, current_line, SkipRecordType) -> str:
+def _get_username(row, current_line, SkipRecordType) -> Optional[str]:
     if "username" in row:
         return row["username"]
 
@@ -570,7 +570,7 @@ def _get_username(row, current_line, SkipRecordType) -> str:
     raise SkipRecordType(current_line, reason="could not extract user's userid")
 
 
-def _get_email(row, current_line, SkipRecordType) -> str:
+def _get_email(row, current_line, SkipRecordType) -> Optional[str]:
     if "email address" in row:
         return row["email address"]
 
@@ -817,13 +817,27 @@ CATS_data = namedtuple(
     ]
 )
 
+def _to_int(value) -> Optional[int]:
+    if value is None:
+        return None
+
+    if isinstance(value, str):
+        value = value.strip()
+
+        if len(value) == 0:
+            return None
+
+        return int(value)
+
+    return int(value)
+
 def _get_CATS(row, current_line) -> CATS_data:
     supervision = row.get("supervision", None)
     marking = row.get("marking", None)
     moderating = row.get("moderating", None)
     presentation = row.get("presentation", None)
 
-    return CATS_data(supervision, marking, moderating, presentation)
+    return CATS_data(_to_int(supervision), _to_int(marking), _to_int(moderating), _to_int(presentation))
 
 
 ## MATCHING HELPERS
@@ -838,6 +852,8 @@ def _match_existing_student(current_line, username, email) -> Optional[Tuple[boo
     existing_record = (
         db.session.query(User).filter(or_(func.lower(User.email) == func.lower(email), func.lower(User.username) == func.lower(username))).first()
     )
+
+    print(f'@@ trying to match record with user_id="{username}" and email="{email}"')
 
     if existing_record is not None:
         if not existing_record.has_role("student"):
@@ -859,6 +875,8 @@ def _match_existing_faculty(current_line, username, email) -> Optional[Tuple[boo
     existing_record = (
         db.session.query(User).filter(or_(func.lower(User.email) == func.lower(email), func.lower(User.username) == func.lower(username))).first()
     )
+
+    print(f'@@ trying to match record with user_id="{username}" and email="{email}"')
 
     if existing_record is not None:
         if not existing_record.has_role("faculty"):
@@ -950,7 +968,6 @@ def register_batch_create_tasks(celery):
                     try:
                         # username and email are first things to extract
                         username = _get_username(row, current_line, FacultySkipRow)
-
                         email = _get_email(row, current_line, FacultySkipRow)
 
                         # try to match this data to an existing record
@@ -958,6 +975,17 @@ def register_batch_create_tasks(celery):
 
                         # get name and break into comma-separated parts
                         first_name, last_name = _get_name(row, current_line, FacultySkipRow)
+                        if existing_record is not None:
+                            existing_user: User = existing_record.user
+
+                            if first_name != existing_user.first_name:
+                                first_name = None
+
+                            if last_name != existing_user.last_name:
+                                last_name = None
+
+                            if username != existing_user.username:
+                                username = None
 
                         try:
                             office = _get_office(row, current_line)
@@ -965,6 +993,7 @@ def register_batch_create_tasks(celery):
 
                             item = FacultyBatchItem(
                                 parent_id=record.id,
+                                existing_id=existing_record.id if existing_record is not None else None,
                                 user_id=username,
                                 first_name=first_name,
                                 last_name=last_name,
@@ -972,7 +1001,7 @@ def register_batch_create_tasks(celery):
                                 office=office,
                                 CATS_supervision=CATS.supervision,
                                 CATS_marking=CATS.marking,
-                                CATS_moderating=CATS.moderating,
+                                CATS_moderation=CATS.moderating,
                                 CATS_presentation=CATS.presentation,
                                 dont_convert=dont_convert,
                             )

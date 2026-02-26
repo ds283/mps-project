@@ -994,7 +994,7 @@ def terminate_faculty_batch(batch_id):
         "<strong>{name}</strong>.</p>"
         "<p>This action cannot be undone.</p>".format(name=record.name)
     )
-    submit_label = "Terminate batch create"
+    submit_label = "Terminate import"
 
     return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
@@ -1062,7 +1062,7 @@ def terminate_student_batch(batch_id):
         "<strong>{name}</strong>.</p>"
         "<p>This action cannot be undone.</p>".format(name=record.name)
     )
-    submit_label = "Terminate batch create"
+    submit_label = "Terminate import"
 
     return render_template_context(
         "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
@@ -1286,7 +1286,10 @@ def view_faculty_batch_data_ajax(batch_id):
     base_query = db.session.query(FacultyBatchItem).filter_by(parent_id=record.id)
 
     def search_name(row: FacultyBatchItem):
-        return row.first_name + " " + row.last_name
+        if row.first_name is not None and row.last_name is not None:
+            return row.first_name + " " + row.last_name
+
+        return None
 
     def sort_name(row: FacultyBatchItem):
         return [row.last_name, row.first_name]

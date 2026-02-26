@@ -10995,6 +10995,33 @@ def custom_CATS_limits(record_id):
     return render_template_context("convenor/dashboard/custom_CATS_limits.html", record=record, form=form, user=record.owner.user)
 
 
+@convenor.route("/remove_CATS_limits/<int:record_id>", methods=["GET"])
+@roles_accepted("faculty", "admin", "root")
+def remove_CATS_limits(record_id):
+    # record_id is an EnrollmentRecord
+    record = EnrollmentRecord.query.get_or_404(record_id)
+
+    if not validate_is_convenor(record.pclass):
+        return redirect(redirect_url())
+
+    record.CATS_supervision = None
+    record.CATS_marking = None
+    record.CATS_moderation = None
+    record.CATS_presentation = None
+
+    record.last_edit_id = current_user.id
+    record.last_edit_timestamp = datetime.now()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash("Could not reset custom CATS values due to a database error. Please contact a system administrator.", "error")
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
 @convenor.route("/submission_period_documents/<int:pid>")
 @roles_accepted("faculty", "admin", "root")
 def submission_period_documents(pid):

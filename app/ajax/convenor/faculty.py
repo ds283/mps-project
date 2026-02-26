@@ -91,28 +91,43 @@ _name = """
 _enrolments = """
 {% if er is not none %}
     {{ simple_label(er.enrolled_labels) }}
-    <div>
-        {% if er.CATS_supervision is not none %}
-            <span class="badge bg-warning text-dark">S: {{ er.CATS_supervision }} CATS</span>
-        {% else %}
-            <span class="badge bg-secondary">S: Default</span>
-        {% endif %}
-        {% if er.CATS_marking is not none %}
-            <span class="badge bg-warning text-dark">Mk {{ er.CATS_marking }} CATS</span>
-        {% else %}
-            <span class="badge bg-secondary">Mk: Default</span>
-        {% endif %}
-        {% if er.CATS_moderation is not none %}
-            <span class="badge bg-warning text-dark">Mo {{ er.CATS_moderation }} CATS</span>
-        {% else %}
-            <span class="badge bg-secondary">Mo: Default</span>
-        {% endif %}
-        {% if er.CATS_presentation is not none %}
-            <span class="badge bg-warning text-dark">P {{ er.CATS_presentation }} CATS</span>
-        {% else %}
-            <span class="badge bg-secondary">P: Default</span>
-        {% endif %}
-    </div>
+    {% if er.CATS_supervision is not none or er.CATS_marking is not none or er.CATS_moderation is not none or er.CATS_presentation is not none %}
+        <div class="small fw-semibold mt-1">Enrolment CATS limits</div>
+        <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 mt-1 small">
+            {% if er.CATS_supervision is not none %}
+                <span class="text-primary">S: {{ er.CATS_supervision }} CATS</span>
+            {% endif %}
+            {% if er.CATS_marking is not none %}
+                <span class="text-primary">Mk: {{ er.CATS_marking }} CATS</span>
+            {% endif %}
+            {% if er.CATS_moderation is not none %}
+                <span class="text-primary">Mo: {{ er.CATS_moderation }} CATS</span>
+            {% endif %}
+            {% if er.CATS_presentation is not none %}
+                <span class="text-primary">P: {{ er.CATS_presentation }} CATS</span>
+            {% endif %}
+        </div>
+        <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-1 mt-1 small">
+            <a class="btn btn-sm btn-outline-secondary small" href="{{ url_for('convenor.remove_CATS_limits', record_id=er.id) }}"><i class="fas fa-trash"></i> Reset limits</a>
+        </div>
+    {% endif %}
+    {% if d.CATS_supervision is not none or d.CATS_marking is not none or d.CATS_moderation is not none or d.CATS_presentation is not none %}
+        <div class="small fw-semibold mt-1">Global CATS limits</div>
+        <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 mt-1 small">
+            {% if d.CATS_supervision is not none %}
+                <span class="text-primary">S: {{ d.CATS_supervision }} CATS</span>
+            {% endif %}
+            {% if d.CATS_marking is not none %}
+                <span class="text-primary">Mk: {{ d.CATS_marking }} CATS</span>
+            {% endif %}
+            {% if d.CATS_moderation is not none %}
+                <span class="text-primary">Mo: {{ d.CATS_moderation }} CATS</span>
+            {% endif %}
+            {% if d.CATS_presentation is not none %}
+                <span class="text-primary">P: {{ d.CATS_presentation }} CATS</span>
+            {% endif %}
+        </div>
+    {% endif %}
 {% else %}
     <span class="badge bg-secondary">Not enrolled</span>
 {% endif %}
@@ -146,7 +161,6 @@ def _build_menu_templ() -> Template:
 
 def faculty_data(pclass: ProjectClass, config: ProjectClassConfig, row_list: List[Tuple[User, FacultyData]]):
     simple_label = get_template_attribute("labels.html", "simple_label")
-    # textonly_label = get_template_attribute("labels.html", "textonly_label")
 
     name_templ: Template = _build_name_templ()
     enrolments_templ: Template = _build_enrolments_templ()

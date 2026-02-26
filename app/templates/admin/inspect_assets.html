@@ -15,7 +15,15 @@
             $('#assets-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: {url: $SCRIPT_ROOT + '/admin/assets_ajax', dataSrc: ''},
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: $SCRIPT_ROOT + '/admin/assets_ajax',
+                    type: 'POST',
+                    data: function (d) {
+                        return {args: JSON.stringify(d)};
+                    }
+                },
                 "fnDrawCallback": function () {
                     $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
                     $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'});

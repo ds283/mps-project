@@ -11070,18 +11070,78 @@ def inspect_assets():
     return render_template_context("admin/inspect_assets.html")
 
 
-@admin.route("/assets_ajax")
+@admin.route("/assets_ajax", methods=["POST"])
 @roles_required("admin", "root")
 def assets_ajax():
     """
-    AJAX data point for asset inspection view
+    AJAX data point for asset inspection view.
+    Combines GeneratedAsset, TemporaryAsset, and SubmittedAsset records into a single
+    in-memory list and paginates using ServerSideInMemoryHandler.
     :return:
     """
-    generated = db.session.query(GeneratedAsset).all()
-    temporary = db.session.query(TemporaryAsset).all()
-    submitted = db.session.query(SubmittedAsset).all()
+    # Build a combined list of (asset, type_label) tuples from all three asset tables.
+    # We use three separate queries and tag each row with its type string so that the
+    # row formatter can distinguish them.
+    generated = [(a, "GeneratedAsset") for a in db.session.query(GeneratedAsset).all()]
+    temporary = [(a, "TemporaryAsset") for a in db.session.query(TemporaryAsset).all()]
+    submitted = [(a, "SubmittedAsset") for a in db.session.query(SubmittedAsset).all()]
 
-    return ajax.admin.assets_data(generated, temporary, submitted)
+    combined = generated + temporary + submitted
+
+    # Wrap the combined list in a trivial SQLAlchemy-compatible object.
+    # ServerSideInMemoryHandler accepts any iterable for its query argument when
+    # a row_filter is not needed; we pass a fake query-like object that simply
+    # returns the combined list from .all().
+    class _FakeQuery:
+        def __init__(self, rows):
+            self._rows = rows
+
+        def all(self):
+            return self._rows
+
+        def count(self):
+            return len(self._rows)
+
+    fake_query = _FakeQuery(combined)
+
+    # Column definitions for in-memory search and sort.
+    # Each row is a (asset, asset_type_str) tuple, so accessors receive that tuple.
+    def _target_name(row):
+        asset, _ = row
+        return getattr(asset, "target_name", None) or ""
+
+    def _asset_type(row):
+        _, asset_type = row
+        return asset_type
+
+    def _mimetype(row):
+        asset, _ = row
+        return getattr(asset, "mimetype", None) or ""
+
+    def _comment(row):
+        asset, _ = row
+        return getattr(asset, "comment", None) or ""
+
+    def _expiry_order(row):
+        asset, _ = row
+        return asset.expiry
+
+    target_name = {"search": _target_name, "order": _target_name}
+    asset_type = {"search": _asset_type, "order": _asset_type}
+    mimetype = {"search": _mimetype, "order": _mimetype}
+    comment = {"search": _comment, "order": _comment}
+    expiry = {"order": _expiry_order}
+
+    columns = {
+        "target_name": target_name,
+        "type": asset_type,
+        "mimetype": mimetype,
+        "comment": comment,
+        "expiry": expiry,
+    }
+
+    with ServerSideInMemoryHandler(request, fake_query, columns) as handler:
+        return handler.build_payload(ajax.admin.assets_data)
 
 
 @admin.route("/asset_remove_expiry/<string:asset_type>/<int:asset_id>")

@@ -15,7 +15,7 @@ import app.shared.cloud_object_store.bucket_types as buckets
 # language=jinja2
 _target = """
 {% if target_name is not none %}
-    <a class="text-secondary text-decoration-none fw-semibold" href="{{ url_for('admin.download_generated_asset', asset_id=asset.id) }}">{{ target_name }}</a>
+    <a class="text-secondary text-decoration-none fw-semibold" href="{{ url_for('admin.download_generated_asset', asset_id=asset.id) }}">{{ target_name|truncate(40) }}</a>
 {% else %}
     <div class="text-secondary"><i class="fas fa-ban"></i> None</div>
 {% endif %}
@@ -152,7 +152,7 @@ _menu_temporary = """
 """
 
 
-def _build_row(asset, asset_type: str, simple_label):
+def _build_row(asset, asset_type: str, simple_label, truncate):
     has_license = hasattr(asset, 'license')
     has_download_data = hasattr(asset, 'mimetype')
 
@@ -165,7 +165,7 @@ def _build_row(asset, asset_type: str, simple_label):
     encrypted = getattr(asset, 'encrypted', False)
     compressed = getattr(asset, 'compressed', False)
 
-    target_html = render_template_string(_target, target_name=target_name, asset=asset)
+    target_html = render_template_string(_target, target_name=target_name, asset=asset, truncate=truncate)
     type_html = render_template_string(_type_badge, asset_type=asset_type)
     license_html = render_template_string(_license, license=license_obj, simple_label=simple_label)
     expiry_html = render_template_string(_expiry, expiry=asset.expiry)
@@ -203,18 +203,18 @@ def _build_row(asset, asset_type: str, simple_label):
     }
 
 
-def assets_data(generated_assets, temporary_assets, submitted_assets):
+def assets_data(assets):
+    """
+    Build the JSON payload for the assets DataTable.
+
+    :param assets: iterable of (asset, asset_type_str) pairs, as produced by the
+                   ServerSideInMemoryHandler row formatter callback.
+    """
     simple_label = get_template_attribute("labels.html", "simple_label")
+    truncate = get_template_attribute("macros.html", "truncate")
 
     data = []
+    for asset, asset_type in assets:
+        data.append(_build_row(asset, asset_type, simple_label, truncate))
 
-    for asset in generated_assets:
-        data.append(_build_row(asset, 'GeneratedAsset', simple_label))
-
-    for asset in temporary_assets:
-        data.append(_build_row(asset, 'TemporaryAsset', simple_label))
-
-    for asset in submitted_assets:
-        data.append(_build_row(asset, 'SubmittedAsset', simple_label))
-
-    return jsonify(data)
+    return data

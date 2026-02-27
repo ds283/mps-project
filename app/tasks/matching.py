@@ -23,7 +23,7 @@ from celery import group, chain
 from celery.exceptions import Ignore
 from flask import current_app, render_template, render_template_string
 from flask_mailman import EmailMultiAlternatives
-from pandas import DataFrame, ExcelWriter
+from pandas import DataFrame
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -2774,6 +2774,7 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
 
         asset.grant_user(user)
         db.session.add(asset)
+        db.session.flush()
 
         download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user, description=f'LP file generated for matching attempt "{record.name}"')
         db.session.add(download_item)
@@ -3303,6 +3304,7 @@ def register_matching_tasks(celery):
                     new_asset.access_control_list = old_asset.access_control_list
                     new_asset.access_control_roles = old_asset.access_control_roles
                     db.session.add(new_asset)
+                    db.session.flush()
 
                     download_item: DownloadCentreItem = DownloadCentreItem._build(asset=new_asset, user=current_id, description=f'Copy generated for "{new_name}" (original was "{old_asset.name}")')
                     db.session.add(download_item)
@@ -3806,6 +3808,7 @@ def register_matching_tasks(celery):
 
             asset.grant_user(user)
             db.session.add(asset)
+            db.session.flush()
 
             download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user, description=f'Excel report for matching attempt "{record.name}"')
             db.session.add(download_item)

@@ -16,7 +16,13 @@ import app.shared.cloud_object_store.bucket_types as buckets
 _target = """
 <div class="d-flex flex-column justify-content-start align-items-start gap-2">
     {% if target_name is not none %}
-        <a class="text-secondary text-decoration-none fw-semibold" href="{{ url_for('admin.download_generated_asset', asset_id=asset.id) }}">{{ target_name|truncate(40) }}</a>
+        {% if asset_type == 'GeneratedAsset' %}
+            <a class="text-secondary text-decoration-none fw-semibold" href="{{ url_for('admin.download_generated_asset', asset_id=asset.id) }}">{{ target_name|truncate(40) }}</a>
+        {% elif asset_type == 'SubmittedAsset' %}
+            <a class="text-secondary text-decoration-none fw-semibold" href="{{ url_for('admin.download_submitted_asset', asset_id=asset.id) }}">{{ target_name|truncate(40) }}</a>
+        {% else %}
+            <div class="text-secondary text-decoration-none fw-semibold">{{ target_name|truncate(40) }}</div>
+        {% endif %}
     {% else %}
         <div class="text-secondary"><i class="fas fa-ban"></i> No target name</div>
     {% endif %}

@@ -24,7 +24,6 @@ profiling
 profile
 scratch
 restart.sh
-sonar-project.properties
 test_pdf.py
 venv
 worker-output

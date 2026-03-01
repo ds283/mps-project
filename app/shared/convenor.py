@@ -7,7 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-from typing import Optional
+from typing import Optional, Union
 
 from flask import current_app
 from sqlalchemy import or_, func
@@ -29,7 +29,7 @@ from ..shared.utils import get_current_year
 
 
 def add_liveproject(
-    number: Optional[int], project: Project | int, config_id: int, desc: Optional[ProjectDescription] = None, autocommit: bool = False
+    number: Optional[int], project: Union[Project, int], config_id: int, desc: Optional[ProjectDescription] = None, autocommit: bool = False
 ):
     # extract this project; input 'project' is allowed to be a Project instance, or else
     # the database id of an instance

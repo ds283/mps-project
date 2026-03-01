@@ -5530,10 +5530,10 @@ def match_export_excel(matching_id):
     )
 
     celery = current_app.extensions["celery"]
-    task = celery.tasks["app.tasks.matching.send_excel_report_by_email"]
+    task = celery.tasks["app.tasks.matching.generate_excel_matching_report"]
 
     task.apply_async(args=(matching_id, current_user.id, task_id), task_id=task_id)
-    flash(f'An Excel report for "{record.name}" is being generated. It will be delivered by email when it is available.')
+    flash(f'An Excel report for "{record.name}" is being generated, and you will be notified when it is available.')
 
     return redirect(redirect_url())
 

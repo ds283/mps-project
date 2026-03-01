@@ -57,6 +57,7 @@ from ..models import (
     DegreeProgramme, DownloadCentreItem,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
+from ..shared.excel import _normalize_excel_sheet_name
 from ..shared.scratch import ScratchFileManager
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
@@ -173,14 +174,6 @@ Please click <a href="{{ url_for('admin.manage_matching') }}" onclick="setTimeou
 
 _match_failure = """
 <div><strong>Matching task {{ name }} did not complete successfully.</strong></div>
-<div class="mt-2">This page does not auto-update.
-Please click <a href="{{ url_for('admin.manage_matching') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the matching list.</div>
-"""
-
-
-_match_offline_ready = """
-<div><strong>The files necessary to perform offline matching for task {{ name }} have now been generated.</strong></div>
-<div class="mt-2">These files have been emailed to you, but you can also download them from the matching list.</div>
 <div class="mt-2">This page does not auto-update.
 Please click <a href="{{ url_for('admin.manage_matching') }}" onclick="setTimeout(location.reload.bind(location), 1)">here</a> to refresh or view the matching list.</div>
 """
@@ -2727,36 +2720,14 @@ def _process_PuLP_solution(
     return record.score
 
 
-def _send_offline_email(celery, record: MatchingAttempt, user: User, lp_asset: GeneratedAsset):
-    send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-
-    msg = EmailMultiAlternatives(
-        subject="Files for offline matching of {name} are now ready".format(name=record.name),
-        from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-        reply_to=[current_app.config["MAIL_REPLY_TO"]],
-        to=[user.email],
-    )
-
-    msg.body = render_template("email/matching/generated.txt", name=record.name, user=user)
-
-    # TODO: will be problems when generated LP/MPS files are too large; should instead send a download link
-    object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
-    lp_storage: AssetCloudAdapter = AssetCloudAdapter(lp_asset, object_store, audit_data="matching._send_offline_email #1")
-
-    msg.attach(filename=str("schedule.lp"), mimetype=lp_asset.mimetype, content=lp_storage.get())
-
-    # register a new task in the database
-    task_id = register_task(msg.subject, description="Email to {r}".format(r=", ".join(msg.to)))
-    send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
-
-
-def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
+def _write_LP_file(record: MatchingAttempt, prob, user):
     now = datetime.now()
+    expiry = now + timedelta(days=7)
     object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
 
     def make_asset(source_path: Path, target_name: str):
         # AssetUploadManager will populate most fields later
-        asset = GeneratedAsset(timestamp=now, expiry=None, target_name=target_name, parent_asset_id=None, license_id=None)
+        asset = GeneratedAsset(timestamp=now, expiry=expiry, target_name=target_name, parent_asset_id=None, license_id=None)
 
         size = source_path.stat().st_size
 
@@ -2765,7 +2736,7 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
                 asset,
                 data=BytesIO(f.read()),
                 storage=object_store,
-                audit_data=f"matching._write_LP_MPS_files (matching attempt #{record.id})",
+                audit_data=f"matching._write_LP_file (matching attempt #{record.id})",
                 length=size,
                 mimetype="text/plain",
                 validate_nonce=validate_nonce,
@@ -2775,6 +2746,7 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
         asset.grant_user(user)
         db.session.add(asset)
 
+        # add this asset to the user's download centre
         download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user, description=f'LP file generated for matching attempt "{record.name}"')
         db.session.add(download_item)
 
@@ -2784,16 +2756,6 @@ def _write_LP_MPS_files(record: MatchingAttempt, prob, user):
         lp_path: Path = mgr.path
         prob.writeLP(lp_path)
         lp_asset = make_asset(lp_path, "matching.lp")
-
-    # write new assets to database, so they get a valid primary key
-    db.session.flush()
-
-    # add asset details to MatchingAttempt record
-    record.lp_file = lp_asset
-
-    # allow exceptions to propagate up to calling function
-    record.celery_finished = True
-    db.session.commit()
 
     return lp_asset
 
@@ -2899,28 +2861,37 @@ def register_matching_tasks(celery):
 
         print(" -- creation complete in time {t}".format(t=create_time.interval))
 
-        progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP file...", autocommit=True)
 
         try:
-            lp_asset = _write_LP_MPS_files(record, pulp_problem.problem, user)
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        _send_offline_email(celery, record, user, lp_asset)
-
-        progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Storing matching details for later processing...", autocommit=True)
-
-        try:
+            progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Storing matching details for later processing...", autocommit=True)
             _store_enumeration_details(record, data)
+
+            progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Writing .LP file...", autocommit=True)
+            lp_asset = _write_LP_file(record, pulp_problem.problem, user)
+
+            # add asset details to MatchingAttempt record
+            record.lp_file = lp_asset
+            record.celery_finished = True
+
+            db.session.flush()
+
+            progress_update(record.celery_id, TaskRecord.SUCCESS, 100, "File generation for offline project matching now complete", autocommit=True)
+            self.update_state("STARTED", meta={"msg": "Post message to user"})
+
+            # language=jinja2
+            message_tmpl = """
+            <div><strong>The LP file for matching "{{ name }} is now available.</strong></div>
+            <div class="mt-2">You can find this file in your <a href="{{ url_for('home.download_centre') }}" onclick="setTimeout(location.reload.bind(location), 1)">Download Centre</a>.</div>
+            """
+
+            message = render_template_string(message_tmpl, name=record.name)
+            user.post_message(message, "success", autocommit=False)
+
+            db.session.commit()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        progress_update(record.celery_id, TaskRecord.SUCCESS, 100, "File generation for offline project matching now complete", autocommit=True)
-
-        msg = render_template_string(_match_offline_ready, name=record.name)
-        user.post_message(msg, "info", autocommit=True)
 
     @celery.task(bind=True, default_retry_delay=30)
     def process_offline_solution(self, matching_id, asset_id, user_id):
@@ -3685,7 +3656,7 @@ def register_matching_tasks(celery):
         return payload
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_excel_report_by_email(self, matching_id, user_id, task_id):
+    def generate_excel_matching_report(self, matching_id, user_id, task_id):
         self.update_state(state="STARTED", meta={"msg": "Looking up MatchingAttempt record for id={id}".format(id=matching_id)})
         progress_update(task_id, TaskRecord.RUNNING, 10, "Looking up database records...", autocommit=True)
 
@@ -3709,73 +3680,20 @@ def register_matching_tasks(celery):
 
         try:
             xlsx_asset: GeneratedAsset = _export_matching_as_excel(record, user)
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
+            db.session.flush()
 
-        self.update_state("STARTED", meta={"msg": "Sending .xlsx report by email"})
+            self.update_state("STARTED", meta={"msg": "Post message to user"})
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        now = datetime.now()
+            # language=jinja2
+            message_tmpl = """
+            <div><strong>The Excel report for matching "{{ name }} is now available.</strong></div>
+            <div class="mt-2">You can find this report in your <a href="{{ url_for('home.download_centre') }}" onclick="setTimeout(location.reload.bind(location), 1)">Download Centre</a>.</div>
+            """
+            message = render_template_string(message_tmpl, name=record.name)
+            user.post_message(message, "success", autocommit=False)
 
-        msg = EmailMultiAlternatives(
-            subject=f"Excel report for matching attempt {record.name} at {now.strftime('%Y-%m-%d %H:%M:%S')}",
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
-            to=[user.email],
-        )
-
-        msg.body = render_template("email/matching/notify_excel_report.txt", name=record.name, user=user)
-
-        # TODO: will be problems when generated LP/MPS files are too large; should instead send a download link
-        object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
-        xlsx_storage: AssetCloudAdapter = AssetCloudAdapter(xlsx_asset, object_store, audit_data="matching._send_excel_report_by_email #1")
-
-        msg.attach(filename=xlsx_asset.target_name, mimetype=xlsx_asset.mimetype, content=xlsx_storage.get())
-
-        # register a new task in the database
-        send_task_id = register_task(msg.subject, description="Email to {r}".format(r=", ".join(msg.to)))
-
-        self.update_state("STARTED", meta={"msg": "Handoff to email dispatch task"})
-
-        send_tasks = chain(
-            send_log_email.s(send_task_id, msg),
-            notify_excel_file_sent.s(matching_id, user_id, send_task_id),
-        )
-
-        self.update_state("SUCCESS", meta={"msg": ".xlsx report generation complete"})
-        progress_update(task_id, TaskRecord.SUCCESS, 100, ".xlsx report generation complete", autocommit=True)
-
-        return self.replace(send_tasks)
-
-    @celery.task(bind=True, default_retry_delay=5)
-    def notify_excel_file_sent(self, result_data, matching_id, user_id, task_id):
-        # result_data not currently used
-        self.update_state("STARTED", meta={"msg": "Notify user that Excel report has been generated"})
-        progress_update(task_id, TaskRecord.SUCCESS, 100, "Excel report sent by email", autocommit=False)
-
-        try:
-            user: User = db.session.query(User).filter_by(id=user_id).first()
-            record: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if user is None:
-            self.update_state(state="FAILURE", meta={"msg": "Could not load owning User record"})
-            raise Ignore()
-
-        if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
-            raise Ignore()
-
-        self.update_state("STARTED", meta={"msg": "Post message to user"})
-        user.post_message(f'An Excel report for matching "{record.name}" has been sent by email to {user.email}', "success", autocommit=False)
-
-        try:
             db.session.commit()
         except SQLAlchemyError as e:
-            db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
@@ -3807,6 +3725,7 @@ def register_matching_tasks(celery):
             asset.grant_user(user)
             db.session.add(asset)
 
+            # add this asset to the user's download centre
             download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user, description=f'Excel report for matching attempt "{record.name}"')
             db.session.add(download_item)
 
@@ -3882,17 +3801,11 @@ def register_matching_tasks(celery):
             df = DataFrame.from_records(records)
 
             output_path = mgr.path
-            sheet_name = f'Matching "{record.name}"'
-            if len(sheet_name) > 31:
-                sheet_name = sheet_name[:31]
-            sheet_name = sheet_name.replace("[", "(")
-            sheet_name = sheet_name.replace("]", ")")
-            sheet_name = sheet_name.replace(":", "-")
-            sheet_name = sheet_name.replace("*", "-")
-            sheet_name = sheet_name.replace("?", "-")
-            sheet_name = sheet_name.replace("/", "-")
+            sheet_name = _normalize_excel_sheet_name(f'Matching "{record.name}"')
+
+            # validate sheet name for Excel
+            # it can't be longer than 31 chars, and there are special characters that it can't contain
             df.to_excel(output_path, sheet_name=sheet_name, index=False)
             xlsx_asset = make_asset(output_path, f"Matching_{record.name}-{now.strftime("%Y-%m-%d_%H:%M:%S")}")
 
-        db.session.commit()
         return xlsx_asset

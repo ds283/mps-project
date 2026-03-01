@@ -10,7 +10,7 @@
 
 import base64
 import itertools
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import partial
 from io import BytesIO
 from os import path
@@ -22,7 +22,7 @@ import pulp.apis as pulp_apis
 from celery import group, chain
 from celery.exceptions import Ignore
 from distutils.util import strtobool
-from flask import current_app, render_template
+from flask import current_app, render_template, render_template_string
 from flask_mailman import EmailMultiAlternatives
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -1077,13 +1077,14 @@ def _send_offline_email(celery, record, user, lp_asset):
     send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
 
-def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
+def _write_LP_file(record: ScheduleAttempt, prob, user):
     now = datetime.now()
+    expiry = now + timedelta(days=7)
     object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
 
     def make_asset(source_path: Path, target_name: str):
         # AssetUploadManager will populate most fields later
-        asset = GeneratedAsset(timestamp=now, expiry=None, target_name=target_name, parent_asset_id=None, license_id=None)
+        asset = GeneratedAsset(timestamp=now, expiry=expiry, target_name=target_name, parent_asset_id=None, license_id=None)
 
         size = source_path.stat().st_size
 
@@ -1092,7 +1093,7 @@ def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
                 asset,
                 data=BytesIO(f.read()),
                 storage=object_store,
-                audit_data=f"scheduling._write_LP_MPS_files (schedule attempt #{record.id})",
+                audit_data=f"scheduling._write_LP_file (schedule attempt #{record.id})",
                 length=size,
                 mimetype="text/plain",
                 validate_nonce=validate_nonce,
@@ -1102,6 +1103,7 @@ def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
         asset.grant_user(user)
         db.session.add(asset)
 
+        # add this asset to the user's download centre
         download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user, description=f'LP file generated for schedule attempt "{record.name}"')
         db.session.add(download_item)
 
@@ -1111,16 +1113,6 @@ def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
         lp_path: Path = mgr.path
         prob.writeLP(lp_path)
         lp_asset = make_asset(lp_path, "schedule.lp")
-
-    # write new assets to database, so they get a valid primary key
-    db.session.flush()
-
-    # add asset details to ScheduleAttempt record
-    record.lp_file = lp_asset
-
-    # allow exceptions to propagate up to calling function
-    record.celery_finished = True
-    db.session.commit()
 
     return lp_asset
 
@@ -1352,26 +1344,35 @@ def register_scheduling_tasks(celery):
 
         print(f" -- creation complete in time {create_time.interval:.5g} s")
 
-        progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP file...", autocommit=True)
-
         try:
-            lp_asset = _write_LP_MPS_files(record, prob, user)
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        _send_offline_email(celery, record, user, lp_asset)
-
-        progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Storing schedule details for later processing...", autocommit=True)
-
-        try:
+            progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Storing schedule details for later processing...", autocommit=True)
             _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_period)
+
+            progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Writing .LP file...", autocommit=True)
+            lp_asset = _write_LP_file(record, prob, user)
+
+            # add asset details to ScheduleAttempt record
+            record.lp_file = lp_asset
+            record.celery_finished = True
+
+            db.session.flush()
+
+            progress_update(record.celery_id, TaskRecord.SUCCESS, 100, "File generation for offline scheduling now complete", autocommit=True)
+            self.update_state("STARTED", meta={"msg": "Post message to user"})
+
+            # language=jinja2
+            message_tmpl = """
+            <div><strong>The LP file for schedule attempt "{{ name }} is now available.</strong></div>
+            <div class="mt-2">You can find this file in your <a href="{{ url_for('home.download_centre') }}" onclick="setTimeout(location.reload.bind(location), 1)">Download Centre</a>.</div>
+            """
+
+            message = render_template_string(message_tmpl, name=record.name)
+            user.post_message(message, "success", autocommit=False)
+
+            db.session.commit()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
-
-        progress_update(record.celery_id, TaskRecord.SUCCESS, 100, "File generation for offline scheduling now complete", autocommit=True)
-        user.post_message("The files necessary to perform offline scheduling have been emailed to you", "info", autocommit=True)
 
     @celery.task(bind=True, default_retry_delay=30)
     def process_offline_solution(self, schedule_id, asset_id, user_id):

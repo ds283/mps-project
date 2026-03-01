@@ -1102,6 +1102,7 @@ def _write_LP_file(record: ScheduleAttempt, prob, user):
 
         asset.grant_user(user)
         db.session.add(asset)
+        db.session.flush()
 
         # add this asset to the user's download centre
         download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user, description=f'LP file generated for schedule attempt "{record.name}"')
@@ -1659,6 +1660,7 @@ def register_scheduling_tasks(celery):
                     new_asset.access_control_list = old_asset.access_control_list
                     new_asset.access_control_roles = old_asset.access_control_roles
                     db.session.add(new_asset)
+                    db.session.flush()
 
                     download_item: DownloadCentreItem = DownloadCentreItem._build(asset=new_asset, user=current_id, description=f'Copy generated for "{new_name}" (original was "{old_record.name}")')
                     db.session.add(download_item)

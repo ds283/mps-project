@@ -25,14 +25,18 @@ RUN pip3 install -U pip setuptools wheel && pip3 install -U -r requirements.txt
 # build time and container size. Currently sticking with this trade-off.
 COPY --chown=mpsproject:0 --chmod=774 app ./app/
 COPY --chown=mpsproject:0 --chmod=774 migrations ./migrations/
-COPY --chown=mpsproject:0 --chmod=774 mpsproject.py serve.py gunicorn_config.py initdb.py celery_node.py migrate.py boot.sh launch_celery.sh launch_beat.sh launch_flower.sh ./
+COPY --chown=mpsproject:0 --chmod=774 SQLAlchemy-mysql-base.patch mpsproject.py serve.py gunicorn_config.py initdb.py celery_node.py migrate.py boot.sh launch_celery.sh launch_beat.sh launch_flower.sh ./
+
+# patch mysql dialect driver for SQLAlchemy so that it works with VARCHAR fields that have collation specified
+# otehrwise, we can't use alembic
+RUN patch -p1 < SQLAlchemy-mysql-base.patch && rm SQLAlchemy-mysql-base.patch
 
 # need destination file for config file local.py to exist, otherwise Docker will create it as a folder
 USER mpsproject
 RUN touch ./app/instance/local.py
 
-ENV FLASK_ENV production
-ENV FLASK_APP mpsproject.py
+ENV FLASK_ENV=production
+ENV FLASK_APP=mpsproject.py
 
 # web app and flower monitoring tool both run on port 5000
 EXPOSE 5000

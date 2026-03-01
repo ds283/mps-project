@@ -1362,7 +1362,7 @@ def register_scheduling_tasks(celery):
 
             # language=jinja2
             message_tmpl = """
-            <div><strong>The LP file for schedule attempt "{{ name }} is now available.</strong></div>
+            <div><strong>The LP file for schedule attempt "{{ name }}" is now available.</strong></div>
             <div class="mt-2">You can find this file in your <a href="{{ url_for('home.download_centre') }}" onclick="setTimeout(location.reload.bind(location), 1)">Download Centre</a>.</div>
             """
 

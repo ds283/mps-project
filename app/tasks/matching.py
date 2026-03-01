@@ -2880,7 +2880,7 @@ def register_matching_tasks(celery):
 
             # language=jinja2
             message_tmpl = """
-            <div><strong>The LP file for matching "{{ name }} is now available.</strong></div>
+            <div><strong>The LP file for matching "{{ name }}" is now available.</strong></div>
             <div class="mt-2">You can find this file in your <a href="{{ url_for('home.download_centre') }}" onclick="setTimeout(location.reload.bind(location), 1)">Download Centre</a>.</div>
             """
 
@@ -3686,7 +3686,7 @@ def register_matching_tasks(celery):
 
             # language=jinja2
             message_tmpl = """
-            <div><strong>The Excel report for matching "{{ name }} is now available.</strong></div>
+            <div><strong>The Excel report for matching "{{ name }}" is now available.</strong></div>
             <div class="mt-2">You can find this report in your <a href="{{ url_for('home.download_centre') }}" onclick="setTimeout(location.reload.bind(location), 1)">Download Centre</a>.</div>
             """
             message = render_template_string(message_tmpl, name=record.name)

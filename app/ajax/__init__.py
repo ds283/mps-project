@@ -22,3 +22,4 @@ from . import project_approver
 from . import documents
 from . import projecthub
 from . import public_browser
+from . import tenants

@@ -397,6 +397,12 @@
                             </a>
                             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                 {% set needs_divider = false %}
+                                {% if is_root %}
+                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('tenants.edit_tenants') }}">
+                                        <i class="fas fa-building fa-fw"></i> Manage tenants...
+                                    </a>
+                                    {% set needs_divider = true %}
+                                {% endif %}
                                 {% if is_manage_users or is_root %}
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.edit_users') }}">
                                         <i class="fas fa-users fa-fw"></i> Manage users...

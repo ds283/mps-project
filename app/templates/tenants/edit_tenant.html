@@ -1,0 +1,22 @@
+{% extends "base_app.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card border-primary mt-3 mb-3">
+                <div class="card-header bg-primary text-white">{{ title }}</div>
+                <div class="card-body">
+                    {{ wtf.render_form(tenant_form) }}
+                </div>
+            </div>
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

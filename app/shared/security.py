@@ -9,7 +9,8 @@
 #
 import base64
 
-from app.models import BackupRecord, GeneratedAsset, SubmittedAsset
+from ..database import db
+from ..models import BackupRecord, GeneratedAsset, SubmittedAsset
 
 
 def validate_nonce(nonce: bytes):

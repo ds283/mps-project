@@ -32,85 +32,15 @@ from url_normalize import url_normalize
 
 import app.shared.cloud_object_store.bucket_types as buckets
 import app.shared.cloud_object_store.encryption_types as encryptions
+from .defaults import DEFAULT_STRING_LENGTH, IP_LENGTH, PASSWORD_HASH_LENGTH, SERIALIZED_LAYOUT_LENGTH
+from .choices import short_academic_titles_dict
 from ..cache import cache
 from ..database import db
 from ..shared.colours import get_text_colour
 from ..shared.formatters import format_size, format_time, format_readable_time
 from ..shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE
+from .config import get_AES_key
 from ..shared.sqlalchemy import get_count
-
-# length of database string for typical fields, if used
-DEFAULT_STRING_LENGTH = 255
-
-# length of database string used for IP addresses
-IP_LENGTH = 60
-
-# length of database string for a "year" column
-YEAR_LENGTH = 4
-
-# length of database string for password hash field, if used
-PASSWORD_HASH_LENGTH = 255
-
-# length of string for serialized project hub layout storage
-SERIALIZED_LAYOUT_LENGTH = 2048
-
-
-# default number of markers to assign
-DEFAULT_ASSIGNED_MARKERS = 2
-
-# default number of moderators to assign
-DEFAULT_ASSIGNED_MODERATORS = 0
-
-
-# labels and keys for student 'level' field
-student_level_choices = [(0, "UG"), (1, "PGT"), (2, "PGR")]
-
-# labels and keys for 'year' field; it's not possible to join in Y1; treat students as
-# joining in Y2
-year_choices = [(2, "Year 2"), (3, "Year 3"), (4, "Year 4")]
-
-# labels and keys for 'extent' field
-extent_choices = [(1, "1 year"), (2, "2 years"), (3, "3 years")]
-
-# labels and keys for the 'start year' field
-start_year_choices = [(1, "Y1"), (2, "Y2"), (3, "Y3"), (4, "Y4")]
-
-# labels and keys for 'academic titles' field
-academic_titles = [(1, "Dr"), (2, "Professor"), (3, "Mr"), (4, "Ms"), (5, "Mrs"), (6, "Miss"), (7, "Mx")]
-short_academic_titles = [(1, "Dr"), (2, "Prof"), (3, "Mr"), (4, "Ms"), (6, "Mrs"), (6, "Miss"), (7, "Mx")]
-
-academic_titles_dict = dict(academic_titles)
-short_academic_titles_dict = dict(short_academic_titles)
-
-# labels and keys for years_history
-matching_history_choices = [(1, "1 year"), (2, "2 years"), (3, "3 years"), (4, "4 years"), (5, "5 years")]
-
-# PuLP solver choices
-solver_choices = [
-    (0, "PuLP-packaged CBC (amd64 only)"),
-    (1, "CBC external command (amd64 or arm64)"),
-    (2, "GLPK external command (amd64 or arm64)"),
-    (3, "CPLEX external command (not available in cloud by default, requires license)"),
-    (4, "Gurobi external command (not available in cloud by default, requires license)"),
-    (5, "SCIP external command  (not available in cloud by default, requires license)"),
-]
-
-# session types
-session_choices = [(0, "Morning"), (1, "Afternoon")]
-
-# semesters
-semester_choices = [(0, "Autumn Semester"), (1, "Spring Semester"), (2, "Autumn & Spring teaching"), (3, "All-year teaching")]
-
-# frequency of email summaries
-email_freq_choices = [(1, "1 day"), (2, "2 days"), (3, "3 days"), (4, "4 days"), (5, "5 days"), (6, "6 days"), (7, "7 days")]
-
-# auto-enroll selectors
-auto_enrol_year_choices = [(0, "The first year for which they are eligible"), (1, "Every year for which students are eligible")]
-
-
-# for encrypted fields, extract encryption key from configuration variables
-def _get_key():
-    return current_app.config["SQLACHEMY_AES_KEY"]
 
 
 class EditingMetadataMixin:
@@ -3124,7 +3054,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
     # API access token for this user; AesGcmEngine is more secure but cannot perform queries
     # here, that's OK because we don't expect to have to query against the token
     canvas_API_token = db.Column(
-        EncryptedType(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), _get_key, AesGcmEngine, "pkcs5"), default=None, nullable=True
+        EncryptedType(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), get_AES_key, AesGcmEngine, "pkcs5"), default=None, nullable=True
     )
 
     @property
@@ -3911,7 +3841,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     # exam number is needed for marking
     # we store this encrypted out of prudence. Note that we use AesEngine which is the less secure of the two
     # AES choices provided by SQLAlchemyUtils, but which can perform queries against the field
-    exam_number = db.Column(EncryptedType(db.Integer(), _get_key, AesEngine, "oneandzeroes"))
+    exam_number = db.Column(EncryptedType(db.Integer(), get_AES_key, AesEngine, "oneandzeroes"))
 
     # cohort is used to compute this student's academic year, and
     # identifies which project classes this student will be enrolled for

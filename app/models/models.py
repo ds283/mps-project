@@ -1464,7 +1464,14 @@ def _get_current_year():
 # ASSOCIATION TABLES
 ####################
 
-# association table holding mapping from roles to users
+# association table mapping from users to tenants
+tenant_to_users = db.Table(
+    "tenant_users",
+    db.Column("user_id", db.Integer(), db.ForeignKey("users.id"), primary_key=True),
+    db.Column("tenant_id", db.Integer(), db.ForeignKey("tenants.id"), primary_key=True),
+)
+
+# association table mapping from roles to users
 roles_to_users = db.Table(
     "roles_users",
     db.Column("user_id", db.Integer(), db.ForeignKey("users.id"), primary_key=True),
@@ -2098,6 +2105,9 @@ class User(db.Model, UserMixin):
     __tablename__ = "users"
 
     id = db.Column(db.Integer(), primary_key=True)
+
+    # tenants to which this user belongs
+    tenants = db.relationship("Tenant", secondary=tenant_to_users, backref=db.backref("users", lazy="dynamic"))
 
     # primary email address
     email = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True)

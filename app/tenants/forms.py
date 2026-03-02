@@ -21,6 +21,10 @@ class TenantMixin:
         "Tenant name", validators=[InputRequired(message="Tenant name is required"), Length(max=DEFAULT_STRING_LENGTH)]
     )
 
+    colour = StringField(
+        "Colour", validators=[Length(max=DEFAULT_STRING_LENGTH)], description="Assign a colour to help identify this tenant"
+    )
+
 
 class AddTenantForm(Form, TenantMixin):
     submit = SubmitField("Add new tenant")

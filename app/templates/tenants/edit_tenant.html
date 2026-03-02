@@ -1,6 +1,26 @@
 {% extends "base_app.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import colour_field %}
+
+{% block scripts %}
+    {{ super() }}
+    {% assets filters="cssmin", output="gen/bootstrap-colorpicker-min.css", "css/bootstrap-colorpicker.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/bootstrap-colorpicker-min.js", "js/bootstrap-colorpicker.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#colour-group').colorpicker({"format": "hex"});
+        });
+    </script>
+{% endblock %}
 
 {% block title %}
     {{ title }}
@@ -13,7 +33,21 @@
             <div class="card border-primary mt-3 mb-3">
                 <div class="card-header bg-primary text-white">{{ title }}</div>
                 <div class="card-body">
-                    {{ wtf.render_form(tenant_form) }}
+                    <form action="{{ request.path }}" method="POST" name="tenant_form">
+                        {{ tenant_form.hidden_tag() }}
+
+                        <div class="mt-2">
+                            {{ wtf.render_field(tenant_form.name) }}
+                        </div>
+
+                        <div class="mt-2">
+                            {{ colour_field(tenant_form.colour, 'colour-group') }}
+                        </div>
+
+                        <div class="mt-3">
+                            {{ wtf.render_field(tenant_form.submit, button_map={'submit': 'primary'}) }}
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

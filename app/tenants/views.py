@@ -47,7 +47,7 @@ def add_tenant():
     form = AddTenantForm(request.form)
     
     if form.validate_on_submit():
-        tenant = Tenant(name=form.name.data)
+        tenant = Tenant(name=form.name.data, colour=form.colour.data)
 
         try:
             db.session.add(tenant)
@@ -64,7 +64,7 @@ def add_tenant():
 
 @tenants.route('/rename_tenant/<int:id>', methods=["GET", "POST"])
 @roles_required("root")
-def rename_tenant(id):
+def edit_tenant(id):
     tenant = db.session.query(Tenant).get_or_404(id)
     
     form = EditTenantForm(obj=tenant)
@@ -72,6 +72,7 @@ def rename_tenant(id):
     
     if form.validate_on_submit():
         tenant.name = form.name.data
+        tenant.colour = form.colour.data
 
         try:
             db.session.commit()

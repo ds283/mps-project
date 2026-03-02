@@ -130,6 +130,16 @@ class EditUserTenantsMixin:
     )
 
 
+class BatchUploadTenantsMixin:
+    tenants = QuerySelectMultipleField(
+        "Assign tenants",
+        query_factory=GetAllTenants,
+        get_label=BuildTenantName,
+        validators=[InputRequired(message="At least one tenant must be assigned")],
+        description="Assign imported user accounts to these tenants. At least one tenant is required.",
+    )
+
+
 class RegisterOfficeForm(
     Form,
     RegisterFormMixin,
@@ -214,7 +224,7 @@ class ResearchGroupMixin:
     )
 
 
-class UploadBatchCreateStudentsForm(Form):
+class UploadBatchCreateStudentsForm(Form, BatchUploadTenantsMixin):
     trust_cohort = BooleanField(
         "Trust imported cohort information",
         default=False,
@@ -239,11 +249,11 @@ class UploadBatchCreateStudentsForm(Form):
         validators=[InputRequired("An reference academic year is required")],
     )
 
-    submit = SubmitField("Upload user list")
+    submit = SubmitField("Upload student list")
 
 
-class UploadBatchCreateFacultyForm(Form):
-    submit = SubmitField("Upload user list")
+class UploadBatchCreateFacultyForm(Form, BatchUploadTenantsMixin):
+    submit = SubmitField("Upload faculty list")
 
 
 def EditStudentBatchItemFormFactory(batch):

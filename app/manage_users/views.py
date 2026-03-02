@@ -790,6 +790,7 @@ def batch_create_students():
                     academic_year=current_year,
                     report=None,
                 )
+                record.tenants = form.tenants.data
 
                 try:
                     db.session.add(asset)
@@ -876,6 +877,7 @@ def batch_create_faculty():
                     interpreted_lines=None,
                     report=None,
                 )
+                record.tenants = form.tenants.data
 
                 try:
                     db.session.add(asset)

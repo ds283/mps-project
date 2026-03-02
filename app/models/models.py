@@ -32,14 +32,14 @@ from url_normalize import url_normalize
 
 import app.shared.cloud_object_store.bucket_types as buckets
 import app.shared.cloud_object_store.encryption_types as encryptions
-from .defaults import DEFAULT_STRING_LENGTH, IP_LENGTH, PASSWORD_HASH_LENGTH, SERIALIZED_LAYOUT_LENGTH
 from .choices import short_academic_titles_dict
+from .config import get_AES_key
+from .defaults import DEFAULT_STRING_LENGTH, IP_LENGTH, PASSWORD_HASH_LENGTH, SERIALIZED_LAYOUT_LENGTH
 from ..cache import cache
 from ..database import db
 from ..shared.colours import get_text_colour
 from ..shared.formatters import format_size, format_time, format_readable_time
 from ..shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE
-from .config import get_AES_key
 from ..shared.sqlalchemy import get_count
 
 
@@ -1468,6 +1468,20 @@ def _get_current_year():
 tenant_to_users = db.Table(
     "tenant_users",
     db.Column("user_id", db.Integer(), db.ForeignKey("users.id"), primary_key=True),
+    db.Column("tenant_id", db.Integer(), db.ForeignKey("tenants.id"), primary_key=True),
+)
+
+# association table mapping from student batch records to tenants
+student_batch_to_tenants = db.Table(
+    "student_batch_tenants",
+    db.Column("batch_id", db.Integer(), db.ForeignKey("batch_student.id"), primary_key=True),
+    db.Column("tenant_id", db.Integer(), db.ForeignKey("tenants.id"), primary_key=True),
+)
+
+# association table mapping from faculty batch records to tenants
+faculty_batch_to_tenants = db.Table(
+    "faculty_batch_tenants",
+    db.Column("batch_id", db.Integer(), db.ForeignKey("batch_faculty.id"), primary_key=True),
     db.Column("tenant_id", db.Integer(), db.ForeignKey("tenants.id"), primary_key=True),
 )
 
@@ -4334,6 +4348,9 @@ class StudentBatch(db.Model):
     owner_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
     owner = db.relationship("User", foreign_keys=[owner_id], uselist=False, backref=db.backref("student_batch_imports", lazy="dynamic"))
 
+    # tenants to assign to imported users
+    tenants = db.relationship("Tenant", secondary=student_batch_to_tenants, lazy="dynamic", backref=db.backref("student_batches", lazy="dynamic"))
+
     # celery task UUID
     celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
@@ -4560,6 +4577,9 @@ class FacultyBatch(db.Model):
     # importing user
     owner_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
     owner = db.relationship("User", foreign_keys=[owner_id], uselist=False, backref=db.backref("faculty_batch_imports", lazy="dynamic"))
+
+    # tenants to assign to imported users
+    tenants = db.relationship("Tenant", secondary=faculty_batch_to_tenants, lazy="dynamic", backref=db.backref("faculty_batches", lazy="dynamic"))
 
     # celery task UUID
     celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))

@@ -1,7 +1,28 @@
 {% extends "manage_users/users_dashboard/nav.html" %}
 
+{% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#tenants').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select one or more tenants...'
+            });
+        });
+    </script>
+{% endblock %}
+
 {% block title %}
-    Batch import students
+    Upload student account list
 {% endblock %}
 
 {% block bodyblock %}
@@ -25,6 +46,9 @@
                         <span class="badge bg-info" id="filename-data"></span>
 
                         <hr class="intro-divider">
+                        <div class="card mt-1 mb-3 card-body bg-well">
+                            {{ wtf.render_field(form.tenants) }}
+                        </div>
                         {{ wtf.render_field(form.current_year) }}
                         {{ wtf.render_field(form.ignore_Y0) }}
                         <hr class="intro-divider">
@@ -121,6 +145,14 @@
                                         {% endif %}
                                     </ul>
                                 </div>
+                                {% if batch.tenants %}
+                                    <div class="mt-1 text-muted small">
+                                        <span class="fw-semibold">Tenants:</span>
+                                        {% for tenant in batch.tenants %}
+                                            <span class="badge bg-secondary">{{ tenant.name }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="col-4">

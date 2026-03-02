@@ -24,7 +24,8 @@ from sqlalchemy.sql.functions import func
 
 from app.manage_users.actions import register_user
 from ..database import db
-from ..models import TemporaryAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData, AssetLicense, FacultyBatch, FacultyBatchItem, \
+from ..models import TemporaryAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData, AssetLicense, FacultyBatch, \
+    FacultyBatchItem, \
     FacultyData
 from ..shared.asset_tools import AssetCloudAdapter
 from ..task_queue import progress_update
@@ -346,7 +347,7 @@ class FacultySkipRow(Exception):
             return True
 
 
-def _faculty_overwrite_record(item: FacultyBatchItem) -> int:
+def _faculty_overwrite_record(item: FacultyBatchItem, batch: FacultyBatch) -> int:
     faculty_record: FacultyData = item.existing_record
     user_record: User = faculty_record.user
 
@@ -377,10 +378,15 @@ def _faculty_overwrite_record(item: FacultyBatchItem) -> int:
     if item.CATS_presentation is not None and faculty_record.CATS_presentation != item.CATS_presentation:
         faculty_record.CATS_presentation = item.CATS_presentation
 
+    # assign tenants from the batch record to the user, adding any that are not already present
+    for tenant in batch.tenants:
+        if tenant not in user_record.tenants:
+            user_record.tenants.append(tenant)
+
     return OUTCOME_MERGED
 
 
-def _student_overwrite_record(item: StudentBatchItem) -> int:
+def _student_overwrite_record(item: StudentBatchItem, batch: StudentBatch) -> int:
     student_record: StudentData = item.existing_record
     user_record: User = student_record.user
 
@@ -423,10 +429,15 @@ def _student_overwrite_record(item: StudentBatchItem) -> int:
     if hasattr(student_record, "disable_validate"):
         del student_record.disable_validate
 
+    # assign tenants from the batch record to the user, adding any that are not already present
+    for tenant in batch.tenants:
+        if tenant not in user_record.tenants:
+            user_record.tenants.append(tenant)
+
     return OUTCOME_MERGED
 
 
-def _faculty_create_record(item: FacultyBatchItem, user_id) -> int:
+def _faculty_create_record(item: FacultyBatchItem, batch: FacultyBatch, user_id) -> int:
     faculty_lic = current_app.config["FACULTY_DEFAULT_LICENSE"]
     faculty_default = db.session.query(AssetLicense).filter_by(abbreviation=faculty_lic).first()
 
@@ -440,6 +451,11 @@ def _faculty_create_record(item: FacultyBatchItem, user_id) -> int:
         ask_confirm=False,
         default_license=faculty_default,
     )
+
+    # assign tenants from the batch record to the new user
+    for tenant in batch.tenants:
+        if tenant not in user.tenants:
+            user.tenants.append(tenant)
 
     # create new faculty record
     data = FacultyData(
@@ -469,7 +485,7 @@ def _faculty_create_record(item: FacultyBatchItem, user_id) -> int:
     return OUTCOME_CREATED
 
 
-def _student_create_record(item: StudentBatchItem, user_id) -> int:
+def _student_create_record(item: StudentBatchItem, batch: StudentBatch, user_id) -> int:
     student_lic = current_app.config["STUDENT_DEFAULT_LICENSE"]
     student_default = db.session.query(AssetLicense).filter_by(abbreviation=student_lic).first()
 
@@ -483,6 +499,11 @@ def _student_create_record(item: StudentBatchItem, user_id) -> int:
         ask_confirm=False,
         default_license=student_default,
     )
+
+    # assign tenants from the batch record to the new user
+    for tenant in batch.tenants:
+        if tenant not in user.tenants:
+            user.tenants.append(tenant)
 
     # create new student record and mark it as automatically validated
     data = StudentData(
@@ -1085,13 +1106,15 @@ def register_batch_create_tasks(celery):
             return OUTCOME_IGNORED
 
         try:
+            batch: FacultyBatch = item.parent
+
             if item.existing_record is not None:
-                result = _faculty_overwrite_record(item)
+                result = _faculty_overwrite_record(item, batch)
             else:
-                result = _faculty_create_record(item, user_id)
+                result = _faculty_create_record(item, batch, user_id)
 
             # delete this item
-            item.parent.items.remove(item)
+            batch.items.remove(item)
             db.session.delete(item)
 
             db.session.commit()
@@ -1426,13 +1449,15 @@ def register_batch_create_tasks(celery):
             return OUTCOME_IGNORED
 
         try:
+            batch: StudentBatch = item.parent
+
             if item.existing_record is not None:
-                result = _student_overwrite_record(item)
+                result = _student_overwrite_record(item, batch)
             else:
-                result = _student_create_record(item, user_id)
+                result = _student_create_record(item, batch, user_id)
 
             # delete this item
-            item.parent.items.remove(item)
+            batch.items.remove(item)
             db.session.delete(item)
 
             db.session.commit()

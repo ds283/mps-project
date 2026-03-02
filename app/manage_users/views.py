@@ -183,8 +183,6 @@ def create_faculty(role):
 
         user = register_user(**field_data)
 
-        user.tenants = form.tenants.data
-
         # insert extra data for faculty accounts
         data = FacultyData(
             id=user.id,
@@ -263,8 +261,6 @@ def create_student(role):
 
         user = register_user(**field_data)
         form.user = user
-
-        user.tenants = form.tenants.data
 
         # insert extra data for student accounts
 
@@ -744,11 +740,6 @@ def batch_create_students():
         if "batch_list" in request.files:
             batch_file = request.files["batch_list"]
 
-            trust_cohort = form.trust_cohort.data
-            trust_registration = form.trust_registration.data
-            current_year = form.current_year.data
-            ignore_Y0 = form.ignore_Y0.data
-
             # generate new filename for upload
             incoming_filename = Path(batch_file.filename)
             extension = incoming_filename.suffix.lower()
@@ -784,13 +775,13 @@ def batch_create_students():
                     timestamp=datetime.now(),
                     total_lines=None,
                     interpreted_lines=None,
-                    trust_cohort=trust_cohort,
-                    trust_registration=trust_registration,
-                    ignore_Y0=ignore_Y0,
-                    academic_year=current_year,
+                    trust_cohort=(form.trust_cohort.data),
+                    trust_registration=(form.trust_registration.data),
+                    ignore_Y0=(form.ignore_Y0.data),
+                    academic_year=(form.current_year.data),
                     report=None,
+                    tenants=form.tenants.data,
                 )
-                record.tenants = form.tenants.data
 
                 try:
                     db.session.add(asset)
@@ -876,8 +867,8 @@ def batch_create_faculty():
                     total_lines=None,
                     interpreted_lines=None,
                     report=None,
+                    tenants=form.tenants.data,
                 )
-                record.tenants = form.tenants.data
 
                 try:
                     db.session.add(asset)

@@ -434,6 +434,10 @@ def create_app():
 
     app.register_blueprint(projecthub_blueprint, url_prefix="/projecthub")
 
+    from .tenants import tenants as tenants_blueprint
+
+    app.register_blueprint(tenants_blueprint, url_prefix="/tenants")
+
     if app.config.get("ENABLE_PUBLIC_BROWSER", False):
         from .public_browser import public_browser as public_browser_blueprint
 

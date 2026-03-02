@@ -33,8 +33,8 @@ from ..models import (
     SubmittedAsset,
     AssetLicense,
     MainConfig,
-    validate_nonce,
 )
+from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetUploadManager, AssetCloudAdapter
 from ..shared.utils import get_main_config
 

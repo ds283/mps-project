@@ -111,13 +111,13 @@ from ..models import (
     SubmissionRole,
     MatchingRecord,
     MatchingRole,
-    validate_nonce,
     LiveProjectAlternative,
     ProjectAlternative,
     FeedbackRecipe,
     FeedbackReport,
     GeneratedAsset,
 )
+from ..shared.security import validate_nonce
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.convenor_dashboard import (

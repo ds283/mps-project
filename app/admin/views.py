@@ -160,12 +160,12 @@ from ..models import (
     MatchingRole,
     SubmissionAttachment,
     PeriodAttachment,
-    validate_nonce,
     BackupLabel,
     FeedbackAsset,
     TemplateTag,
     FeedbackRecipe, DownloadCentreItem,
 )
+from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
     get_backup_config,

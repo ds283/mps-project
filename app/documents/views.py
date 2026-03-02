@@ -35,9 +35,9 @@ from ..models import (
     User,
     AssetLicense,
     SubmittingStudent,
-    validate_nonce,
     FeedbackReport,
 )
+from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory

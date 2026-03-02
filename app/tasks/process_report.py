@@ -20,7 +20,8 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import SubmissionRecord, SubmittedAsset, User, ProjectClassConfig, GeneratedAsset, StudentData, validate_nonce
+from ..models import SubmissionRecord, SubmittedAsset, User, ProjectClassConfig, GeneratedAsset, StudentData
+from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.scratch import ScratchFileManager
 

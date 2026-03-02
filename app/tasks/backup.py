@@ -30,7 +30,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .. import register_task
 from ..database import db
-from ..models import BackupRecord, validate_nonce, BackupLabel
+from ..models import BackupRecord, BackupLabel
+from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.backup import get_backup_config, compute_current_backup_count, compute_current_backup_size, remove_backup
 from ..shared.cloud_object_store import ObjectStore

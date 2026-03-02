@@ -44,11 +44,11 @@ from ..models import (
     DegreeProgramme,
     DegreeType,
     BackupRecord,
-    validate_nonce,
     SubmittingStudent,
     SelectingStudent,
     PopularityRecord, DownloadCentreItem,
 )
+from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetCloudScratchContextManager, AssetUploadManager
 from ..shared.cloud_object_store import ObjectStore
 from ..shared.utils import get_current_year, get_count

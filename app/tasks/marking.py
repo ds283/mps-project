@@ -43,10 +43,10 @@ from ..models import (
     FeedbackRecipe,
     FeedbackAsset,
     AssetLicense,
-    validate_nonce,
     LiveProject,
     FeedbackReport,
 )
+from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetCloudScratchContextManager, AssetUploadManager
 from ..shared.scratch import ScratchFileManager, ScratchGroupManager
 from ..task_queue import register_task

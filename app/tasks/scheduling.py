@@ -46,9 +46,9 @@ from ..models import (
     LiveProject,
     ResearchGroup,
     ProjectClassConfig,
-    validate_nonce,
     SubmissionRole, DownloadCentreItem,
 )
+from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.scratch import ScratchFileManager
 from ..shared.sqlalchemy import get_count

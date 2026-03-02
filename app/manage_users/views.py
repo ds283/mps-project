@@ -66,8 +66,8 @@ from ..models import (
     AssetLicense,
     WorkflowMixin,
     faculty_affiliations,
-    validate_nonce,
 )
+from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
 from ..shared.conversions import is_integer, is_boolean

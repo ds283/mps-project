@@ -49,13 +49,13 @@ from ..models import (
     SubmissionPeriodDefinition,
     SubmittingStudent,
     SubmissionRole,
-    validate_nonce,
     CustomOffer,
     Project,
     LiveProjectAlternative,
     StudentData,
     DegreeProgramme, DownloadCentreItem,
 )
+from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.excel import _normalize_excel_sheet_name
 from ..shared.scratch import ScratchFileManager

@@ -13,6 +13,10 @@
 {% endif %}
 {% set filter_CATS_coded = '1' if filter_CATS else '0' %}
 
+{% if not tenant_filter or tenant_filter is none %}
+    {% set tenant_filter = 'all' %}
+{% endif %}
+
 {% from "datatables.html" import import_datatables, bootstrap_spinner %}
 
 {% block scripts %}
@@ -28,7 +32,8 @@
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 serverSide: true, processing: true,
                 language: {{ bootstrap_spinner() }},
-                ajax: { url: $SCRIPT_ROOT + '/manage_users/users_faculty_ajax?pclass={{ pclass_filter }}&group={{ group_filter }}&&CATS={{ filter_CATS_coded }}',
+                ajax: {
+                    url: $SCRIPT_ROOT + '/manage_users/users_faculty_ajax?pclass={{ pclass_filter }}&group={{ group_filter }}&CATS={{ filter_CATS_coded }}&tenant={{ tenant_filter }}',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'}); },
@@ -68,7 +73,8 @@
         <div class="card-body">
             {% set has_pclasses = (pclasses is not none and pclasses|length > 0) %}
             {% set has_groups = (groups is not none and groups|length > 0) %}
-            {% if has_pclasses or has_groups or filter_CATS %}
+            {% set has_tenants = (tenants is not none and tenants|length > 0) %}
+            {% if has_pclasses or has_groups or has_tenants or filter_CATS %}
                 <div class="card mt-3 mb-3 card-body bg-well">
                     {% set needs_hrule = false %}
                     {% if has_pclasses %}
@@ -76,12 +82,12 @@
                         <div class="row">
                             <div class="col-12">
                                 <p>Filter by enrolment</p>
-                                <a href="{{ url_for('manage_users.edit_users_faculty', pclass='all', group=group_filter, CATS=filter_CATS_coded) }}"
+                                <a href="{{ url_for('manage_users.edit_users_faculty', pclass='all', group=group_filter, CATS=filter_CATS_coded, tenant=tenant_filter) }}"
                                    class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     All
                                 </a>
                                 {% for pclass in pclasses %}
-                                    <a href="{{ url_for('manage_users.edit_users_faculty', pclass=pclass.id, group=group_filter, CATS=filter_CATS_coded) }}"
+                                    <a href="{{ url_for('manage_users.edit_users_faculty', pclass=pclass.id, group=group_filter, CATS=filter_CATS_coded, tenant=tenant_filter) }}"
                                        class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                         {{ pclass.name }}
                                     </a>
@@ -96,14 +102,39 @@
                         <div class="row">
                             <div class="col-12">
                                 <p>Filter by affiliation or research group</p>
-                                <a href="{{ url_for('manage_users.edit_users_faculty', pclass=pclass_filter, group='all', CATS=filter_CATS_coded) }}"
+                                <a href="{{ url_for('manage_users.edit_users_faculty', pclass=pclass_filter, group='all', CATS=filter_CATS_coded, tenant=tenant_filter) }}"
                                    class="btn btn-sm filter-btn {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     All
                                 </a>
                                 {% for group in groups %}
-                                    <a href="{{ url_for('manage_users.edit_users_faculty', pclass=pclass_filter, group=group.id, CATS=filter_CATS_coded) }}"
+                                    <a href="{{ url_for('manage_users.edit_users_faculty', pclass=pclass_filter, group=group.id, CATS=filter_CATS_coded, tenant=tenant_filter) }}"
                                        class="btn btn-sm filter-btn {% if group_filter == group.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                         {{ group.name }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if has_tenants %}
+                        {% if needs_hrule %}
+                            <hr class="intro-divider">{% endif %}
+                        {% set needs_hrule = true %}
+                        <div class="row">
+                            <div class="col-12">
+                                <p>Filter by tenant</p>
+                                <a href="{{ url_for('manage_users.edit_users_faculty', pclass=pclass_filter, group=group_filter, CATS=filter_CATS_coded, tenant='all') }}"
+                                   class="btn btn-sm filter-btn {% if tenant_filter is none or tenant_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    All
+                                </a>
+                                <a href="{{ url_for('manage_users.edit_users_faculty', pclass=pclass_filter, group=group_filter, CATS=filter_CATS_coded, tenant='none') }}"
+                                   class="btn btn-sm filter-btn {% if tenant_filter == 'none' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    No tenant
+                                </a>
+                                {% for tenant in tenants %}
+                                    <a href="{{ url_for('manage_users.edit_users_faculty', pclass=pclass_filter, group=group_filter, CATS=filter_CATS_coded, tenant=tenant.id) }}"
+                                       class="btn btn-sm filter-btn {% if tenant_filter == tenant.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                        {{ tenant.name }}
                                     </a>
                                 {% endfor %}
                             </div>
@@ -115,7 +146,7 @@
                     <div class="row">
                         <div class="col-12">
                             <p>Filter by properties</p>
-                            <a href="{{ url_for('manage_users.edit_users_faculty', pclass=pclass_filter, group=group_filter, CATS='0' if filter_CATS else '1') }}"
+                            <a href="{{ url_for('manage_users.edit_users_faculty', pclass=pclass_filter, group=group_filter, CATS='0' if filter_CATS else '1', tenant=tenant_filter) }}"
                                class="btn btn-sm filter-btn {% if filter_CATS %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                 Has CATS limits
                             </a>

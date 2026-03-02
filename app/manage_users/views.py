@@ -60,6 +60,7 @@ from ..models import (
     ProjectClass,
     ResearchGroup,
     Role,
+    Tenant,
     TemporaryAsset,
     TaskRecord,
     BackupRecord,
@@ -334,7 +335,23 @@ def edit_users():
     if role_filter is not None:
         session["accounts_role_filter"] = role_filter
 
-    return render_template_context("manage_users/users_dashboard/accounts.html", filter=role_filter, pane="accounts")
+    tenant_filter = request.args.get("tenant")
+
+    if tenant_filter is None and session.get("accounts_tenant_filter"):
+        tenant_filter = session["accounts_tenant_filter"]
+
+    if tenant_filter is not None:
+        session["accounts_tenant_filter"] = tenant_filter
+
+    tenants = db.session.query(Tenant).order_by(Tenant.name.asc()).all()
+
+    return render_template_context(
+        "manage_users/users_dashboard/accounts.html",
+        filter=role_filter,
+        pane="accounts",
+        tenant_filter=tenant_filter,
+        tenants=tenants,
+    )
 
 
 @manage_users.route("/edit_users_students")
@@ -424,6 +441,16 @@ def edit_users_students():
 
     cohorts = [c[0] for c in cohort_data]
 
+    tenant_filter = request.args.get("tenant")
+
+    if tenant_filter is None and session.get("accounts_students_tenant_filter"):
+        tenant_filter = session["accounts_students_tenant_filter"]
+
+    if tenant_filter is not None:
+        session["accounts_students_tenant_filter"] = tenant_filter
+
+    tenants = db.session.query(Tenant).order_by(Tenant.name.asc()).all()
+
     return render_template_context(
         "manage_users/users_dashboard/students.html",
         filter=prog_filter,
@@ -437,6 +464,8 @@ def edit_users_students():
         filter_SEND=filter_SEND,
         programmes=programmes,
         cohorts=sorted(cohorts),
+        tenant_filter=tenant_filter,
+        tenants=tenants,
     )
 
 
@@ -496,6 +525,16 @@ def edit_users_faculty():
         .all()
     )
 
+    tenant_filter = request.args.get("tenant")
+
+    if tenant_filter is None and session.get("accounts_faculty_tenant_filter"):
+        tenant_filter = session["accounts_faculty_tenant_filter"]
+
+    if tenant_filter is not None:
+        session["accounts_faculty_tenant_filter"] = tenant_filter
+
+    tenants = db.session.query(Tenant).order_by(Tenant.name.asc()).all()
+
     return render_template_context(
         "manage_users/users_dashboard/faculty.html",
         pane="faculty",
@@ -504,6 +543,8 @@ def edit_users_faculty():
         filter_CATS=filter_CATS,
         groups=groups,
         pclasses=pclasses,
+        tenant_filter=tenant_filter,
+        tenants=tenants,
     )
 
 
@@ -535,6 +576,14 @@ def users_ajax():
         base_query = db.session.query(User).filter(User.roles.any(Role.name == "root"))
     else:
         base_query = db.session.query(User)
+
+    tenant_filter = request.args.get("tenant")
+    if tenant_filter == "none":
+        base_query = base_query.filter(~User.tenants.any())
+    else:
+        flag, tenant_value = is_integer(tenant_filter)
+        if flag:
+            base_query = base_query.filter(User.tenants.any(Tenant.id == tenant_value))
 
     name = {
         "search": func.concat(User.first_name, " ", User.last_name),
@@ -608,6 +657,14 @@ def users_students_ajax():
     if flag and filter_SEND:
         base_query = base_query.filter(or_(StudentData.dyspraxia_sticker == True, StudentData.dyslexia_sticker == True))
 
+    tenant_filter = request.args.get("tenant")
+    if tenant_filter == "none":
+        base_query = base_query.filter(~User.tenants.any())
+    else:
+        flag, tenant_value = is_integer(tenant_filter)
+        if flag:
+            base_query = base_query.filter(User.tenants.any(Tenant.id == tenant_value))
+
     name = {
         "search": func.concat(User.first_name, " ", User.last_name),
         "order": [User.last_name, User.first_name],
@@ -652,6 +709,14 @@ def users_faculty_ajax():
                 FacultyData.CATS_presentation != None,
             )
         )
+
+    tenant_filter = request.args.get("tenant")
+    if tenant_filter == "none":
+        base_query = base_query.filter(~User.tenants.any())
+    else:
+        flag, tenant_value = is_integer(tenant_filter)
+        if flag:
+            base_query = base_query.filter(User.tenants.any(Tenant.id == tenant_value))
 
     name = {
         "search": func.concat(User.first_name, " ", User.last_name),

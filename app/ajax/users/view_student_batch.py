@@ -30,6 +30,14 @@ _name = """
     {% if item.intermitting %}
         <div><span class="badge bg-danger">TWD</span></div>
     {% endif %}
+    {% if new_tenants|length > 0 %}
+        <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-1 mt-1">
+            <span class="small text-muted">New tenants:</span>
+            {% for t in new_tenants %}
+                {{ simple_label(t.make_label()) }}
+            {% endfor %}
+        </div>
+    {% endif %}
     {% set warnings = item.warnings %}
     {% set w_length = warnings|length %}
     {% if w_length == 1 %}
@@ -112,8 +120,16 @@ def _element(item_id):
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
+    # compute which tenants from the parent batch are new for this user
+    batch_tenants = list(item.parent.tenants)
+    if item.existing_record is not None:
+        existing_tenants = set(item.existing_record.user.tenants)
+        new_tenants = [t for t in batch_tenants if t not in existing_tenants]
+    else:
+        new_tenants = batch_tenants
+
     return {
-        "name": render_template_string(_name, item=item),
+        "name": render_template_string(_name, item=item, new_tenants=new_tenants, simple_label=simple_label),
         "user": item.user_id,
         "email": item.email,
         "cohort": render_template_string(_cohort, item=item, simple_label=simple_label),

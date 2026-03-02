@@ -90,11 +90,35 @@
         <div class="card-body">
             <div class="card mt-3 mb-3 card-body bg-well">
                 {% set needs_hrule = false %}
-                {% if programmes is not none and programmes|length > 0 %}
+                {% if tenants is not none and tenants|length > 0 %}
                     {% set needs_hrule = true %}
                     <div class="row">
                         <div class="col-12">
-                            <p>Filter by programme</p>
+                            <div class="mt-1 mb-2">Filter by tenant</div>
+                            <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded, tenant='all') }}"
+                               class="btn btn-sm filter-btn {% if tenant_filter is none or tenant_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                All
+                            </a>
+                            <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded, tenant='none') }}"
+                               class="btn btn-sm filter-btn {% if tenant_filter == 'none' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                No tenant
+                            </a>
+                            {% for tenant in tenants %}
+                                <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded, tenant=tenant.id) }}"
+                                   class="btn btn-sm filter-btn {% if tenant_filter == tenant.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    {{ tenant.name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                {% if programmes is not none and programmes|length > 0 %}
+                    {% if needs_hrule %}
+                        <hr class="intro-divider">{% endif %}
+                    {% set needs_hrule = true %}
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mt-1 mb-2">Filter by programme</div>
                             <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog='all', cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded, tenant=tenant_filter) }}"
                                class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                 All
@@ -113,7 +137,7 @@
                 {% set needs_hrule = true %}
                 <div class="row">
                     <div class="col-6">
-                        <p>Filter by academic year</p>
+                        <div class="mt-1 mb-2">Filter by academic year</div>
                         <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year='all', valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded, tenant=tenant_filter) }}"
                            class="btn btn-sm filter-btn {% if year_filter is none or year_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             All
@@ -140,7 +164,7 @@
                         </a>
                     </div>
                     <div class="col-6">
-                        <p>Filter by validation status</p>
+                        <div class="mt-1 mb-2">Filter by validation status</div>
                         <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year=year_filter, valid='all', TWD=filter_TWD_coded, SEND=filter_SEND_coded, tenant=tenant_filter) }}"
                            class="btn btn-sm filter-btn {% if valid_filter is none or valid_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             All
@@ -165,7 +189,7 @@
                     {% set needs_hrule = true %}
                     <div class="row">
                         <div class="col-12">
-                            <p>Filter by cohort</p>
+                            <div class="mt-1 mb-2">Filter by cohort</div>
                             <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort='all', year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded, tenant=tenant_filter) }}"
                                class="btn btn-sm filter-btn {% if cohort_filter is none or cohort_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                 All
@@ -184,7 +208,7 @@
                 {% set needs_hrule = true %}
                 <div class="row">
                     <div class="col-6">
-                        <p>Filter by properties</p>
+                        <div class="mt-1 mb-2">Filter by properties</div>
                         <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD='0' if filter_TWD else '1', SEND=filter_SEND_coded, tenant=tenant_filter) }}"
                            class="btn btn-sm filter-btn {% if filter_TWD %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Intermitting/TWD
@@ -195,7 +219,7 @@
                         </a>
                     </div>
                     <div class="col-6">
-                        <p>Filter by level</p>
+                        <div class="mt-1 mb-2">Filter by level</div>
                         <a href="{{ url_for('manage_users.edit_users_students', level='all', prog=prog_filter, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded, tenant=tenant_filter) }}"
                            class="btn btn-sm filter-btn {% if level_filter is none or level_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             All
@@ -214,31 +238,6 @@
                         </a>
                     </div>
                 </div>
-
-                {% if tenants is not none and tenants|length > 0 %}
-                    {% if needs_hrule %}
-                        <hr class="intro-divider">{% endif %}
-                    {% set needs_hrule = true %}
-                    <div class="row">
-                        <div class="col-12">
-                            <p>Filter by tenant</p>
-                            <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded, tenant='all') }}"
-                               class="btn btn-sm filter-btn {% if tenant_filter is none or tenant_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                                All
-                            </a>
-                            <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded, tenant='none') }}"
-                               class="btn btn-sm filter-btn {% if tenant_filter == 'none' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                                No tenant
-                            </a>
-                            {% for tenant in tenants %}
-                                <a href="{{ url_for('manage_users.edit_users_students', level=level_filter, prog=prog_filter, cohort=cohort_filter, year=year_filter, valid=valid_filter, TWD=filter_TWD_coded, SEND=filter_SEND_coded, tenant=tenant.id) }}"
-                                   class="btn btn-sm filter-btn {% if tenant_filter == tenant.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                                    {{ tenant.name }}
-                                </a>
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% endif %}
             </div>
 
             <table id="edit-students" class="table table-striped table-bordered">

@@ -34,6 +34,8 @@ from app.models import (
     ProjectClassConfig,
     SubmittingStudent,
     StudentData,
+    Tenant,
+    ProjectClass,
 )
 from app.shared.cloud_object_store import ObjectStore, ObjectMeta
 from app.shared.conversions import is_integer
@@ -609,3 +611,125 @@ def import_examiner_data(app, initial_db=None):
 
         print(f'** using INITDB_EXAMINER_IMPORT="{examiner_CSV}" to import examiner marking data')
         store_examiner_data(app, init_bucket, examiner_CSV)
+
+
+# tenant names used for assignment
+_TENANT_DATA_SCIENCE = "Data Science MSc"
+_TENANT_PHYSICS_ASTRONOMY = "Physics & Astronomy"
+
+# ProjectClass names that map to the Data Science MSc tenant
+_DS_PCLASS_NAMES = {"Data Science", "Human & Social Data Science"}
+
+# ResearchGroup names that map to the Data Science MSc tenant (used as fallback for faculty
+# with no enrollment records)
+_DS_RESEARCH_GROUP_NAMES = {"Informatics", "Engineering & Design", "Life Sciences", "Mathematics"}
+
+
+def assign_tenants(app):
+    """
+    Assign Tenant records to each User based on their role and enrolment data.
+
+    Faculty users:
+      - Assigned the "Data Science MSc" tenant if they have an EnrollmentRecord for a
+        ProjectClass whose name is "Data Science" or "Human and Social Data Science".
+      - Assigned the "Physics & Astronomy" tenant if they have an EnrollmentRecord for
+        any other ProjectClass.
+      - A faculty member may therefore be assigned both tenants simultaneously.
+      - If a faculty member has no enrollment records at all, a fallback based on their
+        ResearchGroup affiliations is used instead: they are assigned "Data Science MSc"
+        if any affiliation is in {"Informatics", "Engineering & Design", "Life Sciences",
+        "Mathematics"}, and "Physics & Astronomy" otherwise.
+
+    Student users:
+      - Assigned the "Data Science MSc" tenant if their degree programme name contains
+        the substring "Data Science".
+      - Otherwise assigned the "Physics & Astronomy" tenant.
+      - A student is assigned exactly one tenant.
+    """
+    # look up the two tenant records we need
+    ds_tenant: Tenant = db.session.query(Tenant).filter(Tenant.name == _TENANT_DATA_SCIENCE).first()
+    if ds_tenant is None:
+        print(f'!! assign_tenants: could not find Tenant with name "{_TENANT_DATA_SCIENCE}" — aborting')
+        return
+
+    pa_tenant: Tenant = db.session.query(Tenant).filter(Tenant.name == _TENANT_PHYSICS_ASTRONOMY).first()
+    if pa_tenant is None:
+        print(f'!! assign_tenants: could not find Tenant with name "{_TENANT_PHYSICS_ASTRONOMY}" — aborting')
+        return
+
+    users: List[User] = db.session.query(User).all()
+    assigned_count = 0
+
+    for user in users:
+        user: User
+
+        if user.has_role("faculty"):
+            fd: FacultyData = db.session.query(FacultyData).filter(FacultyData.id == user.id).first()
+            if fd is None:
+                print(f'-- !! assign_tenants: user "{user.name}" has faculty role but no FacultyData record — skipping')
+                continue
+
+            want_ds = False
+            want_pa = False
+
+            enrollments = fd.enrollments.all()
+
+            if len(enrollments) > 0:
+                # primary path: determine tenants from enrollment records
+                for enrollment in enrollments:
+                    enrollment: EnrollmentRecord
+                    pclass: ProjectClass = enrollment.pclass
+                    if pclass is None:
+                        continue
+
+                    if pclass.name in _DS_PCLASS_NAMES:
+                        want_ds = True
+                    else:
+                        want_pa = True
+            else:
+                # fallback path: no enrollment records — use ResearchGroup affiliations
+                affiliations = fd.affiliations.all()
+                affiliation_names = {g.name for g in affiliations}
+                if affiliation_names & _DS_RESEARCH_GROUP_NAMES:
+                    want_ds = True
+                else:
+                    want_pa = True
+                print(
+                    f'-- ?? assign_tenants: faculty user "{user.name}" has no enrollment records; '
+                    f'falling back to research group affiliations {affiliation_names}'
+                )
+
+            if want_ds and ds_tenant not in user.tenants:
+                user.tenants.append(ds_tenant)
+                print(f'-- >> assign_tenants: assigned tenant "{_TENANT_DATA_SCIENCE}" to faculty user "{user.name}"')
+
+            if want_pa and pa_tenant not in user.tenants:
+                user.tenants.append(pa_tenant)
+                print(f'-- >> assign_tenants: assigned tenant "{_TENANT_PHYSICS_ASTRONOMY}" to faculty user "{user.name}"')
+
+            assigned_count += 1
+
+        elif user.has_role("student"):
+            sd: StudentData = db.session.query(StudentData).filter(StudentData.id == user.id).first()
+            if sd is None:
+                print(f'-- !! assign_tenants: user "{user.name}" has student role but no StudentData record — skipping')
+                continue
+
+            programme = sd.programme
+            if programme is None:
+                print(f'-- !! assign_tenants: student user "{user.name}" has no degree programme — skipping')
+                continue
+
+            if "Data Science" in programme.name:
+                if ds_tenant not in user.tenants:
+                    user.tenants.append(ds_tenant)
+                print(f'-- >> assign_tenants: assigned tenant "{_TENANT_DATA_SCIENCE}" to student user "{user.name}"')
+            else:
+                if pa_tenant not in user.tenants:
+                    user.tenants.append(pa_tenant)
+                print(f'-- >> assign_tenants: assigned tenant "{_TENANT_PHYSICS_ASTRONOMY}" to student user "{user.name}"')
+
+            assigned_count += 1
+
+    db.session.commit()
+    print(f"** assign_tenants: tenant assignment complete; processed {assigned_count} user(s)")

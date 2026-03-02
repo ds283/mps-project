@@ -20,6 +20,12 @@
             $('#default_license').select2({
                 theme: 'bootstrap-5'
             });
+            $('#tenants').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select one or more tenants...'
+            });
         });
     </script>
 {% endblock %}
@@ -84,6 +90,15 @@
                 {{ wtf.render_field(user_form.default_license) }}
             {% endif %}
         </div>
+
+{# TENANT ASSIGNMENT #}
+
+{% if user_form.tenants is defined %}
+    <div class="card mt-3 mb-3 card-body bg-well">
+        <div class="form-group-heading">Which tenant does this user belong to?</div>
+        {{ wtf.render_field(user_form.tenants) }}
+    </div>
+{% endif %}
 
         {% if user_form.password is defined or user_form.password_confirm is defined or user_form.random_password is defined %}
             <div class="card mt-3 mb-3 card-body bg-well">

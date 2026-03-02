@@ -142,6 +142,8 @@ def create_office(role):
         user = register_user(**field_data)
         form.user = user
 
+        user.tenants = form.tenants.data
+
         db.session.commit()
 
         return redirect(url_for("manage_users.edit_users"))
@@ -180,6 +182,8 @@ def create_faculty(role):
         field_data["roles"] = [role]
 
         user = register_user(**field_data)
+
+        user.tenants = form.tenants.data
 
         # insert extra data for faculty accounts
         data = FacultyData(
@@ -259,6 +263,8 @@ def create_student(role):
 
         user = register_user(**field_data)
         form.user = user
+
+        user.tenants = form.tenants.data
 
         # insert extra data for student accounts
 
@@ -1754,6 +1760,7 @@ def edit_office(id):
         user.username = form.username.data
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
+        user.tenants = form.tenants.data
 
         _datastore.commit()
 
@@ -1761,6 +1768,10 @@ def edit_office(id):
             _resend_confirm_email(user)
 
         return redirect(url_for("manage_users.edit_users"))
+
+    else:
+        if request.method == "GET":
+            form.tenants.data = user.tenants
 
     return render_template_context("security/register_user.html", user_form=form, user=user, title="Edit a user account")
 
@@ -1788,6 +1799,7 @@ def edit_faculty(id):
         user.username = form.username.data
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
+        user.tenants = form.tenants.data
 
         data.academic_title = form.academic_title.data
         data.use_academic_title = form.use_academic_title.data
@@ -1841,6 +1853,8 @@ def edit_faculty(id):
             if form.project_capacity.data is None and form.enforce_capacity.data:
                 form.project_capacity.data = current_app.config["DEFAULT_PROJECT_CAPACITY"]
 
+            form.tenants.data = user.tenants
+
     return render_template_context("security/register_user.html", user_form=form, user=user, title="Edit a user account", pane=pane)
 
 
@@ -1867,6 +1881,7 @@ def edit_student(id):
         user.username = form.username.data
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
+        user.tenants = form.tenants.data
 
         rep_years = form.repeated_years.data
         ry = rep_years if rep_years is not None and rep_years >= 0 else 0
@@ -1915,6 +1930,7 @@ def edit_student(id):
             form.programme.data = data.programme
             form.dyspraxia_sticker.data = data.dyspraxia_sticker
             form.dyslexia_sticker.data = data.dyslexia_sticker
+            form.tenants.data = user.tenants
 
     return render_template_context("security/register_user.html", user_form=form, user=user, title="Edit a user account", pane=pane, url=url)
 

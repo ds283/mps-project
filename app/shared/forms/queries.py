@@ -45,6 +45,7 @@ from ...models import (
     BackupLabel,
     TemplateTag,
     FeedbackAsset,
+    Tenant,
 )
 from ...models import project_pclasses, description_pclasses, roles_to_users
 
@@ -524,3 +525,11 @@ def GetAllFeedbackTemplates():
 
 def GetAllNonTemplateFeedbackAssets():
     return db.session.query(FeedbackAsset).filter(FeedbackAsset.is_template == False)
+
+
+def GetAllTenants():
+    return db.session.query(Tenant).order_by(Tenant.name.asc())
+
+
+def BuildTenantName(tenant: Tenant):
+    return tenant.name

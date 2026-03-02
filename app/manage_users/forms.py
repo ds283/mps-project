@@ -23,11 +23,11 @@ from flask_security.forms import (
 )
 from wtforms import StringField, BooleanField, PasswordField, SelectField, SubmitField, IntegerField, RadioField, TextAreaField
 from wtforms.validators import InputRequired, Length, Optional
-from wtforms_alchemy import QuerySelectField
+from wtforms_alchemy import QuerySelectField, QuerySelectMultipleField
 
 from app.models import DEFAULT_STRING_LENGTH, EnrollmentRecord
 from app.shared.forms.mixins import FirstLastNameMixin, FacultyDataMixinFactory, SaveChangesMixin, EditUserNameMixin, DefaultLicenseMixin
-from app.shared.forms.queries import GetActiveDegreeProgrammes, BuildDegreeProgrammeName
+from app.shared.forms.queries import GetActiveDegreeProgrammes, BuildDegreeProgrammeName, GetAllTenants, BuildTenantName
 from app.shared.forms.wtf_validators import (
     valid_username,
     globally_unique_username,
@@ -120,6 +120,16 @@ class StudentDataMixin:
     dyslexia_sticker = BooleanField("Mark work with sticker for specific learning difference", default=False)
 
 
+class EditUserTenantsMixin:
+    tenants = QuerySelectMultipleField(
+        "Tenants",
+        query_factory=GetAllTenants,
+        get_label=BuildTenantName,
+        validators=[InputRequired(message="At least one tenant must be assigned")],
+        description="Assign this user to one or more tenants. At least one tenant is required.",
+    )
+
+
 class RegisterOfficeForm(
     Form,
     RegisterFormMixin,
@@ -133,7 +143,7 @@ class RegisterOfficeForm(
     pass
 
 
-class ConfirmRegisterOfficeForm(RegisterOfficeForm, PasswordConfirmFormMixin, NextFormMixin):
+class ConfirmRegisterOfficeForm(RegisterOfficeForm, PasswordConfirmFormMixin, NextFormMixin, EditUserTenantsMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.next.data:
@@ -184,7 +194,7 @@ class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin, Cr
     pass
 
 
-class EditOfficeForm(Form, SaveChangesMixin, EditUserNameMixin, AskConfirmEditFormMixin, EditEmailFormMixin, FirstLastNameMixin, DefaultLicenseMixin):
+class EditOfficeForm(Form, SaveChangesMixin, EditUserNameMixin, AskConfirmEditFormMixin, EditEmailFormMixin, FirstLastNameMixin, DefaultLicenseMixin, EditUserTenantsMixin):
     pass
 
 

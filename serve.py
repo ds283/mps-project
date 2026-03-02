@@ -18,7 +18,7 @@ from sqlalchemy import text, inspect
 import gunicorn_config
 from app import create_app
 from app.database import db
-from initdb import initial_populate_database, populate_CATS_limits, import_supervisor_data, import_examiner_data, assign_tenants
+from initdb import initial_populate_database, populate_CATS_limits, import_supervisor_data, import_examiner_data
 
 
 def has_table(inspector, table_name):
@@ -78,8 +78,6 @@ with app.app_context():
     if hasattr(initdb_module, "INITDB_EXAMINER_IMPORT") and initdb_module.INITDB_EXAMINER_IMPORT is not None:
         db.session.commit()
         import_examiner_data(app, initdb_module)
-
-    assign_tenants(app)
 
 
 class StandaloneApplication(gunicorn.app.base.BaseApplication):

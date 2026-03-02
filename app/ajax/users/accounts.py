@@ -78,9 +78,6 @@ def build_accounts_data(current_user: User, users: List[User]):
             "name": render_template(name_templ, u=u, simple_label=simple_label),
             "user": u.username,
             "email": '<a class="text-decoration-none" href="mailto:{m}">{m}</a>'.format(m=u.email),
-            "confirm": u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S")
-            if u.confirmed_at is not None
-            else '<span class="badge bg-warning text-dark">Not confirmed</span>',
             "active": render_template(active_templ, u=u),
             "details": render_template(status_templ, u=u),
             "role": render_template(roles_templ, user=u, simple_label=simple_label),

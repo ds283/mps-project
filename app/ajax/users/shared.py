@@ -12,39 +12,44 @@ from flask import current_app
 from jinja2 import Template, Environment
 
 # language=jinja2
-name = """
+_name = """
 <a class="text-decoration-none" href="mailto:{{ u.email }}">{{ u.name }}</a>
 <div>
     {% if u.currently_active %}<span class="badge bg-success">ACTIVE</span>{% endif %}
     {% set sd = u.student_data %}
-    {% if sd and sd is not none %}
+    {% if sd is defined and sd is not none %}
         {% set programme = sd.programme %}
         {% set type = programme.degree_type %}
-        <span class="badge {% if type.level >= type.LEVEL_UG and type.level <= type.LEVEL_PGR %}bg-secondary{% else %}bg-danger{% endif %}">
+        <div class="mt-1 small {% if type.level >= type.LEVEL_UG and type.level <= type.LEVEL_PGR %}text-secondary{% else %}text-danger{% endif %}">
             {{ type._level_text(type.level) }}
-        </span>
-        {% if sd.intermitting %}
-            <span class="badge bg-warning text-dark">TWD</span>
-        {% endif %}
-        {% if sd.dyspraxia_sticker %}
-            <span class="badge bg-primary">Support</span>
-        {% endif %}
-        {% if sd.dyslexia_sticker %}
-            <span class="badge bg-primary">SpLD</span>
-        {% endif %}
-        {% set state = sd.workflow_state %}
-        {% if state == sd.WORKFLOW_APPROVAL_QUEUED %}
-            <span class="badge bg-warning text-dark">Approval: Queued</span>
-        {% elif state == sd.WORKFLOW_APPROVAL_REJECTED %}
-            <span class="badge bg-danger">Approval: In progress</span>
-        {% elif state == sd.WORKFLOW_APPROVAL_VALIDATED %}
-            <span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>
-        {% else %}
-            <span class="badge bg-danger">Approval: Unknown state</span>
-        {% endif %}
+        </div>
+        <div class="mt-1 small d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
+            {% if sd.intermitting %}
+                <span class="badge bg-warning text-dark">TWD</span>
+            {% endif %}
+            {% if sd.dyspraxia_sticker %}
+                <span class="badge bg-primary">Support</span>
+            {% endif %}
+            {% if sd.dyslexia_sticker %}
+                <span class="badge bg-primary">SpLD</span>
+            {% endif %}
+            {% set state = sd.workflow_state %}
+            {% if state == sd.WORKFLOW_APPROVAL_QUEUED %}
+                <span class="badge bg-warning text-dark">Approval: Queued</span>
+            {% elif state == sd.WORKFLOW_APPROVAL_REJECTED %}
+                <span class="badge bg-danger">Approval: In progress</span>
+            {% elif state == sd.WORKFLOW_APPROVAL_VALIDATED %}
+                <span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>
+            {% else %}
+                <span class="badge bg-danger">Approval: Unknown state</span>
+            {% endif %}
+        </div>
     {% endif %}
-    {% if f %}
-        <div>
+    {% if f is defined and f is not none %}
+        {% if f.office is not none and f.office|length > 0 %}
+            <div class="mt-1 small text-primary fw-semibold">{{ f.office }}</div>
+        {% endif %}
+        <div class="mt-1 small d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
             {% if f.is_convenor %}
                 {% for item in f.convenor_list %}
                     {{ simple_label(item.make_label(item.abbreviation), prefix='Convenor') }}
@@ -52,15 +57,25 @@ name = """
             {% endif %}
         </div>
     {% endif %}
-    {% if u.last_email %}
-        <span class="badge bg-info">Notify &commat;{{ u.last_email.strftime("%d/%m/%y") }}</span>
+    {% if u.confirmed_at %}
+        <div class="mt-1 small text-muted"><i class="fas fa-calendar"></i> Confirmed at {{ u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") }}</div>
+    {% else %}
+        <div class="mt-1 small text-danger"><i class="fas fa-exclamation-circle"></i> Not confirmed</div>
     {% endif %}
+    {% if u.last_email %}
+        <div class="mt-1 small text-muted"><i class="fas fa-envelope"></i> Last notify {{ u.last_email.strftime("%d/%m/%y") }}</div>
+    {% endif %}
+    <div class="mt-1 small d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
+        {% for tenant in u.tenants %}
+            {{ simple_label(tenant.make_label(tenant.name)) }}
+        {% endfor %}
+    </div>
 </div>
 """
 
 
 # language=jinja2
-menu = """
+_menu = """
 {% set user_is_student  = user.has_role('student') %}
 {% set user_is_faculty  = user.has_role('faculty') %}
 {% set user_is_admin    = user.has_role('admin') %}
@@ -152,7 +167,7 @@ menu = """
 """
 
 # language=jinja2
-active = """
+_active = """
 {% if u.active %}
     <div class="d-flex flex-row justify-content-start align-items-center gap-1 text-success"><i class="fas fa-check-circle"></i> Active</span>
 {% else %}
@@ -161,46 +176,46 @@ active = """
 """
 
 # language=jinja2
-cohort = """
+_cohort = """
 {{ simple_label(s.cohort_label) }}
 """
 
 # language=jinja2
-programme = """
+_programme = """
 {{ simple_label(s.programme.label) }}
 """
 
 # language=jinja2
-academic_year = """
+_academic_year = """
 {{ simple_label(s.academic_year_label(show_details=True)) }}
 """
 
 
 def build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
-    return env.from_string(name)
+    return env.from_string(_name)
 
 
 def build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
-    return env.from_string(menu)
+    return env.from_string(_menu)
 
 
 def build_active_templ() -> Template:
     env: Environment = current_app.jinja_env
-    return env.from_string(active)
+    return env.from_string(_active)
 
 
 def build_programme_templ() -> Template:
     env: Environment = current_app.jinja_env
-    return env.from_string(programme)
+    return env.from_string(_programme)
 
 
 def build_cohort_templ() -> Template:
     env: Environment = current_app.jinja_env
-    return env.from_string(cohort)
+    return env.from_string(_cohort)
 
 
 def build_academic_year_templ() -> Template:
     env: Environment = current_app.jinja_env
-    return env.from_string(academic_year)
+    return env.from_string(_academic_year)

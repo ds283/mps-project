@@ -67,10 +67,10 @@ from ..models import (
     WorkflowMixin,
     faculty_affiliations,
 )
-from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
 from ..shared.conversions import is_integer, is_boolean
+from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import func
 from ..shared.utils import get_current_year, get_main_config, home_dashboard_url, redirect_url
 from ..shared.validators import validate_is_convenor
@@ -541,12 +541,11 @@ def users_ajax():
     }
     user = {"search": User.username, "order": User.username, "search_collation": "utf8_general_ci"}
     email = {"search": User.email, "order": User.email, "search_collation": "utf8_general_ci"}
-    confirm = {"search": func.date_format(User.confirmed_at, "%a %d %b %Y %H:%M:%S"), "order": User.confirmed_at}
     active = {"order": User.active}
     details = {"order": [User.last_active, User.current_login_at, User.last_login_at]}
     role = {"search": Role.name, "search_collection": User.roles, "search_collation": "utf8_general_ci"}
 
-    columns = {"name": name, "user": user, "email": email, "confirm": confirm, "active": active, "details": details, "role": role}
+    columns = {"name": name, "user": user, "email": email, "active": active, "details": details, "role": role}
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.users.build_accounts_data, current_user))
@@ -658,9 +657,8 @@ def users_faculty_ajax():
         "search_collation": "utf8_general_ci",
     }
     active = {"order": User.active}
-    office = {"search": FacultyData.office, "order": FacultyData.office, "search_collation": "utf8_general_ci"}
 
-    columns = {"name": name, "active": active, "office": office}
+    columns = {"name": name, "active": active}
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.users.build_faculty_data, current_user))

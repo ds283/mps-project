@@ -118,7 +118,6 @@ def build_faculty_data(current_user: User, faculty: List[FacultyData]):
         {
             "name": render_template(name_templ, u=fd.user, f=fd, simple_label=simple_label),
             "active": render_template(active_templ, u=fd.user),
-            "office": fd.office,
             "settings": render_template(settings_templ, f=fd),
             "affiliation": render_template(affiliation_templ, f=fd, simple_label=simple_label),
             "enrolled": render_template(enrolled_templ, f=fd, small_swatch=small_swatch),

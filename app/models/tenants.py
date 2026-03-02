@@ -24,3 +24,9 @@ class Tenant(db.Model, ColouredLabelMixin):
 
     # name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    def make_label(self, text=None):
+        if text is None:
+            text = self.name
+
+        return self._make_label(text)

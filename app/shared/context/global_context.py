@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 
 from datetime import datetime
-from typing import List
+from typing import List, Dict, Any
 
 from flask import has_request_context, session, render_template
 from flask_login import current_user
@@ -20,18 +20,17 @@ from .utils import get_pclass_list, get_pclass_config_list
 from ..utils import home_dashboard_url
 from ... import site_revision, site_copyright_dates
 from ...database import db
-from ...models import User
+from ...models import User, ProjectClass, ProjectClassConfig
 
 
 def get_global_context_data():
-    pcs = get_pclass_list()
-    configs = get_pclass_config_list(pcs)
+    pcs: List[ProjectClass] = get_pclass_list()
+    configs: List[ProjectClassConfig] = get_pclass_config_list(pcs)
 
-    assessment = get_assessment_data(configs)
-    matching = get_matching_data(configs)
+    assessment_data: Dict[str, Any] = get_assessment_data(configs)
+    matching_data: Dict[str, Any] = get_matching_data(configs)
 
-    assessment.update(matching)
-    return assessment
+    return assessment_data | matching_data | {"all_pclasses": pcs}
 
 
 def _get_previous_login():
@@ -95,8 +94,6 @@ def _build_global_context():
     is_emailer = "email" in visible_roles
 
     base_context_data = get_global_context_data()
-    matching_ready = base_context_data["matching_ready"]
-    has_assessments = base_context_data["has_assessments"]
 
     # assumes _static_ctx has been suitably initialized
     return _static_ctx | {
@@ -113,10 +110,8 @@ def _build_global_context():
         "is_edit_tags": is_edit_tags,
         "is_view_email": is_view_email,
         "is_manage_users": is_manage_users,
-        "is_emailer": is_emailer,
-        "matching_ready": matching_ready,
-        "has_assessments": has_assessments,
-    }
+        "is_emailer": is_emailer
+    } | base_context_data
 
 
 def render_template_context(template: str | Template | List[str | Template], **kwargs) -> str:

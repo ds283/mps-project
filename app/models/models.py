@@ -2224,16 +2224,6 @@ class User(db.Model, UserMixin):
         # apply any using generator comprehension
         return any(self.has_role(r) for r in role_list)
 
-    # allow user objects to get all project classes so that we can render
-    # a 'Convenor' menu in the navbar for all admin users
-    @property
-    def all_project_classes(self):
-        """
-        Get available project classes
-        :return:
-        """
-        return ProjectClass.query.filter_by(active=True).order_by(ProjectClass.name)
-
     # build a name for this user
     @property
     def name(self):
@@ -3407,10 +3397,6 @@ class FacultyData(db.Model, EditingMetadataMixin):
     @property
     def ordered_enrollments(self):
         return self.enrollments.join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id).order_by(ProjectClass.name)
-
-    @property
-    def number_enrollments(self):
-        return get_count(self.enrollments)
 
     @property
     def is_convenor(self):

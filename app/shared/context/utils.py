@@ -7,20 +7,29 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from typing import List
 
 from ...database import db
-from ...models import ProjectClass
+from ...models import ProjectClass, ProjectClassConfig
 
 
-def get_pclass_list():
-    return db.session.query(ProjectClass).filter_by(active=True).order_by(ProjectClass.name.asc()).all()
+def get_pclass_list() -> List[ProjectClass]:
+    return (
+        db.session.query(ProjectClass)
+        .filter(
+            ProjectClass.active == True,
+            ProjectClass.publish == True,
+        )
+        .order_by(ProjectClass.name.asc())
+        .all()
+    )
 
 
-def get_pclass_config_list(pcs=None):
+def get_pclass_config_list(pcs: List[ProjectClass]=None) -> List[ProjectClassConfig]:
     if pcs is None:
-        pcs = get_pclass_list()
+        pcs: List[ProjectClass] = get_pclass_list()
 
-    cs = [pclass.most_recent_config for pclass in pcs]
+    cs: List[ProjectClassConfig] = [pclass.most_recent_config for pclass in pcs]
 
     # strip out 'None' entries before returning
     return [x for x in cs if x is not None]

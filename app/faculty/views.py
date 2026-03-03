@@ -2692,7 +2692,9 @@ def change_availability():
 @faculty.route("/show_enrollments")
 @roles_required("faculty")
 def show_enrollments():
-    data = FacultyData.query.get_or_404(current_user.id)
+    data: FacultyData = FacultyData.query.get_or_404(current_user.id)
+
+    user_tenant_ids: List[int] = [t.id for t in current_user.tenants]
 
     url = request.args.get("url", None)
     if url is None:
@@ -2702,8 +2704,23 @@ def show_enrollments():
         if url is not None and "show_enrollments" in url:
             url = None
 
-    pclasses = db.session.query(ProjectClass).filter_by(active=True, publish=True).all()
-    return render_template_context("faculty/show_enrollments.html", data=data, url=url, project_classes=pclasses)
+    pclasses: List[ProjectClass] = (
+        db.session.query(ProjectClass)
+        .filter(
+            and_(
+                ProjectClass.active == True,
+        ProjectClass.publish == True,
+                ProjectClass.tenant_id.in_(user_tenant_ids),
+            ),
+        )
+        .order_by(ProjectClass.name)
+        .all()
+    )
+    pclasses_binned = [(p, data.is_enrolled(p)) for p in pclasses]
+    enrolled_pclasses = [data.get_enrollment_record(p) for p, flag in pclasses_binned if flag]
+    unenrolled_pclasses = [p for p, flag in pclasses_binned if not flag]
+
+    return render_template_context("faculty/show_enrollments.html", data=data, url=url, enrolment_records=enrolled_pclasses, unenrolled_pclasses=unenrolled_pclasses)
 
 
 @faculty.route("/show_workload")

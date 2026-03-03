@@ -19,8 +19,8 @@
                     </a>
                 </div>
             {% endif %}
-            {% if data.enrollments.first() %}
-                {% if data.number_enrollments != project_classes|length %}
+            {% if enrolment_records|length > 0 %}
+                {% if unenrolled_pclasses|length > 0 %}
                     <div class="alert alert-info">
                         {% call icon_block("info-circle") %}
                             <div><strong>You are not currently enrolled for the following project classes.</strong></div>
@@ -29,19 +29,18 @@
                                 please contact the appropriate convenor.
                             </div>
                             <ul class="mt-1">
-                                {% for pclass in current_user.all_project_classes %}
-                                    {% if not data.is_enrolled(pclass) %}
-                                        <li>
-                                            {{ pclass.name }} &ndash; convenor
-                                            <a class="text-decoration-none" href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor_name }}</a>
-                                        </li>
-                                    {% endif %}
+                                {% for pclass in unenrolled_pclasses %}
+                                    <li>
+                                        {{ pclass.name }} &ndash; convenor
+                                        <a class="text-decoration-none link-primary"
+                                           href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor_name }}</a>
+                                    </li>
                                 {% endfor %}
                             </ul>
                         {% endcall %}
                     </div>
                 {% endif %}
-                {% for record in data.ordered_enrollments %}
+                {% for record in enrolment_records %}
                     <div class="card card-body border-info mt-3 mb-3 bg-well">
                         {% set pclass = record.pclass %}
                         <div class="d-flex justify-content-between align-items-end">
@@ -55,16 +54,16 @@
                         </div>
                         <hr class="intro-divider mb-2">
                         <div class="row vertical-top mb-2">
-                            <div class="col-3">
+                            <div class="col-3 fw-semibold text-secondary">
                                 Supervision
                             </div>
-                            <div class="col-3">
+                            <div class="col-3 fw-semibold text-secondary">
                                 Marking
                             </div>
-                            <div class="col-3">
+                            <div class="col-3 fw-semibold text-secondary">
                                 Moderation
                             </div>
-                            <div class="col-3">
+                            <div class="col-3 fw-semibold text-secondary">
                                 Presentations
                             </div>
                         </div>
@@ -72,81 +71,85 @@
                             <div class="col-3">
                                 {% if record.pclass.uses_supervisor %}
                                     {% if record.supervisor_state == record.SUPERVISOR_ENROLLED  %}
-                                        <span class="badge bg-info"><i class="fas fa-check"></i> Enrolled</span>
+                                        <span class="text-success"><i class="fas fa-check-circle"></i> Enrolled</span>
                                     {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                                        <span class="badge bg-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
+                                        <span class="text-secondary"><i class="fas fa-stop-circle"></i> Sabbatical/Buyout</span>
                                         {% if record.supervisor_reenroll is not none %}
-                                            <span class="badge bg-secondary">ends {{ record.supervisor_reenroll }}</span>
+                                            <span class="text-muted">(ends {{ record.supervisor_reenroll }})</span>
                                         {% else %}
-                                            <span class="badge bg-warning text-dark">no end date</span>
+                                            <span class="text-muted">(no end date)</span>
                                         {% endif %}
                                     {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                                        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Exempt</span>
+                                        <span class="text-secondary"><i class="fas fa-times-circle"></i> Exempt</span>
                                     {% else %}
-                                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
+                                        <span class="text-danger"><i
+                                                class="fas fa-exclamation-triangle"></i> Error</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="badge bg-secondary">Not used</span>
+                                    <span class="text-muted"><i class="fas fa-ban"></i> Not used</span>
                                 {% endif %}
                             </div>
                             <div class="col-3">
                                 {% if record.pclass.uses_marker %}
                                     {% if record.marker_state == record.MARKER_ENROLLED %}
-                                        <span class="badge bg-info"><i class="fas fa-check"></i> Enrolled</span>
+                                        <span class="text-success"><i class="fas fa-check-circle"></i> Enrolled</span>
                                     {% elif record.marker_state == record.MARKER_SABBATICAL %}
-                                        <span class="badge bg-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
+                                        <span class="text-secondary"><i class="fas fa-stop-circle"></i> Sabbatical/Buyout</span>
                                         {% if record.marker_reenroll is not none %}
-                                            <span class="badge bg-secondary">ends {{ record.marker_reenroll }}</span>
+                                            <span class="text-muted">(ends {{ record.marker_reenroll }})</span>
                                         {% else %}
-                                            <span class="badge bg-warning text-dark">no end date</span>
+                                            <span class="text-muted">(no end date)</span>
                                         {% endif %}
                                     {% elif record.marker_state == record.MARKER_EXEMPT %}
-                                        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Exempt</span>
+                                        <span class="text-secondary"><i class="fas fa-times-circle"></i> Exempt</span>
                                     {% else %}
-                                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
+                                        <span class="text-danger"><i
+                                                class="fas fa-exclamation-triangle"></i> Error</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="badge bg-secondary">Not used</span>
+                                    <span class="text-muted"><i class="fas fa-ban"></i> Not used</span>
                                 {% endif %}
                             </div>
                             <div class="col-3">
                                 {% if record.pclass.uses_moderator %}
                                     {% if record.moderator_state == record.MODERATOR_ENROLLED %}
-                                        <span class="badge bg-info"><i class="fas fa-check"></i> Enrolled</span>
+                                        <span class="text-success"><i class="fas fa-check-circle"></i> Enrolled</span>
                                     {% elif record.moderator_state == record.MODERATOR_SABBATICAL %}
-                                        <span class="badge bg-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
+                                        <span class="text-secondary"><i class="fas fa-stop-circle"></i> Sabbatical/Buyout</span>
                                         {% if record.moderator_reenroll is not none %}
-                                            <span class="badge bg-secondary">ends {{ record.marker_reenroll }}</span>
+                                            <span class="text-muted">(ends {{ record.moderator_reenroll }})</span>
                                         {% else %}
-                                            <span class="badge bg-warning text-dark">no end date</span>
+                                            <span class="text-muted">(no end date)</span>
                                         {% endif %}
                                     {% elif record.moderator_state == record.MODERATOR_EXEMPT %}
-                                        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Exempt</span>
+                                        <span class="text-secondary"><i class="fas fa-times-circle"></i> Exempt</span>
                                     {% else %}
-                                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
+                                        <span class="text-danger"><i
+                                                class="fas fa-exclamation-triangle"></i> Error</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="badge bg-secondary">Not used</span>
+                                    <span class="text-muted"><i class="fas fa-ban"></i> Not used</span>
                                 {% endif %}
                             </div>
                             <div class="col-3">
                                 {% if record.pclass.uses_presentations %}
                                     {% if record.presentations_state == record.PRESENTATIONS_ENROLLED %}
-                                        <span class="badge bg-info"><i class="fas fa-check"></i> Enrolled</span>
+                                        <span class="text-success"><i class="fas fa-check-circle"></i> Enrolled</span>
                                     {% elif record.presentations_state == record.PRESENTATIONS_SABBATICAL %}
-                                        <span class="badge bg-secondary"><i class="fas fa-times"></i> Sabbatical/Buyout</span>
+                                        <span class="text-secondary"><i class="fas fa-stop-circle"></i> Sabbatical/Buyout</span>
                                         {% if record.presentations_reenroll is not none %}
-                                            <span class="badge bg-secondary">ends {{ record.presentations_reenroll }}</span>
+                                            <span class="text-muted">(ends {{ record.presentations_reenroll }})</span>
                                         {% else %}
-                                            <span class="badge bg-warning text-dark">no end date</span>
+                                            <span class="text-muted">(no end date)</span>
                                         {% endif %}
                                     {% elif record.presentations_state == record.PRESENTATIONS_EXEMPT %}
-                                        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Exempt</span>
+                                        <span class="text-secondary"><i class="fas fa-times-circle"></i> Exempt</span>
                                     {% else %}
-                                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Error</span>
+                                        <span class="text-danger"><i
+                                                class="fas fa-exclamation-triangle"></i> Error</span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="badge bg-secondary">Not used</span>
+                                    <span class="text-muted"><i class="fas fa-ban"></i> Not used</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -159,16 +162,21 @@
                         <div class="mt-1">
                             If you believe you should be enrolled for any of these project types,
                             please contact the appropriate convenor.
-                            The available classes are:
                         </div>
-                        <ul class="mt-1">
-                            {% for pclass in project_classes %}
-                                <li>
-                                    {{ pclass.name }} &ndash;
-                                    <a class="text-decoration-none" href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor_name }}</a>
-                                </li>
-                            {% endfor %}
-                        </ul>
+                        {% if unenrolled_pclasses|length > 0 %}
+                            <div class="mt-2">
+                                The available classes are:
+                            </div>
+                            <ul class="mt-1">
+                                {% for pclass in unenrolled_pclasses %}
+                                    <li>
+                                        {{ pclass.name }} &ndash;
+                                        <a class="text-decoration-none"
+                                           href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor_name }}</a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
                     {% endcall %}
                 </div>
             {% endif %}

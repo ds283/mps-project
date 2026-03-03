@@ -209,8 +209,21 @@ def unique_or_original_project_tag_group(form, field):
 
 
 def globally_unique_project_tag(form, field):
-    if db.session.query(ProjectTag).filter_by(name=field.data).first():
-        raise ValidationError("{name} is already in use for a project tag".format(name=field.data))
+    if form.group.data is None:
+        raise ValidationError("Cannot validate project tag name without specifying a tag group. Please select a project tag group")
+
+    check_exists = (
+        db.session.query(ProjectTag)
+        .join(ProjectTagGroup, ProjectTag.group_id == ProjectTagGroup.id)
+        .filter(
+            ProjectTag.name == field.data,
+            ProjectTagGroup.name == form.group.data.name,
+        )
+        .first()
+    )
+
+    if check_exists is not None:
+        raise ValidationError(f'"{field.data}" is already in use for a project tag in group "{form.group.data.name}"')
 
 
 def unique_or_original_project_tag(form, field):

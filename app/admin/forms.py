@@ -996,7 +996,7 @@ class AddProjectTagGroupForm(Form, ProjectTagGroupMixin, EditTenantsMixin):
     name = StringField(
         "Name",
         validators=[
-            InputRequired(message="Please supply a unique name for this group"),
+            InputRequired(message="Please supply a unique name for this tag group"),
             Length(max=DEFAULT_STRING_LENGTH),
             globally_unique_project_tag_group,
         ],
@@ -1009,7 +1009,7 @@ class EditProjectTagGroupForm(Form, ProjectTagGroupMixin, EditTenantsMixin, Save
     name = StringField(
         "Name",
         validators=[
-            InputRequired(message="Please supply a unique name for this group"),
+            InputRequired(message="Please supply a unique name for this tag group"),
             Length(max=DEFAULT_STRING_LENGTH),
             unique_or_original_project_tag_group,
         ],

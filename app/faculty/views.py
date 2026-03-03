@@ -1545,14 +1545,14 @@ def dashboard():
     # check for unofferable projects and warn if any are present
     fd: FacultyData = current_user.faculty_data
 
-    unofferable = fd.projects_unofferable
-    if unofferable > 0:
-        plural = "" if unofferable == 1 else "s"
-        isare = "is" if unofferable == 1 else "are"
+    num_unofferable = fd.projects_unofferable
+    if num_unofferable > 0:
+        plural = "" if num_unofferable == 1 else "s"
+        isare = "is" if num_unofferable == 1 else "are"
+        itthey = "it has" if num_unofferable == 1 else "they have"
 
         flash(
-            "You have {n} project{plural} that {isare} active but cannot be offered to students. "
-            "Please check your project list.".format(n=unofferable, plural=plural, isare=isare),
+            f"You have {num_unofferable} project{plural} that {isare} active but cannot be offered to students because {itthey} validation errors. Please check your project list.",
             "error",
         )
 

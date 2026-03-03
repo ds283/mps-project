@@ -2046,6 +2046,9 @@ class MainConfig(db.Model):
     # URL for Canvas instance used to sync (if enabled)
     canvas_url = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
+    # enable 2026 ATAS campaign landing page
+    enable_2026_ATAS_campaign = db.Column(db.Boolean(), default=False)
+
     @validates("canvas_url")
     def _validate_canvas_url(self, key, value):
         self._canvas_root_API = None

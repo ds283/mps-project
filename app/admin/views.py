@@ -223,6 +223,8 @@ def global_config():
         config.enable_canvas_sync = form.enable_canvas_sync.data
         config.canvas_url = r.geturl() if r is not None else None
 
+        config.enable_2026_ATAS_compaign = form.enable_2026_ATAS_compaign.data
+
         try:
             db.session.commit()
         except SQLAlchemyError as e:

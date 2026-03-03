@@ -15,7 +15,7 @@ from importlib import import_module
 from pathlib import Path
 from tarfile import TarFile, TarInfo
 from tarfile import open as tarfile_open
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Set
 
 import pandas as pd
 from dateutil import parser
@@ -35,11 +35,12 @@ from app.models import (
     SubmittingStudent,
     StudentData,
     Tenant,
-    ProjectClass,
+    ProjectClass, Project, ProjectTagGroup, ProjectTag, LiveProject,
 )
 from app.shared.cloud_object_store import ObjectStore, ObjectMeta
 from app.shared.conversions import is_integer
 from app.shared.scratch import ScratchFileManager
+from app.shared.sqlalchemy import get_count
 from app.shared.utils import get_current_year
 
 
@@ -733,3 +734,91 @@ def assign_tenants(app):
 
     db.session.commit()
     print(f"** assign_tenants: tenant assignment complete; processed {assigned_count} user(s)")
+
+
+def demerge_project_tags(app):
+    def demerge_tags(project, allowed_tenant_ids: Set[int]):
+        if len(allowed_tenant_ids) == 0:
+            raise RuntimeError(f'-- !! demerge_project_tags: no allowed tenant ids provided')
+
+        for tag in project.tags:
+            tag_group: ProjectTagGroup = tag.group
+
+            is_ok: bool = any([(t.id in allowed_tenant_ids) for t in tag_group.tenants])
+
+            if not is_ok:
+                print(f'-- >> demerge_project_tags: removing tag "{tag.name}" from project "{project.name}" (allowed tenant ids = {allowed_tenant_ids})')
+
+                replacement_tag = (
+                    db.session.query(ProjectTag)
+                    .join(ProjectTagGroup, ProjectTagGroup.id == ProjectTag.group_id)
+                    .filter(
+                        ProjectTag.name == tag.name,
+                        ProjectTagGroup.tenants.any(Tenant.id.in_(allowed_tenant_ids)),
+                    )
+                    .first()
+                )
+
+                if replacement_tag is not None:
+                    project.tags.remove(tag)
+                    project.tags.append(replacement_tag)
+                else:
+                    default_group = (
+                        db.session.query(ProjectTagGroup)
+                        .filter(
+                            ProjectTagGroup.default == True,
+                            ProjectTagGroup.tenants.any(Tenant.id.in_(allowed_tenant_ids)),
+                        )
+                        .first()
+                    )
+
+                    if default_group is None:
+                        print(
+                            f'-- !! demerge_project_tags: could not find replacement tag for "{tag.name}" and no default list exists: removing this tag')
+                        project.tags.remove(tag)
+                    else:
+                        print(
+                            f'-- >> demerge_project_tags: could not find replacement tag for "{tag.name}": creating new tag in default list {default_group.name}')
+                        new_tag = ProjectTag(
+                            name = tag.name,
+                            group = default_group,
+                            active=True
+                        )
+                        db.session.add(new_tag)
+                        db.session.flush()
+                        project.tags.remove(tag)
+                        project.tags.append(new_tag)
+
+    projects: List[Project] = db.session.query(Project).all()
+
+    for project in projects:
+        project: Project
+        allowed_tenant_ids: Set[int] = set([p.tenant_id for p in project.project_classes])
+        if len(allowed_tenant_ids) == 0:
+            if project.owner is not None:
+                allowed_tenant_ids = set([t.id for t in project.owner.user.tenants])
+            else:
+                print(f'-- !! demerge_project_tags: could not find allowed tenant ids for project "{project.name}"')
+                continue
+
+        demerge_tags(project, allowed_tenant_ids)
+
+    liveprojects: List[LiveProject] = db.session.query(LiveProject).all()
+
+    for project in liveprojects:
+        project: LiveProject
+        allowed_tenant_ids: List[int] = [project.config.project_class.tenant_id]
+        demerge_tags(project, allowed_tenant_ids)
+
+    db.session.commit()
+    db.session.begin()
+
+    all_tags: List[ProjectTag] = db.session.query(ProjectTag).all()
+    for tag in all_tags:
+        tag: ProjectTag
+
+        if get_count(tag.projects) == 0 and get_count(tag.live_projects) == 0:
+            print(f'-- >> demerge_project_tags: tag "{tag.name}" in group "{tag.group.name}" is not used: pruning this tag')
+            db.session.delete(tag)
+
+    db.session.commit()

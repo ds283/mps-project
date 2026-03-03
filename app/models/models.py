@@ -7720,7 +7720,7 @@ class ProjectTag(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # name of tag
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
     # group that this tag belongs to
     group_id = db.Column(db.Integer(), db.ForeignKey("project_tag_groups.id"))

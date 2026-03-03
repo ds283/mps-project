@@ -430,7 +430,8 @@ def add_project():
     form = AddProjectForm(request.form)
 
     if form.validate_on_submit():
-        tag_list = create_new_tags(form)
+        allowed_tenants = set([pcl.tenant_id for pcl in form.project_classes.data])
+        tag_list = create_new_tags(form, allowed_tenants)
 
         data = Project(
             name=form.name.data,
@@ -520,7 +521,8 @@ def edit_project(id):
     form.project = project
 
     if form.validate_on_submit():
-        tag_list = create_new_tags(form)
+        allowed_tenants = set([pcl.tenant_id for pcl in form.project_classes.data])
+        tag_list = create_new_tags(form, allowed_tenants)
 
         project.name = form.name.data
         project.tags = tag_list if uses_tags else None

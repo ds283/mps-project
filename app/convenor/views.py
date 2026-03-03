@@ -117,7 +117,6 @@ from ..models import (
     FeedbackReport,
     GeneratedAsset, Tenant,
 )
-from ..shared.security import validate_nonce
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.convenor_dashboard import (
@@ -133,6 +132,7 @@ from ..shared.conversions import is_integer
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.projects import create_new_tags, get_filter_list_for_groups_and_skills, project_list_SQL_handler, project_list_in_memory_handler
 from ..shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE, QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_UNAVAILABLE
+from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count, clone_model
 from ..shared.utils import (
     get_current_year,
@@ -4266,7 +4266,8 @@ def add_project(pclass_id):
     form = AddProjectForm(request.form)
 
     if form.validate_on_submit():
-        tag_list = create_new_tags(form)
+        allowed_tenants = [pclass.tenant]
+        tag_list = create_new_tags(form, allowed_tenants)
         project = Project(
             name=form.name.data,
             tags=tag_list,
@@ -4389,7 +4390,8 @@ def edit_project(id, pclass_id):
     form.project = project
 
     if form.validate_on_submit():
-        tag_list = create_new_tags(form)
+        allowed_tenants = [pclass.tenant]
+        tag_list = create_new_tags(form, allowed_tenants)
 
         project.name = form.name.data
         project.owner = form.owner.data if not form.generic.data else None
@@ -4471,7 +4473,8 @@ def duplicate_project(id):
     form.project = proj
 
     if form.validate_on_submit():
-        tag_list = create_new_tags(form)
+        allowed_tenants = [pclass.tenant]
+        tag_list = create_new_tags(form, allowed_tenants)
 
         new_proj = Project(
             name=form.name.data,

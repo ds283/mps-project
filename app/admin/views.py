@@ -26,7 +26,7 @@ from flask import current_app, redirect, url_for, flash, request, jsonify, sessi
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
 from math import pi
 from numpy import histogram
-from sqlalchemy import or_, update
+from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import cast
 from sqlalchemy.sql import func
@@ -1425,10 +1425,6 @@ def add_project_tag_group():
         )
 
         try:
-            # unset default from all other groups, if this one is the new defaut
-            if group.default:
-                db.session.execute(update(ProjectTagGroup).values(default=False))
-
             db.session.add(group)
             db.session.commit()
         except SQLAlchemyError as e:
@@ -1467,9 +1463,6 @@ def edit_project_tag_group(gid):
         group.last_edit_timestamp = datetime.now()
 
         try:
-            if group.default and not form.was_default:
-                db.session.execute(update(ProjectTagGroup).where(ProjectTagGroup.id != group.id).values(default=False))
-
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()

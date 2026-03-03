@@ -9,7 +9,7 @@
 #
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 from flask import flash, current_app
 from flask_security import current_user
@@ -19,25 +19,42 @@ from sqlalchemy.exc import SQLAlchemyError
 from app import ajax
 from ..database import db
 from ..models import ProjectTagGroup, ProjectTag, ResearchGroup, TransferableSkill, SkillGroup, ProjectClass, Project, ProjectClassConfig, User, \
-    ProjectLikeList, ProjectDescLikeList
+    ProjectLikeList, ProjectDescLikeList, Tenant
 from ..tools import ServerSideSQLHandler, ServerSideInMemoryHandler
 
 
-def create_new_tags(form):
+def create_new_tags(form, allowed_tenants):
     matched, unmatched = form.tags.data
+
+    if not isinstance(allowed_tenants, list):
+        raise RuntimeError("allowed_tenants must be a list")
+
+    if len(allowed_tenants) == 0:
+        raise RuntimeError("allowed_tenants must not be empty")
+
+    def get_tenant_id(tenant):
+        if isinstance(tenant, int):
+            return tenant
+        elif isinstance(tenant, Tenant):
+            return tenant.id
+        else:
+            raise RuntimeError("Unexpected tenant type")
+
+    allowed_tenant_ids: List[int] = [get_tenant_id(t) for t in allowed_tenants]
 
     if len(unmatched) > 0:
         now = datetime.now()
-        default_group = db.session.query(ProjectTagGroup).filter_by(default=True).first()
+        default_group = (
+            db.session.query(ProjectTagGroup)
+            .filter(
+                ProjectTagGroup.default == True,
+                ProjectTagGroup.tenants.any(Tenant.id.in_(allowed_tenant_ids)),
+            )
+            .first()
+        )
+
         if default_group is None:
-            default_group = db.session.query(ProjectTagGroup).first()
-            if default_group is not None:
-                flash(
-                    "No default tag group has been set. Appending newly defined tags to the " 'group "{group}".'.format(group=default_group.name),
-                    "warning",
-                )
-            else:
-                flash("No default tag group has been set. Newly defined tags have been discarded.", "error")
+            flash("No default tag group has been set for this tenant. Newly defined tags have been discarded.", "error")
 
         if default_group is not None:
             for label in unmatched:
@@ -48,7 +65,7 @@ def create_new_tags(form):
                 except SQLAlchemyError as e:
                     current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     flash(
-                        'Could not add newly defined tag "{tag}" due to a database error. ' "Please contact a system administrator".format(tag=label),
+                        'Could not add newly defined tag "{tag}" due to a database error. Please contact a system administrator'.format(tag=label),
                         "error",
                     )
 

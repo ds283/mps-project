@@ -2004,9 +2004,18 @@ def edit_affiliations(id):
     :return:
     """
 
-    user = User.query.get_or_404(id)
-    data = FacultyData.query.get_or_404(id)
-    research_groups = ResearchGroup.query.filter_by(active=True)
+    user: User = User.query.get_or_404(id)
+    data: FacultyData = FacultyData.query.get_or_404(id)
+
+    user_tenant_ids: List[int] = [t.id for t in user.tenants]
+
+    research_groups: List[ResearchGroup] = (
+        ResearchGroup.query.filter(
+            ResearchGroup.active == True,
+            ResearchGroup.tenants.any(Tenant.id.in_(user_tenant_ids)),
+        )
+        .order_by(ResearchGroup.name).all()
+    )
 
     create = request.args.get("create", default=None)
     pane = request.args.get("pane", default=None)

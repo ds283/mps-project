@@ -64,7 +64,7 @@ from ..models import (
     StudentData,
     SubmittingStudent,
     SubmissionPeriodRecord,
-    SubmissionRole,
+    SubmissionRole, Tenant,
 )
 from ..shared.actions import render_project, do_confirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.context.global_context import render_template_context
@@ -240,8 +240,17 @@ def affiliations():
     :return:
     """
 
-    data = FacultyData.query.get_or_404(current_user.id)
-    research_groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name).all()
+    data: FacultyData = FacultyData.query.get_or_404(current_user.id)
+
+    user_tenant_ids: List[int] = [t.id for t in current_user.tenants]
+
+    research_groups: List[ResearchGroup] = (
+        ResearchGroup.query.filter(
+            ResearchGroup.active == True,
+            ResearchGroup.tenants.any(Tenant.id.in_(user_tenant_ids)),
+        )
+        .order_by(ResearchGroup.name).all()
+    )
 
     return render_template_context("faculty/affiliations.html", user=current_user, data=data, research_groups=research_groups)
 

@@ -436,11 +436,11 @@ def add_project():
 
         data = Project(
             name=form.name.data,
+            ATAS_restricted=form.ATAS_restricted.data,
             tags=tag_list if uses_tags else None,
             active=True,
             owner_id=current_user.faculty_data.id,
             generic=False,
-            ATAS_restricted=form.ATAS_restricted.data,
             group=form.group.data if uses_research_groups else None,
             project_classes=form.project_classes.data,
             skills=[],
@@ -528,6 +528,7 @@ def edit_project(id):
         tag_list = create_new_tags(form, allowed_tenants)
 
         project.name = form.name.data
+        project.ATAS_restricted = form.ATAS_restricted.data
         project.tags = tag_list if uses_tags else None
         project.group = form.group.data if uses_research_groups else None
         project.project_classes = form.project_classes.data

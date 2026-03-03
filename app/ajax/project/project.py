@@ -53,6 +53,9 @@ _name = """
     {% endif %}
     {% if project.active %}
         <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-1 small">
+            {% if project.ATAS_restricted %}
+                <span class="badge bg-danger">ATAS restricted</span>
+            {% endif %}
             {% if current_user is not none and project.has_new_comments(current_user) %}
                 <span class="badge bg-warning text-dark">New comments</span>
             {% endif %}

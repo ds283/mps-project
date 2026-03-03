@@ -4393,6 +4393,7 @@ def edit_project(id, pclass_id):
         tag_list = create_new_tags(form, allowed_tenants)
 
         project.name = form.name.data
+        project.ATAS_restricted = form.ATAS_restricted.data
         project.owner = form.owner.data if not form.generic.data else None
         project.generic = form.generic.data
         project.tags = tag_list

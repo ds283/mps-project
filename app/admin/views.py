@@ -485,10 +485,8 @@ def degree_programmes_ajax():
 
     columns = {"name": name, "type": type, "show_type": show_type, "course_code": course_code, "active": active}
 
-    levels = db.session.query(FHEQ_Level).filter_by(active=True).order_by(FHEQ_Level.numeric_level.asc()).all()
-
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(partial(ajax.admin.degree_programmes_data, levels))
+        return handler.build_payload(ajax.admin.degree_programmes_data)
 
 
 @admin.route("/modules_ajax", methods=["POST"])

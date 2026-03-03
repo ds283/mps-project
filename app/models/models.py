@@ -4908,7 +4908,11 @@ class DegreeProgramme(db.Model, EditingMetadataMixin):
         )
 
     def _level_modules_query(self, level_id):
-        query = db.session.query(programmes_to_modules.c.module_id).filter(programmes_to_modules.c.programme_id == self.id).subquery()
+        query = (
+            db.session.query(programmes_to_modules.c.module_id)
+            .filter(programmes_to_modules.c.programme_id == self.id)
+            .subquery()
+        )
 
         return (
             db.session.query(Module)
@@ -4917,11 +4921,29 @@ class DegreeProgramme(db.Model, EditingMetadataMixin):
             .order_by(Module.semester.asc(), Module.name.asc())
         )
 
+    def _levels_query(self):
+        query = (
+            db.session.query(programmes_to_modules.c.module_id)
+            .filter(programmes_to_modules.c.programme_id == self.id)
+            .subquery()
+        )
+
+        return (
+            db.session.query(FHEQ_Level)
+            .join(Module, Module.level_id == FHEQ_Level.id, isouter=True)
+            .join(query, query.c.module_id == Module.id)
+            .order_by(FHEQ_Level.numeric_level.asc())
+            .distinct()
+        )
+
     def number_level_modules(self, level_id):
         return get_count(self._level_modules_query(level_id))
 
     def get_level_modules(self, level_id):
         return self._level_modules_query(level_id).all()
+
+    def get_levels(self):
+        return self._levels_query().all()
 
 
 class SkillGroup(db.Model, ColouredLabelMixin, EditingMetadataMixin):

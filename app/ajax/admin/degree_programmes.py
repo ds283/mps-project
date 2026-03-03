@@ -75,14 +75,17 @@ _name = """
     <span text="text-secondary fw-semibold">{{ p.name }}</span>
     {{ simple_label(p.short_label) }}
 </div>
-<div class="mt-2 d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 small">
-    {% if p.foundation_year %}
-        <span class="badge bg-info">Foundation year</span>
-    {% endif %}
-    {% if p.year_out %}
-        <span class="badge bg-info">Year out{%- if p.year_out_value %} Y{{ p.year_out_value}}{% endif %}</span>
-    {% endif %}
-</div>
+{% if p.foundation_year or p.year_out %}
+    <div class="mt-2 d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 small">
+        {% if p.foundation_year %}
+            <span class="badge bg-info">Foundation year</span>
+        {% endif %}
+        {% if p.year_out %}
+            <span class="badge bg-info">Year out{%- if p.year_out_value %} Y{{ p.year_out_value}}{% endif %}</span>
+        {% endif %}
+    </div>
+{% endif %}
+{% set levels = p.get_levels() %}
 {% if levels|length > 0 %}
     <div class="mt-2 d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 small">
         {% for level in levels %}
@@ -143,7 +146,7 @@ def build_menu_templ() -> Template:
     return env.from_string(_menu)
 
 
-def degree_programmes_data(levels, programmes):
+def degree_programmes_data(programmes):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
     name_templ: Template = _build_name_templ()
@@ -155,7 +158,7 @@ def degree_programmes_data(levels, programmes):
 
     data = [
         {
-            "name": render_template(name_templ, p=p, levels=levels, simple_label=simple_label),
+            "name": render_template(name_templ, p=p, simple_label=simple_label),
             "type": render_template(type_templ, t=p.degree_type, simple_label=simple_label),
             "show_type": render_template(show_type_templ, p=p),
             "course_code": render_template(course_code_templ, p=p),

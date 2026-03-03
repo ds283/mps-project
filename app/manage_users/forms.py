@@ -126,7 +126,7 @@ class StudentDataMixin:
 
 class EditUserTenantsMixin:
     tenants = QuerySelectMultipleField(
-        "Which tenant does this user belong to?",
+        "Assign tenants for this user",
         query_factory=GetAllTenants,
         get_label=BuildTenantName,
         validators=[InputRequired(message="At least one tenant must be assigned")],

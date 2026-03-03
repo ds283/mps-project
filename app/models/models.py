@@ -2984,7 +2984,7 @@ class ResearchGroup(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # tenants to which this research group belongs
-    tenants = db.relationship("Tenant", secondary=tenant_to_groups, backref=db.backref("users", lazy="dynamic"))
+    tenants = db.relationship("Tenant", secondary=tenant_to_groups, backref=db.backref("research_groups", lazy="dynamic"))
 
     # abbreviation for use in space-limited contexts
     abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True)

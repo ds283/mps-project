@@ -8,10 +8,11 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, get_template_attribute
+from flask import get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
 
 # language=jinja2
-_groups_menu = """
+_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
@@ -61,18 +62,70 @@ _website = """
 {% endif %}
 """
 
+# language=jinja2
+_abbreviation = """
+<div>{{ g.abbreviation }}</div>
+<div class="mt-1 small d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
+    {% for tenant in g.tenants %}
+        {{ simple_label(tenant.make_label(tenant.name)) }}
+    {% endfor %}
+</div>
+"""
+
+# language=jinja2
+_name = """
+{{ g.name }}
+"""
+
+
+def _build_abbreviation_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_abbreviation)
+
+
+def _build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+def _build_active_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_active)
+
+
+def _build_colour_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_colour)
+
+
+def _build_website_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_website)
+
+
+def _build_menu_template() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
 
 def groups_data(groups):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
+    abbreviation_templ: Template = _build_abbreviation_templ()
+    name_templ: Template = _build_name_templ()
+    active_templ: Template = _build_active_templ()
+    colour_templ: Template = _build_colour_templ()
+    website_templ: Template = _build_website_templ()
+    menu_templ: Template = _build_menu_template()
+
     data = [
         {
-            "abbrv": g.abbreviation,
-            "active": render_template_string(_active, g=g),
-            "name": g.name,
-            "colour": render_template_string(_colour, g=g, simple_label=simple_label),
-            "website": render_template_string(_website, g=g),
-            "menu": render_template_string(_groups_menu, group=g),
+            "abbrv": render_template(abbreviation_templ, g=g, simple_label=simple_label),
+            "active": render_template(active_templ, g=g),
+            "name": render_template(name_templ, g=g),
+            "colour": render_template(colour_templ, g=g, simple_label=simple_label),
+            "website": render_template(website_templ, g=g),
+            "menu": render_template(menu_templ, group=g),
         }
         for g in groups
     ]

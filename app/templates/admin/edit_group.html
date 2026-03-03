@@ -2,9 +2,11 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, colour_field %}
+{% from "select2.html" import import_select2 %}
 
 {% block scripts %}
     {{ super() }}
+    {{ import_select2() }}
 
     {% assets filters="cssmin", output="gen/bootstrap-colorpicker-min.css", "css/bootstrap-colorpicker.css" -%}
         <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
@@ -19,6 +21,14 @@
             $('#colour-group').colorpicker({
                 format: 'hex',
                 useAlpha: false
+            });
+        });
+        $(document).ready(function () {
+            $('#tenants').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select one or more tenants...'
             });
         });
     </script>
@@ -43,6 +53,7 @@
 
 {#        {{ wtf.form_errors(group_form) }}#}
 
+{{ wtf.render_field(group_form.tenants) }}
         {{ wtf.render_field(group_form.abbreviation) }}
         {{ wtf.render_field(group_form.name) }}
 

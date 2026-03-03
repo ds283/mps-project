@@ -165,7 +165,6 @@ from ..models import (
     TemplateTag,
     FeedbackRecipe, DownloadCentreItem,
 )
-from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
     get_backup_config,
@@ -182,6 +181,7 @@ from ..shared.conversions import is_integer
 from ..shared.formatters import format_size
 from ..shared.forms.queries import ScheduleSessionQuery
 from ..shared.internal_redis import get_redis
+from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import (
     get_current_year,
@@ -282,6 +282,7 @@ def add_group():
         r = urlsplit(url)  # canonicalize
 
         group = ResearchGroup(
+            tenants=form.tenants.data,
             abbreviation=form.abbreviation.data,
             name=form.name.data,
             colour=form.colour.data,
@@ -312,17 +313,18 @@ def edit_group(id):
     :param id:
     :return:
     """
-    group = ResearchGroup.query.get_or_404(id)
-    form = EditResearchGroupForm(obj=group)
+    group: ResearchGroup = ResearchGroup.query.get_or_404(id)
+    form: EditResearchGroupForm = EditResearchGroupForm(obj=group)
 
     form.group = group
 
     if form.validate_on_submit():
         url = form.website.data
-        if not re.match(r"http(s?)\:", url):
+        if not re.match(r"http(s?):", url):
             url = "http://" + url
         r = urlsplit(url)  # canonicalize
 
+        group.tenants = form.tenants.data
         group.abbreviation = form.abbreviation.data
         group.name = form.name.data
         group.colour = form.colour.data

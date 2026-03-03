@@ -167,7 +167,16 @@ class GlobalConfigForm(Form):
     submit = SubmitField("Save changes")
 
 
-class AddResearchGroupForm(Form, ResearchGroupMixin):
+class EditTenantsMixin:
+    tenants = QuerySelectMultipleField(
+        "Assign tenants",
+        query_factory=GetAllTenants,
+        get_label=BuildTenantName,
+        validators=[InputRequired(message="At least one tenant must be assigned")],
+        description="Assign to one or more tenants. At least one tenant is required.",
+    )
+
+class AddResearchGroupForm(Form, ResearchGroupMixin, EditTenantsMixin):
     name = StringField("Name", validators=[InputRequired(message="Name is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_group_name])
 
     abbreviation = StringField(
@@ -178,7 +187,7 @@ class AddResearchGroupForm(Form, ResearchGroupMixin):
     submit = SubmitField("Add new group")
 
 
-class EditResearchGroupForm(Form, ResearchGroupMixin, SaveChangesMixin):
+class EditResearchGroupForm(Form, ResearchGroupMixin, EditTenantsMixin, SaveChangesMixin):
     name = StringField(
         "Name", validators=[InputRequired(message="Name is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_group_name]
     )

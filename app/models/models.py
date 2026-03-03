@@ -1481,6 +1481,13 @@ tenant_to_groups = db.Table(
     db.Column("tenant_id", db.Integer(), db.ForeignKey("tenants.id"), primary_key=True),
 )
 
+# association table mapping from project tags to tenants
+tenant_to_project_tag_groups = db.Table(
+    "tenant_project_tag_groups",
+    db.Column("project_tag_group_id", db.Integer(), db.ForeignKey("project_tag_groups.id"), primary_key=True),
+    db.Column("tenant_id", db.Integer(), db.ForeignKey("tenants.id"), primary_key=True),
+)
+
 # association table mapping from student batch records to tenants
 student_batch_to_tenants = db.Table(
     "student_batch_tenants",
@@ -7657,7 +7664,10 @@ class ProjectTagGroup(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
-    # name of group
+    # tenants to which this tag group belongs
+    tenants = db.relationship("Tenant", secondary=tenant_to_project_tag_groups, backref=db.backref("project_tag_groups", lazy="dynamic"))
+
+    # name of tag group
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
 
     # active flag

@@ -43,7 +43,7 @@ from ...models import (
     WorkflowMixin,
     ProjectDescription,
     ResearchGroup,
-    ConfirmRequest,
+    ConfirmRequest, Tenant,
 )
 
 
@@ -54,7 +54,14 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     :param config:
     :return:
     """
-    all_fac_query = db.session.query(User).filter_by(active=True).join(FacultyData, FacultyData.id == User.id)
+    all_fac_query = (
+        db.session.query(User)
+        .filter(
+            User.active==True,
+            User.tenants.any(Tenant.id == pclass.tenant_id),
+        )
+        .join(FacultyData, FacultyData.id == User.id)
+    )
 
     all_fac_count = get_count(all_fac_query)
     enrolled_fac_count = get_count(all_fac_query.filter(FacultyData.enrollments.any(pclass_id=pclass.id)))

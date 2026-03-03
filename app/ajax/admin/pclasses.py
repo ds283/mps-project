@@ -232,9 +232,7 @@ _name = """
 <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2">
     <span class="fw-semibold">{{ p.name }}</span>
     {{ simple_label(p.make_label(p.abbreviation)) }}
-    {% if p.tenant is not none %}
-        {{ simple_label(p.tenant.make_label(p.tenant.name)) }}
-    {% endif %}
+    {{ simple_label(p.tenant.make_label(p.tenant.name)) }}
 </div>
 <div class="mt-2 d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 small">
     <span class="badge {% if p.student_level >= p.LEVEL_UG and p.student_level <= p.LEVEL_PGR %}bg-secondary{% else %}bg-danger{% endif %}">

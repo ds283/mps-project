@@ -115,7 +115,7 @@ from ..models import (
     ProjectAlternative,
     FeedbackRecipe,
     FeedbackReport,
-    GeneratedAsset,
+    GeneratedAsset, Tenant,
 )
 from ..shared.security import validate_nonce
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm_to_pending
@@ -715,7 +715,10 @@ def faculty_ajax(id):
         # get User, FacultyData pairs for this list
         base_query = (
             db.session.query(User, FacultyData, EnrollmentRecord)
-            .filter(User.active)
+            .filter(
+                User.active,
+                User.tenants.any(Tenant.id == pclass.tenant_id),
+            )
             .join(FacultyData, FacultyData.id == User.id)
             .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id, EnrollmentRecord.pclass_id == pclass.id))
         )
@@ -724,7 +727,10 @@ def faculty_ajax(id):
         # join to main User and FacultyData records and select pairs that have no counterpart in faculty_ids
         base_query = (
             db.session.query(User, FacultyData, EnrollmentRecord)
-            .filter(User.active)
+            .filter(
+                User.active,
+                User.tenants.any(Tenant.id == pclass.tenant_id),
+            )
             .join(FacultyData, FacultyData.id == User.id)
             .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id, EnrollmentRecord.pclass_id == pclass.id), isouter=True)
             .filter(EnrollmentRecord.id == None)
@@ -737,7 +743,10 @@ def faculty_ajax(id):
     ):
         base_query = (
             db.session.query(User, FacultyData, EnrollmentRecord)
-            .filter(User.active)
+            .filter(
+                User.active,
+                User.tenants.any(Tenant.id == pclass.tenant_id),
+            )
             .join(FacultyData, FacultyData.id == User.id)
             .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id, EnrollmentRecord.pclass_id == pclass.id))
         )
@@ -765,7 +774,10 @@ def faculty_ajax(id):
         # build list of all active faculty, together with their FacultyData records
         base_query = (
             db.session.query(User, FacultyData, EnrollmentRecord)
-            .filter(User.active)
+            .filter(
+                User.active,
+                User.tenants.any(Tenant.id == pclass.tenant_id),
+            )
             .join(FacultyData, FacultyData.id == User.id)
             .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id, EnrollmentRecord.pclass_id == pclass.id), isouter=True)
         )

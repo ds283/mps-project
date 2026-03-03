@@ -36,7 +36,7 @@ from ..models import (
     StudentData,
     ProjectDescription,
     DegreeProgramme,
-    DegreeType,
+    DegreeType, Tenant,
 )
 from ..models import project_assessors
 
@@ -512,7 +512,7 @@ def _build_generic_enroll_candidate(config: ProjectClassConfig, year_offset: int
         allowed_programmes = set(detuple(x) for x in allowed_programmes)
 
     # build a list of eligible students who are not already attached as selectors
-    candidate_students = _build_candidates(allowed_programmes, config.student_level, first_year, last_year)
+    candidate_students = _build_candidates(config.project_class.tenant_id, allowed_programmes, config.student_level, first_year, last_year)
 
     # build a list of existing selecting students associated with this ProjectClassConfig instance
     existing_students = db.session.query(StudentRecordType.student_id).filter(StudentRecordType.config_id == config.id,
@@ -528,11 +528,15 @@ def _build_generic_enroll_candidate(config: ProjectClassConfig, year_offset: int
     return missing_students
 
 
-def _build_candidates(allowed_programmes, student_level: int, first_year: int, last_year: int):
+def _build_candidates(tenant_id: int, allowed_programmes, student_level: int, first_year: int, last_year: int):
     candidates = (
         db.session.query(StudentData)
         .join(User, StudentData.id == User.id)
-        .filter(User.active == True, StudentData.intermitting == False)
+        .filter(
+            User.active == True,
+            User.tenants.any(Tenant.id == tenant_id),
+            StudentData.intermitting == False,
+        )
         .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
     )

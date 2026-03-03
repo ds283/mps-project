@@ -12,6 +12,7 @@
 from datetime import datetime, date, timedelta
 from functools import partial
 from pathlib import Path
+from typing import List
 
 from celery import chain, group
 from flask import redirect, url_for, flash, request, current_app, session
@@ -2024,9 +2025,17 @@ def edit_enrollments(id):
     :return:
     """
 
-    user = User.query.get_or_404(id)
-    data = FacultyData.query.get_or_404(id)
-    project_classes = ProjectClass.query.filter_by(active=True)
+    user: User = User.query.get_or_404(id)
+    data: FacultyData = FacultyData.query.get_or_404(id)
+
+    user_tenant_ids: List[int] = [t.id for t in user.tenants]
+
+    project_classes: List[ProjectClass] = (
+        ProjectClass.query.filter(
+            ProjectClass.active == True,
+            ProjectClass.tenant_id.in_(user_tenant_ids),
+        )
+    )
 
     create = request.args.get("create", default=None)
     pane = request.args.get("pane", default=None)

@@ -164,7 +164,7 @@ class GlobalConfigForm(Form):
         description="Provide the root URL for the Canvas instance that should be used for push or pull of student data.",
     )
 
-    enable_2026_ATAS_compaign = BooleanField("Enable 2026 ATAS campaign", default=False)
+    enable_2026_ATAS_campaign = BooleanField("Enable 2026 ATAS campaign", default=False)
 
     submit = SubmitField("Save changes")
 

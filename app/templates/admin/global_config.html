@@ -14,11 +14,14 @@
     <form action="{{ url_for('admin.global_config') }}" method="POST" name="config_form">
         {{ config_form.hidden_tag() }}
 
-        <div class="mb-2">
+        <div class="card mt-3 mb-3 card-body bg-well">
             {{ wtf.render_field(config_form.enable_canvas_sync) }}
+            {{ wtf.render_field(config_form.canvas_url) }}
         </div>
 
-        {{ wtf.render_field(config_form.canvas_url) }}
+        <div class="card mt-3 mb-3 card-body bg-well">
+            {{ wtf.render_field(config_form.enable_2026_ATAS_campaign) }}
+        </div>
 
         {{ wtf.render_field(config_form.submit, button_map={'submit': 'primary'}) }}
     </form>

@@ -9,7 +9,7 @@
 #
 
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Iterable
 
 from flask import flash, current_app
 from flask_security import current_user
@@ -26,8 +26,8 @@ from ..tools import ServerSideSQLHandler, ServerSideInMemoryHandler
 def create_new_tags(form, allowed_tenants):
     matched, unmatched = form.tags.data
 
-    if not isinstance(allowed_tenants, list):
-        raise RuntimeError("allowed_tenants must be a list")
+    if not isinstance(allowed_tenants, Iterable):
+        raise RuntimeError("allowed_tenants must be iterable")
 
     if len(allowed_tenants) == 0:
         raise RuntimeError("allowed_tenants must not be empty")

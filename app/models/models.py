@@ -7762,6 +7762,12 @@ class ProjectTag(db.Model, ColouredLabelMixin, EditingMetadataMixin):
         """
         self.active = False
 
+    @property
+    def uses(self):
+        return {
+            "Projects": get_count(self.projects),
+            "Live Projects": get_count(self.live_projects),
+        }
 
 @cache.memoize()
 def _Project_is_offerable(pid):

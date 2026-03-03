@@ -28,6 +28,11 @@
                     { data: 'group',
                       orderable: true,
                       searchable: true },
+                    {
+                        data: 'uses',
+                        orderable: false,
+                        searchable: false
+                    },
                     { data: 'colour',
                       orderable: false,
                       searchable: false },
@@ -55,11 +60,12 @@
             <table id="tags" class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <th width="40%">Tag name</th>
+                        <th width="30%">Tag name</th>
                         <th width="20%">Group</th>
+                        <th width="15%">Uses</th>
                         <th width="15%">Colour</th>
                         <th width="10%">Status</th>
-                        <th width="15%">Actions</th>
+                        <th width="10%">Actions</th>
                     </tr>
                 </thead>
             </table>

@@ -8,7 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, get_template_attribute
+from flask import get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
 
 # language=jinja2
 _menu = """
@@ -68,16 +69,59 @@ _colour = """
 """
 
 
+# language=jinja2
+_uses = """
+{% set uses = t.uses %}
+<div class="d-flex flex-column justify-content-start align-items-start gap-2 small">
+{% for u in uses %}
+    <span class="text-secondary">{{ u }}: {{ uses[u] }}</span>
+{% endfor %}   
+</div>
+"""
+
+
+def _build_colour_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_colour)
+
+
+def _build_group_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_group)
+
+
+def _build_uses_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_uses)
+
+
+def _build_active_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_active)
+
+
+def _build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
+
 def tags_data(tags):
     simple_label = get_template_attribute("labels.html", "simple_label")
+
+    colour_templ: Template = _build_colour_templ()
+    group_templ: Template = _build_group_templ()
+    uses_templ: Template = _build_uses_templ()
+    active_templ: Template = _build_active_templ()
+    menu_templ: Template = _build_menu_templ()
 
     data = [
         {
             "name": t.name,
-            "colour": render_template_string(_colour, t=t, simple_label=simple_label),
-            "group": render_template_string(_group, t=t),
-            "active": render_template_string(_active, t=t),
-            "menu": render_template_string(_menu, tag=t),
+            "colour": render_template(colour_templ, t=t, simple_label=simple_label),
+            "group": render_template(group_templ, t=t),
+            "uses": render_template(uses_templ, t=t),
+            "active": render_template(active_templ, t=t),
+            "menu": render_template(menu_templ, tag=t),
         }
         for t in tags
     ]

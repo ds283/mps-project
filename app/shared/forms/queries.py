@@ -7,7 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-from typing import Iterable
+from typing import Iterable, List
 
 from flask_login import current_user
 from sqlalchemy import or_
@@ -487,11 +487,27 @@ def BuildCanvasLoginUserName(data: FacultyData):
     return data.user.name_and_username
 
 
-def GetActiveTags():
+def GetActiveTags(allowed_tenants: List[Tenant]):
+    if len(allowed_tenants) == 0:
+        raise RuntimeError("GetActiveTags requires at least one allowed tenant")
+
+    def get_tenant_id(tenant):
+        if isinstance(tenant, int):
+            return tenant
+        if isinstance(tenant, Tenant):
+            return tenant.id
+        raise TypeError(f"Unexpected type '{type(tenant)}' for argument tenant in GetActiveTags")
+
+    allowed_tenant_ids = [get_tenant_id(t) for t in allowed_tenants]
+
     return (
         db.session.query(ProjectTag)
         .join(ProjectTagGroup, ProjectTagGroup.id == ProjectTag.group_id)
-        .filter(ProjectTagGroup.active == True, ProjectTag.active == True)
+        .filter(
+            ProjectTagGroup.active == True,
+            ProjectTagGroup.tenants.any(Tenant.id.in_(allowed_tenant_ids)),
+            ProjectTag.active == True
+        )
     )
 
 

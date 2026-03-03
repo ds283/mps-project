@@ -9,6 +9,7 @@
 #
 
 from functools import partial
+from typing import List
 
 from flask_security.forms import Form
 from wtforms import SubmitField, IntegerField, StringField, BooleanField, TextAreaField, DateTimeField, SelectField
@@ -27,7 +28,7 @@ from ..models import (
     SubmissionRecord,
     FacultyData,
     AlternativesPriorityMixin,
-    Project,
+    Project, Tenant,
 )
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, PeriodPresentationsMixin, PeriodSelectorMixinFactory
 from ..shared.forms.queries import (
@@ -564,17 +565,19 @@ def EditLiveProjectSupervisorsFactory(project: LiveProject):
     return EditLiveProjectSupervisors
 
 
-class DuplicateProjectForm(
-    Form,
-    ProjectMixinFactory(
-        convenor_editing=True, uses_tags=True, uses_research_groups=True, project_classes_qf=AllProjectClasses, group_qf=AllResearchGroups
-    ),
-):
-    name = StringField(
-        "Title", validators=[InputRequired(message="Project title is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_project]
-    )
+def DuplicateProjectFormFactory(allowed_tenants: List[Tenant]):
+    class DuplicateProjectForm(
+        Form,
+        ProjectMixinFactory(allowed_tenants, convenor_editing=True, uses_tags=True, uses_research_groups=True, project_classes_qf=AllProjectClasses,
+                            group_qf=AllResearchGroups),
+    ):
+        name = StringField(
+            "Title", validators=[InputRequired(message="Project title is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_project]
+        )
 
-    submit = SubmitField("Duplicate project")
+        submit = SubmitField("Duplicate project")
+
+    return DuplicateProjectForm
 
 
 def _CustomOfferFormMixinFactory(pclass: ProjectClassConfig, year: int):

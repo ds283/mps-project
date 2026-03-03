@@ -9,13 +9,14 @@
 #
 
 from functools import partial
+from typing import List
 
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, SubmitField, TextAreaField, BooleanField
 from wtforms.validators import InputRequired, Optional, Length, ValidationError
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
-from ..models import DEFAULT_STRING_LENGTH, ProjectClass
+from ..models import DEFAULT_STRING_LENGTH, ProjectClass, Tenant
 from ..models import Project
 from ..shared.forms.mixins import (
     SaveChangesMixin,
@@ -48,7 +49,7 @@ from ..shared.forms.widgets import GroupedTagSelectField
 from ..shared.forms.wtf_validators import globally_unique_project, unique_or_original_project, project_unique_label, project_unique_or_original_label
 
 
-def ProjectMixinFactory(convenor_editing: bool, uses_tags: bool, uses_research_groups: bool, project_classes_qf, group_qf):
+def ProjectMixinFactory(allowed_tenants, convenor_editing: bool, uses_tags: bool, uses_research_groups: bool, project_classes_qf, group_qf):
     class ProjectMixin:
         if convenor_editing:
             # convenors can assign projects to any owner; ordinary faculty membes can only edit their own
@@ -75,9 +76,10 @@ def ProjectMixinFactory(convenor_editing: bool, uses_tags: bool, uses_research_g
                     raise ValidationError("This project is not generic. Please assign an owner.")
 
         if uses_tags:
+            get_tags = partial(GetActiveTags, allowed_tenants=allowed_tenants)
             tags = GroupedTagSelectField(
                 "Add tags to help classify your project",
-                query_factory=GetActiveTags,
+                query_factory=get_tags,
                 get_label=BuildTagName,
                 get_group=BuildTagGroup,
                 description="Use tags to help students understand the general area of "
@@ -205,14 +207,10 @@ def ProjectMixinFactory(convenor_editing: bool, uses_tags: bool, uses_research_g
     return ProjectMixin
 
 
-def AddProjectFormFactory(convenor_editing=False, uses_tags=True, uses_research_groups=True):
-    Mixin = ProjectMixinFactory(
-        convenor_editing,
-        uses_tags,
-        uses_research_groups,
-        AllProjectClasses if convenor_editing else CurrentUserProjectClasses,
-        AllResearchGroups if convenor_editing else CurrentUserResearchGroups,
-    )
+def AddProjectFormFactory(allowed_tenants: List[Tenant], convenor_editing=False, uses_tags=True, uses_research_groups=True):
+    Mixin = ProjectMixinFactory(allowed_tenants, convenor_editing, uses_tags, uses_research_groups,
+                                AllProjectClasses if convenor_editing else CurrentUserProjectClasses,
+                                AllResearchGroups if convenor_editing else CurrentUserResearchGroups)
 
     class AddProjectForm(Form, Mixin):
         name = StringField(
@@ -228,14 +226,10 @@ def AddProjectFormFactory(convenor_editing=False, uses_tags=True, uses_research_
     return AddProjectForm
 
 
-def EditProjectFormFactory(convenor_editing=False, uses_tags=True, uses_research_groups=True):
-    Mixin = ProjectMixinFactory(
-        convenor_editing,
-        uses_tags,
-        uses_research_groups,
-        AllProjectClasses if convenor_editing else CurrentUserProjectClasses,
-        AllResearchGroups if convenor_editing else CurrentUserResearchGroups,
-    )
+def EditProjectFormFactory(allowed_tenants: List[Tenant], convenor_editing=False, uses_tags=True, uses_research_groups=True):
+    Mixin = ProjectMixinFactory(allowed_tenants, convenor_editing, uses_tags, uses_research_groups,
+                                AllProjectClasses if convenor_editing else CurrentUserProjectClasses,
+                                AllResearchGroups if convenor_editing else CurrentUserResearchGroups)
 
     class EditProjectForm(Form, Mixin, SaveChangesMixin):
         name = StringField(

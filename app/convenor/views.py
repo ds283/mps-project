@@ -53,9 +53,8 @@ from .forms import (
     EditProjectAlternativeForm,
     EditProjectSupervisorsFactory,
     EditLiveProjectSupervisorsFactory,
-    DuplicateProjectForm,
     CreateCustomOfferFormFactory,
-    EditCustomOfferFormFactory,
+    EditCustomOfferFormFactory, DuplicateProjectFormFactory,
 )
 from ..admin.forms import LevelSelectorForm
 from ..database import db
@@ -4262,7 +4261,7 @@ def add_project(pclass_id):
             return redirect(redirect_url())
 
     # set up form
-    AddProjectForm = AddProjectFormFactory(convenor_editing=True, uses_tags=True, uses_research_groups=True)
+    AddProjectForm = AddProjectFormFactory(current_user.tenants, convenor_editing=True, uses_tags=True, uses_research_groups=True)
     form = AddProjectForm(request.form)
 
     if form.validate_on_submit():
@@ -4385,7 +4384,7 @@ def edit_project(id, pclass_id):
     # set up form
     project: Project = Project.query.get_or_404(id)
 
-    EditProjectForm = EditProjectFormFactory(convenor_editing=True, uses_tags=True, uses_research_groups=True)
+    EditProjectForm = EditProjectFormFactory(current_user.tenants, convenor_editing=True, uses_tags=True, uses_research_groups=True)
     form = EditProjectForm(obj=project)
     form.project = project
 
@@ -4469,11 +4468,12 @@ def duplicate_project(id):
             text = "previous view"
 
     # set up form
+    allowed_tenants = [p.tenant for p in proj.project_classes]
+    DuplicateProjectForm = DuplicateProjectFormFactory(allowed_tenants)
     form = DuplicateProjectForm(obj=proj)
     form.project = proj
 
     if form.validate_on_submit():
-        allowed_tenants = [pclass.tenant]
         tag_list = create_new_tags(form, allowed_tenants)
 
         new_proj = Project(

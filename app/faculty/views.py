@@ -426,7 +426,8 @@ def add_project():
     uses_research_groups = enrolled_for_pclasses_using_research_groups(fd)
 
     # set up form
-    AddProjectForm = AddProjectFormFactory(convenor_editing=False, uses_tags=uses_tags, uses_research_groups=uses_research_groups)
+    AddProjectForm = AddProjectFormFactory(current_user.tenants, convenor_editing=False, uses_tags=uses_tags,
+                                           uses_research_groups=uses_research_groups)
     form = AddProjectForm(request.form)
 
     if form.validate_on_submit():
@@ -516,7 +517,9 @@ def edit_project(id):
         url = url_for("faculty.edit_projects")
         text = "project library"
 
-    EditProjectForm = EditProjectFormFactory(convenor_editing=False, uses_tags=uses_tags, uses_research_groups=uses_research_groups)
+    allowed_tenants = [pcl.tenant_id for pcl in project.project_classes]
+    EditProjectForm = EditProjectFormFactory(allowed_tenants, convenor_editing=False, uses_tags=uses_tags,
+                                             uses_research_groups=uses_research_groups)
     form = EditProjectForm(obj=project)
     form.project = project
 

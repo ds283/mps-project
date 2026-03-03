@@ -54,7 +54,7 @@ def GetActiveDegreeTypes():
     return DegreeType.query.filter_by(active=True).order_by(DegreeType.name.asc())
 
 
-def GetActiveDegreeProgrammes():
+def GetActiveDegreeProgrammes(allowed_tenants: List[Tenant]):
     return DegreeProgramme.query.filter_by(active=True).order_by(DegreeProgramme.name.asc())
 
 

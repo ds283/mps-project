@@ -2,6 +2,23 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $(document).ready(function () {
+            $('#tenants').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select one or more tenants...'
+            });
+        });
+    </script>
+{% endblock %}
 
 {% block title %}
     {{ title }}
@@ -23,6 +40,7 @@
 {#        {{ wtf.form_errors(programme_form) }}#}
 
         {{ wtf.render_field(programme_form.name) }}
+{{ wtf.render_field(programme_form.tenants) }}
         {{ wtf.render_field(programme_form.abbreviation) }}
         {{ wtf.render_field(programme_form.course_code) }}
 

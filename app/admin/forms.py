@@ -48,7 +48,7 @@ from ..models import (
     DEFAULT_ASSIGNED_MARKERS,
     DEFAULT_ASSIGNED_MODERATORS,
     DEFAULT_STRING_LENGTH,
-    ProjectClassConfig,
+    ProjectClassConfig, Tenant,
 )
 from ..shared.forms.mixins import SaveChangesMixin, PeriodPresentationsMixin
 from ..shared.forms.queries import (
@@ -264,7 +264,7 @@ class DegreeProgrammeMixin:
     )
 
 
-class AddDegreeProgrammeForm(Form, DegreeProgrammeMixin):
+class AddDegreeProgrammeForm(Form, EditTenantsMixin, DegreeProgrammeMixin):
     name = StringField(
         "Name",
         validators=[InputRequired(message="Degree programme name is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_degree_programme],
@@ -282,7 +282,7 @@ class AddDegreeProgrammeForm(Form, DegreeProgrammeMixin):
     submit = SubmitField("Add new degree programme")
 
 
-class EditDegreeProgrammeForm(Form, DegreeProgrammeMixin, SaveChangesMixin):
+class EditDegreeProgrammeForm(Form, DegreeProgrammeMixin, EditTenantsMixin, SaveChangesMixin):
     name = StringField(
         "Name",
         validators=[
@@ -326,287 +326,302 @@ class EditModuleForm(Form, ModuleMixin, SaveChangesMixin):
     )
 
 
-class ProjectClassMixin:
-    tenant = QuerySelectField(
-        "Tenant", description="Assign a tenant to this project class", query_factory=GetAllTenants, get_label=BuildTenantName,
-    )
-
-    colour = StringField(
-        "Colour", description="Assign a colour to help students identify this project class.", validators=[Length(max=DEFAULT_STRING_LENGTH)]
-    )
-
-    do_matching = BooleanField("Use automated global matching of faculty to projects", default=True)
-
-    number_assessors = IntegerField(
-        "Number of assessors required per project",
-        description="Assessors are used to assign markers, moderators and presentation assessors. "
-        "Significantly more than one assessor is required per project to allow "
-        "sufficient flexibility during matching.",
-        validators=[NotOptionalIf("do_matching"), NumberRange(min=0, message="Required number of assessors cannot be zero")],
-    )
-
-    use_project_hub = BooleanField(
-        "Use Project Hubs (caution: not production quality)",
-        description="The Project Hub is a lightweight learning management system that "
-        "allows resources to be published to students, and provides a journal "
-        "and to-do list. It is a central "
-        "location to manage projects.",
-    )
-
-    student_level = SelectField(
-        "Student level",
-        description="Determines whether this project type applies to UG, PGT or PGR students.",
-        choices=student_level_choices,
-        coerce=int,
-    )
-
-    start_year = SelectField(
-        "Starts in academic year",
-        description="Determines the academic year in which students join the project.",
-        choices=start_year_choices,
-        coerce=int,
-    )
-
-    extent = SelectField(
-        "Duration", choices=extent_choices, coerce=int, description="For how many academic years do students participate in the project?"
-    )
-
-    is_optional = BooleanField("This project is optional", default=False)
-
-    uses_selection = BooleanField(
-        "Students are required to submit a ranked list of project choices",
-        default=True,
-        description="Disable for projects types where only the project list is published, and selection takes place through a different workflow.",
-    )
-
-    uses_submission = BooleanField("Students submit work requiring marking or feedback", default=True)
-
-    require_confirm = BooleanField("Require faculty to confirm projects yearly", default=True)
-
-    supervisor_carryover = BooleanField("For multi-year projects, automatically carry over supervisor year-to-year")
-
-    include_available = BooleanField("Include this project class in supervisor availability calculations")
-
-    uses_supervisor = BooleanField(
-        "Uses supervisor roles", default=True, description="Select if the project is actively supervised by one or more members of staff"
-    )
-
-    uses_marker = BooleanField(
-        "Uses marker roles", default=True, description="Select if the submissions are assessed by one or more members of staff"
-    )
-
-    uses_moderator = BooleanField(
-        "Uses moderator roles", default=False, description="Select if submissions are moderated by one or more members of staff"
-    )
-
-    uses_presentations = BooleanField("Includes one or more assessed presentations")
-
-    display_marker = BooleanField("Display assessor information")
-
-    display_presentations = BooleanField("Display presentation assessment information")
-
-    reenroll_supervisors_early = BooleanField("Re-enroll supervisors one year before end of sabbatical/buyout", default=True)
-
-    initial_choices = IntegerField(
-        "Number of initial project preferences",
-        description="Select number of preferences students should list before joining.",
-        validators=[NotOptionalIf("uses_selection"), NumberRange(min=1, message="The required number of preferences should be at least 1")],
-    )
-
-    allow_switching = BooleanField(
-        "Allow switching supervisors in subsequent years",
-        description="Some project types may allow switching supervisors after the first year. "
-        "If this is allowed, students may be required to submit a different number of ranked preferences.",
-        default=False,
-    )
-
-    switch_choices = IntegerField(
-        "Number of subsequent project preferences",
-        description="Number of preferences to allow in subsequent years, if switching is allowed.",
-        validators=[NotOptionalIf("uses_selection"), NumberRange(min=1, message="The required number of preferences should be at least 1")],
-    )
-
-    faculty_maximum = IntegerField(
-        "Limit selections per faculty member",
-        description="Optional. Specify a maximum number of projects that "
-        "students can select if they are offered by the same "
-        "faculty supervisor. Leave blank to disable.",
-        validators=[Optional(), NumberRange(min=1, message="Specified maximum cannot be less than 1")],
-    )
-
-    CATS_supervision = IntegerField(
-        "CATS awarded for project supervision",
-        validators=[NotOptionalIf("uses_supervisor"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
-    )
-
-    CATS_marking = IntegerField(
-        "CATS awarded for marking submissions",
-        validators=[NotOptionalIf("uses_marker"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
-    )
-
-    CATS_moderation = IntegerField(
-        "CATS awarded for moderating submissions",
-        validators=[NotOptionalIf("uses_moderator"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
-    )
-
-    CATS_presentation = IntegerField(
-        "CATS awarded for assessing presentations",
-        validators=[NotOptionalIf("uses_presentations"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
-    )
-
-    hourly_choices = [
-        (1, "1 day"),
-        (2, "2 days"),
-        (3, "3 days"),
-        (4, "4 days"),
-        (5, "5 days"),
-        (6, "6 days"),
-        (7, "7 days"),
-        (8, "8 days"),
-        (9, "9 days"),
-        (10, "10 days"),
-        (11, "11 days"),
-        (12, "12 days"),
-        (13, "13 days"),
-        (14, "14 days"),
-    ]
-    keep_hourly_popularity = SelectField("Keep hourly popularity data for", choices=hourly_choices, coerce=int)
-
-    daily_choices = [(1, "1 week"), (2, "2 weeks"), (3, "3 weeks"), (4, "4 weeks"), (5, "5 weeks"), (6, "6 weeks"), (7, "7 weeks"), (8, "8 weeks")]
-    keep_daily_popularity = SelectField("Keep daily popularity data for", choices=daily_choices, coerce=int)
-
-    convenor = QuerySelectField("Convenor", query_factory=GetPossibleConvenors, get_label=BuildConvenorRealName)
-
-    coconvenors = QuerySelectMultipleField(
-        "Co-convenors",
-        query_factory=GetPossibleConvenors,
-        get_label=BuildConvenorRealName,
-        description="Co-convenors have the same administrative privileges "
-        "as convenors, but are not identified to students. "
-        "For example, they might be previous convenors who are "
-        "helping with administration during a transition period.",
-        validators=[Optional()],
-    )
-
-    office_contacts = QuerySelectMultipleField(
-        "Professional Services contacts",
-        query_factory=BuildPossibleOfficeContacts,
-        get_label=BuildOfficeContactName,
-        description="Specify one or more members of the professional services "
-        "(School Office) team "
-        "who act as contacts for this project type. Professional "
-        "services contacts "
-        "receive email updates to keep them appraised of the "
-        "project lifecycle.",
-        validators=[Optional()],
-    )
-
-    approvals_team = QuerySelectMultipleField(
-        "Approvals team",
-        query_factory=BuildPossibleApprovers,
-        get_label=BuildApproverName,
-        description="Specify one or members of the approvals pool who will be able to approve changes to project descriptions.",
-        allow_blank=False,
-    )
-
-    @staticmethod
-    def validate_approvals_team(form, field):
-        if field.data is None or not isinstance(field.data, list) or len(field.data) == 0:
-            raise ValidationError("At least one member of the approvals pool should be selected to join the approvals team.")
-
-    select_in_previous_cycle = BooleanField(
-        "Project selection occurs in previous cycle",
-        description="Select this option if selectors submit their preferences in the "
-        "academic cycle before the project runs. This is commonly the case for UG "
-        "projects, but not for PGT projects.",
-    )
-
-    selection_open_to_all = BooleanField(
-        "This is an opt-in project open to all students, regardless of their degree programme",
-        description="By default, selectors are auto-enrolled based on their degree programme. "
-        "If this option is selected then selectors from all eligible years will be "
-        "auto-enrolled as selectors. If no project selection is made, the selector "
-        "is assumed not to have opted-in.",
-    )
-
-    auto_enrol_enable = BooleanField(
-        "Automatically enrol selectors during rollover",
-        description="If selected, students participating in the specified programmes and "
-        "at the appropriate stage will automatically be enrolled as "
-        "selectors during rollover of the academic year.",
-    )
-
-    auto_enroll_years = RadioField("In which years should students be auto-enrolled as selectors?", choices=auto_enrol_year_choices, coerce=int)
-
-    programmes = QuerySelectMultipleField(
-        "Auto-enrol students as selectors from degree programmes", query_factory=GetActiveDegreeProgrammes, get_label=BuildDegreeProgrammeName
-    )
-
-    # validate_programmes() is an inline validator that is called automatically by WTForms to validate
-    # the programmes field; see https://wtforms.readthedocs.io/en/2.3.x/forms/#inline-validators
-    @staticmethod
-    def validate_programmes(form, field):
-        # if selection is open to anyone, there is no need to specify a particular set of programmes
-        if form.selection_open_to_all.data:
-            return
-
-        # otherwise, at least one programme should be specified
-        if field.data is None or not isinstance(field.data, list) or len(field.data) == 0:
-            raise ValidationError("At least one degree programme should be selected")
-
-        # check all programmes are consistent with the specified project level
-        for programme in field.data:
-            programme: DegreeProgramme
-            programme_type: DegreeType = programme.degree_type
-            if programme_type.level != form.student_level.data:
-                raise ValidationError("The selected degree programmes are not consistent with the required student level")
-
-    advertise_research_group = BooleanField(
-        "Advertise affiliations/research groups to students",
-        description="Students will be shown the research group "
-        "or other affiliation "
-        "associated with each project. For example, this could be "
-        "used to drive improved awareness of research teams "
-        "within the department.",
-    )
-
-    use_project_tags = BooleanField("Use tags", description="Each project variant can be given one or more tags, which are advertised to students.")
-
-    force_tag_groups = QuerySelectMultipleField(
-        "Require tags from specific groups",
-        query_factory=GetActiveProjectTagGroups,
-        get_label="name",
-        description="Forces projects to be tagged with at least one tag "
-        "from a specified set of groups. For instance, this "
-        "could be used "
-        "to enforce a consistent labelling convention.",
-    )
+def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
 
 
-class AddProjectClassForm(Form, ProjectClassMixin):
-    name = StringField(
-        "Name",
-        validators=[InputRequired(message="Name of project class is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_project_class],
-    )
+    class ProjectClassMixin:
+        tenant = QuerySelectField(
+            "Tenant", description="Assign a tenant to this project class", query_factory=GetAllTenants, get_label=BuildTenantName,
+        )
 
-    abbreviation = StringField(
-        "Abbreviation",
-        validators=[InputRequired(message="An abbreviation is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_project_class_abbrev],
-    )
+        colour = StringField(
+            "Colour", description="Assign a colour to help students identify this project class.", validators=[Length(max=DEFAULT_STRING_LENGTH)]
+        )
 
-    submit = SubmitField("Add new project class")
+        do_matching = BooleanField("Use automated global matching of faculty to projects", default=True)
+
+        number_assessors = IntegerField(
+            "Number of assessors required per project",
+            description="Assessors are used to assign markers, moderators and presentation assessors. "
+            "Significantly more than one assessor is required per project to allow "
+            "sufficient flexibility during matching.",
+            validators=[NotOptionalIf("do_matching"), NumberRange(min=0, message="Required number of assessors cannot be zero")],
+        )
+
+        use_project_hub = BooleanField(
+            "Use Project Hubs (caution: not production quality)",
+            description="The Project Hub is a lightweight learning management system that "
+            "allows resources to be published to students, and provides a journal "
+            "and to-do list. It is a central "
+            "location to manage projects.",
+        )
+
+        student_level = SelectField(
+            "Student level",
+            description="Determines whether this project type applies to UG, PGT or PGR students.",
+            choices=student_level_choices,
+            coerce=int,
+        )
+
+        start_year = SelectField(
+            "Starts in academic year",
+            description="Determines the academic year in which students join the project.",
+            choices=start_year_choices,
+            coerce=int,
+        )
+
+        extent = SelectField(
+            "Duration", choices=extent_choices, coerce=int, description="For how many academic years do students participate in the project?"
+        )
+
+        is_optional = BooleanField("This project is optional", default=False)
+
+        uses_selection = BooleanField(
+            "Students are required to submit a ranked list of project choices",
+            default=True,
+            description="Disable for projects types where only the project list is published, and selection takes place through a different workflow.",
+        )
+
+        uses_submission = BooleanField("Students submit work requiring marking or feedback", default=True)
+
+        require_confirm = BooleanField("Require faculty to confirm projects yearly", default=True)
+
+        supervisor_carryover = BooleanField("For multi-year projects, automatically carry over supervisor year-to-year")
+
+        include_available = BooleanField("Include this project class in supervisor availability calculations")
+
+        uses_supervisor = BooleanField(
+            "Uses supervisor roles", default=True, description="Select if the project is actively supervised by one or more members of staff"
+        )
+
+        uses_marker = BooleanField(
+            "Uses marker roles", default=True, description="Select if the submissions are assessed by one or more members of staff"
+        )
+
+        uses_moderator = BooleanField(
+            "Uses moderator roles", default=False, description="Select if submissions are moderated by one or more members of staff"
+        )
+
+        uses_presentations = BooleanField("Includes one or more assessed presentations")
+
+        display_marker = BooleanField("Display assessor information")
+
+        display_presentations = BooleanField("Display presentation assessment information")
+
+        reenroll_supervisors_early = BooleanField("Re-enroll supervisors one year before end of sabbatical/buyout", default=True)
+
+        initial_choices = IntegerField(
+            "Number of initial project preferences",
+            description="Select number of preferences students should list before joining.",
+            validators=[NotOptionalIf("uses_selection"), NumberRange(min=1, message="The required number of preferences should be at least 1")],
+        )
+
+        allow_switching = BooleanField(
+            "Allow switching supervisors in subsequent years",
+            description="Some project types may allow switching supervisors after the first year. "
+            "If this is allowed, students may be required to submit a different number of ranked preferences.",
+            default=False,
+        )
+
+        switch_choices = IntegerField(
+            "Number of subsequent project preferences",
+            description="Number of preferences to allow in subsequent years, if switching is allowed.",
+            validators=[NotOptionalIf("uses_selection"), NumberRange(min=1, message="The required number of preferences should be at least 1")],
+        )
+
+        faculty_maximum = IntegerField(
+            "Limit selections per faculty member",
+            description="Optional. Specify a maximum number of projects that "
+            "students can select if they are offered by the same "
+            "faculty supervisor. Leave blank to disable.",
+            validators=[Optional(), NumberRange(min=1, message="Specified maximum cannot be less than 1")],
+        )
+
+        CATS_supervision = IntegerField(
+            "CATS awarded for project supervision",
+            validators=[NotOptionalIf("uses_supervisor"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
+        )
+
+        CATS_marking = IntegerField(
+            "CATS awarded for marking submissions",
+            validators=[NotOptionalIf("uses_marker"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
+        )
+
+        CATS_moderation = IntegerField(
+            "CATS awarded for moderating submissions",
+            validators=[NotOptionalIf("uses_moderator"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
+        )
+
+        CATS_presentation = IntegerField(
+            "CATS awarded for assessing presentations",
+            validators=[NotOptionalIf("uses_presentations"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
+        )
+
+        hourly_choices = [
+            (1, "1 day"),
+            (2, "2 days"),
+            (3, "3 days"),
+            (4, "4 days"),
+            (5, "5 days"),
+            (6, "6 days"),
+            (7, "7 days"),
+            (8, "8 days"),
+            (9, "9 days"),
+            (10, "10 days"),
+            (11, "11 days"),
+            (12, "12 days"),
+            (13, "13 days"),
+            (14, "14 days"),
+        ]
+        keep_hourly_popularity = SelectField("Keep hourly popularity data for", choices=hourly_choices, coerce=int)
+
+        daily_choices = [(1, "1 week"), (2, "2 weeks"), (3, "3 weeks"), (4, "4 weeks"), (5, "5 weeks"), (6, "6 weeks"), (7, "7 weeks"), (8, "8 weeks")]
+        keep_daily_popularity = SelectField("Keep daily popularity data for", choices=daily_choices, coerce=int)
+
+        convenor = QuerySelectField("Convenor", query_factory=GetPossibleConvenors, get_label=BuildConvenorRealName)
+
+        coconvenors = QuerySelectMultipleField(
+            "Co-convenors",
+            query_factory=GetPossibleConvenors,
+            get_label=BuildConvenorRealName,
+            description="Co-convenors have the same administrative privileges "
+            "as convenors, but are not identified to students. "
+            "For example, they might be previous convenors who are "
+            "helping with administration during a transition period.",
+            validators=[Optional()],
+        )
+
+        office_contacts = QuerySelectMultipleField(
+            "Professional Services contacts",
+            query_factory=BuildPossibleOfficeContacts,
+            get_label=BuildOfficeContactName,
+            description="Specify one or more members of the professional services "
+            "(School Office) team "
+            "who act as contacts for this project type. Professional "
+            "services contacts "
+            "receive email updates to keep them appraised of the "
+            "project lifecycle.",
+            validators=[Optional()],
+        )
+
+        approvals_team = QuerySelectMultipleField(
+            "Approvals team",
+            query_factory=BuildPossibleApprovers,
+            get_label=BuildApproverName,
+            description="Specify one or members of the approvals pool who will be able to approve changes to project descriptions.",
+            allow_blank=False,
+        )
+
+        @staticmethod
+        def validate_approvals_team(form, field):
+            if field.data is None or not isinstance(field.data, list) or len(field.data) == 0:
+                raise ValidationError("At least one member of the approvals pool should be selected to join the approvals team.")
+
+        select_in_previous_cycle = BooleanField(
+            "Project selection occurs in previous cycle",
+            description="Select this option if selectors submit their preferences in the "
+            "academic cycle before the project runs. This is commonly the case for UG "
+            "projects, but not for PGT projects.",
+        )
+
+        selection_open_to_all = BooleanField(
+            "This is an opt-in project open to all students, regardless of their degree programme",
+            description="By default, selectors are auto-enrolled based on their degree programme. "
+            "If this option is selected then selectors from all eligible years will be "
+            "auto-enrolled as selectors. If no project selection is made, the selector "
+            "is assumed not to have opted-in.",
+        )
+
+        auto_enrol_enable = BooleanField(
+            "Automatically enrol selectors during rollover",
+            description="If selected, students participating in the specified programmes and "
+            "at the appropriate stage will automatically be enrolled as "
+            "selectors during rollover of the academic year.",
+        )
+
+        auto_enroll_years = RadioField("In which years should students be auto-enrolled as selectors?", choices=auto_enrol_year_choices, coerce=int)
+
+        programmes = QuerySelectMultipleField(
+            "Auto-enrol students as selectors from degree programmes", query_factory=GetActiveDegreeProgrammes, get_label=BuildDegreeProgrammeName
+        )
+
+        # validate_programmes() is an inline validator that is called automatically by WTForms to validate
+        # the programmes field; see https://wtforms.readthedocs.io/en/2.3.x/forms/#inline-validators
+        @staticmethod
+        def validate_programmes(form, field):
+            # if selection is open to anyone, there is no need to specify a particular set of programmes
+            if form.selection_open_to_all.data:
+                return
+
+            # otherwise, at least one programme should be specified
+            if field.data is None or not isinstance(field.data, list) or len(field.data) == 0:
+                raise ValidationError("At least one degree programme should be selected")
+
+            # check all programmes are consistent with the specified project level
+            for programme in field.data:
+                programme: DegreeProgramme
+                programme_type: DegreeType = programme.degree_type
+                if programme_type.level != form.student_level.data:
+                    raise ValidationError("The selected degree programmes are not consistent with the required student level")
+
+        advertise_research_group = BooleanField(
+            "Advertise affiliations/research groups to students",
+            description="Students will be shown the research group "
+            "or other affiliation "
+            "associated with each project. For example, this could be "
+            "used to drive improved awareness of research teams "
+            "within the department.",
+        )
+
+        use_project_tags = BooleanField("Use tags", description="Each project variant can be given one or more tags, which are advertised to students.")
+
+        force_tag_groups = QuerySelectMultipleField(
+            "Require tags from specific groups",
+            query_factory=GetActiveProjectTagGroups,
+            get_label="name",
+            description="Forces projects to be tagged with at least one tag "
+            "from a specified set of groups. For instance, this "
+            "could be used "
+            "to enforce a consistent labelling convention.",
+        )
+
+    return ProjectClassMixin
 
 
-class EditProjectClassForm(Form, ProjectClassMixin, SaveChangesMixin):
-    name = StringField(
-        "Name",
-        validators=[InputRequired(message="Name of project class is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_project_class],
-    )
+def AddProjectClassFormFactory(allowed_tenants: List[Tenant]):
+    ProjectClassMixin = ProjectClassMixinFactory(allowed_tenants)
 
-    abbreviation = StringField(
-        "Abbreviation",
-        validators=[InputRequired(message="An abbreviation is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_project_class_abbrev],
-    )
+    class AddProjectClassForm(Form, ProjectClassMixin):
+        name = StringField(
+            "Name",
+            validators=[InputRequired(message="Name of project class is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_project_class],
+        )
+
+        abbreviation = StringField(
+            "Abbreviation",
+            validators=[InputRequired(message="An abbreviation is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_project_class_abbrev],
+        )
+
+        submit = SubmitField("Add new project class")
+
+    return AddProjectClassForm
+
+
+def EditProjectClassFormFactory(allowed_tenants: List[Tenant]):
+    ProjectClassMixin = ProjectClassMixinFactory(allowed_tenants)
+
+    class EditProjectClassForm(Form, ProjectClassMixin, SaveChangesMixin):
+        name = StringField(
+            "Name",
+            validators=[InputRequired(message="Name of project class is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_project_class],
+        )
+
+        abbreviation = StringField(
+            "Abbreviation",
+            validators=[InputRequired(message="An abbreviation is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_project_class_abbrev],
+        )
+
+    return EditProjectClassForm
 
 
 class EditProjectTextForm(Form, SaveChangesMixin):

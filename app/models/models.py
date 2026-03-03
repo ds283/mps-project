@@ -1488,6 +1488,13 @@ tenant_to_project_tag_groups = db.Table(
     db.Column("tenant_id", db.Integer(), db.ForeignKey("tenants.id"), primary_key=True),
 )
 
+# association table mapping from degree programmes to tenants
+tenant_to_degree_programmes = db.Table(
+    "tenant_to_degree_programmes",
+    db.Column("degree_programme.id", db.Integer(), db.ForeignKey("degree_programmes.id"), primary_key=True),
+    db.Column("tenant_id", db.Integer(), db.ForeignKey("tenants.id"), primary_key=True),
+)
+
 # association table mapping from student batch records to tenants
 student_batch_to_tenants = db.Table(
     "student_batch_tenants",
@@ -4796,7 +4803,11 @@ class DegreeProgramme(db.Model, EditingMetadataMixin):
     # make table name plural
     __tablename__ = "degree_programmes"
 
+    # primary key
     id = db.Column(db.Integer(), primary_key=True)
+
+    # tenants to which this tag group belongs
+    tenants = db.relationship("Tenant", secondary=tenant_to_degree_programmes, backref=db.backref("degree_programmes", lazy="dynamic"))
 
     # programme name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True)

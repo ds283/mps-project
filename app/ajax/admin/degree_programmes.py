@@ -8,7 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, get_template_attribute
+from flask import render_template_string, get_template_attribute, render_template, current_app
+from jinja2 import Template, Environment
 
 # language=jinja2
 _menu = """
@@ -70,15 +71,20 @@ _show_type = """
 
 # language=jinja2
 _name = """
-{{ p.name }} {{ simple_label(p.short_label) }}
-{% if p.foundation_year %}
-    <span class="badge bg-info">Foundation year</span>
-{% endif %}
-{% if p.year_out %}
-    <span class="badge bg-info">Year out{%- if p.year_out_value %} Y{{ p.year_out_value}}{% endif %}</span>
-{% endif %}
+<div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2">
+    <span text="text-secondary fw-semibold">{{ p.name }}</span>
+    {{ simple_label(p.short_label) }}
+</div>
+<div class="mt-2 d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 small">
+    {% if p.foundation_year %}
+        <span class="badge bg-info">Foundation year</span>
+    {% endif %}
+    {% if p.year_out %}
+        <span class="badge bg-info">Year out{%- if p.year_out_value %} Y{{ p.year_out_value}}{% endif %}</span>
+    {% endif %}
+</div>
 {% if levels|length > 0 %}
-    <div class="mt-3">
+    <div class="mt-2 d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 small">
         {% for level in levels %}
             {% set num = p.number_level_modules(level.id) %} 
             {% if num > 0 %}
@@ -87,6 +93,11 @@ _name = """
         {% endfor %}
     </div>
 {% endif %}
+<div class="mt-2 small d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
+    {% for tenant in p.tenants %}
+        {{ simple_label(tenant.make_label(tenant.name)) }}
+    {% endfor %}
+</div>
 """
 
 
@@ -96,17 +107,60 @@ _type = """
 """
 
 
+# language=jinja2
+_course_code = """
+<span class="text-primary">{{ p.course_code }}</span>
+"""
+
+
+def _build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+def _build_type_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_type)
+
+
+def _build_show_type_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_show_type)
+
+
+def _build_course_code_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_course_code)
+
+
+def build_active_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_active)
+
+
+def build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
+
 def degree_programmes_data(levels, programmes):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
+    name_templ: Template = _build_name_templ()
+    type_templ: Template = _build_type_templ()
+    show_type_templ: Template = _build_show_type_templ()
+    course_code_templ: Template = _build_course_code_templ()
+    active_templ: Template = build_active_templ()
+    menu_templ: Template = build_menu_templ()
+
     data = [
         {
-            "name": render_template_string(_name, p=p, levels=levels, simple_label=simple_label),
-            "type": render_template_string(_type, t=p.degree_type, simple_label=simple_label),
-            "show_type": render_template_string(_show_type, p=p),
-            "course_code": p.course_code,
-            "active": render_template_string(_active, p=p),
-            "menu": render_template_string(_menu, programme=p),
+            "name": render_template(name_templ, p=p, levels=levels, simple_label=simple_label),
+            "type": render_template(type_templ, t=p.degree_type, simple_label=simple_label),
+            "show_type": render_template(show_type_templ, p=p),
+            "course_code": render_template(course_code_templ, p=p),
+            "active": render_template(active_templ, p=p),
+            "menu": render_template(menu_templ, programme=p),
         }
         for p in programmes
     ]

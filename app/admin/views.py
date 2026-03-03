@@ -52,8 +52,6 @@ from .forms import (
     EditTransferableSkillForm,
     AddSkillGroupForm,
     EditSkillGroupForm,
-    AddProjectClassForm,
-    EditProjectClassForm,
     EditProjectTextForm,
     AddPeriodDefinitionFormFactory,
     EditPeriodDefinitionFormFactory,
@@ -105,7 +103,7 @@ from .forms import (
     UploadFeedbackAssetForm,
     EditFeedbackAssetForm,
     AddFeedbackRecipeForm,
-    EditFeedbackRecipeForm,
+    EditFeedbackRecipeForm, AddProjectClassFormFactory, EditProjectClassFormFactory,
 )
 from ..cache import cache
 from ..database import db
@@ -163,7 +161,7 @@ from ..models import (
     BackupLabel,
     FeedbackAsset,
     TemplateTag,
-    FeedbackRecipe, DownloadCentreItem,
+    FeedbackRecipe, DownloadCentreItem, Tenant,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
@@ -643,6 +641,7 @@ def add_degree_programme():
         degree_type = form.degree_type.data
         programme = DegreeProgramme(
             name=form.name.data,
+            tenants=form.tenants.data,
             abbreviation=form.abbreviation.data,
             show_type=form.show_type.data,
             foundation_year=form.foundation_year.data,
@@ -684,6 +683,7 @@ def edit_degree_programme(id):
 
     if form.validate_on_submit():
         programme.name = form.name.data
+        programme.tenants = form.tenants.data
         programme.abbreviation = form.abbreviation.data
         programme.show_type = form.show_type.data
         programme.course_code = form.course_code.data
@@ -1870,6 +1870,8 @@ def add_pclass():
         flash("No degree types are available. Set up at least one active degree type before adding a project class.")
         return redirect(redirect_url())
 
+    all_tenants: List[Tenant] = db.session.query(Tenant).all()
+    AddProjectClassForm = AddProjectClassFormFactory(all_tenants)
     form: AddProjectClassForm = AddProjectClassForm(request.form)
 
     if form.validate_on_submit():
@@ -2052,13 +2054,16 @@ def edit_pclass(id):
     :param id:
     :return:
     """
-    data: ProjectClass = ProjectClass.query.get_or_404(id)
-    form: EditProjectClassForm = EditProjectClassForm(obj=data)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
-    form.project_class = data
+    allowed_tenants = [pclass.tenant]
+    EditProjectClassForm = EditProjectClassFormFactory(allowed_tenants)
+    form: EditProjectClassForm = EditProjectClassForm(obj=pclass)
+
+    form.project_class = pclass
 
     # remember old convenor
-    old_convenor: FacultyData = data.convenor
+    old_convenor: FacultyData = pclass.convenor
 
     if form.validate_on_submit():
         # make sure convenor and coconvenors don't have overlap
@@ -2066,71 +2071,71 @@ def edit_pclass(id):
         if form.convenor.data in coconvenors:
             coconvenors.remove(form.convenor.data)
 
-        data.name = form.name.data
-        data.abbreviation = form.abbreviation.data
-        data.tenant = form.tenant.data
-        data.use_project_hub = form.use_project_hub.data
-        data.student_level = form.student_level.data
-        data.start_year = form.start_year.data
-        data.colour = form.colour.data
-        data.is_optional = form.is_optional.data
-        data.uses_selection = form.uses_selection.data
-        data.uses_submission = form.uses_submission.data
-        data.do_matching = form.do_matching.data
-        data.number_assessors = form.number_assessors.data
-        data.extent = form.extent.data
-        data.require_confirm = form.require_confirm.data
-        data.supervisor_carryover = form.supervisor_carryover.data
-        data.include_available = form.include_available.data
-        data.uses_supervisor = form.uses_supervisor.data
-        data.uses_marker = form.uses_marker.data
-        data.uses_moderator = form.uses_moderator.data
-        data.uses_presentations = form.uses_presentations.data
-        data.display_marker = form.display_marker.data
-        data.display_presentations = form.display_presentations.data
-        data.reenroll_supervisors_early = form.reenroll_supervisors_early.data
-        data.convenor = form.convenor.data
-        data.coconvenors = coconvenors
-        data.office_contacts = form.office_contacts.data
-        data.approvals_team = form.approvals_team.data
-        data.select_in_previous_cycle = form.select_in_previous_cycle.data
-        data.selection_open_to_all = form.selection_open_to_all.data
-        data.auto_enrol_enable = form.auto_enrol_enable.data
-        data.auto_enroll_years = form.auto_enroll_years.data
-        data.advertise_research_group = form.advertise_research_group.data
-        data.use_project_tags = form.use_project_tags.data
-        data.force_tag_groups = form.force_tag_groups.data
-        data.programmes = form.programmes.data
-        data.initial_choices = form.initial_choices.data
-        data.allow_switching = form.allow_switching.data
-        data.switch_choices = form.switch_choices.data
-        data.faculty_maximum = form.faculty_maximum.data
-        data.CATS_supervision = form.CATS_supervision.data
-        data.CATS_marking = form.CATS_marking.data
-        data.CATS_moderation = form.CATS_moderation.data
-        data.CATS_presentation = form.CATS_presentation.data
-        data.keep_hourly_popularity = form.keep_hourly_popularity.data
-        data.keep_daily_popularity = form.keep_daily_popularity.data
-        data.last_edit_id = current_user.id
-        data.last_edit_timestamp = datetime.now()
+        pclass.name = form.name.data
+        pclass.abbreviation = form.abbreviation.data
+        pclass.tenant = form.tenant.data
+        pclass.use_project_hub = form.use_project_hub.data
+        pclass.student_level = form.student_level.data
+        pclass.start_year = form.start_year.data
+        pclass.colour = form.colour.data
+        pclass.is_optional = form.is_optional.data
+        pclass.uses_selection = form.uses_selection.data
+        pclass.uses_submission = form.uses_submission.data
+        pclass.do_matching = form.do_matching.data
+        pclass.number_assessors = form.number_assessors.data
+        pclass.extent = form.extent.data
+        pclass.require_confirm = form.require_confirm.data
+        pclass.supervisor_carryover = form.supervisor_carryover.data
+        pclass.include_available = form.include_available.data
+        pclass.uses_supervisor = form.uses_supervisor.data
+        pclass.uses_marker = form.uses_marker.data
+        pclass.uses_moderator = form.uses_moderator.data
+        pclass.uses_presentations = form.uses_presentations.data
+        pclass.display_marker = form.display_marker.data
+        pclass.display_presentations = form.display_presentations.data
+        pclass.reenroll_supervisors_early = form.reenroll_supervisors_early.data
+        pclass.convenor = form.convenor.data
+        pclass.coconvenors = coconvenors
+        pclass.office_contacts = form.office_contacts.data
+        pclass.approvals_team = form.approvals_team.data
+        pclass.select_in_previous_cycle = form.select_in_previous_cycle.data
+        pclass.selection_open_to_all = form.selection_open_to_all.data
+        pclass.auto_enrol_enable = form.auto_enrol_enable.data
+        pclass.auto_enroll_years = form.auto_enroll_years.data
+        pclass.advertise_research_group = form.advertise_research_group.data
+        pclass.use_project_tags = form.use_project_tags.data
+        pclass.force_tag_groups = form.force_tag_groups.data
+        pclass.programmes = form.programmes.data
+        pclass.initial_choices = form.initial_choices.data
+        pclass.allow_switching = form.allow_switching.data
+        pclass.switch_choices = form.switch_choices.data
+        pclass.faculty_maximum = form.faculty_maximum.data
+        pclass.CATS_supervision = form.CATS_supervision.data
+        pclass.CATS_marking = form.CATS_marking.data
+        pclass.CATS_moderation = form.CATS_moderation.data
+        pclass.CATS_presentation = form.CATS_presentation.data
+        pclass.keep_hourly_popularity = form.keep_hourly_popularity.data
+        pclass.keep_daily_popularity = form.keep_daily_popularity.data
+        pclass.last_edit_id = current_user.id
+        pclass.last_edit_timestamp = datetime.now()
 
-        if data.convenor.id != old_convenor.id:
-            old_convenor.remove_convenorship(data)
-            data.convenor.add_convenorship(data)
+        if pclass.convenor.id != old_convenor.id:
+            old_convenor.remove_convenorship(pclass)
+            pclass.convenor.add_convenorship(pclass)
 
         try:
             db.session.flush()
-            modified: bool = data.validate_presentations()
+            modified: bool = pclass.validate_presentations()
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
             flash("Could not save project class configuration because of a database error. Please check the logs for further information.", "error")
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        if data.convenor.id != old_convenor.id:
+        if pclass.convenor.id != old_convenor.id:
             flash(
                 'Set convenor for "{title}" to {name}. The previous convenor was {oldname} and has been '
-                "removed".format(name=data.convenor_name, oldname=old_convenor.user.name, title=data.name)
+                "removed".format(name=pclass.convenor_name, oldname=old_convenor.user.name, title=pclass.name)
             )
 
         return redirect(url_for("admin.edit_project_classes"))
@@ -2182,7 +2187,7 @@ def edit_pclass(id):
             if form.force_tag_groups.data is None:
                 form.force_tag_groups.data = []
 
-    return render_template_context("admin/edit_project_class.html", pclass_form=form, pclass=data, title="Edit project class")
+    return render_template_context("admin/edit_project_class.html", pclass_form=form, pclass=pclass, title="Edit project class")
 
 
 @admin.route("/edit_pclass_text/<int:id>", methods=["GET", "POST"])

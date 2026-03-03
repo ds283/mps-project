@@ -33,17 +33,15 @@ from .forms import (
     UserTypeSelectForm,
     ConfirmRegisterOfficeForm,
     ConfirmRegisterFacultyForm,
-    ConfirmRegisterStudentForm,
     EditOfficeForm,
     EditFacultyForm,
-    EditStudentForm,
     UploadBatchCreateStudentsForm,
     UploadBatchCreateFacultyForm,
     EditStudentBatchItemFormFactory,
     EditFacultyBatchItemFormFactory,
     EnrollmentRecordForm,
     AddRoleForm,
-    EditRoleForm,
+    EditRoleForm, EditStudentFormFactory, ConfirmRegisterStudentFormFactory,
 )
 from ..database import db
 from ..limiter import limiter
@@ -252,6 +250,8 @@ def create_student(role):
         flash("Requested role was not recognized. If this error persists, please contact the system administrator.")
         return redirect(url_for("manage_users.edit_users"))
 
+    all_tenants: List[Tenant] = db.session.query(Tenant).all()
+    ConfirmRegisterStudentForm = ConfirmRegisterStudentFormFactory(all_tenants)
     form = ConfirmRegisterStudentForm(request.form)
 
     pane = request.args.get("pane", None)
@@ -1921,6 +1921,9 @@ def edit_faculty(id):
 @roles_accepted("manage_users", "root")
 def edit_student(id):
     user: User = User.query.get_or_404(id)
+
+    allowed_tenants = [t.id for t in user.tenants]
+    EditStudentForm = EditStudentFormFactory(allowed_tenants)
     form: EditStudentForm = EditStudentForm(obj=user)
 
     form.user = user

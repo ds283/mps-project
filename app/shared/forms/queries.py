@@ -7,7 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 
 from flask_login import current_user
 from sqlalchemy import or_
@@ -54,8 +54,37 @@ def GetActiveDegreeTypes():
     return DegreeType.query.filter_by(active=True).order_by(DegreeType.name.asc())
 
 
-def GetActiveDegreeProgrammes(allowed_tenants: List[Tenant]):
-    return DegreeProgramme.query.filter_by(active=True).order_by(DegreeProgramme.name.asc())
+def GetActiveDegreeProgrammes(allowed_tenants: Optional[List[Tenant]]):
+    if len(allowed_tenants) == 0:
+        raise RuntimeError("GetActiveDegreeProgrammes requires at least one allowed tenant")
+
+    def get_tenant_id(tenant):
+        if isinstance(tenant, int):
+            return tenant
+        if isinstance(tenant, Tenant):
+            return tenant.id
+        raise TypeError(f"Unexpected type '{type(tenant)}' for argument tenant in GetActiveDegreeProgrammes")
+
+    allowed_tenant_ids = [get_tenant_id(t) for t in allowed_tenants]
+
+    query = (
+        db.session.query(DegreeProgramme)
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
+        .filter(
+            DegreeProgramme.active == True,
+            DegreeType.active == True,
+        )
+    )
+
+    if allowed_tenants is not None:
+        query = query.filter(
+            DegreeProgramme.tenants.any(Tenant.id.in_(allowed_tenant_ids)),
+        )
+
+    return query.order_by(
+        DegreeType.name.asc(),
+        DegreeProgramme.name.asc()
+    )
 
 
 def GetActiveSkillGroups():

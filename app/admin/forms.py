@@ -328,6 +328,7 @@ class EditModuleForm(Form, ModuleMixin, SaveChangesMixin):
 
 def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
 
+    get_programmes = partial(GetActiveDegreeProgrammes, allowed_tenants)
 
     class ProjectClassMixin:
         tenant = QuerySelectField(
@@ -542,7 +543,7 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
         auto_enroll_years = RadioField("In which years should students be auto-enrolled as selectors?", choices=auto_enrol_year_choices, coerce=int)
 
         programmes = QuerySelectMultipleField(
-            "Auto-enrol students as selectors from degree programmes", query_factory=GetActiveDegreeProgrammes, get_label=BuildDegreeProgrammeName
+            "Auto-enrol students as selectors from degree programmes", query_factory=get_programmes, get_label=BuildDegreeProgrammeName
         )
 
         # validate_programmes() is an inline validator that is called automatically by WTForms to validate

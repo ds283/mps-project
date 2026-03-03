@@ -9,6 +9,7 @@
 #
 
 from functools import partial
+from typing import List
 
 from flask import request
 from flask_security.forms import (
@@ -25,7 +26,7 @@ from wtforms import StringField, BooleanField, PasswordField, SelectField, Submi
 from wtforms.validators import InputRequired, Length, Optional
 from wtforms_alchemy import QuerySelectField, QuerySelectMultipleField
 
-from app.models import DEFAULT_STRING_LENGTH, EnrollmentRecord
+from app.models import DEFAULT_STRING_LENGTH, EnrollmentRecord, Tenant
 from app.shared.forms.mixins import FirstLastNameMixin, FacultyDataMixinFactory, SaveChangesMixin, EditUserNameMixin, DefaultLicenseMixin
 from app.shared.forms.queries import GetActiveDegreeProgrammes, BuildDegreeProgrammeName, GetAllTenants, BuildTenantName
 from app.shared.forms.wtf_validators import (
@@ -92,36 +93,41 @@ class UserTypeSelectForm(Form, UserTypeMixin):
     submit = SubmitField("Select role")
 
 
-class StudentDataMixin:
-    ATAS_restricted = BooleanField("ATAS restricted",
-                                   description="Select if this student should be restricted from accessing certain projects under the ATAS scheme",
-                                   default=False)
+def StudentDataMixinFactory(allowed_tenants: List[Tenant]):
+    get_programmes = partial(GetActiveDegreeProgrammes, allowed_tenants)
 
-    foundation_year = BooleanField("This student used a Foundation Year")
+    class StudentDataMixin:
+        ATAS_restricted = BooleanField("ATAS restricted",
+                                       description="Select if this student should be restricted from accessing certain projects under the ATAS scheme",
+                                       default=False)
 
-    cohort = IntegerField(
-        "Cohort",
-        validators=[InputRequired(message="Cohort is required")],
-        description="Enter the year the student joined the university. "
-        "If this needs to be adjusted because the student did a foundation year, "
-        "or for other reasons such as resitting years, this will be accommodated "
-        "separately.",
-    )
+        foundation_year = BooleanField("This student used a Foundation Year")
 
-    repeated_years = IntegerField(
-        "Number of repeat years",
-        default=0,
-        validators=[InputRequired(message="Number of repeat years is required"), value_is_nonnegative],
-        description="Enter the number of repeat years the student has used.",
-    )
+        cohort = IntegerField(
+            "Cohort",
+            validators=[InputRequired(message="Cohort is required")],
+            description="Enter the year the student joined the university. "
+            "If this needs to be adjusted because the student did a foundation year, "
+            "or for other reasons such as resitting years, this will be accommodated "
+            "separately.",
+        )
 
-    programme = QuerySelectField("Degree programme", query_factory=GetActiveDegreeProgrammes, get_label=BuildDegreeProgrammeName)
+        repeated_years = IntegerField(
+            "Number of repeat years",
+            default=0,
+            validators=[InputRequired(message="Number of repeat years is required"), value_is_nonnegative],
+            description="Enter the number of repeat years the student has used.",
+        )
 
-    intermitting = BooleanField("This student is currently intermitting (TWD)")
+        programme = QuerySelectField("Degree programme", query_factory=get_programmes, get_label=BuildDegreeProgrammeName)
 
-    dyspraxia_sticker = BooleanField("Mark work with sticker for learning support package", default=False)
+        intermitting = BooleanField("This student is currently intermitting (TWD)")
 
-    dyslexia_sticker = BooleanField("Mark work with sticker for specific learning difference", default=False)
+        dyspraxia_sticker = BooleanField("Mark work with sticker for learning support package", default=False)
+
+        dyslexia_sticker = BooleanField("Mark work with sticker for specific learning difference", default=False)
+
+    return StudentDataMixin
 
 
 class EditUserTenantsMixin:
@@ -200,12 +206,21 @@ class EditStudentNumbersMixin:
     )
 
 
-class RegisterStudentForm(RegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin):
-    pass
+def RegisterStudentFormFactory(allowed_tenants: List[Tenant]):
+    StudentDataMixin = StudentDataMixinFactory(allowed_tenants)
 
+    class RegisterStudentForm(RegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin):
+        pass
 
-class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin):
-    pass
+    return RegisterStudentForm
+
+def ConfirmRegisterStudentFormFactory(allowed_tenants: List[Tenant]):
+    StudentDataMixin = StudentDataMixinFactory(allowed_tenants)
+
+    class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin):
+        pass
+
+    return ConfirmRegisterStudentForm
 
 
 class EditOfficeForm(Form, SaveChangesMixin, EditUserNameMixin, AskConfirmEditFormMixin, EditEmailFormMixin, FirstLastNameMixin, DefaultLicenseMixin, EditUserTenantsMixin):
@@ -216,8 +231,13 @@ class EditFacultyForm(EditOfficeForm, FacultyDataMixinFactory(admin=True, enable
     pass
 
 
-class EditStudentForm(EditOfficeForm, StudentDataMixin, EditStudentNumbersMixin):
-    pass
+def EditStudentFormFactory(allowed_tenants: List[Tenant]):
+    StudentDataMixin = StudentDataMixinFactory(allowed_tenants)
+
+    class EditStudentForm(EditOfficeForm, StudentDataMixin, EditStudentNumbersMixin):
+        pass
+
+    return EditStudentForm
 
 
 class ResearchGroupMixin:
@@ -261,6 +281,8 @@ class UploadBatchCreateFacultyForm(Form, BatchUploadTenantsMixin):
 
 
 def EditStudentBatchItemFormFactory(batch):
+    get_programmes = partial(GetActiveDegreeProgrammes, None)
+
     class EditStudentBatchItemForm(Form, SaveChangesMixin):
         user_id = StringField(
             "User id",
@@ -293,7 +315,7 @@ def EditStudentBatchItemFormFactory(batch):
 
         cohort = IntegerField("Cohort", validators=[InputRequired("Cohort is required")])
 
-        programme = QuerySelectField("Degree programme", query_factory=GetActiveDegreeProgrammes, get_label=BuildDegreeProgrammeName)
+        programme = QuerySelectField("Degree programme", query_factory=get_programmes, get_label=BuildDegreeProgrammeName)
 
         foundation_year = BooleanField("Foundation year")
 

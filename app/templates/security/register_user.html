@@ -95,7 +95,6 @@
 
 {% if user_form.tenants is defined %}
     <div class="card mt-3 mb-3 card-body bg-well">
-        <div class="form-group-heading">Which tenant does this user belong to?</div>
         {{ wtf.render_field(user_form.tenants) }}
     </div>
 {% endif %}
@@ -143,6 +142,9 @@
                     {% if user_form.intermitting is defined %}
                         {{ wtf.render_field(user_form.intermitting) }}
                     {% endif %}
+                {% endif %}
+                {% if user_form.ATAS_restricted is defined %}
+                    {{ wtf.render_field(user_form.ATAS_restricted) }}
                 {% endif %}
             </div>
         {%  endif %}

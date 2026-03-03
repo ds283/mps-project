@@ -86,7 +86,7 @@ from ..shared.forms.queries import (
     GetActiveTemplateTags,
     BuildTemplateTagName,
     GetAllFeedbackTemplates,
-    GetAllNonTemplateFeedbackAssets,
+    GetAllNonTemplateFeedbackAssets, GetAllTenants, BuildTenantName,
 )
 from ..shared.forms.widgets import BasicTagSelectField
 from ..shared.forms.wtf_validators import (
@@ -316,6 +316,10 @@ class EditModuleForm(Form, ModuleMixin, SaveChangesMixin):
 
 
 class ProjectClassMixin:
+    tenant = QuerySelectField(
+        "Tenant", description="Assign a tenant to this project class", query_factory=GetAllTenants, get_label=BuildTenantName,
+    )
+
     colour = StringField(
         "Colour", description="Assign a colour to help students identify this project class.", validators=[Length(max=DEFAULT_STRING_LENGTH)]
     )

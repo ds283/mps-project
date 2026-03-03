@@ -151,6 +151,13 @@ def ProjectMixinFactory(convenor_editing: bool, uses_tags: bool, uses_research_g
             '"Actions" dropdown in your project library view.',
         )
 
+        # ATAS configuration
+        ATAS_restricted = BooleanField(
+            "Project should not be offered to students with ATAS restrictions",
+            default=False,
+            description="Select if your project involves technology or knowledge that is restricted under the ATAS scheme",
+        )
+
         # project options
 
         meeting_reqd = SelectField("Meeting required?", choices=Project.MEETING_OPTIONS, coerce=int, description="Not used for generic projects.")

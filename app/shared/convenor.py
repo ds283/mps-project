@@ -80,6 +80,7 @@ def add_liveproject(
         name=item.name,
         owner_id=item.owner_id,
         generic=item.generic,
+        ATAS_restricted=item.ATAS_restricted,
         tags=item.tags,
         group_id=item.group_id,
         skills=item.skills,

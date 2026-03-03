@@ -76,60 +76,64 @@ _menu = """
 
 # language=jinja2
 _options = """
-{% if p.colour and p.colour is not none %}
-  {{ simple_label(p.make_label(p.colour)) }}
-{% else %}
-  <span class="badge bg-secondary">No colour</span>'
-{% endif %}
-{% if p.use_project_hub %}
-    <span class="badge bg-secondary">Project Hubs</span>
-{% endif %}
-{% if p.is_optional %}
-    <span class="badge bg-secondary">Optional</span>
-{% endif %}
-{% if not p.uses_selection %}
-    <span class="badge bg-danger">No selections</span>
-{% endif %}
-{% if not p.uses_submission %}
-    <span class="badge bg-danger">No submissions</span>
-{% endif %}
-{% if p.do_matching %}
-    <span class="badge bg-secondary">Auto-match</span>
-{% endif %}
-{% if p.require_confirm %}
-    <span class="badge bg-secondary">Confirm</span>
-{% endif %}
-{% if p.supervisor_carryover %}
-    <span class="badge bg-secondary">Carryover</span>
-{% endif %}
-{% if p.include_available %}
-    <span class="badge bg-secondary">Availability</span>
-{% endif %}
-{% if p.reenroll_supervisors_early %}
-    <span class="badge bg-secondary">Re-enroll early</span>
-{% endif %}
-{% if p.advertise_research_group %}
-    <span class="badge bg-secondary">Affiliations</span>
-{% endif %}
-{% if p.use_project_tags %}
-    <span class="badge bg-secondary">Tags</span>
-{% endif %}
+<div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
+    {% if p.colour and p.colour is not none %}
+      {{ simple_label(p.make_label(p.colour)) }}
+    {% else %}
+      <span class="badge bg-secondary">No colour</span>'
+    {% endif %}
+    {% if p.use_project_hub %}
+        <span class="badge bg-secondary">Project hubs</span>
+    {% endif %}
+    {% if p.is_optional %}
+        <span class="badge bg-secondary">Optional</span>
+    {% endif %}
+    {% if not p.uses_selection %}
+        <span class="badge bg-danger">No selections</span>
+    {% endif %}
+    {% if not p.uses_submission %}
+        <span class="badge bg-danger">No submissions</span>
+    {% endif %}
+    {% if p.do_matching %}
+        <span class="badge bg-secondary">Auto-match</span>
+    {% endif %}
+    {% if p.require_confirm %}
+        <span class="badge bg-secondary">Confirm</span>
+    {% endif %}
+    {% if p.supervisor_carryover %}
+        <span class="badge bg-secondary">Carryover</span>
+    {% endif %}
+    {% if p.include_available %}
+        <span class="badge bg-secondary">Availability</span>
+    {% endif %}
+    {% if p.reenroll_supervisors_early %}
+        <span class="badge bg-secondary">Re-enroll early</span>
+    {% endif %}
+    {% if p.advertise_research_group %}
+        <span class="badge bg-secondary">Affiliations</span>
+    {% endif %}
+    {% if p.use_project_tags %}
+        <span class="badge bg-secondary">Tags</span>
+    {% endif %}
+</div>
 """
 
 # language=jinja2
 _workload = """
-{% if p.uses_supervisor %}
-    <span class="badge bg-primary">S {{ p.CATS_supervision }}</span>
-{% endif %}
-{% if p.uses_marker %}
-    <span class="badge bg-info">Mk {{ p.CATS_marking }}</span>
-{% endif %}
-{% if p.uses_moderator %}
-    <span class="badge bg-info">Mo {{ p.CATS_moderation }}</span>
-{% endif %}
-{% if p.uses_presentations %}
-    <span class="badge bg-info">P {{ p.CATS_presentation }}</span>
-{% endif %}
+<div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-1 mt-1 small">
+    {% if p.uses_supervisor %}
+        <span class="text-primary">S: {{ p.CATS_supervision }}</span>
+    {% endif %}
+    {% if p.uses_marker %}
+        <span class="text-primary">Mk: {{ p.CATS_marking }}</span>
+    {% endif %}
+    {% if p.uses_moderator %}
+        <span class="text-primary">Mo: {{ p.CATS_moderation }}</span>
+    {% endif %}
+    {% if p.uses_presentations %}
+        <span class="text-primary">P: {{ p.CATS_presentation }}</span>
+    {% endif %}
+</div>
 """
 
 # language=jinja2
@@ -225,26 +229,34 @@ _timing = """
 
 # language=jinja2
 _name = """
-{{ p.name }} {{ simple_label(p.make_label(p.abbreviation)) }}
-<span class="badge {% if p.student_level >= p.LEVEL_UG and p.student_level <= p.LEVEL_PGR %}bg-secondary{% else %}bg-danger{% endif %}">
-    {{ p._level_text(p.student_level) }}
-</span>
-{% set num_approvers = p.number_approvals_team %}
-<span class="badge {% if num_approvers > 0 %}bg-secondary{% else %}bg-danger{% endif %}"
-    {% if num_approvers > 0 %}data-bs-toggle="tooltip" data-html="true" title="{% for u in p.approvals_team %}{{ u.name }}<br/>{% endfor %}"{% endif %}>
-    {{ num_approvers }} approver{%- if num_approvers != 1 -%}s{%- endif -%}
-</span>
-<div class="mt-2">
-{% if p.active %}
-    <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
-{% else %}
-    <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Inactive</span>
-{% endif %}
-{% if p.publish %}
-    <span class="badge bg-success"><i class="fas fa-eye"></i> Published</span>
-{% else %}
-    <span class="badge bg-warning text-dark"><i class="fas fa-eye-slash"></i> Unpublished</span>
-{% endif %}
+<div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2">
+    <span class="fw-semibold">{{ p.name }}</span>
+    {{ simple_label(p.make_label(p.abbreviation)) }}
+    {% if p.tenant is not none %}
+        {{ simple_label(p.tenant.make_label(p.tenant.name)) }}
+    {% endif %}
+</div>
+<div class="mt-2 d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 small">
+    <span class="badge {% if p.student_level >= p.LEVEL_UG and p.student_level <= p.LEVEL_PGR %}bg-secondary{% else %}bg-danger{% endif %}">
+        {{ p._level_text(p.student_level) }}
+    </span>
+    {% set num_approvers = p.number_approvals_team %}
+    <span class="badge {% if num_approvers > 0 %}bg-secondary{% else %}bg-danger{% endif %}"
+        {% if num_approvers > 0 %}data-bs-toggle="tooltip" data-html="true" title="{% for u in p.approvals_team %}{{ u.name }}<br/>{% endfor %}"{% endif %}>
+        {{ num_approvers }} approver{%- if num_approvers != 1 -%}s{%- endif -%}
+    </span>
+</div>
+<div class="mt-2 d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
+    {% if p.active %}
+        <span class="badge bg-success"><i class="fas fa-check"></i> Active</span>
+    {% else %}
+        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Inactive</span>
+    {% endif %}
+    {% if p.publish %}
+        <span class="badge bg-success"><i class="fas fa-eye"></i> Published</span>
+    {% else %}
+        <span class="badge bg-warning text-dark"><i class="fas fa-eye-slash"></i> Unpublished</span>
+    {% endif %}
 </div>
 """
 

@@ -429,6 +429,7 @@ def add_project():
             active=True,
             owner_id=current_user.faculty_data.id,
             generic=False,
+            ATAS_restricted=form.ATAS_restricted.data,
             group=form.group.data if uses_research_groups else None,
             project_classes=form.project_classes.data,
             skills=[],

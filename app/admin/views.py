@@ -1883,6 +1883,7 @@ def add_pclass():
             # insert a record for this project class
             data = ProjectClass(
                 name=form.name.data,
+                tenant=form.tenant.data,
                 abbreviation=form.abbreviation.data,
                 colour=form.colour.data,
                 do_matching=form.do_matching.data,
@@ -2068,6 +2069,7 @@ def edit_pclass(id):
 
         data.name = form.name.data
         data.abbreviation = form.abbreviation.data
+        data.tenant = form.tenant.data
         data.use_project_hub = form.use_project_hub.data
         data.student_level = form.student_level.data
         data.start_year = form.start_year.data

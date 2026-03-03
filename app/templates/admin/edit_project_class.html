@@ -54,6 +54,9 @@
                 dropdownCssClass: 'select2--small',
                 placeholder: 'Select zero or mode groups...'
             })
+            $('tenant').select2({
+                theme: 'bootstrap-5'
+            })
 
             $('#colour-group').colorpicker({
                 format: 'hex',
@@ -92,6 +95,7 @@
         <div class="card mt-3 mb-3 card-body bg-well">
             <p class="form-group-heading">General settings</p>
             {{ wtf.render_field(pclass_form.name) }}
+            {{ wtf.render_field(pclass_form.tenant) }}
 
             <div class="row vertical-top">
                 <div class="col-6">

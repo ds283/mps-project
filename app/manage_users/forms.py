@@ -93,6 +93,10 @@ class UserTypeSelectForm(Form, UserTypeMixin):
 
 
 class StudentDataMixin:
+    ATAS_restricted = BooleanField("ATAS restricted",
+                                   description="Select if this student should be restricted from accessing certain projects under the ATAS scheme",
+                                   default=False)
+
     foundation_year = BooleanField("This student used a Foundation Year")
 
     cohort = IntegerField(
@@ -122,7 +126,7 @@ class StudentDataMixin:
 
 class EditUserTenantsMixin:
     tenants = QuerySelectMultipleField(
-        "Tenants",
+        "Which tenant does this user belong to?",
         query_factory=GetAllTenants,
         get_label=BuildTenantName,
         validators=[InputRequired(message="At least one tenant must be assigned")],

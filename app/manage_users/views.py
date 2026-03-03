@@ -1944,6 +1944,7 @@ def edit_student(id):
         rep_years = form.repeated_years.data
         ry = rep_years if rep_years is not None and rep_years >= 0 else 0
 
+        data.ATAS_restricted = form.ATAS_restricted.data
         data.foundation_year = form.foundation_year.data
         data.intermitting = form.intermitting.data
         data.registration_number = form.registration_number.data

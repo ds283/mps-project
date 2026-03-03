@@ -277,6 +277,9 @@ def ProjectConfigurationMixinFactory(
 
         # TAGS AND METADATA
 
+        # is this project ATAS restricted?
+        ATAS_restricted = db.Column(db.Boolean(), default=False)
+
         # normalized tags associated with this project (if any)
         @declared_attr
         def tags(cls):
@@ -3859,6 +3862,15 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), db.ForeignKey("users.id"), primary_key=True)
     user = db.relationship("User", foreign_keys=[id], backref=db.backref("student_data", uselist=False))
 
+
+    # ATAS CONFIGURATION
+
+    # is this user ATAS restricted?
+    ATAS_restricted = db.Column(db.Boolean(), default=False)
+
+
+    # IDENTIFIERS
+
     # registration number
     registration_number = db.Column(db.Integer(), unique=True)
 
@@ -3866,6 +3878,9 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     # we store this encrypted out of prudence. Note that we use AesEngine which is the less secure of the two
     # AES choices provided by SQLAlchemyUtils, but which can perform queries against the field
     exam_number = db.Column(EncryptedType(db.Integer(), get_AES_key, AesEngine, "oneandzeroes"))
+
+
+    # STUDENT INFORMATION
 
     # cohort is used to compute this student's academic year, and
     # identifies which project classes this student will be enrolled for
@@ -3893,7 +3908,8 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     # or otherwise on a reasonably frequent basis as part of normal database maintenance
     academic_year = db.Column(db.Integer(), default=None)
 
-    # SEND labelling
+
+    # SEND LABELLING
 
     # requires dyspraxia sticker on reports distributed for marking?
     dyspraxia_sticker = db.Column(db.Boolean(), default=False, nullable=False)
@@ -5034,6 +5050,14 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     # active?
     active = db.Column(db.Boolean(), default=True)
 
+
+    # TENANT
+
+    # tenant this project class belongs to
+    tenant_id = db.Column(db.Integer(), db.ForeignKey("tenants.id"), index=True)
+    tenant = db.relationship("Tenant", foreign_keys=[tenant_id], backref=db.backref("project_classes", lazy="dynamic"))
+
+
     # PRACTICAL DATA
 
     # enable project hub by default?
@@ -5140,6 +5164,7 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     # text displayed when a project is detected as being a change-supervisor request
     card_text_noninitial = db.Column(db.Text())
 
+
     # MATCHING EMAIL TEXT
 
     # preamble for draft matching email
@@ -5147,6 +5172,7 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
 
     # preamble for final matching email
     email_text_final_match_preamble = db.Column(db.Text())
+
 
     # OPTIONS
 
@@ -5159,6 +5185,7 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     # include in 'availability' calculations -- how many students a given supervisor is 'available' for
     include_available = db.Column(db.Boolean())
 
+
     # POPULARITY DISPLAY
 
     # how many days to keep hourly popularity data for
@@ -5166,6 +5193,7 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
 
     # how many weeks to keep daily popularity data for
     keep_daily_popularity = db.Column(db.Integer())
+
 
     # WORKLOAD MODEL
 
@@ -5181,6 +5209,7 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     # CATS awarded for presentation assessment
     CATS_presentation = db.Column(db.Integer())
 
+
     # AUTOMATED MATCHING
 
     # what level of automated student/project/2nd-marker matching does this project class use?
@@ -5189,6 +5218,7 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
 
     # number of assessors that should be specified per project
     number_assessors = db.Column(db.Integer())
+
 
     # PERSONNEL
 
@@ -5218,6 +5248,7 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
         "DegreeProgramme", secondary=pclass_programme_associations, lazy="dynamic", backref=db.backref("project_classes", lazy="dynamic")
     )
 
+
     # AUTOMATIC RE-ENROLLMENT
 
     # re-enroll supervisors one year early (normally we want this to be yes, because projects are
@@ -5228,6 +5259,7 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
     force_tag_groups = db.relationship(
         "ProjectTagGroup", secondary=force_tag_groups, lazy="dynamic", backref=db.backref("force_tags_for", lazy="dynamic")
     )
+
 
     # ATTACHED PROJECTS
 

@@ -56,6 +56,9 @@
 
         {{ wtf.render_field(project_form.name) }}
 
+        {% if project_form.ATAS_restricted %}
+            {{ wtf.render_field(project_form.ATAS_restricted) }}
+        {% endif %}
         {% if project_form.generic %}
             {{ wtf.render_field(project_form.generic) }}
         {% endif %}

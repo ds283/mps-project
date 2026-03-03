@@ -20,19 +20,8 @@ _name = """
     {% if sd is defined and sd is not none %}
         {% set programme = sd.programme %}
         {% set type = programme.degree_type %}
-        <div class="mt-1 small {% if type.level >= type.LEVEL_UG and type.level <= type.LEVEL_PGR %}text-secondary{% else %}text-danger{% endif %}">
-            {{ type._level_text(type.level) }}
-        </div>
         <div class="mt-1 small d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
-            {% if sd.intermitting %}
-                <span class="badge bg-warning text-dark">TWD</span>
-            {% endif %}
-            {% if sd.dyspraxia_sticker %}
-                <span class="badge bg-primary">Support</span>
-            {% endif %}
-            {% if sd.dyslexia_sticker %}
-                <span class="badge bg-primary">SpLD</span>
-            {% endif %}
+            <span class="{% if type.level >= type.LEVEL_UG and type.level <= type.LEVEL_PGR %}text-secondary{% else %}text-danger{% endif %}">{{ type._level_text(type.level) }}</div>
             {% set state = sd.workflow_state %}
             {% if state == sd.WORKFLOW_APPROVAL_QUEUED %}
                 <span class="badge bg-warning text-dark">Approval: Queued</span>
@@ -42,6 +31,20 @@ _name = """
                 <span class="badge bg-success"><i class="fas fa-check"></i> Approved</span>
             {% else %}
                 <span class="badge bg-danger">Approval: Unknown state</span>
+            {% endif %}
+        </div>
+        <div class="mt-1 small d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
+            {% if sd.ATAS_restricted %}
+                <span class="badge bg-danger">ATAS restricted</span>
+            {% endif %}
+            {% if sd.intermitting %}
+                <span class="badge bg-warning text-dark">TWD</span>
+            {% endif %}
+            {% if sd.dyspraxia_sticker %}
+                <span class="badge bg-primary">Support</span>
+            {% endif %}
+            {% if sd.dyslexia_sticker %}
+                <span class="badge bg-primary">SpLD</span>
             {% endif %}
         </div>
     {% endif %}

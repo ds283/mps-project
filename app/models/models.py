@@ -1474,6 +1474,13 @@ tenant_to_users = db.Table(
     db.Column("tenant_id", db.Integer(), db.ForeignKey("tenants.id"), primary_key=True),
 )
 
+# association table mapping from research groups to tenants
+tenant_to_groups = db.Table(
+    "tenant_groups",
+    db.Column("group_id", db.Integer(), db.ForeignKey("research_groups.id"), primary_key=True),
+    db.Column("tenant_id", db.Integer(), db.ForeignKey("tenants.id"), primary_key=True),
+)
+
 # association table mapping from student batch records to tenants
 student_batch_to_tenants = db.Table(
     "student_batch_tenants",
@@ -2975,6 +2982,9 @@ class ResearchGroup(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     __tablename__ = "research_groups"
 
     id = db.Column(db.Integer(), primary_key=True)
+
+    # tenants to which this research group belongs
+    tenants = db.relationship("Tenant", secondary=tenant_to_groups, backref=db.backref("users", lazy="dynamic"))
 
     # abbreviation for use in space-limited contexts
     abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True)

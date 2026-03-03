@@ -8,8 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string
-
+from flask import current_app, render_template, get_template_attribute
+from jinja2 import Template, Environment
 
 # language=jinja2
 _menu = """
@@ -63,20 +63,54 @@ _include_name = """
 
 # language=jinja2
 _name = """
-{{ g.name }}
-{% if g.default %}
-    <span class="badge bg-success">Default</span>
-{% endif %}
+<div>{{ g.name }}</div>
+<div class="mt-1 d-flex flex-row flex-wrap justify-content-start align-items-center gap-2 small">
+    {% if g.default %}
+        <span class="badge bg-success">Default</span>
+    {% endif %}
+</div>
+<div class="mt-1 small d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
+    {% for tenant in g.tenants %}
+        {{ simple_label(tenant.make_label(tenant.name)) }}
+    {% endfor %}
+</div>
 """
 
 
+def _build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+def _build_active_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_active)
+
+
+def _build_include_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_include_name)
+
+
+def _build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
+
 def tag_groups_data(groups):
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
+    name_templ: Template = _build_name_templ()
+    active_templ: Template = _build_active_templ()
+    include_name_templ: Template = _build_include_name_templ()
+    menu_templ: Template = _build_menu_templ()
+
     data = [
         {
-            "name": render_template_string(_name, g=g),
-            "active": render_template_string(_active, g=g),
-            "include": render_template_string(_include_name, g=g),
-            "menu": render_template_string(_menu, group=g),
+            "name": render_template(name_templ, g=g, simple_label=simple_label),
+            "active": render_template(active_templ, g=g),
+            "include": render_template(include_name_templ, g=g),
+            "menu": render_template(menu_templ, group=g),
         }
         for g in groups
     ]

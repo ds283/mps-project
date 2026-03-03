@@ -103,7 +103,7 @@ def _build_website_templ() -> Template:
     return env.from_string(_website)
 
 
-def _build_menu_template() -> Template:
+def _build_menu_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_menu)
 
@@ -116,7 +116,7 @@ def groups_data(groups):
     active_templ: Template = _build_active_templ()
     colour_templ: Template = _build_colour_templ()
     website_templ: Template = _build_website_templ()
-    menu_templ: Template = _build_menu_template()
+    menu_templ: Template = _build_menu_templ()
 
     data = [
         {

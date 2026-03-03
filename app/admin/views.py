@@ -1416,6 +1416,7 @@ def add_project_tag_group():
     if form.validate_on_submit():
         group = ProjectTagGroup(
             name=form.name.data,
+            tenants=form.tenants.data,
             add_group=form.add_group.data,
             default=form.default.data,
             active=True,
@@ -1459,6 +1460,7 @@ def edit_project_tag_group(gid):
 
     if form.validate_on_submit():
         group.name = form.name.data
+        group.tenants = form.tenants.data
         group.add_group = form.add_group.data
         group.default = form.default.data
         group.last_edit_id = current_user.id

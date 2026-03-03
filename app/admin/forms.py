@@ -992,7 +992,7 @@ class ProjectTagGroupMixin:
     default = BooleanField("Default group for new tags", description="New dynamically generated tags will be added to this group")
 
 
-class AddProjectTagGroupForm(Form, ProjectTagGroupMixin):
+class AddProjectTagGroupForm(Form, ProjectTagGroupMixin, EditTenantsMixin):
     name = StringField(
         "Name",
         validators=[
@@ -1005,7 +1005,7 @@ class AddProjectTagGroupForm(Form, ProjectTagGroupMixin):
     submit = SubmitField("Add new group")
 
 
-class EditProjectTagGroupForm(Form, ProjectTagGroupMixin, SaveChangesMixin):
+class EditProjectTagGroupForm(Form, ProjectTagGroupMixin, EditTenantsMixin, SaveChangesMixin):
     name = StringField(
         "Name",
         validators=[

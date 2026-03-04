@@ -4282,7 +4282,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
                     submitter_records[year] = []
                 submitter_records[year].append(rec)
 
-        return years, selector_records, submitter_records
+        return sorted(years, reverse=True), selector_records, submitter_records
 
     @property
     def ordered_selecting(self):

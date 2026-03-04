@@ -47,7 +47,12 @@ def add_tenant():
     form = AddTenantForm(request.form)
     
     if form.validate_on_submit():
-        tenant = Tenant(name=form.name.data, colour=form.colour.data)
+        tenant = Tenant(
+            name=form.name.data,
+            colour=form.colour.data,
+            force_ATAS_flag=form.force_ATAS_flag.data,
+            in_2026_ATAS_campaign=form.in_2026_ATAS_campaign.data,
+        )
 
         try:
             db.session.add(tenant)
@@ -62,7 +67,7 @@ def add_tenant():
     return render_template_context("tenants/edit_tenant.html", tenant_form=form, title="Add new tenant")
 
 
-@tenants.route('/rename_tenant/<int:id>', methods=["GET", "POST"])
+@tenants.route('/edit_tenant/<int:id>', methods=["GET", "POST"])
 @roles_required("root")
 def edit_tenant(id):
     tenant = db.session.query(Tenant).get_or_404(id)
@@ -73,6 +78,8 @@ def edit_tenant(id):
     if form.validate_on_submit():
         tenant.name = form.name.data
         tenant.colour = form.colour.data
+        tenant.force_ATAS_flag = form.force_ATAS_flag.data
+        tenant.in_2026_ATAS_campaign = form.in_2026_ATAS_campaign.data
 
         try:
             db.session.commit()
@@ -83,4 +90,4 @@ def edit_tenant(id):
 
         return redirect(url_for('tenants.edit_tenants'))
         
-    return render_template_context("tenants/edit_tenant.html", tenant_form=form, title="Rename tenant")
+    return render_template_context("tenants/edit_tenant.html", tenant_form=form, title="Edit tenant")

@@ -73,7 +73,7 @@ def ProjectMixinFactory(allowed_tenants, convenor_editing: bool, uses_tags: bool
             @staticmethod
             def validate_owner(form, field):
                 if field.data is None and not form.generic.data:
-                    raise ValidationError("This project is not generic. Please assign an owner.")
+                    raise ValidationError("This project is not marked as generic. Please assign an owner.")
 
         if uses_tags:
             get_tags = partial(GetActiveTags, allowed_tenants=allowed_tenants)

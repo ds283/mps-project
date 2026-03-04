@@ -25,6 +25,12 @@ class Tenant(db.Model, ColouredLabelMixin):
     # name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
+    # require ATAS flag to be set
+    force_ATAS_flag = db.Column(db.Boolean, default=False)
+
+    # in 2026 ATAS campaign
+    in_2026_ATAS_campaign = db.Column(db.Boolean, default=False)
+
     def make_label(self, text=None):
         if text is None:
             text = self.name

@@ -42,6 +42,12 @@
 
                         <div class="mt-2">
                             {{ colour_field(tenant_form.colour, 'colour-group') }}
+                            <div class="mt-1">
+                                {{ wtf.render_field(tenant_form.force_ATAS_flag) }}
+                            </div>
+                            <div class="mt-1">
+                                {{ wtf.render_field(tenant_form.in_2026_ATAS_campaign) }}
+                            </div>
                         </div>
 
                         <div class="mt-3">

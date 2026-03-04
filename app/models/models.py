@@ -2148,7 +2148,7 @@ class User(db.Model, UserMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # tenants to which this user belongs
-    tenants = db.relationship("Tenant", secondary=tenant_to_users, backref=db.backref("users", lazy="dynamic"))
+    tenants = db.relationship("Tenant", secondary=tenant_to_users, lazy="dynamic", backref=db.backref("users", lazy="dynamic"))
 
     # primary email address
     email = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True)
@@ -2991,7 +2991,7 @@ class ResearchGroup(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # tenants to which this research group belongs
-    tenants = db.relationship("Tenant", secondary=tenant_to_groups, backref=db.backref("research_groups", lazy="dynamic"))
+    tenants = db.relationship("Tenant", secondary=tenant_to_groups, lazy="dynamic", backref=db.backref("research_groups", lazy="dynamic"))
 
     # abbreviation for use in space-limited contexts
     abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True, unique=True)
@@ -4807,7 +4807,7 @@ class DegreeProgramme(db.Model, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # tenants to which this tag group belongs
-    tenants = db.relationship("Tenant", secondary=tenant_to_degree_programmes, backref=db.backref("degree_programmes", lazy="dynamic"))
+    tenants = db.relationship("Tenant", secondary=tenant_to_degree_programmes, lazy="dynamic", backref=db.backref("degree_programmes", lazy="dynamic"))
 
     # programme name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True)
@@ -7701,7 +7701,7 @@ class ProjectTagGroup(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # tenants to which this tag group belongs
-    tenants = db.relationship("Tenant", secondary=tenant_to_project_tag_groups, backref=db.backref("project_tag_groups", lazy="dynamic"))
+    tenants = db.relationship("Tenant", secondary=tenant_to_project_tag_groups, lazy="dynamic", backref=db.backref("project_tag_groups", lazy="dynamic"))
 
     # name of tag group
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
@@ -7871,11 +7871,12 @@ def _Project_is_offerable(pid):
     if project.generic:
         for pclass in project.project_classes:
             if project.number_supervisors(pclass) == 0:
-                errors[("supervisors", pclass.id)] = f"Zero supervisors in pool for '{pclass.name}'"
+                errors[("supervisors", pclass.id)] = f"There are no supervisors in the generic pool for '{pclass.name}'"
 
     # CONSTRAINT 6. The ATAS restricted flag has to be set
-    if project.ATAS_restricted is None:
-        errors["ATAS"] = "The ATAS-restricted option has not been set"
+    if any([p.tenant.force_ATAS_flag for p in project.project_classes]):
+        if project.ATAS_restricted is None:
+            errors["ATAS"] = "The ATAS-restricted option has not been set"
 
     if len(errors) > 0:
         return False, errors, warnings

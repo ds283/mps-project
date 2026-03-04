@@ -46,20 +46,23 @@ def check_2026_ATAS(fd: FacultyData):
         setattr(InputForm, f"project_{project.id}_ATAS", BooleanField("This project is not suitable for ATAS-restricted students", default=False))
         setattr(InputForm, f"project_{project.id}_tags", QuerySelectMultipleField("Assign labels for this project", query_factory=query_factory, get_label=get_label, validators=[InputRequired(message="Please apply at least one tag")]))
 
-    for project in fd.projects.filter(Project.active == True):
-        if project.ATAS_restricted is None:
-            add_project(project)
-            continue
+    for project in fd.projects.filter(
+            Project.active == True,
+    ):
+        if any([p.tenant.in_2026_ATAS_campaign for p in project.project_classes]):
+            if project.ATAS_restricted is None:
+                add_project(project)
+                continue
 
-        for pclass in project.project_classes:
-            pclass: ProjectClass
+            for pclass in project.project_classes:
+                pclass: ProjectClass
 
-            if tag_group in pclass.force_tag_groups:
-                query = project.tags.filter(ProjectTagGroup.id == tag_group.id)
-                count = get_count(query)
-                if count == 0:
-                    add_project(project)
-                    continue
+                if tag_group in pclass.force_tag_groups:
+                    query = project.tags.filter(ProjectTagGroup.id == tag_group.id)
+                    count = get_count(query)
+                    if count == 0:
+                        add_project(project)
+                        continue
 
     return {
         "projects": projects,

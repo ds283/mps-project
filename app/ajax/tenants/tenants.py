@@ -8,7 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, get_template_attribute
+from flask import render_template_string, get_template_attribute, current_app, render_template
+from jinja2 import Template, Environment
 
 # language=jinja2
 _menu = """
@@ -33,15 +34,36 @@ _colour = """
 {% endif %}
 """
 
-def _build_row(t, simple_label):
-    menu_html = render_template_string(_menu, t=t)
-    colour_html = render_template_string(_colour, t=t, simple_label=simple_label)
+# language=jinja2
+_name = """
+<div>{{ t.name }}</div>
+{% if t.force_ATAS_flag or t.in_2026_ATAS_campaign %}
+    <div class="mt-2 d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 small">
+        {% if t.force_ATAS_flag %}
+            <span class="badge bg-info">Force ATAS</span>
+        {% endif %}
+        {% if t.in_2026_ATAS_campaign %}
+            <span class="badge bg-info">2026 ATAS campaign</span>
+        {% endif %}
+    </div>
+{% endif %}
+"""
 
-    return {
-        "name": t.name,
-        "colour": colour_html,
-        "menu": menu_html,
-    }
+
+def _build_name_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_name)
+
+
+def _build_colour_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_colour)
+
+
+def _build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_menu)
+
 
 def tenants_data(tenants):
     """
@@ -49,8 +71,14 @@ def tenants_data(tenants):
     """
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = []
-    for t in tenants:
-        data.append(_build_row(t, simple_label))
+    name_templ: Template = _build_name_templ()
+    colour_templ: Template = _build_colour_templ()
+    menu_templ: Template = _build_menu_templ()
+
+    data = [{
+            'name': render_template(name_templ, t=t),
+            'colour': render_template(colour_templ, t=t, simple_label=simple_label),
+            'menu': render_template(menu_templ, t=t),
+        } for t in tenants]
 
     return data

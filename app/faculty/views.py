@@ -1549,9 +1549,11 @@ def dashboard():
 
     main_config: MainConfig = get_main_config()
     if main_config.enable_2026_ATAS_campaign:
-        data = check_2026_ATAS(fd)
-        if len(data["projects"]) > 0:
-            return redirect(url_for("campaigns.atas_2026"))
+        # only consider jumping to landing page if this user belongs to a tenant participating in the campaign
+        if get_count(current_user.tenants.filter(Tenant.in_2026_ATAS_campaign == True)) > 0:
+            data = check_2026_ATAS(fd)
+            if len(data["projects"]) > 0:
+                return redirect(url_for("campaigns.atas_2026"))
 
 
     num_unofferable = fd.projects_unofferable

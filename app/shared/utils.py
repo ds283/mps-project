@@ -41,11 +41,11 @@ from ..models import (
 from ..models import project_assessors
 
 
-def get_main_config():
+def get_main_config() -> MainConfig:
     return db.session.query(MainConfig).order_by(MainConfig.year.desc()).first()
 
 
-def get_current_year():
+def get_current_year() -> int:
     return get_main_config().year
 
 

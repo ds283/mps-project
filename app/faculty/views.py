@@ -35,6 +35,7 @@ from .forms import (
     EditDescriptionContentForm,
 )
 from ..admin.forms import LevelSelectorForm
+from ..campaigns import check_2026_ATAS
 from ..database import db
 from ..models import (
     DegreeProgramme,
@@ -64,7 +65,7 @@ from ..models import (
     StudentData,
     SubmittingStudent,
     SubmissionPeriodRecord,
-    SubmissionRole, Tenant,
+    SubmissionRole, Tenant, MainConfig,
 )
 from ..shared.actions import render_project, do_confirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.context.global_context import render_template_context
@@ -1545,6 +1546,13 @@ def dashboard():
     """
     # check for unofferable projects and warn if any are present
     fd: FacultyData = current_user.faculty_data
+
+    main_config: MainConfig = get_main_config()
+    if main_config.enable_2026_ATAS_campaign:
+        data = check_2026_ATAS(fd)
+        if len(data["projects"]) > 0:
+            return redirect(url_for("campaigns.atas_2026"))
+
 
     num_unofferable = fd.projects_unofferable
     if num_unofferable > 0:

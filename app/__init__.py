@@ -438,6 +438,10 @@ def create_app():
 
     app.register_blueprint(tenants_blueprint, url_prefix="/tenants")
 
+    from .campaigns import campaigns as campaigns_blueprint
+
+    app.register_blueprint(campaigns_blueprint, url_prefix="/campaigns")
+
     if app.config.get("ENABLE_PUBLIC_BROWSER", False):
         from .public_browser import public_browser as public_browser_blueprint
 

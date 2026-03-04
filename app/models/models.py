@@ -7833,15 +7833,31 @@ def _Project_is_offerable(pid):
         if not project.group.active:
             errors["groups"] = "The project's assigned affiliation or research group is not active"
 
-    # CONSTRAINT 3. For each attached project class, we should have enough assessors.
-    # Also, there should be a project description
+    # CONSTRAINT 3.
+    # -- A. For each attached project class, we should have enough assessors.
+    # -- B. Also, there should be a project description
+    # -- C. If there are required tag groups, at least one such tag must be supplied
     for pclass in project.project_classes:
+        pclass: ProjectClass
+        # A
         if pclass.uses_marker and pclass.number_assessors is not None and project.number_assessors(pclass) < pclass.number_assessors:
             errors[("pclass-assessors", pclass.id)] = f"Too few assessors assigned for '{pclass.name}'"
 
+        # B
         desc = project.get_description(pclass)
         if desc is None:
             errors[("pclass-descriptions", pclass.id)] = f"No project description assigned for '{pclass.name}'"
+
+        # C
+        for group in pclass.force_tag_groups:
+            group: ProjectTagGroup
+
+            query = project.tags.filter(
+                ProjectTag.group_id == group.id,
+            )
+            count = get_count(query)
+            if count == 0:
+                errors[("pclass-tags", pclass.id)] = f"{pclass.name} requires at least one tag to be assigned from the group '{group.name}'"
 
     # CONSTRAINT 4. All attached project descriptions should validate individually
     for desc in project.descriptions:
@@ -7856,6 +7872,10 @@ def _Project_is_offerable(pid):
         for pclass in project.project_classes:
             if project.number_supervisors(pclass) == 0:
                 errors[("supervisors", pclass.id)] = f"Zero supervisors in pool for '{pclass.name}'"
+
+    # CONSTRAINT 6. The ATAS restricted flag has to be set
+    if project.ATAS_restricted is None:
+        errors["ATAS"] = "The ATAS-restricted option has not been set"
 
     if len(errors) > 0:
         return False, errors, warnings

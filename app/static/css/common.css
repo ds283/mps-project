@@ -111,6 +111,13 @@ p.copyright {
   font-weight: bold;
 }
 
+.campaign-page-title {
+    font-family: 'Roboto', sans-serif;
+    font-weight: bold;
+    font-size: 38px;
+    margin-bottom: 1rem;
+}
+
 .timeline-page-title {
     font-family: 'Roboto', sans-serif;
     font-weight: bold;

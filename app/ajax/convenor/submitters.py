@@ -123,7 +123,7 @@ _periods = """
                     <div class="small dropdown assignment-label">
                         <a class="text-primary small text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Change</a>
                         <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                            {% set disabled = period.is_feedback_open or r.student_engaged %}
+                            {% set disabled = period.is_feedback_open %}
                             {% if disabled %}
                                 <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign project</a>
                             {% else %}
@@ -140,25 +140,6 @@ _periods = """
             <div class="d-flex flex-row justify-content-start align-items-center flex-wrap gap-2">
                 {% if show_period %}<div class="small text-muted"><em><strong>{{ period.display_name }}</strong></em></div>{% endif %}
                 {% if sub.published %}
-                    <div class="dropdown assignment-label">
-                        <a class="small text-decoration-none {% if r.student_engaged %}text-success{% else %}text-secondary{% endif %} dropdown-toggle"
-                            href="" role="button" aria-haspopup="true" aria-expanded="false"
-                            data-bs-toggle="dropdown">{% if r.student_engaged %}<i class="fas fa-check"></i> Started{% else %}<i class="fas fa-times"></i> Not started{% endif %}</a>
-                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                            {% if r.submission_period > config.submission_period %}
-                                <a class="dropdown-item d-flex gap-2 disabled">Submission period not yet open</a>
-                            {% elif not r.student_engaged %}
-                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.mark_started', id=r.id) }}">
-                                    <i class="fas fa-check fa-fw"></i> Mark as started
-                                </a>
-                            {% else %}
-                                {% set disabled = (config.submitter_lifecycle >= config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
-                                <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.mark_waiting', id=r.id) }}"{% endif %}>
-                                    <i class="fas fa-times fa-fw"></i> Mark as not started
-                                </a>
-                            {% endif %}
-                        </div>
-                    </div>
                     {% if r.report is not none %}
                         <div class="text-success small"><i class="fas fa-check-circle"></i> Report uploaded</div>
                     {% endif %}

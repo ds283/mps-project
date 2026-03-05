@@ -2384,7 +2384,6 @@ def regenerate_period_records(id):
                 project_id=None,
                 selection_config_id=None,
                 matching_record_id=None,
-                student_engaged=False,
                 use_project_hub=None,
                 report_id=None,
                 processed_report_id=None,

@@ -3714,21 +3714,6 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         return any(supervisor_late) or any(marker_late) or any(response_late) or any(presentation_late)
 
-    def has_not_started_flags(self, config_proxy):
-        if isinstance(config_proxy, ProjectClassConfig):
-            config_id = config_proxy.id
-        elif isinstance(config_proxy, ProjectClass):
-            config_id = config_proxy.most_recent_config.id
-        elif isinstance(config_proxy, int):
-            config_id = config_proxy
-
-        not_started = [
-            not x.student_engaged and x.submission_period <= x.owner.config.submission_period
-            for x in self.supervisor_assignments(config_id=config_id)
-        ]
-
-        return any(not_started)
-
     @property
     def outstanding_availability_requests(self):
         query = (
@@ -10692,14 +10677,6 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
         return self.supervisor_feedback_late or self.marker_feedback_late or self.presentation_feedback_late
 
     @property
-    def has_not_started_flags(self):
-        q = self.records.join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id).filter(
-            SubmissionPeriodRecord.submission_period <= self.config.submission_period, SubmissionRecord.student_engaged == False
-        )
-
-        return get_count(q) > 0
-
-    @property
     def has_report(self):
         """
         Returns true if a report has been uploaded and processed for the current submission period
@@ -11458,8 +11435,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # LIFECYCLE DATA
 
-    # has the project started? Helpful for convenor and senior tutor reports
-    student_engaged = db.Column(db.Boolean(), default=False)
 
     # FEEDBACK FOR STUDENT
 

@@ -140,10 +140,6 @@
                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='no-late-feedback', data_display=data_display) }}">
                             Has no late feedback
                         </a>
-                        <a class="btn btn-sm filter-btn {% if state_filter == 'not-started' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-                           href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='not-started', data_display=data_display) }}">
-                            Not started
-                        </a>
                         <a class="btn btn-sm filter-btn {% if state_filter == 'report' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='report', data_display=data_display) }}">
                             Report uploaded
@@ -209,9 +205,6 @@
                     <i class="fas fa-trash"></i> Delete all
                 </a>
                 {% if pclass.publish %}
-                    <a href="{{ url_for('convenor.mark_all_started', id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}" class="btn btn-sm btn-outline-primary top-row-button">
-                        Mark all started
-                    </a>
                     <a href="{{ url_for('convenor.unpublish_all_assignments', id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}" class="btn btn-sm btn-outline-primary top-row-button">
                         <i class="fas fa-eye-slash"></i> Unpublish all
                     </a>

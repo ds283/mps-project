@@ -137,9 +137,6 @@
                                                 {% else %}
                                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ rec.number_attachments }})...</a>
                                                 {% endif %}
-                                                {% if rec.owner.published and not rec.student_engaged and rec.submission_period <= rec.owner.config.submission_period %}
-                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.mark_started', id=rec.id) }}"><i class="fas fa-running fa-fw"></i> Mark as started</a>
-                                                {% endif %}
                                                 {% set state = my_role.feedback_state %}
                                                 {% set valid = my_role.feedback_valid %}
                                                 {% if state > my_role.FEEDBACK_NOT_YET %}

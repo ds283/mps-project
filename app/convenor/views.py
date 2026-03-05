@@ -2008,7 +2008,6 @@ def submitters(id):
         "unpublished",
         "late-feedback",
         "no-late-feedback",
-        "not-started",
         "report",
         "no-report",
         "attachments",
@@ -9442,124 +9441,6 @@ def unpublish_all_assignments(id):
     return redirect(redirect_url())
 
 
-@convenor.route("/mark_started/<int:id>")
-@roles_accepted("faculty", "admin", "root")
-def mark_started(id):
-    # id is a SubmissionRecord
-    rec = SubmissionRecord.query.get_or_404(id)
-
-    # reject if logged-in user is not a convenor for the project class associated with this submission record
-    if not validate_is_convenor(rec.owner.config.project_class):
-        return redirect(redirect_url())
-
-    # reject if project class not published
-    if not validate_project_class(rec.owner.config.project_class):
-        return redirect(redirect_url())
-
-    if rec.owner.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash('It is now too late to mark a submission period as "started" for this project class.', "error")
-        return redirect(redirect_url())
-
-    if rec.submission_period > rec.owner.config.submission_period:
-        flash("Cannot mark this submission period as started because it is not yet open.", "error")
-        return redirect(redirect_url())
-
-    if not rec.owner.published:
-        flash("Cannot mark this submission period as started because it is not published to the submitter.", "error")
-        return redirect(redirect_url())
-
-    rec.student_engaged = True
-
-    try:
-        db.session.commit()
-    except SQLAlchemyError as e:
-        flash('Could not mark student "started" because of a database error. ' "Please contact a system administrator.", "error")
-        db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-    return redirect(redirect_url())
-
-
-@convenor.route("/mark_all_started/<int:id>")
-@roles_accepted("faculty", "admin", "root")
-def mark_all_started(id):
-    # id is a ProjectClassConfig
-    config = ProjectClassConfig.query.get_or_404(id)
-
-    # reject if logged-in user is not a convenor for this project class
-    if not validate_is_convenor(config.project_class):
-        return redirect(redirect_url())
-
-    # reject if project class not published
-    if not validate_project_class(config.project_class):
-        return redirect(redirect_url())
-
-    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash("It is now too late to mark students as started.", "error")
-        return redirect(redirect_url())
-
-    cohort_filter = request.args.get("cohort_filter")
-    prog_filter = request.args.get("prog_filter")
-    state_filter = request.args.get("state_filter")
-    year_filter = request.args.get("year_filter")
-
-    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
-
-    for sub in data:
-        sub: SubmittingStudent
-        if sub.published:
-            record: SubmissionRecord = sub.get_assignment(config.submission_period)
-            if record is not None and record.project_id is not None:
-                record.student_engaged = True
-
-    try:
-        db.session.commit()
-    except SQLAlchemyError as e:
-        flash('Could not mark students "started" because of a database error. ' "Please contact a system administrator.", "error")
-        db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-    return redirect(redirect_url())
-
-
-@convenor.route("/mark_waiting/<int:id>")
-@roles_accepted("faculty", "admin", "root")
-def mark_waiting(id):
-    # id is a SubmissionRecord
-    rec = SubmissionRecord.query.get_or_404(id)
-
-    # reject if logged-in user is not a convenor for the project class associated with this submission record
-    if not validate_is_convenor(rec.owner.config.project_class):
-        return redirect(redirect_url())
-
-    # reject if project class not published
-    if not validate_project_class(rec.owner.config.project_class):
-        return redirect(redirect_url())
-
-    if rec.owner.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash('It is now too late to mark a submission period as "waiting" for this project class.', "error")
-        return redirect(redirect_url())
-
-    if rec.submission_period > rec.owner.config.submission_period:
-        flash("Cannot mark this submission period as started because it is not yet open.", "error")
-        return redirect(redirect_url())
-
-    if not rec.owner.published:
-        flash("Cannot mark this submission period as started because it is not published to the submitter.", "error")
-        return redirect(redirect_url())
-
-    rec.student_engaged = False
-
-    try:
-        db.session.commit()
-    except SQLAlchemyError as e:
-        flash('Could not mark student "waiting" because of a database error. ' "Please contact a system administrator.", "error")
-        db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-    return redirect(redirect_url())
-
-
 @convenor.route("/populate_markers/<int:configid>")
 @roles_accepted("faculty", "admin", "root")
 def populate_markers(configid):
@@ -10055,7 +9936,7 @@ def manual_assign():
         text=text,
         form=form,
         submitter=submitter,
-        allow_reassign_project=rec.project_id is None or (not period.is_feedback_open and not rec.student_engaged),
+        allow_reassign_project=rec.project_id is None or not period.is_feedback_open,
     )
 
 
@@ -10111,10 +9992,6 @@ def assign_revert(id):
 
     if rec.period.is_feedback_open:
         flash("Can not revert assignment for {name} because feedback is already open".format(name=rec.period.display_name), "error")
-        return redirect(redirect_url())
-
-    if rec.student_engaged:
-        flash("Can not revert assignment for {name} because the project is already marked as started".format(name=rec.period.display_name), "error")
         return redirect(redirect_url())
 
     if rec.matching_record is None:
@@ -10209,10 +10086,6 @@ def assign_from_selection(id, sel_id):
         flash("Can not reassign for {name} because feedback is already open".format(name=rec.period.display_name), "error")
         return redirect(redirect_url())
 
-    if rec.student_engaged and rec.project_id is not None:
-        flash("Can not reassign for {name} because the project is already marked as started".format(name=rec.period.display_name), "error")
-        return redirect(redirect_url())
-
     sel: SelectionRecord = SelectionRecord.query.get_or_404(sel_id)
 
     try:
@@ -10289,10 +10162,6 @@ def assign_liveproject(id, pid):
 
     if rec.period.is_feedback_open:
         flash("Can not reassign for {name} because feedback is already open".format(name=rec.period.display_name), "error")
-        return redirect(redirect_url())
-
-    if rec.student_engaged and rec.project_id is not None:
-        flash("Can not reassign for {name} because the project is already marked as started".format(name=rec.period.display_name), "error")
         return redirect(redirect_url())
 
     lp: LiveProject = LiveProject.query.get_or_404(pid)
@@ -10378,10 +10247,6 @@ def deassign_project(id):
 
     if rec.period.is_feedback_open:
         flash("Can not de-assign project for {name} because feedback is already open".format(name=rec.period.display_name), "error")
-        return redirect(redirect_url())
-
-    if rec.student_engaged:
-        flash("Can not de-assign project for {name} because the project is already marked as started".format(name=rec.period.display_name), "error")
         return redirect(redirect_url())
 
     # as long as we don't set both project and project_id (or marker and marker_id) simultaneously to zero,

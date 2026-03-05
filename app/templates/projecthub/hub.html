@@ -164,14 +164,6 @@
                 <div class="row">
                     <div class="col-12">
                         <div class="mt-2 mb-2">
-                        {% if submitter.published and record.submission_period <= config.submission_period %}
-                            {% if record.student_engaged %}
-                                <i class="fas fa-check"></i> <strong>Student engaged</strong>
-                                <a class="btn btn-sm btn-outline-danger mb-2" href="{{ url_for('faculty.mark_waiting', id=record.id) }}"> Mark as not engaged</a>
-                            {% else %}
-                                <a class="btn btn-sm btn-outline-success" href="{{ url_for('faculty.mark_started', id=record.id) }}"> Mark student as engaged</a>
-                            {% endif %}
-                        {% endif %}
                             <a class="btn btn-sm btn-outline-info" href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('projecthub.hub', subid=record.id), text='project hub') }}">
                                 <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
                             </a>

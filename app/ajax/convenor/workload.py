@@ -37,25 +37,10 @@ _supervising = """
     {% set pclass = config.project_class %}
     {% set student = sub.student %}
     {% set user = student.user %}
-    {% set enable_engagement = (r.submission_period <= config.submission_period) and (config.submitter_lifecycle < config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
     {% set colour = "bg-secondary" %}
-    {% if enable_engagement %}
-        {% if r.student_engaged %}
-            {% set colour = "bg-success" %}
-        {% else %}
-            {% set colour = "bg-warning" %}
-        {% endif %}
-    {% endif %}
     <div>
         <div class="dropdown assignment-label">
             <a class="badge text-decoration-none text-nohover-light {{ colour }} btn-table-block dropdown-toggle" data-bs-toggle="dropdown" href="" role="button" aria-haspopup="true" aria-expanded="false">
-                {% if enable_engagement %}
-                    {% if r.student_engaged %}
-                        <i class="fas fa-check"></i>
-                    {% else %}
-                        <i class="fas fa-times"></i>
-                    {% endif %}
-                {% endif %}
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {{ r.owner.student.user.name }}
             </a>
@@ -65,19 +50,7 @@ _supervising = """
                     <i class="fas fa-comments fa-fw"></i> Show feedback
                 </a>
                 
-                {% if not disabled and sub.published and enable_engagement %}
-                    {% if not r.student_engaged %}
-                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.mark_started', id=r.id) }}">
-                            <i class="fas fa-check fa-fw"></i> Mark as started
-                        </a>
-                    {% else %}
-                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.mark_waiting', id=r.id) }}">
-                            <i class="fas fa-times fa-fw"></i> Mark as waiting
-                        </a>
-                    {% endif %}
-                {% endif %}
-                
-                {% set no_reassign = r.period.is_feedback_open or r.student_engaged %}
+                {% set no_reassign = r.period.is_feedback_open %}
                 <div role="separator" class="dropdown-divider"></div>
                 {% if no_reassign %}
                     <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign</a>

@@ -660,7 +660,7 @@ class SupervisionEventTemplateMixin:
 
 
 def AddSupervisionEventTemplateFormFactory(unit: SubmissionPeriodUnit):
-    unique_name = partial(globally_unique_supervision_event_template, unit.d)
+    unique_name = partial(globally_unique_supervision_event_template, unit.id)
 
     class AddSupervisionEventTemplateForm(Form, SupervisionEventTemplateMixin):
         name = StringField(

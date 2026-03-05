@@ -13,7 +13,7 @@ from typing import List
 from flask import current_app, render_template, url_for
 from jinja2 import Template, Environment
 
-from ...models import SubmissionPeriodUnit, SubmissionPeriodRecord
+from ...models import SubmissionPeriodUnit, SubmissionPeriodRecord, SupervisionEventTemplate
 
 
 # language=jinja2
@@ -36,7 +36,7 @@ _name = """
 
 
 # language=jinja2
-_dates = """
+_start_date = """
 {% if unit.start_date is not none %}
     <div class="small">{{ unit.start_date.strftime("%a %d %b %Y") }}</div>
 {% else %}
@@ -56,12 +56,36 @@ _end_date = """
 
 
 # language=jinja2
+_event_templates = """
+{% set templates = unit.event_templates.all() %}
+{% if templates %}
+    <ul class="list-unstyled mb-0">
+        {% for t in templates %}
+            <li class="small">
+                <a class="text-decoration-none" href="{{ url_for('convenor.inspect_unit_event_templates', unit_id=unit.id, url=return_url) }}">
+                    <span class="badge bg-secondary me-1">{{ t._role_labels.get(t.target_role, "?") }}</span>{{ t.name }}
+                    <span class="text-muted">({{ t._event_labels.get(t.type, "?") }})</span>
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <span class="text-muted small">None</span>
+{% endif %}
+"""
+
+
+# language=jinja2
 _menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle table-button" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.inspect_unit_event_templates', unit_id=unit.id, url=return_url, text='submission period units inspector') }}">
+            <i class="fas fa-calendar-alt fa-fw"></i> Event templates...
+        </a>
+        <div role="separator" class="dropdown-divider"></div>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_period_unit', unit_id=unit.id, url=return_url) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
         </a>
@@ -78,14 +102,19 @@ def _build_name_templ() -> Template:
     return env.from_string(_name)
 
 
-def _build_dates_templ() -> Template:
+def _build_start_date_templ() -> Template:
     env: Environment = current_app.jinja_env
-    return env.from_string(_dates)
+    return env.from_string(_start_date)
 
 
 def _build_end_date_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_end_date)
+
+
+def _build_event_templates_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_event_templates)
 
 
 def _build_menu_templ() -> Template:
@@ -97,21 +126,23 @@ def submission_period_units_data(units: List[SubmissionPeriodUnit], period: Subm
     return_url = url_for("convenor.inspect_period_units", period_id=period.id, url=url, text=text)
 
     name_templ: Template = _build_name_templ()
-    dates_templ: Template = _build_dates_templ()
+    start_date_templ: Template = _build_start_date_templ()
     end_date_templ: Template = _build_end_date_templ()
+    event_templates_templ: Template = _build_event_templates_templ()
     menu_templ: Template = _build_menu_templ()
 
     data = [
         {
             "name": render_template(name_templ, unit=u),
             "start_date": {
-                "display": render_template(dates_templ, unit=u),
+                "display": render_template(start_date_templ, unit=u),
                 "sortvalue": u.start_date.isoformat() if u.start_date is not None else "",
             },
             "end_date": {
                 "display": render_template(end_date_templ, unit=u),
                 "sortvalue": u.end_date.isoformat() if u.end_date is not None else "",
             },
+            "event_templates": render_template(event_templates_templ, unit=u, return_url=return_url),
             "menu": render_template(menu_templ, unit=u, return_url=return_url),
         }
         for u in units

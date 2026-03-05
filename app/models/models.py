@@ -7323,7 +7323,7 @@ class SubmissionPeriodUnit(db.Model, EditingMetadataMixin):
     """
     Capture details about a particular unit within a submission period.
     Units can refer to any time period that is required, but in a typical Sussex semester they will usually
-    refer to weeks. Each unit can contain a number of default meetings.
+    refer to weeks. Each unit can contain a number of meetings.
     """
 
     __tablename__ = "submission_period_units"

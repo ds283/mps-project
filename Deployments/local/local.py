@@ -155,6 +155,26 @@ _project_storage_options = _base_storage_options | {
 OBJECT_STORAGE_PROJECT_URI = os.environ.get("OBJECT_STORAGE_PROJECT_URI")
 OBJECT_STORAGE_PROJECT = ObjectStore(OBJECT_STORAGE_PROJECT_URI, buckets.PROJECT_BUCKET, _project_storage_options)
 
+# -- SUPERVISION ASSETS BUCKET
+
+# get credentials to access supervision assets bucket
+OBJECT_STORAGE_SUPERVISION_ASSETS_ACCESS_KEY = os.environ.get("OBJECT_STORAGE_SUPERVISION_ASSETS_ACCESS_KEY")
+OBJECT_STORAGE_SUPERVISION_ASSETS_SECRET_KEY = os.environ.get("OBJECT_STORAGE_SUPERVISION_ASSETS_SECRET_KEY")
+
+# set up encryption pipeline for supervision assets bucket
+OBJECT_STORAGE_SUPERVISION_ASSETS_ENCRYPT_KEY = os.environ.get("OBJECT_STORAGE_SUPERVISION_ASSETS_ENCRYPT_KEY")
+_supervision_assets_encrypt_key = base64.urlsafe_b64decode(OBJECT_STORAGE_SUPERVISION_ASSETS_ENCRYPT_KEY)
+
+_supervision_assets_storage_options = _base_storage_options | {
+    "access_key": OBJECT_STORAGE_SUPERVISION_ASSETS_ACCESS_KEY,
+    "secret_key": OBJECT_STORAGE_SUPERVISION_ASSETS_SECRET_KEY,
+    "encryption_pipeline": ChaCha20_Poly1305(_supervision_assets_encrypt_key),
+}
+
+# create ObjectStore for supervision assets bucket
+OBJECT_STORAGE_SUPERVISION_ASSETS_URI = os.environ.get("OBJECT_STORAGE_SUPERVISION_ASSETS_URI")
+OBJECT_STORAGE_SUPERVISION_ASSETS = ObjectStore(OBJECT_STORAGE_SUPERVISION_ASSETS_URI, buckets.SUPERVISION_ASSETS_BUCKET, _supervision_assets_storage_options)
+
 
 # set up bucket map
 OBJECT_STORAGE_BUCKETS = {
@@ -163,4 +183,5 @@ OBJECT_STORAGE_BUCKETS = {
     buckets.TELEMETRY_BUCKET: OBJECT_STORAGE_TELEMETRY,
     buckets.FEEDBACK_BUCKET: OBJECT_STORAGE_FEEDBACK,
     buckets.PROJECT_BUCKET: OBJECT_STORAGE_PROJECT,
+    buckets.SUPERVISION_ASSETS_BUCKET: OBJECT_STORAGE_SUPERVISION_ASSETS,
 }

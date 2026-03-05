@@ -1412,6 +1412,11 @@ class SupervisionEventTypesMixin:
 
     _event_labels = {EVENT_ONE_TO_ONE_MEETING: "1-to-1 meeting", EVENT_GROUP_MEETING: "group meeting"}
 
+    _menu_labels = {
+        EVENT_ONE_TO_ONE_MEETING: "1-to-1 meeting",
+        EVENT_GROUP_MEETING: "Group meeting",
+    }
+
 
 class SupervisionEventAttendanceMixin:
     """
@@ -1467,6 +1472,9 @@ def _get_current_year():
 # ASSOCIATION TABLES
 ####################
 
+
+# TENANTS
+
 # association table mapping from users to tenants
 tenant_to_users = db.Table(
     "tenant_users",
@@ -1508,6 +1516,9 @@ faculty_batch_to_tenants = db.Table(
     db.Column("batch_id", db.Integer(), db.ForeignKey("batch_faculty.id"), primary_key=True),
     db.Column("tenant_id", db.Integer(), db.ForeignKey("tenants.id"), primary_key=True),
 )
+
+
+# USERS
 
 # association table mapping from roles to users
 roles_to_users = db.Table(
@@ -1815,7 +1826,7 @@ project_matching_table = db.Table(
 )
 
 
-# SUPERVISION ROLES, EVENTS
+# SUPERVISION ROLES, EVENTS, ATTENDANCE MONITORING
 
 # email log linking all emails to the supervision event they are associated with
 event_email_table = db.Table(
@@ -1839,6 +1850,12 @@ event_roles_table = db.Table(
     db.Column("submission_role_id", db.Integer(), db.ForeignKey("submission_roles.id"), primary_key=True),
 )
 
+even_assets_table = db.Table(
+    "supervision_event_assets",
+    db.Column("asset_id", db.Integer(), db.ForeignKey("submitted_assets.id"), primary_key=True),
+    db.Column("event_id", db.Integer(), db.ForeignKey("supervision_events.id"), primary_key=True),
+)
+
 
 # SUBMISSION AND MARKING WORKLOW
 
@@ -1856,7 +1873,7 @@ submission_record_to_feedback_report = db.Table(
     db.Column("report_id", db.Integer(), db.ForeignKey("feedback_reports.id"), primary_key=True),
 )
 
-# PRESENTATIONS
+# PRESENTATIONS AND SCHEDULING
 
 # link presentation assessments to submission periods
 assessment_to_periods = db.Table(
@@ -4282,7 +4299,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
                     submitter_records[year] = []
                 submitter_records[year].append(rec)
 
-        return years, selector_records, submitter_records
+        return sorted(years, reverse=True), selector_records, submitter_records
 
     @property
     def ordered_selecting(self):
@@ -7306,7 +7323,7 @@ class SubmissionPeriodUnit(db.Model, EditingMetadataMixin):
     """
     Capture details about a particular unit within a submission period.
     Units can refer to any time period that is required, but in a typical Sussex semester they will usually
-    refer to weeks. Each unit can contain a number of default meetings.
+    refer to weeks. Each unit can contain a number of meetings.
     """
 
     __tablename__ = "submission_period_units"
@@ -7332,6 +7349,49 @@ class SubmissionPeriodUnit(db.Model, EditingMetadataMixin):
     # unit end date (inclusive)
     end_date = db.Column(db.Date())
 
+    # TODO: consider adding
+    #  - week-by-week articles covering relevant topics or HOWTOs
+    #  - scheduled emails
+    #  - messages and notices
+
+
+class SupervisionEventTemplate(db.Model, EditingMetadataMixin, SupervisionEventTypesMixin, SubmissionRoleTypesMixin):
+    """
+    Capture a template (later to be replicated over all submitters) for a supervision event within a submission unit.
+    In a typical Sussex supervision arrangement, events will be 1-to-1 supervision meetings
+    """
+
+    __tablename__ = "supervision_event_templates"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # parent submission unit
+    unit_id = db.Column(db.Integer(), db.ForeignKey("submission_period_units.id"), nullable=False)
+    unit = db.relationship(
+        "SubmissionPeriodUnit",
+        foreign_keys=[unit_id],
+        uselist=False,
+        backref=db.backref("event_templates", lazy="dynamic", cascade="all, delete, delete-orphan"),
+    )
+
+    # name of this event
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False)
+
+    # assign this event to which submission roles?
+    target_role = db.Column(db.Integer(), nullable=False)
+
+
+    ## ATTENDEES AND TEAM
+    # event type identifier, drawn from SupervisionEventTypesMixin
+    type = db.Column(db.Integer(), default=SupervisionEventTypesMixin.EVENT_ONE_TO_ONE_MEETING, nullable=False)
+
+
+    ## ATTENDANCE MONITORING
+
+    # collect attendance data for this event?
+    monitor_attendance = db.Column(db.Boolean(), default=True)
+
 
 class SupervisionEvent(db.Model, EditingMetadataMixin, SupervisionEventTypesMixin, SupervisionEventAttendanceMixin):
     """
@@ -7353,6 +7413,19 @@ class SupervisionEvent(db.Model, EditingMetadataMixin, SupervisionEventTypesMixi
         backref=db.backref("events", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
+    # name of this event
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False)
+
+    # time of event
+    time = db.Column(db.DateTime(), nullable=False)
+
+
+    ## ATTENDEES AND TEAM
+
+    # submitter to whom this event applies
+    sub_record_id = db.Column(db.Integer(), db.ForeignKey("submission_records.id"))
+    sub_record = db.relationship("SubmissionRecord", foreign_keys=[sub_record_id], uselist=False, backref=db.backref("events", lazy="dynamic", cascade="all, delete, delete-orphan"))
+
     # responsible event owner, usually the responsible supervisor, but does not have to be
     owner_id = db.Column(db.Integer(), db.ForeignKey("submission_roles.id"))
     owner = db.relationship("SubmissionRole", foreign_keys=[owner_id], uselist=False, backref=db.backref("events_owner", lazy="dynamic"))
@@ -7360,12 +7433,14 @@ class SupervisionEvent(db.Model, EditingMetadataMixin, SupervisionEventTypesMixi
     # other attending members of the supervision team
     team = db.relationship("SubmissionRole", secondary=event_roles_table, lazy="dynamic", backref=db.backref("events_team", lazy="dynamic"))
 
-    # event type identifier, drawn from SupervisionEventTypesMixing
-    event_types = [
-        (SupervisionEventTypesMixin.EVENT_ONE_TO_ONE_MEETING, "1-to-1 meeting"),
-        (SupervisionEventTypesMixin.EVENT_GROUP_MEETING, "Group meeting"),
-    ]
+    # event type identifier, drawn from SupervisionEventTypesMixin
     type = db.Column(db.Integer(), default=SupervisionEventTypesMixin.EVENT_ONE_TO_ONE_MEETING, nullable=False)
+
+
+    ## ATTENDANCE MONITORING
+
+    # collect attendance data for this event?
+    monitor_attendance = db.Column(db.Boolean(), default=True)
 
     # attendance record
     attendance_values = [
@@ -7376,6 +7451,21 @@ class SupervisionEvent(db.Model, EditingMetadataMixin, SupervisionEventTypesMixi
         (SupervisionEventAttendanceMixin.ATTENDANCE_RESCHEDULED, "The meeting is being rescheduled"),
     ]
     attendance = db.Column(db.Integer(), default=None, nullable=True)
+
+
+    ## RECORD-KEEPING AND STUDENT PROGRESS
+
+    # meeting summary
+    meeting_summary = db.Column(db.Text())
+
+    # private notes
+    private_notes = db.Column(db.Text())
+
+    # assets uploaded for this event
+    uploaded_assets = db.relationship("SubmittedAsset", secondary=even_assets_table, lazy="dynamic", backref=db.backref("supervision_events", lazy="dynamic"))
+
+
+    ## EMAIL LOGS
 
     # emails associated with this event
     email_log = db.relationship("EmailLog", secondary=event_email_table, lazy="dynamic")

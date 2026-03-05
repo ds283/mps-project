@@ -1357,6 +1357,16 @@ class SubmissionRoleTypesMixin:
         ROLE_RESPONSIBLE_SUPERVISOR: "supervisor",
     }
 
+    role_options = [
+        (ROLE_RESPONSIBLE_SUPERVISOR, "Responsible supervisor"),
+        (ROLE_SUPERVISOR, "Supervisor"),
+        (ROLE_MARKER, "Marker"),
+        (ROLE_PRESENTATION_ASSESSOR, "Presentation assessor"),
+        (ROLE_MODERATOR, "Moderator"),
+        (ROLE_EXAM_BOARD, "Exam board member"),
+        (ROLE_EXTERNAL_EXAMINER, "External examiner"),
+    ]
+
 
 class BackupTypesMixin:
     # type of backup
@@ -1412,10 +1422,10 @@ class SupervisionEventTypesMixin:
 
     _event_labels = {EVENT_ONE_TO_ONE_MEETING: "1-to-1 meeting", EVENT_GROUP_MEETING: "group meeting"}
 
-    _menu_labels = {
-        EVENT_ONE_TO_ONE_MEETING: "1-to-1 meeting",
-        EVENT_GROUP_MEETING: "Group meeting",
-    }
+    event_options = [
+        (EVENT_ONE_TO_ONE_MEETING, "1-to-1 meeting"),
+        (EVENT_GROUP_MEETING, "Group meeting"),
+    ]
 
 
 class SupervisionEventAttendanceMixin:
@@ -10845,15 +10855,6 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
     user = db.relationship("User", foreign_keys=[user_id], uselist=False, backref=db.backref("submission_roles", lazy="dynamic"))
 
     # role identifier, drawn from SubmissionRoleTypesMixin
-    role_options = [
-        (SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR, "Responsible supervisor"),
-        (SubmissionRoleTypesMixin.ROLE_SUPERVISOR, "Supervisor"),
-        (SubmissionRoleTypesMixin.ROLE_MARKER, "Marker"),
-        (SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR, "Presentation assessor"),
-        (SubmissionRoleTypesMixin.ROLE_MODERATOR, "Moderator"),
-        (SubmissionRoleTypesMixin.ROLE_EXAM_BOARD, "Exam board member"),
-        (SubmissionRoleTypesMixin.ROLE_EXTERNAL_EXAMINER, "External examiner"),
-    ]
     role = db.Column(db.Integer(), default=SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR, nullable=False)
 
     @validates("role")

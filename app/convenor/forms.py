@@ -28,7 +28,7 @@ from ..models import (
     SubmissionRecord,
     FacultyData,
     AlternativesPriorityMixin,
-    Project, Tenant, SubmissionPeriodRecord,
+    Project, Tenant, SubmissionPeriodRecord, SupervisionEventTemplate, SubmissionPeriodUnit,
 )
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, PeriodPresentationsMixin, PeriodSelectorMixinFactory
 from ..shared.forms.queries import (
@@ -635,3 +635,60 @@ def EditSubmissionPeriodUnitFormFactory(period: SubmissionPeriodRecord):
         )
 
     return EditSubmissionPeriodUnitForm
+
+
+class SupervisionEventTemplateMixin:
+    target_role = SelectField(
+        "Target role",
+        choices=SupervisionEventTemplate.role_options,
+        coerce=int,
+        description="When this event is distributed, it will be assigned to all staff with the specified submission role."
+    )
+
+    type = SelectField(
+        "Event type",
+        choices=SupervisionEventTemplate.event_options,
+        coerce=int,
+    )
+
+    monitor_attendance = BooleanField(
+        "Monitor attendance",
+        default=True,
+        description="If selected, attendance data will be collected for instances of this event."
+    )
+
+
+def AddSupervisionEventTemplateFormFactory(unit: SubmissionPeriodUnit):
+    unique_name = partial(globally_unique_supervision_event_template, unit.d)
+
+    class AddSupervisionEventTemplateForm(Form, SupervisionEventTemplateMixin):
+        name = StringField(
+            "Name",
+            validators=[
+                InputRequired(message="Please enter a name for this event"),
+                Length(max=DEFAULT_STRING_LENGTH),
+                unique_name,
+            ],
+            description="Provide a name for this event. The name should be unique within this submission unit.",
+        )
+
+        submit = SubmitField("Add new event")
+
+    return AddSupervisionEventTemplateForm
+
+
+def EditSupervisionEventTemplateFormFactory(unit: SubmissionPeriodUnit):
+    unique_name = partial(unique_or_original_supervision_event_template, unit.id)
+
+    class EditSupervisionEventTemplateForm(Form, SupervisionEventTemplateMixin, SaveChangesMixin):
+        name = StringField(
+            "Name",
+            validators=[
+                InputRequired(message="Please enter a name for this event"),
+                Length(max=DEFAULT_STRING_LENGTH),
+                unique_name,
+            ],
+            description="Provide a name for this event. The name should be unique within this submission unit.",
+        )
+
+    return EditSupervisionEventTemplateForm

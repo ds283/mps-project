@@ -524,7 +524,7 @@ def register_marking_tasks(celery):
     def sanity_check_grade(role: SubmissionRole, person: User, student: User, convenor: Optional[User]):
         fail = False
 
-        label: str = role._role_labels[role.role].capitalize()
+        label: str = role._role_string[role.role].capitalize()
         if role.grade < 0:
             fail = True
             report_error(

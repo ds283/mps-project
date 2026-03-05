@@ -63,8 +63,11 @@ _event_templates = """
         {% for t in templates %}
             <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2 small">
                 <a class="link-primary text-decoration-none" href="{{ url_for('convenor.edit_unit_event_template', template_id=t.id, url=return_url) }}">{{ t.name }}</a>                
-                <span class="badge bg-secondary">{{ t._role_labels.get(t.target_role, "?") }}</span>
-                <span class="text-muted">({{ t._event_labels.get(t.type, "?") }})</span>
+                <span class="badge bg-secondary">{{ t._role_string.get(t.target_role, "?") }}</span>
+                <span class="text-muted">({{ t._short_event_string.get(t.type, "?") }})</span>
+                {% if t.monitor_attendance %}
+                    <span class="text-success"><i class="fas fa-check-circle"></i> Attendance</span>
+                {% endif %}
             </div>
         {% endfor %}
         <a class="btn btn-xs btn-outline-secondary small mt-2" href="{{ url_for('convenor.inspect_unit_event_templates', unit_id=unit.id, url=return_url, text="submission period units inspector") }}">Inspect events&hellip;</a>

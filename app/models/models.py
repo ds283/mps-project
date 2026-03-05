@@ -1350,11 +1350,21 @@ class SubmissionRoleTypesMixin:
     _role_labels = {
         ROLE_SUPERVISOR: "supervisor",
         ROLE_MARKER: "marker",
-        ROLE_PRESENTATION_ASSESSOR: "presentation assessor",
+        ROLE_PRESENTATION_ASSESSOR: "presentation_assessor",
         ROLE_MODERATOR: "moderator",
         ROLE_EXAM_BOARD: "exam board member",
         ROLE_EXTERNAL_EXAMINER: "external examiner",
         ROLE_RESPONSIBLE_SUPERVISOR: "supervisor",
+    }
+
+    _role_string = {
+        ROLE_SUPERVISOR: "Supervisor",
+        ROLE_MARKER: "Marker",
+        ROLE_PRESENTATION_ASSESSOR: "Assessor",
+        ROLE_MODERATOR: "Moderator",
+        ROLE_EXAM_BOARD: "Exam board",
+        ROLE_EXTERNAL_EXAMINER: "External",
+        ROLE_RESPONSIBLE_SUPERVISOR: "Responsible",
     }
 
     role_options = [
@@ -1420,7 +1430,15 @@ class SupervisionEventTypesMixin:
     _MIN_TYPE = EVENT_ONE_TO_ONE_MEETING
     _MAX_TYPE = EVENT_GROUP_MEETING
 
-    _event_labels = {EVENT_ONE_TO_ONE_MEETING: "1-to-1 meeting", EVENT_GROUP_MEETING: "group meeting"}
+    _event_string = {
+        EVENT_ONE_TO_ONE_MEETING: "1-to-1 meeting",
+        EVENT_GROUP_MEETING: "Group meeting"
+    }
+
+    _short_event_string = {
+        EVENT_ONE_TO_ONE_MEETING: "1-to-1",
+        EVENT_GROUP_MEETING: "Group"
+    }
 
     event_options = [
         (EVENT_ONE_TO_ONE_MEETING, "1-to-1 meeting"),

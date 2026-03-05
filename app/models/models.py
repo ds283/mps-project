@@ -6986,7 +6986,7 @@ class SubmissionPeriodRecord(db.Model):
         delta = self.hand_in_date - today
         return format_readable_time(delta)
 
-    def _unordered_records_query(self, user, role: str):
+    def _unordered_records_query(self, user, roles: Union[Iterable[str], str]):
         """
         Base query to extract SubmissionRecord instances belonging to this submission period,
         for which the quoted faculty member has a specified role
@@ -6999,7 +6999,7 @@ class SubmissionPeriodRecord(db.Model):
         elif isinstance(user, FacultyData) or isinstance(user, User):
             user_id = user.id
         else:
-            raise RuntimeError('Unknown faculty id type "{typ}" passed to ' "SubmissionPeriodRecord.get_supervisor_records".format(typ=type(user)))
+            raise RuntimeError('Unknown faculty id type "{typ}" passed to SubmissionPeriodRecord.get_supervisor_records'.format(typ=type(user)))
 
         role_map = {
             "supervisor": SubmissionRole.ROLE_SUPERVISOR,
@@ -7009,24 +7009,42 @@ class SubmissionPeriodRecord(db.Model):
             "exam_board": SubmissionRole.ROLE_EXAM_BOARD,
             "external": SubmissionRole.ROLE_EXTERNAL_EXAMINER,
             "responsible supervisor": SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+            "responsible": SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
         }
-        if role not in role_map:
-            raise KeyError('Unknown role "{role}" in ' "SubmissionPeriodRecord._unordered_records_query()".format(role=role))
 
-        role_id = role_map[role]
+        def stringize_role(role):
+            if isinstance(role, str):
+                role_str = role.lower()
+            else:
+                role_str = str(role).lower()
 
-        record_ids = db.session.query(SubmissionRecord.id).filter(SubmissionRecord.period_id == self.id, SubmissionRecord.retired == False).all()
+            if role_str not in role_map:
+                raise RuntimeError(f'Unknown role "{role}" passed to SubmissionPeriodRecord.get_supervisor_records')
 
-        # SQLAlchemy returns a list of Row objects, even when we ask for only a single column
-        if len(record_ids) > 0:
-            if isinstance(record_ids[0], Iterable):
-                record_ids = [x[0] for x in record_ids]
+            return role_str
 
-        return db.session.query(SubmissionRole).filter(
-            SubmissionRole.submission_id.in_(record_ids), SubmissionRole.role == role_id, SubmissionRole.user_id == user_id
+        if isinstance(roles, str):
+            roles_list = [stringize_role(roles)]
+        elif isinstance(roles, Iterable):
+            roles_list = [stringize_role(r) for r in roles]
+        else:
+            raise RuntimeError(f'Unknown roles type "{type(roles)}" passed to SubmissionPeriodRecord.get_supervisor_records')
+
+        role_ids = [role_map[role] for role in roles_list]
+
+        # find all SubmissionRole instances of the required role types, belonging to this submission period and the specified user
+        return (
+            db.session.query(SubmissionRole)
+            .join(SubmissionRecord, SubmissionRecord.id == SubmissionRole.submission_id)
+            .filter(
+                SubmissionRecord.period_id == self.id,
+                SubmissionRecord.retired == False,
+                SubmissionRole.user_id == user_id,
+                SubmissionRole.role.in_(role_ids),
+            )
         )
 
-    def _ordered_records_query(self, user, role: str, order_by: str):
+    def _ordered_records_query(self, user, roles: Union[Iterable[str], str], order_by: str):
         """
         Same as _unordered_records_query(), but now order by student name or exam number (as specified)
         :param user: identify staff member, either primary key for User, FacultyData or a User/FacultyData instance
@@ -7035,11 +7053,10 @@ class SubmissionPeriodRecord(db.Model):
         :return:
         """
         if order_by not in ["name", "exam"]:
-            raise KeyError('Unknown order type "{type}" in ' "SubmissionPeriodRecord._ordered_records_query()".format(type=order_by))
+            raise KeyError(f'Unknown order type "{order_by}" in SubmissionPeriodRecord._ordered_records_query()')
 
         query = (
-            self._unordered_records_query(user, role)
-            .join(SubmissionRecord, SubmissionRecord.id == SubmissionRole.submission_id)
+            self._unordered_records_query(user, roles)
             .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
         )
         if order_by == "name":
@@ -7051,10 +7068,10 @@ class SubmissionPeriodRecord(db.Model):
         return query
 
     def number_supervisor_records(self, user) -> int:
-        return get_count(self._unordered_records_query(user, "supervisor"))
+        return get_count(self._unordered_records_query(user, ["supervisor", "responsible"] ))
 
     def get_supervisor_records(self, user):
-        return self._ordered_records_query(user, "supervisor", "name").all()
+        return self._ordered_records_query(user, ["supervisor", "responsible"], "name").all()
 
     def number_marker_records(self, user) -> int:
         return get_count(self._unordered_records_query(user, "marker"))

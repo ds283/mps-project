@@ -45,7 +45,8 @@ from ..shared.forms.queries import (
     AllProjectClasses,
     AllResearchGroups,
 )
-from ..shared.forms.wtf_validators import NotOptionalIf, globally_unique_project, globally_unique_submission_unit, unique_or_original_submission_unit
+from ..shared.forms.wtf_validators import NotOptionalIf, globally_unique_project, globally_unique_submission_unit, unique_or_original_submission_unit, \
+    globally_unique_supervision_event_template, unique_or_original_supervision_event_template
 
 
 def GoLiveFormFactory(submit_label="Go live", live_and_close_label="Go live and immediately close", datebox_label="Deadline"):

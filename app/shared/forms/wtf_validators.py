@@ -43,7 +43,7 @@ from ...models import (
     ProjectTag,
     FeedbackAsset,
     FeedbackRecipe,
-    FacultyBatchItem, SubmissionPeriodUnit,
+    FacultyBatchItem, SubmissionPeriodUnit, SupervisionEventTemplate,
 )
 
 _security = LocalProxy(lambda: current_app.extensions["security"])
@@ -608,6 +608,27 @@ def unique_or_original_submission_unit(period_id, form, field):
         return
 
     return globally_unique_submission_unit(period_id, form, field)
+
+
+def globally_unique_supervision_event_template(unit_id, form, field):
+    if (
+        db.session.query(SupervisionEventTemplate)
+        .filter(
+            SupervisionEventTemplate.unit_id == unit_id,
+            SupervisionEventTemplate.name == field.data,
+        )
+        .first()
+    ):
+        raise ValidationError(
+            f'A supervision event template with the name "{field.data}" already exists for this unit'
+        )
+
+
+def unique_or_original_supervision_event_template(unit_id, form, field):
+    if field.data == form.template.name:
+        return
+
+    return globally_unique_supervision_event_template(unit_id, form, field)
 
 
 def valid_json(form, field):

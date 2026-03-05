@@ -17821,6 +17821,6 @@ class FeedbackReport(db.Model):
 # ############################
 
 
-ProjectLike = Project | LiveProject
+ProjectLike = Union[Project, LiveProject]
 ProjectLikeList = List[ProjectLike]
 ProjectDescLikeList = List[Tuple[ProjectLike, ProjectDescription]]

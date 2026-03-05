@@ -28,4 +28,5 @@ from .submitters import submitters_data
 from .teaching_groups import teaching_group_by_faculty, teaching_group_by_student
 from .todo_list import todo_list_data
 from .submission_period_units import submission_period_units_data
+from .supervision_event_templates import supervision_event_templates_data
 from .workload import faculty_workload_data

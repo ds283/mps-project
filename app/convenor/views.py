@@ -56,6 +56,7 @@ from .forms import (
     CreateCustomOfferFormFactory,
     EditCustomOfferFormFactory, DuplicateProjectFormFactory,
     AddSubmissionPeriodUnitFormFactory, EditSubmissionPeriodUnitFormFactory,
+    AddSupervisionEventTemplateFormFactory, EditSupervisionEventTemplateFormFactory,
 )
 from ..admin.forms import LevelSelectorForm
 from ..database import db
@@ -117,6 +118,7 @@ from ..models import (
     FeedbackReport,
     GeneratedAsset, Tenant,
     SubmissionPeriodUnit,
+    SupervisionEventTemplate,
 )
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.asset_tools import AssetUploadManager
@@ -10874,6 +10876,179 @@ def delete_period_unit(unit_id):
         flash("Could not delete submission period unit due to a database error. Please contact a system administrator.", "error")
 
     return redirect(url_for("convenor.inspect_period_units", period_id=period.id))
+
+
+@convenor.route("/inspect_unit_event_templates/<int:unit_id>")
+@roles_accepted("faculty", "admin", "root")
+def inspect_unit_event_templates(unit_id):
+    # unit_id is a SubmissionPeriodUnit
+    unit: SubmissionPeriodUnit = SubmissionPeriodUnit.query.get_or_404(unit_id)
+    period: SubmissionPeriodRecord = unit.owner
+    config: ProjectClassConfig = period.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    return render_template_context(
+        "convenor/supervision_events/inspect_unit_event_templates.html",
+        unit=unit,
+        period=period,
+        config=config,
+        url=url,
+        text=text,
+    )
+
+
+@convenor.route("/inspect_unit_event_templates_ajax/<int:unit_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def inspect_unit_event_templates_ajax(unit_id):
+    """
+    AJAX endpoint for inspect_unit_event_templates view
+    """
+    # unit_id is a SubmissionPeriodUnit
+    unit: SubmissionPeriodUnit = SubmissionPeriodUnit.query.get_or_404(unit_id)
+    period: SubmissionPeriodRecord = unit.owner
+    config: ProjectClassConfig = period.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return jsonify({})
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    templates = unit.event_templates.all()
+
+    return jsonify(ajax.convenor.supervision_event_templates_data(templates, unit, url=url, text=text))
+
+
+@convenor.route("/add_unit_event_template/<int:unit_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def add_unit_event_template(unit_id):
+    # unit_id is a SubmissionPeriodUnit
+    unit: SubmissionPeriodUnit = SubmissionPeriodUnit.query.get_or_404(unit_id)
+    period: SubmissionPeriodRecord = unit.owner
+    config: ProjectClassConfig = period.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = url_for("convenor.inspect_unit_event_templates", unit_id=unit.id)
+
+    AddSupervisionEventTemplateForm = AddSupervisionEventTemplateFormFactory(unit)
+    form = AddSupervisionEventTemplateForm(request.form)
+
+    if form.validate_on_submit():
+        template = SupervisionEventTemplate(
+            unit_id=unit.id,
+            name=form.name.data,
+            target_role=form.target_role.data,
+            type=form.type.data,
+            monitor_attendance=form.monitor_attendance.data,
+            creator_id=current_user.id,
+            creation_timestamp=datetime.now(),
+            last_edit_id=None,
+            last_edit_timestamp=None,
+        )
+
+        try:
+            db.session.add(template)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not add new supervision event template due to a database error. Please contact a system administrator.", "error")
+
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/supervision_events/edit_unit_event_template.html",
+        form=form,
+        unit=unit,
+        title="Add supervision event template",
+        formtitle=f"Add event template to unit <strong>{unit.name}</strong>",
+        url=url,
+    )
+
+
+@convenor.route("/edit_unit_event_template/<int:template_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_unit_event_template(template_id):
+    # template_id is a SupervisionEventTemplate
+    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(template_id)
+    unit: SubmissionPeriodUnit = template.unit
+    period: SubmissionPeriodRecord = unit.owner
+    config: ProjectClassConfig = period.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = url_for("convenor.inspect_unit_event_templates", unit_id=unit.id)
+
+    EditSupervisionEventTemplateForm = EditSupervisionEventTemplateFormFactory(unit)
+    form = EditSupervisionEventTemplateForm(obj=template)
+    form.template = template
+
+    if form.validate_on_submit():
+        template.name = form.name.data
+        template.target_role = form.target_role.data
+        template.type = form.type.data
+        template.monitor_attendance = form.monitor_attendance.data
+        template.last_edit_id = current_user.id
+        template.last_edit_timestamp = datetime.now()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not save changes to supervision event template due to a database error. Please contact a system administrator.", "error")
+
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/supervision_events/edit_unit_event_template.html",
+        form=form,
+        template=template,
+        unit=unit,
+        title="Edit supervision event template",
+        formtitle=f"Edit supervision event template <strong>{template.name}</strong>",
+        url=url,
+    )
+
+
+@convenor.route("/delete_unit_event_template/<int:template_id>")
+@roles_accepted("faculty", "admin", "root")
+def delete_unit_event_template(template_id):
+    # template_id is a SupervisionEventTemplate
+    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(template_id)
+    unit: SubmissionPeriodUnit = template.unit
+    period: SubmissionPeriodRecord = unit.owner
+    config: ProjectClassConfig = period.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    try:
+        db.session.delete(template)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not delete supervision event template due to a database error. Please contact a system administrator.", "error")
+
+    return redirect(url_for("convenor.inspect_unit_event_templates", unit_id=unit.id))
 
 
 @convenor.route("/generate_feedback_reports/<int:id>")

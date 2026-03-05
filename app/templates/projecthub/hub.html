@@ -159,40 +159,40 @@
                 <hr class="intro-divider mb-5">
             {% endif %}
 
-            {# Populate dashboard widgets #}
-        <div class="mt-3 card border-secondary">
-            <div class="card-header bg-light">
-                <span class="fw-semibold">Resources</span>
-            </div>
-            <div class="card-body bg-well">
-                {{ resources_widget(submitter, student, config, pclass, project, record, period) }}
-            </div>
-        </div>
-        <div class="mt-3 card border-secondary">
-            <div class="card-header bg-light">
-                <span class="fw-semibold">News and articles</span>
-            </div>
-            <div class="card-body bg-well">
-                {{ articles_widget(submitter, student, config, pclass, project, record, period) }}
-            </div>
-        </div>
-        <div class="mt-3 card border-secondary">
-            <div class="card-header bg-light">
-                <span class="fw-semibold">Notes and journal</span>
-            </div>
-            <div class="card-body bg-well">
-                Content
-                </div>
-            </div>
-
-            {% if text and url %}
-                <div class="mt-3">
-                    <a class="text-decoration-none" href="{{ url }}">
-                        <i class="fas fa-backward"></i> Return to {{ text }}
-                    </a>
-                </div>
-            {% endif %}
-        </div>
-        <div class="col-1"></div>
-    </div>
+    {# Populate dashboard widgets #}
+    {#        <div class="mt-3 card border-secondary">#}
+    {#            <div class="card-header bg-light">#}
+    {#                <span class="fw-semibold">Resources</span>#}
+    {#            </div>#}
+    {#            <div class="card-body bg-well">#}
+    {#                {{ resources_widget(submitter, student, config, pclass, project, record, period) }}#}
+    {#            </div>#}
+    {#        </div>#}
+    {#        <div class="mt-3 card border-secondary">#}
+    {#            <div class="card-header bg-light">#}
+    {#                <span class="fw-semibold">News and articles</span>#}
+    {#            </div>#}
+    {#            <div class="card-body bg-well">#}
+    {#                {{ articles_widget(submitter, student, config, pclass, project, record, period) }}#}
+    {#            </div>#}
+    {#        </div>#}
+    {#        <div class="mt-3 card border-secondary">#}
+    {#            <div class="card-header bg-light">#}
+    {#                <span class="fw-semibold">Notes and journal</span>#}
+    {#            </div>#}
+    {#            <div class="card-body bg-well">#}
+    {#                Content#}
+    {#                </div>#}
+    {#            </div>#}
+    {##}
+    {#            {% if text and url %}#}
+    {#                <div class="mt-3">#}
+    {#                    <a class="text-decoration-none" href="{{ url }}">#}
+    {#                        <i class="fas fa-backward"></i> Return to {{ text }}#}
+    {#                    </a>#}
+    {#                </div>#}
+    {#            {% endif %}#}
+    {#        </div>#}
+    {#        <div class="col-1"></div>#}
+    {#    </div>#}
 {% endblock %}

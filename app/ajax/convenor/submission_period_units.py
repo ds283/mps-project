@@ -82,15 +82,15 @@ _menu = """
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.inspect_unit_event_templates', unit_id=unit.id, url=return_url, text='submission period units inspector') }}">
-            <i class="fas fa-calendar-alt fa-fw"></i> Event templates...
-        </a>
-        <div role="separator" class="dropdown-divider"></div>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_period_unit', unit_id=unit.id, url=return_url) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
         </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.delete_period_unit', unit_id=unit.id, url=return_url) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
+        </a>
+        <div role="separator" class="dropdown-divider"></div>
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.inspect_unit_event_templates', unit_id=unit.id, url=return_url, text='submission period units inspector') }}">
+            <i class="fas fa-calendar-alt fa-fw"></i> Event templates...
         </a>
     </div>
 </div>

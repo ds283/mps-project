@@ -1887,7 +1887,6 @@ def add_pclass():
                 colour=form.colour.data,
                 do_matching=form.do_matching.data,
                 number_assessors=form.number_assessors.data,
-                use_project_hub=form.use_project_hub.data,
                 student_level=form.student_level.data,
                 is_optional=form.is_optional.data,
                 uses_selection=form.uses_selection.data,
@@ -1959,7 +1958,6 @@ def add_pclass():
                 requests_skipped=False,
                 requests_skipped_id=None,
                 requests_skipped_timestamp=None,
-                use_project_hub=form.use_project_hub.data,
                 live=False,
                 selection_closed=False,
                 CATS_supervision=data.CATS_supervision,
@@ -2072,7 +2070,6 @@ def edit_pclass(id):
         pclass.name = form.name.data
         pclass.abbreviation = form.abbreviation.data
         pclass.tenant = form.tenant.data
-        pclass.use_project_hub = form.use_project_hub.data
         pclass.student_level = form.student_level.data
         pclass.start_year = form.start_year.data
         pclass.colour = form.colour.data
@@ -2384,7 +2381,6 @@ def regenerate_period_records(id):
                 project_id=None,
                 selection_config_id=None,
                 matching_record_id=None,
-                use_project_hub=None,
                 report_id=None,
                 processed_report_id=None,
                 celery_started=False,

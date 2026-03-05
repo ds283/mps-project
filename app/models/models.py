@@ -5101,9 +5101,6 @@ class ProjectClass(db.Model, ColouredLabelMixin, EditingMetadataMixin, StudentLe
 
     # PRACTICAL DATA
 
-    # enable project hub by default?
-    use_project_hub = db.Column(db.Boolean(), default=True)
-
     # what student level is this project associated with (UG, PGT, PGR)
     student_level = db.Column(db.Integer(), default=StudentLevelsMixin.LEVEL_UG)
 
@@ -5703,13 +5700,6 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     # display presentation information in UI?
     display_presentations = db.Column(db.Boolean())
 
-    # SETTINGS
-
-    # enable project hub (inherited from ProjectClass, but can be set on a per-configuration basis)
-    # True/False = override setting inherited from ProjectClass
-    # None = inherit setting
-    use_project_hub = db.Column(db.Boolean(), default=None, nullable=True)
-
     # CANVAS INTEGRATION
 
     # Canvas id for the module corresponding to this ProjectClassConfig
@@ -5836,11 +5826,6 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     @property
     def messages(self):
         messages = []
-
-        if self.uses_project_hub:
-            messages.append("Project hub enabled")
-        else:
-            messages.append("Project hub disabled")
 
         if self.main_config.enable_canvas_sync:
             if self.canvas_enabled:
@@ -6118,15 +6103,6 @@ class ProjectClassConfig(db.Model, ConvenorTasksMixinFactory(ConvenorGenericTask
     @property
     def abbreviation(self):
         return self.project_class.abbreviation
-
-    @property
-    def uses_project_hub(self):
-        # if we have a local override, use that setting; otherwise, we inherit our setting from our parent
-        # ProjectClass
-        if self.use_project_hub is not None:
-            return self.use_project_hub
-
-        return self.project_class.use_project_hub
 
     @property
     def student_level(self):
@@ -11351,14 +11327,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         "MatchingRecord", foreign_keys=[matching_record_id], uselist=False, backref=db.backref("submission_record", uselist=False)
     )
 
-    # CONFIGURATION
-
-    # optionally override project hub setting inherited from ProjectClassConfig
-    # (which may in turn inherit its setting from the parent ProjectClass)
-    # True/False = override inherited setting
-    # None = inherit setting
-    use_project_hub = db.Column(db.Boolean(), default=None, nullable=True)
-
     # REPORT UPLOAD
 
     # main report
@@ -11507,15 +11475,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         self._validated = False
         self._errors = False
         self._warnings = False
-
-    @property
-    def uses_project_hub(self):
-        # if we have a local override, use that setting; otherwise, we inherit our setting from our parent
-        # ProjectClassConfig (which may in turn inherit its own etting)
-        if self.use_project_hub is not None:
-            return self.use_project_hub
-
-        return self.current_config.uses_project_hub
 
     @property
     def submission_period(self):
@@ -17680,37 +17639,6 @@ class MatchingEnumeration(db.Model, MatchingEnumerationTypesMixin):
         uselist=False,
         backref=db.backref("enumerations", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
-
-
-class ProjectHubLayout(db.Model):
-    """
-    Serialize stored layout for project hub widgets
-    """
-
-    __tablename__ = "project_hub_layout"
-
-    # primary key id
-    id = db.Column(db.Integer(), primary_key=True)
-
-    # link to SubmissionRecord to which this hub layout applies
-    owner_id = db.Column(db.Integer(), db.ForeignKey("submission_records.id"))
-    owner = db.relationship(
-        "SubmissionRecord",
-        foreign_keys=[owner_id],
-        uselist=False,
-        backref=db.backref("saved_layouts", lazy="dynamic", cascade="all, delete, delete-orphan"),
-    )
-
-    # link to User for which this hub layout applies
-    user_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    user = db.relationship("User", foreign_keys=[user_id], uselist=False, backref=db.backref("saved_layouts", lazy="dynamic"))
-
-    # serialized content
-    serialized_layout = db.Column(db.String(SERIALIZED_LAYOUT_LENGTH, collation="utf8_bin"))
-
-    # last recorded timestamp, to ensure we only store layouts in order: ie., we should not overwrite
-    # a later layout with the details of an earlier one
-    timestamp = db.Column(db.BigInteger())
 
 
 class FormattedArticle(db.Model, EditingMetadataMixin):

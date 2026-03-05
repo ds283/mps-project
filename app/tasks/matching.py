@@ -3583,7 +3583,6 @@ def register_matching_tasks(celery):
                     selection_config_id=config.id,
                     matching_record_id=data.id,
                     student_engage=False,
-                    use_project_hub=None,
                     report_id=None,
                     processed_report_id=None,
                     celery_started=False,

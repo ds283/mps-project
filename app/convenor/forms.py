@@ -282,7 +282,6 @@ class EditSubmissionPeriodRecordPresentationsForm(Form, PeriodPresentationsMixin
 
 
 def EditProjectConfigFormFactory(config: ProjectClassConfig):
-    hub_enabled = config.project_class.use_project_hub
     canvas_enabled = config.main_config.enable_canvas_sync
 
     class EditProjectConfigForm(Form, SaveChangesMixin):
@@ -309,25 +308,6 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
         display_marker = BooleanField("Display assessor information")
 
         display_presentations = BooleanField("Display presentation assessment information")
-
-        project_hub_choices = [
-            (1, "Inherit ({which} in project class)".format(which="enabled" if hub_enabled else "disabled")),
-            (2, "Enable"),
-            (3, "Disable"),
-        ]
-        project_hub_value_map = {1: None, 2: True, 3: False}
-        project_hub_choice_map = {None: 1, True: 2, False: 3}
-
-        use_project_hub = SelectField(
-            "Use Project Hubs (caution: not production quality)",
-            choices=project_hub_choices,
-            coerce=int,
-            description="This setting is inherited from the project configuration, "
-            "but can be overridden in any academic year. "
-            "The Project Hub is a lightweight learning management system "
-            "that allows you to publish resources to students and "
-            "offers some project management tools.",
-        )
 
         full_CATS = IntegerField(
             "CAT threshold for supervisors to be full",

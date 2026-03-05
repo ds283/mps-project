@@ -9154,10 +9154,6 @@ def edit_project_config(pid):
         if form.full_CATS.data != config.full_CATS:
             config.full_CATS = form.full_CATS.data
 
-        use_hub = form.project_hub_value_map[form.use_project_hub.data]
-        if use_hub != config.use_project_hub:
-            config.use_project_hub = use_hub
-
         config.uses_supervisor = form.uses_supervisor.data
         config.uses_marker = form.uses_marker.data
         config.uses_moderator = form.uses_moderator.data
@@ -9183,13 +9179,6 @@ def edit_project_config(pid):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for("convenor.status", id=config.project_class.id))
-
-    else:
-        if request.method == "GET":
-            value = config.use_project_hub
-            if value not in form.project_hub_choice_map.keys():
-                value = None
-            form.use_project_hub.data = form.project_hub_choice_map[value]
 
     return render_template_context("convenor/dashboard/edit_project_config.html", form=form, config=config)
 

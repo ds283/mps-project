@@ -170,7 +170,6 @@ def add_blank_submitter(student, selecting_config_id, submitting_config_id, auto
             marker_id=None,
             selection_config_id=selecting_config_id,
             matching_record_id=None,
-            use_project_hub=None,
             report_id=None,
             processed_report_id=None,
             celery_started=False,

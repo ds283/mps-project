@@ -349,14 +349,6 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
             validators=[NotOptionalIf("do_matching"), NumberRange(min=0, message="Required number of assessors cannot be zero")],
         )
 
-        use_project_hub = BooleanField(
-            "Use Project Hubs (caution: not production quality)",
-            description="The Project Hub is a lightweight learning management system that "
-            "allows resources to be published to students, and provides a journal "
-            "and to-do list. It is a central "
-            "location to manage projects.",
-        )
-
         student_level = SelectField(
             "Student level",
             description="Determines whether this project type applies to UG, PGT or PGR students.",

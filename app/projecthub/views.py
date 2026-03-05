@@ -35,7 +35,6 @@ from ..models import (
     ProjectClass,
     LiveProject,
     SubmissionPeriodRecord,
-    ProjectHubLayout,
     ConvenorSubmitterArticle,
     FormattedArticle,
     ProjectSubmitterArticle,
@@ -54,14 +53,6 @@ def hub(subid):
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(subid)
 
     if not validate_project_hub(record, current_user, message=True):
-        return redirect(redirect_url())
-
-    if not record.uses_project_hub:
-        flash(
-            "The project hub has been disabled for this submission. If you think this is incorrect, "
-            "please contact your supervisor or the projects convenor.",
-            "info",
-        )
         return redirect(redirect_url())
 
     submitter: SubmittingStudent = record.owner
@@ -122,17 +113,6 @@ def hub(subid):
 
     text = request.args.get("text", None)
     url = request.args.get("url", None)
-
-    layout = {
-        "resources-widget": {"x": 5, "y": 3, "w": 7, "h": 5},
-        "news-widget": {"x": 0, "y": 0, "w": 12, "h": 3},
-        "journal-widget": {"x": 0, "y": 3, "w": 5, "h": 5},
-    }
-
-    saved_layout: ProjectHubLayout = db.session.query(ProjectHubLayout).filter_by(owner_id=subid, user_id=current_user.id).first()
-
-    if saved_layout is not None:
-        layout.update(json.loads(saved_layout.serialized_layout))
 
     # generate burn-down doughnut chart if we can
     now = date.today()
@@ -211,75 +191,9 @@ def hub(subid):
         project=project,
         record=record,
         period=period,
-        layout=layout,
         burndown_div=burndown_div,
         burndown_script=burndown_script,
     )
-
-
-@projecthub.route("/save_hub_layout", methods=["POST"])
-@login_required
-def save_hub_layout():
-    data = request.get_json()
-
-    # discard notification if ill-formed
-    if "payload" not in data or "record_id" not in data or "user_id" not in data or "timestamp" not in data:
-        return jsonify({"status": "ill_formed"})
-
-    payload = data["payload"]
-    record_id = data["record_id"]
-    user_id = data["user_id"]
-
-    try:
-        timestamp = int(data["timestamp"])
-    except ValueError:
-        return jsonify({"status": "ill_formed"})
-
-    if payload is None or record_id is None or user_id is None:
-        return jsonify({"status": "ill_formed"})
-
-    record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-
-    if record is None:
-        return jsonify({"status": "database_error"})
-
-    if user_id != current_user.id:
-        return jsonify({"status": "bad_login"})
-
-    try:
-        layout = {item["widget"]: {"x": item["x"], "y": item["y"], "w": item["w"], "h": item["h"]} for item in payload}
-    except KeyError:
-        return jsonify({"status": "ill_formed"})
-
-    saved_layout: ProjectHubLayout = db.session.query(ProjectHubLayout).filter_by(owner_id=record_id, user_id=user_id).first()
-
-    if saved_layout is None:
-        new_layout = ProjectHubLayout(owner_id=record_id, user_id=user_id, serialized_layout=json.dumps(layout), timestamp=timestamp)
-
-        try:
-            db.session.add(new_layout)
-            db.session.commit()
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            return jsonify({"status": "database_error"})
-
-    else:
-        if saved_layout.timestamp is None or timestamp > saved_layout.timestamp:
-            old_layout = json.loads(saved_layout.serialized_layout)
-            old_layout.update(layout)
-
-            saved_layout.serialized_layout = json.dumps(old_layout)
-            saved_layout.timestamp = timestamp
-
-            try:
-                db.session.commit()
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                return jsonify({"status": "database_error"})
-
-    return jsonify({"status": "ok"})
 
 
 @projecthub.route("/edit_subpd_record_articles/<int:pid>")
@@ -294,14 +208,6 @@ def edit_subpd_record_articles(pid):
 
     # reject if user is not a convenor for the project owning this submission period
     if not validate_is_convenor(config.project_class):
-        return redirect(redirect_url())
-
-    if not config.uses_project_hub:
-        flash(
-            "It is not possible to edit articles or news for {pclass}/{period} because project hubs "
-            "are currently disabled for this project class. Please contact a system administrator if you "
-            "believe this is an error.".format(pclass=config.name, period=record.display_name)
-        )
         return redirect(redirect_url())
 
     return render_template_context(
@@ -328,9 +234,6 @@ def edit_subpd_record_articles_ajax(pid):
 
     # reject if user is not a convenor for the project owning this submission period
     if not validate_is_convenor(record.config.project_class):
-        return jsonify({})
-
-    if not config.uses_project_hub:
         return jsonify({})
 
     base_query = record.articles
@@ -364,14 +267,6 @@ def add_subpd_record_article(pid):
 
     # reject if user is not a convenor for the project owning this submission period
     if not validate_is_convenor(record.config.project_class):
-        return redirect(redirect_url())
-
-    if not config.uses_project_hub:
-        flash(
-            "It is not possible to edit articles or news for {pclass}/{period} because project hubs "
-            "are currently disabled for this project class. Please contact a system administrator if you "
-            "believe this is an error.".format(pclass=config.name, period=record.display_name)
-        )
         return redirect(redirect_url())
 
     form = AddFormatterArticleForm(request.form)
@@ -424,14 +319,6 @@ def edit_subpd_record_article(aid):
 
     # reject if user is not a convenor for the project owning this submission period
     if not validate_is_convenor(record.config.project_class):
-        return redirect(redirect_url())
-
-    if not config.uses_project_hub:
-        flash(
-            "It is not possible to edit articles or news for {pclass}/{period} because project hubs "
-            "are currently disabled for this project class. Please contact a system administrator if you "
-            "believe this is an error.".format(pclass=config.name, period=record.display_name)
-        )
         return redirect(redirect_url())
 
     form = EditFormattedArticleForm(obj=article)
@@ -488,9 +375,6 @@ def article_widget_ajax(subid):
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(subid)
 
     if not validate_project_hub(record, current_user, message=True):
-        return jsonify({})
-
-    if not record.uses_project_hub:
         return jsonify({})
 
     articles = with_polymorphic(FormattedArticle, [ConvenorSubmitterArticle, ProjectSubmitterArticle])

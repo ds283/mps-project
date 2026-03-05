@@ -82,9 +82,6 @@ _options = """
     {% else %}
       <span class="badge bg-secondary">No colour</span>'
     {% endif %}
-    {% if p.use_project_hub %}
-        <span class="badge bg-secondary">Project hubs</span>
-    {% endif %}
     {% if p.is_optional %}
         <span class="badge bg-secondary">Optional</span>
     {% endif %}

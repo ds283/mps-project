@@ -26,7 +26,6 @@
                     {% set rec = my_role.submission %}
                     {# rec is a SubmissionRecord #}
                     {% set uses_feedback = rec.uses_supervisor_feedback %}
-                    {% set uses_project_hub = rec.uses_project_hub %}
                     {# sub is a SubmittingStudent #}
                     {% set sub = rec.owner %}
                     <tr>
@@ -123,45 +122,59 @@
                         </td>
                         <td>
                             <div class="d-flex flex-row justify-content-end align-content-start">
-                                {% if uses_project_hub %}
+                                <div class="btn-group">
+                                    <a class="btn btn-outline-secondary btn-sm"
+                                       href="{{ url_for('projecthub.hub', subid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}">Student
+                                        page</a>
                                     <div class="btn-group">
-                                        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('projecthub.hub', subid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}">Go to hub</a>
-                                {% endif %}
-                                        <div class="btn-group">
-                                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                                Actions
-                                            </button>
-                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-                                                {% if uses_project_hub %}
-                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('projecthub.hub', subid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fab fa-hubspot fa-fw"></i> Project hub</a>
-                                                {% else %}
-                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ rec.number_attachments }})...</a>
-                                                {% endif %}
-                                                {% set state = my_role.feedback_state %}
-                                                {% set valid = my_role.feedback_valid %}
-                                                {% if state > my_role.FEEDBACK_NOT_YET %}
-                                                    {% if uses_feedback and (period.is_feedback_open and not period.closed) or (period.closed and not my_role.submitted_feedback) %}
-                                                        {% if valid %}
-                                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-search fa-fw"></i> Preview feedback...</a>
-                                                        {% else %}
-                                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.edit_feedback', id=my_role.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit feedback...</a>
-                                                        {% endif %}
-                                                    {% endif %}
-                                                    {% if period.closed %}
-                                                        {% if rec.student_feedback_submitted and not my_role.acknowledge_student %}
-                                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-pencil-alt fa-fw"></i> Respond to feedback...</a>
-                                                        {% elif rec.student_feedback_submitted and not my_role.submitted_response %}
-                                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-pencil-alt fa-fw"></i> Respond to feedback...</a>
-                                                        {% else %}
-                                                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-search fa-fw"></i> View feedback...</a>
-                                                        {% endif %}
+                                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
+                                                data-bs-toggle="dropdown">
+                                            Actions
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+                                            <a class="dropdown-item d-flex gap-2"
+                                               href="{{ url_for('projecthub.hub', subid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i
+                                                    class="fab fa-hubspot fa-fw"></i> Student page</a>
+                                            <a class="dropdown-item d-flex gap-2"
+                                               href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i
+                                                    class="fas fa-file fa-fw"></i> Manage documents
+                                                ({{ rec.number_attachments }})...</a>
+                                            {% set state = my_role.feedback_state %}
+                                            {% set valid = my_role.feedback_valid %}
+                                            {% if state > my_role.FEEDBACK_NOT_YET %}
+                                                {% if uses_feedback and (period.is_feedback_open and not period.closed) or (period.closed and not my_role.submitted_feedback) %}
+                                                    {% if valid %}
+                                                        <a class="dropdown-item d-flex gap-2"
+                                                           href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i
+                                                                class="fas fa-search fa-fw"></i> Preview feedback...</a>
+                                                    {% else %}
+                                                        <a class="dropdown-item d-flex gap-2"
+                                                           href="{{ url_for('faculty.edit_feedback', id=my_role.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i
+                                                                class="fas fa-pencil-alt fa-fw"></i> Edit
+                                                            feedback...</a>
                                                     {% endif %}
                                                 {% endif %}
-                                            </div>
+                                                {% if period.closed %}
+                                                    {% if rec.student_feedback_submitted and not my_role.acknowledge_student %}
+                                                        <a class="dropdown-item d-flex gap-2"
+                                                           href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i
+                                                                class="fas fa-pencil-alt fa-fw"></i> Respond to
+                                                            feedback...</a>
+                                                    {% elif rec.student_feedback_submitted and not my_role.submitted_response %}
+                                                        <a class="dropdown-item d-flex gap-2"
+                                                           href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i
+                                                                class="fas fa-pencil-alt fa-fw"></i> Respond to
+                                                            feedback...</a>
+                                                    {% else %}
+                                                        <a class="dropdown-item d-flex gap-2"
+                                                           href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i
+                                                                class="fas fa-search fa-fw"></i> View feedback...</a>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endif %}
                                         </div>
-                                {% if uses_project_hub %}
                                     </div>
-                                {% endif %}
+                                </div>
                             </div>
                         </td>
                     </tr>

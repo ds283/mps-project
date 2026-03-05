@@ -11,8 +11,8 @@
 {% endblock %}
 
 {% block form_content %}
-    {% if template %}
-        <form action="{{ url_for('convenor.edit_unit_event_template', template_id=template.id, url=url) }}"
+    {% if event_template %}
+        <form action="{{ url_for('convenor.edit_unit_event_template', template_id=event_template.id, url=url) }}"
               method="POST"
               name="edit_form">
     {% else %}
@@ -28,12 +28,7 @@
 {{ wtf.render_field(form.monitor_attendance) }}
 
 <div class="mt-4">
-    {% if template %}
-        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
-    {% else %}
-        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
-    {% endif %}
+    {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 </div>
-
 </form>
 {% endblock %}

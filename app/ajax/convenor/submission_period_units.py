@@ -38,7 +38,7 @@ _name = """
 # language=jinja2
 _start_date = """
 {% if unit.start_date is not none %}
-    <div class="small">{{ unit.start_date.strftime("%a %d %b %Y") }}</div>
+    <div><i class="fas fa-calendar"></i> {{ unit.start_date.strftime("%a %d %b %Y") }}</div>
 {% else %}
     <span class="badge bg-secondary">Not set</span>
 {% endif %}
@@ -48,7 +48,7 @@ _start_date = """
 # language=jinja2
 _end_date = """
 {% if unit.end_date is not none %}
-    <div class="small">{{ unit.end_date.strftime("%a %d %b %Y") }}</div>
+    <div><i class="fas fa-calendar"></i> {{ unit.end_date.strftime("%a %d %b %Y") }}</div>
 {% else %}
     <span class="badge bg-secondary">Not set</span>
 {% endif %}
@@ -59,16 +59,16 @@ _end_date = """
 _event_templates = """
 {% set templates = unit.event_templates.all() %}
 {% if templates %}
-    <ul class="list-unstyled mb-0">
+    <div class="d-flex flex-column justify-content-start align-items-start gap-1">
         {% for t in templates %}
-            <li class="small">
-                <a class="text-decoration-none" href="{{ url_for('convenor.inspect_unit_event_templates', unit_id=unit.id, url=return_url) }}">
-                    <span class="badge bg-secondary me-1">{{ t._role_labels.get(t.target_role, "?") }}</span>{{ t.name }}
-                    <span class="text-muted">({{ t._event_labels.get(t.type, "?") }})</span>
-                </a>
-            </li>
+            <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2 small">
+                <a class="link-primary text-decoration-none" href="{{ url_for('convenor.edit_unit_event_template', template_id=t.id, url=return_url) }}">{{ t.name }}</a>                
+                <span class="badge bg-secondary">{{ t._role_labels.get(t.target_role, "?") }}</span>
+                <span class="text-muted">({{ t._event_labels.get(t.type, "?") }})</span>
+            </div>
         {% endfor %}
-    </ul>
+        <a class="btn btn-xs btn-outline-secondary small mt-2" href="{{ url_for('convenor.inspect_unit_event_templates', unit_id=unit.id, url=return_url, text="submission period units inspector") }}">Inspect events&hellip;</a>
+    </div>
 {% else %}
     <span class="text-muted small">None</span>
 {% endif %}

@@ -11019,7 +11019,7 @@ def edit_unit_event_template(template_id):
     return render_template_context(
         "convenor/supervision_events/edit_unit_event_template.html",
         form=form,
-        template=template,
+        event_template=template,
         unit=unit,
         title="Edit supervision event template",
         formtitle=f"Edit supervision event template <strong>{template.name}</strong>",

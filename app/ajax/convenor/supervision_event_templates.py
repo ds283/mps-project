@@ -34,9 +34,9 @@ _target_role = """
 # language=jinja2
 _monitor = """
 {% if event.monitor_attendance %}
-    <span class="badge bg-success"><i class="fas fa-check"></i> Yes</span>
+    <span class="text-success"><i class="fas fa-check-circle"></i> Yes</span>
 {% else %}
-    <span class="badge bg-secondary">No</span>
+    <span class="text-secondary"><i class="fas fa-times-circle"></i> No</span>
 {% endif %}
 """
 

@@ -1,0 +1,66 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import date_field %}
+{% from "datepicker.html" import import_datepicker %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_datepicker() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#datetimepicker-start').datetimepicker({
+                format: 'DD/MM/YYYY',
+                allowInputToggle: true,
+                sideBySide: true
+            });
+
+            $('#datetimepicker-end').datetimepicker({
+                format: 'DD/MM/YYYY',
+                allowInputToggle: true,
+                sideBySide: true
+            });
+
+            {% if unit %}
+                {% if unit.start_date %}
+                    $('#datetimepicker-start').datetimepicker('date', moment('{{ unit.start_date.strftime("%d/%m/%Y") }}', 'DD/MM/YYYY'));
+                {% endif %}
+
+                {% if unit.end_date %}
+                    $('#datetimepicker-end').datetimepicker('date', moment('{{ unit.end_date.strftime("%d/%m/%Y") }}', 'DD/MM/YYYY'));
+                {% endif %}
+            {% endif %}
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {{ title }}
+{% endblock %}
+
+{% block form_content %}
+    {% if unit %}
+        <form action="{{ url_for('convenor.edit_period_unit', unit_id=unit.id) }}" method="POST" name="edit_form">
+    {% else %}
+        <form action="{{ url_for('convenor.add_period_unit', period_id=period.id) }}" method="POST" name="add_form">
+    {% endif %}
+
+{{ form.hidden_tag() }}
+
+{{ wtf.render_field(form.name) }}
+{{ date_field(form.start_date, 'datetimepicker-start') }}
+{{ date_field(form.end_date, 'datetimepicker-end') }}
+
+<div class="mt-4">
+    {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+</div>
+
+</form>
+{% endblock %}

@@ -43,7 +43,7 @@ from ...models import (
     ProjectTag,
     FeedbackAsset,
     FeedbackRecipe,
-    FacultyBatchItem,
+    FacultyBatchItem, SubmissionPeriodUnit,
 )
 
 _security = LocalProxy(lambda: current_app.extensions["security"])
@@ -588,6 +588,26 @@ def unique_or_original_feedback_recipe_label(form, field):
         return
 
     return globally_unique_feedback_recipe_label(form, field)
+
+
+def globally_unique_submission_unit(period_id, form, field):
+    if (
+        db.session.query(SubmissionPeriodUnit)
+        .filter(
+            SubmissionPeriodUnit.owner_id == period_id,
+            SubmissionPeriodUnit.name == field.data,
+        )
+        .first()
+    ):
+        raise ValidationError(
+            f'A submission period unit with the name "{field.data}" already exists for this period'
+        )
+
+def unique_or_original_submission_unit(period_id, form, field):
+    if field.data == form.unit.name:
+        return
+
+    return globally_unique_submission_unit(period_id, form, field)
 
 
 def valid_json(form, field):

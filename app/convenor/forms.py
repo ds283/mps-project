@@ -28,7 +28,7 @@ from ..models import (
     SubmissionRecord,
     FacultyData,
     AlternativesPriorityMixin,
-    Project, Tenant,
+    Project, Tenant, SubmissionPeriodRecord,
 )
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, PeriodPresentationsMixin, PeriodSelectorMixinFactory
 from ..shared.forms.queries import (
@@ -45,7 +45,7 @@ from ..shared.forms.queries import (
     AllProjectClasses,
     AllResearchGroups,
 )
-from ..shared.forms.wtf_validators import NotOptionalIf, globally_unique_project
+from ..shared.forms.wtf_validators import NotOptionalIf, globally_unique_project, globally_unique_submission_unit, unique_or_original_submission_unit
 
 
 def GoLiveFormFactory(submit_label="Go live", live_and_close_label="Go live and immediately close", datebox_label="Deadline"):
@@ -561,7 +561,7 @@ def DuplicateProjectFormFactory(allowed_tenants: List[Tenant]):
 
 
 def _CustomOfferFormMixinFactory(pclass: ProjectClassConfig, year: int):
-    class CustomOfferFormMixin(Form):
+    class CustomOfferFormMixin:
         comment = TextAreaField(
             "Comment",
             render_kw={"rows": 3},
@@ -580,7 +580,7 @@ def _CustomOfferFormMixinFactory(pclass: ProjectClassConfig, year: int):
 def CreateCustomOfferFormFactory(pclass: ProjectClassConfig, year: int):
     mixin = _CustomOfferFormMixinFactory(pclass, year)
 
-    class CreateCustomOfferForm(mixin):
+    class CreateCustomOfferForm(Form, mixin):
         submit = SubmitField("Create new custom offer")
 
     return CreateCustomOfferForm
@@ -589,7 +589,38 @@ def CreateCustomOfferFormFactory(pclass: ProjectClassConfig, year: int):
 def EditCustomOfferFormFactory(pclass: ProjectClassConfig, year: int):
     mixin = _CustomOfferFormMixinFactory(pclass, year)
 
-    class EditCustomOfferForm(mixin, SaveChangesMixin):
+    class EditCustomOfferForm(Form, mixin, SaveChangesMixin):
         pass
 
     return EditCustomOfferForm
+
+
+class SubmissionPeriodUnitMixin:
+    start_date = DateTimeField("Date", format="%d/%m/%Y", validators=[InputRequired()], description="Specify the start date for this session")
+
+    end_date = DateTimeField("Date", format="%d/%m/%Y", validators=[InputRequired()], description="Specify the end date for this session")
+
+
+def _SubmissionPeriodUnitFormFactory(unique_name):
+    class SubmissionPeriodUnitForm(Form, SubmissionPeriodUnitMixin):
+        name = StringField(
+            "Name",
+            validators=[
+                InputRequired(message="Please enter a name for this unit"),
+                Length(max=DEFAULT_STRING_LENGTH),
+                unique_name,
+            ],
+            description="Provide a name for this unit (such as Week 2). The name should be unique within this submission period.",
+        )
+
+    return SubmissionPeriodUnitForm
+
+
+def AddSubmissionPeriodUnitFormFactory(period: SubmissionPeriodRecord):
+    unique_name = partial(globally_unique_submission_unit, period.id)
+    return _SubmissionPeriodUnitFormFactory(unique_name)
+
+
+def EditSubmissionPeriodUnitFormFactory(period: SubmissionPeriodRecord):
+    unique_name = partial(unique_or_original_submission_unit(), period.id)
+    return _SubmissionPeriodUnitFormFactory(unique_name)

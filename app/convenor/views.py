@@ -55,6 +55,7 @@ from .forms import (
     EditLiveProjectSupervisorsFactory,
     CreateCustomOfferFormFactory,
     EditCustomOfferFormFactory, DuplicateProjectFormFactory,
+    AddSubmissionPeriodUnitFormFactory, EditSubmissionPeriodUnitFormFactory,
 )
 from ..admin.forms import LevelSelectorForm
 from ..database import db
@@ -115,6 +116,7 @@ from ..models import (
     FeedbackRecipe,
     FeedbackReport,
     GeneratedAsset, Tenant,
+    SubmissionPeriodUnit,
 )
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.asset_tools import AssetUploadManager
@@ -10701,6 +10703,160 @@ def push_feedback(id):
     seq.apply_async(task_id=task_id)
 
     return redirect(redirect_url())
+
+
+@convenor.route("/inspect_period_units/<int:period_id>")
+@roles_accepted("faculty", "admin", "root")
+def inspect_period_units(period_id):
+    # period_id is a SubmissionPeriodRecord
+    period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
+    config: ProjectClassConfig = period.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    return render_template_context(
+        "convenor/supervision_events/inspect_period_units.html",
+        period=period,
+        config=config,
+    )
+
+
+@convenor.route("/inspect_period_units_ajax/<int:period_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def inspect_period_units_ajax(period_id):
+    """
+    AJAX endpoint for inspect_period_units view
+    """
+    # period_id is a SubmissionPeriodRecord
+    period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
+    config: ProjectClassConfig = period.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return jsonify({})
+
+    base_query = period.units.join(SubmissionPeriodUnit, SubmissionPeriodUnit.id == SubmissionPeriodUnit.id)
+
+    name = {"search": SubmissionPeriodUnit.name, "order": SubmissionPeriodUnit.name, "search_collation": "utf8_general_ci"}
+    start_date = {"order": SubmissionPeriodUnit.start_date}
+    end_date = {"order": SubmissionPeriodUnit.end_date}
+
+    columns = {"name": name, "start_date": start_date, "end_date": end_date}
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(partial(ajax.convenor.submission_period_units_data, period=period))
+
+
+@convenor.route("/add_period_unit/<int:period_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def add_period_unit(period_id):
+    # period_id is a SubmissionPeriodRecord
+    period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
+    config: ProjectClassConfig = period.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    AddPeriodUnitForm = AddSubmissionPeriodUnitFormFactory(period)
+    form = AddPeriodUnitForm(request.form)
+
+    if form.validate_on_submit():
+        unit = SubmissionPeriodUnit(
+            owner_id=period.id,
+            name=form.name.data,
+            start_date=form.start_date.data,
+            end_date=form.end_date.data,
+            creator_id=current_user.id,
+            creation_timestamp=datetime.now(),
+            last_edit_id=None,
+            last_edit_timestamp=None,
+        )
+
+        try:
+            db.session.add(unit)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not add new submission period unit due to a database error. Please contact a system administrator.", "error")
+
+        return redirect(url_for("convenor.inspect_period_units", period_id=period_id))
+
+    return render_template_context(
+        "convenor/supervision_events/edit_period_unit.html",
+        form=form,
+        period=period,
+        title="Add unit to submission period <strong>{name}</strong>".format(name=period.display_name),
+    )
+
+
+@convenor.route("/edit_period_unit/<int:unit_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_period_unit(unit_id):
+    # unit_id is a SubmissionPeriodUnit
+    unit: SubmissionPeriodUnit = SubmissionPeriodUnit.query.get_or_404(unit_id)
+    period: SubmissionPeriodRecord = unit.owner
+    config: ProjectClassConfig = period.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = url_for("convenor.inspect_period_units", period_id=period.id)
+
+    EditPeriodUnitForm = EditSubmissionPeriodUnitFormFactory(period)
+    form = EditPeriodUnitForm(obj=unit)
+
+    if form.validate_on_submit():
+        unit.name = form.name.data
+        unit.start_date = form.start_date.data
+        unit.end_date = form.end_date.data
+        unit.last_edit_id = current_user.id
+        unit.last_edit_timestamp = datetime.now()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not save changes to submission period unit due to a database error. Please contact a system administrator.", "error")
+
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/supervision_events/edit_period_unit.html",
+        form=form,
+        unit=unit,
+        title="Edit unit <strong>{name}</strong>".format(name=unit.name),
+    )
+
+
+@convenor.route("/delete_period_unit/<int:unit_id>")
+@roles_accepted("faculty", "admin", "root")
+def delete_period_unit(unit_id):
+    # unit_id is a SubmissionPeriodUnit
+    unit: SubmissionPeriodUnit = SubmissionPeriodUnit.query.get_or_404(unit_id)
+    period: SubmissionPeriodRecord = unit.owner
+    config: ProjectClassConfig = period.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    try:
+        db.session.delete(unit)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not delete submission period unit due to a database error. Please contact a system administrator.", "error")
+
+    return redirect(url_for("convenor.inspect_period_units", period_id=period.id))
 
 
 @convenor.route("/generate_feedback_reports/<int:id>")

@@ -10737,7 +10737,7 @@ def inspect_period_units_ajax(period_id):
     if not validate_is_convenor(config.project_class):
         return jsonify({})
 
-    base_query = period.units.join(SubmissionPeriodUnit, SubmissionPeriodUnit.id == SubmissionPeriodUnit.id)
+    base_query = period.units
 
     name = {"search": SubmissionPeriodUnit.name, "order": SubmissionPeriodUnit.name, "search_collation": "utf8_general_ci"}
     start_date = {"order": SubmissionPeriodUnit.start_date}
@@ -10789,7 +10789,8 @@ def add_period_unit(period_id):
         "convenor/supervision_events/edit_period_unit.html",
         form=form,
         period=period,
-        title="Add unit to submission period <strong>{name}</strong>".format(name=period.display_name),
+        title="Add submission period unit",
+        formtitle=f"Add unit to submission period <strong>{period.display_name}</strong>",
     )
 
 
@@ -10832,7 +10833,8 @@ def edit_period_unit(unit_id):
         "convenor/supervision_events/edit_period_unit.html",
         form=form,
         unit=unit,
-        title="Edit unit <strong>{name}</strong>".format(name=unit.name),
+        title="Edit submission period unit",
+        formtitle=f"Edit submission period unit <strong>{unit.name}</strong>",
     )
 
 

@@ -28,4 +28,51 @@
             </li>
         {% endif %}
     </ul>
+    <div class="mt-2 mb-2 card border-secondary p-3">
+        <div class="d-flex flex-row w-100 justify-content-between align-items-center mb-2">
+            <div class="fs-6 fw-semibold text-secondary"><i class="fas fa-calendar-week me-1"></i> Supervision units
+            </div>
+            <a href="{{ url_for('convenor.inspect_period_units', period_id=period.id) }}"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-search"></i> Inspect units&hellip;
+            </a>
+        </div>
+        {% set units = period.ordered_units.all() %}
+        {% if units|length == 0 %}
+            <span class="text-muted small">No supervision units defined for this period.</span>
+        {% else %}
+            <div class="list-group border-0 list-group-flush">
+                {% for unit in units %}
+                    <div class="list-group-item px-0 py-1">
+                        <div class="d-flex flex-row flex-wrap w-100 justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-semibold">{{ unit.name if unit.name else '(unnamed unit)' }}</span>
+                                {% if unit.start_date or unit.end_date %}
+                                    <span class="text-muted small ms-2">
+                                        {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
+                                        {% if unit.start_date and unit.end_date %}&ndash;{% endif %}
+                                        {% if unit.end_date %}{{ unit.end_date.strftime("%d %b %Y") }}{% endif %}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-xs btn-outline-secondary dropdown-toggle" type="button"
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    Actions
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item"
+                                           href="{{ url_for('convenor.edit_period_unit', unit_id=unit.id) }}">
+                                            <i class="fas fa-pencil-alt fa-fw me-1"></i> Edit&hellip;
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
 {% endmacro %}

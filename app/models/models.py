@@ -7270,6 +7270,18 @@ class SubmissionPeriodRecord(db.Model):
         return self._canvas_assignment_URL
 
     @property
+    def number_units(self) -> int:
+        return get_count(self.units)
+
+    @property
+    def has_units(self) -> bool:
+        return self.number_units > 0
+
+    @property
+    def ordered_units(self):
+        return self.units.order_by(SubmissionPeriodUnit.start_date, SubmissionPeriodUnit.end_date)
+
+    @property
     def validate(self):
         messages = []
 

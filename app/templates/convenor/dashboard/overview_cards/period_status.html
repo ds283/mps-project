@@ -13,6 +13,20 @@
                 <strong>{{ p.hand_in_date.strftime("%a %d %b %Y") }}</strong></div>
         {% endif %}
     </div>
+    <div class="d-flex flex-row justify-content-start align-items-center gap-2 mt-2">
+        {% set num_units = p.number_units %}
+        {% if num_units == 0 %}
+            <span class="text-muted small"><i class="fas fa-calendar-week"></i> No supervision units defined</span>
+        {% elif num_units == 1 %}
+            <span class="text-secondary small"><i class="fas fa-calendar-week"></i> <strong>1</strong> supervision unit</span>
+        {% else %}
+            <span class="text-secondary small"><i class="fas fa-calendar-week"></i> <strong>{{ num_units }}</strong> supervision units</span>
+        {% endif %}
+        <a href="{{ url_for('convenor.inspect_period_units', period_id=p.id) }}"
+           class="btn btn-xs btn-outline-secondary">
+            <i class="fas fa-search"></i> Inspect units&hellip;
+        </a>
+    </div>
     {% if p.feedback_open %}
         <div class="text-secondary small mt-2">
             {% if p.closed %}

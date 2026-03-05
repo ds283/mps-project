@@ -601,8 +601,10 @@ class SubmissionPeriodUnitMixin:
     end_date = DateTimeField("Date", format="%d/%m/%Y", validators=[InputRequired()], description="Specify the end date for this session")
 
 
-def _SubmissionPeriodUnitFormFactory(unique_name):
-    class SubmissionPeriodUnitForm(Form, SubmissionPeriodUnitMixin):
+def AddSubmissionPeriodUnitFormFactory(period: SubmissionPeriodRecord):
+    unique_name = partial(globally_unique_submission_unit, period.id)
+
+    class AddSubmissionPeriodUnitForm(Form, SubmissionPeriodUnitMixin):
         name = StringField(
             "Name",
             validators=[
@@ -613,14 +615,23 @@ def _SubmissionPeriodUnitFormFactory(unique_name):
             description="Provide a name for this unit (such as Week 2). The name should be unique within this submission period.",
         )
 
-    return SubmissionPeriodUnitForm
+        submit = SubmitField("Add new unit")
 
-
-def AddSubmissionPeriodUnitFormFactory(period: SubmissionPeriodRecord):
-    unique_name = partial(globally_unique_submission_unit, period.id)
-    return _SubmissionPeriodUnitFormFactory(unique_name)
+    return AddSubmissionPeriodUnitForm
 
 
 def EditSubmissionPeriodUnitFormFactory(period: SubmissionPeriodRecord):
-    unique_name = partial(unique_or_original_submission_unit(), period.id)
-    return _SubmissionPeriodUnitFormFactory(unique_name)
+    unique_name = partial(unique_or_original_submission_unit, period.id)
+
+    class EditSubmissionPeriodUnitForm(Form, SubmissionPeriodUnitMixin, SaveChangesMixin):
+        name = StringField(
+            "Name",
+            validators=[
+                InputRequired(message="Please enter a name for this unit"),
+                Length(max=DEFAULT_STRING_LENGTH),
+                unique_name,
+            ],
+            description="Provide a name for this unit (such as Week 2). The name should be unique within this submission period.",
+        )
+
+    return EditSubmissionPeriodUnitForm

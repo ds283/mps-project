@@ -597,9 +597,9 @@ def EditCustomOfferFormFactory(pclass: ProjectClassConfig, year: int):
 
 
 class SubmissionPeriodUnitMixin:
-    start_date = DateTimeField("Date", format="%d/%m/%Y", validators=[InputRequired()], description="Specify the start date for this session")
+    start_date = DateTimeField("Start date", format="%d/%m/%Y", validators=[InputRequired()], description="Specify the (inclusive) start date for this unit")
 
-    end_date = DateTimeField("Date", format="%d/%m/%Y", validators=[InputRequired()], description="Specify the end date for this session")
+    end_date = DateTimeField("End date", format="%d/%m/%Y", validators=[InputRequired()], description="Specify the (inclusive) end date for this unit")
 
 
 def AddSubmissionPeriodUnitFormFactory(period: SubmissionPeriodRecord):

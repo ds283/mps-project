@@ -146,7 +146,7 @@
                                 {% endif %}
                             </div>
                             <div class="mb-2">
-                                {{ period_status(p) }}
+                                {{ period_status(p, return_url=url_for('convenor.status', id=pclass.id), return_text='convenor dashboard') }}
                             </div>
                         </li>
                     {% else %}

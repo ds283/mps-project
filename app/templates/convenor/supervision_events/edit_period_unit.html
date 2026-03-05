@@ -47,9 +47,11 @@
 
 {% block form_content %}
     {% if unit %}
-        <form action="{{ url_for('convenor.edit_period_unit', unit_id=unit.id) }}" method="POST" name="edit_form">
+        <form action="{{ url_for('convenor.edit_period_unit', unit_id=unit.id, url=url) }}" method="POST"
+              name="edit_form">
     {% else %}
-        <form action="{{ url_for('convenor.add_period_unit', period_id=period.id) }}" method="POST" name="add_form">
+        <form action="{{ url_for('convenor.add_period_unit', period_id=period.id, url=url) }}" method="POST"
+              name="add_form">
     {% endif %}
 
 {{ form.hidden_tag() }}

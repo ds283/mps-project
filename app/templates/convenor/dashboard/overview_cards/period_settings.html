@@ -1,7 +1,7 @@
 {% from "macros.html" import submission_period_configure_button %}
 {% from "convenor/dashboard/overview_cards/period_status.html" import period_status %}
 
-{% macro period_settings(config, period) %}
+{% macro period_settings(config, period, return_url=none, return_text=none) %}
     <ul class="list-group border-0 mb-3">
         <li class="list-group-item">
             <div class="d-flex w-100 justify-content-start align-items-start mb-2">
@@ -10,7 +10,7 @@
                     {{ submission_period_configure_button(period, config, small=true, margin=false) }}
                 </div>
             </div>
-            {{ period_status(period) }}
+            {{ period_status(period, return_url=return_url, return_text=return_text) }}
         </li>
         {% if period.has_presentation %}
             <li class="list-group-item">
@@ -32,7 +32,7 @@
         <div class="d-flex flex-row w-100 justify-content-between align-items-center mb-2">
             <div class="fs-6 fw-semibold text-secondary"><i class="fas fa-calendar-week me-1"></i> Supervision units
             </div>
-            <a href="{{ url_for('convenor.inspect_period_units', period_id=period.id) }}"
+            <a href="{{ url_for('convenor.inspect_period_units', period_id=period.id, url=return_url, text=return_text) }}"
                class="btn btn-sm btn-outline-secondary">
                 <i class="fas fa-search"></i> Inspect units&hellip;
             </a>
@@ -63,7 +63,7 @@
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li>
                                         <a class="dropdown-item"
-                                           href="{{ url_for('convenor.edit_period_unit', unit_id=unit.id) }}">
+                                           href="{{ url_for('convenor.edit_period_unit', unit_id=unit.id, url=url_for('convenor.periods', id=config.pclass_id)) }}">
                                             <i class="fas fa-pencil-alt fa-fw me-1"></i> Edit&hellip;
                                         </a>
                                     </li>

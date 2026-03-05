@@ -65,7 +65,7 @@ _menu = """
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_period_unit', unit_id=unit.id, url=return_url) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit...
         </a>
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.delete_period_unit', unit_id=unit.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.delete_period_unit', unit_id=unit.id, url=return_url) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
     </div>
@@ -93,8 +93,8 @@ def _build_menu_templ() -> Template:
     return env.from_string(_menu)
 
 
-def submission_period_units_data(units: List[SubmissionPeriodUnit], period: SubmissionPeriodRecord):
-    return_url = url_for("convenor.inspect_period_units", period_id=period.id)
+def submission_period_units_data(units: List[SubmissionPeriodUnit], period: SubmissionPeriodRecord, url: str = None, text: str = None):
+    return_url = url_for("convenor.inspect_period_units", period_id=period.id, url=url, text=text)
 
     name_templ: Template = _build_name_templ()
     dates_templ: Template = _build_dates_templ()

@@ -10716,10 +10716,15 @@ def inspect_period_units(period_id):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
     return render_template_context(
         "convenor/supervision_events/inspect_period_units.html",
         period=period,
         config=config,
+        url=url,
+        text=text,
     )
 
 
@@ -10745,8 +10750,11 @@ def inspect_period_units_ajax(period_id):
 
     columns = {"name": name, "start_date": start_date, "end_date": end_date}
 
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(partial(ajax.convenor.submission_period_units_data, period=period))
+        return handler.build_payload(partial(ajax.convenor.submission_period_units_data, period=period, url=url, text=text))
 
 
 @convenor.route("/add_period_unit/<int:period_id>", methods=["GET", "POST"])
@@ -10759,6 +10767,10 @@ def add_period_unit(period_id):
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = url_for("convenor.inspect_period_units", period_id=period.id)
 
     AddPeriodUnitForm = AddSubmissionPeriodUnitFormFactory(period)
     form = AddPeriodUnitForm(request.form)
@@ -10783,7 +10795,7 @@ def add_period_unit(period_id):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             flash("Could not add new submission period unit due to a database error. Please contact a system administrator.", "error")
 
-        return redirect(url_for("convenor.inspect_period_units", period_id=period_id))
+        return redirect(url)
 
     return render_template_context(
         "convenor/supervision_events/edit_period_unit.html",
@@ -10791,6 +10803,7 @@ def add_period_unit(period_id):
         period=period,
         title="Add submission period unit",
         formtitle=f"Add unit to submission period <strong>{period.display_name}</strong>",
+        url=url,
     )
 
 
@@ -10812,6 +10825,7 @@ def edit_period_unit(unit_id):
 
     EditPeriodUnitForm = EditSubmissionPeriodUnitFormFactory(period)
     form = EditPeriodUnitForm(obj=unit)
+    form.unit = unit
 
     if form.validate_on_submit():
         unit.name = form.name.data
@@ -10835,6 +10849,7 @@ def edit_period_unit(unit_id):
         unit=unit,
         title="Edit submission period unit",
         formtitle=f"Edit submission period unit <strong>{unit.name}</strong>",
+        url=url,
     )
 
 

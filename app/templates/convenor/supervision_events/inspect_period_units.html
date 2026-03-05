@@ -16,7 +16,7 @@
                 serverSide: true, processing: true,
                 language: {{ bootstrap_spinner() }},
                 ajax: {
-                    'url': $SCRIPT_ROOT + '/convenor/inspect_period_units_ajax/{{ period.id }}',
+                    'url': $SCRIPT_ROOT + '/convenor/inspect_period_units_ajax/{{ period.id }}?url={{ url|urlencode if url else "" }}&text={{ text|urlencode if text else "" }}',
                     type: 'POST',
                     data: function (args) {
                         return {"args": JSON.stringify(args)};
@@ -67,10 +67,18 @@
 {% endblock %}
 
 {% block title %}
-    Submission period units &ndash; {{ period.display_name }}
+    Submission units &ndash; {{ period.display_name }}
 {% endblock %}
 
 {% block bodyblock %}
+    {% if url and text %}
+        <div class="top-return-link">
+            <a class="text-decoration-none" href="{{ url }}">
+                <i class="fas fa-backward"></i> Return to {{ text }}
+            </a>
+        </div>
+    {% endif %}
+
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white">
             Submission period units for <strong>{{ period.display_name }}</strong>
@@ -87,11 +95,19 @@
                 </thead>
             </table>
             <div style="text-align: center;">
-                <a href="{{ url_for('convenor.add_period_unit', period_id=period.id) }}"
+                <a href="{{ url_for('convenor.add_period_unit', period_id=period.id, url=url_for('convenor.inspect_period_units', period_id=period.id, url=url, text=text)) }}"
                    class="btn btn-secondary btn-lg">
                     <i class="fas fa-plus"></i> Add unit
                 </a>
             </div>
         </div>
     </div>
+
+    {% if url and text %}
+        <div>
+            <a class="text-decoration-none" href="{{ url }}">
+                <i class="fas fa-backward"></i> Return to {{ text }}
+            </a>
+        </div>
+    {% endif %}
 {% endblock %}

@@ -1,4 +1,4 @@
-{% macro period_status(p) %}
+{% macro period_status(p, return_url=none, return_text=none) %}
     <div class="d-flex flex-row justify-content-start align-items-center gap-3">
         {% set messages = p.messages %}
         {% if messages|length > 0 %}
@@ -22,7 +22,7 @@
         {% else %}
             <span class="text-secondary small"><i class="fas fa-calendar-week"></i> <strong>{{ num_units }}</strong> supervision units</span>
         {% endif %}
-        <a href="{{ url_for('convenor.inspect_period_units', period_id=p.id) }}"
+        <a href="{{ url_for('convenor.inspect_period_units', period_id=p.id, url=request.url, text='convenor dashboard') }}"
            class="btn btn-xs btn-outline-secondary">
             <i class="fas fa-search"></i> Inspect units&hellip;
         </a>

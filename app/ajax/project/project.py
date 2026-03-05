@@ -102,11 +102,6 @@ _name = """
 
 
 # language=jinja2
-_error_block = """
-"""
-
-
-# language=jinja2
 _owner = """
 {% if project.generic %}
     <div class="fw-semibold text-secondary">Generic</div>

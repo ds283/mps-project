@@ -46,9 +46,9 @@ from ..models import (
     LiveProject,
     FeedbackReport,
 )
-from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetCloudScratchContextManager, AssetUploadManager
 from ..shared.scratch import ScratchFileManager, ScratchGroupManager
+from ..shared.security import validate_nonce
 from ..task_queue import register_task
 
 AssetDictionary = Dict[str, AssetCloudScratchContextManager]
@@ -524,7 +524,7 @@ def register_marking_tasks(celery):
     def sanity_check_grade(role: SubmissionRole, person: User, student: User, convenor: Optional[User]):
         fail = False
 
-        label: str = role._role_string[role.role].capitalize()
+        label: str = role.role_as_string.capitalize()
         if role.grade < 0:
             fail = True
             report_error(

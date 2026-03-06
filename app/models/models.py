@@ -1468,6 +1468,14 @@ class SupervisionEventAttendanceMixin:
         ATTENDANCE_RESCHEDULED: "This meeting was rescheduled",
     }
 
+    _type_string = {
+        ATTENDANCE_ON_TIME: "Attended",
+        ATTENDANCE_LATE: "Late",
+        ATTENDANCE_NO_SHOW_NOTIFIED: "No-show",
+        ATTENDANCE_NO_SHOW_UNNOTIFIED: "No-show",
+        ATTENDANCE_RESCHEDULED: "Rescheduled",
+    }
+
 
 class AssessorPoolChoicesMixin:
     """
@@ -7419,6 +7427,22 @@ class SupervisionEventTemplate(db.Model, EditingMetadataMixin, SupervisionEventT
     monitor_attendance = db.Column(db.Boolean(), default=True)
 
     @property
+    def role_as_str(self):
+        return self._role_string.get(self.role, "Unknown")
+
+    @property
+    def short_role_as_str(self):
+        return self._role_string.get(self.role, "?")
+
+    @property
+    def event_as_str(self):
+        return self._event_string.get(self.type, "Unknown")
+
+    @property
+    def short_event_as_str(self):
+        return self._short_event_string.get(self.type, "?")
+
+    @property
     def number_events(self) -> int:
         return get_count(self.events)
 
@@ -7514,6 +7538,10 @@ class SupervisionEvent(db.Model, EditingMetadataMixin, SupervisionEventTypesMixi
 
     # reminder emails (specifically) associated with this event
     reminder_log = db.relationship("EmailLog", secondary=event_reminder_table, lazy="dynamic")
+
+    @property
+    def attendance_str(self):
+        return self._attendance_string.get(self.attendance, "Unknown")
 
 
 class EnrollmentRecord(db.Model, EditingMetadataMixin):
@@ -10980,6 +11008,10 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
         return "unknown"
 
     @property
+    def role_as_str(self):
+        return self._role_string[self.role]
+
+    @property
     def uses_supervisor_feedback(self):
         return self.submission.period.uses_supervisor_feedback
 
@@ -11122,7 +11154,7 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
                 or_(
                   and_(
                       SupervisionEvent.time == None,
-                      SubmissionPeriodUnit.end_date < now,
+                      SubmissionPeriodUnit.end_date < now.date(),
                   ),
                     and_(
                         SupervisionEvent.time != None,
@@ -11146,7 +11178,7 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
                 or_(
                     and_(
                         SupervisionEvent.time == None,
-                        SubmissionPeriodUnit.start_date > now,
+                        SubmissionPeriodUnit.start_date > now.date(),
                         ),
                     and_(
                         SupervisionEvent.time != None,
@@ -11161,14 +11193,14 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
     def current_owned_events(self, now: Optional[datetime]=None):
         if now is None:
             now = datetime.now()
-            
+
         query = (
             db.session.query(SupervisionEvent)
             .join(SubmissionPeriodUnit, SubmissionPeriodUnit.id == SupervisionEvent.unit_id)
             .filter(
                 SupervisionEvent.owner_id == self.id,
-                SubmissionPeriodUnit.start_date <= now,
-                SubmissionPeriodUnit.end_date >= now,
+                SubmissionPeriodUnit.start_date <= now.date(),
+                SubmissionPeriodUnit.end_date >= now.date(),
             )
         )
         
@@ -12379,7 +12411,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 or_(
                   and_(
                       SupervisionEvent.time == None,
-                      SubmissionPeriodUnit.end_date < now,
+                      SubmissionPeriodUnit.end_date < now.date(),
                   ),
                     and_(
                         SupervisionEvent.time != None,
@@ -12408,7 +12440,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 or_(
                     and_(
                         SupervisionEvent.time == None,
-                        SubmissionPeriodUnit.start_date > now,
+                        SubmissionPeriodUnit.start_date > now.date(),
                         ),
                     and_(
                         SupervisionEvent.time != None,
@@ -12434,8 +12466,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             .join(SubmissionPeriodUnit, SubmissionPeriodUnit.id == SupervisionEvent.unit_id)
             .filter(
                 SubmissionRole.submission_id == self.id,
-                SubmissionPeriodUnit.start_date <= now,
-                SubmissionPeriodUnit.end_date >= now,
+                SubmissionPeriodUnit.start_date <= now.date(),
+                SubmissionPeriodUnit.end_date >= now.date(),
             )
             .order_by(
                 SubmissionPeriodUnit.start_date,

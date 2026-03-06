@@ -133,8 +133,10 @@ from ..shared.context.global_context import render_template_context
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter, build_outstanding_confirmations_query
 from ..shared.conversions import is_integer
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
-from ..shared.projects import create_new_tags, get_filter_list_for_groups_and_skills, project_list_SQL_handler, project_list_in_memory_handler
-from ..shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE, QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_UNAVAILABLE
+from ..shared.projects import create_new_tags, get_filter_list_for_groups_and_skills, project_list_SQL_handler, \
+    project_list_in_memory_handler
+from ..shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE, \
+    QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_UNAVAILABLE
 from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count, clone_model
 from ..shared.utils import (
@@ -10700,6 +10702,36 @@ def push_feedback(id):
     error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
     seq = chain(init.si(task_id, tk_name), email_task.si(id, current_user.id, True, None), final.si(task_id, tk_name, current_user.id)).on_error(
+        error.si(task_id, tk_name, current_user.id)
+    )
+    seq.apply_async(task_id=task_id)
+
+    return redirect(redirect_url())
+
+
+@convenor.route('/populate_supervision_events/<int:period_id>')
+@roles_accepted("faculty", "admin", "root")
+def populate_supervision_events(period_id):
+    # period_id is a SubmissionPeriodRecord
+    period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
+    config: ProjectClassConfig = period.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    celery = current_app.extensions["celery"]
+    populate = celery.tasks["app.tasks.events.populate"]
+
+    tk_name = f'Populate supervision events for submission period "{period.display_name}" in "{config.name}"'
+    tk_description = "Populate supervision events"
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
+    final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
+    error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
+
+    seq = chain(init.si(task_id, tk_name), populate.si(task_id, period_id, current_user.id), final.si(task_id, tk_name, current_user.id)).on_error(
         error.si(task_id, tk_name, current_user.id)
     )
     seq.apply_async(task_id=task_id)

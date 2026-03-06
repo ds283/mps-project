@@ -34,7 +34,7 @@ import app.shared.cloud_object_store.bucket_types as buckets
 import app.shared.cloud_object_store.encryption_types as encryptions
 from .choices import short_academic_titles_dict
 from .config import get_AES_key
-from .defaults import DEFAULT_STRING_LENGTH, IP_LENGTH, PASSWORD_HASH_LENGTH, SERIALIZED_LAYOUT_LENGTH
+from .defaults import DEFAULT_STRING_LENGTH, IP_LENGTH, PASSWORD_HASH_LENGTH
 from ..cache import cache
 from ..database import db
 from ..shared.colours import get_text_colour
@@ -7390,7 +7390,7 @@ class SupervisionEventTemplate(db.Model, EditingMetadataMixin, SupervisionEventT
         "SubmissionPeriodUnit",
         foreign_keys=[unit_id],
         uselist=False,
-        backref=db.backref("event_templates", lazy="dynamic", cascade="all, delete, delete-orphan"),
+        backref=db.backref("templates", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
     # name of this event
@@ -7431,11 +7431,20 @@ class SupervisionEvent(db.Model, EditingMetadataMixin, SupervisionEventTypesMixi
         backref=db.backref("events", lazy="dynamic", cascade="all, delete, delete-orphan"),
     )
 
+    # parent template
+    template_id = db.Column(db.Integer(), db.ForeignKey("supervision_event_templates.id"), nullable=False)
+    template = db.relationship(
+        "SupervisionEventTemplate",
+        foreign_keys=[template_id],
+        uselist=False,
+        backref=db.backref("events", lazy="dynamic")
+    )
+
     # name of this event
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False)
 
     # time of event
-    time = db.Column(db.DateTime(), nullable=False)
+    time = db.Column(db.DateTime(), nullable=True)
 
 
     ## ATTENDEES AND TEAM
@@ -7476,8 +7485,11 @@ class SupervisionEvent(db.Model, EditingMetadataMixin, SupervisionEventTypesMixi
     # meeting summary
     meeting_summary = db.Column(db.Text())
 
-    # private notes
-    private_notes = db.Column(db.Text())
+    # private notes for faculty
+    supervision_notes = db.Column(db.Text())
+
+    # private notes for students
+    submitter_notes = db.Column(db.Text())
 
     # assets uploaded for this event
     uploaded_assets = db.relationship("SubmittedAsset", secondary=even_assets_table, lazy="dynamic", backref=db.backref("supervision_events", lazy="dynamic"))
@@ -12220,6 +12232,23 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     @property
     def has_articles(self):
         return self.article_list.first() is not None
+
+    def get_event(self, template:'SupervisionEventTemplate') -> Optional['SupervisionEvent']:
+        if not isinstance(template, SupervisionEventTemplate):
+            raise RuntimeError(f'Unknown template type "{type(template)}" passed to get_meeting()')
+
+        # find if anyone with a submission role for this record has an event matching this template
+        return (
+            db.session.query(SupervisionEvent)
+            .select_from(SubmissionRole)
+            .filter(SubmissionRole.submission_id == self.id)
+            .join(SupervisionEvent, SupervisionEvent.owner_id == SubmissionRole.id)
+            .filter(
+                SupervisionEvent.unit_id == template.unit_id,
+                SupervisionEvent.template_id == template.id,
+            )
+            .first()
+        )
 
     def _check_access_control_users(self, asset, allow_student=False):
         asset: Union[SubmittedAsset, GeneratedAsset]

@@ -240,6 +240,7 @@ def create_app():
     tasks.register_background_tasks(celery)
     tasks.register_test_tasks(celery)
     tasks.register_cloud_api_audit_tasks(celery)
+    tasks.register_supervision_event_tasks(celery)
 
     use_pyinstrument = app.config.get("PROFILE_PYINSTRUMENT")
     if use_pyinstrument:

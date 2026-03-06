@@ -2,40 +2,46 @@
 {% from "convenor/dashboard/overview_cards/period_status.html" import period_status %}
 
 {% macro period_settings(config, period, return_url=none, return_text=none) %}
-    <ul class="list-group border-0 mb-3">
-        <li class="list-group-item">
-            <div class="d-flex w-100 justify-content-start align-items-start mb-2">
-                <div class="overview-dashboard-settings align-self-start me-3 mt-1"><i class="fas fa-sliders-h fa-lg me-1"></i> Settings</div>
-                <div class="align-self-center">
-                    {{ submission_period_configure_button(period, config, small=true, margin=false) }}
-                </div>
+    <div class="mt-2 mb-2 card border-secondary p-3">
+        <div class="d-flex flex-column justify-content-start align-items-start gap-2">
+            <div class="d-flex flex-row w-100 justify-content-between align-items-center mb-2">
+                <div class="fs-6 fw-semibold text-secondary"><i class="fas fa-sliders-h fa-lg me-1"></i> Settings</div>
+                <div>{{ submission_period_configure_button(period, config, small=true, margin=false) }}</div>
             </div>
-            {{ period_status(period, return_url=return_url, return_text=return_text) }}
-        </li>
+            <div>{{ period_status(period, return_url=return_url, return_text=return_text) }}</div>
+        </div>
         {% if period.has_presentation %}
-            <li class="list-group-item">
-                <h6>Presentation assessment</h6>
-                {% set messages = period.presentation_messages %}
-                <span class="text-muted">{{ messages|join(', ') }}</span>
-            </li>
-            <li class="list-group-item">
-                <h6>Morning session</h6>
-                <span class="text-muted">{% if period.morning_session and period.morning_session|length > 0 %}{{ period.morning_session }}{% else %}Not set{% endif %}</span>
-            </li>
-            <li class="list-group-item">
-                <h6>Afternoon session</h6>
-                <span class="text-muted">{% if period.afternoon_session and period.afternoon_session|length > 0 %}{{ period.afternoon_session }}{% else %}Not set{% endif %}</span>
-            </li>
+            <ul class="list-group border-0 mt-2 mb-2">
+                <li class="list-group-item">
+                    <div class="fs-6 fw-semibold text-secondary">Presentation assessment</div>
+                    {% set messages = period.presentation_messages %}
+                    <span class="text-muted">{{ messages|join(', ') }}</span>
+                </li>
+                <li class="list-group-item">
+                    <div class="fs-6 fw-semibold text-secondary">Morning session</div>
+                    <span class="text-muted">{% if period.morning_session and period.morning_session|length > 0 %}
+                        {{ period.morning_session }}{% else %}Not set{% endif %}</span>
+                </li>
+                <li class="list-group-item">
+                    <div class="fs-6 fw-semibold text-secondary">Afternoon session</div>
+                    <span class="text-muted">{% if period.afternoon_session and period.afternoon_session|length > 0 %}
+                        {{ period.afternoon_session }}{% else %}Not set{% endif %}</span>
+                </li>
+            </ul>
         {% endif %}
-    </ul>
+    </div>
     <div class="mt-2 mb-2 card border-secondary p-3">
         <div class="d-flex flex-row w-100 justify-content-between align-items-center mb-2">
             <div class="fs-6 fw-semibold text-secondary"><i class="fas fa-calendar-week me-1"></i> Supervision units
             </div>
-            <a href="{{ url_for('convenor.inspect_period_units', period_id=period.id, url=return_url, text=return_text) }}"
-               class="btn btn-sm btn-outline-secondary">
-                <i class="fas fa-search"></i> Inspect units&hellip;
-            </a>
+            <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2">
+                <a href="{{ url_for('convenor.populate_supervision_events', period_id=period.id) }}"
+                   class="btn btn-sm btn-outline-secondary">Populate events</a>
+                <a href="{{ url_for('convenor.inspect_period_units', period_id=period.id, url=return_url, text=return_text) }}"
+                   class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-search"></i> Inspect units&hellip;
+                </a>
+            </div>
         </div>
         {% set units = period.ordered_units.all() %}
         {% if units|length == 0 %}

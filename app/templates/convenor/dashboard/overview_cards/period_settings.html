@@ -50,15 +50,27 @@
             <div class="list-group border-0 list-group-flush">
                 {% for unit in units %}
                     <div class="list-group-item px-0 py-1">
-                        <div class="d-flex flex-row flex-wrap w-100 justify-content-between align-items-center">
+                        <div class="d-flex flex-row flex-wrap w-100 justify-content-between align-items-center gap-2">
                             <div>
                                 <span class="fw-semibold">{{ unit.name if unit.name else '(unnamed unit)' }}</span>
                                 {% if unit.start_date or unit.end_date %}
-                                    <span class="text-muted small ms-2">
+                                    <span class="text-muted">
                                         {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
                                         {% if unit.start_date and unit.end_date %}&ndash;{% endif %}
                                         {% if unit.end_date %}{{ unit.end_date.strftime("%d %b %Y") }}{% endif %}
                                     </span>
+                                {% endif %}
+                                {% set num_templates = unit.number_templates %}
+                                {% if num_templates == 1 %}
+                                    <span class="text-muted small"><em>1 template</em></span>
+                                {% elif num_templates > 1 %}
+                                    <span class="text-muted small"><em>{{ num_templates }} templates</em></span>
+                                {% endif %}
+                                {% set num_events = unit.number_events %}
+                                {% if num_events == 1 %}
+                                    <span class="text-muted small"><em>1 event</em></span>
+                                {% elif num_events > 1 %}
+                                    <span class="text-muted small"><em>{{ num_events }} events</em></span>
                                 {% endif %}
                             </div>
                             <div class="dropdown">

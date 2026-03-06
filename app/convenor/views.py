@@ -10953,7 +10953,7 @@ def inspect_unit_event_templates_ajax(unit_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    templates = unit.event_templates.all()
+    templates = unit.templates.all()
 
     return jsonify(ajax.convenor.supervision_event_templates_data(templates, unit, url=url, text=text))
 

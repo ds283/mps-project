@@ -7372,6 +7372,14 @@ class SubmissionPeriodUnit(db.Model, EditingMetadataMixin):
     #  - scheduled emails
     #  - messages and notices
 
+    @property
+    def number_templates(self) -> int:
+        return get_count(self.templates)
+
+    @property
+    def number_events(self) -> int:
+        return get_count(self.events)
+
 
 class SupervisionEventTemplate(db.Model, EditingMetadataMixin, SupervisionEventTypesMixin, SubmissionRoleTypesMixin):
     """
@@ -7409,6 +7417,10 @@ class SupervisionEventTemplate(db.Model, EditingMetadataMixin, SupervisionEventT
 
     # collect attendance data for this event?
     monitor_attendance = db.Column(db.Boolean(), default=True)
+
+    @property
+    def number_events(self) -> int:
+        return get_count(self.events)
 
 
 class SupervisionEvent(db.Model, EditingMetadataMixin, SupervisionEventTypesMixin, SupervisionEventAttendanceMixin):

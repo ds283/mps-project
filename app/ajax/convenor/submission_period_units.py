@@ -13,8 +13,7 @@ from typing import List
 from flask import current_app, render_template, url_for
 from jinja2 import Template, Environment
 
-from ...models import SubmissionPeriodUnit, SubmissionPeriodRecord, SupervisionEventTemplate
-
+from ...models import SubmissionPeriodUnit, SubmissionPeriodRecord
 
 # language=jinja2
 _name = """
@@ -57,7 +56,7 @@ _end_date = """
 
 # language=jinja2
 _event_templates = """
-{% set templates = unit.event_templates.all() %}
+{% set templates = unit.templates.all() %}
 {% if templates %}
     <div class="d-flex flex-column justify-content-start align-items-start gap-1">
         {% for t in templates %}

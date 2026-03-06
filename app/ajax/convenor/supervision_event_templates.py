@@ -15,13 +15,18 @@ from jinja2 import Template, Environment
 
 from ...models import SupervisionEventTemplate, SubmissionPeriodUnit
 
-
 # language=jinja2
 _name = """
 <div class="fw-semibold">{{ event.name }}</div>
 <div class="small text-muted">
     {{ event_label }}
 </div>
+{% set num_events = event.number_events %}
+{% if num_events == 1 %}
+    <div class="small text-muted mt-1">1 event</div>
+{% elif num_events > 1 %}
+    <div class="small text-muted mt-1">{{ num_events }} events</div>
+{% endif %}
 """
 
 

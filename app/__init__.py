@@ -433,7 +433,7 @@ def create_app():
 
     from .projecthub import projecthub as projecthub_blueprint
 
-    app.register_blueprint(projecthub_blueprint, url_prefix="/projecthub")
+    app.register_blueprint(projecthub_blueprint, url_prefix="/hub")
 
     from .tenants import tenants as tenants_blueprint
 

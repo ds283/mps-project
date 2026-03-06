@@ -11094,6 +11094,22 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
 
         return True
 
+    @property
+    def number_events_owned(self) -> int:
+        return get_count(self.events_owner)
+
+    @property
+    def events_owned(self) -> List['SupervisionEvent']:
+        return self.events_owner.all()
+
+    @property
+    def number_events_attending(self) -> int:
+        return get_count(self.events_team)
+
+    @property
+    def events_attending(self) -> List['SupervisionEvent']:
+        return self.events_team.all()
+
 
 @listens_for(SubmissionRole, "before_update")
 def _SubmissionRole_update_handler(mapper, connection, target):

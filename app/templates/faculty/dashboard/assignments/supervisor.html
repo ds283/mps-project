@@ -55,6 +55,13 @@
                                     <a class="text-decoration-none" href="{{ url_for('faculty.past_feedback', student_id=rec.owner.student.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">View previous feedback...</a>
                                 </div>
                             {% endif %}
+                            {% set num_events_owned = my_role.number_events_owned %}
+                            {% if num_events_owned == 1 %}
+                                <div class="text-muted small mt-1"><em>1 supervision event</em></div>
+                            {% elif num_events_owned > 1 %}
+                                <div class="text-muted small mt-1"><em>{{ num_events_owned }} supervision events</em>
+                                </div>
+                            {% endif %}
                         </td>
                         {% if period.config.display_marker %}
                             <td>

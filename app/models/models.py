@@ -11110,6 +11110,94 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
     def events_attending(self) -> List['SupervisionEvent']:
         return self.events_team.all()
 
+    def past_owned_events(self, now: Optional[datetime]=None) -> List['SupervisionEvent']:
+        if now is None:
+            now = datetime.now()
+
+        query = (
+            db.session.query(SupervisionEvent)
+            .join(SubmissionPeriodUnit, SubmissionPeriodUnit.id == SupervisionEvent.unit_id)
+            .filter(
+                SupervisionEvent.owner_id == self.id,
+                or_(
+                  and_(
+                      SupervisionEvent.time == None,
+                      SubmissionPeriodUnit.end_date < now,
+                  ),
+                    and_(
+                        SupervisionEvent.time != None,
+                        SupervisionEvent.time < now
+                    )
+                )
+            )
+        )
+
+        return query
+
+    def future_owned_events(self, now: Optional[datetime]=None) -> List['SupervisionEvent']:
+        if now is None:
+            now = datetime.now()
+
+        query = (
+            db.session.query(SupervisionEvent)
+            .join(SubmissionPeriodUnit, SubmissionPeriodUnit.id == SupervisionEvent.unit_id)
+            .filter(
+                SupervisionEvent.owner_id == self.id,
+                or_(
+                    and_(
+                        SupervisionEvent.time == None,
+                        SubmissionPeriodUnit.start_date > now,
+                        ),
+                    and_(
+                        SupervisionEvent.time != None,
+                        SupervisionEvent.time > now
+                    )
+                )
+            )
+        )
+
+        return query
+    
+    def current_owned_events(self, now: Optional[datetime]=None) -> List['SupervisionEvent']:
+        if now is None:
+            now = datetime.now()
+            
+        query = (
+            db.session.query(SupervisionEvent)
+            .join(SubmissionPeriodUnit, SubmissionPeriodUnit.id == SupervisionEvent.unit_id)
+            .filter(
+                SupervisionEvent.owner_id == self.id,
+                SubmissionPeriodUnit.start_date <= now,
+                SubmissionPeriodUnit.end_date >= now,
+            )
+        )
+        
+        return query()
+
+    def number_owned_events_with_attendance(self, now: Optional[datetime]=None) -> int:
+        if now is None:
+            now = datetime.now()
+
+        query = self.past_owned_events(now)
+        query = query.filter(
+            SupervisionEvent.monitor_attendance == True,
+            SupervisionEvent.attendance != None
+        )
+        return get_count(query)
+
+
+    def number_owned_events_missing_attendance(self, now: Optional[datetime]=None) -> int:
+        if now is None:
+            now = datetime.now()
+
+        query = self.past_owned_events(now)
+        query = query.filter(
+            SupervisionEvent.monitor_attendance == True,
+            SupervisionEvent.attendance == None
+        )
+        return get_count(query)
+
+
 
 @listens_for(SubmissionRole, "before_update")
 def _SubmissionRole_update_handler(mapper, connection, target):

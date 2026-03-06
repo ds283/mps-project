@@ -30,38 +30,67 @@
                     {% set sub = rec.owner %}
                     <tr>
                         <td>
-                            {% if period.canvas_enabled and sub is not none %}
-                                {% if sub.canvas_user_id is not none %}
-                                    <i class="fas fa-circle me-1 text-success" data-bs-toggle="tooltip"
-                                       title="This student is enrolled on the linked Canvas site"></i>
-                                {% elif sub.canvas_missing %}
-                                    <i class="fas fa-circle me-1 text-danger" data-bs-toggle="tooltip"
-                                       title="This student is not enrolled on the linked Canvas site"></i>
-                                {% else %}
-                                    <i class="fas fa-unlink me-1" data-bs-toggle="tooltip"
-                                       title="Information associated with this student for the linked Canvas site has not yet been synchronized"></i>
+                            <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+                                <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2">
+                                    {% if period.canvas_enabled and sub is not none %}
+                                        {% if sub.canvas_user_id is not none %}
+                                            <i class="fas fa-circle me-1 text-success" data-bs-toggle="tooltip"
+                                               title="This student is enrolled on the linked Canvas site"></i>
+                                        {% elif sub.canvas_missing %}
+                                            <i class="fas fa-circle me-1 text-danger" data-bs-toggle="tooltip"
+                                               title="This student is not enrolled on the linked Canvas site"></i>
+                                        {% else %}
+                                            <i class="fas fa-unlink me-1" data-bs-toggle="tooltip"
+                                               title="Information associated with this student for the linked Canvas site has not yet been synchronized"></i>
+                                        {% endif %}
+                                    {% endif %}
+                                    <a class="text-decoration-none"
+                                       href="mailto:{{ rec.owner.student.user.email }}">{{ unformatted_label(rec.student_identifier) }}</a>
+                                </div>
+                                <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2">
+                                    {{ simple_label(rec.owner.student.cohort_label) }}
+                                    {{ simple_label(rec.owner.student.programme.short_label) }}
+                                    {% if not rec.owner.published %}
+                                        <span class="badge bg-warning tex t-dark">Not published</span>
+                                    {% endif %}
+                                </div>
+                                {% if rec.owner.student.has_previous_submissions %}
+                                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2 small">
+                                        <a class="text-decoration-none"
+                                           href="{{ url_for('faculty.past_feedback', student_id=rec.owner.student.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">View
+                                            previous feedback...</a>
+                                    </div>
                                 {% endif %}
-                            {% endif %}
-                            <a class="text-decoration-none" href="mailto:{{ rec.owner.student.user.email }}">{{ unformatted_label(rec.student_identifier) }}</a>
-                            <div class="pt-2">
-                                {{ simple_label(rec.owner.student.cohort_label) }}
-                                {{ simple_label(rec.owner.student.programme.short_label) }}
-                                {% if not rec.owner.published %}
-                                    <span class="badge bg-warning tex t-dark">Not published</span>
+                                {% set num_events_owned = my_role.number_events_owned %}
+                                {% if num_events_owned > 0 %}
+                                    <div class="d-flex flex-column flex-wrap justify-content-start align-items-start gap-1 small">
+                                        {% if num_events_owned == 1 %}
+                                            <div class="text-muted"><em>1 supervision event</em></div>
+                                        {% elif num_events_owned > 1 %}
+                                            <div class="text-muted"><em>{{ num_events_owned }} supervision events</em>
+                                            </div>
+                                        {% endif %}
+                                        {% set has_attendance = my_role.number_owned_events_with_attendance() %}
+                                        {% set missing_attendance = my_role.number_owned_events_missing_attendance() %}
+                                        {% if has_attendance > 0 %}
+                                            {% if has_attendance == 1 %}
+                                                <div class="text-success"><em>Attendance recorded for 1 event</em></div>
+                                            {% else %}
+                                                <div class="text-success"><em>Attendance recorded
+                                                    for {{ has_attendance }} events</em></div>
+                                            {% endif %}
+                                        {% endif %}
+                                        {% if missing_attendance > 0 %}
+                                            {% if missing_attendance == 1 %}
+                                                <div class="text-danger"><em>Attendance required for 1 event</em></div>
+                                            {% else %}
+                                                <div class="text-danger"><em>Attendance required
+                                                    for {{ missing_attendance }} events</em></div>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
                                 {% endif %}
                             </div>
-                            {% if rec.owner.student.has_previous_submissions %}
-                                <div class="pt-2 small">
-                                    <a class="text-decoration-none" href="{{ url_for('faculty.past_feedback', student_id=rec.owner.student.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">View previous feedback...</a>
-                                </div>
-                            {% endif %}
-                            {% set num_events_owned = my_role.number_events_owned %}
-                            {% if num_events_owned == 1 %}
-                                <div class="text-muted small mt-1"><em>1 supervision event</em></div>
-                            {% elif num_events_owned > 1 %}
-                                <div class="text-muted small mt-1"><em>{{ num_events_owned }} supervision events</em>
-                                </div>
-                            {% endif %}
                         </td>
                         {% if period.config.display_marker %}
                             <td>

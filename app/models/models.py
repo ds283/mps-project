@@ -11110,7 +11110,7 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
     def events_attending(self) -> List['SupervisionEvent']:
         return self.events_team.all()
 
-    def past_owned_events(self, now: Optional[datetime]=None) -> List['SupervisionEvent']:
+    def past_owned_events(self, now: Optional[datetime]=None):
         if now is None:
             now = datetime.now()
 
@@ -11134,7 +11134,7 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
 
         return query
 
-    def future_owned_events(self, now: Optional[datetime]=None) -> List['SupervisionEvent']:
+    def future_owned_events(self, now: Optional[datetime]=None):
         if now is None:
             now = datetime.now()
 
@@ -11158,7 +11158,7 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
 
         return query
     
-    def current_owned_events(self, now: Optional[datetime]=None) -> List['SupervisionEvent']:
+    def current_owned_events(self, now: Optional[datetime]=None):
         if now is None:
             now = datetime.now()
             
@@ -11172,7 +11172,7 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
             )
         )
         
-        return query()
+        return query
 
     def number_owned_events_with_attendance(self, now: Optional[datetime]=None) -> int:
         if now is None:
@@ -12365,6 +12365,85 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             )
             .first()
         )
+
+    def get_ordered_past_events(self, now: Optional[datetime]=None):
+        if now is None:
+            now = datetime.now()
+
+        query = (
+            db.session.query(SupervisionEvent)
+            .join(SubmissionRole, SubmissionRole.id == SupervisionEvent.owner_id)
+            .join(SubmissionPeriodUnit, SubmissionPeriodUnit.id == SupervisionEvent.unit_id)
+            .filter(
+                SubmissionRole.submission_id == self.id,
+                or_(
+                  and_(
+                      SupervisionEvent.time == None,
+                      SubmissionPeriodUnit.end_date < now,
+                  ),
+                    and_(
+                        SupervisionEvent.time != None,
+                        SupervisionEvent.time < now
+                    )
+                ),
+            )
+            .order_by(
+                SubmissionPeriodUnit.end_date.desc(),
+                SupervisionEvent.time.desc(),
+            )
+        )
+
+        return query
+
+    def get_ordered_future_events(self, now: Optional[datetime]=None):
+        if now is None:
+            now = datetime.now()
+
+        query = (
+            db.session.query(SupervisionEvent)
+            .join(SubmissionRole, SubmissionRole.id == SupervisionEvent.owner_id)
+            .join(SubmissionPeriodUnit, SubmissionPeriodUnit.id == SupervisionEvent.unit_id)
+            .filter(
+                SubmissionRole.submission_id == self.id,
+                or_(
+                    and_(
+                        SupervisionEvent.time == None,
+                        SubmissionPeriodUnit.start_date > now,
+                        ),
+                    and_(
+                        SupervisionEvent.time != None,
+                        SupervisionEvent.time > now
+                    )
+                ),
+            )
+            .order_by(
+                SubmissionPeriodUnit.start_date,
+                SupervisionEvent.time,
+            )
+        )
+
+        return query
+
+    def get_ordered_current_events(self, now: Optional[datetime]=None):
+        if now is None:
+            now = datetime.now()
+
+        query = (
+            db.session.query(SupervisionEvent)
+            .join(SubmissionRole, SubmissionRole.id == SupervisionEvent.owner_id)
+            .join(SubmissionPeriodUnit, SubmissionPeriodUnit.id == SupervisionEvent.unit_id)
+            .filter(
+                SubmissionRole.submission_id == self.id,
+                SubmissionPeriodUnit.start_date <= now,
+                SubmissionPeriodUnit.end_date >= now,
+            )
+            .order_by(
+                SubmissionPeriodUnit.start_date,
+                SupervisionEvent.time,
+            )
+        )
+
+        return query
 
     def _check_access_control_users(self, asset, allow_student=False):
         asset: Union[SubmittedAsset, GeneratedAsset]

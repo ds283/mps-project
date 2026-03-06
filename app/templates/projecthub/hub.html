@@ -7,6 +7,9 @@
 {% from "projecthub/resources.html" import resources_widget %}
 {% from "projecthub/articles.html" import articles_widget %}
 
+{% macro format_supervision_event(event) %}
+{% endmacro %}
+
 {% block scripts %}
     {{ super() }}
     {{ import_bokeh() }}
@@ -158,6 +161,9 @@
                 </div>
                 <hr class="intro-divider mb-5">
             {% endif %}
+
+    {% set current_events = record.get_ordered_current_events() %}
+    {% set past_events = record.get_ordered_past_events() %}
 
     {# Populate dashboard widgets #}
     {#        <div class="mt-3 card border-secondary">#}

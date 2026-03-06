@@ -11054,7 +11054,7 @@ def edit_unit_event_template(template_id):
         event_template=template,
         unit=unit,
         title="Edit supervision event template",
-        formtitle=f"Edit supervision event template <strong>{template.name}</strong>",
+        formtitle=f"Edit supervision event template <strong>{template.name}</strong> in unit <strong>{unit.name}</strong>",
         url=url,
     )
 

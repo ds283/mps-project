@@ -131,14 +131,14 @@
                                     </div>
                                     <div class="d-flex flex-row justify-content-end align-items-start">
                                         <div class="btn-group">
-                                            {#                                            <a class="btn btn-outline-primary btn-sm" href="{{ url_for('projecthub.hub', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}">Project page</a>#}
+                                            {#                                            <a class="btn btn-outline-primary btn-sm" href="{{ url_for('hub.hub', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}">Project page</a>#}
                                             <div class="btn-group">
                                                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle"
                                                         type="button" data-bs-toggle="dropdown">
                                                     Actions
                                                 </button>
                                                 <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-                                                    {#                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('projecthub.hub', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fab fa-hubspot fa-fw"></i> Project page...</a>#}
+                                                    {#                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('hub.hub', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i class="fab fa-hubspot fa-fw"></i> Project page...</a>#}
                                                     <a class="dropdown-item d-flex gap-2"
                                                        href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}"><i
                                                             class="fas fa-file fa-fw"></i> Manage documents

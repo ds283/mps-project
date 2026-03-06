@@ -110,7 +110,7 @@
                     <div class="col-12">
                         <div class="mt-2 mb-2">
                             <a class="btn btn-sm btn-outline-primary"
-                               href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('projecthub.hub', subid=record.id), text='project hub') }}">
+                               href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('hub.hub', subid=record.id), text='project hub') }}">
                                 <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
                             </a>
                         </div>
@@ -150,7 +150,7 @@
                     <div class="col-12">
                         <div class="mt-2 mb-2">
                             <a class="btn btn-sm btn-outline-primary"
-                               href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('projecthub.hub', subid=record.id), text='project hub') }}">
+                               href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('hub.hub', subid=record.id), text='project hub') }}">
                                 <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
                             </a>
                         </div>

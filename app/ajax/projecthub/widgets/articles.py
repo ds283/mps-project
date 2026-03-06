@@ -14,9 +14,8 @@ from flask import render_template_string
 
 from ....models import FormattedArticle
 
-
 _title = """
-<a class="text-decoration-none" href="{{ url_for('projecthub.show_formatted_article', aid=a.id, url=url, text=text) }}">{{ a.title }}</a>
+<a class="text-decoration-none" href="{{ url_for('hub.show_formatted_article', aid=a.id, url=url, text=text) }}">{{ a.title }}</a>
 """
 
 

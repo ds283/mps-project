@@ -12,8 +12,9 @@
 from flask_security.forms import Form
 from wtforms import SubmitField, StringField, TextAreaField, BooleanField, DateTimeField
 from wtforms.validators import InputRequired, Length, Optional
+from wtforms_alchemy import QuerySelectMultipleField
 
-from ..models import DEFAULT_STRING_LENGTH
+from ..models import DEFAULT_STRING_LENGTH, SubmissionRole
 from ..shared.forms.mixins import SaveChangesMixin
 
 
@@ -64,3 +65,44 @@ class SupervisionNotesForm(Form):
     )
 
     submit = SubmitField("Save changes")
+
+
+def _build_supervisor_role_label(role: SubmissionRole) -> str:
+    """Return a human-readable label for a SubmissionRole used in the team selector."""
+    if role.user is not None:
+        return f"{role.user.name} ({role.role_as_str})"
+    return f"Unknown user ({role.role_as_str})"
+
+
+def build_event_team_form(event):
+    """
+    Factory that returns an EventTeamForm class whose query_factory is bound to the
+    SubmissionRole instances eligible to appear in the team for *event*.
+
+    Eligible roles are those attached to the parent SubmissionRecord with
+    ROLE_SUPERVISOR or ROLE_RESPONSIBLE_SUPERVISOR, excluding the event owner.
+    """
+    from ..models import SubmissionRecord
+
+    owner_id = event.owner_id
+    record: SubmissionRecord = event.sub_record
+
+    def _query_factory():
+        return [
+            role
+            for role in record.supervisor_roles
+            if role.id != owner_id
+        ]
+
+    class EventTeamForm(Form):
+        team = QuerySelectMultipleField(
+            "Attending supervisors",
+            query_factory=_query_factory,
+            get_label=_build_supervisor_role_label,
+            validators=[Optional()],
+            description="Select the additional supervisors (other than the event owner) who attended this meeting.",
+        )
+
+        submit = SubmitField("Save changes")
+
+    return EventTeamForm

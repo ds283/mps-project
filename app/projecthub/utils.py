@@ -36,11 +36,13 @@ def validate_project_hub(record: SubmissionRecord, user: User, message=False):
     if user.has_role("office") or user.has_role("moderator") or user.has_role("exam_board") or user.has_role("external_examiner"):
         return True
 
-    # supervisors, markers can always look
+    # supervisors, markers, moderators, exam board members, and external examiners can always look
     project: LiveProject = record.project
-    if user.has_role("faculty") or user.has_role("supervisor"):
-        if project.owner_id == user.id or record.marker_id == user.id:
-            return True
+    if user.has_role("faculty"):
+        for role in record.roles:
+            role: SubmissionRole
+            if role.user_id == user.id and role.role in [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR, SubmissionRole.ROLE_MARKER, SubmissionRole.ROLE_EXAM_BOARD, SubmissionRole.ROLE_EXTERNAL_EXAMINER, SubmissionRole.ROLE_MODERATOR]:
+                return True
 
     # project convenors can look
     owner: SubmittingStudent = record.owner
@@ -54,7 +56,7 @@ def validate_project_hub(record: SubmissionRecord, user: User, message=False):
         suser: User = sd.user
         if project is not None:
             flash(
-                f'You are not currently authorized to view the project hub for student "{suser.name}" (project "{project.title}")',
+                f'You are not currently authorized to view the project hub for student "{suser.name}" (project "{project.name}")',
                 "info",
             )
         else:

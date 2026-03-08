@@ -24,7 +24,7 @@ from sqlalchemy.sql import func
 
 import app.ajax as ajax
 from . import projecthub
-from .forms import AddFormatterArticleForm, EditFormattedArticleForm, MeetingSummaryForm, SupervisionNotesForm
+from .forms import AddFormatterArticleForm, EditFormattedArticleForm, MeetingSummaryForm, SupervisionNotesForm, build_event_team_form
 from .utils import validate_project_hub, validate_set_attendance
 from ..database import db
 from ..models import (
@@ -38,7 +38,7 @@ from ..models import (
     ConvenorSubmitterArticle,
     FormattedArticle,
     ProjectSubmitterArticle,
-    User, SupervisionEvent,
+    User, SupervisionEvent, SubmissionRole,
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
@@ -438,12 +438,17 @@ def event_details(event_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
+    # Only show the team-edit button when there is more than one supervisor role on the record
+    # (i.e. there is at least one eligible non-owner team member)
+    num_supervisor_roles = len(record.supervisor_roles)
+
     return render_template_context(
         "projecthub/event/event_details.html",
         event=event,
         record=record,
         url=url,
         text=text,
+        num_supervisor_roles=num_supervisor_roles,
         edit_summary_url=url_for(
             "projecthub.edit_meeting_summary",
             event_id=event_id,
@@ -456,6 +461,71 @@ def event_details(event_id):
             url=request.url,
             text="meeting summary",
         ),
+        edit_team_url=url_for(
+            "projecthub.edit_event_team",
+            event_id=event_id,
+            url=request.url,
+            text="event details",
+        ),
+    )
+
+
+@projecthub.route("/edit_event_team/<int:event_id>", methods=["GET", "POST"])
+@roles_accepted("root", "admin", "faculty", "office")
+def edit_event_team(event_id):
+    event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
+    record: SubmissionRecord = event.sub_record
+
+    if not validate_project_hub(record, current_user, message=True):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    # Build a form class whose query is scoped to this event's eligible supervisors
+    EventTeamForm = build_event_team_form(event)
+
+    # Pre-populate the multi-select with the current team members
+    form = EventTeamForm(obj=event)
+
+    if form.validate_on_submit():
+        # Replace the team relationship with the newly selected roles.
+        # We must not include the owner in the team list.
+        selected_roles = form.team.data or []
+        # Guard: silently drop the owner if somehow included
+        new_team = [r for r in selected_roles if r.id != event.owner_id]
+
+        try:
+            # Clear existing team and replace
+            current_team = event.team.all()
+            for role in current_team:
+                event.team.remove(role)
+            for role in new_team:
+                event.team.append(role)
+            db.session.commit()
+            flash(f'Supervision team for event "{event.name}" has been updated.', "success")
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash(
+                "Could not save changes to the supervision team because of a database error. "
+                "Please contact a system administrator.",
+                "error",
+            )
+
+        if url is not None:
+            return redirect(url)
+
+        return redirect(url_for("projecthub.event_details", event_id=event_id))
+
+    return render_template_context(
+        "projecthub/event/edit_event_team.html",
+        form=form,
+        event=event,
+        record=record,
+        url=url,
+        text=text,
+        action_url=url_for("projecthub.edit_event_team", event_id=event_id, url=url, text=text),
     )
 
 

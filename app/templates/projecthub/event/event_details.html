@@ -74,6 +74,49 @@
                 </div>
             {% endif %}
 
+            {# ── Supervision team attendees (only shown when there are multiple supervisors) ── #}
+            {% if num_supervisor_roles > 1 %}
+                {% set team_list = event.team.all() %}
+                <div class="card mt-3 mb-3 border-info">
+                    <div class="card-header d-flex flex-row justify-content-between align-items-center bg-light">
+                        <span class="fw-semibold">
+                            <i class="fas fa-user-friends"></i> Supervision team attendees
+                        </span>
+                        <a class="btn btn-sm btn-secondary" href="{{ edit_team_url }}">
+                            <i class="fas fa-pencil-alt"></i> Edit attendees
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {# Always show the owner #}
+                        <ul class="list-unstyled mb-0">
+                            {% if event.owner and event.owner.user %}
+                                <li class="mb-1">
+                                    <i class="fas fa-user-tie text-primary me-1"></i>
+                                    <strong>{{ event.owner.user.name }}</strong>
+                                    <span class="badge bg-primary ms-1">{{ event.owner.role_as_str }}</span>
+                                    <span class="text-muted small ms-1">(event owner)</span>
+                                </li>
+                            {% endif %}
+                            {# Additional team members #}
+                            {% for role in team_list %}
+                                {% if role.user %}
+                                    <li class="mb-1">
+                                        <i class="fas fa-user text-secondary me-1"></i>
+                                        {{ role.user.name }}
+                                        <span class="badge bg-secondary ms-1">{{ role.role_as_str }}</span>
+                                    </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="text-muted small fst-italic">
+                                    No additional team members are attending this event.
+                                    <a href="{{ edit_team_url }}">Add some now.</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            {% endif %}
+
             {# ── Meeting summary ── #}
             <div class="card mt-3 mb-3 border-primary">
                 <div class="card-header d-flex flex-row justify-content-between align-items-center bg-light">

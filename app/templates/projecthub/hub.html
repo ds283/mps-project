@@ -7,37 +7,7 @@
 {% from "projecthub/resources.html" import resources_widget %}
 {% from "projecthub/articles.html" import articles_widget %}
 
-{% macro format_supervision_event(event, past_event=false, show_attendance=true) %}
-    {% set unit = event.unit %}
-    {% set template = event.template %}
-    <div class="d-flex flex-column justify-content-start align-items-start gap-2">
-        <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline gap-2">
-            <div class="{% if past_event %}fs-5{% else %}fs-4 fw-semibold{% endif %}">{{ event.name }}</div>
-            {% if past_event %}
-                <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
-                    <div class="text-muted">{{ unit.name }}</div>
-                    <span class="text-muted">
-                        {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
-                        {% if unit.start_date and unit.end_date %}&ndash;{% endif %}
-                        {% if unit.end_date %}{{ unit.end_date.strftime("%d %b %Y") }}{% endif %}
-                    </span>
-                </div>
-            {% endif %}
-        </div>
-        {% if event.time %}
-            <div class="text-primary fs-5">{{ event.time.strftime("%A %d %b %Y %H:%M:%S") }}</div>
-        {% endif %}
-        {% if show_attendance and is_faculty and event.monitor_attendance %}
-            {% if event.attendance %}
-                <div class="text-primary">{{ event.attendance_str }}</div>
-            {% else %}
-                <div class="text-danger"><i class="fas fa-exclamation-circle"></i> Attendance not recorded</div>
-            {% endif %}
-        {% endif %}
-    </div>
-{% endmacro %}
-
-{% macro format_current_submission_unit(unit) %}
+{% macro current_supervision_event_header(unit) %}
     <div class="d-flex flex-row justify-content-start align-items-baseline gap-4">
         <div class="fs-2 text-primary">{{ unit.name }}</div>
         <span class="text-muted">
@@ -45,6 +15,63 @@
             {% if unit.start_date and unit.end_date %}&ndash;{% endif %}
             {% if unit.end_date %}{{ unit.end_date.strftime("%d %b %Y") }}{% endif %}
         </span>
+    </div>
+{% endmacro %}
+
+{% macro past_supervision_event_header(event) %}
+    {% set unit = event.unit %}
+    <div class="d-flex flex-row flex-weap justify-content-start align-items-baseline gap-2">
+        <i class="fas fa-calendar"></i>
+        <span class="text-muted">
+            {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
+            {% if unit.start_date and unit.end_date %}&ndash;{% endif %}
+            {% if unit.end_date %}{{ unit.end_date.strftime("%d %b %Y") }}{% endif %}
+        </span>
+        <div class="text-muted">{{ unit.name }}</div>
+    </div>
+{% endmacro %}
+
+{% macro attendance_dropdown(btn_label, event) %}
+    <div class="btn-group dropdown-menu-right" role="group">
+        <button class="btn btn-sm btn-outline-secondary">
+            {{ btn_label }}
+        </button>
+        <button type="button" class="btn btn-sm btn-secondary dropdown-toggle dropdown-toggle-split"
+                data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
+            <span class="sr-only">Toggle Dropdown</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end small">
+            {% for value, label in event.attendance_menu %}
+                <a class="dropdown-item d-flex gap-2 small"
+                   href="{{ url_for('projecthub.set_attendance', event_id=event.id, attendance=value) }}">
+                    {{ label }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro format_supervision_event(event, past_event=false, show_attendance=true) %}
+    {% set unit = event.unit %}
+    {% set template = event.template %}
+    <div class="d-flex flex-column justify-content-start align-items-start gap-2">
+        <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline gap-2">
+            <div class="{% if past_event %}fs-5{% else %}fs-4 fw-semibold{% endif %}"><i
+                    class="fas fa-users"></i> {{ event.name }}</div>
+        </div>
+        {% if event.time %}
+            <div class="text-primary fs-5">{{ event.time.strftime("%A %d %b %Y %H:%M:%S") }}</div>
+        {% endif %}
+        {% if show_attendance and is_faculty and event.monitor_attendance %}
+            <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline gap-2">
+                {% if event.attendance is none %}
+                    <div class="text-danger"><i class="fas fa-exclamation-circle"></i> Attendance not recorded</div>
+                    {{ attendance_dropdown("Set attendance...", event) }}
+                {% else %}
+                    {{ attendance_dropdown(event.attendance_str, event) }}
+                {% endif %}
+            </div>
+        {% endif %}
     </div>
 {% endmacro %}
 
@@ -151,7 +178,7 @@
                     <div class="col-12">
                         <div class="mt-2 mb-2">
                             <a class="btn btn-sm btn-outline-primary"
-                               href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('hub.hub', subid=record.id), text='project hub') }}">
+                               href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('projecthub.hub', subid=record.id), text='project hub') }}">
                                 <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
                             </a>
                         </div>
@@ -191,7 +218,7 @@
                     <div class="col-12">
                         <div class="mt-2 mb-2">
                             <a class="btn btn-sm btn-outline-primary"
-                               href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('hub.hub', subid=record.id), text='project hub') }}">
+                               href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('projecthub.hub', subid=record.id), text='project hub') }}">
                                 <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
                             </a>
                         </div>
@@ -208,7 +235,7 @@
             {% set unit = current_events[0].unit %}
             <div class="mt-3 mb-3 card border-primary">
                 <div class="card-body">
-                    {{ format_current_submission_unit(unit) }}
+                    {{ current_supervision_event_header(unit) }}
                     <hr class="intro-divider">
                     <div class="mt-3 d-flex flex-column justify-content-start align-items-start gap-4">
                         {% for event in current_events %}
@@ -225,6 +252,7 @@
             <div class="fs-4 text-dark mb-3">Past events</div>
             {% for event in past_events %}
                 <div class="card card-body bg-light mt-2 mb-2 border-secondary">
+                    {{ past_supervision_event_header(event) }}
                     {{ format_supervision_event(event, past_event=true) }}
                 </div>
             {% endfor %}

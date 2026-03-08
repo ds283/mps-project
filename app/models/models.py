@@ -1457,10 +1457,10 @@ class SupervisionEventAttendanceMixin:
     ATTENDANCE_NO_SHOW_UNNOTIFIED = 3
     ATTENDANCE_RESCHEDULED = 4
 
-    _MIN_TYPE = ATTENDANCE_ON_TIME
-    _MAX_TYPE = ATTENDANCE_RESCHEDULED
+    _MIN_ATTENDANCE = ATTENDANCE_ON_TIME
+    _MAX_ATTANDANCE = ATTENDANCE_RESCHEDULED
 
-    _type_labels = {
+    _attendance_labels = {
         ATTENDANCE_ON_TIME: "The meeting started on time",
         ATTENDANCE_LATE: "The meeting started late",
         ATTENDANCE_NO_SHOW_NOTIFIED: "The student did not attend, but I was notified in advance",
@@ -1468,13 +1468,28 @@ class SupervisionEventAttendanceMixin:
         ATTENDANCE_RESCHEDULED: "This meeting was rescheduled",
     }
 
-    _type_string = {
-        ATTENDANCE_ON_TIME: "Attended",
-        ATTENDANCE_LATE: "Late",
-        ATTENDANCE_NO_SHOW_NOTIFIED: "No-show",
-        ATTENDANCE_NO_SHOW_UNNOTIFIED: "No-show",
+    _attendance_string = {
+        ATTENDANCE_ON_TIME: "Started on time",
+        ATTENDANCE_LATE: "Started late",
+        ATTENDANCE_NO_SHOW_NOTIFIED: "No-show (notified)",
+        ATTENDANCE_NO_SHOW_UNNOTIFIED: "No-show (not notified)",
         ATTENDANCE_RESCHEDULED: "Rescheduled",
     }
+
+    attendance_menu = [
+        (ATTENDANCE_ON_TIME, "Started on time"),
+        (ATTENDANCE_LATE, "Started late"),
+        (ATTENDANCE_NO_SHOW_NOTIFIED, "No-show (notified)"),
+        (ATTENDANCE_NO_SHOW_UNNOTIFIED, "No-show (not notified)"),
+        (ATTENDANCE_RESCHEDULED, "Rescheduled"),
+    ]
+
+    @classmethod
+    def attendance_valid(cls, attendance):
+        if cls._MIN_ATTENDANCE <= attendance <= cls._MAX_ATTANDANCE:
+            return True
+
+        return False
 
 
 class AssessorPoolChoicesMixin:

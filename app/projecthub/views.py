@@ -25,7 +25,7 @@ from sqlalchemy.sql import func
 import app.ajax as ajax
 from . import projecthub
 from .forms import AddFormatterArticleForm, EditFormattedArticleForm
-from .utils import validate_project_hub
+from .utils import validate_project_hub, validate_set_attendance
 from ..database import db
 from ..models import (
     SubmissionRecord,
@@ -38,7 +38,7 @@ from ..models import (
     ConvenorSubmitterArticle,
     FormattedArticle,
     ProjectSubmitterArticle,
-    User,
+    User, SupervisionEvent,
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
@@ -60,7 +60,7 @@ def hub(subid):
 
     if student is None or student.user is None:
         flash(
-            "The project hub for this submitter (id={sid}) cannot be displayed because it is not associated "
+            "The project page for this submitter (id={sid}) cannot be displayed because it is not associated "
             "with a student account. This is almost certainly caused by a database error. Please contact "
             "a system administrator.".format(sid=submitter.id),
             "info",
@@ -71,7 +71,7 @@ def hub(subid):
 
     if config is None:
         flash(
-            "The project hub for student {name} cannot be displayed because it is not linked to a project "
+            "The project page for student {name} cannot be displayed because it is not linked to a project "
             "class configuration instance. This is almost certainly caused by a database error. Please contact "
             "a system administrator.".format(name=student.user.name),
             "info",
@@ -82,7 +82,7 @@ def hub(subid):
 
     if pclass is None:
         flash(
-            "The project hub for student {name} cannot be displayed because it is not linked to a project "
+            "The project page for student {name} cannot be displayed because it is not linked to a project "
             "class instance. This is almost certainly caused by a database error. Please contact "
             "a system administrator.".format(name=student.user.name),
             "info",
@@ -93,7 +93,7 @@ def hub(subid):
 
     if project is None:
         flash(
-            "The project hub for student {name} cannot be displayed because no project has "
+            "The project page for student {name} cannot be displayed because no project has "
             "been allocated. If you think this is an error, please contact a system "
             "administrator.".format(name=student.user.name),
             "info",
@@ -104,7 +104,7 @@ def hub(subid):
 
     if period is None:
         flash(
-            "The project hub for student {name} cannot be displayed because it is not linked to a "
+            "The project page for student {name} cannot be displayed because it is not linked to a "
             "submission period. This is almost certainly caused by a database error. Please contact "
             "a system administrator.".format(name=student.user.name),
             "info",
@@ -196,9 +196,9 @@ def hub(subid):
     )
 
 
-@projecthub.route("/edit_subpd_record_articles/<int:pid>")
+@projecthub.route("/edit_submission_period_articles/<int:pid>")
 @roles_accepted("faculty", "admin", "root")
-def edit_subpd_record_articles(pid):
+def edit_submission_period_articles(pid):
     # pid is a SubmissionPeriodRecord
     record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
     config: ProjectClassConfig = record.config
@@ -220,20 +220,20 @@ def edit_subpd_record_articles(pid):
         "({yra}&ndash;{yrb})".format(
             name=record.display_name, pclass=record.config.name, yra=record.config.submit_year_a, yrb=record.config.submit_year_b
         ),
-        ajax_endpoint=url_for("projecthub.edit_subpd_record_articles_ajax", pid=pid),
-        add_endpoint=url_for("projecthub.add_subpd_record_article", pid=pid),
+        ajax_endpoint=url_for("projecthub.edit_submission_period_articles_ajax", pid=pid),
+        add_endpoint=url_for("projecthub.add_submission_period_article", pid=pid),
     )
 
 
-@projecthub.route("/edit_subpd_record_articles_ajax/<int:pid>", methods=["POST"])
+@projecthub.route("/edit_submission_period_articles_ajax/<int:pid>", methods=["POST"])
 @roles_accepted("faculty", "admin", "root")
-def edit_subpd_record_articles_ajax(pid):
+def edit_submission_period_articles_ajax(pid):
     # pid is a SubmissionPeriodRecord
     record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
     config: ProjectClassConfig = record.config
 
     # reject if user is not a convenor for the project owning this submission period
-    if not validate_is_convenor(record.config.project_class):
+    if not validate_is_convenor(config.project_class):
         return jsonify({})
 
     base_query = record.articles
@@ -250,23 +250,23 @@ def edit_subpd_record_articles_ajax(pid):
 
     columns = {"title": title, "published": published, "last_edit": last_edit}
 
-    return_url = url_for("projecthub.edit_subpd_record_articles", pid=pid)
+    return_url = url_for("projecthub.edit_submission_period_articles", pid=pid)
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(
-            partial(ajax.projecthub.article_list_data, return_url, "submission period articles", "projecthub.edit_subpd_record_article")
+            partial(ajax.projecthub.article_list_data, return_url, "submission period articles", "projecthub.edit_submission_period_article")
         )
 
 
-@projecthub.route("add_subpd_record_article/<int:pid>", methods=["GET", "POST"])
+@projecthub.route("add_submission_period_article/<int:pid>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "route")
-def add_subpd_record_article(pid):
+def add_submission_period_article(pid):
     # pid is a SubmissionPeriodRecord
     record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
     config: ProjectClassConfig = record.config
 
     # reject if user is not a convenor for the project owning this submission period
-    if not validate_is_convenor(record.config.project_class):
+    if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
     form = AddFormatterArticleForm(request.form)
@@ -293,7 +293,7 @@ def add_subpd_record_article(pid):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             flash("Could not add new article because of a database error. Please contact a system administrator", "error")
 
-        return redirect(url_for("projecthub.edit_subpd_record_articles", pid=pid))
+        return redirect(url_for("projecthub.edit_submission_period_articles", pid=pid))
 
     return render_template_context(
         "projecthub/articles/edit_article.html",
@@ -305,20 +305,20 @@ def add_subpd_record_article(pid):
         "({yra}&ndash;{yrb})".format(
             pname=record.display_name, pclass=record.config.name, yra=record.config.submit_year_a, yrb=record.config.submit_year_b
         ),
-        action_url=url_for("projecthub.add_subpd_record_article", pid=pid),
+        action_url=url_for("projecthub.add_submission_period_article", pid=pid),
     )
 
 
-@projecthub.route("edit_subpd_record_article/<int:aid>", methods=["GET", "POST"])
+@projecthub.route("edit_submission_period_article/<int:aid>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "route")
-def edit_subpd_record_article(aid):
+def edit_submission_period_article(aid):
     # pid is a SubmissionPeriodRecord
     article: ConvenorSubmitterArticle = ConvenorSubmitterArticle.query.get_or_404(aid)
     record: SubmissionPeriodRecord = article.period
     config: ProjectClassConfig = record.config
 
     # reject if user is not a convenor for the project owning this submission period
-    if not validate_is_convenor(record.config.project_class):
+    if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
     form = EditFormattedArticleForm(obj=article)
@@ -340,7 +340,7 @@ def edit_subpd_record_article(aid):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             flash("Could not save changes to this article because of a database error. Please contact a system administrator", "error")
 
-        return redirect(url_for("projecthub.edit_subpd_record_articles", pid=record.id))
+        return redirect(url_for("projecthub.edit_submission_period_articles", pid=record.id))
 
     return render_template_context(
         "projecthub/articles/edit_article.html",
@@ -353,7 +353,7 @@ def edit_subpd_record_article(aid):
         "({yra}&ndash;{yrb})".format(
             pname=record.display_name, pclass=record.config.name, yra=record.config.submit_year_a, yrb=record.config.submit_year_b
         ),
-        action_url=url_for("projecthub.edit_subpd_record_article", aid=aid),
+        action_url=url_for("projecthub.edit_submission_period_article", aid=aid),
     )
 
 
@@ -398,3 +398,26 @@ def article_widget_ajax(subid):
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.projecthub.widgets.articles, url, text))
+
+
+@projecthub.route("/set_attendance/<int:event_id>/<int:attendance>")
+@roles_accepted("faculty", "admin", "root", "office")
+def set_attendance(event_id, attendance):
+    event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
+
+    if not validate_set_attendance(event, current_user, message=True):
+        return redirect(redirect_url())
+
+    if not SupervisionEvent.attendance_valid(attendance):
+        flash(f'Cannot set attendance for event "{event.name}" because the attendance setting is not valid.', "error")
+        return redirect(redirect_url())
+
+    try:
+        event.attendance = attendance
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not save changes to this event because of a database error. Please contact a system administrator", "error")
+
+    return redirect(redirect_url())

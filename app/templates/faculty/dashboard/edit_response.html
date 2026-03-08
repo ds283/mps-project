@@ -23,6 +23,6 @@
 
         {{ wtf.render_field(form.feedback) }}
 
-        {{ wtf.render_field(form.save_changes, button_map={'save_changes': 'primary'}) }}
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
     </form>
 {% endblock %}

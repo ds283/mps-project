@@ -22,7 +22,7 @@ class StudentFeedbackMixin:
         "and mathematical markup. Preview by looking on your feedback page.",
     )
 
-    save_changes = SubmitField("Save changes")
+    submit = SubmitField("Save changes")
 
 
 class StudentFeedbackForm(Form, StudentFeedbackMixin):

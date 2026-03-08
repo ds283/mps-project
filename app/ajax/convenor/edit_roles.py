@@ -28,6 +28,10 @@ _menu = """
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_role', role_id=role.id, url=return_url) }}">
+            <i class="fas fa-pencil-alt fa-fw"></i> Edit&hellip;
+        </a>
+        <div role="separator" class="dropdown-divider"></div>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.delete_role', role_id=role.id, url=return_url) }}">
             <i class="fas fa-trash fa-fw"></i> Delete
         </a>
@@ -61,7 +65,7 @@ _details = """
 {% endif %}
 {% if role.last_edited_by is not none %}
     <div class="mt-1 small">
-        Last edited by <i class="fs fa-user-circle"></i>
+        Last edited by <i class="fas fa-user-circle"></i>
         <a class="text-decoration-none" href="mailto:{{ role.last_edited_by.email }}">{{ role.last_edited_by.name }}</a>
         {% if role.last_edit_timestamp is not none %}
             on {{ role.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}

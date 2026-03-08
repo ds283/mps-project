@@ -407,7 +407,7 @@ class SubmissionRoleResponseMixin:
         "project.",
     )
 
-    save_changes = SubmitField("Save changes")
+    submit = SubmitField("Save changes")
 
 
 class SubmissionRoleResponseForm(Form, SubmissionRoleResponseMixin):

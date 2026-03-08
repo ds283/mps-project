@@ -48,6 +48,7 @@ from .forms import (
     EditConvenorGenericTask,
     EditSubmissionPeriodRecordPresentationsForm,
     AddSubmitterRoleForm,
+    EditSubmissionRoleForm,
     EditRolesFormFactory,
     EditLiveProjectAlternativeForm,
     EditProjectAlternativeForm,
@@ -2802,6 +2803,62 @@ def add_role(record_id):
             form.role.data = SubmissionRole.ROLE_MARKER
 
     return render_template_context("convenor/submitter/add_role.html", form=form, record=record, period=period, config=config, sub=sub, url=url)
+
+
+@convenor.route("/edit_role/<int:role_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_role(role_id):
+    # role_id is a SubmissionRole
+    role: SubmissionRole = SubmissionRole.query.get_or_404(role_id)
+
+    record: SubmissionRecord = role.submission
+    sub: SubmittingStudent = record.owner
+    period: SubmissionPeriodRecord = record.period
+    config: ProjectClassConfig = period.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = url_for("convenor.edit_roles", sub_id=sub.id, record_id=record.id)
+
+    form = EditSubmissionRoleForm(obj=role)
+
+    if form.validate_on_submit():
+        role.role = form.role.data
+
+        # only update marking-related fields for supervisor/responsible supervisor roles
+        if form.role.data in [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]:
+            role.marking_distributed = form.marking_distributed.data
+            role.external_marking_url = form.external_marking_url.data if form.external_marking_url.data else None
+            role.grade = form.grade.data
+            role.weight = form.weight.data
+            role.justification = form.justification.data if form.justification.data else None
+
+        role.last_edit_id = current_user.id
+        role.last_edit_timestamp = datetime.now()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not save changes to role due to a database error. Please contact a system administrator", "error")
+
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/submitter/edit_role.html",
+        form=form,
+        role=role,
+        record=record,
+        period=period,
+        config=config,
+        sub=sub,
+        url=url,
+    )
 
 
 @convenor.route("/edit_project_alternatives/<int:proj_id>")

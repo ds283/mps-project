@@ -1,0 +1,92 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#role').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Select a role...'
+            });
+
+            var SUPERVISOR_ROLES = [{{ role.ROLE_SUPERVISOR }}, {{ role.ROLE_RESPONSIBLE_SUPERVISOR }}];
+
+            function updateSupervisorFields() {
+                var selectedRole = parseInt($('#role').val());
+                var isSupervisor = SUPERVISOR_ROLES.indexOf(selectedRole) !== -1;
+                var $supervisorSection = $('#supervisor-fields-section');
+                if (isSupervisor) {
+                    $supervisorSection.show();
+                } else {
+                    $supervisorSection.hide();
+                }
+            }
+
+            // Run on page load
+            updateSupervisorFields();
+
+            // Run when role changes
+            $('#role').on('change', function () {
+                updateSupervisorFields();
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Edit role for {{ sub.student.user.name }}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="card border-primary mt-3 mb-3">
+                <div class="card-header bg-primary text-white">
+                    Edit role for <i class="fas fa-user-circle"></i> <strong>{{ role.user.name }}</strong>
+                    &mdash; submitter <i class="fas fa-user-circle"></i> <strong>{{ sub.student.user.name }}</strong>
+                    ({{ period.display_name }})
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('convenor.edit_role', role_id=role.id, url=url) }}" method="POST"
+                          enctype="multipart/form-data" name="edit_role_form">
+                        {{ form.hidden_tag() }}
+
+                        {{ wtf.render_field(form.role) }}
+
+                        <div id="supervisor-fields-section">
+                            <hr/>
+                            <p class="text-muted small">
+                                The following fields apply only to supervisor and responsible supervisor roles.
+                            </p>
+
+                            {{ wtf.render_field(form.marking_distributed) }}
+                            {{ wtf.render_field(form.external_marking_url) }}
+                            {{ wtf.render_field(form.grade) }}
+                            {{ wtf.render_field(form.weight) }}
+                            {{ wtf.render_field(form.justification) }}
+                        </div>
+
+                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                    </form>
+                </div>
+            </div>
+
+            {% if url %}
+                <div>
+                    <a class="text-decoration-none" href="{{ url }}">
+                        <i class="fas fa-backward"></i> Return to previous view
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

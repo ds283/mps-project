@@ -451,6 +451,40 @@ class EditConvenorGenericTask(Form, ConvenorTaskMixin, ConvenorGenericTaskMixin,
     pass
 
 
+class EditSubmissionRoleForm(Form, SaveChangesMixin):
+    role = SelectField("Role type", choices=SubmissionRole.role_options, coerce=int)
+
+    marking_distributed = BooleanField(
+        "Marking distributed",
+        description="Select if the marking materials have been distributed to this person.",
+    )
+
+    external_marking_url = StringField(
+        "External marking URL",
+        validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
+        description="Optional. If an external marking link (e.g. to a Qualtrics or Google form) is needed, enter it here.",
+    )
+
+    grade = IntegerField(
+        "Grade",
+        validators=[Optional(), NumberRange(min=0, max=100, message="Grade should be between 0 and 100.")],
+        description="Optional. Enter the returned mark as a percentage (0–100).",
+    )
+
+    weight = IntegerField(
+        "Weight",
+        validators=[Optional(), NumberRange(min=0, message="Weight should not be negative.")],
+        description="Optional. Enter the resolved weight for this score.",
+    )
+
+    justification = TextAreaField(
+        "Justification",
+        render_kw={"rows": 5},
+        validators=[Optional()],
+        description="Optional. Enter a justification for the score.",
+    )
+
+
 class AddSubmitterRoleForm(Form):
     role = SelectField("Role type", choices=SubmissionRole.role_options, coerce=int)
 

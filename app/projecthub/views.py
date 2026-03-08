@@ -721,9 +721,9 @@ def reassign_event_owner(event_id):
         url = redirect_url()
 
     # Check that the event actually has team members to reassign to
-    team_members = event.team.all()
-    if not team_members:
-        flash("Cannot reassign event owner because there are no other team members to assign as the new owner.", "warning")
+    num_supervisor_roles = len(record.supervisor_roles)
+    if num_supervisor_roles < 2:
+        flash("Cannot reassign event owner because there are no other supervision team members to assign as the new owner.", "warning")
         return redirect(url)
 
     ReassignForm = ReassignEventOwnerFormFactory(event)

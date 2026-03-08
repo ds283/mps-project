@@ -13,7 +13,7 @@ from wtforms import SubmitField, StringField, TextAreaField, BooleanField, DateT
 from wtforms.validators import InputRequired, Length, Optional
 from wtforms_alchemy import QuerySelectMultipleField, QuerySelectField
 
-from ..models import DEFAULT_STRING_LENGTH, SubmissionRole
+from ..models import DEFAULT_STRING_LENGTH, SubmissionRole, SubmissionRecord
 from ..shared.forms.mixins import SaveChangesMixin
 
 
@@ -99,7 +99,7 @@ def build_event_team_form(event):
             query_factory=_query_factory,
             get_label=_build_supervisor_role_label,
             validators=[Optional()],
-            description="Select the additional supervisors (other than the event owner) who attended this meeting.",
+            description="Select additional supervisors (other than the event owner) who attended this meeting.",
         )
 
         submit = SubmitField("Save changes")
@@ -122,7 +122,8 @@ def ReassignEventOwnerFormFactory(event):
         ev: SupervisionEvent = SupervisionEvent.query.get(event_id)
         if ev is None:
             return []
-        return ev.team.all()
+        sub_record: SubmissionRecord = ev.sub_record
+        return [r for r in sub_record.supervisor_roles if r.id != ev.owner_id]
 
     def _get_label(role: SubmissionRole) -> str:
         if role is not None and role.user is not None:
@@ -135,8 +136,7 @@ def ReassignEventOwnerFormFactory(event):
             query_factory=_query_factory,
             get_label=_get_label,
             allow_blank=False,
-            description="Select the team member who should become the new owner of this event. "
-                        "The current owner will be moved to the team.",
+            description="Select the team member who should become the new owner of this event.",
         )
 
         submit = SubmitField("Reassign owner")

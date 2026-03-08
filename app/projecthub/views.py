@@ -24,7 +24,7 @@ from sqlalchemy.sql import func
 
 import app.ajax as ajax
 from . import projecthub
-from .forms import AddFormatterArticleForm, EditFormattedArticleForm
+from .forms import AddFormatterArticleForm, EditFormattedArticleForm, MeetingSummaryForm, SupervisionNotesForm
 from .utils import validate_project_hub, validate_set_attendance
 from ..database import db
 from ..models import (
@@ -57,8 +57,9 @@ def hub(subid):
 
     submitter: SubmittingStudent = record.owner
     student: StudentData = submitter.student
+    suser: User = student.user
 
-    if student is None or student.user is None:
+    if student is None or suser is None:
         flash(
             "The project page for this submitter (id={sid}) cannot be displayed because it is not associated "
             "with a student account. This is almost certainly caused by a database error. Please contact "
@@ -193,6 +194,8 @@ def hub(subid):
         period=period,
         burndown_div=burndown_div,
         burndown_script=burndown_script,
+        return_url=url_for("projecthub.hub", subid=subid, url=url, text=text),
+        return_text=f'project page for {suser.name}'
     )
 
 
@@ -421,3 +424,128 @@ def set_attendance(event_id, attendance):
         flash("Could not save changes to this event because of a database error. Please contact a system administrator", "error")
 
     return redirect(redirect_url())
+
+
+@projecthub.route("/event_details/<int:event_id>")
+@roles_accepted("root", "admin", "faculty", "office")
+def event_details(event_id):
+    event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
+    record: SubmissionRecord = event.sub_record
+
+    if not validate_project_hub(record, current_user, message=True):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    return render_template_context(
+        "projecthub/event/event_details.html",
+        event=event,
+        record=record,
+        url=url,
+        text=text,
+        edit_summary_url=url_for(
+            "projecthub.edit_meeting_summary",
+            event_id=event_id,
+            url=request.url,
+            text="meeting summary",
+        ),
+        edit_notes_url=url_for(
+            "projecthub.edit_supervision_notes",
+            event_id=event_id,
+            url=request.url,
+            text="meeting summary",
+        ),
+    )
+
+
+@projecthub.route("/edit_meeting_summary/<int:event_id>", methods=["GET", "POST"])
+@roles_accepted("root", "admin", "faculty", "office")
+def edit_meeting_summary(event_id):
+    event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
+    record: SubmissionRecord = event.sub_record
+
+    if not validate_project_hub(record, current_user, message=True):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    form = MeetingSummaryForm(obj=event)
+
+    if form.validate_on_submit():
+        event.meeting_summary = form.meeting_summary.data
+        event.last_edit_id = current_user.id
+        event.last_edit_timestamp = datetime.now()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash(
+                "Could not save changes to the meeting summary because of a database error. "
+                "Please contact a system administrator.",
+                "error",
+            )
+
+        if url is not None:
+            return redirect(url)
+
+        return redirect(url_for("projecthub.event_details", event_id=event_id))
+
+    return render_template_context(
+        "projecthub/event/edit_meeting_summary.html",
+        form=form,
+        event=event,
+        record=record,
+        url=url,
+        text=text,
+        action_url=url_for("projecthub.edit_meeting_summary", event_id=event_id, url=url, text=text),
+    )
+
+
+@projecthub.route("/edit_supervision_notes/<int:event_id>", methods=["GET", "POST"])
+@roles_accepted("root", "admin", "faculty", "office")
+def edit_supervision_notes(event_id):
+    event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
+    record: SubmissionRecord = event.sub_record
+
+    if not validate_project_hub(record, current_user, message=True):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    form = SupervisionNotesForm(obj=event)
+
+    if form.validate_on_submit():
+        event.supervision_notes = form.supervision_notes.data
+        event.last_edit_id = current_user.id
+        event.last_edit_timestamp = datetime.now()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash(
+                "Could not save changes to the supervision notes because of a database error. "
+                "Please contact a system administrator.",
+                "error",
+            )
+
+        if url is not None:
+            return redirect(url)
+
+        return redirect(url_for("projecthub.event_details", event_id=event_id))
+
+    return render_template_context(
+        "projecthub/event/edit_supervision_notes.html",
+        form=form,
+        event=event,
+        record=record,
+        url=url,
+        text=text,
+        action_url=url_for("projecthub.edit_supervision_notes", event_id=event_id, url=url, text=text),
+    )

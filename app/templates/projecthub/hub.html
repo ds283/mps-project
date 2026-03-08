@@ -56,21 +56,30 @@
     {% set template = event.template %}
     <div class="d-flex flex-column justify-content-start align-items-start gap-2">
         <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline gap-2">
-            <div class="{% if past_event %}fs-5{% else %}fs-4 fw-semibold{% endif %}"><i
-                    class="fas fa-users"></i> {{ event.name }}</div>
+            <div class="{% if past_event %}fs-5{% else %}fs-4 fw-semibold{% endif %}">
+                <i class="fas fa-users"></i> {{ event.name }}
+            </div>
         </div>
         {% if event.time %}
             <div class="text-primary fs-5">{{ event.time.strftime("%A %d %b %Y %H:%M:%S") }}</div>
         {% endif %}
-        {% if show_attendance and is_faculty and event.monitor_attendance %}
+        <div class="d-flex flex-row flex-wrap w-100 justify-content-between align-items-baseline">
             <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline gap-2">
-                {% if event.attendance is none %}
-                    <div class="text-danger"><i class="fas fa-exclamation-circle"></i> Attendance not recorded</div>
-                    {{ attendance_dropdown("Set attendance...", event) }}
-                {% else %}
-                    {{ attendance_dropdown(event.attendance_str, event) }}
+                {% if show_attendance and is_faculty and event.monitor_attendance %}
+                    {% if event.attendance is none %}
+                        <div class="text-danger"><i class="fas fa-exclamation-circle"></i> Attendance not recorded</div>
+                        {{ attendance_dropdown("Set attendance...", event) }}
+                    {% else %}
+                        {{ attendance_dropdown(event.attendance_str, event) }}
+                    {% endif %}
                 {% endif %}
             </div>
+            <a class="btn btn-sm btn-outline-primary"
+               href="{{ url_for('projecthub.event_details', event_id=event.id, url=return_url, text=return_text) }}">Show
+                details&hellip;</a>
+        </div>
+        {% if event.meeting_summary and event.meeting_summary|length > 0 %}
+            <div class="text-muted small">{{ event.meeting_summary|truncate(400)|safe }}</div>
         {% endif %}
     </div>
 {% endmacro %}
@@ -178,7 +187,7 @@
                     <div class="col-12">
                         <div class="mt-2 mb-2">
                             <a class="btn btn-sm btn-outline-primary"
-                               href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('projecthub.hub', subid=record.id), text='project hub') }}">
+                               href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=return_text) }}">
                                 <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
                             </a>
                         </div>
@@ -218,7 +227,7 @@
                     <div class="col-12">
                         <div class="mt-2 mb-2">
                             <a class="btn btn-sm btn-outline-primary"
-                               href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('projecthub.hub', subid=record.id), text='project hub') }}">
+                               href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=return_text) }}">
                                 <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
                             </a>
                         </div>

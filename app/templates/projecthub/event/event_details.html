@@ -1,0 +1,117 @@
+{% extends "base_app.html" %}
+
+{% block title %}
+    Meeting summary
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+
+            {% if text and url %}
+                <div class="top-return-link">
+                    <a class="text-decoration-none" href="{{ url }}">
+                        <i class="fas fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+
+            {# ── Event header ── #}
+            <div class="d-flex flex-row justify-content-between align-items-baseline gap-3 mt-3 mb-2">
+                <div class="fs-3 fw-semibold text-primary">
+                    <i class="fas fa-users"></i> {{ event.name }}
+                </div>
+                {% if event.time %}
+                    <div class="text-muted">
+                        {{ event.time.strftime("%A %d %b %Y %H:%M") }}
+                    </div>
+                {% endif %}
+            </div>
+
+            {% set unit = event.unit %}
+            {% if unit %}
+                <div class="text-muted mb-3">
+                    {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
+                    {% if unit.start_date and unit.end_date %}&ndash;{% endif %}
+                    {% if unit.end_date %}{{ unit.end_date.strftime("%d %b %Y") }}{% endif %}
+                    {% if unit.name %}&nbsp;&middot;&nbsp;{{ unit.name }}{% endif %}
+                </div>
+            {% endif %}
+
+            <hr class="intro-divider">
+
+            {# ── Meeting summary ── #}
+            <div class="card mt-3 mb-3 border-primary">
+                <div class="card-header d-flex flex-row justify-content-between align-items-center bg-primary text-white">
+                    <span class="fw-semibold"><i class="fas fa-file-alt"></i> Meeting summary</span>
+                    <a class="btn btn-sm btn-light"
+                       href="{{ edit_summary_url }}">
+                        <i class="fas fa-pencil-alt"></i> Edit
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if event.meeting_summary %}
+                        <div class="meeting-summary-content">
+                            {{ event.meeting_summary|safe }}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle"></i>
+                            No meeting summary has been recorded yet.
+                            <a class="alert-link" href="{{ edit_summary_url }}">Add one now.</a>
+                        </div>
+                    {% endif %}
+                </div>
+                {% if event.last_edit_timestamp %}
+                    <div class="card-footer text-muted small">
+                        Last edited
+                        {% if event.last_edit_id %}
+                            by
+                            {% if event.last_edited_by %}{{ event.last_edited_by.name }}{% else %}unknown user
+                            {% endif %}
+                        {% endif %}
+                        on {{ event.last_edit_timestamp.strftime("%a %d %b %Y %H:%M") }}
+                    </div>
+                {% endif %}
+            </div>
+
+            {# ── Supervision notes ── #}
+            <div class="card mt-3 mb-3 border-secondary">
+                <div class="card-header d-flex flex-row justify-content-between align-items-center bg-secondary text-white">
+                    <span class="fw-semibold">
+                        <i class="fas fa-lock"></i> Supervision notes
+                        <small class="ms-2 fw-normal opacity-75">(not visible to students)</small>
+                    </span>
+                    <a class="btn btn-sm btn-light"
+                       href="{{ edit_notes_url }}">
+                        <i class="fas fa-pencil-alt"></i> Edit
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if event.supervision_notes %}
+                        <div class="supervision-notes-content">
+                            {{ event.supervision_notes|safe }}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle"></i>
+                            No supervision notes have been recorded yet.
+                            <a class="alert-link" href="{{ edit_notes_url }}">Add some now.</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if text and url %}
+                <div class="mt-3 mb-3">
+                    <a class="text-decoration-none" href="{{ url }}">
+                        <i class="fas fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

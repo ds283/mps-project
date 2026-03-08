@@ -42,3 +42,25 @@ class AddFormatterArticleForm(FormattedArticleForm):
 
 class EditFormattedArticleForm(FormattedArticleForm, SaveChangesMixin):
     pass
+
+
+class MeetingSummaryForm(Form):
+    meeting_summary = TextAreaField(
+        "Meeting summary",
+        validators=[Optional()],
+        render_kw={"rows": 15},
+        description="A summary of the meeting that will be visible to the student and supervision team.",
+    )
+
+    submit = SubmitField("Save changes")
+
+
+class SupervisionNotesForm(Form):
+    supervision_notes = TextAreaField(
+        "Supervision notes",
+        validators=[Optional()],
+        render_kw={"rows": 15},
+        description="Private notes for the supervision team. These are not visible to the student.",
+    )
+
+    submit = SubmitField("Save changes")

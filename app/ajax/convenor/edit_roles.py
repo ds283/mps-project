@@ -75,7 +75,7 @@ def edit_roles(roles: List[SubmissionRole], return_url=None):
     data = [
         {
             "name": render_template_string(_name, user=r.user),
-            "role": r.role_label,
+            "role": r.role_as_str,
             "details": render_template_string(_details, role=r),
             "menu": render_template_string(_menu, role=r, return_url=return_url),
         }

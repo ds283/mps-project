@@ -1347,16 +1347,6 @@ class SubmissionRoleTypesMixin:
     _MIN_ROLE = ROLE_SUPERVISOR
     _MAX_ROLE = ROLE_RESPONSIBLE_SUPERVISOR
 
-    _role_labels = {
-        ROLE_SUPERVISOR: "supervisor",
-        ROLE_MARKER: "marker",
-        ROLE_PRESENTATION_ASSESSOR: "presentation_assessor",
-        ROLE_MODERATOR: "moderator",
-        ROLE_EXAM_BOARD: "exam board member",
-        ROLE_EXTERNAL_EXAMINER: "external examiner",
-        ROLE_RESPONSIBLE_SUPERVISOR: "supervisor",
-    }
-
     _role_string = {
         ROLE_SUPERVISOR: "Supervisor",
         ROLE_MARKER: "Marker",
@@ -1364,7 +1354,7 @@ class SubmissionRoleTypesMixin:
         ROLE_MODERATOR: "Moderator",
         ROLE_EXAM_BOARD: "Exam board",
         ROLE_EXTERNAL_EXAMINER: "External",
-        ROLE_RESPONSIBLE_SUPERVISOR: "Responsible",
+        ROLE_RESPONSIBLE_SUPERVISOR: "Responsible supervisor",
     }
 
     role_options = [
@@ -11016,15 +11006,8 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
     feedback_push_timestamp = db.Column(db.DateTime())
 
     @property
-    def role_label(self):
-        if self.role in self._role_labels:
-            return self._role_labels[self.role]
-
-        return "unknown"
-
-    @property
     def role_as_str(self):
-        return self._role_string[self.role]
+        return self._role_string.get(self.role, "Unknown")
 
     @property
     def uses_supervisor_feedback(self):
@@ -11304,12 +11287,14 @@ def _SubmissionRecord_is_valid(sid):
     moderators_needed = period.number_moderators
 
     supervisor_roles: List[SubmissionRole] = obj.supervisor_roles
+    responsible_supervisor_roles: List[SubmissionRole] = [r for r in supervisor_roles if r.role == SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]
     marker_roles: List[SubmissionRole] = obj.marker_roles
     moderator_roles: List[SubmissionRole] = obj.moderator_roles
 
-    supervisor_ids: Set[int] = set(r.user.id for r in supervisor_roles)
-    marker_ids: Set[int] = set(r.user.id for r in marker_roles)
-    moderator_ids: Set[int] = set(r.user.id for r in moderator_roles)
+    supervisor_ids: Set[int] = set(r.user_id for r in supervisor_roles)
+    responsible_supervisor_ids: Set[int] = set(r.user_id for r in responsible_supervisor_roles)
+    marker_ids: Set[int] = set(r.user_id for r in marker_roles)
+    moderator_ids: Set[int] = set(r.user_id for r in moderator_roles)
 
     # 1. SUPERVISOR, MARKER, AND MODERATOR ROLES SHOULD BE DISTINCT
     a = supervisor_ids.intersection(marker_ids)
@@ -11361,9 +11346,9 @@ def _SubmissionRecord_is_valid(sid):
         if len(supervisor_ids) == 0:
             errors[("supervisors", 0)] = "No supervision roles are assigned for this project"
 
-        # 1B. USUALLY THERE SHOULD BE JUST ONE SUPERVISOR ROLE
-        if len(supervisor_ids) > 1:
-            warnings[("supervisors", 0)] = "There are {n} supervision roles assigned for this project".format(n=len(supervisor_ids))
+        # 1B. USUALLY THERE SHOULD BE JUST ONE RESPONSIBLE SUPERVISOR ROLE
+        if len(responsible_supervisor_ids) > 1:
+            warnings[("responsible-supervisors", 0)] = "There are {n} responsible supervision roles assigned for this project".format(n=len(supervisor_ids))
 
         # 1C. SUPERVISORS SHOULD NOT BE MULTIPLY ASSIGNED TO THE SAME ROLE
         for u_id in supervisor_counts:
@@ -11371,7 +11356,7 @@ def _SubmissionRecord_is_valid(sid):
             if count > 1:
                 user: User = supervisor_dict[u_id]
 
-                errors[("supervisors", 1)] = 'Supervisor "{name}" is assigned {n} times for this ' "submitter".format(name=user.name, n=count)
+                errors[("supervisors", 1)] = 'Supervisor "{name}" is assigned {n} times for this submitter'.format(name=user.name, n=count)
 
     if uses_marker:
         # 1D. THERE SHOULD BE THE RIGHT NUMBER OF ASSIGNED MARKERS

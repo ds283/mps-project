@@ -82,9 +82,6 @@ _records = """
                             {{ role.grade }}%
                         </span>
                     {% endif %}
-                    {% if role.signed_off %}
-                        <i class="fas fa-check-circle text-success ms-1" data-bs-toggle="tooltip" title="Signed off {{ role.signed_off.strftime('%d %b %Y') }}"></i>
-                    {% endif %}
                 </span>
             {% endfor %}
         </div>
@@ -100,7 +97,7 @@ _records = """
             <div class="d-flex flex-row justify-content-between align-items-start gap-2">
                 <div class="flex-grow-1">
                     {% if r.project is not none %}
-                        <div class="fw-semibold small">{{ r.project.name|truncate(60) }}</div>
+                        <div class="fw-semibold small">{{ r.project.name }}</div>
                     {% else %}
                         <div class="small text-muted fst-italic">No project assigned</div>
                     {% endif %}

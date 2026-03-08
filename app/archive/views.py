@@ -24,7 +24,7 @@ from ..models import (
     DegreeProgramme,
     SubmittingStudent,
     User,
-    Tenant,
+    Tenant, SubmissionRecord,
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.conversions import is_integer
@@ -74,7 +74,11 @@ def reports():
     if current_user.has_role('root'):
         pclasses: List[ProjectClass] = (
             db.session.query(ProjectClass)
-            .filter(ProjectClass.active == True)
+            .filter(
+                ProjectClass.active == True,
+                ProjectClass.publish == True,
+                ProjectClass.uses_submission == True
+            )
             .order_by(ProjectClass.name.asc())
             .all()
         )
@@ -83,6 +87,8 @@ def reports():
             db.session.query(ProjectClass)
             .filter(
                 ProjectClass.active == True,
+                ProjectClass.publish == True,
+                ProjectClass.uses_submission == True,
                 ProjectClass.tenant_id.in_(allowed_tenant_ids),
             )
             .order_by(ProjectClass.name.asc())
@@ -158,7 +164,12 @@ def reports_ajax():
         .join(StudentData, StudentData.id == SubmittingStudent.student_id)
         .join(User, User.id == StudentData.id)
         .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id, isouter=True)
-        .filter(SubmittingStudent.retired == True)
+        .filter(
+            ProjectClass.uses_submission == True,
+            ProjectClass.active == True,
+            ProjectClass.publish == True,
+            SubmittingStudent.retired == True,
+        )
     )
 
     # Apply tenant restriction for non-root users
@@ -184,24 +195,13 @@ def reports_ajax():
         'search_collation': 'utf8_general_ci',
     }
     year_col = {
+        'search': ProjectClassConfig.year,
         'order': ProjectClassConfig.year,
-    }
-    pclass_col = {
-        'search': ProjectClass.name,
-        'order': ProjectClass.name,
-        'search_collation': 'utf8_general_ci',
-    }
-    programme_col = {
-        'search': DegreeProgramme.name,
-        'order': DegreeProgramme.name,
-        'search_collation': 'utf8_general_ci',
     }
 
     columns = {
         'name': name_col,
         'year': year_col,
-        'pclass': pclass_col,
-        'programme': programme_col,
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:

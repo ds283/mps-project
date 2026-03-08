@@ -273,7 +273,7 @@
                     {% if record.report_exemplar and record.exemplar_comment and record.exemplar_comment|length > 0 %}
                         <div class="mb-3">
                             {% call icon_block("comment") %}
-                                <div class="text-muted small">{{ record.exemplar_comment }}</div>
+                                <div class="text-muted small">{{ record.exemplar_comment|safe }}</div>
                             {% endcall %}
                         </div>
                     {% endif %}

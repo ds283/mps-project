@@ -133,7 +133,7 @@ class EditSubmissionRecordSettingsForm(Form, SaveChangesMixin):
     )
 
     exemplar_comment = TextAreaField(
-        "Exemplar comment",
+        "Add any appropriate comments, description, or explanation to accompany this exemplar.",
         description="Optional. Enter any comments about this report that should be displayed when it is offered as an exemplar.",
         render_kw={"rows": 5},
     )

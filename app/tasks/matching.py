@@ -3589,7 +3589,7 @@ def register_matching_tasks(celery):
                     celery_finished=False,
                     timestamp=False,
                     report_exemplar=False,
-                    report_embargo=False,
+                    report_embargo=None,
                     report_secret=False,
                     exemplar_comment=None,
                     supervision_grade=None,

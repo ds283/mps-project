@@ -176,7 +176,7 @@ def add_blank_submitter(student, selecting_config_id, submitting_config_id, auto
             celery_finished=False,
             timestamp=False,
             report_exemplar=False,
-            report_embargo=False,
+            report_embargo=None,
             report_secret=False,
             exemplar_comment=None,
             supervision_grade=None,

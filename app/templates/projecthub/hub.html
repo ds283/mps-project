@@ -20,14 +20,14 @@
 
 {% macro past_supervision_event_header(event) %}
     {% set unit = event.unit %}
-    <div class="d-flex flex-row flex-weap justify-content-start align-items-baseline gap-2">
+    <div class="d-flex flex-row flex-weap justify-content-start align-items-baseline gap-2 text-muted">
         <i class="fas fa-calendar"></i>
-        <span class="text-muted">
+        <span>
             {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
             {% if unit.start_date and unit.end_date %}&ndash;{% endif %}
             {% if unit.end_date %}{{ unit.end_date.strftime("%d %b %Y") }}{% endif %}
         </span>
-        <div class="text-muted">{{ unit.name }}</div>
+        <span>{{ unit.name }}</span>
     </div>
 {% endmacro %}
 

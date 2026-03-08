@@ -46,11 +46,11 @@
                 <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-3 mb-4">
                     <div>
                         {% if event.attendance is none %}
-                            <span class="text-danger fw-semibold">
+                            <span class="text-danger">
                                 <i class="fas fa-exclamation-circle"></i> Attendance not yet recorded
                             </span>
                         {% else %}
-                            <span class="text-success fw-semibold">
+                            <span class="text-success">
                                 <i class="fas fa-user-check"></i> Attendance: {{ event.attendance_str }}
                             </span>
                         {% endif %}

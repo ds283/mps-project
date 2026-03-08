@@ -7442,12 +7442,12 @@ class SupervisionEventTemplate(db.Model, EditingMetadataMixin, SupervisionEventT
     monitor_attendance = db.Column(db.Boolean(), default=True)
 
     @property
-    def role_as_str(self):
-        return self._role_string.get(self.role, "Unknown")
+    def target_role_as_str(self):
+        return self._role_string.get(self.target_role, "Unknown")
 
     @property
-    def short_role_as_str(self):
-        return self._role_string.get(self.role, "?")
+    def short_target_role_as_str(self):
+        return self._role_string.get(self.target_role, "?")
 
     @property
     def event_as_str(self):

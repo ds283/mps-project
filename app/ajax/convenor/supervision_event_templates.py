@@ -102,7 +102,7 @@ def supervision_event_templates_data(templates: List[SupervisionEventTemplate], 
             "target_role": render_template(
                 target_role_templ,
                 event=t,
-                role_label=t.role_as_str,
+                role_label=t.target_role_as_str,
             ),
             "monitor": render_template(monitor_templ, event=t),
             "menu": render_template(menu_templ, event=t, return_url=return_url),

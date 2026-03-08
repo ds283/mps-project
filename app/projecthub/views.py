@@ -24,7 +24,8 @@ from sqlalchemy.sql import func
 
 import app.ajax as ajax
 from . import projecthub
-from .forms import AddFormatterArticleForm, EditFormattedArticleForm, MeetingSummaryForm, SupervisionNotesForm, build_event_team_form
+from .forms import AddFormatterArticleForm, EditFormattedArticleForm, MeetingSummaryForm, SupervisionNotesForm, build_event_team_form, \
+    ReassignEventOwnerFormFactory
 from .utils import validate_project_hub, validate_set_attendance
 from ..database import db
 from ..models import (
@@ -445,7 +446,15 @@ def event_details(event_id):
     # Determine whether the current user is a convenor (or admin/root) for this project class,
     # so the template can conditionally show the "Reassign owner" button
     config: ProjectClassConfig = record.period.config
-    is_convenor = validate_is_convenor(config.project_class, message=False)
+    is_target_convenor = validate_is_convenor(config.project_class, message=False)
+
+    # Determine whether the current user is the event owner
+    owner_role = event.owner
+    is_event_owner = (
+        owner_role is not None
+        and owner_role.user_id is not None
+        and owner_role.user_id == current_user.id
+    )
 
     return render_template_context(
         "projecthub/event/event_details.html",
@@ -454,7 +463,8 @@ def event_details(event_id):
         url=url,
         text=text,
         num_supervisor_roles=num_supervisor_roles,
-        is_convenor=is_convenor,
+        is_target_convenor=is_target_convenor,
+        is_event_owner=is_event_owner,
         edit_summary_url=url_for(
             "projecthub.edit_meeting_summary",
             event_id=event_id,
@@ -624,4 +634,101 @@ def edit_supervision_notes(event_id):
         url=url,
         text=text,
         action_url=url_for("projecthub.edit_supervision_notes", event_id=event_id, url=url, text=text),
+    )
+
+
+@projecthub.route("/reassign_event_owner/<int:event_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def reassign_event_owner(event_id):
+    """
+    Allow the convenor (or an admin/root user), or the current owner of a SupervisionEvent,
+    to reassign ownership to one of the current team members.
+    The new owner is removed from the team collection; the previous owner is added to it.
+    """
+    event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
+
+    # Resolve the submission record and project class config
+    record: SubmissionRecord = event.sub_record
+    if record is None:
+        flash("Cannot reassign event owner because the associated submission record could not be found.", "error")
+        return redirect(redirect_url())
+
+    sub: SubmittingStudent = record.owner
+    config: ProjectClassConfig = sub.config
+    pclass: ProjectClass = config.project_class
+
+    # Determine whether the current user is a convenor/admin for this project class
+    is_target_convenor = validate_is_convenor(pclass, message=False)
+
+    # Determine whether the current user is the event owner (via their SubmissionRole)
+    owner_role: SubmissionRole = event.owner
+    is_event_owner = (
+        owner_role is not None
+        and owner_role.user_id is not None
+        and owner_role.user_id == current_user.id
+    )
+
+    # Only the convenor/admin or the event owner may perform this action
+    if not is_target_convenor and not is_event_owner:
+        flash("You do not have permission to reassign the owner of this event.", "error")
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    # Check that the event actually has team members to reassign to
+    team_members = event.team.all()
+    if not team_members:
+        flash("Cannot reassign event owner because there are no other team members to assign as the new owner.", "warning")
+        return redirect(url)
+
+    ReassignForm = ReassignEventOwnerFormFactory(event)
+    form = ReassignForm(request.form)
+
+    if form.validate_on_submit():
+        new_owner_role: SubmissionRole = form.new_owner.data
+        old_owner_role: SubmissionRole = event.owner
+
+        if new_owner_role is None:
+            flash("Please select a team member to become the new event owner.", "error")
+            return redirect(url)
+
+        if old_owner_role is not None and new_owner_role.id == old_owner_role.id:
+            flash("The selected team member is already the event owner.", "warning")
+            return redirect(url)
+
+        try:
+            # Remove the new owner from the team collection (they are becoming the owner)
+            if new_owner_role in event.team:
+                event.team.remove(new_owner_role)
+
+            # Add the old owner to the team collection (they are being demoted to team member)
+            if old_owner_role is not None and old_owner_role not in event.team:
+                event.team.append(old_owner_role)
+
+            # Update the owner
+            event.owner_id = new_owner_role.id
+
+            db.session.commit()
+            flash(
+                f'Event owner has been reassigned to <strong>{new_owner_role.user.name}</strong>.',
+                "success",
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not reassign event owner due to a database error. Please contact a system administrator.", "error")
+
+        return redirect(url)
+
+    return render_template_context(
+        "projecthub/event/reassign_event_owner.html",
+        form=form,
+        event=event,
+        record=record,
+        sub=sub,
+        url=url,
+        is_target_convenor=is_target_convenor,
+        is_event_owner=is_event_owner,
     )

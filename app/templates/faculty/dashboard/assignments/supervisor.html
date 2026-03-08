@@ -148,7 +148,7 @@
                             </div>
                             {% set supv_roles = rec.supervisor_roles %}
                             {% if supv_roles|length > 1 %}
-                                <div class="mt-2 small text-muted"><em>Supervisor roles</em></div>
+                                <div class="mt-2 small text-muted"><em>Other supervisor roles</em></div>
                                 <div class="d-flex flex-row justify-content-start align-content-start gap-2 small text-muted">
                                     {% for role in supv_roles if role.user.id != current_user.id %}
                                         <a class="text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>{%- if loop.index < loop.length -%},{%- endif %}

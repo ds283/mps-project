@@ -7,12 +7,11 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-
-
+from flask_security import Form
 from flask_security.forms import Form
 from wtforms import SubmitField, StringField, TextAreaField, BooleanField, DateTimeField
 from wtforms.validators import InputRequired, Length, Optional
-from wtforms_alchemy import QuerySelectMultipleField
+from wtforms_alchemy import QuerySelectMultipleField, QuerySelectField
 
 from ..models import DEFAULT_STRING_LENGTH, SubmissionRole
 from ..shared.forms.mixins import SaveChangesMixin
@@ -106,3 +105,40 @@ def build_event_team_form(event):
         submit = SubmitField("Save changes")
 
     return EventTeamForm
+
+
+def ReassignEventOwnerFormFactory(event):
+    """
+    Factory that returns a form for reassigning the owner of a SupervisionEvent.
+    The new owner must be one of the current team members (i.e. a SubmissionRole
+    that is already in the event's team collection).
+    """
+    from ..models import SupervisionEvent, SubmissionRole
+
+    event_id = event.id
+
+    def _query_factory():
+        # Reload the event to get the current team
+        ev: SupervisionEvent = SupervisionEvent.query.get(event_id)
+        if ev is None:
+            return []
+        return ev.team.all()
+
+    def _get_label(role: SubmissionRole) -> str:
+        if role is not None and role.user is not None:
+            return f"{role.user.name} ({role.role_as_str})"
+        return "Unknown"
+
+    class ReassignEventOwnerForm(Form):
+        new_owner = QuerySelectField(
+            "New event owner",
+            query_factory=_query_factory,
+            get_label=_get_label,
+            allow_blank=False,
+            description="Select the team member who should become the new owner of this event. "
+                        "The current owner will be moved to the team.",
+        )
+
+        submit = SubmitField("Reassign owner")
+
+    return ReassignEventOwnerForm

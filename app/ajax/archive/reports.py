@@ -96,14 +96,21 @@ _records = """
             {% set period = r.period %}
             <div class="d-flex flex-row justify-content-between align-items-start gap-2">
                 <div class="flex-grow-1">
-                    {% if r.project is not none %}
-                        <div class="fw-semibold small">{{ r.project.name }}</div>
-                    {% else %}
-                        <div class="small text-muted fst-italic">No project assigned</div>
-                    {% endif %}
-                    {% if period is not none %}
-                        <div class="small text-muted">{{ period.display_name }}</div>
-                    {% endif %}
+                    <div class="d-flex flex-row flex-swap justify-content-start align-items-baseline gap-2">
+                        {% if r.project is not none %}
+                            <div class="fw-semibold small">{{ r.project.name }}</div>
+                            {% if r.project.group is not none %}
+                                <div class="mt-1">
+                                    {{ simple_label(r.project.group.make_label()) }}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="small text-muted fst-italic">No project assigned</div>
+                        {% endif %}
+                        {% if period is not none %}
+                            <div class="small text-muted">{{ period.display_name }}</div>
+                        {% endif %}
+                    </div>
 
                     {# Grades #}
                     {% if r.supervision_grade is not none or r.report_grade is not none %}
@@ -199,7 +206,7 @@ def retired_reports(students: List[SubmittingStudent]):
                 "display": render_template(year_templ, sub=s, simple_label=simple_label),
                 "sortvalue": s.config.year,
             },
-            "records": render_template(records_templ, sub=s),
+            "records": render_template(records_templ, sub=s, simple_label=simple_label),
         }
         for s in students
     ]

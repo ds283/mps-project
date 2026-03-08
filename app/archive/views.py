@@ -25,6 +25,8 @@ from ..models import (
     SubmittingStudent,
     User,
     Tenant, SubmissionRecord,
+    ResearchGroup,
+    LiveProject,
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.conversions import is_integer
@@ -69,6 +71,29 @@ def reports():
 
     if year_filter is not None:
         session['archive_reports_year_filter'] = year_filter
+
+    # --- group filter ---
+    group_filter = request.args.get('group_filter')
+
+    if group_filter is None and session.get('archive_reports_group_filter'):
+        group_filter = session['archive_reports_group_filter']
+
+    if group_filter is not None and group_filter != 'all':
+        flag, value = is_integer(group_filter)
+        if flag:
+            group: ResearchGroup = db.session.query(ResearchGroup).filter_by(id=value).first()
+            if group is None:
+                group_filter = 'all'
+            elif not current_user.has_role('root'):
+                # check that this group belongs to at least one of the user's tenants
+                group_tenant_ids = {t.id for t in group.tenants}
+                if not group_tenant_ids.intersection(allowed_tenant_ids):
+                    group_filter = 'all'
+        else:
+            group_filter = 'all'
+
+    if group_filter is not None:
+        session['archive_reports_group_filter'] = group_filter
 
     # --- build list of available project classes (tenant-scoped) ---
     if current_user.has_role('root'):
@@ -121,12 +146,39 @@ def reports():
 
     years: List[int] = [row[0] for row in year_data]
 
+    # --- build list of available research groups (tenant-scoped) ---
+    if current_user.has_role('root'):
+        groups: List[ResearchGroup] = (
+            db.session.query(ResearchGroup)
+            .filter(ResearchGroup.active == True)
+            .order_by(ResearchGroup.name.asc())
+            .all()
+        )
+    else:
+        # collect all research groups associated with the user's tenants
+        group_ids: Set[int] = set()
+        for tenant in current_user.tenants:
+            for g in tenant.research_groups:
+                group_ids.add(g.id)
+
+        groups: List[ResearchGroup] = (
+            db.session.query(ResearchGroup)
+            .filter(
+                ResearchGroup.active == True,
+                ResearchGroup.id.in_(group_ids),
+            )
+            .order_by(ResearchGroup.name.asc())
+            .all()
+        )
+
     return render_template_context(
         'archive/reports.html',
         pclasses=pclasses,
         pclass_filter=pclass_filter,
         years=years,
         year_filter=year_filter,
+        groups=groups,
+        group_filter=group_filter,
     )
 
 
@@ -137,6 +189,7 @@ def reports_ajax():
 
     pclass_filter = request.args.get('pclass_filter')
     year_filter = request.args.get('year_filter')
+    group_filter = request.args.get('group_filter')
 
     # Validate pclass filter
     if pclass_filter is not None and pclass_filter != 'all':
@@ -155,6 +208,20 @@ def reports_ajax():
         flag, _ = is_integer(year_filter)
         if not flag:
             year_filter = 'all'
+
+    # Validate group filter
+    if group_filter is not None and group_filter != 'all':
+        flag, value = is_integer(group_filter)
+        if flag:
+            group: ResearchGroup = db.session.query(ResearchGroup).filter_by(id=value).first()
+            if group is None:
+                group_filter = 'all'
+            elif not current_user.has_role('root'):
+                group_tenant_ids = {t.id for t in group.tenants}
+                if not group_tenant_ids.intersection(allowed_tenant_ids):
+                    group_filter = 'all'
+        else:
+            group_filter = 'all'
 
     # Build base query
     base_query = (
@@ -187,6 +254,18 @@ def reports_ajax():
         flag, value = is_integer(year_filter)
         if flag:
             base_query = base_query.filter(ProjectClassConfig.year == value)
+
+    # Apply group filter: join through SubmissionRecord and LiveProject to ResearchGroup
+    if group_filter is not None and group_filter != 'all':
+        flag, value = is_integer(group_filter)
+        if flag:
+            base_query = (
+                base_query
+                .join(SubmissionRecord, SubmissionRecord.owner_id == SubmittingStudent.id)
+                .join(LiveProject, LiveProject.id == SubmissionRecord.project_id)
+                .filter(LiveProject.group_id == value)
+                .distinct()
+            )
 
     # Define columns for ServerSideSQLHandler
     name_col = {

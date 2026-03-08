@@ -10,6 +10,10 @@
     {% set year_filter = 'all' %}
 {% endif %}
 
+{% if not group_filter or group_filter is none %}
+    {% set group_filter = 'all' %}
+{% endif %}
+
 {% block scripts %}
     {{ super() }}
     {{ import_datatables() }}
@@ -29,7 +33,7 @@
                 serverSide: true,
                 language: {{ bootstrap_spinner() }},
                 ajax: {
-                    url: $SCRIPT_ROOT + '/archive/reports_ajax?pclass_filter={{ pclass_filter }}&year_filter={{ year_filter }}',
+                    url: $SCRIPT_ROOT + '/archive/reports_ajax?pclass_filter={{ pclass_filter }}&year_filter={{ year_filter }}&group_filter={{ group_filter }}',
                     type: 'POST',
                     data: function (args) {
                         return {"args": JSON.stringify(args)};
@@ -88,12 +92,12 @@
                         <div class="col-12">
                             <p class="mb-1">Filter by project class</p>
                             <div class="d-flex flex-row flex-wrap gap-1">
-                                <a href="{{ url_for('archive.reports', pclass_filter='all', year_filter=year_filter) }}"
+                                <a href="{{ url_for('archive.reports', pclass_filter='all', year_filter=year_filter, group_filter=group_filter) }}"
                                    class="btn btn-sm filter-btn {% if pclass_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     All
                                 </a>
                                 {% for pclass in pclasses %}
-                                    <a href="{{ url_for('archive.reports', pclass_filter=pclass.id, year_filter=year_filter) }}"
+                                    <a href="{{ url_for('archive.reports', pclass_filter=pclass.id, year_filter=year_filter, group_filter=group_filter) }}"
                                        class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                         {{ pclass.name }}
                                     </a>
@@ -108,18 +112,42 @@
                     {% if pclasses is not none and pclasses|length > 0 %}
                         <hr class="intro-divider">
                     {% endif %}
-                    <div class="row">
+                    <div class="row mb-2">
                         <div class="col-12">
                             <p class="mb-1">Filter by academic year</p>
                             <div class="d-flex flex-row flex-wrap gap-1">
-                                <a href="{{ url_for('archive.reports', pclass_filter=pclass_filter, year_filter='all') }}"
+                                <a href="{{ url_for('archive.reports', pclass_filter=pclass_filter, year_filter='all', group_filter=group_filter) }}"
                                    class="btn btn-sm filter-btn {% if year_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     All years
                                 </a>
                                 {% for year in years %}
-                                    <a href="{{ url_for('archive.reports', pclass_filter=pclass_filter, year_filter=year) }}"
+                                    <a href="{{ url_for('archive.reports', pclass_filter=pclass_filter, year_filter=year, group_filter=group_filter) }}"
                                        class="btn btn-sm filter-btn {% if year_filter == year|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                         {{ year }}&ndash;{{ year + 1 }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {# Research group filter #}
+                {% if groups is not none and groups|length > 0 %}
+                    {% if (pclasses is not none and pclasses|length > 0) or (years is not none and years|length > 0) %}
+                        <hr class="intro-divider">
+                    {% endif %}
+                    <div class="row">
+                        <div class="col-12">
+                            <p class="mb-1">Filter by research group</p>
+                            <div class="d-flex flex-row flex-wrap gap-1">
+                                <a href="{{ url_for('archive.reports', pclass_filter=pclass_filter, year_filter=year_filter, group_filter='all') }}"
+                                   class="btn btn-sm filter-btn {% if group_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    All groups
+                                </a>
+                                {% for group in groups %}
+                                    <a href="{{ url_for('archive.reports', pclass_filter=pclass_filter, year_filter=year_filter, group_filter=group.id) }}"
+                                       class="btn btn-sm filter-btn {% if group_filter == group.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                        {{ group.name }}
                                     </a>
                                 {% endfor %}
                             </div>

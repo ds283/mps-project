@@ -252,6 +252,33 @@
                         </a>
                     {% endif %}
                 </div>
+                {# Show current report settings badges #}
+                {% if admin_rights %}
+                    <div class="d-flex flex-row flex-wrap gap-2 mb-3">
+                        {% if record.report_secret %}
+                            <span class="badge bg-danger"><i class="fas fa-lock fa-fw"></i> Restricted</span>
+                        {% else %}
+                            <span class="badge bg-secondary"><i
+                                    class="fas fa-lock-open fa-fw"></i> Not restricted</span>
+                        {% endif %}
+
+                        {% if record.report_embargo %}
+                            <span class="badge bg-warning text-dark"><i class="fas fa-calendar-times fa-fw"></i> Embargoed until {{ record.report_embargo.strftime("%d %b %Y %H:%M") }}</span>
+                        {% endif %}
+
+                        {% if record.report_exemplar %}
+                            <span class="badge bg-success"><i class="fas fa-star fa-fw"></i> Exemplar</span>
+                        {% endif %}
+                    </div>
+                    {% if record.report_exemplar and record.exemplar_comment and record.exemplar_comment|length > 0 %}
+                        <div class="mb-3">
+                            {% call icon_block("comment") %}
+                                <div class="text-muted small">{{ record.exemplar_comment }}</div>
+                            {% endcall %}
+                        </div>
+                    {% endif %}
+                {% endif %}
+
                 {% if record.report %}
                     {% set asset = record.report %}
                     {% set passet = record.processed_report %}

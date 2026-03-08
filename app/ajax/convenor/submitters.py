@@ -85,18 +85,21 @@ _periods = """
     {% set number_submissions = config.number_submissions %}
     <div class="bg-light p-2 mb-2 {% if number_submissions > 1 and period.submission_period == current_period.submission_period %}border border-info{% endif %}">
         {% if r.project is not none %}
-            <div class="d-flex flex-row justify-content-between align-items-start gap-2">
-                <div>
-                    {% if r.project.name|length < 70 %}
-                        {% set proj_name = r.project.name %}
-                    {% else %}
-                        {% set proj_name = r.project.name[0:70] + '...' %}
-                    {% endif %}
-                    <a class="fw-semibold text-decoration-none" href="{{ url_for('faculty.live_project', pid=r.project_id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">{{ proj_name }}</a>
-                    {% if r.has_issues %}
-                        <i class="fas fa-exclamation-triangle text-danger"></i>
-                    {% endif %}
-                    <div class="d-flex flex-row justify-content-start align-items-start gap-2">
+            <div class="d-flex flex-row flex-wrap justify-content-between align-items-start gap-2">
+                <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-3">
+                        {% if r.project.name|length < 70 %}
+                            {% set proj_name = r.project.name %}
+                        {% else %}
+                            {% set proj_name = r.project.name[0:70] + '...' %}
+                        {% endif %}
+                        <a class="fw-semibold text-decoration-none" href="{{ url_for('faculty.live_project', pid=r.project_id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">{{ proj_name }}</a>
+                        {% if r.has_issues %}
+                            <i class="fas fa-exclamation-triangle text-danger"></i>
+                        {% endif %}
+                        <a class="btn btn-xs btn-outline-secondary" href="{{ url_for('projecthub.hub', subid=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Project page&hellip;</a>
+                    </div>
+                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
                         {% if r.supervision_grade %}
                             <div>
                                 <div class="small text-muted">Supervision</div>
@@ -111,7 +114,7 @@ _periods = """
                         {% endif %}
                     </div>
                 </div>
-                <div class="d-flex flex-row justify-content-start align-items-start gap-2">
+                <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-1">
                     {% if r.project.generic or r.project.owner is none %}
                         <div class="small text-primary text-capitalize">Generic</div>
                     {% else %}

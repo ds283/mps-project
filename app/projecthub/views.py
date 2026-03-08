@@ -159,7 +159,7 @@ def hub(subid):
         attendance_percent = attendance_data["attendance"]
 
         if attendance_percent is not None and not isnan(attendance_percent) and not isinf(attendance_percent):
-            attendance_diagram = doughnut_diagram(attendance_percent/100.0)
+            attendance_diagram = doughnut_diagram(attendance_percent/100.0, burned_colour="palegreen", unburned_colour="tomato")
         else:
             attendance_percent = None
 
@@ -187,8 +187,8 @@ def hub(subid):
     )
 
 
-def doughnut_diagram(burn_fraction: float) -> DoughnutDiagram:
-    angle = 2 * pi * burn_fraction
+def doughnut_diagram(burn_fraction: float, burned_colour='tomato', unburned_colour='palegreen') -> DoughnutDiagram:
+    angle = 2 * pi * min(burn_fraction, 0.995)
     start_angle = pi / 2.0
     end_angle = pi / 2.0 - angle if angle < pi / 2.0 else 5.0 * pi / 2.0 - angle
 
@@ -203,19 +203,20 @@ def doughnut_diagram(burn_fraction: float) -> DoughnutDiagram:
         line_color=None,
         start_angle=start_angle,
         end_angle=end_angle,
-        fill_color="tomato",
+        fill_color=burned_colour,
     )
-    plot.annular_wedge(
-        x=0,
-        y=0,
-        inner_radius=0.75,
-        outer_radius=1,
-        direction="clock",
-        line_color=None,
-        start_angle=end_angle,
-        end_angle=start_angle,
-        fill_color="palegreen",
-    )
+    if burn_fraction < 1.0:
+        plot.annular_wedge(
+            x=0,
+            y=0,
+            inner_radius=0.75,
+            outer_radius=1,
+            direction="clock",
+            line_color=None,
+            start_angle=end_angle,
+            end_angle=start_angle,
+            fill_color=unburned_colour
+        )
     plot.axis.visible = False
     plot.xgrid.visible = False
     plot.ygrid.visible = False
@@ -230,7 +231,7 @@ def doughnut_diagram(burn_fraction: float) -> DoughnutDiagram:
         y=0,
         x_units="data",
         y_units="data",
-        text="{p:.2g}%".format(p=burn_fraction * 100),
+        text="{p:.2g}%".format(p=burn_fraction * 100) if burn_fraction < 1.0 else "100%",
         background_fill_alpha=0.0,
         text_align="center",
         text_baseline="middle",

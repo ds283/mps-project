@@ -139,22 +139,28 @@ _records = """
 
                 {# Download buttons #}
                 <div class="d-flex flex-column justify-content-start align-items-end gap-1">
-                    {% if r.report is not none %}
-                        <a class="btn btn-xs btn-outline-primary"
-                           href="{{ url_for('admin.download_submitted_asset', asset_id=r.report_id) }}"
-                           data-bs-toggle="tooltip" title="Download original report">
-                            <i class="fas fa-file-download fa-fw"></i> Original
-                        </a>
-                    {% endif %}
-                    {% if r.processed_report is not none %}
-                        <a class="btn btn-xs btn-outline-secondary"
-                           href="{{ url_for('admin.download_generated_asset', asset_id=r.processed_report_id) }}"
-                           data-bs-toggle="tooltip" title="Download processed report">
-                            <i class="fas fa-file-pdf fa-fw"></i> Processed
-                        </a>
-                    {% endif %}
-                    {% if r.report is none and r.processed_report is none %}
-                        <span class="badge bg-light text-muted border">No report</span>
+                    {% if r.report_secret %}
+                        <span class="text-danger"><i class="fas fa-exclamation-circle"> Report restricted</span>
+                    {% elif r.report_embargo %}
+                        <span class="text-danger"><i class="fas fa-exclamation-circle"> Embargoed until {{ r.report.embargo.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                    {% else %}
+                        {% if r.report is not none %}
+                            <a class="btn btn-xs btn-outline-primary"
+                               href="{{ url_for('admin.download_submitted_asset', asset_id=r.report_id) }}"
+                               data-bs-toggle="tooltip" title="Download original report">
+                                <i class="fas fa-file-download fa-fw"></i> Original
+                            </a>
+                        {% endif %}
+                        {% if r.processed_report is not none %}
+                            <a class="btn btn-xs btn-outline-secondary"
+                               href="{{ url_for('admin.download_generated_asset', asset_id=r.processed_report_id) }}"
+                               data-bs-toggle="tooltip" title="Download processed report">
+                                <i class="fas fa-file-pdf fa-fw"></i> Processed
+                            </a>
+                        {% endif %}
+                        {% if r.report is none and r.processed_report is none %}
+                            <span class="badge bg-light text-muted border">No report</span>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>

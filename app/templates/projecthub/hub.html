@@ -188,7 +188,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
                 <div class="row">
                     <div class="col-12">
                         <div class="mt-2 mb-2">
@@ -242,37 +241,36 @@
                 <hr class="intro-divider mb-5">
             {% endif %}
 
-        {% set current_events = record.get_ordered_current_events().all() %}
-        {% set past_events = record.get_ordered_past_events().all() %}
-        {% set needs_rule = false %}
-        {% if current_events|length > 0 %}
-            {% set needs_rule = true %}
-            {% set unit = current_events[0].unit %}
-            <div class="mt-3 mb-3 card border-primary">
-                <div class="card-body">
-                    {{ current_supervision_event_header(unit) }}
-                    <hr class="intro-divider">
-                    <div class="mt-3 d-flex flex-column justify-content-start align-items-start gap-4">
-                        {% for event in current_events %}
-                            {{ format_supervision_event(event) }}
-                        {% endfor %}
+            {% set current_events = record.get_ordered_current_events().all() %}
+            {% set past_events = record.get_ordered_past_events().all() %}
+            {% set needs_rule = false %}
+            {% if current_events|length > 0 %}
+                {% set needs_rule = true %}
+                {% set unit = current_events[0].unit %}
+                <div class="mt-3 mb-3 card border-primary">
+                    <div class="card-body">
+                        {{ current_supervision_event_header(unit) }}
+                        <hr class="intro-divider">
+                        <div class="mt-3 d-flex flex-column justify-content-start align-items-start gap-4">
+                            {% for event in current_events %}
+                                {{ format_supervision_event(event) }}
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
-            </div>
-        {% endif %}
-        {% if past_events|length > 0 %}
-            {% if needs_rule %}
-                <hr class="intro-divider">
             {% endif %}
-            <div class="fs-4 text-dark mb-3">Past events</div>
-            {% for event in past_events %}
-                <div class="card card-body bg-light mt-2 mb-2 border-secondary">
-                    {{ past_supervision_event_header(event) }}
-                    {{ format_supervision_event(event, past_event=true) }}
-                </div>
-            {% endfor %}
-            </div>
-        {% endif %}
+            {% if past_events|length > 0 %}
+                {% if needs_rule %}
+                    <hr class="intro-divider">
+                {% endif %}
+                <div class="fs-4 text-dark mb-3">Past events</div>
+                {% for event in past_events %}
+                    <div class="card card-body bg-light mt-2 mb-2 border-secondary">
+                        {{ past_supervision_event_header(event) }}
+                        {{ format_supervision_event(event, past_event=true) }}
+                    </div>
+                {% endfor %}
+            {% endif %}
 
     {# Populate dashboard widgets #}
     {#        <div class="mt-3 card border-secondary">#}
@@ -299,15 +297,15 @@
     {#                Content#}
     {#                </div>#}
     {#            </div>#}
-    {##}
-    {#            {% if text and url %}#}
-    {#                <div class="mt-3">#}
-    {#                    <a class="text-decoration-none" href="{{ url }}">#}
-    {#                        <i class="fas fa-backward"></i> Return to {{ text }}#}
-    {#                    </a>#}
-    {#                </div>#}
-    {#            {% endif %}#}
-    {#        </div>#}
-    {#        <div class="col-1"></div>#}
-    {#    </div>#}
+
+            {% if text and url %}
+                <div class="mt-3">
+                    <a class="text-decoration-none" href="{{ url }}">
+                        <i class="fas fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-1"></div>
+    </div>
 {% endblock %}

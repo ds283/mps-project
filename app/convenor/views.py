@@ -58,6 +58,7 @@ from .forms import (
     EditCustomOfferFormFactory, DuplicateProjectFormFactory,
     AddSubmissionPeriodUnitFormFactory, EditSubmissionPeriodUnitFormFactory,
     AddSupervisionEventTemplateFormFactory, EditSupervisionEventTemplateFormFactory,
+    ReassignEventOwnerFormFactory,
 )
 from ..admin.forms import LevelSelectorForm
 from ..database import db
@@ -120,6 +121,7 @@ from ..models import (
     GeneratedAsset, Tenant,
     SubmissionPeriodUnit,
     SupervisionEventTemplate,
+    SupervisionEvent,
 )
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.asset_tools import AssetUploadManager
@@ -12124,6 +12126,89 @@ def mark_task_dropped(tid):
 
 INJECT_CURRENT_CYCLE = 1
 INJECT_PREVIOUS_CYCLE = 2
+
+
+@convenor.route("/reassign_event_owner/<int:event_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def reassign_event_owner(event_id):
+    """
+    Allow the convenor (or an admin/root user) who is the owner of a SupervisionEvent
+    to reassign ownership to one of the current team members.
+    The new owner is removed from the team collection; the previous owner is added to it.
+    """
+    event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
+
+    # Resolve the submission record and project class config
+    record: SubmissionRecord = event.sub_record
+    if record is None:
+        flash("Cannot reassign event owner because the associated submission record could not be found.", "error")
+        return redirect(redirect_url())
+
+    sub: SubmittingStudent = record.owner
+    config: ProjectClassConfig = sub.config
+    pclass: ProjectClass = config.project_class
+
+    # Only convenors (and admin/root) may perform this action
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    # Check that the event actually has team members to reassign to
+    team_members = event.team.all()
+    if not team_members:
+        flash("Cannot reassign event owner because there are no other team members to assign as the new owner.", "warning")
+        return redirect(url)
+
+    ReassignForm = ReassignEventOwnerFormFactory(event)
+    form = ReassignForm(request.form)
+
+    if form.validate_on_submit():
+        new_owner_role: SubmissionRole = form.new_owner.data
+        old_owner_role: SubmissionRole = event.owner
+
+        if new_owner_role is None:
+            flash("Please select a team member to become the new event owner.", "error")
+            return redirect(url)
+
+        if old_owner_role is not None and new_owner_role.id == old_owner_role.id:
+            flash("The selected team member is already the event owner.", "warning")
+            return redirect(url)
+
+        try:
+            # Remove the new owner from the team collection (they are becoming the owner)
+            if new_owner_role in event.team:
+                event.team.remove(new_owner_role)
+
+            # Add the old owner to the team collection (they are being demoted to team member)
+            if old_owner_role is not None and old_owner_role not in event.team:
+                event.team.append(old_owner_role)
+
+            # Update the owner
+            event.owner_id = new_owner_role.id
+
+            db.session.commit()
+            flash(
+                f'Event owner has been reassigned to <strong>{new_owner_role.user.name}</strong>.',
+                "success",
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not reassign event owner due to a database error. Please contact a system administrator.", "error")
+
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/submitter/reassign_event_owner.html",
+        form=form,
+        event=event,
+        record=record,
+        sub=sub,
+        url=url,
+    )
 
 
 @convenor.route("/inject_liveproject/<int:pid>/<int:pclass_id>/<int:type>")

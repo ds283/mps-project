@@ -82,9 +82,17 @@
                         <span class="fw-semibold">
                             <i class="fas fa-user-friends"></i> Supervision team attendees
                         </span>
-                        <a class="btn btn-sm btn-secondary" href="{{ edit_team_url }}">
-                            <i class="fas fa-pencil-alt"></i> Edit attendees
-                        </a>
+                        <div class="d-flex flex-row gap-2">
+                            {% if is_convenor and team_list|length > 0 %}
+                                <a class="btn btn-sm btn-warning"
+                                   href="{{ url_for('convenor.reassign_event_owner', event_id=event.id, url=request.url) }}">
+                                    <i class="fas fa-user-edit"></i> Reassign owner
+                                </a>
+                            {% endif %}
+                            <a class="btn btn-sm btn-secondary" href="{{ edit_team_url }}">
+                                <i class="fas fa-pencil-alt"></i> Edit attendees
+                            </a>
+                        </div>
                     </div>
                     <div class="card-body">
                         {# Always show the owner #}

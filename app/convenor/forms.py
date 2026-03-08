@@ -727,3 +727,40 @@ def EditSupervisionEventTemplateFormFactory(unit: SubmissionPeriodUnit):
         )
 
     return EditSupervisionEventTemplateForm
+
+
+def ReassignEventOwnerFormFactory(event):
+    """
+    Factory that returns a form for reassigning the owner of a SupervisionEvent.
+    The new owner must be one of the current team members (i.e. a SubmissionRole
+    that is already in the event's team collection).
+    """
+    from ..models import SupervisionEvent, SubmissionRole
+
+    event_id = event.id
+
+    def _query_factory():
+        # Reload the event to get the current team
+        ev: SupervisionEvent = SupervisionEvent.query.get(event_id)
+        if ev is None:
+            return []
+        return ev.team.all()
+
+    def _get_label(role: SubmissionRole) -> str:
+        if role is not None and role.user is not None:
+            return f"{role.user.name} ({role.role_as_str})"
+        return "Unknown"
+
+    class ReassignEventOwnerForm(Form):
+        new_owner = QuerySelectField(
+            "New event owner",
+            query_factory=_query_factory,
+            get_label=_get_label,
+            allow_blank=False,
+            description="Select the team member who should become the new owner of this event. "
+                        "The current owner will be moved to the team.",
+        )
+
+        submit = SubmitField("Reassign owner")
+
+    return ReassignEventOwnerForm

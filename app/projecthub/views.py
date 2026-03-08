@@ -442,6 +442,11 @@ def event_details(event_id):
     # (i.e. there is at least one eligible non-owner team member)
     num_supervisor_roles = len(record.supervisor_roles)
 
+    # Determine whether the current user is a convenor (or admin/root) for this project class,
+    # so the template can conditionally show the "Reassign owner" button
+    config: ProjectClassConfig = record.period.config
+    is_convenor = validate_is_convenor(config.project_class, message=False)
+
     return render_template_context(
         "projecthub/event/event_details.html",
         event=event,
@@ -449,6 +454,7 @@ def event_details(event_id):
         url=url,
         text=text,
         num_supervisor_roles=num_supervisor_roles,
+        is_convenor=is_convenor,
         edit_summary_url=url_for(
             "projecthub.edit_meeting_summary",
             event_id=event_id,

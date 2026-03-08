@@ -820,24 +820,8 @@ def AssetMixinFactory(acl_name, acr_name):
             return db.relationship("Role", secondary=acr_name, lazy="dynamic")
 
         def _get_userid(self, user):
-            # dereference a Werkzeug LocalProxy if needed, eg. if current_user is passed to us
-            if hasattr(user, "_get_current_object"):
-                user = user._get_current_object()
-
-            if isinstance(user, int):
-                user_id = user
-            elif isinstance(user, User):
-                user_id = user.id
-            elif isinstance(user, SubmissionRole):
-                user_id = user.user_id
-            elif isinstance(user, FacultyData):
-                user_id = user.user.id
-            elif isinstance(user, StudentData):
-                user_id = user.user.id
-            else:
-                raise RuntimeError('Unrecognized object "user" passed to AssetMixin._get_userid()')
-
-            return user_id
+            user_obj: User = self._get_user(user)
+            return user_obj.id
 
         def _get_user(self, user):
             # dereference a Werkzeug LocalProxy if needed, eg. if current_user is passed to us
@@ -855,19 +839,13 @@ def AssetMixinFactory(acl_name, acr_name):
             elif isinstance(user, int):
                 user_obj = db.session.query(User).filter_by(id=user).first()
             else:
-                raise RuntimeError('Unrecognized object "user" passed to AssetMixin._get_user()')
+                raise RuntimeError(f'Unrecognized object "{user}" of type "{type(user)}" passed to AssetMixin._get_user()')
 
             return user_obj
 
         def _get_roleid(self, role):
-            if isinstance(role, int):
-                role_id = role
-            elif isinstance(role, Role):
-                role_id = role.id
-            else:
-                raise RuntimeError('Unrecognized object "role" passed to AssetMixin._get_roleid()')
-
-            return role_id
+            role_obj: Role = self._get_role(role)
+            return role_obj.id
 
         def _get_role(self, role):
             if isinstance(role, Role):
@@ -877,7 +855,7 @@ def AssetMixinFactory(acl_name, acr_name):
             elif isinstance(role, int):
                 role_obj = db.session.query(Role).filter_by(id=role).first()
             else:
-                raise RuntimeError('Unrecognized object "role" passed to AssetMixin._get_role()')
+                raise RuntimeError(f'Unrecognized object "{role}" of type "{type(role)}" passed to AssetMixin._get_role()')
 
             return role_obj
 
@@ -12477,6 +12455,18 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         return query
 
+    def _check_access_control_groups(self, asset):
+        asset: Union[SubmittedAsset, GeneratedAsset]
+        modified = False
+
+        allowed_roles = ['archive_reports']
+        for allowed_role in allowed_roles:
+            if not asset.in_role_acl(allowed_role):
+                asset.grant_role(allowed_role)
+                modified = True
+
+        return modified
+
     def _check_access_control_users(self, asset, allow_student=False):
         asset: Union[SubmittedAsset, GeneratedAsset]
         modified = False
@@ -12529,8 +12519,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             # emit warning message to log
             print(
                 "@@ Access control warning: Asset id={asset_id} (target={target}, unique_name={uniq}) for "
-                "SubmissionRecord id={record_id} grants access to user {name} who is not the supervisor or "
-                "marker".format(asset_id=asset.id, target=asset.target_name, uniq=asset.unique_name, record_id=self.id, name=user.name)
+                "SubmissionRecord id={record_id} grants access to user {name} who does not have a supervisor, marker, or moderator "
+                "role.".format(asset_id=asset.id, target=asset.target_name, uniq=asset.unique_name, record_id=self.id, name=user.name)
             )
 
         return modified
@@ -12544,11 +12534,11 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         # check access control status for uploaded report
         if self.report is not None:
-            modified = modified | self._check_access_control_users(self.report, allow_student=True)
+            modified = modified | self._check_access_control_users(self.report, allow_student=True) | self._check_access_control_groups(self.report)
 
         # check access control status for processed report
         if self.processed_report is not None:
-            modified = modified | self._check_access_control_users(self.processed_report, allow_student=False)
+            modified = modified | self._check_access_control_users(self.processed_report, allow_student=False) | self._check_access_control_groups(self.processed_report)
 
         # check access control status for any uploaded attachments; generally these should not be
         # available to students

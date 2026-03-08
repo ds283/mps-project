@@ -4,11 +4,13 @@
 {% from "macros.html" import date_field %}
 {% from "labels.html" import unformatted_label %}
 {% from "datepicker.html" import import_datepicker %}
+{% from "tinymce.html" import import_tinymce %}
 {% from "icon_block.html" import icon_block %}
 
 {% block scripts %}
     {{ super() }}
     {{ import_datepicker() }}
+    {{ import_tinymce() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -38,6 +40,15 @@
 
             // Set initial state on page load
             updateEmbargoState();
+
+            tinymce.init({
+                selector: '#exemplar_comment',
+                plugins: 'lists advlist autolink autosave codesample emoticons fullscreen link paste searchreplace table visualblocks charmap',
+                toolbar: 'undo redo | blocks styles fontfamily fontsize removeformat | bold italic | alignleft aligncenter alignright alignjustify lineheight | outdent indent | numlist bullist table | link codesample emoticons charmap | restoredraft paste pastetext visualblocks | fullscreen',
+                menubar: 'edit insert view table',
+                min_height: 300,
+                resize: true
+            });
         });
     </script>
 {% endblock %}
@@ -78,7 +89,7 @@
             <p class="card-title"><strong>Exemplar settings</strong></p>
 
             {{ wtf.render_field(form.report_exemplar) }}
-            {{ wtf.render_field(form.exemplar_comment) }}
+            <div class="mt-2">{{ wtf.render_field(form.exemplar_comment) }}</div>
         </div>
 
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}

@@ -37,3 +37,4 @@ INITDB_TARFILE = None
 # INITDB_CATS_LIMITS_FILE = "DS-CATS-data.csv"
 # INITDB_SUPERVISOR_IMPORT = "supervisor.csv"
 # INITDB_EXAMINER_IMPORT = "examiner.csv"
+# INITDB_ATTENDANCE_IMPORT = "attendance.csv"

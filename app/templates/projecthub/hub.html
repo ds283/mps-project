@@ -99,6 +99,10 @@
         {{ burndown_script|safe }}
     {% endif %}
 
+    {% if attendance_div is defined and attendance_div is not none and attendance_script is defined and attendance_script is not none %}
+        {{ attendance_script|safe }}
+    {% endif %}
+
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
@@ -188,17 +192,6 @@
                             </div>
                         </div>
                     </div>
-                <div class="row">
-                    <div class="col-12">
-                        <div class="mt-2 mb-2">
-                            <a class="btn btn-sm btn-outline-primary"
-                               href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=return_text) }}">
-                                <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <hr class="intro-divider mb-5">
             {% else %}
                 <div class="fs-3 mb-3">Project page for <i class="fas fa-user-circle"></i> {{ student.user.name }}</div>
                 <div class="row vertical-top">
@@ -228,18 +221,49 @@
                         </div>
                     </div>
                 </div>
+            {% endif %}
+
+            {# COMMON HEADER ELEMENTS #}
+            <div class="row">
+                <div class="col-12">
+                    <div class="mt-2 mb-2">
+                        <a class="btn btn-sm btn-outline-primary"
+                           href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=return_text) }}">
+                            <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% if attendance_recorded or attendance_missing or attendance_percent %}
                 <div class="row">
                     <div class="col-12">
-                        <div class="mt-2 mb-2">
-                            <a class="btn btn-sm btn-outline-primary"
-                               href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=return_text) }}">
-                                <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
-                            </a>
+                        <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 mt-2 mb-2">
+                            {% if attendance_recorded %}
+                                <div>
+                                    <div class="small text-muted">Recorded</div>
+                                    <div class="fw-bold fs-4 {% if attendance_missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_recorded }}</div>
+                                </div>
+                            {% endif %}
+                            {% if attendance_missing %}
+                                <div>
+                                    <div class="small text-muted">Missing</div>
+                                    <div class="fw-bold fs-4 {% if attendance_missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_missing }}</div>
+                                </div>
+                            {% endif %}
+                            {% if attendance_percent %}
+                                <div>
+                                    <div class="small text-muted">Attendance</div>
+                                    <div class="fw-bold fs-4 text-success">{{ attendance_percent|round(precision=0) }}%</div>
+                                </div>
+                            {% endif %}
+                            {% if attendance_div is defined and attendance_div is not none and attendance_script is defined and attendance_script is not none %}
+                                {{ attendance_div|safe }}
+                            {% endif %}
                         </div>
                     </div>
                 </div>
-                <hr class="intro-divider mb-5">
             {% endif %}
+            <hr class="intro-divider mb-5">
 
             {% set current_events = record.get_ordered_current_events().all() %}
             {% set past_events = record.get_ordered_past_events().all() %}

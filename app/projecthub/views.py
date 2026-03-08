@@ -9,6 +9,7 @@
 #
 
 import json
+from collections import namedtuple
 from datetime import date, timedelta, datetime
 from functools import partial
 
@@ -18,6 +19,7 @@ from bokeh.plotting import figure
 from flask import redirect, flash, request, jsonify, current_app, url_for
 from flask_security import current_user, roles_accepted, login_required
 from math import pi
+from numpy import isnan, isinf
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import with_polymorphic
 from sqlalchemy.sql import func
@@ -45,6 +47,14 @@ from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 from ..tools import ServerSideSQLHandler
+
+DoughnutDiagram = namedtuple(
+    "DoughnutDiagram",
+    [
+        "script",
+        "div"
+    ]
+)
 
 
 @projecthub.route("/hub/<int:subid>")
@@ -126,6 +136,7 @@ def hub(subid):
 
     # generate burn-down doughnut chart if we can
     now = date.today()
+    burn_diagram = None
     if not record.retired and period.start_date and now >= period.start_date and period.hand_in_date and now <= period.hand_in_date:
         total_time: timedelta = period.hand_in_date - period.start_date
         total_time_days: int = total_time.days
@@ -133,62 +144,24 @@ def hub(subid):
         used_time: timedelta = now - period.start_date
         used_time_days: int = used_time.days
 
-        burnt_time = float(used_time_days) / float(total_time_days)
-        angle = 2 * pi * burnt_time
-        start_angle = pi / 2.0
-        end_angle = pi / 2.0 - angle if angle < pi / 2.0 else 5.0 * pi / 2.0 - angle
+        burn_fraction = float(used_time_days) / float(total_time_days)
+        burn_diagram = doughnut_diagram(burn_fraction)
 
-        plot = figure(width=80, height=80, toolbar_location=None)
-        plot.sizing_mode = "fixed"
-        plot.annular_wedge(
-            x=0,
-            y=0,
-            inner_radius=0.75,
-            outer_radius=1,
-            direction="clock",
-            line_color=None,
-            start_angle=start_angle,
-            end_angle=end_angle,
-            fill_color="tomato",
-        )
-        plot.annular_wedge(
-            x=0,
-            y=0,
-            inner_radius=0.75,
-            outer_radius=1,
-            direction="clock",
-            line_color=None,
-            start_angle=end_angle,
-            end_angle=start_angle,
-            fill_color="palegreen",
-        )
-        plot.axis.visible = False
-        plot.xgrid.visible = False
-        plot.ygrid.visible = False
-        plot.border_fill_color = None
-        plot.toolbar.logo = None
-        plot.background_fill_color = None
-        plot.outline_line_color = None
-        plot.toolbar.active_drag = None
+    # get attendance data and generate doughnut chart
+    attendance_data = record.get_attendance_data()
+    attendance_diagram = None
+    attendance_recorded = None
+    attendance_missing = None
+    attendance_percent = None
+    if attendance_data:
+        attendance_recorded = attendance_data["recorded"]
+        attendance_missing = attendance_data["missing"]
+        attendance_percent = attendance_data["attendance"]
 
-        annotation = Label(
-            x=0,
-            y=0,
-            x_units="data",
-            y_units="data",
-            text="{p:.2g}%".format(p=burnt_time * 100),
-            background_fill_alpha=0.0,
-            text_align="center",
-            text_baseline="middle",
-            text_font_style="bold",
-        )
-        plot.add_layout(annotation)
-
-        burndown_script, burndown_div = components(plot)
-
-    else:
-        burndown_script = None
-        burndown_div = None
+        if attendance_percent is not None and not isnan(attendance_percent) and not isinf(attendance_percent):
+            attendance_diagram = doughnut_diagram(attendance_percent/100.0)
+        else:
+            attendance_percent = None
 
     return render_template_context(
         "projecthub/hub.html",
@@ -202,11 +175,71 @@ def hub(subid):
         record=record,
         period=period,
         my_role=my_role,
-        burndown_div=burndown_div,
-        burndown_script=burndown_script,
+        burndown_div=burn_diagram.div if burn_diagram else None,
+        burndown_script=burn_diagram.script if burn_diagram else None,
+        attendance_recorded=attendance_recorded,
+        attendance_missing=attendance_missing,
+        attendance_percent=attendance_percent,
+        attendance_div=attendance_diagram.div if attendance_diagram else None,
+        attendance_script=attendance_diagram.script if attendance_diagram else None,
         return_url=url_for("projecthub.hub", subid=subid, url=url, text=text),
         return_text=f'project page for {suser.name}'
     )
+
+
+def doughnut_diagram(burn_fraction: float) -> DoughnutDiagram:
+    angle = 2 * pi * burn_fraction
+    start_angle = pi / 2.0
+    end_angle = pi / 2.0 - angle if angle < pi / 2.0 else 5.0 * pi / 2.0 - angle
+
+    plot = figure(width=80, height=80, toolbar_location=None)
+    plot.sizing_mode = "fixed"
+    plot.annular_wedge(
+        x=0,
+        y=0,
+        inner_radius=0.75,
+        outer_radius=1,
+        direction="clock",
+        line_color=None,
+        start_angle=start_angle,
+        end_angle=end_angle,
+        fill_color="tomato",
+    )
+    plot.annular_wedge(
+        x=0,
+        y=0,
+        inner_radius=0.75,
+        outer_radius=1,
+        direction="clock",
+        line_color=None,
+        start_angle=end_angle,
+        end_angle=start_angle,
+        fill_color="palegreen",
+    )
+    plot.axis.visible = False
+    plot.xgrid.visible = False
+    plot.ygrid.visible = False
+    plot.border_fill_color = None
+    plot.toolbar.logo = None
+    plot.background_fill_color = None
+    plot.outline_line_color = None
+    plot.toolbar.active_drag = None
+
+    annotation = Label(
+        x=0,
+        y=0,
+        x_units="data",
+        y_units="data",
+        text="{p:.2g}%".format(p=burn_fraction * 100),
+        background_fill_alpha=0.0,
+        text_align="center",
+        text_baseline="middle",
+        text_font_style="bold",
+    )
+    plot.add_layout(annotation)
+
+    script, div = components(plot)
+    return DoughnutDiagram(script=script, div=div)
 
 
 @projecthub.route("/edit_submission_period_articles/<int:pid>")

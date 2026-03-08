@@ -31,23 +31,18 @@
     </div>
 {% endmacro %}
 
-{% macro attendance_dropdown(btn_label, event) %}
-    <div class="btn-group dropdown-menu-right" role="group">
-        <button class="btn btn-sm btn-outline-secondary">
-            {{ btn_label }}
-        </button>
-        <button type="button" class="btn btn-sm btn-secondary dropdown-toggle dropdown-toggle-split"
-                data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
-            <span class="sr-only">Toggle Dropdown</span>
-        </button>
-        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end small">
-            {% for value, label in event.attendance_menu %}
-                <a class="dropdown-item d-flex gap-2 small"
-                   href="{{ url_for('projecthub.set_attendance', event_id=event.id, attendance=value) }}">
-                    {{ label }}
-                </a>
-            {% endfor %}
-        </div>
+{% macro attendance_dropdown(event) %}
+    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split"
+            data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
+        Set&hellip;
+    </button>
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end small">
+        {% for value, label in event.attendance_menu %}
+            <a class="dropdown-item d-flex gap-2 small"
+               href="{{ url_for('projecthub.set_attendance', event_id=event.id, attendance=value) }}">
+                {{ label }}
+            </a>
+        {% endfor %}
     </div>
 {% endmacro %}
 
@@ -63,14 +58,16 @@
         {% if event.time %}
             <div class="text-primary fs-5">{{ event.time.strftime("%A %d %b %Y %H:%M:%S") }}</div>
         {% endif %}
-        <div class="d-flex flex-row flex-wrap w-100 justify-content-between align-items-baseline">
+        <div class="d-flex flex-row flex-wrap w-100 justify-content-start align-items-baseline gap-3">
             <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline gap-2">
                 {% if show_attendance and is_faculty and event.monitor_attendance %}
                     {% if event.attendance is none %}
                         <div class="text-danger"><i class="fas fa-exclamation-circle"></i> Attendance not recorded</div>
-                        {{ attendance_dropdown("Set attendance...", event) }}
+                        {{ attendance_dropdown(event) }}
                     {% else %}
-                        {{ attendance_dropdown(event.attendance_str, event) }}
+                        <div class="text-success"><i class="fas fa-user-check me-2"></i>
+                            Attendance: {{ event.attendance_str }}</div>
+                        {{ attendance_dropdown(event) }}
                     {% endif %}
                 {% endif %}
             </div>

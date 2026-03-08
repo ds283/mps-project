@@ -41,11 +41,44 @@
 
             <hr class="intro-divider">
 
+            {# ── Attendance ── #}
+            {% if event.monitor_attendance %}
+                <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-3 mb-4">
+                    <div>
+                        {% if event.attendance is none %}
+                            <span class="text-danger fw-semibold">
+                                <i class="fas fa-exclamation-circle"></i> Attendance not yet recorded
+                            </span>
+                        {% else %}
+                            <span class="text-success fw-semibold">
+                                <i class="fas fa-user-check"></i> Attendance: {{ event.attendance_str }}
+                            </span>
+                        {% endif %}
+                    </div>
+                    {# Dropdown to change attendance status #}
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split"
+                            data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
+                        Set&hellip;
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                        {% for value, label in event.attendance_menu %}
+                            <li>
+                                <a class="dropdown-item small {% if event.attendance == value %}active{% endif %}"
+                                   href="{{ url_for('projecthub.set_attendance', event_id=event.id, attendance=value) }}">
+                                    {{ label }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
             {# ── Meeting summary ── #}
             <div class="card mt-3 mb-3 border-primary">
-                <div class="card-header d-flex flex-row justify-content-between align-items-center bg-primary text-white">
+                <div class="card-header d-flex flex-row justify-content-between align-items-center bg-light">
                     <span class="fw-semibold"><i class="fas fa-file-alt"></i> Meeting summary</span>
-                    <a class="btn btn-sm btn-light"
+                    <a class="btn btn-sm btn-secondary"
                        href="{{ edit_summary_url }}">
                         <i class="fas fa-pencil-alt"></i> Edit
                     </a>
@@ -56,7 +89,7 @@
                             {{ event.meeting_summary|safe }}
                         </div>
                     {% else %}
-                        <div class="alert alert-info mb-0">
+                        <div class="alert alert-secondary mb-0">
                             <i class="fas fa-info-circle"></i>
                             No meeting summary has been recorded yet.
                             <a class="alert-link" href="{{ edit_summary_url }}">Add one now.</a>
@@ -78,12 +111,12 @@
 
             {# ── Supervision notes ── #}
             <div class="card mt-3 mb-3 border-secondary">
-                <div class="card-header d-flex flex-row justify-content-between align-items-center bg-secondary text-white">
+                <div class="card-header d-flex flex-row justify-content-between align-items-center bg-light">
                     <span class="fw-semibold">
                         <i class="fas fa-lock"></i> Supervision notes
                         <small class="ms-2 fw-normal opacity-75">(not visible to students)</small>
                     </span>
-                    <a class="btn btn-sm btn-light"
+                    <a class="btn btn-sm btn-secondary"
                        href="{{ edit_notes_url }}">
                         <i class="fas fa-pencil-alt"></i> Edit
                     </a>
@@ -94,7 +127,7 @@
                             {{ event.supervision_notes|safe }}
                         </div>
                     {% else %}
-                        <div class="alert alert-info mb-0">
+                        <div class="alert alert-secondary mb-0">
                             <i class="fas fa-info-circle"></i>
                             No supervision notes have been recorded yet.
                             <a class="alert-link" href="{{ edit_notes_url }}">Add some now.</a>

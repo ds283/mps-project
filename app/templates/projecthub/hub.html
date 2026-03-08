@@ -58,6 +58,15 @@
         {% if event.time %}
             <div class="text-primary fs-5">{{ event.time.strftime("%A %d %b %Y %H:%M:%S") }}</div>
         {% endif %}
+        {% if my_role is none or (my_role is not none and my_role.id != event.owner_id) %}
+            <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-2 small text-secondary">
+                <div><i class="fas fa-user-circle"></i> {{ event.sub_record.owner.student.user.name }}</div>
+                <div><i class="fas fa-user-circle"></i> {{ event.owner.user.name }}</div>
+                {% for attendee in event.team %}
+                    <div><i class="fas fa-user-circle"></i> {{ attendee.user.name }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
         <div class="d-flex flex-row flex-wrap w-100 justify-content-start align-items-baseline gap-3">
             <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline gap-2">
                 {% if show_attendance and is_faculty and event.monitor_attendance %}

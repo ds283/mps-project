@@ -15,10 +15,11 @@ from ..models import SubmissionRecord, User, SupervisionEvent, SubmissionRole, L
     StudentData
 
 
-def validate_project_hub(record: SubmissionRecord, user: User, message=False):
+def validate_project_hub(record: SubmissionRecord, user: User, current_role=None, message=False):
     """
     Validate whether a given user instance is entitled to view the
     ProjectHub for a given SubmissionRecord
+    :param current_role:
     :param record:
     :param user:
     :return:
@@ -37,17 +38,35 @@ def validate_project_hub(record: SubmissionRecord, user: User, message=False):
         return True
 
     # supervisors, markers, moderators, exam board members, and external examiners can always look
-    project: LiveProject = record.project
-    if user.has_role("faculty"):
-        for role in record.roles:
-            role: SubmissionRole
-            if role.user_id == user.id and role.role in [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR, SubmissionRole.ROLE_MARKER, SubmissionRole.ROLE_EXAM_BOARD, SubmissionRole.ROLE_EXTERNAL_EXAMINER, SubmissionRole.ROLE_MODERATOR]:
-                return True
+    allowed_roles = [
+        SubmissionRole.ROLE_SUPERVISOR,
+        SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+        SubmissionRole.ROLE_MARKER,
+        SubmissionRole.ROLE_EXAM_BOARD,
+        SubmissionRole.ROLE_EXTERNAL_EXAMINER,
+        SubmissionRole.ROLE_MODERATOR
+    ]
+
+    if current_role is not None:
+        if current_role.user_id != user.id:
+            if message:
+                flash(f'Authorization issue for project page: current role does not match current user. Please contact a system administrator.', 'error')
+            return False
+        if current_role.role in allowed_roles:
+            return True
+    else:
+        if user.has_role("faculty"):
+            for role in record.roles:
+                role: SubmissionRole
+                if role.user_id == user.id and role.role in allowed_roles:
+                    return True
 
     # project convenors can look
     owner: SubmittingStudent = record.owner
     config: ProjectClassConfig = owner.config
     pclass: ProjectClass = config.project_class
+    project: LiveProject = record.project
+
     if pclass.is_convenor(user.id):
         return True
 

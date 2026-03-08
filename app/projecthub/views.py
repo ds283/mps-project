@@ -53,7 +53,15 @@ def hub(subid):
     # subid labels a SubmissionRecord
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(subid)
 
-    if not validate_project_hub(record, current_user, message=True):
+    my_role: SubmissionRole = None
+    if current_user.has_role("faculty"):
+        for role in record.roles:
+            role: SubmissionRole
+            if role.user_id == current_user.id:
+                my_role = role
+                break
+
+    if not validate_project_hub(record, current_user, current_role=my_role, message=True):
         return redirect(redirect_url())
 
     submitter: SubmittingStudent = record.owner
@@ -193,6 +201,7 @@ def hub(subid):
         project=project,
         record=record,
         period=period,
+        my_role=my_role,
         burndown_div=burndown_div,
         burndown_script=burndown_script,
         return_url=url_for("projecthub.hub", subid=subid, url=url, text=text),

@@ -19,6 +19,7 @@ from uuid import uuid4
 import humanize
 from flask import current_app
 from flask_security import current_user, UserMixin, RoleMixin, AsaList
+from numpy import nan
 from sqlalchemy import orm, or_, and_
 from sqlalchemy.event import listens_for
 from sqlalchemy.ext.declarative import declared_attr
@@ -11193,7 +11194,6 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
         )
         return get_count(query)
 
-
     def number_owned_events_missing_attendance(self, now: Optional[datetime]=None) -> int:
         if now is None:
             now = datetime.now()
@@ -12454,6 +12454,55 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         )
 
         return query
+
+    def get_attendance_data(self, now: Optional[datetime]=None) -> Dict[str, Any]:
+        if now is None:
+            now = datetime.now()
+
+        attended_values = [
+            SupervisionEvent.ATTENDANCE_ON_TIME,
+            SupervisionEvent.ATTENDANCE_LATE,
+        ]
+
+        def in_past(event: SupervisionEvent):
+            if event.time is not None:
+                return event.time < now
+
+            return event.unit.end_date < now.date()
+
+        past_events = [e for e in self.events if e.monitor_attendance and in_past(e)]
+        total_events_attended = sum([e.attendance in attended_values for e in past_events])
+        total_events_recorded_attendance = sum([e.attendance is not None for e in past_events])
+        total_events_missing_attendance = sum([e.attendance is None for e in past_events])
+
+        return {
+            'attendance': 100.0 * float(total_events_attended) / float(total_events_recorded_attendance) if total_events_recorded_attendance > 0 else nan,
+            'total': len(past_events),
+            'missing': total_events_missing_attendance,
+            'recorded': total_events_recorded_attendance,
+        }
+
+    def number_events_with_attendance(self, now: Optional[datetime]=None):
+        if now is None:
+            now = datetime.now()
+
+        query = self.get_ordered_past_events(now=now)
+        query = query.filter(
+            SupervisionEvent.monitor_attendance == True,
+            SupervisionEvent.attendance != None,
+        )
+        return get_count(query)
+
+    def number_events_missing_attendance(self, now: Optional[datetime]=None):
+        if now is None:
+            now = datetime.now()
+
+        query = self.get_ordered_past_events(now=now)
+        query = query.filter(
+            SupervisionEvent.monitor_attendance == True,
+            upervisionEvent.attendance == None,
+            )
+        return get_count(query)
 
     def _check_access_control_groups(self, asset):
         asset: Union[SubmittedAsset, GeneratedAsset]

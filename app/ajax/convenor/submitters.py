@@ -87,6 +87,7 @@ _periods = """
         {% if r.project is not none %}
             <div class="d-flex flex-row flex-wrap justify-content-between align-items-start gap-2">
                 <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+                    {# BASIC DETAILS #}
                     <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-3">
                         {% if r.project.name|length < 70 %}
                             {% set proj_name = r.project.name %}
@@ -99,6 +100,33 @@ _periods = """
                         {% endif %}
                         <a class="btn btn-xs btn-outline-secondary" href="{{ url_for('projecthub.hub', subid=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Project page&hellip;</a>
                     </div>
+
+                    {# ATTENDANCE #}
+                    {% set attendance_data = r.get_attendance_data() %}
+                    {% if attendance_data and attendance_data['total'] > 0 %}
+                        {% set total = attendance_data["total"] %}
+                        {% set missing = attendance_data["missing"] %}
+                        {% set recorded = attendance_data["recorded"] %}
+                        {% set attendance_percent = attendance_data["attendance"] %}
+                        <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
+                            <div>
+                                <div class="small text-muted">Recorded</div>
+                                <div class="fw-bold fs-4 {% if missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_data['recorded'] }}</div>
+                            </div>
+                            <div>
+                                <div class="small text-muted">Missing</div>
+                                <div class="fw-bold fs-4 {% if missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_data['missing'] }}</div>
+                            </div>
+                            {% if attendance_percent >= 0.0 %}
+                                <div>
+                                    <div class="small text-muted">Attendance</div>
+                                    <div class="fw-bold fs-4 text-success">{{ attendance_percent|round(precision=0) }}%</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    
+                    {# GRADES #}
                     <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
                         {% if r.supervision_grade %}
                             <div>

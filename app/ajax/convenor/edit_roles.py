@@ -41,6 +41,37 @@ _menu = """
 
 
 # language=jinja2
+_role = """
+<div>{{ role.role_as_str }}</div>
+{% if role.role in [role.ROLE_SUPERVISOR, role.ROLE_RESPONSIBLE_SUPERVISOR] %}
+    <div class="mt-2 small">
+        {% if role.marking_distributed %}
+            <span class="text-success"><i class="fas fa-check-circle fa-fw"></i> Marking distributed</span>
+        {% else %}
+            <span class="text-secondary"><i class="fas fa-times-circle fa-fw"></i> Marking not distributed</span>
+        {% endif %}
+    </div>
+    {% if role.external_marking_url %}
+        <div class="mt-1 small">
+            <i class="fas fa-link fa-fw"></i>
+            <a class="text-decoration-none" href="{{ role.external_marking_url }}" target="_blank" rel="noopener noreferrer">External marking link</a>
+        </div>
+    {% endif %}
+    {% if role.grade is not none %}
+        <div class="mt-1 small">
+            <i class="fas fa-star fa-fw"></i> Grade: <strong>{{ role.grade }}%</strong>
+        </div>
+    {% endif %}
+    {% if role.weight is not none %}
+        <div class="mt-1 small">
+            <i class="fas fa-balance-scale fa-fw"></i> Weight: <strong>{{ role.weight }}</strong>
+        </div>
+    {% endif %}
+{% endif %}
+"""
+
+
+# language=jinja2
 _details = """
 {% if role.created_by is not none %}
     <div class="small">
@@ -79,7 +110,7 @@ def edit_roles(roles: List[SubmissionRole], return_url=None):
     data = [
         {
             "name": render_template_string(_name, user=r.user),
-            "role": r.role_as_str,
+            "role": render_template_string(_role, role=r),
             "details": render_template_string(_details, role=r),
             "menu": render_template_string(_menu, role=r, return_url=return_url),
         }

@@ -20,6 +20,7 @@ from typing import Optional, List, Dict, Set
 import pandas as pd
 from dateutil import parser
 from flask_migrate import upgrade
+from numpy import nan
 from sqlalchemy import text, func
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -35,7 +36,7 @@ from app.models import (
     SubmittingStudent,
     StudentData,
     Tenant,
-    ProjectClass, Project, ProjectTagGroup, ProjectTag, LiveProject,
+    ProjectClass, Project, ProjectTagGroup, ProjectTag, LiveProject, SupervisionEvent, SubmissionPeriodUnit,
 )
 from app.shared.cloud_object_store import ObjectStore, ObjectMeta
 from app.shared.conversions import is_integer
@@ -612,6 +613,120 @@ def import_examiner_data(app, initial_db=None):
 
         print(f'** using INITDB_EXAMINER_IMPORT="{examiner_CSV}" to import examiner marking data')
         store_examiner_data(app, init_bucket, examiner_CSV)
+
+
+def store_attendance_data(app, bucket: ObjectStore, csv_file: str | Path):
+    if isinstance(csv_file, str):
+        csv_file = Path(csv_file)
+
+    full_suffix = "".join(csv_file.suffixes)
+
+    current_year = get_current_year()
+
+    with ScratchFileManager(suffix=full_suffix) as scratch_path:
+        with open(scratch_path.path, mode="wb") as f:
+            data: bytes = bucket.get(str(csv_file), audit_data="store_attendance_data")
+            f.write(data)
+
+        def get_value(value):
+            if value is None:
+                return None
+
+            if value is nan:
+                return None
+
+            if isinstance(value, str) and len(value) == 0:
+                return None
+
+            if isinstance(value, str):
+                return value.strip()
+
+            return str(value).strip()
+
+        df = pd.read_csv(scratch_path.path)
+        print(df)
+        for index, row in df.iterrows():
+            student_raw_name = get_value(row["Student"])
+            week_raw: str = get_value(row["Week"])
+            attendance_raw = get_value(row["Attendance"])
+            summary_raw = get_value(row["Summary"])
+            notes_raw = get_value(row["Notes"])
+
+            student_name = student_raw_name.split()
+            # split student name into first + last
+            student_first = student_name[0]
+
+            if len(student_name) == 3:
+                # assume in first initial. last form
+                if student_name[1] in ["de", "De"]:
+                    student_last = student_name[1] + " " + student_name[2]
+                else:
+                    student_last = student_name[2]
+            else:
+                student_last = student_name[1]
+
+            rec = (
+                db.session.query(SupervisionEvent)
+                .join(SubmissionPeriodUnit, SubmissionPeriodUnit.id == SupervisionEvent.unit_id)
+                .join(SubmissionRecord, SubmissionRecord.id == SupervisionEvent.sub_record_id)
+                .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
+                .join(StudentData, StudentData.id == SubmittingStudent.student_id)
+                .join(User, User.id == StudentData.id)
+                .filter(
+                    ProjectClassConfig.year == current_year,
+                    User.last_name == student_last,
+                    User.first_name == student_first,
+                    SubmissionPeriodUnit.name == week_raw,
+                )
+                .order_by(SubmissionPeriodUnit.start_date)
+            ).all()
+
+            if len(rec) == 0:
+                print(f'!! Could not find SupervisionEvent record for student = "{student_raw_name}" (student_last = "{student_last}"), week = "{week_raw}"')
+                continue
+
+            elif len(rec) > 1:
+                print(f'!! Multiple SupervisionEvent matches found for student = "{student_raw_name}" (student_last = "{student_last}"), week = "{week_raw}"; using only the first record')
+
+            attendance_map = {
+                "Yes, and was on time": SupervisionEvent.ATTENDANCE_ON_TIME,
+                "Yes, but was not on time": SupervisionEvent.ATTENDANCE_LATE,
+                "No": SupervisionEvent.ATTENDANCE_NO_SHOW_NOTIFIED,
+            }
+
+            if attendance_raw not in attendance_map:
+                print(f'!! Could not identify attendance for student = "{student_raw_name}" (student_last = "{student_last}"), week = "{week_raw}", attendance = "{attendance_raw}"')
+                continue
+
+            rec: SupervisionEvent = rec[0]
+            rec.attendance = attendance_map[attendance_raw]
+            rec.meeting_summary = summary_raw
+            rec.supervision_notes = notes_raw
+
+            print(f"++ Updated SupervisionEvent record for student = {student_raw_name}, week = {week_raw}")
+
+    db.session.commit()
+
+
+def import_attendance_data(app, initial_db=None):
+    # import initdb ObjectStore from which we can download the data
+    if initial_db is None:
+        initial_db = import_module("app.initdb.initdb")
+
+    init_bucket: ObjectStore = initial_db.INITDB_BUCKET
+    attendance_CSV: str = initial_db.INITDB_ATTENDANCE_IMPORT
+
+    _wait_until_unlocked(init_bucket)
+
+    with LockFileManager(init_bucket) as lock:
+        contents = init_bucket.list(audit_data="import_attendance_data")
+
+        if attendance_CSV not in contents:
+            print(f'** ignored INITDB_ATTENDANCE_IMPORT="{attendance_CSV}", which was not present in the initdb object store')
+            return
+
+        print(f'** using INITDB_ATTENDANCE_IMPORT="{attendance_CSV}" to import attendance data')
+        store_attendance_data(app, init_bucket, attendance_CSV)
 
 
 # tenant names used for assignment

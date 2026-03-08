@@ -243,7 +243,15 @@
 
             {# REPORT #}
             <div class="card mt-3 mb-3 card-body bg-well">
-                <span class="document-group-title mb-2">Report</span>
+                <div class="d-flex flex-row justify-content-between align-items-center mb-2">
+                    <span class="document-group-title">Report</span>
+                    {% if admin_rights %}
+                        <a href="{{ url_for('documents.edit_submission_record_settings', sid=record.id, url=url, text=text) }}"
+                           class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-cog fa-fw"></i> Report settings...
+                        </a>
+                    {% endif %}
+                </div>
                 {% if record.report %}
                     {% set asset = record.report %}
                     {% set passet = record.processed_report %}

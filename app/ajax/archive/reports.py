@@ -142,7 +142,7 @@ _records = """
                     {% if r.report_secret %}
                         <span class="text-danger"><i class="fas fa-exclamation-circle"> Report restricted</span>
                     {% elif r.report_embargo %}
-                        <span class="text-danger"><i class="fas fa-exclamation-circle"> Embargoed until {{ r.report.embargo.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                        <span class="text-danger"><i class="fas fa-exclamation-circle"> Embargoed until {{ r.report.embargo.strftime("%a %d %b %Y %H:%M") }}</span>
                     {% else %}
                         {% if r.report is not none %}
                             <a class="btn btn-xs btn-outline-primary"

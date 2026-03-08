@@ -9,8 +9,8 @@
 #
 
 from flask_security.forms import Form
-from wtforms import SubmitField, StringField, BooleanField, SelectField
-from wtforms.validators import InputRequired
+from wtforms import SubmitField, StringField, BooleanField, SelectField, DateTimeField, TextAreaField
+from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy import QuerySelectField
 
 from ..shared.forms.mixins import SaveChangesMixin
@@ -110,3 +110,30 @@ class UploadPeriodAttachmentForm(Form, PeriodAttachmentMixin, DownloadableAttach
 
 class EditPeriodAttachmentForm(Form, PeriodAttachmentMixin, SaveChangesMixin):
     pass
+
+
+class EditSubmissionRecordSettingsForm(Form, SaveChangesMixin):
+    report_secret = BooleanField(
+        "Mark report as secret/private",
+        description="If set, the report will be treated as confidential (e.g. it contains commercially sensitive content). "
+        "Setting this option will clear any embargo date.",
+    )
+
+    report_embargo = DateTimeField(
+        "Embargo date",
+        format="%d/%m/%Y %H:%M",
+        validators=[Optional()],
+        description="Optional. If set, the report will be embargoed until the specified date and time. "
+        "Leave blank for no embargo. This field is ignored if the report is marked as secret.",
+    )
+
+    report_exemplar = BooleanField(
+        "Mark report as an exemplar",
+        description="If set, this report may be used as an exemplar for future students.",
+    )
+
+    exemplar_comment = TextAreaField(
+        "Exemplar comment",
+        description="Optional. Enter any comments about this report that should be displayed when it is offered as an exemplar.",
+        render_kw={"rows": 5},
+    )

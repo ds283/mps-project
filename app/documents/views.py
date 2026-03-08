@@ -19,7 +19,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
 from . import documents
-from .forms import UploadReportForm, UploadSubmitterAttachmentFormFactory, EditReportForm, EditSubmitterAttachmentFormFactory
+from .forms import UploadReportForm, UploadSubmitterAttachmentFormFactory, EditReportForm, EditSubmitterAttachmentFormFactory, EditSubmissionRecordSettingsForm
 from .utils import is_editable, is_deletable, is_listable, is_uploadable, is_admin
 from ..database import db
 from ..models import (
@@ -477,6 +477,59 @@ def edit_submitter_report(sid):
 
     action_url = url_for("documents.edit_submitter_report", sid=record.id, url=url, text=text)
     return render_template_context("documents/edit_attachment.html", form=form, record=record, asset=asset, action_url=action_url)
+
+
+@documents.route("/edit_submission_record_settings/<int:sid>", methods=["GET", "POST"])
+@login_required
+def edit_submission_record_settings(sid):
+    # sid is a SubmissionRecord id
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
+
+    # verify current user has privileges to edit the record settings (admin/convenor only, not students)
+    if not is_editable(record, message=True, allow_student=False):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    form = EditSubmissionRecordSettingsForm(obj=record)
+
+    if form.validate_on_submit():
+        record.report_exemplar = form.report_exemplar.data
+        record.exemplar_comment = form.exemplar_comment.data
+        record.report_secret = form.report_secret.data
+
+        # if report_secret is set, clear the embargo date
+        if form.report_secret.data:
+            record.report_embargo = None
+        else:
+            record.report_embargo = form.report_embargo.data
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash("Could not save changes to this submission record due to a database error. Please contact a system administrator.", "error")
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for("documents.submitter_documents", sid=record.id, url=url, text=text))
+
+    else:
+        if request.method == "GET":
+            form.report_secret.data = record.report_secret
+            form.report_embargo.data = record.report_embargo
+            form.report_exemplar.data = record.report_exemplar
+            form.exemplar_comment.data = record.exemplar_comment
+
+    action_url = url_for("documents.edit_submission_record_settings", sid=record.id, url=url, text=text)
+    return render_template_context(
+        "documents/edit_submission_record_settings.html",
+        form=form,
+        record=record,
+        action_url=action_url,
+        url=url,
+        text=text,
+    )
 
 
 @documents.route("/edit_submitter_attachment/<int:aid>", methods=["GET", "POST"])

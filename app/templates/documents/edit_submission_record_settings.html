@@ -1,0 +1,86 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import date_field %}
+{% from "labels.html" import unformatted_label %}
+{% from "datepicker.html" import import_datepicker %}
+{% from "icon_block.html" import icon_block %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_datepicker() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#datetimepicker1').datetimepicker({
+                format: 'DD/MM/YYYY HH:mm',
+                allowInputToggle: true,
+                sideBySide: true
+            });
+
+            // If report_secret is checked, disable and clear the embargo field
+            function updateEmbargoState() {
+                var secretChecked = $('#report_secret').is(':checked');
+                var embargoInput = $('#datetimepicker1').find('input');
+                if (secretChecked) {
+                    embargoInput.prop('disabled', true);
+                    $('#datetimepicker1').datetimepicker('clear');
+                } else {
+                    embargoInput.prop('disabled', false);
+                }
+            }
+
+            $('#report_secret').on('change', function () {
+                updateEmbargoState();
+            });
+
+            // Set initial state on page load
+            updateEmbargoState();
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Edit report settings for {{ record.student_identifier['label']|safe }}
+{% endblock %}
+
+{% block formtitle %}
+    Edit report settings for <i class="fas fa-user-circle"></i>
+    <strong>{{ unformatted_label(record.student_identifier) }}</strong> {{ record.period.display_name }}
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ action_url }}" method="POST" name="settings_form">
+        {{ form.hidden_tag() }}
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            <p class="card-title"><strong>Confidentiality and embargo</strong></p>
+
+            {{ wtf.render_field(form.report_secret) }}
+
+            <div class="mt-2">
+                {% call icon_block("info-circle") %}
+                    <div class="text-muted small">
+                        If the report is marked as secret, any embargo date will be cleared and ignored.
+                        Use the embargo date to restrict access to the report until a specified date and time.
+                    </div>
+                {% endcall %}
+            </div>
+
+            <div class="mt-3">
+                {{ date_field(form.report_embargo, 'datetimepicker1') }}
+            </div>
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            <p class="card-title"><strong>Exemplar settings</strong></p>
+
+            {{ wtf.render_field(form.report_exemplar) }}
+            {{ wtf.render_field(form.exemplar_comment) }}
+        </div>
+
+        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+    </form>
+{% endblock %}

@@ -85,6 +85,8 @@ def _build_global_context():
     is_office = "office" in visible_roles
     is_student = "student" in visible_roles
     is_reports = "reports" in visible_roles
+    is_archive = "archive_reports" in visible_roles
+    is_archive_reports = "archive_reports" in visible_roles
 
     is_root = "root" in visible_roles
     is_admin = "admin" in visible_roles
@@ -110,7 +112,9 @@ def _build_global_context():
         "is_edit_tags": is_edit_tags,
         "is_view_email": is_view_email,
         "is_manage_users": is_manage_users,
-        "is_emailer": is_emailer
+        "is_emailer": is_emailer,
+        "is_archive": is_archive,
+        "is_archive_reports": is_archive_reports,
     } | base_context_data
 
 

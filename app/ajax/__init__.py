@@ -9,6 +9,7 @@
 #
 
 from . import admin
+from . import archive
 from . import convenor
 from . import home
 from . import project

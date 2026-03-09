@@ -179,9 +179,18 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
 
         pclass_id = None
         if isinstance(pclass, int):
+            pclass_obj = db.session.query(ProjectClass).filter_by(id=pclass).first()
             pclass_id = pclass
+            if tenant_id is None:
+                tenant_id = pclass_obj.tenant_id
+            elif tenant_id != pclass_obj.tenant_id:
+                raise RuntimeError(f'Tenant mismatch between pclass "{pclass_obj.name}" and tenant "{tenant.name}" in EmailTemplate.apply_()')
         elif isinstance(pclass, ProjectClass):
             pclass_id = pclass.id
+            if tenant_id is None:
+                tenant_id = pclass.tenant_id
+            elif tenant_id != pclass.tenant_id:
+                raise RuntimeError(f'Tenant mismatch between pclass "{pclass.name}" and tenant "{tenant.name}" in EmailTemplate.apply_()')
         elif pclass is None:
             pass
         else:

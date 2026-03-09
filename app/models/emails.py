@@ -10,12 +10,13 @@
 from . import DEFAULT_STRING_LENGTH
 from ..database import db
 
+from .models import EditingMetadataMixin
 
 class EmailTemplateTypesMixin:
     pass
 
 
-class EmailTemplate(db.Model, EmailTemplateTypesMixin):
+class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
     __tablename__ = "email_templates"
 
     id = db.Column(db.Integer(), primary_key=True)
@@ -38,4 +39,13 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin):
 
     # specify the body of the email in HTML format
     # we autogenerate a text equivalent
-    html_body = db.Column(db.Text, nullable=False)
+    html_body = db.Column(db.Text(), nullable=False)
+
+    # comment/description field
+    comment = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), nullable=True)
+
+    # version number, allowing multiple versions of an email to exist simultaneously, rather than over-writing previous versions
+    version = db.Column(db.Integer(), nullable=False)
+
+    # last used
+    last_used = db.Column(db.DateTime(), nullable=True)

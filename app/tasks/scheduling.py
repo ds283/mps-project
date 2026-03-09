@@ -23,7 +23,6 @@ from celery import group, chain
 from celery.exceptions import Ignore
 from distutils.util import strtobool
 from flask import current_app, render_template, render_template_string
-from flask_mailman import EmailMultiAlternatives
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -47,6 +46,7 @@ from ..models import (
     ResearchGroup,
     ProjectClassConfig,
     SubmissionRole, DownloadCentreItem,
+    EmailTemplate,
 )
 from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
@@ -1057,14 +1057,12 @@ def _process_PuLP_solution(
 def _send_offline_email(celery, record, user, lp_asset):
     send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
 
-    msg = EmailMultiAlternatives(
-        subject="Files for offline scheduling of {name} are now ready".format(name=record.name),
-        from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-        reply_to=[current_app.config["MAIL_REPLY_TO"]],
+    msg = EmailTemplate.apply_(
+        type=EmailTemplate.SCHEDULING_GENERATED,
         to=[user.email],
+        subject_kwargs={"name": record.name},
+        body_kwargs={"name": record.name, "user": user},
     )
-
-    msg.body = render_template("email/scheduling/generated.txt", name=record.name, user=user)
 
     # TODO: will be problems when generated LP/MPS files are too large; should instead send a download link
     object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
@@ -1750,30 +1748,31 @@ def register_scheduling_tasks(celery):
         event = record.owner
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailMultiAlternatives(
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"], reply_to=[current_app.config["MAIL_REPLY_TO"]], to=[user.email]
-        )
-
         if is_draft:
-            msg.subject = 'Notification: Draft timetable for project assessment "{name}"'.format(name=event.name)
-            msg.body = render_template(
-                "email/scheduling/draft_notify_students.txt",
-                user=user,
-                event=event,
-                slot=record.get_student_slot(sub_record.owner_id).first(),
-                period=sub_record.period,
-                schedule=record,
+            msg = EmailTemplate.apply_(
+                type=EmailTemplate.SCHEDULING_DRAFT_NOTIFY_STUDENTS,
+                to=[user.email],
+                subject_kwargs={"name": event.name},
+                body_kwargs={
+                    "user": user,
+                    "event": event,
+                    "slot": record.get_student_slot(sub_record.owner_id).first(),
+                    "period": sub_record.period,
+                    "schedule": record,
+                },
             )
-
         else:
-            msg.subject = 'Notification: Final timetable for project assessment "{name}"'.format(name=event.name)
-            msg.body = render_template(
-                "email/scheduling/final_notify_students.txt",
-                user=user,
-                event=event,
-                slot=record.get_student_slot(sub_record.owner_id).first(),
-                period=sub_record.period,
-                schedule=record,
+            msg = EmailTemplate.apply_(
+                type=EmailTemplate.SCHEDULING_FINAL_NOTIFY_STUDENTS,
+                to=[user.email],
+                subject_kwargs={"name": event.name},
+                body_kwargs={
+                    "user": user,
+                    "event": event,
+                    "slot": record.get_student_slot(sub_record.owner_id).first(),
+                    "period": sub_record.period,
+                    "schedule": record,
+                },
             )
 
         # register a new task in the database
@@ -1849,25 +1848,36 @@ def register_scheduling_tasks(celery):
         slots = record.get_faculty_slots(faculty.id).all()
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailMultiAlternatives(
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"], reply_to=[current_app.config["MAIL_REPLY_TO"]], to=[user.email]
-        )
-
         if is_draft:
-            msg.subject = 'Notification: Draft timetable for project assessment "{name}"'.format(name=event.name)
-
             if len(slots) > 0:
-                msg.body = render_template("email/scheduling/draft_notify_faculty.txt", user=user, event=event, slots=slots, schedule=record)
+                msg = EmailTemplate.apply_(
+                    type=EmailTemplate.SCHEDULING_DRAFT_NOTIFY_FACULTY,
+                    to=[user.email],
+                    subject_kwargs={"name": event.name},
+                    body_kwargs={"user": user, "event": event, "slots": slots, "schedule": record},
+                )
             else:
-                msg.body = render_template("email/scheduling/draft_unneeded_faculty.txt", user=user, event=event, schedule=record)
-
+                msg = EmailTemplate.apply_(
+                    type=EmailTemplate.SCHEDULING_DRAFT_UNNEEDED_FACULTY,
+                    to=[user.email],
+                    subject_kwargs={"name": event.name},
+                    body_kwargs={"user": user, "event": event, "schedule": record},
+                )
         else:
-            msg.subject = 'Notification: Final timetable for project assessment "{name}"'.format(name=event.name)
-
             if len(slots) > 0:
-                msg.body = render_template("email/scheduling/final_notify_faculty.txt", user=user, event=event, slots=slots, schedule=record)
+                msg = EmailTemplate.apply_(
+                    type=EmailTemplate.SCHEDULING_FINAL_NOTIFY_FACULTY,
+                    to=[user.email],
+                    subject_kwargs={"name": event.name},
+                    body_kwargs={"user": user, "event": event, "slots": slots, "schedule": record},
+                )
             else:
-                msg.body = render_template("email/scheduling/final_unneeded_faculty.txt", user=user, event=event, schedule=record)
+                msg = EmailTemplate.apply_(
+                    type=EmailTemplate.SCHEDULING_FINAL_UNNEEDED_FACULTY,
+                    to=[user.email],
+                    subject_kwargs={"name": event.name},
+                    body_kwargs={"user": user, "event": event, "schedule": record},
+                )
 
         # register a new task in the database
         task_id = register_task(msg.subject, description="Send schedule email to {r}".format(r=", ".join(msg.to)))

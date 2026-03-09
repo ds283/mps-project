@@ -7,7 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-from typing import List, Optional, Dict, Any, Iterable
+from typing import List, Optional, Dict, Any, Iterable, Callable
 
 from flask import current_app
 from flask_mailman import EmailMultiAlternatives
@@ -164,6 +164,7 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
             reply_to: Optional[List[str]]=None,
             subject_kwargs: Optional[Dict[str, Any]]=None,
             body_kwargs: Optional[Dict[str, Any]]=None,
+            body_attachments: Optional[Dict[str, Callable]]=None,
             tenant=None,
             pclass=None,
     ):
@@ -237,17 +238,14 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
         if template is None:
             raise RuntimeError(f"No active template found for type {type}")
 
-        subject_str: str = template.subject.format(**subject_kwargs) if subject_kwargs is not None else template.subject
-        html_str: str = template.html_body.format(**body_kwargs) if body_kwargs is not None else template.html_body
-
-        h = HTML2Text()
-        plain_str: str = h.handle(html_str)
-
         if from_email is None:
             from_email = current_app.config["MAIL_DEFAULT_SENDER"]
 
         if reply_to is None:
             reply_to = [current_app.config["MAIL_REPLY_TO"]]
+
+        # format subject string
+        subject_str: str = template.subject.format(**subject_kwargs) if subject_kwargs is not None else template.subject
 
         msg = EmailMultiAlternatives(
             subject=subject_str,
@@ -255,6 +253,20 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
             reply_to=reply_to,
             to=to,
         )
+
+        # perform any attachments, storing output in body_kwargs where it can be used if desired
+        for label, callable in body_attachments.items():
+            output = callable(msg)
+            if label not in body_kwargs:
+                body_kwargs[label] = output
+
+        # format HTML body text
+        html_str: str = template.html_body.format(**body_kwargs) if body_kwargs is not None else template.html_body
+
+        # generate plain text version of HTML body (html2text basically produces Markdown)
+        h = HTML2Text()
+        plain_str: str = h.handle(html_str)
+
         msg.body = plain_str
         msg.attach_alternative(html_str, "text/html")
 

@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app, render_template
-from flask_mailman import EmailMultiAlternatives
+from flask import current_app
 
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
@@ -26,6 +25,7 @@ from ..models import (
     LiveProject,
     SelectingStudent,
     MatchingAttempt,
+    EmailTemplate,
 )
 
 from ..task_queue import progress_update, register_task
@@ -368,13 +368,6 @@ def register_golive_tasks(celery):
             self.update_state("FAILURE", meta={"msg": "Could not load database records"})
             raise Ignore()
 
-        msg = EmailMultiAlternatives(
-            subject="{name}: project list now published to students".format(name=config.project_class.name),
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
-            to=[data.user.email],
-        )
-
         # get live projects belonging to both this project class and this faculty member
         projects = config.live_projects.filter_by(owner_id=faculty_id).all()
 
@@ -386,15 +379,19 @@ def register_golive_tasks(celery):
                     projects_use_signoff = True
                     break
 
-        msg.body = render_template(
-            "email/go_live/faculty.txt",
-            deadline=deadline,
-            user=data.user,
-            pclass=config.project_class,
-            config=config,
-            number_projects=len(projects),
-            projects=projects,
-            expect_requests=(expect_requests and projects_use_signoff),
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.GO_LIVE_FACULTY,
+            to=[data.user.email],
+            subject_kwargs={"name": config.project_class.name},
+            body_kwargs={
+                "deadline": deadline,
+                "user": data.user,
+                "pclass": config.project_class,
+                "config": config,
+                "number_projects": len(projects),
+                "projects": projects,
+                "expect_requests": (expect_requests and projects_use_signoff),
+            },
         )
 
         # register a new task in the database
@@ -425,21 +422,12 @@ def register_golive_tasks(celery):
             self.update_state("FAILURE", meta={"msg": "Could not load database records"})
             raise Ignore()
 
-        msg = EmailMultiAlternatives(
-            subject="{name}: project list now available".format(name=config.project_class.name),
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.GO_LIVE_SELECTOR,
             to=[data.student.user.email],
+            subject_kwargs={"name": config.project_class.name},
+            body_kwargs={"user": data.student.user, "student": data, "pclass": config.project_class, "config": config, "deadline": deadline},
         )
-
-        msg.body = render_template(
-            "email/go_live/selector.txt", user=data.student.user, student=data, pclass=config.project_class, config=config, deadline=deadline
-        )
-
-        html = render_template(
-            "email/go_live/selector.html", user=data.student.user, student=data, pclass=config.project_class, config=config, deadline=deadline
-        )
-        msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
         task_id = register_task(msg.subject, description="Send confirmation request email to {r}".format(r=", ".join(msg.to)))
@@ -504,14 +492,12 @@ def register_golive_tasks(celery):
             for user in config.project_class.office_contacts:
                 recipients.add(user.email)
 
-            msg = EmailMultiAlternatives(
-                subject='[mpsprojects] "{name}": project list now published to ' "students".format(name=config.project_class.name),
-                from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-                reply_to=[current_app.config["MAIL_REPLY_TO"]],
+            msg = EmailTemplate.apply_(
+                type=EmailTemplate.GO_LIVE_CONVENOR,
                 to=list(recipients),
+                subject_kwargs={"name": config.project_class.name},
+                body_kwargs={"pclass": config.project_class, "config": config, "deadline": deadline},
             )
-
-            msg.body = render_template("email/go_live/convenor.txt", pclass=config.project_class, config=config, deadline=deadline)
 
             # register a new task in the database
             task_id = register_task(msg.subject, description="Send convenor email notification")

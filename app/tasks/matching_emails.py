@@ -13,12 +13,11 @@ from distutils.util import strtobool
 from typing import List
 
 from celery import group, chain
-from flask import current_app, render_template
-from flask_mailman import EmailMultiAlternatives
+from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import MatchingAttempt, TaskRecord, MatchingRecord, FacultyData, User, ProjectClassConfig, ProjectClass
+from ..models import MatchingAttempt, TaskRecord, MatchingRecord, FacultyData, User, ProjectClassConfig, ProjectClass, EmailTemplate
 from ..task_queue import progress_update, register_task
 
 
@@ -107,59 +106,20 @@ def register_matching_email_tasks(celery):
         pclass: ProjectClass = config.project_class
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailMultiAlternatives(
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"], reply_to=[current_app.config["MAIL_REPLY_TO"]], to=[user.email]
-        )
-
         if is_draft:
-            msg.subject = 'Notification: Draft project allocation for "{name}" ' "{yra}-{yrb}".format(
-                name=config.name, yra=record.submit_year_a, yrb=record.submit_year_b
+            msg = EmailTemplate.apply_(
+                type=EmailTemplate.MATCHING_DRAFT_NOTIFY_STUDENTS,
+                to=[user.email],
+                subject_kwargs={"name": config.name, "yra": record.submit_year_a, "yrb": record.submit_year_b},
+                body_kwargs={"user": user, "config": config, "pclass": pclass, "attempt": record, "matches": matches, "number": len(matches)},
             )
-            msg.body = render_template(
-                "email/matching/draft_notify_students.txt",
-                user=user,
-                config=config,
-                pclass=pclass,
-                attempt=record,
-                matches=matches,
-                number=len(matches),
-            )
-
-            html = render_template(
-                "email/matching/draft_notify_students.html",
-                user=user,
-                config=config,
-                pclass=pclass,
-                attempt=record,
-                matches=matches,
-                number=len(matches),
-            )
-            msg.attach_alternative(html, "text/html")
-
         else:
-            msg.subject = 'Notification: Final project allocation for "{name}" ' "{yra}-{yrb}".format(
-                name=config.name, yra=record.submit_year_a, yrb=record.submit_year_b
+            msg = EmailTemplate.apply_(
+                type=EmailTemplate.MATCHING_FINAL_NOTIFY_STUDENTS,
+                to=[user.email],
+                subject_kwargs={"name": config.name, "yra": record.submit_year_a, "yrb": record.submit_year_b},
+                body_kwargs={"user": user, "config": config, "pclass": pclass, "attempt": record, "matches": matches, "number": len(matches)},
             )
-            msg.body = render_template(
-                "email/matching/final_notify_students.txt",
-                user=user,
-                config=config,
-                pclass=pclass,
-                attempt=record,
-                matches=matches,
-                number=len(matches),
-            )
-
-            html = render_template(
-                "email/matching/final_notify_students.html",
-                user=user,
-                config=config,
-                pclass=pclass,
-                attempt=record,
-                matches=matches,
-                number=len(matches),
-            )
-            msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
         task_id = register_task(msg.subject, description="Send schedule email to {r}".format(r=", ".join(msg.to)))
@@ -258,53 +218,36 @@ def register_matching_email_tasks(celery):
             convenors.add(match.selector.config.project_class.convenor)
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailMultiAlternatives(
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"], reply_to=[current_app.config["MAIL_REPLY_TO"]], to=[user.email]
-        )
-
         if is_draft:
-            msg.subject = "Notification: Draft Final Year Project allocation for {yra}-{yrb}".format(
-                yra=record.submit_year_a, yrb=record.submit_year_b
-            )
-
-            # check whether we are notifying of an assignment, or that a faculty member is not needed for an
-            # assignment
             if len(matches) > 0:
-                msg.body = render_template(
-                    "email/matching/draft_notify_faculty.txt", user=user, fac=fac, attempt=record, matches=binned_matches, convenors=convenors
+                msg = EmailTemplate.apply_(
+                    type=EmailTemplate.MATCHING_DRAFT_NOTIFY_FACULTY,
+                    to=[user.email],
+                    subject_kwargs={"yra": record.submit_year_a, "yrb": record.submit_year_b},
+                    body_kwargs={"user": user, "fac": fac, "attempt": record, "matches": binned_matches, "convenors": convenors},
                 )
-
-                html = render_template(
-                    "email/matching/draft_notify_faculty.html", user=user, fac=fac, attempt=record, matches=binned_matches, convenors=convenors
-                )
-                msg.attach_alternative(html, "text/html")
-
             else:
-                msg.body = render_template("email/matching/draft_unneeded_faculty.txt", user=user, fac=fac, attempt=record)
-
-                html = render_template("email/matching/draft_unneeded_faculty.html", user=user, fac=fac, attempt=record)
-                msg.attach_alternative(html, "text/html")
-
+                msg = EmailTemplate.apply_(
+                    type=EmailTemplate.MATCHING_DRAFT_UNNEEDED_FACULTY,
+                    to=[user.email],
+                    subject_kwargs={"yra": record.submit_year_a, "yrb": record.submit_year_b},
+                    body_kwargs={"user": user, "fac": fac, "attempt": record},
+                )
         else:
-            msg.subject = "Notification: Final Year Project allocation for {yra}-{yrb}".format(yra=record.submit_year_a, yrb=record.submit_year_b)
-
-            # check whether we are notifying of an assignment, or that a faculty member is not needed for an
-            # assignment
             if len(matches) > 0:
-                msg.body = render_template(
-                    "email/matching/final_notify_faculty.txt", user=user, fac=fac, attempt=record, matches=binned_matches, convenors=convenors
+                msg = EmailTemplate.apply_(
+                    type=EmailTemplate.MATCHING_FINAL_NOTIFY_FACULTY,
+                    to=[user.email],
+                    subject_kwargs={"yra": record.submit_year_a, "yrb": record.submit_year_b},
+                    body_kwargs={"user": user, "fac": fac, "attempt": record, "matches": binned_matches, "convenors": convenors},
                 )
-
-                html = render_template(
-                    "email/matching/final_notify_faculty.html", user=user, fac=fac, attempt=record, matches=binned_matches, convenors=convenors
-                )
-                msg.attach_alternative(html, "text/html")
-
             else:
-                msg.body = render_template("email/matching/final_unneeded_faculty.txt", user=user, fac=fac, attempt=record)
-
-                html = render_template("email/matching/final_unneeded_faculty.html", user=user, fac=fac, attempt=record)
-                msg.attach_alternative(html, "text/html")
+                msg = EmailTemplate.apply_(
+                    type=EmailTemplate.MATCHING_FINAL_UNNEEDED_FACULTY,
+                    to=[user.email],
+                    subject_kwargs={"yra": record.submit_year_a, "yrb": record.submit_year_b},
+                    body_kwargs={"user": user, "fac": fac, "attempt": record},
+                )
 
         # register a new task in the database
         task_id = register_task(msg.subject, description="Send schedule email to {r}".format(r=", ".join(msg.to)))

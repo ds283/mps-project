@@ -13,11 +13,10 @@ from email.utils import formataddr
 from celery import group
 from celery.exceptions import Ignore
 from flask import current_app, render_template_string, render_template
-from flask_mailman import EmailMultiAlternatives
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import User
+from ..models import User, EmailTemplate
 from ..task_queue import register_task
 
 
@@ -51,12 +50,12 @@ def register_services_tasks(celery):
         if isinstance(reply_to, str):
             reply_to = [reply_to]
 
-        msg = EmailMultiAlternatives(
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=reply_to,
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.SERVICES_SEND_EMAIL,
             to=[formataddr((record.name, record.email))],
-            subject=subject,
-            body=render_template("email/services/send_email.txt", body=body_text),
+            reply_to=reply_to,
+            subject_kwargs={"subject": subject},
+            body_kwargs={"body": body_text},
         )
 
         # register a new task in the database
@@ -73,12 +72,12 @@ def register_services_tasks(celery):
         if isinstance(reply_to, str):
             reply_to = [reply_to]
 
-        msg = EmailMultiAlternatives(
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=reply_to,
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.SERVICES_CC_EMAIL,
             to=[to_addr],
-            subject=subject,
-            body=render_template("email/services/cc_email.txt", body=body),
+            reply_to=reply_to,
+            subject_kwargs={"subject": subject},
+            body_kwargs={"body": body},
         )
 
         # register a new task in the database
@@ -107,12 +106,12 @@ def register_services_tasks(celery):
         if isinstance(reply_to, str):
             reply_to = list[reply_to]
 
-        msg = EmailMultiAlternatives(
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=reply_to,
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.SERVICES_SEND_EMAIL,
             to=[to_addr],
-            subject=subject,
-            body=render_template("email/services/send_email.txt", body=body),
+            reply_to=reply_to,
+            subject_kwargs={"subject": subject},
+            body_kwargs={"body": body},
         )
 
         # register a new task in the database

@@ -12,14 +12,13 @@ from datetime import datetime, date, timedelta
 import holidays
 from celery import chain, group
 from celery.exceptions import Ignore
-from flask import current_app, render_template
-from flask_mailman import EmailMultiAlternatives
+from flask import current_app
 from numpy import is_busday
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import User, TaskRecord, EmailNotification, ConfirmRequest, LiveProject, Role, SelectingStudent, ProjectClassConfig
+from ..models import User, TaskRecord, EmailNotification, ConfirmRequest, LiveProject, Role, SelectingStudent, ProjectClassConfig, EmailTemplate
 from ..shared.utils import get_current_year
 from ..task_queue import progress_update, register_task
 
@@ -425,14 +424,12 @@ def register_email_notification_tasks(celery):
 
         outstanding_crqs = _get_outstanding_faculty_confirmation_requests(user)
 
-        msg = EmailMultiAlternatives(
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.NOTIFICATIONS_FACULTY_SINGLE,
             to=[user.email],
-            subject=notification.msg_subject(),
+            subject_kwargs={"subject": notification.msg_subject()},
+            body_kwargs={"user": user, "notification": notification, "outstanding": outstanding_crqs},
         )
-
-        msg.body = render_template("email/notifications/faculty/single.txt", user=user, notification=notification, outstanding=outstanding_crqs)
 
         # register a new task in the database
         task_id = register_task(msg.subject, description="Send notification email to {r}".format(r=", ".join(msg.to)))
@@ -487,11 +484,12 @@ def register_email_notification_tasks(celery):
         else:
             subject = "Projects web portal: summary of notifications and events"
 
-        msg = EmailMultiAlternatives(
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"], reply_to=[current_app.config["MAIL_REPLY_TO"]], to=[user.email], subject=subject
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.NOTIFICATIONS_FACULTY_ROLLUP,
+            to=[user.email],
+            subject_kwargs={"subject": subject},
+            body_kwargs={"user": user, "notifications": notifications, "outstanding": outstanding_crqs},
         )
-
-        msg.body = render_template("email/notifications/faculty/rollup.txt", user=user, notifications=notifications, outstanding=outstanding_crqs)
 
         # register a new task in the database
         task_id = register_task(msg.subject, description="Send notification email to {r}".format(r=", ".join(msg.to)))
@@ -527,19 +525,17 @@ def register_email_notification_tasks(celery):
         # if req is None, assume ConfirmRequest has been deleted but the corresponding EmailNotification has been
         # orphaned. That means we should do nothing
         if req is not None:
-            msg = EmailMultiAlternatives(
-                from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-                reply_to=[req.project.owner.user.email],
+            msg = EmailTemplate.apply_(
+                type=EmailTemplate.NOTIFICATIONS_REQUEST_MEETING,
                 to=[req.owner.student.user.email, req.project.owner.user.email],
-                subject="{name}: project meeting request".format(name=req.project.config.project_class.name),
-            )
-
-            msg.body = render_template(
-                "email/notifications/request_meeting.txt",
-                supervisor=req.project.owner.user,
-                student=req.owner.student,
-                config=req.project.config,
-                project=req.project,
+                reply_to=[req.project.owner.user.email],
+                subject_kwargs={"name": req.project.config.project_class.name},
+                body_kwargs={
+                    "supervisor": req.project.owner.user,
+                    "student": req.owner.student,
+                    "config": req.project.config,
+                    "project": req.project,
+                },
             )
 
             # register a new task in the database
@@ -567,14 +563,12 @@ def register_email_notification_tasks(celery):
             self.update_state("FAILURE", meta={"msg": "Could not read database records"})
             raise Ignore()
 
-        msg = EmailMultiAlternatives(
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.NOTIFICATIONS_STUDENT_SINGLE,
             to=[user.email],
-            subject=notification.msg_subject(),
+            subject_kwargs={"subject": notification.msg_subject()},
+            body_kwargs={"user": user, "notification": notification},
         )
-
-        msg.body = render_template("email/notifications/student/single.txt", user=user, notification=notification)
 
         # register a new task in the database
         task_id = register_task(msg.subject, description="Send notification email to {r}".format(r=", ".join(msg.to)))
@@ -627,151 +621,12 @@ def register_email_notification_tasks(celery):
         else:
             subject = "Projects web portal: summary of notifications and events"
 
-        msg = EmailMultiAlternatives(
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"], reply_to=[current_app.config["MAIL_REPLY_TO"]], to=[user.email], subject=subject
-        )
-
-        msg.body = render_template("email/notifications/student/rollup.txt", user=user, notifications=notifications, outstanding=outstanding_crqs)
-
-        # register a new task in the database
-        task_id = register_task(msg.subject, description="Send notification email to {r}".format(r=", ".join(msg.to)))
-
-        # queue Celery task to send the email
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
-
-        previous_set = set(previous_ids)
-        ids_set = set(n_ids)
-
-        previous_set = previous_set.union(ids_set)
-        return list(previous_set), cr_ids
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def dispatch_new_request_notification(self, previous_ids, n_id):
-        try:
-            notification = db.session.query(EmailNotification).filter_by(id=n_id).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if notification is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
-            raise Ignore()
-
-        try:
-            req = db.session.query(ConfirmRequest).filter_by(id=notification.data_1).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        # if req is None, assume ConfirmRequest has been deleted but the corresponding EmailNotification has been
-        # orphaned. That means we should do nothing
-        if req is not None:
-            msg = EmailMultiAlternatives(
-                from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-                reply_to=[req.project.owner.user.email],
-                to=[req.owner.student.user.email, req.project.owner.user.email],
-                subject="{name}: project meeting request".format(name=req.project.config.project_class.name),
-            )
-
-            msg.body = render_template(
-                "email/notifications/request_meeting.txt",
-                supervisor=req.project.owner.user,
-                student=req.owner.student,
-                config=req.project.config,
-                project=req.project,
-            )
-
-            # register a new task in the database
-            task_id = register_task(msg.subject, description='Send meeting setup email for "{proj}"'.format(proj=req.project.name))
-
-            # queue Celery task to send the email
-            send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-            send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
-
-        # pass through previous_ids
-        return previous_ids
-
-    # dispatch_student_single_email is always at the head of a task chain and so does not need an argument
-    # for the return value of the previous task
-    @celery.task(bind=True, default_retry_delay=30)
-    def dispatch_student_single_email(self, user_id, n_id):
-        try:
-            user = db.session.query(User).filter_by(id=user_id).first()
-            notification = db.session.query(EmailNotification).filter_by(id=n_id).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if user is None or notification is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
-            raise Ignore()
-
-        msg = EmailMultiAlternatives(
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.NOTIFICATIONS_STUDENT_ROLLUP,
             to=[user.email],
-            subject=notification.msg_subject(),
+            subject_kwargs={"subject": subject},
+            body_kwargs={"user": user, "notifications": notifications, "outstanding": outstanding_crqs},
         )
-
-        msg.body = render_template("email/notifications/student/single.txt", user=user, notification=notification)
-
-        # register a new task in the database
-        task_id = register_task(msg.subject, description="Send notification email to {r}".format(r=", ".join(msg.to)))
-
-        # queue Celery task to send the email
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
-
-        return n_id
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def dispatch_student_summary_email(self, previous_ids, user_id, n_ids, cr_ids):
-        if previous_ids is None:
-            previous_ids = []
-
-        try:
-            user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if user is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
-            raise Ignore()
-
-        if not isinstance(n_ids, list):
-            raise RuntimeError("Can not interpret n_ids argument in dispatch_student_summary_email")
-        if not isinstance(cr_ids, list):
-            raise RuntimeError("Can not interpret cr_ids argument in dispatch_student_summary_email")
-
-        try:
-            notifications = [db.session.query(EmailNotification).filter_by(id=n_id).first() for n_id in n_ids]
-            outstanding_crqs = [db.session.query(ConfirmRequest).filter_by(id=cr_id).first() for cr_id in cr_ids]
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if any(n is None for n in notifications) or any(cr is None for cr in outstanding_crqs):
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
-            raise Ignore()
-
-        # if there are no notifications and no outstanding requests, then there is nothing to do;
-        # this should have been weeded out
-        if len(n_ids) == 0 and len(outstanding_crqs) == 0:
-            raise RuntimeError("dispatch_student_summary_email called for {name} with no work done".format(name=user.name))
-
-        branding_label = current_app.config.get("BRANDING_LABEL")
-        if branding_label is not None:
-            subject = f"{branding_label}: summary of notifications and events"
-        else:
-            subject = "Projects web portal: summary of notifications and events"
-
-        msg = EmailMultiAlternatives(
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"], reply_to=[current_app.config["MAIL_REPLY_TO"]], to=[user.email], subject=subject
-        )
-
-        msg.body = render_template("email/notifications/student/rollup.txt", user=user, notifications=notifications, outstanding=outstanding_crqs)
 
         # register a new task in the database
         task_id = register_task(msg.subject, description="Send notification email to {r}".format(r=", ".join(msg.to)))

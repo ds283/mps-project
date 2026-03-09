@@ -22,7 +22,6 @@ import pulp.apis as pulp_apis
 from celery import group, chain
 from celery.exceptions import Ignore
 from flask import current_app, render_template, render_template_string
-from flask_mailman import EmailMultiAlternatives
 from pandas import DataFrame
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError

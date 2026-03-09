@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app, render_template
-from flask_mailman import EmailMultiAlternatives
+from flask import current_app
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -25,6 +24,7 @@ from ..models import (
     DescriptionComment,
     Role,
     ProjectClass,
+    EmailTemplate,
 )
 
 from ..task_queue import progress_update, register_task
@@ -254,34 +254,21 @@ def register_issue_confirm_tasks(celery):
             self.update_state("FAILURE", meta={"msg": "Could not load database records"})
             raise Ignore()
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailMultiAlternatives(
-            subject="Please check projects for {name}".format(name=config.project_class.name),
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
-            to=[data.user.email],
-        )
-
         projects = data.projects_offered(config.project_class)
 
-        msg.body = render_template(
-            "email/project_confirmation/confirmation_requested.txt",
-            user=data.user,
-            pclass=config.project_class,
-            config=config,
-            number_projects=len(projects),
-            projects=projects,
+        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.PROJECT_CONFIRMATION_REQUESTED,
+            to=[data.user.email],
+            subject_kwargs={"name": config.project_class.name},
+            body_kwargs={
+                "user": data.user,
+                "pclass": config.project_class,
+                "config": config,
+                "number_projects": len(projects),
+                "projects": projects,
+            },
         )
-
-        html = render_template(
-            "email/project_confirmation/confirmation_requested.html",
-            user=data.user,
-            pclass=config.project_class,
-            config=config,
-            number_projects=len(projects),
-            projects=projects,
-        )
-        msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
         task_id = register_task(msg.subject, description="Send confirmation request email to {r}".format(r=", ".join(msg.to)))
@@ -328,34 +315,21 @@ def register_issue_confirm_tasks(celery):
             self.update_state("FAILURE", meta={"msg": "Could not load database records"})
             raise Ignore()
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailMultiAlternatives(
-            subject="Reminder: please check projects for {name}".format(name=config.project_class.name),
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
-            to=[data.user.email],
-        )
-
         projects = data.projects_offered(config.project_class)
 
-        msg.body = render_template(
-            "email/project_confirmation/confirmation_reminder.txt",
-            user=data.user,
-            pclass=config.project_class,
-            config=config,
-            number_projects=len(projects),
-            projects=projects,
+        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.PROJECT_CONFIRMATION_REMINDER,
+            to=[data.user.email],
+            subject_kwargs={"name": config.project_class.name},
+            body_kwargs={
+                "user": data.user,
+                "pclass": config.project_class,
+                "config": config,
+                "number_projects": len(projects),
+                "projects": projects,
+            },
         )
-
-        html = render_template(
-            "email/project_confirmation/confirmation_reminder.html",
-            user=data.user,
-            pclass=config.project_class,
-            config=config,
-            number_projects=len(projects),
-            projects=projects,
-        )
-        msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
         task_id = register_task(msg.subject, description="Send confirmation reminder email to {r}".format(r=", ".join(msg.to)))
@@ -482,21 +456,19 @@ def register_issue_confirm_tasks(celery):
         owner = project.owner
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailMultiAlternatives(
-            subject="Projects: please consider revising {name}/{desc}".format(name=project.name, desc=record.label),
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_user.email],
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.PROJECT_CONFIRMATION_REVISE_REQUEST,
             to=[owner.user.email],
-        )
-
-        msg.body = render_template(
-            "email/project_confirmation/revise_request.txt",
-            user=owner.user,
-            pclasses=record.project_classes,
-            project=project,
-            record=record,
-            pcl_names=pcl_names,
-            current_user=current_user,
+            reply_to=[current_user.email],
+            subject_kwargs={"name": project.name, "desc": record.label},
+            body_kwargs={
+                "user": owner.user,
+                "pclasses": record.project_classes,
+                "project": project,
+                "record": record,
+                "pcl_names": pcl_names,
+                "current_user": current_user,
+            },
         )
 
         # register a new task in the database
@@ -588,14 +560,12 @@ def register_issue_confirm_tasks(celery):
             return
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailMultiAlternatives(
-            subject="[mpsprojects] A comment was posted on " '"{proj}/{desc}"'.format(proj=comment.parent.parent.name, desc=comment.parent.label),
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.PROJECT_CONFIRMATION_NEW_COMMENT,
             to=list(recipients),
+            subject_kwargs={"proj": comment.parent.parent.name, "desc": comment.parent.label},
+            body_kwargs={"comment": comment, "project": comment.parent.parent, "desc": comment.parent},
         )
-
-        msg.body = render_template("email/project_confirmation/new_comment.txt", comment=comment, project=comment.parent.parent, desc=comment.parent)
 
         # register a new task in the database
         task_id = register_task(msg.subject, description="Notify watchers of new comment".format(r=", ".join(msg.to)))

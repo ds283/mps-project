@@ -114,6 +114,9 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
 
     id = db.Column(db.Integer(), primary_key=True)
 
+    # active flag
+    active = db.Column(db.Boolean(), nullable=False, default=True)
+
     # labels applied to this template
     labels = db.relationship("EmailTemplateLabel", secondary=email_template_to_labels, lazy="dynamic", backref=db.backref("ttemplates", lazy="dynamic"))
 

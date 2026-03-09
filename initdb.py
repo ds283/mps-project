@@ -1324,6 +1324,7 @@ def populate_email_templates(app):
             continue
 
         record = EmailTemplate(
+            active=True,
             tenant_id=None,
             pclass_id=None,
             type=type_constant,

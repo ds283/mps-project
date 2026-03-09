@@ -11,7 +11,7 @@ bleach-whitelist==0.0.11
 blinker==1.9.0
 bokeh==3.8.2
 boto3==1.42.45
-botocore===1.42.45
+botocore==1.42.45
 brotli==1.2.0
 cachelib==0.13.0
 cachetools==5.5.2
@@ -71,6 +71,7 @@ googleapis-common-protos==1.72.0
 greenlet==3.3.1
 gunicorn==25.0.3
 holidays==0.90
+html2text==2025.4.15
 htmlmin2==0.1.13
 humanize==4.15.0
 idna==3.11
@@ -83,6 +84,7 @@ jmespath==1.1.0
 jsmin==3.0.1
 kombu==5.6.2
 latex2markdown==0.2.1
+legacy-cgi==2.6.4
 libpass==1.9.3
 librt==0.7.8
 limits==5.8.0

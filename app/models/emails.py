@@ -7,11 +7,18 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-from . import DEFAULT_STRING_LENGTH
+from typing import List, Optional, Dict, Any, Iterable
+
+from flask import current_app
+from flask_mailman import EmailMultiAlternatives
+from sqlalchemy import or_, nulls_last, desc
+
+from . import DEFAULT_STRING_LENGTH, Tenant
 from ..database import db
 
-from .models import EditingMetadataMixin, ColouredLabelMixin
+from .models import EditingMetadataMixin, ColouredLabelMixin, ProjectClass
 
+from html2text import HTML2Text
 
 email_template_to_labels = db.Table(
     "email_templates_to_labels",
@@ -148,3 +155,98 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
 
     # last used
     last_used = db.Column(db.DateTime(), nullable=True)
+
+    @staticmethod
+    def apply_(
+            type: int,
+            to: List[str],
+            from_email: Optional[str]=None,
+            reply_to: Optional[List[str]]=None,
+            subject_kwargs: Optional[Dict[str, Any]]=None,
+            body_kwargs: Optional[Dict[str, Any]]=None,
+            tenant=None,
+            pclass=None,
+    ):
+        tenant_id = None
+        if isinstance(tenant, int):
+            tenant_id = tenant
+        elif isinstance(tenant, Tenant):
+            tenant_id = tenant.id
+        elif tenant is None:
+            pass
+        else:
+            raise RuntimeError(f'Invalid tenant type "{type(tenant)}" (value="{tenant}") in EmailTemplate.apply_()')
+
+        pclass_id = None
+        if isinstance(pclass, int):
+            pclass_id = pclass
+        elif isinstance(pclass, ProjectClass):
+            pclass_id = pclass.id
+        elif pclass is None:
+            pass
+        else:
+            raise RuntimeError(f'Invalid project class type "{type(pclass)}" (value="{pclass}") in EmailTemplate.apply_()')
+
+        if not isinstance(to, Iterable):
+            raise RuntimeError(f'Invalid recipient list type "{type(to)}" (value="{to}") in EmailTemplate.apply_()')
+
+        if not isinstance(reply_to, Iterable):
+            raise RuntimeError(f'Invalid reply_to list type "{type(reply_to)}" (value="{reply_to}") in EmailTemplate.apply_()')
+
+        # find active template at highest level of override
+        templ_query = (
+            db.session.query(EmailTemplate)
+            .filter(
+                EmailTemplate.type == type,
+                EmailTemplate.active == True
+            )
+        )
+        if tenant_id is not None:
+            templ_query = templ_query.filter(
+                or_(
+                    EmailTemplate.tenant_id == tenant_id,
+                    EmailTemplate.tenant_id.is_(None),
+                )
+            )
+        if pclass_id is not None:
+            templ_query = templ_query.filter(
+                or_(
+                    EmailTemplate.pclass_id == pclass_id,
+                    EmailTemplate.pclass_id.is_(None),
+                )
+            )
+        templ_query = (
+            templ_query.order_by(
+                nulls_last(desc(EmailTemplate.tenant_id)),
+                nulls_last(desc(EmailTemplate.pclass_id)),
+                EmailTemplate.version.desc(),
+            )
+        )
+
+        template: Optional[EmailTemplate] = templ_query.first()
+
+        if template is None:
+            raise RuntimeError(f"No active template found for type {type}")
+
+        subject_str: str = template.subject.format(**subject_kwargs) if subject_kwargs is not None else template.subject
+        html_str: str = template.html_body.format(**body_kwargs) if body_kwargs is not None else template.html_body
+
+        h = HTML2Text()
+        plain_str: str = h.handle(html_str)
+
+        if from_email is None:
+            from_email = current_app.config["MAIL_DEFAULT_SENDER"]
+
+        if reply_to is None:
+            reply_to = [current_app.config["MAIL_REPLY_TO"]]
+
+        msg = EmailMultiAlternatives(
+            subject=subject_str,
+            from_email=from_email,
+            reply_to=reply_to,
+            to=to,
+        )
+        msg.body = plain_str
+        msg.attach_alternative(html_str, "text/html")
+
+        return msg

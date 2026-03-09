@@ -10,16 +10,112 @@
 from . import DEFAULT_STRING_LENGTH
 from ..database import db
 
-from .models import EditingMetadataMixin
+from .models import EditingMetadataMixin, ColouredLabelMixin
+
+
+email_template_to_labels = db.Table(
+    "email_templates_to_labels",
+    db.Column("email_template_id", db.Integer(), db.ForeignKey("email_templates.id"), primary_key=True),
+    db.Column("label_id", db.Integer(), db.ForeignKey("email_template_labels.id"), primary_key=True),
+)
+
 
 class EmailTemplateTypesMixin:
-    pass
+    # backups
+    BACKUP_REPORT_THINNING = 1
+
+    # close_selection
+    CLOSE_SELECTION_CONVENOR = 2
+
+    # go_live
+    GO_LIVE_CONVENOR = 3
+    GO_LIVE_FACULTY = 4
+    GO_LIVE_SELECTOR = 5
+
+    # maintenance
+    MAINTENANCE_LOST_ASSETS = 6
+    MAINTENANCE_UNATTACHED_ASSETS = 7
+
+    # marking
+    MARKING_MARKER = 8
+    MARKING_SUPERVISOR = 9
+
+    # matching
+    MATCHING_DRAFT_NOTIFY_FACULTY = 10
+    MATCHING_DRAFT_NOTIFY_STUDENTS = 11
+    MATCHING_DRAFT_UNNEEDED_FACULTY = 12
+    MATCHING_FINAL_NOTIFY_FACULTY = 13
+    MATCHING_FINAL_NOTIFY_STUDENTS = 14
+    MATCHING_FINAL_UNNEEDED_FACULTY = 15
+    MATCHING_GENERATED = 16
+    MATCHING_NOTIFY_EXCEL_REPORT = 17
+
+    # notifications
+    NOTIFICATIONS_REQUEST_MEETING = 18
+    NOTIFICATIONS_FACULTY_ROLLUP = 19
+    NOTIFICATIONS_FACULTY_SINGLE = 20
+    NOTIFICATIONS_STUDENT_ROLLUP = 21
+    NOTIFICATIONS_STUDENT_SINGLE = 22
+
+    # project_confirmation
+    PROJECT_CONFIRMATION_REMINDER = 23
+    PROJECT_CONFIRMATION_REQUESTED = 24
+    PROJECT_CONFIRMATION_NEW_COMMENT = 25
+    PROJECT_CONFIRMATION_REVISE_REQUEST = 26
+
+    # push_feedback
+    PUSH_FEEDBACK_PUSH_TO_MARKER = 27
+    PUSH_FEEDBACK_PUSH_TO_STUDENT = 28
+    PUSH_FEEDBACK_PUSH_TO_SUPERVISOR = 29
+
+    # scheduling
+    SCHEDULING_AVAILABILITY_REMINDER = 30
+    SCHEDULING_AVAILABILITY_REQUEST = 31
+    SCHEDULING_DRAFT_NOTIFY_FACULTY = 32
+    SCHEDULING_DRAFT_NOTIFY_STUDENTS = 33
+    SCHEDULING_DRAFT_UNNEEDED_FACULTY = 34
+    SCHEDULING_FINAL_NOTIFY_FACULTY = 35
+    SCHEDULING_FINAL_NOTIFY_STUDENTS = 36
+    SCHEDULING_FINAL_UNNEEDED_FACULTY = 37
+    SCHEDULING_GENERATED = 38
+
+    # services
+    SERVICES_CC_EMAIL = 39
+    SERVICES_SEND_EMAIL = 40
+
+    # student_notifications
+    STUDENT_NOTIFICATIONS_CHOICES_RECEIVED = 41
+    STUDENT_NOTIFICATIONS_CHOICES_RECEIVED_PROXY = 42
+
+    # system
+    SYSTEM_GARBAGE_COLLECTION = 43
+
+
+class EmailTemplateLabel(db.Model, ColouredLabelMixin, EditingMetadataMixin):
+    """
+    Represents a label applied to a backup
+    """
+
+    __tablename__ = "email_template_labels"
+
+    # unique identifier used as primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # name of label
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
+
+    def make_label(self, text=None):
+        label_text = text if text is not None else self.name
+        return self._make_label(text=label_text)
 
 
 class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
     __tablename__ = "email_templates"
 
     id = db.Column(db.Integer(), primary_key=True)
+
+    # labels applied to this template
+    labels = db.relationship("EmailTemplateLabel", secondary=email_template_to_labels, lazy="dynamic", backref=db.backref("ttemplates", lazy="dynamic"))
 
     # tenant, if specified
     # if not specified, this template is taken to apply globally

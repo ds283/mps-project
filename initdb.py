@@ -1309,6 +1309,8 @@ def populate_email_templates(app):
     added = 0
     skipped = 0
 
+    now = datetime.now()
+
     for type_constant, stem, subject, comment in _TEMPLATE_DEFINITIONS:
         # skip if a record with this type already exists
         existing: Optional[EmailTemplate] = db.session.query(EmailTemplate).filter_by(type=type_constant).first()
@@ -1333,6 +1335,8 @@ def populate_email_templates(app):
             comment=comment,
             version=1,
             last_used=None,
+            creator_id=1,
+            creation_timestamp=now,
         )
         db.session.add(record)
         added += 1

@@ -21,7 +21,7 @@ import pulp
 import pulp.apis as pulp_apis
 from celery import group, chain
 from celery.exceptions import Ignore
-from flask import current_app, render_template, render_template_string
+from flask import current_app, render_template_string
 from pandas import DataFrame
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
@@ -54,14 +54,14 @@ from ..models import (
     StudentData,
     DegreeProgramme, DownloadCentreItem,
 )
-from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.excel import _normalize_excel_sheet_name
 from ..shared.scratch import ScratchFileManager
+from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
 from ..shared.utils import get_current_year
-from ..task_queue import progress_update, register_task
+from ..task_queue import progress_update
 
 FALLBACK_DEFAULT_SUPERVISOR_CATS = 35
 FALLBACK_DEFAULT_MARKER_CATS = 3
@@ -3781,7 +3781,7 @@ def register_matching_tasks(celery):
                     role: MatchingRole
                     ud: User = role.user
 
-                    label = MatchingRole._role_labels[role.role]
+                    label = role.roleid_as_str
                     if label not in label_numbers:
                         label_numbers[label] = 0
 

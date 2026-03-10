@@ -1336,6 +1336,16 @@ class SubmissionRoleTypesMixin:
         ROLE_RESPONSIBLE_SUPERVISOR: "Responsible supervisor",
     }
 
+    _role_id = {
+        ROLE_SUPERVISOR: "supervisor",
+        ROLE_MARKER: "marker",
+        ROLE_PRESENTATION_ASSESSOR: "presentation_assessor",
+        ROLE_MODERATOR: "moderator",
+        ROLE_EXAM_BOARD: "exam_board",
+        ROLE_EXTERNAL_EXAMINER: "external_examiner",
+        ROLE_RESPONSIBLE_SUPERVISOR: "responsible_supervisor",
+    }
+
     role_options = [
         (ROLE_RESPONSIBLE_SUPERVISOR, "Responsible supervisor"),
         (ROLE_SUPERVISOR, "Supervisor"),
@@ -10985,8 +10995,12 @@ class SubmissionRole(db.Model, SubmissionRoleTypesMixin, SubmissionFeedbackState
     feedback_push_timestamp = db.Column(db.DateTime())
 
     @property
-    def role_as_str(self):
+    def role_as_str(self) -> str:
         return self._role_string.get(self.role, "Unknown")
+
+    @property
+    def roleid_as_str(self) -> str:
+        return self._role_id.get(self.role, "unknown")
 
     @property
     def uses_supervisor_feedback(self):

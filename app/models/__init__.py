@@ -13,7 +13,7 @@ from .choices import student_level_choices, year_choices, extent_choices, start_
     auto_enrol_year_choices
 from .defaults import DEFAULT_STRING_LENGTH, IP_LENGTH, YEAR_LENGTH, PASSWORD_HASH_LENGTH, SERIALIZED_LAYOUT_LENGTH, DEFAULT_ASSIGNED_MARKERS, \
     DEFAULT_ASSIGNED_MODERATORS
-from .emails import EmailTemplate
+from .emails import EmailTemplate, EmailTemplateLabel
 from .models import *
 from .scheduler import CrontabSchedule, IntervalSchedule, DatabaseSchedulerEntry
 from .tenants import Tenant

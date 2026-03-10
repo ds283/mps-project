@@ -9,6 +9,7 @@
 #
 
 from .assets import assets_data
+from .email_templates import email_templates_data
 from .buildings import buildings_data
 from .degree_programmes import degree_programmes_data
 from .degree_types import degree_types_data

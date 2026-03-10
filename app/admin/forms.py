@@ -49,6 +49,7 @@ from ..models import (
     DEFAULT_ASSIGNED_MODERATORS,
     DEFAULT_STRING_LENGTH,
     ProjectClassConfig, Tenant,
+    EmailTemplate,
 )
 from ..shared.forms.mixins import SaveChangesMixin, PeriodPresentationsMixin
 from ..shared.forms.queries import (
@@ -87,6 +88,7 @@ from ..shared.forms.queries import (
     BuildTemplateTagName,
     GetAllFeedbackTemplates,
     GetAllNonTemplateFeedbackAssets, GetAllTenants, BuildTenantName,
+    GetActiveEmailTemplateLabels, BuildEmailTemplateLabelName,
 )
 from ..shared.forms.widgets import BasicTagSelectField
 from ..shared.forms.wtf_validators import (
@@ -1923,3 +1925,36 @@ class EditFeedbackRecipeForm(Form, FeedbackRecipeMixin, SaveChangesMixin):
             unique_or_original_feedback_recipe_label,
         ],
     )
+
+
+class EmailTemplateMixin:
+    """Mixin for EmailTemplate add/edit forms."""
+
+    subject = StringField(
+        "Subject",
+        description="Enter the email subject line",
+        validators=[InputRequired(message="Please provide a subject line"), Length(max=DEFAULT_STRING_LENGTH)],
+    )
+
+    # html_body is rendered by TinyMCE; the TextAreaField is used as the backing field
+    html_body = TextAreaField(
+        "Body (HTML)",
+        description="Enter the HTML body of the email. Use the rich-text editor to format the content.",
+        validators=[InputRequired(message="Please provide an email body")],
+    )
+
+    labels = BasicTagSelectField(
+        "Labels",
+        query_factory=GetActiveEmailTemplateLabels,
+        get_label=BuildEmailTemplateLabelName,
+        description="Optionally add labels to help organize email templates.",
+        blank_text="Add labels...",
+    )
+
+
+class AddEmailTemplateForm(Form, EmailTemplateMixin):
+    submit = SubmitField("Add email template")
+
+
+class EditEmailTemplateForm(Form, EmailTemplateMixin, SaveChangesMixin):
+    pass

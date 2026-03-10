@@ -13,7 +13,8 @@ from flask import current_app
 from flask_mailman import EmailMultiAlternatives
 from sqlalchemy import or_, nulls_last, desc
 
-from . import DEFAULT_STRING_LENGTH, Tenant
+from .defaults import DEFAULT_STRING_LENGTH
+from .tenants import Tenant
 from ..database import db
 
 from .models import EditingMetadataMixin, ColouredLabelMixin, ProjectClass

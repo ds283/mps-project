@@ -1,0 +1,128 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import edit_data %}
+{% from "tinymce.html" import import_tinymce %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_tinymce() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#labels').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Add labels...'
+            });
+            tinymce.init({
+                selector: '#html-body-editor',
+                plugins: 'lists advlist autolink autosave codesample emoticons fullscreen hr link paste charmap wordcount code',
+                toolbar: 'undo redo | styles removeformat | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | hr link codesample emoticons charmap | restoredraft paste pastetext | code | fullscreen',
+                menubar: false
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {% if email_template %}
+        Edit email template &ndash; <strong>{{ email_template.subject }}</strong>
+        <span class="badge bg-secondary ms-2">v{{ email_template.version }}</span>
+    {% else %}
+        {{ title }}
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    {% if email_template %}
+        <form action="{{ url_for('admin.edit_email_template', id=email_template.id) }}" method="POST"
+              name="email_template_form">
+    {% endif %}
+
+{{ form.hidden_tag() }}
+
+{% if email_template %}
+    <div class="card mt-3 mb-3 card-body bg-well">
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-1"><strong>Type:</strong>
+                    <span class="ms-1">{{ email_template.type_name if email_template.type_name is defined else email_template.type }}</span>
+                </p>
+                <p class="mb-1"><strong>Version:</strong>
+                    <span class="badge bg-secondary ms-1">{{ email_template.version }}</span>
+                </p>
+            </div>
+            <div class="col-md-6">
+                {% if email_template.tenant_id is none and email_template.pclass_id is none %}
+                    <p class="mb-1">
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-globe me-1"></i>Global fallback
+                                </span>
+                        <small class="text-muted ms-2">This template is the global fallback and must remain
+                            active.</small>
+                    </p>
+                {% elif email_template.pclass_id is not none %}
+                    <p class="mb-1">
+                                <span class="badge bg-info">
+                                    <i class="fas fa-project-diagram me-1"></i>Project class override
+                                </span>
+                        <span class="ms-2">{{ email_template.pclass.name }}</span>
+                    </p>
+                {% elif email_template.tenant_id is not none %}
+                    <p class="mb-1">
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-building me-1"></i>Tenant override
+                                </span>
+                        <span class="ms-2">{{ email_template.tenant.name }}</span>
+                    </p>
+                {% endif %}
+                {% if email_template.last_used %}
+                    <p class="mb-1 text-muted small">
+                        <i class="fas fa-clock me-1"></i>Last
+                        used: {{ email_template.last_used.strftime('%a %d %b %Y %H:%M') }}
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<div class="card mt-3 mb-3 card-body bg-well">
+    {{ wtf.render_field(form.subject) }}
+</div>
+
+<div class="card mt-3 mb-3 card-body bg-well">
+    <label class="form-label" for="html-body-editor">{{ form.html_body.label.text }}</label>
+    {% if form.html_body.description %}
+        <small class="form-text text-muted d-block mb-2">{{ form.html_body.description }}</small>
+    {% endif %}
+    {{ form.html_body(id='html-body-editor', class='form-control') }}
+    {% if form.html_body.errors %}
+        {% for error in form.html_body.errors %}
+            <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+<div class="card mt-3 mb-3 card-body bg-well">
+    {{ wtf.render_field(form.labels, id='labels') }}
+</div>
+
+{{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+
+</form>
+
+    {% if email_template %}
+        {{ edit_data(email_template) }}
+    {% endif %}
+{% endblock %}

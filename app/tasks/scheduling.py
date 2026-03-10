@@ -48,9 +48,9 @@ from ..models import (
     ProjectClassConfig,
     SubmissionRole, DownloadCentreItem,
 )
-from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.scratch import ScratchFileManager
+from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
 from ..task_queue import progress_update, register_task
@@ -1364,7 +1364,7 @@ def register_scheduling_tasks(celery):
             # language=jinja2
             message_tmpl = """
             <div><strong>The LP file for schedule attempt "{{ name }}" is now available.</strong></div>
-            <div class="mt-2">You can find this file in your <a href="{{ url_for('home.download_centre') }}" onclick="setTimeout(location.reload.bind(location), 1)">Download Centre</a>.</div>
+            <div class="mt-2">You can find this file in your <a href="{{ url_for('home.download_centre') }}">Download Centre</a>.</div>
             """
 
             message = render_template_string(message_tmpl, name=record.name)

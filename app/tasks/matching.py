@@ -21,8 +21,7 @@ import pulp
 import pulp.apis as pulp_apis
 from celery import group, chain
 from celery.exceptions import Ignore
-from flask import current_app, render_template, render_template_string
-from flask_mailman import EmailMultiAlternatives
+from flask import current_app, render_template_string
 from pandas import DataFrame
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
@@ -55,14 +54,14 @@ from ..models import (
     StudentData,
     DegreeProgramme, DownloadCentreItem,
 )
-from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.excel import _normalize_excel_sheet_name
 from ..shared.scratch import ScratchFileManager
+from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
 from ..shared.utils import get_current_year
-from ..task_queue import progress_update, register_task
+from ..task_queue import progress_update
 
 FALLBACK_DEFAULT_SUPERVISOR_CATS = 35
 FALLBACK_DEFAULT_MARKER_CATS = 3
@@ -2882,7 +2881,7 @@ def register_matching_tasks(celery):
             # language=jinja2
             message_tmpl = """
             <div><strong>The LP file for matching "{{ name }}" is now available.</strong></div>
-            <div class="mt-2">You can find this file in your <a href="{{ url_for('home.download_centre') }}" onclick="setTimeout(location.reload.bind(location), 1)">Download Centre</a>.</div>
+            <div class="mt-2">You can find this file in your <a href="{{ url_for('home.download_centre') }}">Download Centre</a>.</div>
             """
 
             message = render_template_string(message_tmpl, name=record.name)

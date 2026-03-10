@@ -17,6 +17,7 @@ from tarfile import TarFile, TarInfo
 from tarfile import open as tarfile_open
 from typing import Optional, List, Dict, Set
 
+import markdown
 import pandas as pd
 from dateutil import parser
 from flask_migrate import upgrade
@@ -1302,7 +1303,8 @@ def populate_email_templates(app):
         if html_path.exists():
             return html_path.read_text(encoding="utf-8")
         elif txt_path.exists():
-            return txt_path.read_text(encoding="utf-8")
+            text = txt_path.read_text(encoding="utf-8")
+            return markdown.markdown(text)
         else:
             return None
 

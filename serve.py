@@ -88,6 +88,8 @@ with app.app_context():
         db.session.commit()
         import_attendance_data(app, initdb_module)
 
+    populate_email_templates(app)
+
 
 class StandaloneApplication(gunicorn.app.base.BaseApplication):
     def __init__(self, app, options=None):

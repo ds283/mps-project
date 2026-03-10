@@ -8,8 +8,12 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app
+import re
+from datetime import datetime
 
+from celery import chain, group
+from celery.exceptions import Ignore
+from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -26,16 +30,8 @@ from ..models import (
     ProjectClass,
     EmailTemplate,
 )
-
-from ..task_queue import progress_update, register_task
-
 from ..shared.sqlalchemy import get_count
-
-from celery import chain, group
-from celery.exceptions import Ignore
-
-from datetime import datetime
-import re
+from ..task_queue import progress_update, register_task
 
 
 def register_issue_confirm_tasks(celery):
@@ -258,7 +254,7 @@ def register_issue_confirm_tasks(celery):
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.PROJECT_CONFIRMATION_REQUESTED,
+            template_type=EmailTemplate.PROJECT_CONFIRMATION_REQUESTED,
             to=[data.user.email],
             subject_kwargs={"name": config.project_class.name},
             body_kwargs={
@@ -319,7 +315,7 @@ def register_issue_confirm_tasks(celery):
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.PROJECT_CONFIRMATION_REMINDER,
+            template_type=EmailTemplate.PROJECT_CONFIRMATION_REMINDER,
             to=[data.user.email],
             subject_kwargs={"name": config.project_class.name},
             body_kwargs={
@@ -457,7 +453,7 @@ def register_issue_confirm_tasks(celery):
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.PROJECT_CONFIRMATION_REVISE_REQUEST,
+            template_type=EmailTemplate.PROJECT_CONFIRMATION_REVISE_REQUEST,
             to=[owner.user.email],
             reply_to=[current_user.email],
             subject_kwargs={"name": project.name, "desc": record.label},
@@ -561,7 +557,7 @@ def register_issue_confirm_tasks(celery):
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.PROJECT_CONFIRMATION_NEW_COMMENT,
+            template_type=EmailTemplate.PROJECT_CONFIRMATION_NEW_COMMENT,
             to=list(recipients),
             subject_kwargs={"proj": comment.parent.parent.name, "desc": comment.parent.label},
             body_kwargs={"comment": comment, "project": comment.parent.parent, "desc": comment.parent},

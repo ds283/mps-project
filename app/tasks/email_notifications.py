@@ -425,7 +425,7 @@ def register_email_notification_tasks(celery):
         outstanding_crqs = _get_outstanding_faculty_confirmation_requests(user)
 
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.NOTIFICATIONS_FACULTY_SINGLE,
+            template_type=EmailTemplate.NOTIFICATIONS_FACULTY_SINGLE,
             to=[user.email],
             subject_kwargs={"subject": notification.msg_subject()},
             body_kwargs={"user": user, "notification": notification, "outstanding": outstanding_crqs},
@@ -485,7 +485,7 @@ def register_email_notification_tasks(celery):
             subject = "Projects web portal: summary of notifications and events"
 
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.NOTIFICATIONS_FACULTY_ROLLUP,
+            template_type=EmailTemplate.NOTIFICATIONS_FACULTY_ROLLUP,
             to=[user.email],
             subject_kwargs={"subject": subject},
             body_kwargs={"user": user, "notifications": notifications, "outstanding": outstanding_crqs},
@@ -526,7 +526,7 @@ def register_email_notification_tasks(celery):
         # orphaned. That means we should do nothing
         if req is not None:
             msg = EmailTemplate.apply_(
-                type=EmailTemplate.NOTIFICATIONS_REQUEST_MEETING,
+                template_type=EmailTemplate.NOTIFICATIONS_REQUEST_MEETING,
                 to=[req.owner.student.user.email, req.project.owner.user.email],
                 reply_to=[req.project.owner.user.email],
                 subject_kwargs={"name": req.project.config.project_class.name},
@@ -564,7 +564,7 @@ def register_email_notification_tasks(celery):
             raise Ignore()
 
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.NOTIFICATIONS_STUDENT_SINGLE,
+            template_type=EmailTemplate.NOTIFICATIONS_STUDENT_SINGLE,
             to=[user.email],
             subject_kwargs={"subject": notification.msg_subject()},
             body_kwargs={"user": user, "notification": notification},
@@ -622,7 +622,7 @@ def register_email_notification_tasks(celery):
             subject = "Projects web portal: summary of notifications and events"
 
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.NOTIFICATIONS_STUDENT_ROLLUP,
+            template_type=EmailTemplate.NOTIFICATIONS_STUDENT_ROLLUP,
             to=[user.email],
             subject_kwargs={"subject": subject},
             body_kwargs={"user": user, "notifications": notifications, "outstanding": outstanding_crqs},

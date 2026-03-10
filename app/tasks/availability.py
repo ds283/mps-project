@@ -306,7 +306,7 @@ def register_availability_tasks(celery):
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.SCHEDULING_AVAILABILITY_REQUEST,
+            template_type=EmailTemplate.SCHEDULING_AVAILABILITY_REQUEST,
             to=[a_record.faculty.user.email],
             subject_kwargs={"name": a_record.assessment.name},
             body_kwargs={"event": a_record.assessment, "deadline": deadline, "user": a_record.faculty.user},
@@ -646,7 +646,7 @@ def register_availability_tasks(celery):
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER,
+            template_type=EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER,
             to=[assessor.faculty.user.email],
             subject_kwargs={"name": assessor.assessment.name},
             body_kwargs={"event": assessor.assessment, "user": assessor.faculty.user},

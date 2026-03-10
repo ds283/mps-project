@@ -120,7 +120,7 @@ def register_close_selection_tasks(celery):
 
             data = config.selector_data
             msg = EmailTemplate.apply_(
-                type=EmailTemplate.CLOSE_SELECTION_CONVENOR,
+                template_type=EmailTemplate.CLOSE_SELECTION_CONVENOR,
                 to=list(recipients),
                 subject_kwargs={"name": config.project_class.name},
                 body_kwargs={"pclass": config.project_class, "config": config, "data": data},

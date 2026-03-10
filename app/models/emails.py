@@ -9,17 +9,15 @@
 #
 from typing import List, Optional, Dict, Any, Iterable, Callable
 
-from flask import current_app
+from flask import current_app, render_template_string
 from flask_mailman import EmailMultiAlternatives
-from sqlalchemy import or_, nulls_last, desc
+from html2text import HTML2Text
+from sqlalchemy import or_
 
 from .defaults import DEFAULT_STRING_LENGTH
+from .models import EditingMetadataMixin, ColouredLabelMixin, ProjectClass
 from .tenants import Tenant
 from ..database import db
-
-from .models import EditingMetadataMixin, ColouredLabelMixin, ProjectClass
-
-from html2text import HTML2Text
 
 email_template_to_labels = db.Table(
     "email_templates_to_labels",
@@ -159,7 +157,7 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
 
     @staticmethod
     def apply_(
-            type: int,
+            template_type: int,
             to: List[str],
             from_email: Optional[str]=None,
             reply_to: Optional[List[str]]=None,
@@ -178,6 +176,12 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
             pass
         else:
             raise RuntimeError(f'Invalid tenant type "{type(tenant)}" (value="{tenant}") in EmailTemplate.apply_()')
+
+        if from_email is None:
+            from_email = current_app.config["MAIL_DEFAULT_SENDER"]
+
+        if reply_to is None:
+            reply_to = [current_app.config["MAIL_REPLY_TO"]]
 
         pclass_id = None
         if isinstance(pclass, int):
@@ -208,7 +212,7 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
         templ_query = (
             db.session.query(EmailTemplate)
             .filter(
-                EmailTemplate.type == type,
+                EmailTemplate.type == template_type,
                 EmailTemplate.active == True
             )
         )
@@ -228,8 +232,8 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
             )
         templ_query = (
             templ_query.order_by(
-                nulls_last(desc(EmailTemplate.tenant_id)),
-                nulls_last(desc(EmailTemplate.pclass_id)),
+                EmailTemplate.tenant_id,
+                EmailTemplate.pclass_id,
                 EmailTemplate.version.desc(),
             )
         )
@@ -237,13 +241,7 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
         template: Optional[EmailTemplate] = templ_query.first()
 
         if template is None:
-            raise RuntimeError(f"No active template found for type {type}")
-
-        if from_email is None:
-            from_email = current_app.config["MAIL_DEFAULT_SENDER"]
-
-        if reply_to is None:
-            reply_to = [current_app.config["MAIL_REPLY_TO"]]
+            raise RuntimeError(f"No active template found for EmailTemplate type {template_type}")
 
         # format subject string
         subject_str: str = template.subject.format(**subject_kwargs) if subject_kwargs is not None else template.subject
@@ -256,13 +254,14 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
         )
 
         # perform any attachments, storing output in body_kwargs where it can be used if desired
-        for label, callable in body_attachments.items():
-            output = callable(msg)
-            if label not in body_kwargs:
-                body_kwargs[label] = output
+        if body_attachments is not None:
+            for label, callable in body_attachments.items():
+                output = callable(msg)
+                if label not in body_kwargs:
+                    body_kwargs[label] = output
 
         # format HTML body text
-        html_str: str = template.html_body.format(**body_kwargs) if body_kwargs is not None else template.html_body
+        html_str: str = render_template_string(template.html_body, **body_kwargs) if body_kwargs is not None else template.html_body
 
         # generate plain text version of HTML body (html2text basically produces Markdown)
         h = HTML2Text()

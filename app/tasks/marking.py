@@ -18,13 +18,12 @@ from celery import group, chain
 from celery.exceptions import Ignore
 from dateutil import parser
 from flask import current_app
-from flask_mailman import EmailMessage, EmailMultiAlternatives
+from flask_mailman import EmailMultiAlternatives
 from pathvalidate import sanitize_filename
 from sqlalchemy.exc import SQLAlchemyError
 from weasyprint import HTML, CSS
 from weasyprint.text.fonts import FontConfiguration
 
-import app.shared.cloud_object_store.bucket_types as buckets
 from .shared.utils import report_error, report_info, attach_asset_to_email_msg
 from ..database import db
 from ..models import (
@@ -172,7 +171,7 @@ def register_marking_tasks(celery):
 
         # inject attached_documents into the body kwargs and re-render
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.MARKING_SUPERVISOR,
+            template_type=EmailTemplate.MARKING_SUPERVISOR,
             to=[test_email if test_email is not None else user.email],
             reply_to=[pclass.convenor_email],
             subject_kwargs={"abbv": pclass.abbreviation, "stu": student.user.name, "deadline": deadline.strftime("%a %d %b")},
@@ -236,7 +235,7 @@ def register_marking_tasks(celery):
 
         # inject attached_documents into the body kwargs and re-render
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.MARKING_MARKER,
+            template_type=EmailTemplate.MARKING_MARKER,
             to=[test_email if test_email is not None else user.email],
             reply_to=[pclass.convenor_email],
             subject_kwargs={"abbv": pclass.abbreviation, "number": student.exam_number, "deadline": deadline.strftime("%a %d %b")},

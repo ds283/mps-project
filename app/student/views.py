@@ -858,7 +858,7 @@ def submit(sid):
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
 
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED,
+            template_type=EmailTemplate.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED,
             to=[sel.student.user.email],
             subject_kwargs={"pcl": sel.config.project_class.name},
             body_kwargs={"user": sel.student.user, "pclass": sel.config.project_class, "config": sel.config, "sel": sel},

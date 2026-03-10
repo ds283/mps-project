@@ -8,8 +8,12 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app
+from datetime import datetime, date
 
+from celery import chain, group
+from celery.exceptions import Ignore
+from dateutil import parser
+from flask import current_app
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -27,16 +31,8 @@ from ..models import (
     MatchingAttempt,
     EmailTemplate,
 )
-
-from ..task_queue import progress_update, register_task
-
 from ..shared.convenor import add_liveproject
-
-from celery import chain, group
-from celery.exceptions import Ignore
-
-from datetime import datetime, date
-from dateutil import parser
+from ..task_queue import progress_update, register_task
 
 
 def register_golive_tasks(celery):
@@ -380,7 +376,7 @@ def register_golive_tasks(celery):
                     break
 
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.GO_LIVE_FACULTY,
+            template_type=EmailTemplate.GO_LIVE_FACULTY,
             to=[data.user.email],
             subject_kwargs={"name": config.project_class.name},
             body_kwargs={
@@ -423,7 +419,7 @@ def register_golive_tasks(celery):
             raise Ignore()
 
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.GO_LIVE_SELECTOR,
+            template_type=EmailTemplate.GO_LIVE_SELECTOR,
             to=[data.student.user.email],
             subject_kwargs={"name": config.project_class.name},
             body_kwargs={"user": data.student.user, "student": data, "pclass": config.project_class, "config": config, "deadline": deadline},
@@ -493,7 +489,7 @@ def register_golive_tasks(celery):
                 recipients.add(user.email)
 
             msg = EmailTemplate.apply_(
-                type=EmailTemplate.GO_LIVE_CONVENOR,
+                template_type=EmailTemplate.GO_LIVE_CONVENOR,
                 to=list(recipients),
                 subject_kwargs={"name": config.project_class.name},
                 body_kwargs={"pclass": config.project_class, "config": config, "deadline": deadline},

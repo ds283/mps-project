@@ -9,10 +9,10 @@
 #
 
 from datetime import datetime
-from distutils.util import strtobool
 from typing import List
 
 from celery import group, chain
+from distutils.util import strtobool
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -108,14 +108,14 @@ def register_matching_email_tasks(celery):
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         if is_draft:
             msg = EmailTemplate.apply_(
-                type=EmailTemplate.MATCHING_DRAFT_NOTIFY_STUDENTS,
+                template_type=EmailTemplate.MATCHING_DRAFT_NOTIFY_STUDENTS,
                 to=[user.email],
                 subject_kwargs={"name": config.name, "yra": record.submit_year_a, "yrb": record.submit_year_b},
                 body_kwargs={"user": user, "config": config, "pclass": pclass, "attempt": record, "matches": matches, "number": len(matches)},
             )
         else:
             msg = EmailTemplate.apply_(
-                type=EmailTemplate.MATCHING_FINAL_NOTIFY_STUDENTS,
+                template_type=EmailTemplate.MATCHING_FINAL_NOTIFY_STUDENTS,
                 to=[user.email],
                 subject_kwargs={"name": config.name, "yra": record.submit_year_a, "yrb": record.submit_year_b},
                 body_kwargs={"user": user, "config": config, "pclass": pclass, "attempt": record, "matches": matches, "number": len(matches)},
@@ -221,14 +221,14 @@ def register_matching_email_tasks(celery):
         if is_draft:
             if len(matches) > 0:
                 msg = EmailTemplate.apply_(
-                    type=EmailTemplate.MATCHING_DRAFT_NOTIFY_FACULTY,
+                    template_type=EmailTemplate.MATCHING_DRAFT_NOTIFY_FACULTY,
                     to=[user.email],
                     subject_kwargs={"yra": record.submit_year_a, "yrb": record.submit_year_b},
                     body_kwargs={"user": user, "fac": fac, "attempt": record, "matches": binned_matches, "convenors": convenors},
                 )
             else:
                 msg = EmailTemplate.apply_(
-                    type=EmailTemplate.MATCHING_DRAFT_UNNEEDED_FACULTY,
+                    template_type=EmailTemplate.MATCHING_DRAFT_UNNEEDED_FACULTY,
                     to=[user.email],
                     subject_kwargs={"yra": record.submit_year_a, "yrb": record.submit_year_b},
                     body_kwargs={"user": user, "fac": fac, "attempt": record},
@@ -236,14 +236,14 @@ def register_matching_email_tasks(celery):
         else:
             if len(matches) > 0:
                 msg = EmailTemplate.apply_(
-                    type=EmailTemplate.MATCHING_FINAL_NOTIFY_FACULTY,
+                    template_type=EmailTemplate.MATCHING_FINAL_NOTIFY_FACULTY,
                     to=[user.email],
                     subject_kwargs={"yra": record.submit_year_a, "yrb": record.submit_year_b},
                     body_kwargs={"user": user, "fac": fac, "attempt": record, "matches": binned_matches, "convenors": convenors},
                 )
             else:
                 msg = EmailTemplate.apply_(
-                    type=EmailTemplate.MATCHING_FINAL_UNNEEDED_FACULTY,
+                    template_type=EmailTemplate.MATCHING_FINAL_UNNEEDED_FACULTY,
                     to=[user.email],
                     subject_kwargs={"yra": record.submit_year_a, "yrb": record.submit_year_b},
                     body_kwargs={"user": user, "fac": fac, "attempt": record},

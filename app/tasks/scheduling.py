@@ -22,7 +22,7 @@ import pulp.apis as pulp_apis
 from celery import group, chain
 from celery.exceptions import Ignore
 from distutils.util import strtobool
-from flask import current_app, render_template, render_template_string
+from flask import current_app, render_template_string
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -1058,7 +1058,7 @@ def _send_offline_email(celery, record, user, lp_asset):
     send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
 
     msg = EmailTemplate.apply_(
-        type=EmailTemplate.SCHEDULING_GENERATED,
+        template_type=EmailTemplate.SCHEDULING_GENERATED,
         to=[user.email],
         subject_kwargs={"name": record.name},
         body_kwargs={"name": record.name, "user": user},
@@ -1750,7 +1750,7 @@ def register_scheduling_tasks(celery):
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         if is_draft:
             msg = EmailTemplate.apply_(
-                type=EmailTemplate.SCHEDULING_DRAFT_NOTIFY_STUDENTS,
+                template_type=EmailTemplate.SCHEDULING_DRAFT_NOTIFY_STUDENTS,
                 to=[user.email],
                 subject_kwargs={"name": event.name},
                 body_kwargs={
@@ -1763,7 +1763,7 @@ def register_scheduling_tasks(celery):
             )
         else:
             msg = EmailTemplate.apply_(
-                type=EmailTemplate.SCHEDULING_FINAL_NOTIFY_STUDENTS,
+                template_type=EmailTemplate.SCHEDULING_FINAL_NOTIFY_STUDENTS,
                 to=[user.email],
                 subject_kwargs={"name": event.name},
                 body_kwargs={
@@ -1851,14 +1851,14 @@ def register_scheduling_tasks(celery):
         if is_draft:
             if len(slots) > 0:
                 msg = EmailTemplate.apply_(
-                    type=EmailTemplate.SCHEDULING_DRAFT_NOTIFY_FACULTY,
+                    template_type=EmailTemplate.SCHEDULING_DRAFT_NOTIFY_FACULTY,
                     to=[user.email],
                     subject_kwargs={"name": event.name},
                     body_kwargs={"user": user, "event": event, "slots": slots, "schedule": record},
                 )
             else:
                 msg = EmailTemplate.apply_(
-                    type=EmailTemplate.SCHEDULING_DRAFT_UNNEEDED_FACULTY,
+                    template_type=EmailTemplate.SCHEDULING_DRAFT_UNNEEDED_FACULTY,
                     to=[user.email],
                     subject_kwargs={"name": event.name},
                     body_kwargs={"user": user, "event": event, "schedule": record},
@@ -1866,14 +1866,14 @@ def register_scheduling_tasks(celery):
         else:
             if len(slots) > 0:
                 msg = EmailTemplate.apply_(
-                    type=EmailTemplate.SCHEDULING_FINAL_NOTIFY_FACULTY,
+                    template_type=EmailTemplate.SCHEDULING_FINAL_NOTIFY_FACULTY,
                     to=[user.email],
                     subject_kwargs={"name": event.name},
                     body_kwargs={"user": user, "event": event, "slots": slots, "schedule": record},
                 )
             else:
                 msg = EmailTemplate.apply_(
-                    type=EmailTemplate.SCHEDULING_FINAL_UNNEEDED_FACULTY,
+                    template_type=EmailTemplate.SCHEDULING_FINAL_UNNEEDED_FACULTY,
                     to=[user.email],
                     subject_kwargs={"name": event.name},
                     body_kwargs={"user": user, "event": event, "schedule": record},

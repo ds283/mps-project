@@ -12,7 +12,7 @@ from email.utils import formataddr
 
 from celery import group
 from celery.exceptions import Ignore
-from flask import current_app, render_template_string, render_template
+from flask import current_app, render_template_string
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -51,7 +51,7 @@ def register_services_tasks(celery):
             reply_to = [reply_to]
 
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.SERVICES_SEND_EMAIL,
+            template_type=EmailTemplate.SERVICES_SEND_EMAIL,
             to=[formataddr((record.name, record.email))],
             reply_to=reply_to,
             subject_kwargs={"subject": subject},
@@ -73,7 +73,7 @@ def register_services_tasks(celery):
             reply_to = [reply_to]
 
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.SERVICES_CC_EMAIL,
+            template_type=EmailTemplate.SERVICES_CC_EMAIL,
             to=[to_addr],
             reply_to=reply_to,
             subject_kwargs={"subject": subject},
@@ -107,7 +107,7 @@ def register_services_tasks(celery):
             reply_to = list[reply_to]
 
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.SERVICES_SEND_EMAIL,
+            template_type=EmailTemplate.SERVICES_SEND_EMAIL,
             to=[to_addr],
             reply_to=reply_to,
             subject_kwargs={"subject": subject},

@@ -14,11 +14,10 @@ from typing import Optional
 
 from celery import group, chain
 from celery.exceptions import Ignore
-from flask import current_app, render_template
+from flask import current_app
 from flask_mailman import EmailMessage
 from sqlalchemy.exc import SQLAlchemyError
 
-import app.shared.cloud_object_store.bucket_types as buckets
 from .shared.utils import report_info, report_error, attach_asset_to_email_msg
 from ..database import db
 from ..models import (
@@ -169,7 +168,7 @@ def register_push_feedback_tasks(celery):
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         msg = EmailTemplate.apply_(
-            type=EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT,
+            template_type=EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT,
             to=[test_email if test_email is not None else student.email],
             subject_kwargs={"proj": pclass.name, "name": period.display_name},
             body_kwargs={"sub": sub, "sd": sd, "student": student, "period": period, "pclass": pclass, "record": record},
@@ -240,7 +239,7 @@ def register_push_feedback_tasks(celery):
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
 
         msg = EmailTemplate.apply_(
-            type=email_template_type,
+            template_type=email_template_type,
             to=[test_email if test_email is not None else person.email],
             subject_kwargs={"pclass_name": pclass.name, "period_name": period.display_name, "email_subject": email_subject},
             body_kwargs={"person": person, "submitters": submitters, "period": period, "pclass": pclass},

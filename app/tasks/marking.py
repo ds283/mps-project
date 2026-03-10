@@ -17,8 +17,8 @@ import markdown
 from celery import group, chain
 from celery.exceptions import Ignore
 from dateutil import parser
-from flask import current_app, render_template
-from flask_mailman import EmailMultiAlternatives, EmailMessage
+from flask import current_app
+from flask_mailman import EmailMessage, EmailMultiAlternatives
 from pathvalidate import sanitize_filename
 from sqlalchemy.exc import SQLAlchemyError
 from weasyprint import HTML, CSS
@@ -149,7 +149,9 @@ def register_marking_tasks(celery):
         test_email: str,
         cc_convenor: bool,
         max_attachment: int,
-    ) -> EmailMultiAlternatives:
+    ):
+        from ..models import EmailTemplate
+
         if hasattr(asset, "filename"):
             filename_path: Path = Path(asset.filename)
         else:
@@ -165,54 +167,33 @@ def register_marking_tasks(celery):
         ).with_suffix(extension)
         print('-- attachment filename = "{path}"'.format(path=str(filename)))
 
-        subject = "IMPORTANT: {abbv} project marking: {stu} - DEADLINE {deadline} - DO NOT REPLY".format(
-            abbv=pclass.abbreviation, stu=student.user.name, deadline=deadline.strftime("%a %d %b")
-        )
+        def attach(msg):
+            return _attach_documents(msg, record, filename, max_attachment, role="supervisor")
 
-        msg = EmailMultiAlternatives(
-            subject=subject,
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[pclass.convenor_email],
+        # inject attached_documents into the body kwargs and re-render
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.MARKING_SUPERVISOR,
             to=[test_email if test_email is not None else user.email],
+            reply_to=[pclass.convenor_email],
+            subject_kwargs={"abbv": pclass.abbreviation, "stu": student.user.name, "deadline": deadline.strftime("%a %d %b")},
+            body_kwargs={
+                "role": role,
+                "config": config,
+                "pclass": pclass,
+                "period": period,
+                "markers": markers,
+                "supervisors": supervisors,
+                "submitter": submitter,
+                "project": record.project,
+                "student": student,
+                "record": record,
+                "deadline": deadline,
+            },
+            body_attachments={"attached_documents": attach}
         )
 
         if test_email is None and cc_convenor:
             msg.cc = [config.convenor_email]
-
-        attached_documents = _attach_documents(msg, record, filename, max_attachment, role="supervisor")
-
-        msg.body = render_template(
-            "email/marking/supervisor.txt",
-            role=role,
-            config=config,
-            pclass=pclass,
-            period=period,
-            markers=markers,
-            supervisors=supervisors,
-            submitter=submitter,
-            project=record.project,
-            student=student,
-            record=record,
-            deadline=deadline,
-            attached_documents=attached_documents,
-        )
-
-        html = render_template(
-            "email/marking/supervisor.html",
-            role=role,
-            config=config,
-            pclass=pclass,
-            period=period,
-            markers=markers,
-            supervisors=supervisors,
-            submitter=submitter,
-            project=record.project,
-            student=student,
-            record=record,
-            deadline=deadline,
-            attached_documents=attached_documents,
-        )
-        msg.attach_alternative(html, "text/html")
 
         return msg
 
@@ -231,7 +212,9 @@ def register_marking_tasks(celery):
         test_email: str,
         cc_convenor: bool,
         max_attachment: int,
-    ) -> EmailMultiAlternatives:
+    ):
+        from ..models import EmailTemplate
+
         if hasattr(asset, "filename"):
             filename_path: Path = Path(asset.filename)
         else:
@@ -247,54 +230,36 @@ def register_marking_tasks(celery):
         ).with_suffix(extension)
         print('-- attachment filename = "{path}"'.format(path=str(filename)))
 
-        subject = "IMPORTANT: {abbv} project marking: candidate {number} - DEADLINE {deadline} - DO NOT REPLY".format(
-            abbv=pclass.abbreviation, number=student.exam_number, deadline=deadline.strftime("%a %d %b")
-        )
 
-        msg = EmailMultiAlternatives(
-            subject=subject,
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[pclass.convenor_email],
+        def attach(msg):
+            return _attach_documents(msg, record, filename, max_attachment, role="marker")
+
+        # inject attached_documents into the body kwargs and re-render
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.MARKING_MARKER,
             to=[test_email if test_email is not None else user.email],
+            reply_to=[pclass.convenor_email],
+            subject_kwargs={"abbv": pclass.abbreviation, "number": student.exam_number, "deadline": deadline.strftime("%a %d %b")},
+            body_kwargs={
+                "role": role,
+                "config": config,
+                "pclass": pclass,
+                "period": period,
+                "markers": markers,
+                "supervisors": supervisors,
+                "submitter": submitter,
+                "project": record.project,
+                "student": student,
+                "record": record,
+                "deadline": deadline,
+            },
+            body_attachments = {
+                "attached_documents": attach,
+            },
         )
 
         if test_email is None and cc_convenor:
             msg.cc = [config.convenor_email]
-
-        attached_documents = _attach_documents(msg, record, filename, max_attachment, role="marker")
-
-        msg.body = render_template(
-            "email/marking/marker.txt",
-            role=role,
-            config=config,
-            pclass=pclass,
-            period=period,
-            markers=markers,
-            supervisors=supervisors,
-            submitter=submitter,
-            project=record.project,
-            student=student,
-            record=record,
-            deadline=deadline,
-            attached_documents=attached_documents,
-        )
-
-        html = render_template(
-            "email/marking/marker.html",
-            role=role,
-            config=config,
-            pclass=pclass,
-            period=period,
-            markers=markers,
-            supervisors=supervisors,
-            submitter=submitter,
-            project=record.project,
-            student=student,
-            record=record,
-            deadline=deadline,
-            attached_documents=attached_documents,
-        )
-        msg.attach_alternative(html, "text/html")
 
         return msg
 
@@ -338,7 +303,7 @@ def register_marking_tasks(celery):
             if not role.marking_distributed:
                 filtered_supervisors: List[SubmissionRole] = [x for x in supervisors if x.id != role.id]
 
-                msg: EmailMultiAlternatives = _build_supervisor_email(
+                msg = _build_supervisor_email(
                     role,
                     record,
                     config,
@@ -370,7 +335,7 @@ def register_marking_tasks(celery):
             if not role.marking_distributed:
                 filtered_markers: List[SubmissionRole] = [x for x in markers if x.id != role.id]
 
-                msg: EmailMultiAlternatives = _build_marker_email(
+                msg = _build_marker_email(
                     role,
                     record,
                     config,
@@ -400,40 +365,27 @@ def register_marking_tasks(celery):
 
         return None
 
-    def _attach_documents(msg: EmailMessage, record: SubmissionRecord, report_filename: Path, max_attached_size: int, role=None):
+    def _attach_documents(msg: EmailMultiAlternatives, record: SubmissionRecord, report_filename: Path, max_attached_size: int, role=None):
         # track cumulative size of added assets, packed on a 'first-come, first-served' system
         current_size = 0
 
         # track attached documents
-        attached_documents = []
+        manifest = []
 
         # extract location of (processed) report from SubmissionRecord; we can rely on record.processed_report not being None
         report_asset: GeneratedAsset = record.processed_report
         if report_asset is None:
             raise RuntimeError("_attach_documents() called with a null processed report")
 
-        # attach report or generate link for download later
-        BUCKET_MAP = {
-            buckets.ASSETS_BUCKET: current_app.config.get("OBJECT_STORAGE_ASSETS"),
-            buckets.BACKUP_BUCKET: current_app.config.get("OBJECT_STORAGE_BACKUP"),
-            buckets.INITDB_BUCKET: current_app.config.get("OBJECT_STORAGE_INITDB"),
-            buckets.TELEMETRY_BUCKET: current_app.config.get("OBJECT_STORAGE_TELEMETRY"),
-            buckets.FEEDBACK_BUCKET: current_app.config.get("OBJECT_STORAGE_FEEDBACK"),
-            buckets.PROJECT_BUCKET: current_app.config.get("OBJECT_STORAGE_PROJECT"),
-        }
-        object_store = BUCKET_MAP[report_asset.bucket]
+        # attach report or generate link for download later]
+        buckets = current_app.config.get("OBJECT_STORAGE_BUCKETS")
+        object_store = buckets[report_asset.bucket]
 
         report_storage = AssetCloudAdapter(report_asset, object_store, audit_data=f"marking._attach_documents #1 (submission record #{record.id})")
-        current_size += attach_asset_to_email_msg(
-            msg,
-            report_storage,
-            current_size,
-            attached_documents,
-            filename=report_filename,
-            max_attached_size=max_attached_size,
-            description="student's submitted report",
-            endpoint="download_generated_asset",
-        )
+        d = attach_asset_to_email_msg(msg, report_storage, current_size, filename=report_filename, max_attached_size=max_attached_size,
+                                      description="student's submitted report", endpoint="download_generated_asset")
+        current_size += d.attached_size
+        manifest.extend(d.manifest)
 
         # attach any other documents provided by the project convenor
         if role is not None:
@@ -442,42 +394,32 @@ def register_marking_tasks(celery):
 
                 if (role in ["marker"] and attachment.include_marker_emails) or (role in ["supervisor"] and attachment.include_supervisor_emails):
                     asset: SubmittedAsset = attachment.attachment
-                    object_store = BUCKET_MAP[asset.bucket]
+                    object_store = buckets[asset.bucket]
                     asset_storage = AssetCloudAdapter(
                         asset, object_store, audit_data=f"marking._attach_documents #2 (submission record #{record.id})"
                     )
 
-                    current_size += attach_asset_to_email_msg(
-                        msg,
-                        asset_storage,
-                        current_size,
-                        attached_documents,
-                        max_attached_size=max_attached_size,
-                        description=attachment.description,
-                        endpoint="download_submitted_asset",
-                    )
+                    d = attach_asset_to_email_msg(msg, asset_storage, current_size, max_attached_size=max_attached_size,
+                                                  description=attachment.description, endpoint="download_submitted_asset")
+                    current_size += d.attached_size
+                    manifest.extend(d.manifest)
 
             for attachment in record.ordered_attachments:
                 attachment: SubmissionAttachment
 
                 if (role in ["marker"] and attachment.include_marker_emails) or (role in ["supervisor"] and attachment.include_supervisor_emails):
                     asset: SubmittedAsset = attachment.attachment
-                    object_store = BUCKET_MAP[asset.bucket]
+                    object_store = buckets[asset.bucket]
                     asset_storage = AssetCloudAdapter(
                         asset, object_store, audit_data=f"marking._attach_documents #3 (submission record #{record.id})"
                     )
 
-                    current_size += attach_asset_to_email_msg(
-                        msg,
-                        asset_storage,
-                        current_size,
-                        attached_documents,
-                        max_attached_size=max_attached_size,
-                        description=attachment.description,
-                        endpoint="download_submitted_asset",
-                    )
+                    d = attach_asset_to_email_msg(msg, asset_storage, current_size, max_attached_size=max_attached_size,
+                                                  description=attachment.description, endpoint="download_submitted_asset")
+                    current_size += d.attached_size
+                    manifest.extend(d.manifest)
 
-        return attached_documents
+        return manifest
 
     @celery.task(bind=True, default_retry_delay=30)
     def record_marking_email_sent(self, role_id, test, role_string):

@@ -11,12 +11,11 @@
 from datetime import datetime
 
 from celery import chain, group
-from flask import current_app, render_template
-from flask_mailman import EmailMultiAlternatives
+from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import TaskRecord, ProjectClassConfig, User, BackupRecord, SelectingStudent, SelectionRecord
+from ..models import TaskRecord, ProjectClassConfig, User, BackupRecord, SelectingStudent, SelectionRecord, EmailTemplate
 from ..task_queue import progress_update, register_task
 
 
@@ -119,15 +118,13 @@ def register_close_selection_tasks(celery):
             for user in config.project_class.office_contacts:
                 recipients.add(user.email)
 
-            msg = EmailMultiAlternatives(
-                subject='[mpsprojects] "{name}": student selections now ' "closed".format(name=config.project_class.name),
-                from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-                reply_to=[current_app.config["MAIL_REPLY_TO"]],
-                to=list(recipients),
-            )
-
             data = config.selector_data
-            msg.body = render_template("email/close_selection/convenor.txt", pclass=config.project_class, config=config, data=data)
+            msg = EmailTemplate.apply_(
+                type=EmailTemplate.CLOSE_SELECTION_CONVENOR,
+                to=list(recipients),
+                subject_kwargs={"name": config.project_class.name},
+                body_kwargs={"pclass": config.project_class, "config": config, "data": data},
+            )
 
             # register a new task in the database
             task_id = register_task(msg.subject, description="Send convenor email notification")

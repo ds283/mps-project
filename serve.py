@@ -18,7 +18,8 @@ from sqlalchemy import text, inspect
 import gunicorn_config
 from app import create_app
 from app.database import db
-from initdb import initial_populate_database, populate_CATS_limits, import_supervisor_data, import_examiner_data, import_attendance_data
+from initdb import initial_populate_database, populate_CATS_limits, import_supervisor_data, import_examiner_data, import_attendance_data, \
+    populate_email_templates
 
 
 def has_table(inspector, table_name):

@@ -7,13 +7,25 @@
 #
 # Contributors: ds283 <>
 #
+from collections import namedtuple
 from typing import Optional, Union
 from urllib.parse import quote
 
 from ...models import User, SubmittedAsset, GeneratedAsset
-from flask_mailman import EmailMessage
+from flask_mailman import EmailMessage, EmailMultiAlternatives
 
 from ...shared.asset_tools import AssetCloudAdapter
+
+
+EmailLike = Union[EmailMessage, EmailMultiAlternatives]
+
+AttachmentData = namedtuple(
+    "AttachmentData",
+    [
+        "attached_size",
+        "manifest",
+    ]
+)
 
 
 def report_error(msg: str, source: str, user: Optional[User]):
@@ -28,22 +40,16 @@ def report_info(msg: str, source: str, user: Optional[User]):
         user.post_message(msg, "info", autocommit=True)
 
 
-def attach_asset_to_email_msg(
-    msg: EmailMessage,
-    storage: AssetCloudAdapter,
-    current_size: int,
-    attached_documents,
-    filename=None,
-    max_attached_size=None,
-    description=None,
-    endpoint="download_submitted_asset",
-):
+def attach_asset_to_email_msg(msg: EmailLike, storage: AssetCloudAdapter, current_size: int, filename=None, max_attached_size=None, description=None,
+                              endpoint="download_submitted_asset") -> AttachmentData:
     if not storage.exists():
         raise RuntimeError("_attach_documents() could not find asset in object store")
 
     # get size of file to be attached, in bytes
     asset: Union[SubmittedAsset, GeneratedAsset] = storage.record()
     asset_size = asset.filesize
+
+    manifest = []
 
     # if attachment is too large, generate a link instead
     if max_attached_size is not None and float(current_size + asset_size) / (1024 * 1024) > max_attached_size:
@@ -57,7 +63,7 @@ def attach_asset_to_email_msg(
                 print(f'attach_asset_to_email_msg: TypeError received with filename="{filename}"')
         else:
             link = "https://mpsprojects.sussex.ac.uk/admin/{endpoint}/{asset_id}".format(endpoint=endpoint, asset_id=asset.id)
-        attached_documents.append((False, link, description))
+        manifest.append((False, link, description))
         asset_size = 0
 
     # otherwise, perform the attachment
@@ -68,6 +74,9 @@ def attach_asset_to_email_msg(
 
         msg.attach(filename=attached_name, mimetype=asset.mimetype, content=storage.get())
 
-        attached_documents.append((True, attached_name, description))
+        manifest.append((True, attached_name, description))
 
-    return asset_size
+    return AttachmentData(
+        attached_size=asset_size,
+        manifest=manifest,
+    )

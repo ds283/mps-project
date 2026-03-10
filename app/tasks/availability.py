@@ -13,8 +13,7 @@ from datetime import datetime, date
 from celery import group, chain
 from celery.exceptions import Ignore
 from dateutil import parser
-from flask import current_app, render_template
-from flask_mailman import EmailMultiAlternatives
+from flask import current_app
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -29,6 +28,7 @@ from ..models import (
     AssessorAttendanceData,
     SubmitterAttendanceData,
     SubmissionRecord,
+    EmailTemplate,
 )
 from ..shared.sqlalchemy import get_count
 from ..task_queue import progress_update, register_task
@@ -305,19 +305,12 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailMultiAlternatives(
-            subject="Availability request for event {name}".format(name=a_record.assessment.name),
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.SCHEDULING_AVAILABILITY_REQUEST,
             to=[a_record.faculty.user.email],
+            subject_kwargs={"name": a_record.assessment.name},
+            body_kwargs={"event": a_record.assessment, "deadline": deadline, "user": a_record.faculty.user},
         )
-
-        msg.body = render_template(
-            "email/scheduling/availability_request.txt", event=a_record.assessment, deadline=deadline, user=a_record.faculty.user
-        )
-
-        html = render_template("email/scheduling/availability_request.html", event=a_record.assessment, deadline=deadline, user=a_record.faculty.user)
-        msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
         task_id = register_task(msg.subject, description="Send availability request email to {r}".format(r=", ".join(msg.to)))
@@ -652,14 +645,12 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailMultiAlternatives(
-            subject="Reminder: availability for event {name}".format(name=assessor.assessment.name),
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER,
             to=[assessor.faculty.user.email],
+            subject_kwargs={"name": assessor.assessment.name},
+            body_kwargs={"event": assessor.assessment, "user": assessor.faculty.user},
         )
-
-        msg.body = render_template("email/scheduling/availability_reminder.txt", event=assessor.assessment, user=assessor.faculty.user)
 
         # register a new task in the database
         task_id = register_task(msg.subject, description="Send availability reminder email to {r}".format(r=", ".join(msg.to)))

@@ -9,13 +9,13 @@
 #
 
 from datetime import datetime
+from functools import partial
 from typing import Optional
 
 from celery import group, chain
 from celery.exceptions import Ignore
 from flask import current_app, render_template
 from flask_mailman import EmailMessage
-from flask_mailman import EmailMultiAlternatives
 from sqlalchemy.exc import SQLAlchemyError
 
 import app.shared.cloud_object_store.bucket_types as buckets
@@ -33,6 +33,7 @@ from ..models import (
     EmailLog,
     GeneratedAsset,
     FeedbackReport,
+    EmailTemplate,
 )
 from ..shared.asset_tools import AssetCloudAdapter
 from ..task_queue import register_task
@@ -116,44 +117,31 @@ def register_push_feedback_tasks(celery):
     # default max attachment size to 50 Mb
     MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024
 
-    def _attach_reports(msg: EmailMessage, record: SubmissionRecord):
+    def _attach_reports(record: SubmissionRecord, msg: EmailMessage):
         current_size = 0
 
         # track attached documents
-        attached_documents = []
+        manifest = []
 
         if not record.feedback_generated:
-            return attached_documents
+            return manifest
 
         # bucket map must be loaded at execution time, because we don't know what configuration we will use
         # (e.g. could even vary by which container we are running in)
-        BUCKET_MAP = {
-            buckets.ASSETS_BUCKET: current_app.config.get("OBJECT_STORAGE_ASSETS"),
-            buckets.BACKUP_BUCKET: current_app.config.get("OBJECT_STORAGE_BACKUP"),
-            buckets.INITDB_BUCKET: current_app.config.get("OBJECT_STORAGE_INITDB"),
-            buckets.TELEMETRY_BUCKET: current_app.config.get("OBJECT_STORAGE_TELEMETRY"),
-            buckets.FEEDBACK_BUCKET: current_app.config.get("OBJECT_STORAGE_FEEDBACK"),
-            buckets.PROJECT_BUCKET: current_app.config.get("OBJECT_STORAGE_PROJECT"),
-        }
+        buckets = current_app.config.get("OBJECT_STORAGE_BUCKETS")
 
         for report in record.feedback_reports:
             report: FeedbackReport
             asset: GeneratedAsset = report.asset
-            object_store = BUCKET_MAP[asset.bucket]
+            object_store = buckets[asset.bucket]
 
             storage = AssetCloudAdapter(asset, object_store, audit_data=f"push_feedback.attach_reports")
-            current_size += attach_asset_to_email_msg(
-                msg,
-                storage,
-                current_size,
-                attached_documents,
-                filename=asset.target_name,
-                max_attached_size=MAX_ATTACHMENT_SIZE,
-                description="feedback report",
-                endpoint="download_generated_asset",
-            )
+            d = attach_asset_to_email_msg(msg, storage, current_size, filename=asset.target_name, max_attached_size=MAX_ATTACHMENT_SIZE,
+                                          description="feedback report", endpoint="download_generated_asset")
+            current_size += d.attached_size
+            manifest.extend(d.manifest)
 
-        return attached_documents
+        return manifest
 
     @celery.task(bind=True, default_retry_delay=30)
     def push_student_feedback(self, record_id, user_id, cc_convenor, test_email):
@@ -180,40 +168,16 @@ def register_push_feedback_tasks(celery):
             return {"ignored": 1, "source": f"push_student_feedback (student={student.name})"}
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailMultiAlternatives(
-            subject="{proj}: Feedback for {name}".format(proj=pclass.name, name=period.display_name),
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
+        msg = EmailTemplate.apply_(
+            type=EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT,
             to=[test_email if test_email is not None else student.email],
+            subject_kwargs={"proj": pclass.name, "name": period.display_name},
+            body_kwargs={"sub": sub, "sd": sd, "student": student, "period": period, "pclass": pclass, "record": record},
+            body_attachments={"attached_docs": partial(_attach_reports, record)},
         )
 
         if test_email is None and cc_convenor:
             msg.cc = [config.convenor_email]
-
-        attached_docs = _attach_reports(msg, record)
-
-        msg.body = render_template(
-            "email/push_feedback/push_to_student.txt",
-            sub=sub,
-            sd=sd,
-            student=student,
-            period=period,
-            pclass=pclass,
-            record=record,
-            attached_documents=attached_docs,
-        )
-
-        html = render_template(
-            "email/push_feedback/push_to_student.html",
-            sub=sub,
-            sd=sd,
-            student=student,
-            period=period,
-            pclass=pclass,
-            record=record,
-            attached_documents=attached_docs,
-        )
-        msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
         task_id = register_task(
@@ -265,39 +229,27 @@ def register_push_feedback_tasks(celery):
         config: ProjectClassConfig = period.config
         pclass: ProjectClass = config.project_class
 
+        _TEMPLATE_TYPE_MAP = {
+            "push_to_supervisor": EmailTemplate.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR,
+            "push_to_marker": EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER,
+        }
+        email_template_type = _TEMPLATE_TYPE_MAP.get(template_name)
+        if email_template_type is None:
+            raise RuntimeError(f"push_role_feedback: unknown template_name '{template_name}'")
+
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailMultiAlternatives(
-            subject=f"{pclass.name} {period.display_name}: {email_subject}",
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
+
+        msg = EmailTemplate.apply_(
+            type=email_template_type,
             to=[test_email if test_email is not None else person.email],
+            subject_kwargs={"pclass_name": pclass.name, "period_name": period.display_name, "email_subject": email_subject},
+            body_kwargs={"person": person, "submitters": submitters, "period": period, "pclass": pclass},
+            body_attachments={f'submitter_{submitter.id}': partial(_attach_reports, submitter) for submitter in submitters},
         )
 
         if test_email is None and cc_convenor:
             msg.cc = [config.convenor_email]
 
-        attached_docs = []
-        for submitter in submitters:
-            attached_docs += _attach_reports(msg, submitter)
-
-        msg.body = render_template(
-            f"email/push_feedback/{template_name}.txt",
-            person=person,
-            submitters=submitters,
-            period=period,
-            pclass=pclass,
-            attached_documents=attached_docs,
-        )
-
-        html = render_template(
-            f"email/push_feedback/{template_name}.html",
-            person=person,
-            submitters=submitters,
-            period=period,
-            pclass=pclass,
-            attached_documents=attached_docs,
-        )
-        msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
         task_id = register_task(

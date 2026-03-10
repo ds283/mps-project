@@ -17,6 +17,7 @@ from tarfile import TarFile, TarInfo
 from tarfile import open as tarfile_open
 from typing import Optional, List, Dict, Set
 
+import markdown
 import pandas as pd
 from dateutil import parser
 from flask_migrate import upgrade
@@ -38,6 +39,7 @@ from app.models import (
     Tenant,
     ProjectClass, Project, ProjectTagGroup, ProjectTag, LiveProject, SupervisionEvent, SubmissionPeriodUnit,
 )
+from app.models.emails import EmailTemplate, EmailTemplateTypesMixin
 from app.shared.cloud_object_store import ObjectStore, ObjectMeta
 from app.shared.conversions import is_integer
 from app.shared.scratch import ScratchFileManager
@@ -937,3 +939,416 @@ def demerge_project_tags(app):
             db.session.delete(tag)
 
     db.session.commit()
+
+
+def populate_email_templates(app):
+    """
+    Populate the EmailTemplate table with the default email templates found in
+    app/templates/email/.
+
+    Rules:
+      - Where both an .html and a .txt file exist with the same stem, use the .html
+        version for html_body and ignore the .txt file.
+      - Where only a .txt file exists, use it for html_body.
+      - tenant_id and pclass_id are set to None (global defaults).
+      - version is set to 1.
+      - If a record with the same type already exists, it is skipped.
+    """
+
+    # Locate the email templates directory relative to this file's location.
+    # initdb.py lives at the project root, alongside the 'app' package.
+    base_dir: Path = Path(__file__).parent / "app" / "templates" / "email"
+
+    # Each entry is a tuple of:
+    #   (type_constant, relative_template_path, subject, comment)
+    # relative_template_path is relative to base_dir and should NOT include the extension;
+    # the function will resolve .html vs .txt automatically.
+    _TEMPLATE_DEFINITIONS = [
+        # ── backups ──────────────────────────────────────────────────────────────
+        (
+            EmailTemplateTypesMixin.BACKUP_REPORT_THINNING,
+            "backups/report_thinning",
+            "[mpsprojects] Backup thinning report at {date}",
+            "Periodic report sent to administrators summarising which backup records were "
+            "retained and which were dropped during the automated backup-thinning process.",
+        ),
+        # ── close_selection ──────────────────────────────────────────────────────
+        (
+            EmailTemplateTypesMixin.CLOSE_SELECTION_CONVENOR,
+            "close_selection/convenor",
+            '[mpsprojects] "{name}": student selections now closed',
+            "Advisory email sent to the project convenor (and co-convenors / office contacts) "
+            "when student selections for a project class are closed, summarising submission "
+            "statistics.",
+        ),
+        # ── go_live ──────────────────────────────────────────────────────────────
+        (
+            EmailTemplateTypesMixin.GO_LIVE_CONVENOR,
+            "go_live/convenor",
+            '[mpsprojects] "{name}": project list now published to students',
+            "Advisory email sent to the project convenor (and co-convenors / office contacts) "
+            "when the project list for a project class goes live, confirming the number of "
+            "projects published and the student selection deadline.",
+        ),
+        (
+            EmailTemplateTypesMixin.GO_LIVE_FACULTY,
+            "go_live/faculty",
+            "{name}: project list now published to students",
+            "Notification email sent to enrolled faculty supervisors when the project list "
+            "goes live, listing their published projects and advising whether any require "
+            "student sign-off before selection.",
+        ),
+        (
+            EmailTemplateTypesMixin.GO_LIVE_SELECTOR,
+            "go_live/selector",
+            "{name}: project list now available",
+            "Notification email sent to student selectors when the project list for their "
+            "project class goes live, providing the selection deadline and a link to the "
+            "live platform.",
+        ),
+        # ── maintenance ──────────────────────────────────────────────────────────
+        (
+            EmailTemplateTypesMixin.MAINTENANCE_LOST_ASSETS,
+            "maintenance/lost_assets",
+            "[{app_name}] Lost asset report at {time}",
+            "Maintenance report emailed to administrators listing asset records whose "
+            "corresponding objects could not be found in the cloud object store.",
+        ),
+        (
+            EmailTemplateTypesMixin.MAINTENANCE_UNATTACHED_ASSETS,
+            "maintenance/unattached_assets",
+            "[{app_name}] Unattached asset report at {time}",
+            "Maintenance report emailed to administrators listing submitted asset records "
+            "that are not attached to any submission record or period attachment.",
+        ),
+        # ── marking ──────────────────────────────────────────────────────────────
+        (
+            EmailTemplateTypesMixin.MARKING_MARKER,
+            "marking/marker",
+            "IMPORTANT: {abbv} project marking: candidate {number} - DEADLINE {deadline} - DO NOT REPLY",
+            "Email sent to examiners / markers distributing the student report for marking, "
+            "together with any additional attachments specified by the convenor, and "
+            "providing the marking deadline.",
+        ),
+        (
+            EmailTemplateTypesMixin.MARKING_SUPERVISOR,
+            "marking/supervisor",
+            "IMPORTANT: {abbv} project marking: {stu} - DEADLINE {deadline} - DO NOT REPLY",
+            "Email sent to project supervisors distributing the student report for marking, "
+            "together with any additional attachments specified by the convenor, and "
+            "providing the marking deadline.",
+        ),
+        # ── matching ─────────────────────────────────────────────────────────────
+        (
+            EmailTemplateTypesMixin.MATCHING_DRAFT_NOTIFY_FACULTY,
+            "matching/draft_notify_faculty",
+            "Notification: Draft Final Year Project allocation for {yra}-{yrb}",
+            "Email sent to faculty supervisors notifying them of their draft project "
+            "allocations in a matching attempt, broken down by project class.",
+        ),
+        (
+            EmailTemplateTypesMixin.MATCHING_DRAFT_NOTIFY_STUDENTS,
+            "matching/draft_notify_students",
+            'Notification: Draft project allocation for "{name}" {yra}-{yrb}',
+            "Email sent to student selectors notifying them of their draft project "
+            "allocation in a matching attempt.",
+        ),
+        (
+            EmailTemplateTypesMixin.MATCHING_DRAFT_UNNEEDED_FACULTY,
+            "matching/draft_unneeded_faculty",
+            "Notification: Draft Final Year Project allocation for {yra}-{yrb}",
+            "Email sent to faculty supervisors who have no allocations in a draft matching "
+            "attempt, informing them that they are not needed for this cycle.",
+        ),
+        (
+            EmailTemplateTypesMixin.MATCHING_FINAL_NOTIFY_FACULTY,
+            "matching/final_notify_faculty",
+            "Notification: Final Year Project allocation for {yra}-{yrb}",
+            "Email sent to faculty supervisors notifying them of their final confirmed "
+            "project allocations, broken down by project class.",
+        ),
+        (
+            EmailTemplateTypesMixin.MATCHING_FINAL_NOTIFY_STUDENTS,
+            "matching/final_notify_students",
+            'Notification: Final project allocation for "{name}" {yra}-{yrb}',
+            "Email sent to student selectors notifying them of their final confirmed "
+            "project allocation.",
+        ),
+        (
+            EmailTemplateTypesMixin.MATCHING_FINAL_UNNEEDED_FACULTY,
+            "matching/final_unneeded_faculty",
+            "Notification: Final Year Project allocation for {yra}-{yrb}",
+            "Email sent to faculty supervisors who have no allocations in the final "
+            "matching, informing them that they are not needed for this cycle.",
+        ),
+        (
+            EmailTemplateTypesMixin.MATCHING_GENERATED,
+            "matching/generated",
+            "Files for offline matching of {name} are now ready",
+            "Email sent to the requesting user when the LP/MPS files needed for offline "
+            "matching have been generated and are ready for download.",
+        ),
+        (
+            EmailTemplateTypesMixin.MATCHING_NOTIFY_EXCEL_REPORT,
+            "matching/notify_excel_report",
+            "Excel report for matching {name} is now ready",
+            "Email sent to the requesting user when an Excel summary report for a matching "
+            "attempt has been generated and is ready for download.",
+        ),
+        # ── notifications ────────────────────────────────────────────────────────
+        (
+            EmailTemplateTypesMixin.NOTIFICATIONS_REQUEST_MEETING,
+            "notifications/request_meeting",
+            "{name}: project meeting request",
+            "Email sent jointly to a student and their prospective supervisor when the "
+            "student requests a confirmation meeting for a project that requires sign-off "
+            "before selection.",
+        ),
+        (
+            EmailTemplateTypesMixin.NOTIFICATIONS_FACULTY_ROLLUP,
+            "notifications/faculty/rollup",
+            "{branding_label}: summary of notifications and events",
+            "Daily summary email sent to faculty members grouping together all pending "
+            "notifications and outstanding confirmation requests into a single digest.",
+        ),
+        (
+            EmailTemplateTypesMixin.NOTIFICATIONS_FACULTY_SINGLE,
+            "notifications/faculty/single",
+            "{subject}",
+            "Individual notification email sent promptly to a faculty member for a single "
+            "event (e.g. a new confirmation request), used when the user has opted out of "
+            "grouped summaries.",
+        ),
+        (
+            EmailTemplateTypesMixin.NOTIFICATIONS_STUDENT_ROLLUP,
+            "notifications/student/rollup",
+            "{branding_label}: summary of notifications and events",
+            "Daily summary email sent to students grouping together all pending "
+            "notifications and outstanding confirmation requests into a single digest.",
+        ),
+        (
+            EmailTemplateTypesMixin.NOTIFICATIONS_STUDENT_SINGLE,
+            "notifications/student/single",
+            "{subject}",
+            "Individual notification email sent promptly to a student for a single event, "
+            "used when the user has opted out of grouped summaries.",
+        ),
+        # ── project_confirmation ─────────────────────────────────────────────────
+        (
+            EmailTemplateTypesMixin.PROJECT_CONFIRMATION_REMINDER,
+            "project_confirmation/confirmation_reminder",
+            "Reminder: please check projects for {name}",
+            "Reminder email sent to faculty supervisors who have not yet confirmed their "
+            "project descriptions after the initial confirmation request was issued.",
+        ),
+        (
+            EmailTemplateTypesMixin.PROJECT_CONFIRMATION_REQUESTED,
+            "project_confirmation/confirmation_requested",
+            "Please check projects for {name}",
+            "Initial email sent to faculty supervisors asking them to review and confirm "
+            "their project descriptions before the project list goes live.",
+        ),
+        (
+            EmailTemplateTypesMixin.PROJECT_CONFIRMATION_NEW_COMMENT,
+            "project_confirmation/new_comment",
+            '[mpsprojects] A comment was posted on "{proj}/{desc}"',
+            "Notification email sent to watchers of a project description when a new "
+            "comment is posted during the project approval workflow.",
+        ),
+        (
+            EmailTemplateTypesMixin.PROJECT_CONFIRMATION_REVISE_REQUEST,
+            "project_confirmation/revise_request",
+            "Projects: please consider revising {name}/{desc}",
+            "Email sent to a faculty supervisor by a project approver requesting that a "
+            "specific project description be revised before it can be approved.",
+        ),
+        # ── push_feedback ────────────────────────────────────────────────────────
+        (
+            EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_MARKER,
+            "push_feedback/push_to_marker",
+            "{pclass} {period}: Examiner feedback for project students",
+            "Email sent to examiners / markers when feedback is pushed, summarising the "
+            "feedback they provided for each of their assigned students.",
+        ),
+        (
+            EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_STUDENT,
+            "push_feedback/push_to_student",
+            "{proj}: Feedback for {name}",
+            "Email sent to a student when their project feedback is released, including "
+            "supervisor and examiner comments and any attached feedback report.",
+        ),
+        (
+            EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR,
+            "push_feedback/push_to_supervisor",
+            "{pclass} {period}: Feedback for supervision students",
+            "Email sent to supervisors when feedback is pushed, summarising the feedback "
+            "they provided for each of their supervised students.",
+        ),
+        # ── scheduling ───────────────────────────────────────────────────────────
+        (
+            EmailTemplateTypesMixin.SCHEDULING_AVAILABILITY_REMINDER,
+            "scheduling/availability_reminder",
+            "Reminder: availability for event {name}",
+            "Reminder email sent to faculty assessors who have not yet confirmed their "
+            "availability for a presentation assessment event.",
+        ),
+        (
+            EmailTemplateTypesMixin.SCHEDULING_AVAILABILITY_REQUEST,
+            "scheduling/availability_request",
+            "Availability request for event {name}",
+            "Initial email sent to faculty assessors requesting that they enter their "
+            "availability for a presentation assessment event before the specified deadline.",
+        ),
+        (
+            EmailTemplateTypesMixin.SCHEDULING_DRAFT_NOTIFY_FACULTY,
+            "scheduling/draft_notify_faculty",
+            'Notification: Draft timetable for project assessment "{name}"',
+            "Email sent to faculty assessors notifying them of their assigned slots in a "
+            "draft presentation timetable.",
+        ),
+        (
+            EmailTemplateTypesMixin.SCHEDULING_DRAFT_NOTIFY_STUDENTS,
+            "scheduling/draft_notify_students",
+            'Notification: Draft timetable for project assessment "{name}"',
+            "Email sent to student submitters notifying them of their assigned slot in a "
+            "draft presentation timetable.",
+        ),
+        (
+            EmailTemplateTypesMixin.SCHEDULING_DRAFT_UNNEEDED_FACULTY,
+            "scheduling/draft_unneeded_faculty",
+            'Notification: Draft timetable for project assessment "{name}"',
+            "Email sent to faculty assessors who are not required in a draft presentation "
+            "timetable, informing them that no sessions have been assigned to them.",
+        ),
+        (
+            EmailTemplateTypesMixin.SCHEDULING_FINAL_NOTIFY_FACULTY,
+            "scheduling/final_notify_faculty",
+            'Notification: Final timetable for project assessment "{name}"',
+            "Email sent to faculty assessors notifying them of their assigned slots in the "
+            "final published presentation timetable.",
+        ),
+        (
+            EmailTemplateTypesMixin.SCHEDULING_FINAL_NOTIFY_STUDENTS,
+            "scheduling/final_notify_students",
+            'Notification: Final timetable for project assessment "{name}"',
+            "Email sent to student submitters notifying them of their assigned slot in the "
+            "final published presentation timetable.",
+        ),
+        (
+            EmailTemplateTypesMixin.SCHEDULING_FINAL_UNNEEDED_FACULTY,
+            "scheduling/final_unneeded_faculty",
+            'Notification: Final timetable for project assessment "{name}"',
+            "Email sent to faculty assessors who are not required in the final published "
+            "presentation timetable, informing them that no sessions have been assigned to them.",
+        ),
+        (
+            EmailTemplateTypesMixin.SCHEDULING_GENERATED,
+            "scheduling/generated",
+            "Files for offline scheduling of {name} are now ready",
+            "Email sent to the requesting user when the LP file needed for offline "
+            "scheduling of a presentation assessment has been generated and is ready for "
+            "download or attachment.",
+        ),
+        # ── services ─────────────────────────────────────────────────────────────
+        (
+            EmailTemplateTypesMixin.SERVICES_CC_EMAIL,
+            "services/cc_email",
+            "{subject}",
+            "Wrapper template used to deliver a copy (CC) of a bulk distribution-list "
+            "email to a nominated notify address, with a preamble explaining the context.",
+        ),
+        (
+            EmailTemplateTypesMixin.SERVICES_SEND_EMAIL,
+            "services/send_email",
+            "{subject}",
+            "Wrapper template used to deliver the body of a bulk distribution-list email "
+            "to individual recipients, with optional per-recipient personalisation.",
+        ),
+        # ── student_notifications ────────────────────────────────────────────────
+        (
+            EmailTemplateTypesMixin.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED,
+            "student_notifications/choices_received",
+            "Your project choices have been received ({pcl})",
+            "Confirmation email sent to a student immediately after they submit their "
+            "ranked project preferences, listing the recorded selection and the current "
+            "submission deadline.",
+        ),
+        (
+            EmailTemplateTypesMixin.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED_PROXY,
+            "student_notifications/choices_received_proxy",
+            "An administrator has submitted project choices on your behalf ({pcl})",
+            "Confirmation email sent to a student when a system administrator submits a "
+            "project selection on their behalf, listing the recorded selection and advising "
+            "that the student may override it before the deadline.",
+        ),
+        # ── system ───────────────────────────────────────────────────────────────
+        (
+            EmailTemplateTypesMixin.SYSTEM_GARBAGE_COLLECTION,
+            "system/garbage_collection",
+            "[mpsprojects] Garbage collection statistics",
+            "Periodic advisory email sent to administrators containing garbage-collection "
+            "statistics gathered during routine database and asset maintenance.",
+        ),
+    ]
+
+    def _read_template(stem: str) -> Optional[str]:
+        """
+        Given a path stem relative to base_dir (no extension), return the content of
+        the best available template file.  Prefers .html over .txt.  Returns None if
+        neither exists.
+        """
+        html_path: Path = base_dir / (stem + ".html")
+        txt_path: Path = base_dir / (stem + ".txt")
+
+        if html_path.exists():
+            return html_path.read_text(encoding="utf-8")
+        elif txt_path.exists():
+            text = txt_path.read_text(encoding="utf-8")
+            return markdown.markdown(text)
+        else:
+            return None
+
+    added = 0
+    skipped = 0
+
+    now = datetime.now()
+
+    for type_constant, stem, subject, comment in _TEMPLATE_DEFINITIONS:
+        # skip if a record with this type already exists
+        existing: Optional[EmailTemplate] = db.session.query(EmailTemplate).filter_by(type=type_constant).first()
+        if existing is not None:
+            print(f'-- >> populate_email_templates: skipping type={type_constant} ("{stem}") — record already exists')
+            skipped += 1
+            continue
+
+        body: Optional[str] = _read_template(stem)
+        if body is None:
+            print(f'-- !! populate_email_templates: could not find template file for stem "{stem}" — skipping')
+            skipped += 1
+            continue
+
+        record = EmailTemplate(
+            active=True,
+            tenant_id=None,
+            pclass_id=None,
+            type=type_constant,
+            subject=subject,
+            html_body=body,
+            comment=comment,
+            version=1,
+            last_used=None,
+            creator_id=1,
+            creation_timestamp=now,
+        )
+        db.session.add(record)
+        added += 1
+        print(f'-- >> populate_email_templates: added type={type_constant} ("{stem}")')
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        app.logger.exception("SQLAlchemyError exception while populating email templates", exc_info=e)
+        return
+
+    print(f"** populate_email_templates: complete — {added} record(s) added, {skipped} skipped")

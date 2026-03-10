@@ -46,6 +46,7 @@ from ...models import (
     TemplateTag,
     FeedbackAsset,
     Tenant,
+    EmailTemplateLabel,
 )
 from ...models import project_pclasses, description_pclasses, roles_to_users
 
@@ -578,3 +579,11 @@ def GetAllTenants():
 
 def BuildTenantName(tenant: Tenant):
     return tenant.name
+
+
+def GetActiveEmailTemplateLabels():
+    return db.session.query(EmailTemplateLabel).order_by(EmailTemplateLabel.name.asc())
+
+
+def BuildEmailTemplateLabelName(label: EmailTemplateLabel):
+    return label.name

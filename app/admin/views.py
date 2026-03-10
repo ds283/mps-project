@@ -104,6 +104,8 @@ from .forms import (
     EditFeedbackAssetForm,
     AddFeedbackRecipeForm,
     EditFeedbackRecipeForm, AddProjectClassFormFactory, EditProjectClassFormFactory,
+    AddEmailTemplateForm,
+    EditEmailTemplateForm,
 )
 from ..cache import cache
 from ..database import db
@@ -162,6 +164,7 @@ from ..models import (
     FeedbackAsset,
     TemplateTag,
     FeedbackRecipe, DownloadCentreItem, Tenant,
+    EmailTemplate, EmailTemplateLabel,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
@@ -11389,3 +11392,282 @@ def edit_feedback_recipe(recipe_id):
         return redirect(url)
 
     return render_template_context("admin/feedback/edit_feedback_recipe.html", form=form, url=url, recipe=recipe)
+
+
+# ======================================================================================================================
+# EmailTemplate views
+# ======================================================================================================================
+
+
+@admin.route("/email_templates")
+@roles_required("root")
+def email_templates():
+    """
+    List all EmailTemplate instances
+    :return:
+    """
+    return render_template_context("admin/email_templates/list.html")
+
+
+@admin.route("/email_templates_ajax", methods=["POST"])
+@roles_required("root")
+def email_templates_ajax():
+    """
+    AJAX data point for email templates list
+    :return:
+    """
+    base_query = db.session.query(EmailTemplate)
+
+    type_col = {"order": EmailTemplate.type}
+    subject = {"search": EmailTemplate.subject, "order": EmailTemplate.subject, "search_collation": "utf8_general_ci"}
+    version = {"order": EmailTemplate.version}
+    scope = {"order": [EmailTemplate.tenant_id, EmailTemplate.pclass_id]}
+    status = {"order": EmailTemplate.active}
+
+    columns = {"type": type_col, "subject": subject, "version": version, "scope": scope, "status": status}
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.admin.email_templates_data)
+
+
+def create_new_email_template_labels(form):
+    matched, unmatched = form.labels.data
+
+    if len(unmatched) > 0:
+        now = datetime.now()
+        for label in unmatched:
+            new_label = EmailTemplateLabel(name=label, colour=None, creator_id=current_user.id, creation_timestamp=now)
+            try:
+                db.session.add(new_label)
+                matched.append(new_label)
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                flash(f'Could not add newly defined label "{label}" due to a database error. Please contact a system administrator.', "error")
+
+    return matched
+
+
+@admin.route("/edit_email_template/<int:id>", methods=["GET", "POST"])
+@roles_required("root")
+def edit_email_template(id):
+    """
+    Edit an existing EmailTemplate instance
+    :param id:
+    :return:
+    """
+    template: EmailTemplate = EmailTemplate.query.get_or_404(id)
+    form: EditEmailTemplateForm = EditEmailTemplateForm(obj=template)
+
+    if form.validate_on_submit():
+        label_list = create_new_email_template_labels(form)
+
+        template.subject = form.subject.data
+        template.html_body = form.html_body.data
+        template.labels = label_list
+
+        template.last_edit_id = current_user.id
+        template.last_edit_timestamp = datetime.now()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not save changes because of a database error. Please contact a system administrator.", "error")
+
+        return redirect(url_for("admin.email_templates"))
+
+    return render_template_context("admin/email_templates/edit.html", form=form, email_template=template, title="Edit email template")
+
+
+@admin.route("/activate_email_template/<int:id>")
+@roles_required("root")
+def activate_email_template(id):
+    """
+    Activate an EmailTemplate instance
+    :param id:
+    :return:
+    """
+    template: EmailTemplate = EmailTemplate.query.get_or_404(id)
+    template.active = True
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not activate this email template because of a database error. Please contact a system administrator.", "error")
+
+    return redirect(redirect_url())
+
+
+@admin.route("/deactivate_email_template/<int:id>")
+@roles_required("root")
+def deactivate_email_template(id):
+    """
+    Deactivate an EmailTemplate instance.
+    The global fallback (tenant_id=None, pclass_id=None) cannot be deactivated.
+    :param id:
+    :return:
+    """
+    template: EmailTemplate = EmailTemplate.query.get_or_404(id)
+
+    # Enforce: the global fallback must always remain active
+    if template.tenant_id is None and template.pclass_id is None:
+        flash("The global fallback template for this type must always remain active and cannot be deactivated.", "error")
+        return redirect(redirect_url())
+
+    template.active = False
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not deactivate this email template because of a database error. Please contact a system administrator.", "error")
+
+    return redirect(redirect_url())
+
+
+@admin.route("/duplicate_email_template/<int:id>")
+@roles_required("root")
+def duplicate_email_template(id):
+    """
+    Duplicate an existing EmailTemplate, creating a new version.
+    :param id:
+    :return:
+    """
+    template: EmailTemplate = EmailTemplate.query.get_or_404(id)
+
+    # Find the highest existing version for this type/tenant/pclass combination
+    max_version = (
+        db.session.query(db.func.max(EmailTemplate.version))
+        .filter(
+            EmailTemplate.type == template.type,
+            EmailTemplate.tenant_id == template.tenant_id,
+            EmailTemplate.pclass_id == template.pclass_id,
+        )
+        .scalar()
+    )
+    new_version = (max_version or 0) + 1
+
+    new_template = EmailTemplate(
+        active=False,  # new duplicate starts inactive
+        tenant_id=template.tenant_id,
+        pclass_id=template.pclass_id,
+        type=template.type,
+        subject=template.subject,
+        html_body=template.html_body,
+        comment=template.comment,
+        version=new_version,
+        last_used=None,
+        creator_id=current_user.id,
+        creation_timestamp=datetime.now(),
+        last_edit_id=None,
+        last_edit_timestamp=None,
+    )
+
+    # copy labels
+    new_template.labels = list(template.labels)
+
+    try:
+        db.session.add(new_template)
+        db.session.commit()
+        flash(f'Email template duplicated as version {new_version}.', "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not duplicate this email template because of a database error. Please contact a system administrator.", "error")
+
+    return redirect(redirect_url())
+
+
+@admin.route("/delete_email_template/<int:id>")
+@roles_required("root")
+def delete_email_template(id):
+    """
+    Delete an EmailTemplate instance.
+    Cannot delete if it is the only instance of its type, or if it is the global fallback.
+    :param id:
+    :return:
+    """
+    template: EmailTemplate = EmailTemplate.query.get_or_404(id)
+
+    # Cannot delete the global fallback (tenant_id=None, pclass_id=None)
+    if template.tenant_id is None and template.pclass_id is None:
+        flash("The global fallback template cannot be deleted. At least one global fallback must exist for each template type.", "error")
+        return redirect(redirect_url())
+
+    # Ensure at least one instance of this type remains with tenant_id=None and pclass_id=None
+    fallback_count = (
+        db.session.query(EmailTemplate)
+        .filter(
+            EmailTemplate.type == template.type,
+            EmailTemplate.tenant_id.is_(None),
+            EmailTemplate.pclass_id.is_(None),
+        )
+        .count()
+    )
+
+    if fallback_count == 0:
+        flash("Cannot delete this template because no global fallback exists for this template type.", "error")
+        return redirect(redirect_url())
+
+    title = "Delete email template"
+    panel_title = f"Delete email template: <strong>{template.subject}</strong>"
+
+    action_url = url_for("admin.perform_delete_email_template", id=id, url=redirect_url())
+    message = (
+        f"<p>Please confirm that you wish to delete the email template "
+        f"<strong>{template.subject}</strong> (version {template.version}).</p>"
+        f"<p>This action cannot be undone.</p>"
+    )
+    submit_label = "Delete template"
+
+    return render_template_context(
+        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+    )
+
+
+@admin.route("/perform_delete_email_template/<int:id>")
+@roles_required("root")
+def perform_delete_email_template(id):
+    """
+    Perform deletion of an EmailTemplate instance.
+    :param id:
+    :return:
+    """
+    template: EmailTemplate = EmailTemplate.query.get_or_404(id)
+
+    url = request.args.get("url", url_for("admin.email_templates"))
+
+    # Cannot delete the global fallback
+    if template.tenant_id is None and template.pclass_id is None:
+        flash("The global fallback template cannot be deleted.", "error")
+        return redirect(url)
+
+    # Ensure at least one global fallback remains for this type
+    fallback_count = (
+        db.session.query(EmailTemplate)
+        .filter(
+            EmailTemplate.type == template.type,
+            EmailTemplate.tenant_id.is_(None),
+            EmailTemplate.pclass_id.is_(None),
+        )
+        .count()
+    )
+
+    if fallback_count == 0:
+        flash("Cannot delete this template because no global fallback exists for this template type.", "error")
+        return redirect(url)
+
+    try:
+        db.session.delete(template)
+        db.session.commit()
+        flash("Email template deleted successfully.", "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not delete this email template because of a database error. Please contact a system administrator.", "error")
+
+    return redirect(url)

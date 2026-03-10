@@ -11409,15 +11409,25 @@ def email_templates():
     return render_template_context("admin/email_templates/list.html")
 
 
-@admin.route("/email_templates_ajax")
+@admin.route("/email_templates_ajax", methods=["POST"])
 @roles_required("root")
 def email_templates_ajax():
     """
     AJAX data point for email templates list
     :return:
     """
-    templates = db.session.query(EmailTemplate).order_by(EmailTemplate.type.asc(), EmailTemplate.version.desc()).all()
-    return ajax.admin.email_templates_data(templates)
+    base_query = db.session.query(EmailTemplate)
+
+    type_col = {"order": EmailTemplate.type}
+    subject = {"search": EmailTemplate.subject, "order": EmailTemplate.subject, "search_collation": "utf8_general_ci"}
+    version = {"order": EmailTemplate.version}
+    scope = {"order": [EmailTemplate.tenant_id, EmailTemplate.pclass_id]}
+    status = {"order": EmailTemplate.active}
+
+    columns = {"type": type_col, "subject": subject, "version": version, "scope": scope, "status": status}
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.admin.email_templates_data)
 
 
 def create_new_email_template_labels(form):

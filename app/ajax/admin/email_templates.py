@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, get_template_attribute, current_app, render_template
+from flask import jsonify, get_template_attribute, current_app, url_for, render_template
 
 from jinja2 import Template, Environment
 
@@ -68,6 +68,14 @@ def get_type_name(type_id):
 
 
 # language=jinja2
+_email_template_type = """
+<div>{{ type_name }}</div>
+{% for label in t.labels %}
+    {{ simple_label(label.make_label()) }}
+{% endfor %}
+"""
+
+# language=jinja2
 _email_template_status = """
 {% if t.active %}
     <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Active</span>
@@ -111,15 +119,6 @@ _email_template_scope = """
 """
 
 # language=jinja2
-_email_template_labels = """
-{% for label in t.labels %}
-    {{ simple_label(label.make_label()) }}
-{% else %}
-    <span class="badge bg-secondary">No labels</span>
-{% endfor %}
-"""
-
-# language=jinja2
 _email_template_menu = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -127,11 +126,8 @@ _email_template_menu = """
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_email_template', id=t.id) }}">
-            <i class="fas fa-pencil-alt fa-fw"></i> Edit template
+            <i class="fas fa-pencil-alt fa-fw"></i> Edit template&hellip;
         </a>
-
-        <div role="separator" class="dropdown-divider"></div>
-
         {% if t.active %}
             {% if t.tenant_id is none and t.pclass_id is none %}
                 <a class="dropdown-item d-flex gap-2 disabled" title="The global fallback template must always be active">
@@ -147,15 +143,9 @@ _email_template_menu = """
                 <i class="fas fa-check-circle fa-fw"></i> Activate
             </a>
         {% endif %}
-
-        <div role="separator" class="dropdown-divider"></div>
-
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.duplicate_email_template', id=t.id) }}">
             <i class="fas fa-copy fa-fw"></i> Duplicate
         </a>
-
-        <div role="separator" class="dropdown-divider"></div>
-
         {% if t.tenant_id is none and t.pclass_id is none %}
             <a class="dropdown-item d-flex gap-2 disabled" title="The global fallback template cannot be deleted">
                 <i class="fas fa-trash fa-fw"></i> Delete
@@ -170,6 +160,11 @@ _email_template_menu = """
 """
 
 
+def _build_type_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_email_template_type)
+
+
 def _build_status_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_email_template_status)
@@ -178,11 +173,6 @@ def _build_status_templ() -> Template:
 def _build_scope_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_email_template_scope)
-
-
-def _build_labels_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string(_email_template_labels)
 
 
 def _build_menu_templ() -> Template:
@@ -194,22 +184,21 @@ def email_templates_data(templates):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
     # precompile Jinja2 template strings once for the whole batch
+    type_templ: Template = _build_type_templ()
     status_templ: Template = _build_status_templ()
     scope_templ: Template = _build_scope_templ()
-    labels_templ: Template = _build_labels_templ()
     menu_templ: Template = _build_menu_templ()
 
     def _process(t: EmailTemplate):
         return {
-            "type": get_type_name(t.type),
+            "type": render_template(type_templ, t=t, type_name=get_type_name(t.type), simple_label=simple_label),
             "subject": t.subject,
             "version": t.version,
             "scope": render_template(scope_templ, t=t),
             "status": render_template(status_templ, t=t),
-            "labels": render_template(labels_templ, t=t, simple_label=simple_label),
             "menu": render_template(menu_templ, t=t),
         }
 
     data = [_process(t) for t in templates]
 
-    return jsonify(data)
+    return data

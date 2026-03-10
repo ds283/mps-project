@@ -99,7 +99,7 @@ def validate_set_attendance(event: SupervisionEvent, user: User, message=False):
 
     # faculty members can set attandance if they are the event owner, or if they are an attendee
     owner: SubmissionRole = event.owner
-    if owner.user == user.id:
+    if owner.user_id == user.id:
         return True
 
     if any([x.user_id == user.id for x in event.team]):

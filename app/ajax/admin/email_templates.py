@@ -8,7 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, url_for
+from flask import jsonify, get_template_attribute, current_app, render_template
+
+from jinja2 import Template, Environment
 
 from ...models.emails import EmailTemplate
 
@@ -168,20 +170,46 @@ _email_template_menu = """
 """
 
 
+def _build_status_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_email_template_status)
+
+
+def _build_scope_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_email_template_scope)
+
+
+def _build_labels_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_email_template_labels)
+
+
+def _build_menu_templ() -> Template:
+    env: Environment = current_app.jinja_env
+    return env.from_string(_email_template_menu)
+
+
 def email_templates_data(templates):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    data = [
-        {
+    # precompile Jinja2 template strings once for the whole batch
+    status_templ: Template = _build_status_templ()
+    scope_templ: Template = _build_scope_templ()
+    labels_templ: Template = _build_labels_templ()
+    menu_templ: Template = _build_menu_templ()
+
+    def _process(t: EmailTemplate):
+        return {
             "type": get_type_name(t.type),
             "subject": t.subject,
             "version": t.version,
-            "scope": render_template_string(_email_template_scope, t=t),
-            "status": render_template_string(_email_template_status, t=t),
-            "labels": render_template_string(_email_template_labels, t=t),
-            "menu": render_template_string(_email_template_menu, t=t),
+            "scope": render_template(scope_templ, t=t),
+            "status": render_template(status_templ, t=t),
+            "labels": render_template(labels_templ, t=t, simple_label=simple_label),
+            "menu": render_template(menu_templ, t=t),
         }
-        for t in templates
-    ]
+
+    data = [_process(t) for t in templates]
 
     return jsonify(data)

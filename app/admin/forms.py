@@ -1941,6 +1941,7 @@ class EmailTemplateMixin:
         "Body (HTML)",
         description="Enter the HTML body of the email. Use the rich-text editor to format the content.",
         validators=[InputRequired(message="Please provide an email body")],
+        render_kw={"rows": 15},
     )
 
     labels = BasicTagSelectField(

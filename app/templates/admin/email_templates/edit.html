@@ -22,12 +22,14 @@
                 tokenSeparators: [',', ' '],
                 placeholder: 'Add labels...'
             });
-            tinymce.init({
-                selector: '#html-body-editor',
-                plugins: 'lists advlist autolink autosave codesample emoticons fullscreen hr link paste charmap wordcount code',
-                toolbar: 'undo redo | styles removeformat | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | hr link codesample emoticons charmap | restoredraft paste pastetext | code | fullscreen',
-                menubar: false
-            });
+            {#tinymce.init({#}
+            {#    selector: '#html-body-editor',#}
+            {#    plugins: 'lists advlist autolink autosave codesample emoticons fullscreen hr link paste charmap wordcount code',#}
+            {#    toolbar: 'undo redo | styles removeformat | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | hr link codesample emoticons charmap | restoredraft paste pastetext | code | fullscreen',#}
+            {#    menubar: false#}
+            {#})
+                ;
+                #}
         });
     </script>
 {% endblock %}
@@ -104,16 +106,17 @@
 </div>
 
 <div class="card mt-3 mb-3 card-body bg-well">
-    <label class="form-label" for="html-body-editor">{{ form.html_body.label.text }}</label>
-    {% if form.html_body.description %}
-        <small class="form-text text-muted d-block mb-2">{{ form.html_body.description }}</small>
-    {% endif %}
-    {{ form.html_body(id='html-body-editor', class='form-control') }}
-    {% if form.html_body.errors %}
-        {% for error in form.html_body.errors %}
-            <div class="invalid-feedback d-block">{{ error }}</div>
-        {% endfor %}
-    {% endif %}
+    {{ wtf.render_field(form.html_body) }}
+    {#    <label class="form-label" for="html-body-editor">{{ form.html_body.label.text }}</label>#}
+    {#    {% if form.html_body.description %}#}
+    {#        <small class="form-text text-muted d-block mb-2">{{ form.html_body.description }}</small>#}
+    {#    {% endif %}#}
+    {#    {{ form.html_body(id='html-body-editor', class='form-control') }}#}
+    {#    {% if form.html_body.errors %}#}
+    {#        {% for error in form.html_body.errors %}#}
+    {#            <div class="invalid-feedback d-block">{{ error }}</div>#}
+    {#        {% endfor %}#}
+    {#    {% endif %}#}
 </div>
 
 <div class="card mt-3 mb-3 card-body bg-well">

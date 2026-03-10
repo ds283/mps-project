@@ -14492,6 +14492,15 @@ class MatchingRole(db.Model, SubmissionRoleTypesMixin):
 
         return value
 
+    @property
+    def role_as_str(self) -> str:
+        return self._role_string.get(self.role, "Unknown")
+
+    @property
+    def roleid_as_str(self) -> str:
+        return self._role_id.get(self.role, "unknown")
+
+
 
 @cache.memoize()
 def _MatchingRecord_current_score(id):

@@ -3781,7 +3781,7 @@ def register_matching_tasks(celery):
                     role: MatchingRole
                     ud: User = role.user
 
-                    label = role.roleid_as_str
+                    label: str = role.roleid_as_str
                     if label not in label_numbers:
                         label_numbers[label] = 0
 

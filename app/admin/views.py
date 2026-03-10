@@ -164,7 +164,7 @@ from ..models import (
     FeedbackAsset,
     TemplateTag,
     FeedbackRecipe, DownloadCentreItem, Tenant,
-    EmailTemplate,
+    EmailTemplate, EmailTemplateLabel,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
@@ -11420,6 +11420,23 @@ def email_templates_ajax():
     return ajax.admin.email_templates_data(templates)
 
 
+def create_new_email_template_labels(form):
+    matched, unmatched = form.labels.data
+
+    if len(unmatched) > 0:
+        now = datetime.now()
+        for label in unmatched:
+            new_label = EmailTemplateLabel(name=label, colour=None, creator_id=current_user.id, creation_timestamp=now)
+            try:
+                db.session.add(new_label)
+                matched.append(new_label)
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                flash(f'Could not add newly defined label "{label}" due to a database error. Please contact a system administrator.', "error")
+
+    return matched
+
+
 @admin.route("/edit_email_template/<int:id>", methods=["GET", "POST"])
 @roles_required("root")
 def edit_email_template(id):
@@ -11432,9 +11449,11 @@ def edit_email_template(id):
     form: EditEmailTemplateForm = EditEmailTemplateForm(obj=template)
 
     if form.validate_on_submit():
+        label_list = create_new_email_template_labels(form)
+
         template.subject = form.subject.data
         template.html_body = form.html_body.data
-        template.labels = form.labels.data
+        template.labels = label_list
 
         template.last_edit_id = current_user.id
         template.last_edit_timestamp = datetime.now()

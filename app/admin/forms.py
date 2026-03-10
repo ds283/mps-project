@@ -1947,7 +1947,7 @@ class EmailTemplateMixin:
         "Labels",
         query_factory=GetActiveEmailTemplateLabels,
         get_label=BuildEmailTemplateLabelName,
-        description="Optionally add labels to help organize email templates.",
+        description="Optionally add labels to organize your email templates.",
         blank_text="Add labels...",
     )
 

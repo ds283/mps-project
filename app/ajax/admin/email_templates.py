@@ -111,7 +111,7 @@ _email_template_scope = """
 # language=jinja2
 _email_template_labels = """
 {% for label in t.labels %}
-    {{ label.make_label() }}
+    {{ simple_label(label.make_label()) }}
 {% else %}
     <span class="badge bg-secondary">No labels</span>
 {% endfor %}
@@ -169,6 +169,8 @@ _email_template_menu = """
 
 
 def email_templates_data(templates):
+    simple_label = get_template_attribute("labels.html", "simple_label")
+
     data = [
         {
             "type": get_type_name(t.type),

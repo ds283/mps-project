@@ -8,7 +8,7 @@
 {% from "projecthub/articles.html" import articles_widget %}
 
 {% macro current_supervision_event_header(unit) %}
-    <div class="d-flex flex-row justify-content-start align-items-baseline gap-4">
+    <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-4">
         <div class="fs-2 text-primary">{{ unit.name }}</div>
         <span class="text-muted">
             {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
@@ -20,7 +20,7 @@
 
 {% macro past_supervision_event_header(event) %}
     {% set unit = event.unit %}
-    <div class="d-flex flex-row flex-weap justify-content-start align-items-baseline gap-2 text-muted">
+    <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-2 text-muted">
         <i class="fas fa-calendar"></i>
         <span>
             {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}

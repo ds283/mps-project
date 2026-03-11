@@ -55,9 +55,20 @@ def browse_ajax():
     # project class; this is the full set of projects for which we allow browsing
     base_query = (
         db.session.query(Project)
-        .filter(and_(Project.active == True, Project.project_classes.any(ProjectClass.id == pclass_id)))
+        .filter(
+            and_(
+                Project.ATAS_restricted == False,
+                Project.active == True,
+                Project.project_classes.any(ProjectClass.id == pclass_id),
+            )
+        )
         .join(User, User.id == Project.owner_id, isouter=True)
-        .filter(or_(Project.generic == True, User.active == True))
+        .filter(
+            or_(
+                Project.generic == True,
+                User.active == True,
+            )
+        )
         .join(ResearchGroup, ResearchGroup.id == Project.group_id, isouter=True)
     )
 

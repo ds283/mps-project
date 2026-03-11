@@ -322,12 +322,20 @@ def _project_list_endpoint(config: ProjectClassConfig, sel: Optional[SelectingSt
     if not verify_open(config, state=state):
         return jsonify({})
 
+    sd: StudentData = current_user.student_data
+    if sd is None:
+        return jsonify({})
+
     base_query = (
-        config.live_projects.filter(~LiveProject.hidden)
+        config.live_projects
         .join(Project, Project.id == LiveProject.parent_id)
         .join(User, User.id == Project.owner_id, isouter=True)
         .join(ResearchGroup, ResearchGroup.id == LiveProject.group_id, isouter=True)
+        .filter(LiveProject.hidden.is_(False))
     )
+
+    if sd.ATAS_restricted:
+        base_query = base_query.filter(LiveProject.ATAS_restricted.is_(False))
 
     if sel is not None:
         filter_groups = config.advertise_research_group and sel.group_filters.first()

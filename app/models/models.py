@@ -12,7 +12,7 @@ from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 from os import path
 from time import time
-from typing import List, Set, Union, Optional, Tuple
+from typing import List, Set, Union, Optional, Tuple, Dict, Any
 from urllib.parse import urljoin
 from uuid import uuid4
 
@@ -10283,12 +10283,15 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
 
         rank = 0
         counts = {}
+        sd: StudentData = self.student
         for item in self.bookmarks.order_by(Bookmark.rank).all():
+
             # STEP 2 - all bookmarks in "active" positions must be available to this user
             project: LiveProject = item.liveproject
             rank += 1
 
             if project is not None:
+                # STEP 2a: if the project is not available to this student, the selection is not valid
                 if not project.is_available(self):
                     valid = False
                     if not project.generic and project.owner is not None:
@@ -10308,7 +10311,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
                             "required.".format(name=project.name, rk=rank)
                         )
 
-                # STEP 3 - check that the maximum number of projects for a single faculty member
+                # STEP 2b - check that the maximum number of projects for a single faculty member
                 # is not exceeded
                 if not project.generic:
                     if project.owner_id not in counts:
@@ -10316,18 +10319,27 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
                     else:
                         counts[project.owner_id] += 1
 
-            if project.hidden:
-                valid = False
-                messages.append(
-                    "Project <em>{name}</em> (currently ranked #{rk}) is no longer available to be selected.".format(name=project.name, rk=rank)
-                )
+                # STEP 2c - hidden projects are not available
+                if project.hidden:
+                    valid = False
+                    messages.append(
+                        "Project <em>{name}</em> (currently ranked #{rk}) is no longer available to be selected.".format(name=project.name, rk=rank)
+                    )
+
+                # STEP 2d - if the student has ATAS restrictions, they cannot select ATAS-restricted projects
+                if sd.ATAS_restricted and project.ATAS_restricted:
+                    valid = False
+                    messages.append(
+                        "Project <em>{name}</em> (currently ranked #{rk}) is restricted and cannot be selected.".format(name=project.name, rk=rank)
+                    )
 
             if rank >= num_choices:
                 break
 
         # STEP 3 - second part: check the final counts
-        if self.config.faculty_maximum is not None:
-            max = self.config.faculty_maximum
+        config: ProjectClassConfig = self.config
+        if config.faculty_maximum is not None:
+            max = config.faculty_maximum
             for owner_id in counts:
                 count = counts[owner_id]
                 if count > max:
@@ -12514,8 +12526,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         query = self.get_ordered_past_events(now=now)
         query = query.filter(
             SupervisionEvent.monitor_attendance == True,
-            upervisionEvent.attendance == None,
-            )
+            SupervisionEvent.attendance == None,
+        )
         return get_count(query)
 
     def _check_access_control_groups(self, asset):

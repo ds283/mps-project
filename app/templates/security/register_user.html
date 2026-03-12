@@ -150,7 +150,9 @@
                     {% endif %}
                 {% endif %}
                 {% if user_form.ATAS_restricted is defined %}
-                    {{ wtf.render_field(user_form.ATAS_restricted) }}
+                    <div class="alert alert-danger mt-2">
+                        {{ wtf.render_field(user_form.ATAS_restricted) }}
+                    </div>
                 {% endif %}
             </div>
         {%  endif %}

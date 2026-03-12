@@ -35,7 +35,7 @@ def SendEmailFormFactory(use_recipients=True):
         subject = StringField("Subject", validators=[InputRequired()])
 
         # email body
-        body = TextAreaField("", render_kw={"rows": 10}, validators=[InputRequired()])
+        body = TextAreaField("", render_kw={"rows": 10})
 
         # send button
         send = SubmitField("Send")

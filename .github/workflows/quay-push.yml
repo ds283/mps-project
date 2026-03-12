@@ -42,4 +42,4 @@ jobs:
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
           image-name: ${{ env.image_name }}
           input-context: "./mpsproject-nginx"
-          input-docker-file: "./Dockerfile"
+          input-docker-file: "./mpsproject-nginx/Dockerfile"

@@ -323,7 +323,9 @@ def pclasses_data(pclasses):
             "submissions": render_template(submissions_templ, p=p),
             "popularity": render_template(popularity_templ, p=p),
             "personnel": render_template(personnel_templ, p=p),
-            "programmes": render_template(programmes_templ, pcl=p, simple_label=simple_label),
+            "programmes": render_template(
+                programmes_templ, pcl=p, simple_label=simple_label
+            ),
             "menu": render_template(menu_templ, pcl=p),
         }
         for p in pclasses

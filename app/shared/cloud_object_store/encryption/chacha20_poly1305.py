@@ -10,7 +10,9 @@
 
 import os
 
-from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305 as chacha_engine
+from cryptography.hazmat.primitives.ciphers.aead import (
+    ChaCha20Poly1305 as chacha_engine,
+)
 
 from ..base import BytesLike, _as_bytes
 from ..encryption_types import ENCRYPTION_CHACHA20_POLY1305

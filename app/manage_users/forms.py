@@ -22,13 +22,33 @@ from flask_security.forms import (
     NextFormMixin,
     EmailValidation,
 )
-from wtforms import StringField, BooleanField, PasswordField, SelectField, SubmitField, IntegerField, RadioField, TextAreaField
+from wtforms import (
+    StringField,
+    BooleanField,
+    PasswordField,
+    SelectField,
+    SubmitField,
+    IntegerField,
+    RadioField,
+    TextAreaField,
+)
 from wtforms.validators import InputRequired, Length, Optional
 from wtforms_alchemy import QuerySelectField, QuerySelectMultipleField
 
 from app.models import DEFAULT_STRING_LENGTH, EnrollmentRecord, Tenant
-from app.shared.forms.mixins import FirstLastNameMixin, FacultyDataMixinFactory, SaveChangesMixin, EditUserNameMixin, DefaultLicenseMixin
-from app.shared.forms.queries import GetActiveDegreeProgrammes, BuildDegreeProgrammeName, GetAllTenants, BuildTenantName
+from app.shared.forms.mixins import (
+    FirstLastNameMixin,
+    FacultyDataMixinFactory,
+    SaveChangesMixin,
+    EditUserNameMixin,
+    DefaultLicenseMixin,
+)
+from app.shared.forms.queries import (
+    GetActiveDegreeProgrammes,
+    BuildDegreeProgrammeName,
+    GetAllTenants,
+    BuildTenantName,
+)
 from app.shared.forms.wtf_validators import (
     valid_username,
     globally_unique_username,
@@ -52,14 +72,24 @@ from app.shared.forms.wtf_validators import (
 class UniqueUserNameMixin:
     username = StringField(
         "Username",
-        validators=[InputRequired(message="Username is required"), Length(max=DEFAULT_STRING_LENGTH), valid_username, globally_unique_username],
+        validators=[
+            InputRequired(message="Username is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            valid_username,
+            globally_unique_username,
+        ],
     )
 
 
 class EditEmailFormMixin:
     email = StringField(
         get_form_field_label("email"),
-        validators=[Length(max=DEFAULT_STRING_LENGTH), email_required, EmailValidation(verify=True), unique_or_original_email],
+        validators=[
+            Length(max=DEFAULT_STRING_LENGTH),
+            email_required,
+            EmailValidation(verify=True),
+            unique_or_original_email,
+        ],
     )
 
 
@@ -75,17 +105,28 @@ class AskConfirmEditFormMixin:
 class NewPasswordFormMixin:
     random_password = BooleanField("Generate random password", default=True)
 
-    password = PasswordField(get_form_field_label("password"), validators=[OptionalIf("random_password"), password_strength])
+    password = PasswordField(
+        get_form_field_label("password"),
+        validators=[OptionalIf("random_password"), password_strength],
+    )
 
 
 class PasswordConfirmFormMixin:
     password_confirm = PasswordField(
-        get_form_field_label("retype_password"), validators=[OptionalIf("random_password"), EqualTo("password", message="RETYPE_PASSWORD_MISMATCH")]
+        get_form_field_label("retype_password"),
+        validators=[
+            OptionalIf("random_password"),
+            EqualTo("password", message="RETYPE_PASSWORD_MISMATCH"),
+        ],
     )
 
 
 class UserTypeMixin:
-    available_roles = [("faculty", "Faculty"), ("student", "Student"), ("office", "Office")]
+    available_roles = [
+        ("faculty", "Faculty"),
+        ("student", "Student"),
+        ("office", "Office"),
+    ]
     roles = SelectField("Role", choices=available_roles)
 
 
@@ -97,9 +138,11 @@ def StudentDataMixinFactory(allowed_tenants: List[Tenant]):
     get_programmes = partial(GetActiveDegreeProgrammes, allowed_tenants)
 
     class StudentDataMixin:
-        ATAS_restricted = BooleanField("ATAS restricted",
-                                       description="Select if this student should be restricted from accessing certain projects under the ATAS scheme",
-                                       default=False)
+        ATAS_restricted = BooleanField(
+            "ATAS restricted",
+            description="Select if this student should be restricted from accessing certain projects under the ATAS scheme",
+            default=False,
+        )
 
         foundation_year = BooleanField("This student used a Foundation Year")
 
@@ -115,17 +158,28 @@ def StudentDataMixinFactory(allowed_tenants: List[Tenant]):
         repeated_years = IntegerField(
             "Number of repeat years",
             default=0,
-            validators=[InputRequired(message="Number of repeat years is required"), value_is_nonnegative],
+            validators=[
+                InputRequired(message="Number of repeat years is required"),
+                value_is_nonnegative,
+            ],
             description="Enter the number of repeat years the student has used.",
         )
 
-        programme = QuerySelectField("Degree programme", query_factory=get_programmes, get_label=BuildDegreeProgrammeName)
+        programme = QuerySelectField(
+            "Degree programme",
+            query_factory=get_programmes,
+            get_label=BuildDegreeProgrammeName,
+        )
 
         intermitting = BooleanField("This student is currently intermitting (TWD)")
 
-        dyspraxia_sticker = BooleanField("Mark work with sticker for learning support package", default=False)
+        dyspraxia_sticker = BooleanField(
+            "Mark work with sticker for learning support package", default=False
+        )
 
-        dyslexia_sticker = BooleanField("Mark work with sticker for specific learning difference", default=False)
+        dyslexia_sticker = BooleanField(
+            "Mark work with sticker for specific learning difference", default=False
+        )
 
     return StudentDataMixin
 
@@ -163,14 +217,18 @@ class RegisterOfficeForm(
     pass
 
 
-class ConfirmRegisterOfficeForm(RegisterOfficeForm, PasswordConfirmFormMixin, NextFormMixin, EditUserTenantsMixin):
+class ConfirmRegisterOfficeForm(
+    RegisterOfficeForm, PasswordConfirmFormMixin, NextFormMixin, EditUserTenantsMixin
+):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.next.data:
             self.next.data = request.args.get("next", "")
 
 
-class RegisterFacultyForm(RegisterOfficeForm, FacultyDataMixinFactory(admin=True, enable_canvas=False)):
+class RegisterFacultyForm(
+    RegisterOfficeForm, FacultyDataMixinFactory(admin=True, enable_canvas=False)
+):
     save_and_exit = SubmitField("Save and exit")
 
     def __init__(self, *args, **kwargs):
@@ -178,7 +236,9 @@ class RegisterFacultyForm(RegisterOfficeForm, FacultyDataMixinFactory(admin=True
         self.submit.label.text = "Next: Research group affiliations"
 
 
-class ConfirmRegisterFacultyForm(ConfirmRegisterOfficeForm, FacultyDataMixinFactory(admin=True, enable_canvas=False)):
+class ConfirmRegisterFacultyForm(
+    ConfirmRegisterOfficeForm, FacultyDataMixinFactory(admin=True, enable_canvas=False)
+):
     save_and_exit = SubmitField("Save and exit")
 
     def __init__(self, *args, **kwargs):
@@ -209,25 +269,41 @@ class EditStudentNumbersMixin:
 def RegisterStudentFormFactory(allowed_tenants: List[Tenant]):
     StudentDataMixin = StudentDataMixinFactory(allowed_tenants)
 
-    class RegisterStudentForm(RegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin):
+    class RegisterStudentForm(
+        RegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin
+    ):
         pass
 
     return RegisterStudentForm
 
+
 def ConfirmRegisterStudentFormFactory(allowed_tenants: List[Tenant]):
     StudentDataMixin = StudentDataMixinFactory(allowed_tenants)
 
-    class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin):
+    class ConfirmRegisterStudentForm(
+        ConfirmRegisterOfficeForm, StudentDataMixin, CreateStudentNumbersMixin
+    ):
         pass
 
     return ConfirmRegisterStudentForm
 
 
-class EditOfficeForm(Form, SaveChangesMixin, EditUserNameMixin, AskConfirmEditFormMixin, EditEmailFormMixin, FirstLastNameMixin, DefaultLicenseMixin, EditUserTenantsMixin):
+class EditOfficeForm(
+    Form,
+    SaveChangesMixin,
+    EditUserNameMixin,
+    AskConfirmEditFormMixin,
+    EditEmailFormMixin,
+    FirstLastNameMixin,
+    DefaultLicenseMixin,
+    EditUserTenantsMixin,
+):
     pass
 
 
-class EditFacultyForm(EditOfficeForm, FacultyDataMixinFactory(admin=True, enable_canvas=False)):
+class EditFacultyForm(
+    EditOfficeForm, FacultyDataMixinFactory(admin=True, enable_canvas=False)
+):
     pass
 
 
@@ -241,10 +317,16 @@ def EditStudentFormFactory(allowed_tenants: List[Tenant]):
 
 
 class ResearchGroupMixin:
-    website = StringField("Website", description="Optional.", validators=[Length(max=DEFAULT_STRING_LENGTH)])
+    website = StringField(
+        "Website",
+        description="Optional.",
+        validators=[Length(max=DEFAULT_STRING_LENGTH)],
+    )
 
     colour = StringField(
-        "Colour", description="Assign a colour to help students identify this affiliation.", validators=[Length(max=DEFAULT_STRING_LENGTH)]
+        "Colour",
+        description="Assign a colour to help students identify this affiliation.",
+        validators=[Length(max=DEFAULT_STRING_LENGTH)],
     )
 
 
@@ -263,7 +345,11 @@ class UploadBatchCreateStudentsForm(Form, BatchUploadTenantsMixin):
         "Otherwise, existing registration numbers will be retained where they exist.",
     )
 
-    ignore_Y0 = BooleanField("Ignore Y0 students", default=True, description="Select if Y0 students should not be imported")
+    ignore_Y0 = BooleanField(
+        "Ignore Y0 students",
+        default=True,
+        description="Select if Y0 students should not be imported",
+    )
 
     current_year = IntegerField(
         "Please specify the academic year that should be used to interpret imported year-of-course values",
@@ -303,24 +389,57 @@ def EditStudentBatchItemFormFactory(batch):
             ],
         )
 
-        last_name = StringField("Last name", validators=[InputRequired("Last name is required"), Length(max=DEFAULT_STRING_LENGTH)])
-
-        first_name = StringField("First name", validators=[InputRequired("First name is required"), Length(max=DEFAULT_STRING_LENGTH)])
-
-        exam_number = IntegerField("Exam number", validators=[Optional(), partial(unique_or_original_batch_item_exam_number, batch.id)])
-
-        registration_number = IntegerField(
-            "Registration number", validators=[Optional(), partial(unique_or_original_batch_item_registration_number, batch.id)]
+        last_name = StringField(
+            "Last name",
+            validators=[
+                InputRequired("Last name is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+            ],
         )
 
-        cohort = IntegerField("Cohort", validators=[InputRequired("Cohort is required")])
+        first_name = StringField(
+            "First name",
+            validators=[
+                InputRequired("First name is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+            ],
+        )
 
-        programme = QuerySelectField("Degree programme", query_factory=get_programmes, get_label=BuildDegreeProgrammeName)
+        exam_number = IntegerField(
+            "Exam number",
+            validators=[
+                Optional(),
+                partial(unique_or_original_batch_item_exam_number, batch.id),
+            ],
+        )
+
+        registration_number = IntegerField(
+            "Registration number",
+            validators=[
+                Optional(),
+                partial(unique_or_original_batch_item_registration_number, batch.id),
+            ],
+        )
+
+        cohort = IntegerField(
+            "Cohort", validators=[InputRequired("Cohort is required")]
+        )
+
+        programme = QuerySelectField(
+            "Degree programme",
+            query_factory=get_programmes,
+            get_label=BuildDegreeProgrammeName,
+        )
 
         foundation_year = BooleanField("Foundation year")
 
         repeated_years = IntegerField(
-            "Number of repeat years", default=0, validators=[InputRequired(message="Number of repeat years is required"), value_is_nonnegative]
+            "Number of repeat years",
+            default=0,
+            validators=[
+                InputRequired(message="Number of repeat years is required"),
+                value_is_nonnegative,
+            ],
         )
 
         intermitting = BooleanField("Currently intermitting")
@@ -349,19 +468,41 @@ def EditFacultyBatchItemFormFactory(batch):
             ],
         )
 
-        last_name = StringField("Last name", validators=[InputRequired("Last name is required"), Length(max=DEFAULT_STRING_LENGTH)])
+        last_name = StringField(
+            "Last name",
+            validators=[
+                InputRequired("Last name is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+            ],
+        )
 
-        first_name = StringField("First name", validators=[InputRequired("First name is required"), Length(max=DEFAULT_STRING_LENGTH)])
+        first_name = StringField(
+            "First name",
+            validators=[
+                InputRequired("First name is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+            ],
+        )
 
-        office = StringField("Office", validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
+        office = StringField(
+            "Office", validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)]
+        )
 
-        CATS_supervision = IntegerField("Supervision CATS", validators=[Optional(), value_is_nonnegative])
+        CATS_supervision = IntegerField(
+            "Supervision CATS", validators=[Optional(), value_is_nonnegative]
+        )
 
-        CATS_marking = IntegerField("Marking CATS", validators=[Optional(), value_is_nonnegative])
+        CATS_marking = IntegerField(
+            "Marking CATS", validators=[Optional(), value_is_nonnegative]
+        )
 
-        CATS_moderation = IntegerField("Moderation CATS", validators=[Optional(), value_is_nonnegative])
+        CATS_moderation = IntegerField(
+            "Moderation CATS", validators=[Optional(), value_is_nonnegative]
+        )
 
-        CATS_presentation = IntegerField("Presentation CATS", validators=[Optional(), value_is_nonnegative])
+        CATS_presentation = IntegerField(
+            "Presentation CATS", validators=[Optional(), value_is_nonnegative]
+        )
 
     return EditFacultyBatchItemForm
 
@@ -369,7 +510,11 @@ def EditFacultyBatchItemFormFactory(batch):
 class EnrollmentRecordMixin:
     # SUPERVISOR
 
-    supervisor_state = RadioField("Project supervision status", choices=EnrollmentRecord.supervisor_choices, coerce=int)
+    supervisor_state = RadioField(
+        "Project supervision status",
+        choices=EnrollmentRecord.supervisor_choices,
+        coerce=int,
+    )
 
     supervisor_reenroll = IntegerField(
         "Re-enroll in academic year",
@@ -386,7 +531,9 @@ class EnrollmentRecordMixin:
 
     # MARKER
 
-    marker_state = RadioField("Marker status", choices=EnrollmentRecord.marker_choices, coerce=int)
+    marker_state = RadioField(
+        "Marker status", choices=EnrollmentRecord.marker_choices, coerce=int
+    )
 
     marker_reenroll = IntegerField(
         "Re-enroll in academic year",
@@ -403,7 +550,9 @@ class EnrollmentRecordMixin:
 
     # MODERATOR
 
-    moderator_state = RadioField("Marker status", choices=EnrollmentRecord.moderator_choices, coerce=int)
+    moderator_state = RadioField(
+        "Marker status", choices=EnrollmentRecord.moderator_choices, coerce=int
+    )
 
     moderator_reenroll = IntegerField(
         "Re-enroll in academic year",
@@ -420,7 +569,9 @@ class EnrollmentRecordMixin:
 
     # PRESENTATIONS
 
-    presentations_state = RadioField("Marker status", choices=EnrollmentRecord.presentations_choices, coerce=int)
+    presentations_state = RadioField(
+        "Marker status", choices=EnrollmentRecord.presentations_choices, coerce=int
+    )
 
     presentations_reenroll = IntegerField(
         "Re-enroll in academic year",
@@ -441,15 +592,25 @@ class EnrollmentRecordForm(Form, EnrollmentRecordMixin, SaveChangesMixin):
 
 
 class RoleMixin:
-    description = StringField("Description", validators=[Length(max=DEFAULT_STRING_LENGTH)])
+    description = StringField(
+        "Description", validators=[Length(max=DEFAULT_STRING_LENGTH)]
+    )
 
-    colour = StringField("Colour", validators=[Length(max=DEFAULT_STRING_LENGTH)], description="Specify a colour to help distinguish different roles")
+    colour = StringField(
+        "Colour",
+        validators=[Length(max=DEFAULT_STRING_LENGTH)],
+        description="Specify a colour to help distinguish different roles",
+    )
 
 
 class AddRoleForm(Form, RoleMixin):
     name = StringField(
         "Name",
-        validators=[InputRequired(message="Please supply a unique name for the role"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_role],
+        validators=[
+            InputRequired(message="Please supply a unique name for the role"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            globally_unique_role,
+        ],
     )
 
     submit = SubmitField("Add new role")
@@ -458,5 +619,9 @@ class AddRoleForm(Form, RoleMixin):
 class EditRoleForm(Form, RoleMixin, SaveChangesMixin):
     name = StringField(
         "Name",
-        validators=[InputRequired(message="Please supply a unique name for the role"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_role],
+        validators=[
+            InputRequired(message="Please supply a unique name for the role"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            unique_or_original_role,
+        ],
     )

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-    flaskext.session
-    ~~~~~~~~~~~~~~~~
+flaskext.session
+~~~~~~~~~~~~~~~~
 
-    Adds server session support to your application.
+Adds server session support to your application.
 
-    :copyright: (c) 2014 by Shipeng Feng.
-    :license: BSD, see LICENSE for more details.
+:copyright: (c) 2014 by Shipeng Feng.
+:license: BSD, see LICENSE for more details.
 """
 
 __version__ = "0.4.5"
@@ -74,7 +74,9 @@ class Session(object):
         config.setdefault("SESSION_KEY_PREFIX", "session:")
         config.setdefault("SESSION_REDIS", None)
         config.setdefault("SESSION_MEMCACHED", None)
-        config.setdefault("SESSION_FILE_DIR", os.path.join(os.getcwd(), "flask_sessionstore"))
+        config.setdefault(
+            "SESSION_FILE_DIR", os.path.join(os.getcwd(), "flask_sessionstore")
+        )
         config.setdefault("SESSION_FILE_THRESHOLD", 500)
         config.setdefault("SESSION_FILE_MODE", 384)
         config.setdefault("SESSION_MONGODB", None)
@@ -91,11 +93,17 @@ class Session(object):
 
         if config["SESSION_TYPE"] == "redis":
             session_interface = RedisSessionInterface(
-                config["SESSION_REDIS"], config["SESSION_KEY_PREFIX"], config["SESSION_USE_SIGNER"], config["SESSION_PERMANENT"]
+                config["SESSION_REDIS"],
+                config["SESSION_KEY_PREFIX"],
+                config["SESSION_USE_SIGNER"],
+                config["SESSION_PERMANENT"],
             )
         elif config["SESSION_TYPE"] == "memcached":
             session_interface = MemcachedSessionInterface(
-                config["SESSION_MEMCACHED"], config["SESSION_KEY_PREFIX"], config["SESSION_USE_SIGNER"], config["SESSION_PERMANENT"]
+                config["SESSION_MEMCACHED"],
+                config["SESSION_KEY_PREFIX"],
+                config["SESSION_USE_SIGNER"],
+                config["SESSION_PERMANENT"],
             )
         elif config["SESSION_TYPE"] == "mongodb":
             session_interface = MongoDBSessionInterface(

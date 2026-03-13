@@ -11,5 +11,5 @@
 import os
 
 # rollbar configuration
-ROLLBAR_TOKEN = os.environ.get('ROLLBAR_TOKEN')
-ROLLBAR_ENV = os.environ.get('ROLLBAR_ENV')
+ROLLBAR_TOKEN = os.environ.get("ROLLBAR_TOKEN")
+ROLLBAR_ENV = os.environ.get("ROLLBAR_ENV")

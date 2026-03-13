@@ -32,7 +32,11 @@ class CrontabSchedule(db.Model):
     @property
     def schedule(self):
         return schedules.crontab(
-            minute=self.minute, hour=self.hour, day_of_week=self.day_of_week, day_of_month=self.day_of_month, month_of_year=self.month_of_year
+            minute=self.minute,
+            hour=self.hour,
+            day_of_week=self.day_of_week,
+            day_of_month=self.day_of_month,
+            month_of_year=self.month_of_year,
         )
 
     @classmethod
@@ -108,10 +112,16 @@ class DatabaseSchedulerEntry(db.Model):
     date_changed = db.Column(db.DateTime)
 
     owner_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    owner = db.relationship("User", backref=db.backref("scheduled_tasks", lazy="dynamic"))
+    owner = db.relationship(
+        "User", backref=db.backref("scheduled_tasks", lazy="dynamic")
+    )
 
-    interval = db.relationship(IntervalSchedule, backref=db.backref("entries", lazy="dynamic"))
-    crontab = db.relationship(CrontabSchedule, backref=db.backref("entries", lazy="dynamic"))
+    interval = db.relationship(
+        IntervalSchedule, backref=db.backref("entries", lazy="dynamic")
+    )
+    crontab = db.relationship(
+        CrontabSchedule, backref=db.backref("entries", lazy="dynamic")
+    )
 
     @property
     def args(self):
@@ -143,6 +153,7 @@ class DatabaseSchedulerEntry(db.Model):
             return self.interval.schedule
         if self.crontab:
             return self.crontab.schedule
+
 
 @listens_for(DatabaseSchedulerEntry, "before_insert")
 def _set_entry_changed_date(mapper, connection, target):

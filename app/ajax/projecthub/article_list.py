@@ -57,14 +57,18 @@ _menu = """
 """
 
 
-def article_list_data(url: str, text: str, edit_endpoint: str, articles: List[FormattedArticle]):
+def article_list_data(
+    url: str, text: str, edit_endpoint: str, articles: List[FormattedArticle]
+):
     data = [
         {
             "title": render_template_string(_title, a=a, url=url, text=text),
             "published": render_template_string(_published, a=a),
             "last_edit": render_template_string(_last_edit, a=a),
             "status": "",
-            "menu": render_template_string(_menu, a=a, edit_endpoint=edit_endpoint, url=url, text=text),
+            "menu": render_template_string(
+                _menu, a=a, edit_endpoint=edit_endpoint, url=url, text=text
+            ),
         }
         for a in articles
     ]

@@ -10,7 +10,7 @@
 
 from flask import Blueprint
 
-campaigns = Blueprint('campaigns', __name__)
+campaigns = Blueprint("campaigns", __name__)
 
 from . import views
 from .tools import check_2026_ATAS

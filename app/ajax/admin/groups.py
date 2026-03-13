@@ -120,7 +120,9 @@ def groups_data(groups):
 
     data = [
         {
-            "abbrv": render_template(abbreviation_templ, g=g, simple_label=simple_label),
+            "abbrv": render_template(
+                abbreviation_templ, g=g, simple_label=simple_label
+            ),
             "active": render_template(active_templ, g=g),
             "name": render_template(name_templ, g=g),
             "colour": render_template(colour_templ, g=g, simple_label=simple_label),

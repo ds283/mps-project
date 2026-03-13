@@ -105,11 +105,14 @@ def backups_data(backups: List[BackupRecord]):
     data = [
         {
             "date": render_template_string(_name, b=b),
-            "initiated": '<a class="text-decoration-none" ' 'href="mailto:{e}">{name}</a>'.format(e=b.owner.email, name=b.owner.name)
+            "initiated": '<a class="text-decoration-none" '
+                         'href="mailto:{e}">{name}</a>'.format(e=b.owner.email, name=b.owner.name)
             if b.owner is not None
             else '<span class="badge bg-secondary">Nobody</span>',
             "type": render_template_string(_type, b=b),
-            "description": render_template_string(_description, b=b, simple_label=simple_label),
+            "description": render_template_string(
+                _description, b=b, simple_label=simple_label
+            ),
             "key": render_template_string(_key, b=b),
             "db_size": b.readable_db_size,
             "archive_size": b.readable_archive_size,

@@ -21,8 +21,18 @@ from ..database import db
 
 email_template_to_labels = db.Table(
     "email_templates_to_labels",
-    db.Column("email_template_id", db.Integer(), db.ForeignKey("email_templates.id"), primary_key=True),
-    db.Column("label_id", db.Integer(), db.ForeignKey("email_template_labels.id"), primary_key=True),
+    db.Column(
+        "email_template_id",
+        db.Integer(),
+        db.ForeignKey("email_templates.id"),
+        primary_key=True,
+    ),
+    db.Column(
+        "label_id",
+        db.Integer(),
+        db.ForeignKey("email_template_labels.id"),
+        primary_key=True,
+    ),
 )
 
 
@@ -108,7 +118,9 @@ class EmailTemplateLabel(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # name of label
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
+    name = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
+    )
 
     def make_label(self, text=None):
         label_text = text if text is not None else self.name
@@ -124,30 +136,45 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
     active = db.Column(db.Boolean(), nullable=False, default=True)
 
     # labels applied to this template
-    labels = db.relationship("EmailTemplateLabel", secondary=email_template_to_labels, lazy="dynamic", backref=db.backref("ttemplates", lazy="dynamic"))
+    labels = db.relationship(
+        "EmailTemplateLabel",
+        secondary=email_template_to_labels,
+        lazy="dynamic",
+        backref=db.backref("ttemplates", lazy="dynamic"),
+    )
 
     # tenant, if specified
     # if not specified, this template is taken to apply globally
     # otherwise it is taken to apply to all project classes in the tenant, unless they in turn have an override
     tenant_id = db.Column(db.Integer(), db.ForeignKey("tenants.id"), nullable=True)
-    tenant = db.relationship("Tenant", backref=db.backref("email_templates", lazy="dynamic"))
+    tenant = db.relationship(
+        "Tenant", backref=db.backref("email_templates", lazy="dynamic")
+    )
 
     # project class, if specified
-    pclass_id = db.Column(db.Integer(), db.ForeignKey("project_classes.id"), nullable=True)
-    pclass = db.relationship("ProjectClass", backref=db.backref("email_templates", lazy="dynamic"))
+    pclass_id = db.Column(
+        db.Integer(), db.ForeignKey("project_classes.id"), nullable=True
+    )
+    pclass = db.relationship(
+        "ProjectClass", backref=db.backref("email_templates", lazy="dynamic")
+    )
 
     # specify the type of this email, drawn from EmailTemplateTypesMixin
     type = db.Column(db.Integer(), nullable=False)
 
     # specify the subject line
-    subject = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), nullable=False)
+    subject = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False
+    )
 
     # specify the body of the email in HTML format
     # we autogenerate a text equivalent
     html_body = db.Column(db.Text(), nullable=False)
 
     # comment/description field
-    comment = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), nullable=True)
+    comment = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
+    )
 
     # version number, allowing multiple versions of an email to exist simultaneously, rather than over-writing previous versions
     version = db.Column(db.Integer(), nullable=False)
@@ -159,11 +186,11 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
     def apply_(
             template_type: int,
             to: List[str],
-            from_email: Optional[str]=None,
-            reply_to: Optional[List[str]]=None,
-            subject_kwargs: Optional[Dict[str, Any]]=None,
-            body_kwargs: Optional[Dict[str, Any]]=None,
-            body_attachments: Optional[Dict[str, Callable]]=None,
+            from_email: Optional[str] = None,
+            reply_to: Optional[List[str]] = None,
+            subject_kwargs: Optional[Dict[str, Any]] = None,
+            body_kwargs: Optional[Dict[str, Any]] = None,
+            body_attachments: Optional[Dict[str, Callable]] = None,
             tenant=None,
             pclass=None,
     ):
@@ -175,7 +202,9 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
         elif tenant is None:
             pass
         else:
-            raise RuntimeError(f'Invalid tenant type "{type(tenant)}" (value="{tenant}") in EmailTemplate.apply_()')
+            raise RuntimeError(
+                f'Invalid tenant type "{type(tenant)}" (value="{tenant}") in EmailTemplate.apply_()'
+            )
 
         if from_email is None:
             from_email = current_app.config["MAIL_DEFAULT_SENDER"]
@@ -190,31 +219,37 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
             if tenant_id is None:
                 tenant_id = pclass_obj.tenant_id
             elif tenant_id != pclass_obj.tenant_id:
-                raise RuntimeError(f'Tenant mismatch between pclass "{pclass_obj.name}" and tenant "{tenant.name}" in EmailTemplate.apply_()')
+                raise RuntimeError(
+                    f'Tenant mismatch between pclass "{pclass_obj.name}" and tenant "{tenant.name}" in EmailTemplate.apply_()'
+                )
         elif isinstance(pclass, ProjectClass):
             pclass_id = pclass.id
             if tenant_id is None:
                 tenant_id = pclass.tenant_id
             elif tenant_id != pclass.tenant_id:
-                raise RuntimeError(f'Tenant mismatch between pclass "{pclass.name}" and tenant "{tenant.name}" in EmailTemplate.apply_()')
+                raise RuntimeError(
+                    f'Tenant mismatch between pclass "{pclass.name}" and tenant "{tenant.name}" in EmailTemplate.apply_()'
+                )
         elif pclass is None:
             pass
         else:
-            raise RuntimeError(f'Invalid project class type "{type(pclass)}" (value="{pclass}") in EmailTemplate.apply_()')
+            raise RuntimeError(
+                f'Invalid project class type "{type(pclass)}" (value="{pclass}") in EmailTemplate.apply_()'
+            )
 
         if not isinstance(to, Iterable):
-            raise RuntimeError(f'Invalid recipient list type "{type(to)}" (value="{to}") in EmailTemplate.apply_()')
+            raise RuntimeError(
+                f'Invalid recipient list type "{type(to)}" (value="{to}") in EmailTemplate.apply_()'
+            )
 
         if not isinstance(reply_to, Iterable):
-            raise RuntimeError(f'Invalid reply_to list type "{type(reply_to)}" (value="{reply_to}") in EmailTemplate.apply_()')
+            raise RuntimeError(
+                f'Invalid reply_to list type "{type(reply_to)}" (value="{reply_to}") in EmailTemplate.apply_()'
+            )
 
         # find active template at highest level of override
-        templ_query = (
-            db.session.query(EmailTemplate)
-            .filter(
-                EmailTemplate.type == template_type,
-                EmailTemplate.active == True
-            )
+        templ_query = db.session.query(EmailTemplate).filter(
+            EmailTemplate.type == template_type, EmailTemplate.active == True
         )
         if tenant_id is not None:
             templ_query = templ_query.filter(
@@ -230,21 +265,25 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
                     EmailTemplate.pclass_id.is_(None),
                 )
             )
-        templ_query = (
-            templ_query.order_by(
-                EmailTemplate.tenant_id,
-                EmailTemplate.pclass_id,
-                EmailTemplate.version.desc(),
-            )
+        templ_query = templ_query.order_by(
+            EmailTemplate.tenant_id,
+            EmailTemplate.pclass_id,
+            EmailTemplate.version.desc(),
         )
 
         template: Optional[EmailTemplate] = templ_query.first()
 
         if template is None:
-            raise RuntimeError(f"No active template found for EmailTemplate type {template_type}")
+            raise RuntimeError(
+                f"No active template found for EmailTemplate type {template_type}"
+            )
 
         # format subject string
-        subject_str: str = template.subject.format(**subject_kwargs) if subject_kwargs is not None else template.subject
+        subject_str: str = (
+            template.subject.format(**subject_kwargs)
+            if subject_kwargs is not None
+            else template.subject
+        )
 
         msg = EmailMultiAlternatives(
             subject=subject_str,
@@ -261,7 +300,11 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
                     body_kwargs[label] = output
 
         # format HTML body text
-        html_str: str = render_template_string(template.html_body, **body_kwargs) if body_kwargs is not None else template.html_body
+        html_str: str = (
+            render_template_string(template.html_body, **body_kwargs)
+            if body_kwargs is not None
+            else template.html_body
+        )
 
         # generate plain text version of HTML body (html2text basically produces Markdown)
         h = HTML2Text()

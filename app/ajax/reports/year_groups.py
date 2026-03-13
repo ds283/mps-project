@@ -53,9 +53,15 @@ def year_groups(students):
     data = [
         {
             "name": render_template_string(_name, s=s, simple_label=simple_label),
-            "programme": render_template_string(_programme, s=s, simple_label=simple_label),
-            "selecting": render_template_string(_selecting, s=s, simple_label=simple_label),
-            "submitting": render_template_string(_submitting, s=s, simple_label=simple_label),
+            "programme": render_template_string(
+                _programme, s=s, simple_label=simple_label
+            ),
+            "selecting": render_template_string(
+                _selecting, s=s, simple_label=simple_label
+            ),
+            "submitting": render_template_string(
+                _submitting, s=s, simple_label=simple_label
+            ),
         }
         for s in students
     ]

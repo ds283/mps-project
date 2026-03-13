@@ -15,32 +15,72 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import TaskRecord, SubmissionPeriodRecord, User, SubmissionRecord, SubmissionPeriodUnit, \
-    SupervisionEventTemplate, SupervisionEvent, SubmissionRole, StudentData, SubmittingStudent
+from ..models import (
+    TaskRecord,
+    SubmissionPeriodRecord,
+    User,
+    SubmissionRecord,
+    SubmissionPeriodUnit,
+    SupervisionEventTemplate,
+    SupervisionEvent,
+    SubmissionRole,
+    StudentData,
+    SubmittingStudent,
+)
 from ..shared.tasks import post_task_update_msg
 
 
 def register_supervision_event_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def populate(self, task_id: int, period_id: int, user_id: int):
-        post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 10, "Initializing task...")
+        post_task_update_msg(
+            self,
+            task_id,
+            states.STARTED,
+            TaskRecord.RUNNING,
+            10,
+            "Initializing task...",
+        )
 
         try:
-            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            period: SubmissionPeriodRecord = (
+                db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            )
             user: User = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if period is None:
-            post_task_update_msg(self, task_id, states.FAILURE, TaskRecord.FAILURE, 0, f"Could not load SubmissionPeriodRecord id={period_id} from the database")
+            post_task_update_msg(
+                self,
+                task_id,
+                states.FAILURE,
+                TaskRecord.FAILURE,
+                0,
+                f"Could not load SubmissionPeriodRecord id={period_id} from the database",
+            )
             raise Ignore()
 
         if user is None:
-            post_task_update_msg(self, task_id, states.FAILURE, TaskRecord.FAILURE, 0, f"Could not load User id={user_id} from the database")
+            post_task_update_msg(
+                self,
+                task_id,
+                states.FAILURE,
+                TaskRecord.FAILURE,
+                0,
+                f"Could not load User id={user_id} from the database",
+            )
             raise Ignore()
 
-        post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 10, "Populating events...")
+        post_task_update_msg(
+            self,
+            task_id,
+            states.STARTED,
+            TaskRecord.RUNNING,
+            10,
+            "Populating events...",
+        )
 
         # iterate through submitters for this submission period
         for submission in period.submissions:
@@ -69,7 +109,9 @@ def register_supervision_event_tasks(celery):
                         # the day-to-day supervision)
                         target_roles = set([template.target_role])
                         if SupervisionEventTemplate.ROLE_SUPERVISOR in target_roles:
-                            target_roles.add(SupervisionEventTemplate.ROLE_RESPONSIBLE_SUPERVISOR)
+                            target_roles.add(
+                                SupervisionEventTemplate.ROLE_RESPONSIBLE_SUPERVISOR
+                            )
 
                         # NOTE: this query assumes ROLE_SUPERVISOR is numerically before ROLE_RESPONSIBLE_SUPERVISOR
                         # it may need changing if ever we are in a situation where that is no longer true
@@ -99,7 +141,9 @@ def register_supervision_event_tasks(celery):
                             .all()
                         )
 
-                        other_attendees_string = ", ".join([x.user.name for x in other_attendees])
+                        other_attendees_string = ", ".join(
+                            [x.user.name for x in other_attendees]
+                        )
                         print(
                             f'** event.populate [{period.config.name}]: Created event for submission #{submission.id} ({suser.name}) for template "{template.name}" in submission unit "{unit.name}" in period "{period.display_name}" | event owner = {role.user.name} | other attendees = [{other_attendees_string}]'
                         )
@@ -128,4 +172,11 @@ def register_supervision_event_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
         else:
-            post_task_update_msg(self, task_id, states.SUCCESS, TaskRecord.SUCCESS, 0, "All events have been populated")
+            post_task_update_msg(
+                self,
+                task_id,
+                states.SUCCESS,
+                TaskRecord.SUCCESS,
+                0,
+                "All events have been populated",
+            )

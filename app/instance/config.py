@@ -12,4 +12,4 @@ import os
 
 # miscellaneous deployment-dependent configuration options
 
-PROXYFIX_FOR = int(os.environ.get('PROXYFIX_FOR', 0))
+PROXYFIX_FOR = int(os.environ.get("PROXYFIX_FOR", 0))

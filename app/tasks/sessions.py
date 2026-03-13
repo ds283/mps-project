@@ -28,7 +28,9 @@ def register_session_tasks(celery):
         if mongo_url is None:
             raise Ignore()
 
-        print("-- Entering sift_sessions maintenance cycle for MongoDB server-side sessions")
+        print(
+            "-- Entering sift_sessions maintenance cycle for MongoDB server-side sessions"
+        )
 
         with MongoClient(host=mongo_url) as client:
             db = client[db_name]
@@ -38,9 +40,21 @@ def register_session_tasks(celery):
             # set their expiry to today plus 7 days
             expiry_date = datetime.now() + timedelta(days=7)
             with Timer() as expiry_timer:
-                result = collection.update_many({"expiration": None}, {"$set": {"expiration": expiry_date}}, upsert=False)
-            print("-- identified {matched} sessions without a valid expiry date".format(matched=result.matched_count))
-            print("-- modified {modified} sessions to expires on {date}".format(modified=result.modified_count, date=expiry_date))
+                result = collection.update_many(
+                    {"expiration": None},
+                    {"$set": {"expiration": expiry_date}},
+                    upsert=False,
+                )
+            print(
+                "-- identified {matched} sessions without a valid expiry date".format(
+                    matched=result.matched_count
+                )
+            )
+            print(
+                "-- modified {modified} sessions to expires on {date}".format(
+                    modified=result.modified_count, date=expiry_date
+                )
+            )
             print("-- elapsed time for query = {s}".format(s=expiry_timer.interval))
 
             # second, determine whether there are any sessions that are stale and
@@ -48,7 +62,9 @@ def register_session_tasks(celery):
             stale_date = datetime.now() - timedelta(days=1)
             with Timer() as stale_timer:
                 result = collection.delete_many({"expiration": {"$lt": stale_date}})
-            print("-- deleted {count} stale sessions".format(count=result.deleted_count))
+            print(
+                "-- deleted {count} stale sessions".format(count=result.deleted_count)
+            )
             print("-- elapsed time for query = {s}".format(s=stale_timer.interval))
 
         print("-- sift_sessions maintenance cycle complete")

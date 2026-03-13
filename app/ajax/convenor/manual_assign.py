@@ -45,8 +45,12 @@ def manual_assign_data(rec, liveprojects):
     data = [
         {
             "project": render_template_string(_name, p=p, r=rec),
-            "supervisor": '<a class="text-decoration-none" href="mailto:{email}">{name}</a>'.format(email=p.owner.user.email, name=p.owner.user.name),
-            "workload": render_template_string(_workload, data=p.owner.total_CATS_assignment()),
+            "supervisor": '<a class="text-decoration-none" href="mailto:{email}">{name}</a>'.format(
+                email=p.owner.user.email, name=p.owner.user.name
+            ),
+            "workload": render_template_string(
+                _workload, data=p.owner.total_CATS_assignment()
+            ),
             "menu": render_template_string(_action, rec=rec, p=p),
         }
         for p in liveprojects

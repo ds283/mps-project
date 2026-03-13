@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+
 def _normalize_excel_sheet_name(name: str) -> str:
     if len(name) > 31:
         name = name[:31]

@@ -11,8 +11,8 @@
 import os
 
 # read database URI from DATABASE_URL environment variable
-SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
 
-SQLACHEMY_AES_KEY = os.environ.get('SQLALCHEMY_AES_KEY')
+SQLACHEMY_AES_KEY = os.environ.get("SQLALCHEMY_AES_KEY")
 
 SQLALCHEMY_TRACK_MODIFICATIONS = False  # suppress notifications on database changes

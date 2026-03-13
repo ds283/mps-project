@@ -143,9 +143,20 @@ def assign_assessor_data(assessors, slot, url=None, text=None):
 
     data = [
         {
-            "name": {"display": render_template_string(_name, a=a, slot=slot), "sortstring": a.faculty.user.last_name + a.faculty.user.first_name},
+            "name": {
+                "display": render_template_string(_name, a=a, slot=slot),
+                "sortstring": a.faculty.user.last_name + a.faculty.user.first_name,
+            },
             "sessions": {
-                "display": render_template_string(_sessions, a=a, slots=slots, url=url, text=text, simple_label=simple_label, truncate=truncate),
+                "display": render_template_string(
+                    _sessions,
+                    a=a,
+                    slots=slots,
+                    url=url,
+                    text=text,
+                    simple_label=simple_label,
+                    truncate=truncate,
+                ),
                 "sortvalue": score,
             },
             "menu": render_template_string(_menu, a=a, slot=slot),

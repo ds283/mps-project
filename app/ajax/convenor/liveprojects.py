@@ -310,12 +310,25 @@ def liveprojects_data(projects, config: ProjectClassConfig, url=None, text=None)
         {
             "name": render_template(name_templ, project=p, config=config),
             "owner": render_template(owner_templ, project=p, text=text, url=url),
-            "group": render_template(affiliation_templ, project=p, simple_label=simple_label, truncate=truncate),
+            "group": render_template(
+                affiliation_templ,
+                project=p,
+                simple_label=simple_label,
+                truncate=truncate,
+            ),
             "bookmarks": render_template(bookmarks_templ, project=p),
             "selections": render_template(selections_templ, project=p),
             "confirmations": render_template(confirmations_templ, project=p),
-            "popularity": render_template(popularity_templ, project=p, require_live=require_live, url=url, text=text),
-            "menu": render_template(menu_templ, project=p, config=config, url=url, text=text),
+            "popularity": render_template(
+                popularity_templ,
+                project=p,
+                require_live=require_live,
+                url=url,
+                text=text,
+            ),
+            "menu": render_template(
+                menu_templ, project=p, config=config, url=url, text=text
+            ),
         }
         for p in projects
     ]

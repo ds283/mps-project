@@ -24,7 +24,13 @@ import app.ajax as ajax
 from . import student
 from .actions import store_selection
 from .forms import StudentFeedbackForm, StudentSettingsForm
-from .utils import verify_submitter, verify_selector, verify_view_project, verify_open, verify_submission_record
+from .utils import (
+    verify_submitter,
+    verify_selector,
+    verify_view_project,
+    verify_open,
+    verify_submission_record,
+)
 from ..database import db
 from ..models import (
     ProjectClass,
@@ -51,8 +57,19 @@ from ..models import (
     EmailTemplate,
 )
 from ..shared.context.global_context import render_template_context
-from ..shared.utils import home_dashboard, home_dashboard_url, get_count, redirect_url, get_current_year
-from ..shared.validators import validate_is_convenor, validate_submission_viewable, validate_using_assessment, validate_assessment
+from ..shared.utils import (
+    home_dashboard,
+    home_dashboard_url,
+    get_count,
+    redirect_url,
+    get_current_year,
+)
+from ..shared.validators import (
+    validate_is_convenor,
+    validate_submission_viewable,
+    validate_using_assessment,
+    validate_assessment,
+)
 from ..task_queue import register_task
 from ..tools import ServerSideSQLHandler
 
@@ -90,7 +107,9 @@ def dashboard():
         config: ProjectClassConfig = item.most_recent_config
 
         # determine whether this student has a selector role for this project class
-        select_q = config.selecting_students.filter_by(retired=False, student_id=current_user.id)
+        select_q = config.selecting_students.filter_by(
+            retired=False, student_id=current_user.id
+        )
 
         if get_count(select_q) > 1:
             flash(
@@ -104,7 +123,9 @@ def dashboard():
             has_selections = True
 
         # determine whether this student has a submitter role for this project class
-        submit_q = config.submitting_students.filter_by(retired=False, student_id=current_user.id)
+        submit_q = config.submitting_students.filter_by(
+            retired=False, student_id=current_user.id
+        )
 
         if get_count(submit_q) > 1:
             flash(
@@ -146,15 +167,24 @@ def dashboard():
         data: StudentData = current_user.student_data
         programme: DegreeProgramme = data.programme
         ptype: DegreeType = programme.degree_type
-        pclasses = ProjectClass.query.filter(ProjectClass.active == True, ProjectClass.publish == True, ProjectClass.student_level == ptype.level)
+        pclasses = ProjectClass.query.filter(
+            ProjectClass.active == True,
+            ProjectClass.publish == True,
+            ProjectClass.student_level == ptype.level,
+        )
     else:
-        pclasses = ProjectClass.query.filter(ProjectClass.active == True, ProjectClass.publish == True)
+        pclasses = ProjectClass.query.filter(
+            ProjectClass.active == True, ProjectClass.publish == True
+        )
 
     # build list of system messages to consider displaying
     messages = []
     for message in (
             db.session.query(MessageOfTheDay)
-                    .filter(MessageOfTheDay.show_students, ~MessageOfTheDay.dismissed_by.any(id=current_user.id))
+                    .filter(
+                MessageOfTheDay.show_students,
+                ~MessageOfTheDay.dismissed_by.any(id=current_user.id),
+            )
                     .order_by(MessageOfTheDay.issue_date.desc())
                     .all()
     ):
@@ -206,7 +236,12 @@ def selector_browse_projects(id):
 
     # supply list of transferable skill groups and research groups that can be filtered against
     if config.advertise_research_group:
-        groups = db.session.query(ResearchGroup).filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+        groups = (
+            db.session.query(ResearchGroup)
+            .filter_by(active=True)
+            .order_by(ResearchGroup.name.asc())
+            .all()
+        )
     else:
         groups = None
 
@@ -257,7 +292,12 @@ def selector_projects_ajax(id):
         return jsonify({})
 
     is_live = state < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
-    return _project_list_endpoint(sel.config, sel, partial(ajax.student.selector_liveprojects_data, sel, is_live), state=state)
+    return _project_list_endpoint(
+        sel.config,
+        sel,
+        partial(ajax.student.selector_liveprojects_data, sel, is_live),
+        state=state,
+    )
 
 
 @student.route("/submitter_browse_projects/<int:id>")
@@ -311,10 +351,17 @@ def submitter_projects_ajax(id):
     if not verify_submitter(sub):
         return jsonify({})
 
-    return _project_list_endpoint(config, None, partial(ajax.student.submitter_liveprojects_data, sub))
+    return _project_list_endpoint(
+        config, None, partial(ajax.student.submitter_liveprojects_data, sub)
+    )
 
 
-def _project_list_endpoint(config: ProjectClassConfig, sel: Optional[SelectingStudent], row_formatter, state=None):
+def _project_list_endpoint(
+        config: ProjectClassConfig,
+        sel: Optional[SelectingStudent],
+        row_formatter,
+        state=None,
+):
     # check that project is viewable for this ProjectClassConfig instance
     if state is None:
         state = config.selector_lifecycle
@@ -327,8 +374,7 @@ def _project_list_endpoint(config: ProjectClassConfig, sel: Optional[SelectingSt
         return jsonify({})
 
     base_query = (
-        config.live_projects
-        .join(Project, Project.id == LiveProject.parent_id)
+        config.live_projects.join(Project, Project.id == LiveProject.parent_id)
         .join(User, User.id == Project.owner_id, isouter=True)
         .join(ResearchGroup, ResearchGroup.id == LiveProject.group_id, isouter=True)
         .filter(LiveProject.hidden.is_(False))
@@ -345,24 +391,47 @@ def _project_list_endpoint(config: ProjectClassConfig, sel: Optional[SelectingSt
             base_query = base_query.filter(
                 and_(
                     or_(ResearchGroup.id == g.id for g in sel.group_filters),
-                    or_(LiveProject.skills.any(TransferableSkill.id == s.id) for s in sel.skill_filters),
+                    or_(
+                        LiveProject.skills.any(TransferableSkill.id == s.id)
+                        for s in sel.skill_filters
+                    ),
                 )
             )
         elif filter_groups:
-            base_query = base_query.filter(or_(ResearchGroup.id == g.id for g in sel.group_filters))
+            base_query = base_query.filter(
+                or_(ResearchGroup.id == g.id for g in sel.group_filters)
+            )
         elif filter_skills:
-            base_query = base_query.filter(or_(LiveProject.skills.any(TransferableSkill.id == s.id) for s in sel.skill_filters))
+            base_query = base_query.filter(
+                or_(
+                    LiveProject.skills.any(TransferableSkill.id == s.id)
+                    for s in sel.skill_filters
+                )
+            )
 
-    name = {"search": LiveProject.name, "order": LiveProject.name, "search_collation": "utf8_general_ci"}
+    name = {
+        "search": LiveProject.name,
+        "order": LiveProject.name,
+        "search_collation": "utf8_general_ci",
+    }
     supervisor = {
         "search": func.concat(User.first_name, " ", User.last_name),
         "order": [User.last_name, User.first_name],
         "search_collation": "utf8_general_ci",
     }
-    group = {"search": ResearchGroup.name, "order": ResearchGroup.name, "search_collation": "utf8_general_ci"}
+    group = {
+        "search": ResearchGroup.name,
+        "order": ResearchGroup.name,
+        "search_collation": "utf8_general_ci",
+    }
     meeting = {"order": LiveProject.meeting_reqd}
 
-    columns = {"name": name, "supervisor": supervisor, "group": group, "meeting": meeting}
+    columns = {
+        "name": name,
+        "supervisor": supervisor,
+        "group": group,
+        "meeting": meeting,
+    }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(row_formatter)
@@ -519,7 +588,15 @@ def selector_view_project(sid, pid):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return render_template_context("student/show_project.html", title=project.name, sel=sel, project=project, desc=project, text=text, url=url)
+    return render_template_context(
+        "student/show_project.html",
+        title=project.name,
+        sel=sel,
+        project=project,
+        desc=project,
+        text=text,
+        url=url,
+    )
 
 
 @student.route("/submitter_view_project/<int:sid>/<int:pid>")
@@ -558,7 +635,14 @@ def submitter_view_project(sid, pid):
         text = "project list"
 
     return render_template_context(
-        "student/show_project.html", title=project.name, sel=None, project=project, desc=project, url=url, text=text, archived=True
+        "student/show_project.html",
+        title=project.name,
+        sel=None,
+        project=project,
+        desc=project,
+        url=url,
+        text=text,
+        archived=True,
     )
 
 
@@ -580,7 +664,10 @@ def add_bookmark(sid, pid):
         return redirect(redirect_url())
 
     if project.hidden:
-        flash("This project has been marked as unavailable by the convenor, and cannot be bookmarked.", "error")
+        flash(
+            "This project has been marked as unavailable by the convenor, and cannot be bookmarked.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # verify student is allowed to view this live project
@@ -628,7 +715,10 @@ def remove_bookmark(sid, pid):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not remove bookmark due to a database error. Please inform a system administrator.", "info")
+            flash(
+                "Could not remove bookmark due to a database error. Please inform a system administrator.",
+                "info",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             db.session.rollback()
 
@@ -658,7 +748,10 @@ def request_confirmation(sid, pid):
         return redirect(redirect_url())
 
     if project.hidden:
-        flash("This project has been marked as unavailable by the convenor. It is not possible to request confirmation for it.", "error")
+        flash(
+            "This project has been marked as unavailable by the convenor. It is not possible to request confirmation for it.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # check whether this project type uses selections
@@ -672,18 +765,31 @@ def request_confirmation(sid, pid):
 
     # check if confirmation has already been issued
     if project.is_confirmed(sel):
-        flash('Confirmation has already been issued for project "{n}"'.format(n=project.name), "info")
+        flash(
+            'Confirmation has already been issued for project "{n}"'.format(
+                n=project.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     # check if confirmation is already pending
     if project.is_waiting(sel):
-        flash('Confirmation is already pending for project "{n}"'.format(n=project.name), "info")
+        flash(
+            'Confirmation is already pending for project "{n}"'.format(n=project.name),
+            "info",
+        )
         return redirect(redirect_url())
 
     # add confirm request
     req = project.make_confirm_request(sel)
     db.session.add(req)
-    add_notification(project.owner, EmailNotification.CONFIRMATION_REQUEST_CREATED, req, autocommit=False)
+    add_notification(
+        project.owner,
+        EmailNotification.CONFIRMATION_REQUEST_CREATED,
+        req,
+        autocommit=False,
+    )
 
     # check if a bookmark already exists, and make one if not
     bookmark_data = sel.is_project_bookmarked(project)
@@ -694,7 +800,10 @@ def request_confirmation(sid, pid):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not issue confirmation request due to a database error. Please inform a system administrator.", "info")
+        flash(
+            "Could not issue confirmation request due to a database error. Please inform a system administrator.",
+            "info",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -734,7 +843,12 @@ def cancel_confirmation(sid, pid):
 
     # check if confirmation has already been issued
     if project.is_confirmed(sel):
-        flash('Confirmation has already been issued for project "{n}"'.format(n=project.name), "info")
+        flash(
+            'Confirmation has already been issued for project "{n}"'.format(
+                n=project.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     # remove confirm request if one exists
@@ -747,7 +861,10 @@ def cancel_confirmation(sid, pid):
             try:
                 db.session.commit()
             except SQLAlchemyError as e:
-                flash("Could not cancel confirmation request due to a database error. Please inform a system administrator.", "info")
+                flash(
+                    "Could not cancel confirmation request due to a database error. Please inform a system administrator.",
+                    "info",
+                )
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 db.session.rollback()
 
@@ -780,7 +897,9 @@ def update_ranking():
     if config_id is None or sid is None or ranking is None:
         return jsonify({"status": "ill_formed"})
 
-    config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+    config: ProjectClassConfig = (
+        db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+    )
     sel: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sid).first()
 
     if config is None or sel is None:
@@ -802,7 +921,9 @@ def update_ranking():
     # update ranking
     for bookmark in sel.bookmarks:
         if bookmark.liveproject.id not in rmap:
-            raise RuntimeError("Failed to demap POSTed ranking to bookmark list in update_ranking()")
+            raise RuntimeError(
+                "Failed to demap POSTed ranking to bookmark list in update_ranking()"
+            )
 
         bookmark.rank = rmap[bookmark.liveproject.id]
 
@@ -846,7 +967,10 @@ def submit(sid):
 
     # verify logged-in user is the selector
     if current_user.id != sel.student_id:
-        flash("You do not have permission to submit project preferences for this selector.", "error")
+        flash(
+            "You do not have permission to submit project preferences for this selector.",
+            "error",
+        )
         return redirect(redirect_url())
 
     valid, errors = sel.is_valid_selection
@@ -869,18 +993,34 @@ def submit(sid):
             template_type=EmailTemplate.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED,
             to=[sel.student.user.email],
             subject_kwargs={"pcl": sel.config.project_class.name},
-            body_kwargs={"user": sel.student.user, "pclass": sel.config.project_class, "config": sel.config, "sel": sel},
+            body_kwargs={
+                "user": sel.student.user,
+                "pclass": sel.config.project_class,
+                "config": sel.config,
+                "sel": sel,
+            },
         )
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description="Send project choices confirmation email to {r}".format(r=", ".join(msg.to)))
+        task_id = register_task(
+            msg.subject,
+            description="Send project choices confirmation email to {r}".format(
+                r=", ".join(msg.to)
+            ),
+        )
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
-        flash("Your project preferences were submitted successfully. A confirmation email has been sent to your registered email address.", "info")
+        flash(
+            "Your project preferences were submitted successfully. A confirmation email has been sent to your registered email address.",
+            "info",
+        )
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash("A database error occurred during submission. Please contact a system administrator.", "error")
+        flash(
+            "A database error occurred during submission. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
@@ -893,7 +1033,10 @@ def clear_submission(sid):
 
     # verify logged-in user is the selector
     if current_user.id != sel.student_id:
-        flash("You do not have permission to clear project preferences for this selector.", "error")
+        flash(
+            "You do not have permission to clear project preferences for this selector.",
+            "error",
+        )
         return redirect(redirect_url())
 
     title = "Clear submitted preferences"
@@ -903,12 +1046,21 @@ def clear_submission(sid):
     message = (
         "<p>Please confirm that you wish to clear your submitted preferences for "
         "<strong>{name} {yeara}&ndash;{yearb}</strong>.</p>"
-        "<p>This action cannot be undone.</p>".format(name=sel.config.name, yeara=sel.config.select_year_a, yearb=sel.config.select_year_b)
+        "<p>This action cannot be undone.</p>".format(
+            name=sel.config.name,
+            yeara=sel.config.select_year_a,
+            yearb=sel.config.select_year_b,
+        )
     )
     submit_label = "Clear submitted preferences"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -919,7 +1071,10 @@ def do_clear_submission(sid):
 
     # verify logged-in user is the selector
     if current_user.id != sel.student_id:
-        flash("You do not have permission to clear project preferences for this selector.", "error")
+        flash(
+            "You do not have permission to clear project preferences for this selector.",
+            "error",
+        )
         return home_dashboard()
 
     sel.selections = []
@@ -930,7 +1085,10 @@ def do_clear_submission(sid):
         db.session.commit()
         flash("Your project preferences have been cleared successfully.", "info")
     except SQLAlchemyError as e:
-        flash("Could not clear project preferences due to a database error. Please inform a system administrator.", "info")
+        flash(
+            "Could not clear project preferences due to a database error. Please inform a system administrator.",
+            "info",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -944,7 +1102,10 @@ def manage_custom_offers(sel_id):
 
     # verify logged-in user is the selector
     if current_user.id != sel.student_id:
-        flash("You do not have permission to manage custom offers for this selector.", "error")
+        flash(
+            "You do not have permission to manage custom offers for this selector.",
+            "error",
+        )
         return home_dashboard()
 
     return render_template_context("student/manage_custom_offers.html", sel=sel)
@@ -959,7 +1120,10 @@ def accept_custom_offer(offer_id):
 
     # verify logged-in user is the selector
     if current_user.id != sel.student_id:
-        flash("You do not have permission to manage custom offers for this selector.", "error")
+        flash(
+            "You do not have permission to manage custom offers for this selector.",
+            "error",
+        )
         return home_dashboard()
 
     # reset any previous acceptances
@@ -974,7 +1138,10 @@ def accept_custom_offer(offer_id):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not accept custom offer due to a database error. Please inform a system administrator.", "info")
+        flash(
+            "Could not accept custom offer due to a database error. Please inform a system administrator.",
+            "info",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -991,7 +1158,10 @@ def decline_custom_offer(offer_id):
 
     # verify logged-in user is the selector
     if current_user.id != sel.student_id:
-        flash("You do not have permission to manage custom offers for this selector.", "error")
+        flash(
+            "You do not have permission to manage custom offers for this selector.",
+            "error",
+        )
         return home_dashboard()
 
     offer.status = CustomOffer.DECLINED
@@ -1001,7 +1171,10 @@ def decline_custom_offer(offer_id):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not decline custom offer due to a database error. Please inform a system administrator.", "info")
+        flash(
+            "Could not decline custom offer due to a database error. Please inform a system administrator.",
+            "info",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -1047,7 +1220,14 @@ def view_feedback(id):
 
     preview = request.args.get("preview", None)
 
-    return render_template_context("student/dashboard/view_feedback.html", record=record, period=period, text=text, url=url, preview=preview)
+    return render_template_context(
+        "student/dashboard/view_feedback.html",
+        record=record,
+        period=period,
+        text=text,
+        url=url,
+        preview=preview,
+    )
 
 
 @student.route("/edit_feedback/<int:id>", methods=["GET", "POST"])
@@ -1060,7 +1240,10 @@ def edit_feedback(id):
         return redirect(redirect_url())
 
     if record.retired:
-        flash("It is no longer possible to submit feedback for this submission because it belongs to a previous academic year.", "info")
+        flash(
+            "It is no longer possible to submit feedback for this submission because it belongs to a previous academic year.",
+            "info",
+        )
         return redirect(redirect_url())
 
     config = record.owner.config
@@ -1075,7 +1258,10 @@ def edit_feedback(id):
         return redirect(redirect_url())
 
     if period.closed and record.student_feedback_submitted:
-        flash("It is not possible to edit your feedback once it has been submitted", "info")
+        flash(
+            "It is not possible to edit your feedback once it has been submitted",
+            "info",
+        )
         return redirect(redirect_url())
 
     form = StudentFeedbackForm(request.form)
@@ -1117,7 +1303,10 @@ def submit_feedback(id):
         return redirect(redirect_url())
 
     if record.retired:
-        flash("It is no longer possible to submit feedback for this submission because it belongs to a previous academic year.", "info")
+        flash(
+            "It is no longer possible to submit feedback for this submission because it belongs to a previous academic year.",
+            "info",
+        )
         return redirect(redirect_url())
 
     config = record.owner.config
@@ -1149,12 +1338,17 @@ def set_availability(assessment_id, submitter_id):
         return redirect(redirect_url())
 
     assessment = PresentationAssessment.query.get_or_404(assessment_id)
-    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(submitter_id)
+    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(
+        submitter_id
+    )
 
     owner: SubmittingStudent = submission_record.owner
 
     if not owner.student.id == current_user.id:
-        flash("You do not have permission to set availability for this assessment.", "error")
+        flash(
+            "You do not have permission to set availability for this assessment.",
+            "error",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -1165,14 +1359,26 @@ def set_availability(assessment_id, submitter_id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability:
-        flash("Cannot set availability for this assessment because it has not yet been opened", "info")
+        flash(
+            "Cannot set availability for this assessment because it has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.availability_closed:
-        flash("Cannot set availability for this assessment because it has been closed", "info")
+        flash(
+            "Cannot set availability for this assessment because it has been closed",
+            "info",
+        )
         return redirect(redirect_url())
 
-    return render_template_context("student/set_availability.html", assessment=assessment, submitter=submission_record, url=url, text=text)
+    return render_template_context(
+        "student/set_availability.html",
+        assessment=assessment,
+        submitter=submission_record,
+        url=url,
+        text=text,
+    )
 
 
 @student.route("/set_available/<int:session_id>/<int:submitter_id>")
@@ -1183,12 +1389,17 @@ def set_available(session_id, submitter_id):
 
     session: PresentationSession = PresentationSession.query.get_or_404(session_id)
     assessment: PresentationAssessment = session.owner
-    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(submitter_id)
+    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(
+        submitter_id
+    )
 
     owner: SubmittingStudent = submission_record.owner
 
     if not owner.student.id == current_user.id:
-        flash("You do not have permission to set availability for this assessment.", "error")
+        flash(
+            "You do not have permission to set availability for this assessment.",
+            "error",
+        )
         return redirect(redirect_url())
 
     current_year = get_current_year()
@@ -1196,11 +1407,17 @@ def set_available(session_id, submitter_id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot set availability for this assessment because availability collection has not yet been opened", "info")
+        flash(
+            "Cannot set availability for this assessment because availability collection has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.availability_closed:
-        flash("Cannot set availability for this session because its parent assessment has been closed", "info")
+        flash(
+            "Cannot set availability for this session because its parent assessment has been closed",
+            "info",
+        )
         return redirect(redirect_url())
 
     session.submitter_make_available(submission_record)
@@ -1210,7 +1427,10 @@ def set_available(session_id, submitter_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes due to a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1223,12 +1443,17 @@ def set_unavailable(session_id, submitter_id):
 
     session: PresentationSession = PresentationSession.query.get_or_404(session_id)
     assessment: PresentationAssessment = session.owner
-    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(submitter_id)
+    submission_record: SubmissionRecord = SubmissionRecord.query.get_or_404(
+        submitter_id
+    )
 
     owner: SubmittingStudent = submission_record.owner
 
     if not owner.student.id == current_user.id:
-        flash("You do not have permission to set availability for this assessment.", "error")
+        flash(
+            "You do not have permission to set availability for this assessment.",
+            "error",
+        )
         return redirect(redirect_url())
 
     current_year = get_current_year()
@@ -1236,11 +1461,17 @@ def set_unavailable(session_id, submitter_id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot set availability for this assessment because availability collection has not yet been opened", "info")
+        flash(
+            "Cannot set availability for this assessment because availability collection has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.availability_closed:
-        flash("Cannot set availability for this session because its parent assessment has been closed", "info")
+        flash(
+            "Cannot set availability for this session because its parent assessment has been closed",
+            "info",
+        )
         return redirect(redirect_url())
 
     session.submitter_make_unavailable(submission_record)
@@ -1250,7 +1481,10 @@ def set_unavailable(session_id, submitter_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes due to a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1278,7 +1512,9 @@ def settings():
 
         return home_dashboard()
 
-    return render_template_context("student/settings.html", settings_form=form, user=user)
+    return render_template_context(
+        "student/settings.html", settings_form=form, user=user
+    )
 
 
 @student.route("/timeline/<int:student_id>")
@@ -1290,17 +1526,26 @@ def timeline(student_id):
     """
 
     if current_user.has_role("student") and student_id != current_user.id:
-        flash("It is only possible to view the project timeline for your own account.", "info")
+        flash(
+            "It is only possible to view the project timeline for your own account.",
+            "info",
+        )
         return redirect(redirect_url())
 
     user = User.query.get_or_404(student_id)
 
     if not user.has_role("student"):
-        flash("It is only possible to view project timelines for a student account.", "info")
+        flash(
+            "It is only possible to view project timelines for a student account.",
+            "info",
+        )
         return redirect(redirect_url())
 
     if user.student_data is None:
-        flash("Cannot display project timeline for this student account because the corresponding StudentData record is missing.", "error")
+        flash(
+            "Cannot display project timeline for this student account because the corresponding StudentData record is missing.",
+            "error",
+        )
         return redirect(redirect_url())
 
     data = user.student_data

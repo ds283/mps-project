@@ -47,8 +47,11 @@ def add_student_ranking(projects, sel):
         {
             "project": render_template_string(_project, sel=sel, proj=project),
             "owner": {
-                "display": render_template_string(_owner, project=project, simple_label=simple_label),
-                "sortvalue": project.owner.user.last_name + project.owner.user.first_name,
+                "display": render_template_string(
+                    _owner, project=project, simple_label=simple_label
+                ),
+                "sortvalue": project.owner.user.last_name
+                + project.owner.user.first_name,
             },
             "actions": render_template_string(_actions, sel=sel, project=project),
         }

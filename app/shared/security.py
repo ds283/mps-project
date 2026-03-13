@@ -19,10 +19,16 @@ def validate_nonce(nonce: bytes):
     if db.session.query(BackupRecord).filter_by(nonce=base64_nonce).first() is not None:
         return False
 
-    if db.session.query(GeneratedAsset).filter_by(nonce=base64_nonce).first() is not None:
+    if (
+            db.session.query(GeneratedAsset).filter_by(nonce=base64_nonce).first()
+            is not None
+    ):
         return False
 
-    if db.session.query(SubmittedAsset).filter_by(nonce=base64_nonce).first() is not None:
+    if (
+            db.session.query(SubmittedAsset).filter_by(nonce=base64_nonce).first()
+            is not None
+    ):
         return False
 
     return True

@@ -12,7 +12,14 @@ from functools import partial
 from typing import List
 
 from flask_security.forms import Form
-from wtforms import StringField, IntegerField, SelectField, SubmitField, TextAreaField, BooleanField
+from wtforms import (
+    StringField,
+    IntegerField,
+    SelectField,
+    SubmitField,
+    TextAreaField,
+    BooleanField,
+)
 from wtforms.validators import InputRequired, Optional, Length, ValidationError
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
@@ -46,10 +53,22 @@ from ..shared.forms.queries import (
     BuildTagGroup,
 )
 from ..shared.forms.widgets import GroupedTagSelectField
-from ..shared.forms.wtf_validators import globally_unique_project, unique_or_original_project, project_unique_label, project_unique_or_original_label
+from ..shared.forms.wtf_validators import (
+    globally_unique_project,
+    unique_or_original_project,
+    project_unique_label,
+    project_unique_or_original_label,
+)
 
 
-def ProjectMixinFactory(allowed_tenants, convenor_editing: bool, uses_tags: bool, uses_research_groups: bool, project_classes_qf, group_qf):
+def ProjectMixinFactory(
+        allowed_tenants,
+        convenor_editing: bool,
+        uses_tags: bool,
+        uses_research_groups: bool,
+        project_classes_qf,
+        group_qf,
+):
     class ProjectMixin:
         if convenor_editing:
             # convenors can assign projects to any owner; ordinary faculty membes can only edit their own
@@ -73,7 +92,9 @@ def ProjectMixinFactory(allowed_tenants, convenor_editing: bool, uses_tags: bool
             @staticmethod
             def validate_owner(form, field):
                 if field.data is None and not form.generic.data:
-                    raise ValidationError("This project is not marked as generic. Please assign an owner.")
+                    raise ValidationError(
+                        "This project is not marked as generic. Please assign an owner."
+                    )
 
         if uses_tags:
             get_tags = partial(GetActiveTags, allowed_tenants=allowed_tenants)
@@ -109,7 +130,9 @@ def ProjectMixinFactory(allowed_tenants, convenor_editing: bool, uses_tags: bool
                         if not found:
                             raise ValidationError(
                                 "Projects attached to class '{cl}' must be tagged with at least "
-                                "one tag from the group '{group}'".format(cl=pclass.name, group=group.name)
+                                "one tag from the group '{group}'".format(
+                                    cl=pclass.name, group=group.name
+                                )
                             )
 
         if uses_research_groups:
@@ -162,7 +185,12 @@ def ProjectMixinFactory(allowed_tenants, convenor_editing: bool, uses_tags: bool
 
         # project options
 
-        meeting_reqd = SelectField("Meeting required?", choices=Project.MEETING_OPTIONS, coerce=int, description="Not used for generic projects.")
+        meeting_reqd = SelectField(
+            "Meeting required?",
+            choices=Project.MEETING_OPTIONS,
+            coerce=int,
+            description="Not used for generic projects.",
+        )
 
         enforce_capacity = BooleanField(
             "Enforce maximum capacity",
@@ -207,14 +235,29 @@ def ProjectMixinFactory(allowed_tenants, convenor_editing: bool, uses_tags: bool
     return ProjectMixin
 
 
-def AddProjectFormFactory(allowed_tenants: List[Tenant], convenor_editing=False, uses_tags=True, uses_research_groups=True):
-    Mixin = ProjectMixinFactory(allowed_tenants, convenor_editing, uses_tags, uses_research_groups,
-                                AllProjectClasses if convenor_editing else CurrentUserProjectClasses,
-                                AllResearchGroups if convenor_editing else CurrentUserResearchGroups)
+def AddProjectFormFactory(
+        allowed_tenants: List[Tenant],
+        convenor_editing=False,
+        uses_tags=True,
+        uses_research_groups=True,
+):
+    Mixin = ProjectMixinFactory(
+        allowed_tenants,
+        convenor_editing,
+        uses_tags,
+        uses_research_groups,
+        AllProjectClasses if convenor_editing else CurrentUserProjectClasses,
+        AllResearchGroups if convenor_editing else CurrentUserResearchGroups,
+    )
 
     class AddProjectForm(Form, Mixin):
         name = StringField(
-            "Title", validators=[InputRequired(message="Project title is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_project]
+            "Title",
+            validators=[
+                InputRequired(message="Project title is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+                globally_unique_project,
+            ],
         )
 
         submit = SubmitField("Next: Project descriptions")
@@ -226,14 +269,29 @@ def AddProjectFormFactory(allowed_tenants: List[Tenant], convenor_editing=False,
     return AddProjectForm
 
 
-def EditProjectFormFactory(allowed_tenants: List[Tenant], convenor_editing=False, uses_tags=True, uses_research_groups=True):
-    Mixin = ProjectMixinFactory(allowed_tenants, convenor_editing, uses_tags, uses_research_groups,
-                                AllProjectClasses if convenor_editing else CurrentUserProjectClasses,
-                                AllResearchGroups if convenor_editing else CurrentUserResearchGroups)
+def EditProjectFormFactory(
+        allowed_tenants: List[Tenant],
+        convenor_editing=False,
+        uses_tags=True,
+        uses_research_groups=True,
+):
+    Mixin = ProjectMixinFactory(
+        allowed_tenants,
+        convenor_editing,
+        uses_tags,
+        uses_research_groups,
+        AllProjectClasses if convenor_editing else CurrentUserProjectClasses,
+        AllResearchGroups if convenor_editing else CurrentUserResearchGroups,
+    )
 
     class EditProjectForm(Form, Mixin, SaveChangesMixin):
         name = StringField(
-            "Title", validators=[InputRequired(message="Project title is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_project]
+            "Title",
+            validators=[
+                InputRequired(message="Project title is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+                unique_or_original_project,
+            ],
         )
 
         save_and_preview = SubmitField("Save changes and preview")
@@ -245,7 +303,9 @@ def DescriptionSettingsMixinFactory(query_factory):
     class DescriptionSettingsMixin:
         # allow the project_class list to be empty (but then the project is not offered)
         project_classes = QuerySelectMultipleField(
-            "For which project types should this description be made available?", query_factory=query_factory, get_label="name"
+            "For which project types should this description be made available?",
+            query_factory=query_factory,
+            get_label="name",
         )
 
         capacity = IntegerField(
@@ -258,7 +318,11 @@ def DescriptionSettingsMixinFactory(query_factory):
         )
 
         # allow team to be empty (but then the project is not offered)
-        team = QuerySelectMultipleField("Who will be part of the supervisory team?", query_factory=GetSupervisorRoles, get_label="name")
+        team = QuerySelectMultipleField(
+            "Who will be part of the supervisory team?",
+            query_factory=GetSupervisorRoles,
+            get_label="name",
+        )
 
         aims = TextAreaField(
             "Aims",
@@ -298,13 +362,17 @@ class DescriptionContentMixin:
 
 
 def AddDescriptionFormFactory(project_id):
-    Mixin = DescriptionSettingsMixinFactory(partial(AvailableProjectDescriptionClasses, project_id, None))
+    Mixin = DescriptionSettingsMixinFactory(
+        partial(AvailableProjectDescriptionClasses, project_id, None)
+    )
 
     class AddDescriptionForm(Form, Mixin):
         label = StringField(
             "Label",
             validators=[
-                InputRequired(message="Please enter a label to identify this description"),
+                InputRequired(
+                    message="Please enter a label to identify this description"
+                ),
                 Length(max=DEFAULT_STRING_LENGTH),
                 project_unique_label,
             ],
@@ -317,13 +385,17 @@ def AddDescriptionFormFactory(project_id):
 
 
 def EditDescriptionSettingsFormFactory(project_id, desc_id):
-    Mixin = DescriptionSettingsMixinFactory(partial(AvailableProjectDescriptionClasses, project_id, desc_id))
+    Mixin = DescriptionSettingsMixinFactory(
+        partial(AvailableProjectDescriptionClasses, project_id, desc_id)
+    )
 
     class EditDescriptionForm(Form, Mixin, SaveChangesMixin):
         label = StringField(
             "Label",
             validators=[
-                InputRequired(message="Please enter a label to identify this description"),
+                InputRequired(
+                    message="Please enter a label to identify this description"
+                ),
                 Length(max=DEFAULT_STRING_LENGTH),
                 project_unique_or_original_label,
             ],
@@ -345,16 +417,23 @@ def MoveDescriptionFormFactory(user_id, project_id, pclass_id=None):
 
     class MoveDescriptionForm(Form, SaveChangesMixin):
         # field for destination project
-        destination = QuerySelectField("Move this description to project", query_factory=qf, get_label="name")
+        destination = QuerySelectField(
+            "Move this description to project", query_factory=qf, get_label="name"
+        )
 
         # optionally leave a copy of the description attached to this project
-        copy = BooleanField("Leave a copy of the description attached to its current project", default=False)
+        copy = BooleanField(
+            "Leave a copy of the description attached to its current project",
+            default=False,
+        )
 
     return MoveDescriptionForm
 
 
 class SkillSelectorMixin:
-    selector = QuerySelectField("Skill group", query_factory=GetSkillGroups, get_label="name")
+    selector = QuerySelectField(
+        "Skill group", query_factory=GetSkillGroups, get_label="name"
+    )
 
 
 class SkillSelectorForm(Form, SkillSelectorMixin):
@@ -364,13 +443,21 @@ class SkillSelectorForm(Form, SkillSelectorMixin):
 def DescriptionSelectorMixinFactory(show_selector, query_factory):
     class DescriptionSelectorMixin:
         if show_selector:
-            selector = QuerySelectField("Show project preview for", query_factory=query_factory, get_label="name")
+            selector = QuerySelectField(
+                "Show project preview for",
+                query_factory=query_factory,
+                get_label="name",
+            )
 
     return DescriptionSelectorMixin
 
 
 class CommentMixin:
-    comment = TextAreaField("Post a new comment", render_kw={"rows": 5}, validators=[InputRequired(message="You cannot post an empty comment")])
+    comment = TextAreaField(
+        "Post a new comment",
+        render_kw={"rows": 5},
+        validators=[InputRequired(message="You cannot post an empty comment")],
+    )
 
     limit_visibility = BooleanField("Limit visibility to approvals team")
 
@@ -378,7 +465,9 @@ class CommentMixin:
 
 
 def FacultyPreviewFormFactory(project_id, show_selector):
-    SelectorMixin = DescriptionSelectorMixinFactory(show_selector, partial(ProjectDescriptionClasses, project_id))
+    SelectorMixin = DescriptionSelectorMixinFactory(
+        show_selector, partial(ProjectDescriptionClasses, project_id)
+    )
 
     class DescriptionSelectorForm(Form, SelectorMixin, CommentMixin):
         pass
@@ -425,7 +514,11 @@ def FacultySettingsFormFactory(user=None, current_user=None, enable_canvas=False
         DefaultLicenseMixin,
     ):
         if current_user is not None and current_user.has_role("root", skip_mask=True):
-            mask_roles = QuerySelectMultipleField("Temporarily mask roles", query_factory=partial(GetMaskableRoles, user.id), get_label="name")
+            mask_roles = QuerySelectMultipleField(
+                "Temporarily mask roles",
+                query_factory=partial(GetMaskableRoles, user.id),
+                get_label="name",
+            )
 
     return FacultySettingsForm
 

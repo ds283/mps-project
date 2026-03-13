@@ -122,12 +122,27 @@ def outstanding_confirm_data(config, url=None, text=None):
     data = [
         {
             "name": {
-                "display": render_template_string(_name, u=f.user, f=f, config=config, pclass=config.project_class, simple_label=simple_label),
+                "display": render_template_string(
+                    _name,
+                    u=f.user,
+                    f=f,
+                    config=config,
+                    pclass=config.project_class,
+                    simple_label=simple_label,
+                ),
                 "sortstring": f.user.last_name + f.user.first_name,
             },
-            "email": '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(em=f.user.email),
+            "email": '<a class="text-decoration-none" href="mailto:{em}">{em}</a>'.format(
+                em=f.user.email
+            ),
             "projects": render_template_string(
-                _projects, f=f, config=config, pclass=config.project_class, url=url, text=text, simple_label=simple_label
+                _projects,
+                f=f,
+                config=config,
+                pclass=config.project_class,
+                url=url,
+                text=text,
+                simple_label=simple_label,
             ),
             "menu": render_template_string(_menu, config=config, f=f),
         }

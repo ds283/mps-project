@@ -94,9 +94,20 @@ def schedule_view_faculty(assessors, record, url=None, text=None):
 
     data = [
         {
-            "name": {"display": render_template_string(_name, a=a), "sortstring": a.faculty.user.last_name + a.faculty.user.first_name},
+            "name": {
+                "display": render_template_string(_name, a=a),
+                "sortstring": a.faculty.user.last_name + a.faculty.user.first_name,
+            },
             "sessions": {
-                "display": render_template_string(_sessions, a=a, slots=slots, rec=record, back_url=url, back_text=text, simple_label=simple_label),
+                "display": render_template_string(
+                    _sessions,
+                    a=a,
+                    slots=slots,
+                    rec=record,
+                    back_url=url,
+                    back_text=text,
+                    simple_label=simple_label,
+                ),
                 "sortvalue": len(slots),
             },
             "availability": render_template_string(_availability, a=a),

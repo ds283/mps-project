@@ -10,4 +10,4 @@
 
 import os
 
-RATELIMIT_STORAGE_URI = os.environ.get('RATELIMIT_REDIS_URI')
+RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_REDIS_URI")

@@ -20,7 +20,9 @@ from ...models import (
     ProjectDescription,
     User,
     ProjectClassConfig,
-    ProjectLike, ProjectLikeList, ProjectDescLikeList,
+    ProjectLike,
+    ProjectLikeList,
+    ProjectDescLikeList,
 )
 
 # language=jinja2
@@ -534,7 +536,9 @@ def build_data(
     simple_label = get_template_attribute("labels.html", "simple_label")
     truncate = get_template_attribute("macros.html", "truncate")
 
-    error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
+    error_block_popover = get_template_attribute(
+        "error_block.html", "error_block_popover"
+    )
 
     name_templ: Template = _build_name_templ()
     owner_templ: Template = _build_owner_templ()
@@ -544,26 +548,47 @@ def build_data(
     affiliation_templ: Template = _build_affiliation_templ()
     prefer_templ: Template = _build_prefer_templ()
     skills_templ: Template = _build_skills_templ()
-    menu_templ: Template = _build_menu_templ(menu_template) if menu_template is not None else None
+    menu_templ: Template = (
+        _build_menu_templ(menu_template) if menu_template is not None else None
+    )
 
     selector_lifecycle = config.selector_lifecycle if config is not None else None
     waiting_confirmations = (
-        selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS if selector_lifecycle is not None else False
+        selector_lifecycle
+        == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
+        if selector_lifecycle is not None
+        else False
     )
 
     def _process(p: ProjectLike, d: Optional[ProjectDescription]):
         if config is not None and not p.generic and p.owner is not None:
-            e = db.session.query(EnrollmentRecord).filter_by(owner_id=current_user.id, pclass_id=config.pclass_id).first()
+            e = (
+                db.session.query(EnrollmentRecord)
+                .filter_by(owner_id=current_user.id, pclass_id=config.pclass_id)
+                .first()
+            )
         else:
             e = None
 
         if d is None and config is not None:
             d = p.get_description(config.pclass_id)
 
-        is_running = (p.running_counterpart(config.id) is not None) if config is not None else False
+        is_running = (
+            (p.running_counterpart(config.id) is not None)
+            if config is not None
+            else False
+        )
 
-        in_selector = (p.selector_live_counterpart(config.id) is not None) if config is not None else False
-        in_submitter = (p.submitter_live_counterpart(config.id) is not None) if config is not None else False
+        in_selector = (
+            (p.selector_live_counterpart(config.id) is not None)
+            if config is not None
+            else False
+        )
+        in_submitter = (
+            (p.submitter_live_counterpart(config.id) is not None)
+            if config is not None
+            else False
+        )
 
         data = {
             "name": render_template(
@@ -593,9 +618,18 @@ def build_data(
             ),
             "pclasses": render_template(pclasses_templ, project=p),
             "meeting": render_template(meetingreqd_templ, project=p),
-            "group": render_template(affiliation_templ, project=p, simple_label=simple_label, truncate=truncate),
-            "prefer": render_template(prefer_templ, project=p, simple_label=simple_label),
-            "skills": render_template(skills_templ, skills=p.ordered_skills, simple_label=simple_label),
+            "group": render_template(
+                affiliation_templ,
+                project=p,
+                simple_label=simple_label,
+                truncate=truncate,
+            ),
+            "prefer": render_template(
+                prefer_templ, project=p, simple_label=simple_label
+            ),
+            "skills": render_template(
+                skills_templ, skills=p.ordered_skills, simple_label=simple_label
+            ),
         }
 
         if menu_templ is not None:
@@ -609,7 +643,9 @@ def build_data(
                         pclass_id=config.pclass_id if config is not None else None,
                         in_selector=in_selector,
                         in_submitter=in_submitter,
-                        select_in_previous_cycle=config.select_in_previous_cycle if config is not None else True,
+                        select_in_previous_cycle=config.select_in_previous_cycle
+                        if config is not None
+                        else True,
                         text=text,
                         url=url,
                     ),
@@ -618,4 +654,9 @@ def build_data(
 
         return data
 
-    return [_process(p=p[0], d=p[1]) if (isinstance(p, Row) or isinstance(p, tuple)) else _process(p=p, d=None) for p in projects]
+    return [
+        _process(p=p[0], d=p[1])
+        if (isinstance(p, Row) or isinstance(p, tuple))
+        else _process(p=p, d=None)
+        for p in projects
+    ]

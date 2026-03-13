@@ -33,20 +33,32 @@ def get_backup_config():
     if num == 0:
         # no configuration record is present; generate a default and
         # allow exceptions to propagate up to caller (we have no sensible way to handle them here)
-        data: BackupConfiguration = BackupConfiguration(keep_hourly=7, keep_daily=2, limit=None, last_changed=datetime.now())
+        data: BackupConfiguration = BackupConfiguration(
+            keep_hourly=7, keep_daily=2, limit=None, last_changed=datetime.now()
+        )
         db.session.add(data)
         db.session.commit()
 
     elif num > 1:
         # remove all but most-recently-edited configuration
-        keep_id = db.session.query(BackupConfiguration.id).order_by(BackupConfiguration.last_changed.desc()).scalar()
+        keep_id = (
+            db.session.query(BackupConfiguration.id)
+            .order_by(BackupConfiguration.last_changed.desc())
+            .scalar()
+        )
 
         BackupConfiguration.query().filter(~BackupConfiguration.id == keep_id).delete()
         db.session.commit()
 
     config: BackupConfiguration = db.session.query(BackupConfiguration).one()
 
-    return config.keep_hourly, config.keep_daily, (config.limit, config.units), config.backup_max, config.last_changed
+    return (
+        config.keep_hourly,
+        config.keep_daily,
+        (config.limit, config.units),
+        config.backup_max,
+        config.last_changed,
+    )
 
 
 def set_backup_config(keep_hourly, keep_daily, limit, units):
@@ -62,7 +74,11 @@ def set_backup_config(keep_hourly, keep_daily, limit, units):
         # no configuration record is present; generate a default and allow exceptions to propagate
         # back up to caller (we have no sensible way to handle them here)
         data: BackupConfiguration = BackupConfiguration(
-            keep_hourly=keep_hourly, keep_daily=keep_daily, limit=limit, units=units, last_changed=datetime.now()
+            keep_hourly=keep_hourly,
+            keep_daily=keep_daily,
+            limit=limit,
+            units=units,
+            last_changed=datetime.now(),
         )
         db.session.add(data)
         db.session.commit()
@@ -70,10 +86,16 @@ def set_backup_config(keep_hourly, keep_daily, limit, units):
 
     elif num > 1:
         # remove all but most-recently-edited configuration
-        keep_id = db.session.query(BackupConfiguration.id).order_by(BackupConfiguration.last_changed.desc()).scalar()
+        keep_id = (
+            db.session.query(BackupConfiguration.id)
+            .order_by(BackupConfiguration.last_changed.desc())
+            .scalar()
+        )
 
         try:
-            BackupConfiguration.query().filter(~BackupConfiguration.id == keep_id).delete()
+            BackupConfiguration.query().filter(
+                ~BackupConfiguration.id == keep_id
+            ).delete()
             db.session.commit()
 
         except SQLAlchemyError as e:
@@ -125,7 +147,12 @@ def remove_backup(id):
         return False, f"backup #{id} is locked and cannot be deleted"
 
     object_store = current_app.config.get("OBJECT_STORAGE_BACKUP")
-    storage = AssetCloudAdapter(record, object_store, audit_data=f"remove_backup (backup id #{id})", size_attr="archive_size")
+    storage = AssetCloudAdapter(
+        record,
+        object_store,
+        audit_data=f"remove_backup (backup id #{id})",
+        size_attr="archive_size",
+    )
 
     # delete database record first; if this succeeds but the storage deletion doesn't, then the stored
     # file will be orphaned and hopefully will be picked up by garbage collection. This is better than the
@@ -154,12 +181,20 @@ def create_new_backup_labels(form):
     if len(unmatched) > 0:
         now = datetime.now()
         for label in unmatched:
-            new_label = BackupLabel(name=label, colour=None, creator_id=current_user.id, creation_timestamp=now)
+            new_label = BackupLabel(
+                name=label,
+                colour=None,
+                creator_id=current_user.id,
+                creation_timestamp=now,
+            )
             try:
                 db.session.add(new_label)
                 matched.append(new_label)
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                flash(f'Could not add newly defined label "{label}" due to a database error. Please contact a system administrator.', "error")
+                flash(
+                    f'Could not add newly defined label "{label}" due to a database error. Please contact a system administrator.',
+                    "error",
+                )
 
     return matched

@@ -71,13 +71,31 @@ def enrol_submitters_data(students: List[StudentData], config):
 
     data = [
         {
-            "name": {"display": s.user.name, "sortstring": s.user.last_name + s.user.first_name},
+            "name": {
+                "display": s.user.name,
+                "sortstring": s.user.last_name + s.user.first_name,
+            },
             "userid": s.user.username,
-            "programme": render_template(programme_templ, s=s, simple_label=simple_label),
-            "cohort": {"display": render_template(cohort_templ, s=s, simple_label=simple_label), "sortvalue": s.cohort},
+            "programme": render_template(
+                programme_templ, s=s, simple_label=simple_label
+            ),
+            "cohort": {
+                "display": render_template(
+                    cohort_templ, s=s, simple_label=simple_label
+                ),
+                "sortvalue": s.cohort,
+            },
             "acadyear": {
-                "display": render_template(academic_year_templ, s=s, config=config, current_year=current_year, simple_label=simple_label),
-                "sortvalue": s.compute_academic_year(desired_year=config.year, current_year=current_year),
+                "display": render_template(
+                    academic_year_templ,
+                    s=s,
+                    config=config,
+                    current_year=current_year,
+                    simple_label=simple_label,
+                ),
+                "sortvalue": s.compute_academic_year(
+                    desired_year=config.year, current_year=current_year
+                ),
             },
             "actions": render_template(enrol_templ, s=s, config=config),
         }

@@ -10,6 +10,7 @@
 
 from flask import current_app
 
+
 # for encrypted fields, extract encryption key from configuration variables
 def get_AES_key():
     return current_app.config["SQLACHEMY_AES_KEY"]

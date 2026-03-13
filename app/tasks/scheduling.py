@@ -45,7 +45,8 @@ from ..models import (
     LiveProject,
     ResearchGroup,
     ProjectClassConfig,
-    SubmissionRole, DownloadCentreItem,
+    SubmissionRole,
+    DownloadCentreItem,
     EmailTemplate,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
@@ -67,7 +68,9 @@ NumberToTalkMap = Dict[int, int]
 TalkDictMap = Dict[int, SubmissionRecord]
 
 
-def _enumerate_talks(schedule: ScheduleAttempt, read_serialized: bool = False) -> Tuple[int, TalkToNumberMap, NumberToTalkMap, TalkDictMap]:
+def _enumerate_talks(
+        schedule: ScheduleAttempt, read_serialized: bool = False
+) -> Tuple[int, TalkToNumberMap, NumberToTalkMap, TalkDictMap]:
     # schedule is a ScheduleAttempt instance
     talk_to_number: TalkToNumberMap = {}
     number_to_talk: NumberToTalkMap = {}
@@ -79,12 +82,18 @@ def _enumerate_talks(schedule: ScheduleAttempt, read_serialized: bool = False) -
     # be scheduled into the make-up event.
     if not read_serialized:
         if len(schedule.owner.schedulable_talks) == 0:
-            raise RuntimeError(f'No schedulable talks found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")')
+            raise RuntimeError(
+                f'No schedulable talks found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")'
+            )
 
         talks = enumerate(schedule.owner.schedulable_talks)
 
     else:
-        talk_data = db.session.query(ScheduleEnumeration).filter_by(category=ScheduleEnumeration.SUBMITTER, schedule_id=schedule.id).subquery()
+        talk_data = (
+            db.session.query(ScheduleEnumeration)
+            .filter_by(category=ScheduleEnumeration.SUBMITTER, schedule_id=schedule.id)
+            .subquery()
+        )
         talks = (
             db.session.query(talk_data.c.enumeration, SubmissionRecord)
             .select_from(SubmissionRecord)
@@ -115,16 +124,24 @@ def _enumerate_assessors(schedule: ScheduleAttempt, read_serialized: bool = Fals
     # one for each assessor who has been invited to attend
     if not read_serialized:
         if len(schedule.owner.ordered_assessors) == 0:
-            raise RuntimeError(f'No assessors found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")')
+            raise RuntimeError(
+                f'No assessors found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")'
+            )
 
         assessors = enumerate(schedule.owner.ordered_assessors)
 
     else:
-        assessor_data = db.session.query(ScheduleEnumeration).filter_by(category=ScheduleEnumeration.ASSESSOR, schedule_id=schedule.id).subquery()
+        assessor_data = (
+            db.session.query(ScheduleEnumeration)
+            .filter_by(category=ScheduleEnumeration.ASSESSOR, schedule_id=schedule.id)
+            .subquery()
+        )
         assessors = (
             db.session.query(assessor_data.c.enumeration, AssessorAttendanceData)
             .select_from(AssessorAttendanceData)
-            .join(assessor_data, assessor_data.c.key == AssessorAttendanceData.faculty_id)
+            .join(
+                assessor_data, assessor_data.c.key == AssessorAttendanceData.faculty_id
+            )
             .order_by(assessor_data.c.enumeration.asc())
             .all()
         )
@@ -151,12 +168,18 @@ def _enumerate_periods(schedule: ScheduleAttempt, read_serialized: bool = False)
 
     if not read_serialized:
         if len(schedule.owner.available_periods) == 0:
-            raise RuntimeError(f'No periods found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")')
+            raise RuntimeError(
+                f'No periods found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")'
+            )
 
         periods = enumerate(schedule.owner.available_periods)
 
     else:
-        period_data = db.session.query(ScheduleEnumeration).filter_by(category=ScheduleEnumeration.PERIOD, schedule_id=schedule.id).subquery()
+        period_data = (
+            db.session.query(ScheduleEnumeration)
+            .filter_by(category=ScheduleEnumeration.PERIOD, schedule_id=schedule.id)
+            .subquery()
+        )
         periods = (
             db.session.query(period_data.c.enumeration, SubmissionPeriodRecord)
             .select_from(SubmissionPeriodRecord)
@@ -184,12 +207,18 @@ def _enumerate_slots(schedule: ScheduleAttempt, read_serialized: bool = False):
 
     if not read_serialized:
         if len(schedule.ordered_slots) == 0:
-            raise RuntimeError(f'No slots found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")')
+            raise RuntimeError(
+                f'No slots found for schedule {schedule.id} (name="{schedule.name}", assessment="{schedule.owner.name}")'
+            )
 
         slots = enumerate(schedule.ordered_slots)
 
     else:
-        slot_data = db.session.query(ScheduleEnumeration).filter_by(category=ScheduleEnumeration.SLOT, schedule_id=schedule.id).subquery()
+        slot_data = (
+            db.session.query(ScheduleEnumeration)
+            .filter_by(category=ScheduleEnumeration.SLOT, schedule_id=schedule.id)
+            .subquery()
+        )
         slots = (
             db.session.query(slot_data.c.enumeration, ScheduleSlot)
             .select_from(ScheduleSlot)
@@ -208,7 +237,9 @@ def _enumerate_slots(schedule: ScheduleAttempt, read_serialized: bool = False):
     return n + 1, slot_to_number, number_to_slot, slot_dict
 
 
-def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict) -> Tuple[AvailabilityMatrix, AvailabilityMatrix]:
+def _build_faculty_availability_matrix(
+        number_assessors, assessor_dict, number_slots, slot_dict
+) -> Tuple[AvailabilityMatrix, AvailabilityMatrix]:
     """
     Construct a dictionary mapping from (assessing-faculty, slot) pairs to yes/no availabilities,
     coded as 0 = not available, 1 = available
@@ -247,7 +278,9 @@ def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_s
     return A, C
 
 
-def _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict) -> AvailabilityMatrix:
+def _build_student_availability_matrix(
+        number_talks, talk_dict, number_slots, slot_dict
+) -> AvailabilityMatrix:
     """
     Construct a dictionary mapping from (submitting-student, slot) pairs to yes/no availabilities,
     coded a 0 = not available, 1 = available
@@ -275,7 +308,9 @@ def _build_student_availability_matrix(number_talks, talk_dict, number_slots, sl
     return B
 
 
-def _generate_minimize_objective(C: AvailabilityMatrix, X, Y, S, number_talks, number_assessors, number_slots, record):
+def _generate_minimize_objective(
+        C: AvailabilityMatrix, X, Y, S, number_talks, number_assessors, number_slots, record
+):
     """
     Generate an objective function that tries to schedule as efficiently as possible,
     with workload balancing
@@ -295,7 +330,11 @@ def _generate_minimize_objective(C: AvailabilityMatrix, X, Y, S, number_talks, n
     objective += sum(S[idx] for idx in S)
 
     # optimizer should penalize any slots that use 'if needed'
-    objective += sum(Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost)) for i in range(number_assessors) for j in range(number_slots))
+    objective += sum(
+        Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost))
+        for i in range(number_assessors)
+        for j in range(number_slots)
+    )
 
     # TODO: - minimize number of days used in schedule
     # TODO: - minimize number of rooms used in schedule
@@ -303,7 +342,9 @@ def _generate_minimize_objective(C: AvailabilityMatrix, X, Y, S, number_talks, n
     return objective
 
 
-def _generate_reschedule_objective(C, oldX, oldY, X, Y, S, number_talks, number_assessors, number_slots, record):
+def _generate_reschedule_objective(
+        C, oldX, oldY, X, Y, S, number_talks, number_assessors, number_slots, record
+):
     """
     Generate an objective function that tries to produce a feasible schedule matching oldX, oldY
     as closely as possible
@@ -340,12 +381,25 @@ def _generate_reschedule_objective(C, oldX, oldY, X, Y, S, number_talks, number_
                 objective += 1 - Y[idx]
 
     # optimizer should penalize any slots that use 'if needed'
-    objective += sum(Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost)) for i in range(number_assessors) for j in range(number_slots))
+    objective += sum(
+        Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost))
+        for i in range(number_assessors)
+        for j in range(number_slots)
+    )
 
     return objective
 
 
-def _reconstruct_XY(self, old_record, number_talks, number_assessors, number_slots, talk_to_number, assessor_to_number, slot_dict):
+def _reconstruct_XY(
+        self,
+        old_record,
+        number_talks,
+        number_assessors,
+        number_slots,
+        talk_to_number,
+        assessor_to_number,
+        slot_dict,
+):
     X = {}
     Y = {}
 
@@ -358,12 +412,16 @@ def _reconstruct_XY(self, old_record, number_talks, number_assessors, number_slo
         k = reverse_slot_dict[(slot.session_id, slot.room_id)]
 
         for talk in slot.talks:
-            if talk.id in talk_to_number:  # key might be missing if this talk has been removed; if so, just ignore
+            if (
+                    talk.id in talk_to_number
+            ):  # key might be missing if this talk has been removed; if so, just ignore
                 i = talk_to_number[talk.id]
                 X[(i, k)] = 1
 
         for assessor in slot.assessors:
-            if assessor.id in assessor_to_number:  # key might be missing if this assessor has been removed; if so, just ignore
+            if (
+                    assessor.id in assessor_to_number
+            ):  # key might be missing if this assessor has been removed; if so, just ignore
                 j = assessor_to_number[assessor.id]
                 Y[(j, k)] = 1
 
@@ -379,14 +437,27 @@ def _reconstruct_XY(self, old_record, number_talks, number_assessors, number_slo
     return X, Y
 
 
-def _forbid_unused_slots(prob, X, Y, number_assessors, number_talks, slot_dict, old_record):
+def _forbid_unused_slots(
+        prob, X, Y, number_assessors, number_talks, slot_dict, old_record
+):
     for k in slot_dict:
         slot = slot_dict[k]
 
-        present = get_count(db.session.query(ScheduleSlot).filter_by(owner_id=old_record.id, session_id=slot.session_id, room_id=slot.room_id)) > 0
+        present = (
+                get_count(
+                    db.session.query(ScheduleSlot).filter_by(
+                        owner_id=old_record.id,
+                        session_id=slot.session_id,
+                        room_id=slot.room_id,
+                    )
+                )
+                > 0
+        )
 
         if not present:
-            print(f"-- removing slot: session = {slot.session.label_as_string} {slot.room.full_name}")
+            print(
+                f"-- removing slot: session = {slot.session.label_as_string} {slot.room.full_name}"
+            )
             for i in range(number_talks):
                 prob += X[(i, k)] == 0
 
@@ -430,22 +501,38 @@ def _create_PuLP_problem(
     """
 
     print("Building PuLP problem for schedule:")
-    print(" -- {l} talks, {m} assessors, {n} slots".format(l=number_talks, m=number_assessors, n=number_slots))
+    print(
+        " -- {l} talks, {m} assessors, {n} slots".format(
+            l=number_talks, m=number_assessors, n=number_slots
+        )
+    )
 
     # generate PuLP problem
     prob = pulp.LpProblem(attempt.name, pulp.LpMinimize)
 
     # generate student-to-slot assignment matrix
     # the entries of this matrix are either 0 or 1 representing 'unassigned' or 'assigned'
-    X = pulp.LpVariable.dicts("x", itertools.product(range(number_talks), range(number_slots)), cat=pulp.LpBinary)
+    X = pulp.LpVariable.dicts(
+        "x",
+        itertools.product(range(number_talks), range(number_slots)),
+        cat=pulp.LpBinary,
+    )
 
     # generate assessor-to-slot assignment matrix
     # the entries of this matrix are either 0 or 1 representing 'unassigned' or 'assigned'
-    Y = pulp.LpVariable.dicts("y", itertools.product(range(number_assessors), range(number_slots)), cat=pulp.LpBinary)
+    Y = pulp.LpVariable.dicts(
+        "y",
+        itertools.product(range(number_assessors), range(number_slots)),
+        cat=pulp.LpBinary,
+    )
 
     # for each period, generate a 'used' variable for each slot
     # this is used to determine (a) whether a slot is in use, and (b) which period the slot corresponds to
-    S = pulp.LpVariable.dicts("s", itertools.product(range(number_periods), range(number_slots)), cat=pulp.LpBinary)
+    S = pulp.LpVariable.dicts(
+        "s",
+        itertools.product(range(number_periods), range(number_slots)),
+        cat=pulp.LpBinary,
+    )
 
     # for each assessor, generate a 'used' variable
     # this is used to bias the optimizer to spread work around so that the minimum number of
@@ -455,7 +542,11 @@ def _create_PuLP_problem(
     # for each talk and slot combination, generate a matrix to record how many assessors are drawn from the
     # corresponding assessor pool (or research group)
     # this is used to bias the optimizer to schedule students from compatible pools/groups together
-    P = pulp.LpVariable.dicts("p", itertools.product(range(number_talks), range(number_slots)), cat=pulp.LpInteger)
+    P = pulp.LpVariable.dicts(
+        "p",
+        itertools.product(range(number_talks), range(number_slots)),
+        cat=pulp.LpInteger,
+    )
 
     # variables representing maximum and minimum number of assignments
     # we use these to tension the optimization so that workload tends to be balanced
@@ -464,7 +555,9 @@ def _create_PuLP_problem(
 
     # OBJECTIVE FUNCTION
 
-    objective = make_objective(X, Y, S, number_talks, number_assessors, number_slots, attempt)
+    objective = make_objective(
+        X, Y, S, number_talks, number_assessors, number_slots, attempt
+    )
     prob += objective, "objective function"
 
     # keep track of how many constraints we generate
@@ -502,7 +595,14 @@ def _create_PuLP_problem(
     # (corresponding to running different Zoom calls with different assessors)
     for session in attempt.owner.sessions:
         for j in range(number_assessors):
-            prob += sum(Y[(j, k)] for k in range(number_slots) if slot_dict[k].session_id == session.id) <= attempt.assessor_multiplicity_per_session
+            prob += (
+                    sum(
+                        Y[(j, k)]
+                        for k in range(number_slots)
+                        if slot_dict[k].session_id == session.id
+                    )
+                    <= attempt.assessor_multiplicity_per_session
+            )
             constraints += 1
 
     # number of times each faculty member is scheduled should fall below the hard limit, or the
@@ -513,9 +613,13 @@ def _create_PuLP_problem(
                 '-- overwriting default assignment limit for assessor "{name}" with limit = '
                 "{lim}".format(name=assessor_dict[j].user.name, lim=assessor_limits[j])
             )
-            prob += sum(Y[(j, k)] for k in range(number_slots)) <= int(assessor_limits[j])
+            prob += sum(Y[(j, k)] for k in range(number_slots)) <= int(
+                assessor_limits[j]
+            )
         else:
-            prob += sum(Y[(j, k)] for k in range(number_slots)) <= int(attempt.assessor_assigned_limit)
+            prob += sum(Y[(j, k)] for k in range(number_slots)) <= int(
+                attempt.assessor_assigned_limit
+            )
         constraints += 1
 
     # if an assessor is scheduled in any slot, their occupation variable is allowed to become 1, otherwise
@@ -553,9 +657,15 @@ def _create_PuLP_problem(
         allowed_assessors = set()
         for j in range(number_assessors):
             assessor: FacultyData = assessor_dict[j]
-            enrolment: EnrollmentRecord = assessor.get_enrollment_record(config.pclass_id)
+            enrolment: EnrollmentRecord = assessor.get_enrollment_record(
+                config.pclass_id
+            )
 
-            if enrolment is not None and enrolment.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED:
+            if (
+                    enrolment is not None
+                    and enrolment.presentations_state
+                    == EnrollmentRecord.PRESENTATIONS_ENROLLED
+            ):
                 allowed_assessors.add(j)
 
         # if slot k is assigned to period m, then the sum of the assessor set should at least equal the expected
@@ -572,7 +682,10 @@ def _create_PuLP_problem(
 
     for k in range(number_slots):
         prob += sum([Y[(j, k)] for j in range(number_assessors)]) == sum(
-            [S[(m, k)] * int(period_dict[m].number_assessors) for m in range(number_periods)]
+            [
+                S[(m, k)] * int(period_dict[m].number_assessors)
+                for m in range(number_periods)
+            ]
         )
         constraints += 1
 
@@ -597,7 +710,9 @@ def _create_PuLP_problem(
 
             talk_set = sum(X[(i, k)] for i in allowed_talks)
 
-            max_capacity = min(room_capacity - int(period.number_assessors), int(period.max_group_size))
+            max_capacity = min(
+                room_capacity - int(period.number_assessors), int(period.max_group_size)
+            )
 
             prob += talk_set <= S[(m, k)] * max_capacity
             constraints += 1
@@ -634,7 +749,9 @@ def _create_PuLP_problem(
         nonlocal prob, constraints, objective
 
         if mode not in ["all", "one"]:
-            raise RuntimeError("Unknown assessor objective mode in _make_assessor_objective()")
+            raise RuntimeError(
+                "Unknown assessor objective mode in _make_assessor_objective()"
+            )
 
         talk: SubmissionRecord = talk_dict[i]
 
@@ -672,7 +789,9 @@ def _create_PuLP_problem(
 
     def _make_assessor_objective_pool(i, mode: str):
         if mode not in ["all", "one"]:
-            raise RuntimeError("Unknown assessor objective mode in _make_assessor_objective_pool()")
+            raise RuntimeError(
+                "Unknown assessor objective mode in _make_assessor_objective_pool()"
+            )
 
         def _not_available_predicate(talk: SubmissionRecord, assessor: FacultyData):
             # don't need to check enrolment status because that is enforced as part of the "TALKS" group above
@@ -682,7 +801,9 @@ def _create_PuLP_problem(
 
     def _make_assessor_objective_research_group(i, mode: str):
         if mode not in ["all", "one"]:
-            raise RuntimeError("Unknown assessor objective mode in _make_assessor_objective_research_group()")
+            raise RuntimeError(
+                "Unknown assessor objective mode in _make_assessor_objective_research_group()"
+            )
 
         def _not_available_predicate(talk: SubmissionRecord, assessor: FacultyData):
             # don't need to check enrolment status because that is enforced as part of the "TALKS" group above
@@ -696,7 +817,9 @@ def _create_PuLP_problem(
             if group is None:
                 return not talk.project.is_assessor(assessor.id)
 
-            return not assessor.has_affiliation(group) and not talk.project.is_assessor(assessor.id)
+            return not assessor.has_affiliation(group) and not talk.project.is_assessor(
+                assessor.id
+            )
 
         return _make_assessor_objective(i, mode, _not_available_predicate)
 
@@ -712,12 +835,16 @@ def _create_PuLP_problem(
         for i in range(number_talks):
             _make_assessor_objective_research_group(i, "all")
 
-    elif attempt.all_assessors_in_pool == ScheduleAttempt.AT_LEAST_ONE_IN_RESEARCH_GROUP:
+    elif (
+            attempt.all_assessors_in_pool == ScheduleAttempt.AT_LEAST_ONE_IN_RESEARCH_GROUP
+    ):
         for i in range(number_talks):
             _make_assessor_objective_research_group(i, "one")
 
     else:
-        raise RuntimeError("Unknown value for ScheduleAttempt.all_assessors_in_pool in _create_PuLP_problem()")
+        raise RuntimeError(
+            "Unknown value for ScheduleAttempt.all_assessors_in_pool in _create_PuLP_problem()"
+        )
 
     # TALKS CANNOT BE SCHEDULED WITH A SUPERVISOR AS AN ASSESSOR
 
@@ -748,7 +875,9 @@ def _create_PuLP_problem(
             slot_ok = True
 
             if not talk.period.has_presentation:
-                raise RuntimeError("Inconsistent presentation state in SubmissionPeriodRecord")
+                raise RuntimeError(
+                    "Inconsistent presentation state in SubmissionPeriodRecord"
+                )
 
             if talk.period.lecture_capture and not slot.room.lecture_capture:
                 slot_ok = False
@@ -775,7 +904,17 @@ def _create_PuLP_problem(
     return prob, X, Y
 
 
-def _store_PuLP_solution(X, Y, record: ScheduleAttempt, number_talks, number_assessors, number_slots, talk_dict, assessor_dict, slot_dict):
+def _store_PuLP_solution(
+        X,
+        Y,
+        record: ScheduleAttempt,
+        number_talks,
+        number_assessors,
+        number_slots,
+        talk_dict,
+        assessor_dict,
+        slot_dict,
+):
     """
     Store a solution to the talk scheduling problem
     :param X:
@@ -831,7 +970,9 @@ def _store_PuLP_solution(X, Y, record: ScheduleAttempt, number_talks, number_ass
 def _create_slots(self, record: ScheduleAttempt):
     # add database records for each available slot (meaning a combination of session+room);
     # the ones we don't use will be cleaned up later
-    print(f' -- creating slots for ScheduleAttempt {record.id} (presentation="{record.owner.name}")')
+    print(
+        f' -- creating slots for ScheduleAttempt {record.id} (presentation="{record.owner.name}")'
+    )
 
     count = 0
     for sess in record.owner.sessions:
@@ -840,13 +981,22 @@ def _create_slots(self, record: ScheduleAttempt):
 
         for room in sess.rooms:
             room: Room
-            print(f' -- ## ## creating slots for room "{room.name}", max occupancy = {room.maximum_occupancy}')
+            print(
+                f' -- ## ## creating slots for room "{room.name}", max occupancy = {room.maximum_occupancy}'
+            )
 
             if room.maximum_occupancy == 0:
-                print(f' !! WARNING: room "{room.name}" has maximum occupancy = 0 and will not be used')
+                print(
+                    f' !! WARNING: room "{room.name}" has maximum occupancy = 0 and will not be used'
+                )
 
             for s in range(0, room.maximum_occupancy):
-                slot = ScheduleSlot(owner_id=record.id, session_id=sess.id, occupancy_label=s+1, room_id=room.id)
+                slot = ScheduleSlot(
+                    owner_id=record.id,
+                    session_id=sess.id,
+                    occupancy_label=s + 1,
+                    room_id=room.id,
+                )
                 db.session.add(slot)
                 count += 1
 
@@ -857,43 +1007,75 @@ def _create_slots(self, record: ScheduleAttempt):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         raise self.retry()
     else:
-        print(f' -- created {count} slots')
+        print(f" -- created {count} slots")
 
 
 def _initialize(self, record, read_serialized=False):
-    progress_update(record.celery_id, TaskRecord.RUNNING, 5, "Collecting information...", autocommit=True)
+    progress_update(
+        record.celery_id,
+        TaskRecord.RUNNING,
+        5,
+        "Collecting information...",
+        autocommit=True,
+    )
 
     try:
         with Timer() as talk_timer:
-            number_talks, talk_to_number, number_to_talk, talk_dict = _enumerate_talks(record, read_serialized=read_serialized)
-        print(f" -- enumerated {number_talks} talks in time {talk_timer.interval:.5g} s")
-
-        with Timer() as assessor_timer:
-            number_assessors, assessor_to_number, number_to_assessor, assessor_dict, assessor_limits = _enumerate_assessors(
+            number_talks, talk_to_number, number_to_talk, talk_dict = _enumerate_talks(
                 record, read_serialized=read_serialized
             )
-        print(f" -- enumerated {number_assessors} assessors in time {assessor_timer.interval:.5g} s")
+        print(
+            f" -- enumerated {number_talks} talks in time {talk_timer.interval:.5g} s"
+        )
+
+        with Timer() as assessor_timer:
+            (
+                number_assessors,
+                assessor_to_number,
+                number_to_assessor,
+                assessor_dict,
+                assessor_limits,
+            ) = _enumerate_assessors(record, read_serialized=read_serialized)
+        print(
+            f" -- enumerated {number_assessors} assessors in time {assessor_timer.interval:.5g} s"
+        )
 
         with Timer() as periods_timer:
-            number_periods, period_to_number, number_to_period, period_dict = _enumerate_periods(record, read_serialized=read_serialized)
-        print(f" -- enumerated {number_periods} periods in time {periods_timer.interval:.5g} s")
+            number_periods, period_to_number, number_to_period, period_dict = (
+                _enumerate_periods(record, read_serialized=read_serialized)
+            )
+        print(
+            f" -- enumerated {number_periods} periods in time {periods_timer.interval:.5g} s"
+        )
 
         with Timer() as slots_timer:
-            number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(record, read_serialized=read_serialized)
-        print(f" -- enumerated {number_slots} slots in time {slots_timer.interval:.5g} s")
+            number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(
+                record, read_serialized=read_serialized
+            )
+        print(
+            f" -- enumerated {number_slots} slots in time {slots_timer.interval:.5g} s"
+        )
 
         # build faculty availability and 'ifneeded' cost matrix
         with Timer() as fac_avail_timer:
             A: AvailabilityMatrix
             C: AvailabilityMatrix
-            A, C = _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict)
-        print(f" -- computed faculty availabilities in time {fac_avail_timer.interval:.5g} s")
+            A, C = _build_faculty_availability_matrix(
+                number_assessors, assessor_dict, number_slots, slot_dict
+            )
+        print(
+            f" -- computed faculty availabilities in time {fac_avail_timer.interval:.5g} s"
+        )
 
         # build submitter availability matrix
         with Timer() as sub_avail_timer:
             B: AvailabilityMatrix
-            B = _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict)
-        print(f" -- computed submitter availabilities in time {sub_avail_timer.interval:.5g} s")
+            B = _build_student_availability_matrix(
+                number_talks, talk_dict, number_slots, slot_dict
+            )
+        print(
+            f" -- computed submitter availabilities in time {sub_avail_timer.interval:.5g} s"
+        )
 
     except SQLAlchemyError as e:
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -923,18 +1105,41 @@ def _initialize(self, record, read_serialized=False):
     )
 
 
-def _execute_live(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots, talk_dict, assessor_dict, slot_dict):
+def _execute_live(
+        self,
+        record,
+        prob,
+        X,
+        Y,
+        create_time,
+        number_talks,
+        number_assessors,
+        number_slots,
+        talk_dict,
+        assessor_dict,
+        slot_dict,
+):
     print("Solving PuLP problem for schedule")
 
-    progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...", autocommit=True)
+    progress_update(
+        record.celery_id,
+        TaskRecord.RUNNING,
+        50,
+        "Solving PuLP linear programming problem...",
+        autocommit=True,
+    )
 
     with Timer() as solve_time:
         record.awaiting_upload = False
 
         if record.solver == ScheduleAttempt.SOLVER_CBC_PACKAGED:
-            status = prob.solve(pulp_apis.PULP_CBC_CMD(msg=1, timeLimit=3600, gapRel=0.25))
+            status = prob.solve(
+                pulp_apis.PULP_CBC_CMD(msg=1, timeLimit=3600, gapRel=0.25)
+            )
         elif record.solver == ScheduleAttempt.SOLVER_CBC_CMD:
-            status = prob.solve(pulp_apis.COIN_CMD(msg=True, timeLimit=3600, gapRel=0.25))
+            status = prob.solve(
+                pulp_apis.COIN_CMD(msg=True, timeLimit=3600, gapRel=0.25)
+            )
         elif record.solver == ScheduleAttempt.SOLVER_GLPK_CMD:
             status = prob.solve(pulp_apis.GLPK_CMD())
         elif record.solver == ScheduleAttempt.SOLVER_CPLEX_CMD:
@@ -947,20 +1152,57 @@ def _execute_live(self, record, prob, X, Y, create_time, number_talks, number_as
             status = prob.solve()
 
     return _process_PuLP_solution(
-        self, record, prob, status, solve_time, X, Y, create_time, number_talks, number_assessors, number_slots, talk_dict, assessor_dict, slot_dict
+        self,
+        record,
+        prob,
+        status,
+        solve_time,
+        X,
+        Y,
+        create_time,
+        number_talks,
+        number_assessors,
+        number_slots,
+        talk_dict,
+        assessor_dict,
+        slot_dict,
     )
 
 
 def _execute_from_solution(
-    self, file, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots, talk_dict, assessor_dict, slot_dict
+        self,
+        file,
+        record,
+        prob,
+        X,
+        Y,
+        create_time,
+        number_talks,
+        number_assessors,
+        number_slots,
+        talk_dict,
+        assessor_dict,
+        slot_dict,
 ):
     print('Processing PuLP solution from "{name}"'.format(name=file))
 
     if not path.exists(file):
-        progress_update(record.celery_id, TaskRecord.FAILURE, 100, "Could not locate uploaded solution file", autocommit=True)
+        progress_update(
+            record.celery_id,
+            TaskRecord.FAILURE,
+            100,
+            "Could not locate uploaded solution file",
+            autocommit=True,
+        )
         raise Ignore
 
-    progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Processing uploaded solution file...", autocommit=True)
+    progress_update(
+        record.celery_id,
+        TaskRecord.RUNNING,
+        50,
+        "Processing uploaded solution file...",
+        autocommit=True,
+    )
 
     # TODO: catch pulp.pulp_apis.PulpSolverError: Unknown status returned by CPLEX
     #  and handle it gracefully (or fix it on the fly)
@@ -970,24 +1212,40 @@ def _execute_from_solution(
 
         if record.solver == ScheduleAttempt.SOLVER_CBC_PACKAGED:
             solver = pulp_apis.PULP_CBC_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol_LP(file, prob, prob.variables())
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
+                solver.readsol_LP(file, prob, prob.variables())
+            )
         elif record.solver == ScheduleAttempt.SOLVER_CBC_CMD:
             solver = pulp_apis.COIN_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol_LP(file, prob, prob.variables())
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
+                solver.readsol_LP(file, prob, prob.variables())
+            )
         elif record.solver == ScheduleAttempt.SOLVER_GLPK_CMD:
             solver = pulp_apis.GLPK_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
+                solver.readsol(file)
+            )
         elif record.solver == ScheduleAttempt.SOLVER_CPLEX_CMD:
             solver = pulp_apis.CPLEX_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
+                solver.readsol(file)
+            )
         elif record.solver == ScheduleAttempt.SOLVER_GUROBI_CMD:
             solver = pulp_apis.GUROBI_CMD()
             status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
         elif record.solver == ScheduleAttempt.SOLVER_SCIP_CMD:
             solver = pulp_apis.SCIP_CMD()
-            status, values, reducedCosts, shadowPrices, slacks, solStatus = solver.readsol(file)
+            status, values, reducedCosts, shadowPrices, slacks, solStatus = (
+                solver.readsol(file)
+            )
         else:
-            progress_update(record.celery_id, TaskRecord.FAILURE, 100, "Unknown solver", autocommit=True)
+            progress_update(
+                record.celery_id,
+                TaskRecord.FAILURE,
+                100,
+                "Unknown solver",
+                autocommit=True,
+            )
             raise Ignore()
 
         if status != pulp.LpStatusInfeasible:
@@ -1001,12 +1259,38 @@ def _execute_from_solution(
         prob.solver = solver
 
     return _process_PuLP_solution(
-        self, record, prob, status, solve_time, X, Y, create_time, number_talks, number_assessors, number_slots, talk_dict, assessor_dict, slot_dict
+        self,
+        record,
+        prob,
+        status,
+        solve_time,
+        X,
+        Y,
+        create_time,
+        number_talks,
+        number_assessors,
+        number_slots,
+        talk_dict,
+        assessor_dict,
+        slot_dict,
     )
 
 
 def _process_PuLP_solution(
-    self, record, prob, status, solve_time, X, Y, create_time, number_talks, number_assessors, number_slots, talk_dict, assessor_dict, slot_dict
+        self,
+        record,
+        prob,
+        status,
+        solve_time,
+        X,
+        Y,
+        create_time,
+        number_talks,
+        number_assessors,
+        number_slots,
+        talk_dict,
+        assessor_dict,
+        slot_dict,
 ):
     state = pulp.LpStatus[status]
 
@@ -1017,10 +1301,26 @@ def _process_PuLP_solution(
         record.construct_time = create_time.interval
         record.compute_time = solve_time.interval
 
-        progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Storing PuLP solution...", autocommit=True)
+        progress_update(
+            record.celery_id,
+            TaskRecord.RUNNING,
+            80,
+            "Storing PuLP solution...",
+            autocommit=True,
+        )
 
         try:
-            _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_slots, talk_dict, assessor_dict, slot_dict)
+            _store_PuLP_solution(
+                X,
+                Y,
+                record,
+                number_talks,
+                number_assessors,
+                number_slots,
+                talk_dict,
+                assessor_dict,
+                slot_dict,
+            )
             db.session.commit()
 
         except SQLAlchemyError as e:
@@ -1040,7 +1340,13 @@ def _process_PuLP_solution(
         raise RuntimeError("Unknown PuLP outcome")
 
     try:
-        progress_update(record.celery_id, TaskRecord.SUCCESS, 100, "Scheduling complete", autocommit=False)
+        progress_update(
+            record.celery_id,
+            TaskRecord.SUCCESS,
+            100,
+            "Scheduling complete",
+            autocommit=False,
+        )
 
         record.finished = True
         record.celery_finished = True
@@ -1066,12 +1372,20 @@ def _send_offline_email(celery, record, user, lp_asset):
 
     # TODO: will be problems when generated LP/MPS files are too large; should instead send a download link
     object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
-    lp_storage: AssetCloudAdapter = AssetCloudAdapter(lp_asset, object_store, audit_data="scheduling._send_offline_email #1")
+    lp_storage: AssetCloudAdapter = AssetCloudAdapter(
+        lp_asset, object_store, audit_data="scheduling._send_offline_email #1"
+    )
 
-    msg.attach(filename=str("schedule.lp"), mimetype=lp_asset.mimetype, content=lp_storage.get())
+    msg.attach(
+        filename=str("schedule.lp"),
+        mimetype=lp_asset.mimetype,
+        content=lp_storage.get(),
+    )
 
     # register a new task in the database
-    task_id = register_task(msg.subject, description="Email to {r}".format(r=", ".join(msg.to)))
+    task_id = register_task(
+        msg.subject, description="Email to {r}".format(r=", ".join(msg.to))
+    )
     send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
 
@@ -1082,7 +1396,13 @@ def _write_LP_file(record: ScheduleAttempt, prob, user):
 
     def make_asset(source_path: Path, target_name: str):
         # AssetUploadManager will populate most fields later
-        asset = GeneratedAsset(timestamp=now, expiry=expiry, target_name=target_name, parent_asset_id=None, license_id=None)
+        asset = GeneratedAsset(
+            timestamp=now,
+            expiry=expiry,
+            target_name=target_name,
+            parent_asset_id=None,
+            license_id=None,
+        )
 
         size = source_path.stat().st_size
 
@@ -1103,7 +1423,11 @@ def _write_LP_file(record: ScheduleAttempt, prob, user):
         db.session.flush()
 
         # add this asset to the user's download centre
-        download_item: DownloadCentreItem = DownloadCentreItem._build(asset=asset, user=user, description=f'LP file generated for schedule attempt "{record.name}"')
+        download_item: DownloadCentreItem = DownloadCentreItem._build(
+            asset=asset,
+            user=user,
+            description=f'LP file generated for schedule attempt "{record.name}"',
+        )
         db.session.add(download_item)
 
         return asset
@@ -1116,10 +1440,17 @@ def _write_LP_file(record: ScheduleAttempt, prob, user):
     return lp_asset
 
 
-def _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_period):
+def _store_enumeration_details(
+        record, number_to_talk, number_to_assessor, number_to_slot, number_to_period
+):
     def write_out(label, block):
         for number in block:
-            data = ScheduleEnumeration(schedule_id=record.id, enumeration=number, key=block[number], category=label)
+            data = ScheduleEnumeration(
+                schedule_id=record.id,
+                enumeration=number,
+                key=block[number],
+                category=label,
+            )
             db.session.add(data)
 
     write_out(ScheduleEnumeration.SUBMITTER, number_to_talk)
@@ -1134,16 +1465,24 @@ def _store_enumeration_details(record, number_to_talk, number_to_assessor, numbe
 def register_scheduling_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def create_schedule(self, id):
-        self.update_state(state="STARTED", meta={"msg": "Looking up ScheduleAttempt record for id={id}".format(id=id)})
+        self.update_state(
+            state="STARTED",
+            meta={"msg": "Looking up ScheduleAttempt record for id={id}".format(id=id)},
+        )
 
         try:
-            record: ScheduleAttempt = db.session.query(ScheduleAttempt).filter_by(id=id).first()
+            record: ScheduleAttempt = (
+                db.session.query(ScheduleAttempt).filter_by(id=id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load ScheduleAttempt record from database"})
+            self.update_state(
+                "FAILURE",
+                meta={"msg": "Could not load ScheduleAttempt record from database"},
+            )
             raise Ignore()
 
         _create_slots(self, record)
@@ -1172,7 +1511,13 @@ def register_scheduling_tasks(celery):
                 C,
             ) = _initialize(self, record)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
+            progress_update(
+                record.celery_id,
+                TaskRecord.RUNNING,
+                20,
+                "Building PuLP linear programming problem...",
+                autocommit=True,
+            )
 
             prob, X, Y = _create_PuLP_problem(
                 A,
@@ -1194,7 +1539,20 @@ def register_scheduling_tasks(celery):
 
         print(f" -- creation complete in time {create_time.interval:.5g} s")
 
-        return _execute_live(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots, talk_dict, assessor_dict, slot_dict)
+        return _execute_live(
+            self,
+            record,
+            prob,
+            X,
+            Y,
+            create_time,
+            number_talks,
+            number_assessors,
+            number_slots,
+            talk_dict,
+            assessor_dict,
+            slot_dict,
+        )
 
     @celery.task(bind=True, default_retry_delay=30)
     def recompute_schedule(self, new_id, old_id, allow_new_slots):
@@ -1203,7 +1561,9 @@ def register_scheduling_tasks(celery):
 
         self.update_state(
             state="STARTED",
-            meta={"msg": f"Looking up ScheduleAttempt records for new_id={new_id}, old_id={old_id}"},
+            meta={
+                "msg": f"Looking up ScheduleAttempt records for new_id={new_id}, old_id={old_id}"
+            },
         )
 
         try:
@@ -1214,7 +1574,10 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None or old_record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load ScheduleAttempt record from database"})
+            self.update_state(
+                "FAILURE",
+                meta={"msg": "Could not load ScheduleAttempt record from database"},
+            )
             raise Ignore()
 
         _create_slots(self, record)
@@ -1243,10 +1606,23 @@ def register_scheduling_tasks(celery):
                 C,
             ) = _initialize(self, record)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
+            progress_update(
+                record.celery_id,
+                TaskRecord.RUNNING,
+                20,
+                "Building PuLP linear programming problem...",
+                autocommit=True,
+            )
 
             oldX, oldY = _reconstruct_XY(
-                self, old_record, number_talks, number_assessors, number_slots, talk_to_number, assessor_to_number, slot_dict
+                self,
+                old_record,
+                number_talks,
+                number_assessors,
+                number_slots,
+                talk_to_number,
+                assessor_to_number,
+                slot_dict,
             )
 
             prob, X, Y = _create_PuLP_problem(
@@ -1268,17 +1644,41 @@ def register_scheduling_tasks(celery):
             )
 
             if not allow_new_slots:
-                print(" -- new slots are not allowed; disallowing use of any slots not present in original schedule")
-                _forbid_unused_slots(prob, X, Y, number_assessors, number_talks, slot_dict, old_record)
+                print(
+                    " -- new slots are not allowed; disallowing use of any slots not present in original schedule"
+                )
+                _forbid_unused_slots(
+                    prob, X, Y, number_assessors, number_talks, slot_dict, old_record
+                )
 
         print(f" -- creation complete in time {create_time.interval:.5g} s")
 
         record.solver = ScheduleAttempt.SOLVER_CBC_PACKAGED
-        return _execute_live(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots, talk_dict, assessor_dict, slot_dict)
+        return _execute_live(
+            self,
+            record,
+            prob,
+            X,
+            Y,
+            create_time,
+            number_talks,
+            number_assessors,
+            number_slots,
+            talk_dict,
+            assessor_dict,
+            slot_dict,
+        )
 
     @celery.task(bind=True, default_retry_delay=30)
     def offline_schedule(self, schedule_id, user_id):
-        self.update_state(state="STARTED", meta={"msg": "Looking up ScheduleAttempt record for id={id}".format(id=schedule_id)})
+        self.update_state(
+            state="STARTED",
+            meta={
+                "msg": "Looking up ScheduleAttempt record for id={id}".format(
+                    id=schedule_id
+                )
+            },
+        )
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
@@ -1288,11 +1688,16 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state="FAILURE", meta={"msg": "Could not load owning User record"})
+            self.update_state(
+                state="FAILURE", meta={"msg": "Could not load owning User record"}
+            )
             raise Ignore()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load ScheduleAttempt record from database"})
+            self.update_state(
+                "FAILURE",
+                meta={"msg": "Could not load ScheduleAttempt record from database"},
+            )
             raise Ignore()
 
         _create_slots(self, record)
@@ -1321,7 +1726,13 @@ def register_scheduling_tasks(celery):
                 C,
             ) = _initialize(self, record)
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
+            progress_update(
+                record.celery_id,
+                TaskRecord.RUNNING,
+                20,
+                "Building PuLP linear programming problem...",
+                autocommit=True,
+            )
 
             prob, X, Y = _create_PuLP_problem(
                 A,
@@ -1344,10 +1755,28 @@ def register_scheduling_tasks(celery):
         print(f" -- creation complete in time {create_time.interval:.5g} s")
 
         try:
-            progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Storing schedule details for later processing...", autocommit=True)
-            _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_period)
+            progress_update(
+                record.celery_id,
+                TaskRecord.RUNNING,
+                50,
+                "Storing schedule details for later processing...",
+                autocommit=True,
+            )
+            _store_enumeration_details(
+                record,
+                number_to_talk,
+                number_to_assessor,
+                number_to_slot,
+                number_to_period,
+            )
 
-            progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Writing .LP file...", autocommit=True)
+            progress_update(
+                record.celery_id,
+                TaskRecord.RUNNING,
+                80,
+                "Writing .LP file...",
+                autocommit=True,
+            )
             lp_asset = _write_LP_file(record, prob, user)
 
             # add asset details to ScheduleAttempt record
@@ -1356,7 +1785,13 @@ def register_scheduling_tasks(celery):
 
             db.session.flush()
 
-            progress_update(record.celery_id, TaskRecord.SUCCESS, 100, "File generation for offline scheduling now complete", autocommit=True)
+            progress_update(
+                record.celery_id,
+                TaskRecord.SUCCESS,
+                100,
+                "File generation for offline scheduling now complete",
+                autocommit=True,
+            )
             self.update_state("STARTED", meta={"msg": "Post message to user"})
 
             # language=jinja2
@@ -1375,7 +1810,14 @@ def register_scheduling_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def process_offline_solution(self, schedule_id, asset_id, user_id):
-        self.update_state(state="STARTED", meta={"msg": "Looking up TemporaryAsset record for id={id}".format(id=asset_id)})
+        self.update_state(
+            state="STARTED",
+            meta={
+                "msg": "Looking up TemporaryAsset record for id={id}".format(
+                    id=asset_id
+                )
+            },
+        )
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
@@ -1386,19 +1828,30 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(state="FAILURE", meta={"msg": "Could not load owning User record"})
+            self.update_state(
+                state="FAILURE", meta={"msg": "Could not load owning User record"}
+            )
             raise Ignore()
 
         if asset is None:
-            self.update_state(state="FAILURE", meta={"msg": "Could not load TemporaryAsset record"})
+            self.update_state(
+                state="FAILURE", meta={"msg": "Could not load TemporaryAsset record"}
+            )
             raise Ignore()
 
         if record is None:
-            self.update_state(state="FAILURE", meta={"msg": "Could not load ScheduleAttempt record from database"})
+            self.update_state(
+                state="FAILURE",
+                meta={"msg": "Could not load ScheduleAttempt record from database"},
+            )
             raise Ignore()
 
         object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
-        storage = AssetCloudAdapter(asset, object_store, audit_data=f"scheduling.process_offline_solution(schedule id #{schedule_id})")
+        storage = AssetCloudAdapter(
+            asset,
+            object_store,
+            audit_data=f"scheduling.process_offline_solution(schedule id #{schedule_id})",
+        )
         with storage.download_to_scratch() as scratch_path:
             with Timer() as create_time:
                 (
@@ -1424,7 +1877,13 @@ def register_scheduling_tasks(celery):
                     C,
                 ) = _initialize(self, record, read_serialized=True)
 
-                progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Building PuLP linear programming problem...", autocommit=True)
+                progress_update(
+                    record.celery_id,
+                    TaskRecord.RUNNING,
+                    20,
+                    "Building PuLP linear programming problem...",
+                    autocommit=True,
+                )
 
                 prob, X, Y = _create_PuLP_problem(
                     A,
@@ -1469,7 +1928,10 @@ def register_scheduling_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def revert_record(self, id):
-        self.update_state(state="STARTED", meta={"msg": "Looking up ScheduleSlot record for id={id}".format(id=id)})
+        self.update_state(
+            state="STARTED",
+            meta={"msg": "Looking up ScheduleSlot record for id={id}".format(id=id)},
+        )
 
         try:
             record = db.session.query(ScheduleSlot).filter_by(id=id).first()
@@ -1478,7 +1940,10 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state="FAILURE", meta={"msg": "Could not load ScheduleSlot record from database"})
+            self.update_state(
+                state="FAILURE",
+                meta={"msg": "Could not load ScheduleSlot record from database"},
+            )
             raise Ignore
 
         try:
@@ -1495,7 +1960,10 @@ def register_scheduling_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def revert_finalize(self, id):
-        self.update_state(state="STARTED", meta={"msg": "Looking up ScheduleAttempt record for id={id}".format(id=id)})
+        self.update_state(
+            state="STARTED",
+            meta={"msg": "Looking up ScheduleAttempt record for id={id}".format(id=id)},
+        )
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
@@ -1504,7 +1972,10 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state="FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
+            self.update_state(
+                state="FAILURE",
+                meta={"msg": "Could not load MatchingAttempt record from database"},
+            )
             raise Ignore
 
         try:
@@ -1521,7 +1992,10 @@ def register_scheduling_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def revert(self, id):
-        self.update_state(state="STARTED", meta={"msg": "Looking up ScheduleAttempt record for id={id}".format(id=id)})
+        self.update_state(
+            state="STARTED",
+            meta={"msg": "Looking up ScheduleAttempt record for id={id}".format(id=id)},
+        )
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
@@ -1530,7 +2004,10 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(state="FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
+            self.update_state(
+                state="FAILURE",
+                meta={"msg": "Could not load MatchingAttempt record from database"},
+            )
             raise Ignore
 
         wg = group(revert_record.si(s.id) for s in record.slots.all())
@@ -1540,16 +2017,24 @@ def register_scheduling_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def duplicate(self, id, new_name, current_id):
-        self.update_state(state="STARTED", meta={"msg": "Looking up ScheduleAttempt record for id={id}".format(id=id)})
+        self.update_state(
+            state="STARTED",
+            meta={"msg": "Looking up ScheduleAttempt record for id={id}".format(id=id)},
+        )
 
         try:
-            old_record: ScheduleAttempt = db.session.query(ScheduleAttempt).filter_by(id=id).first()
+            old_record: ScheduleAttempt = (
+                db.session.query(ScheduleAttempt).filter_by(id=id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if old_record is None:
-            self.update_state(state="FAILURE", meta={"msg": "Could not load MatchingAttempt record from database"})
+            self.update_state(
+                state="FAILURE",
+                meta={"msg": "Could not load MatchingAttempt record from database"},
+            )
             return
 
         try:
@@ -1616,9 +2101,16 @@ def register_scheduling_tasks(celery):
                         if item.key in slot_map:
                             new_key = slot_map[item.key]
                         else:
-                            raise RuntimeError("Could not map from old to new ScheduleSlot ids")
+                            raise RuntimeError(
+                                "Could not map from old to new ScheduleSlot ids"
+                            )
 
-                    en = ScheduleEnumeration(category=item.category, enumeration=item.enumeration, key=new_key, schedule_id=new_record.id)
+                    en = ScheduleEnumeration(
+                        category=item.category,
+                        enumeration=item.enumeration,
+                        key=new_key,
+                        schedule_id=new_record.id,
+                    )
                     db.session.add(en)
 
                 now = datetime.now()
@@ -1626,12 +2118,20 @@ def register_scheduling_tasks(celery):
                 object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
 
                 def copy_asset(old_asset):
-                    old_storage = AssetCloudAdapter(old_asset, object_store, audit_data=f"scheduling.duplicate.copy_asset (schedule id #{id})")
-                    new_key, put_result = old_storage.duplicate(validate_nonce=validate_nonce)
+                    old_storage = AssetCloudAdapter(
+                        old_asset,
+                        object_store,
+                        audit_data=f"scheduling.duplicate.copy_asset (schedule id #{id})",
+                    )
+                    new_key, put_result = old_storage.duplicate(
+                        validate_nonce=validate_nonce
+                    )
 
                     new_base64_nonce = None
                     if "nonce" in put_result:
-                        new_base64_nonce = base64.urlsafe_b64encode(put_result["nonce"]).decode("ascii")
+                        new_base64_nonce = base64.urlsafe_b64encode(
+                            put_result["nonce"]
+                        ).decode("ascii")
 
                     # must duplicate all fields, including those usually managed by AssetUploadManager
                     new_asset = GeneratedAsset(
@@ -1660,13 +2160,19 @@ def register_scheduling_tasks(celery):
                     db.session.add(new_asset)
                     db.session.flush()
 
-                    download_item: DownloadCentreItem = DownloadCentreItem._build(asset=new_asset, user=current_id, description=f'Copy generated for "{new_name}" (original was "{old_record.name}")')
+                    download_item: DownloadCentreItem = DownloadCentreItem._build(
+                        asset=new_asset,
+                        user=current_id,
+                        description=f'Copy generated for "{new_name}" (original was "{old_record.name}")',
+                    )
                     db.session.add(download_item)
 
                     return new_asset
 
                 if old_record.lp_file is not None:
-                    new_record.lp_file = copy_asset(old_record.lp_file, "schedule.lp", ext="lp")
+                    new_record.lp_file = copy_asset(
+                        old_record.lp_file, "schedule.lp", ext="lp"
+                    )
 
             db.session.commit()
 
@@ -1686,10 +2192,19 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load ScheduleAttempt record from database"})
+            self.update_state(
+                "FAILURE",
+                meta={"msg": "Could not load ScheduleAttempt record from database"},
+            )
             raise self.retry()
 
-        progress_update(task_id, TaskRecord.RUNNING, 10, "Building list of student submitters...", autocommit=True)
+        progress_update(
+            task_id,
+            TaskRecord.RUNNING,
+            10,
+            "Building list of student submitters...",
+            autocommit=True,
+        )
 
         recipients = set()
         for a in record.owner.submitter_list:
@@ -1699,7 +2214,10 @@ def register_scheduling_tasks(celery):
         notify = celery.tasks["app.tasks.utilities.email_notification"]
 
         task = chain(
-            group(publish_email_to_submitter.si(id, a_id, not bool(record.deployed)) for a_id in recipients),
+            group(
+                publish_email_to_submitter.si(id, a_id, not bool(record.deployed))
+                for a_id in recipients
+            ),
             notify.s(user_id, "{n} email notification{pl} issued", "info"),
             publish_to_submitter_finalize.si(task_id),
         )
@@ -1720,7 +2238,9 @@ def register_scheduling_tasks(celery):
 
     @celery.task(bind=True)
     def publish_to_submitter_finalize(self, task_id):
-        progress_update(task_id, TaskRecord.SUCCESS, 100, "Email job is complete", autocommit=True)
+        progress_update(
+            task_id, TaskRecord.SUCCESS, 100, "Email job is complete", autocommit=True
+        )
 
     @celery.task(bind=True, default_retry_delay=30)
     def publish_email_to_submitter(self, schedule_id, attend_id, is_draft):
@@ -1729,17 +2249,29 @@ def register_scheduling_tasks(celery):
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
-            attend_data = db.session.query(SubmitterAttendanceData).filter_by(id=attend_id).first()
+            attend_data = (
+                db.session.query(SubmitterAttendanceData)
+                .filter_by(id=attend_id)
+                .first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load ScheduleAttempt record from database"})
+            self.update_state(
+                "FAILURE",
+                meta={"msg": "Could not load ScheduleAttempt record from database"},
+            )
             raise self.retry()
 
         if attend_data is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load SubmitterAttendanceData record from database"})
+            self.update_state(
+                "FAILURE",
+                meta={
+                    "msg": "Could not load SubmitterAttendanceData record from database"
+                },
+            )
             raise self.retry()
 
         sub_record = attend_data.submitter
@@ -1776,7 +2308,10 @@ def register_scheduling_tasks(celery):
             )
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description="Send schedule email to {r}".format(r=", ".join(msg.to)))
+        task_id = register_task(
+            msg.subject,
+            description="Send schedule email to {r}".format(r=", ".join(msg.to)),
+        )
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1
@@ -1790,15 +2325,27 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load ScheduleAttempt record from database"})
+            self.update_state(
+                "FAILURE",
+                meta={"msg": "Could not load ScheduleAttempt record from database"},
+            )
             raise self.retry()
 
         notify = celery.tasks["app.tasks.utilities.email_notification"]
 
-        progress_update(task_id, TaskRecord.RUNNING, 10, "Building list of faculty assessors...", autocommit=True)
+        progress_update(
+            task_id,
+            TaskRecord.RUNNING,
+            10,
+            "Building list of faculty assessors...",
+            autocommit=True,
+        )
 
         task = chain(
-            group(publish_email_to_assessor.si(id, a.id, not bool(record.deployed)) for a in record.owner.assessor_list.all()),
+            group(
+                publish_email_to_assessor.si(id, a.id, not bool(record.deployed))
+                for a in record.owner.assessor_list.all()
+            ),
             notify.s(user_id, "{n} email notification{pl} issued", "info"),
             publish_to_assessors_finalize.si(task_id),
         )
@@ -1819,7 +2366,9 @@ def register_scheduling_tasks(celery):
 
     @celery.task(bind=True)
     def publish_to_assessors_finalize(self, task_id):
-        progress_update(task_id, TaskRecord.SUCCESS, 100, "Email job is complete", autocommit=True)
+        progress_update(
+            task_id, TaskRecord.SUCCESS, 100, "Email job is complete", autocommit=True
+        )
 
     @celery.task(bind=True, default_retry_delay=30)
     def publish_email_to_assessor(self, schedule_id, attend_id, is_draft):
@@ -1828,17 +2377,27 @@ def register_scheduling_tasks(celery):
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
-            attend_data = db.session.query(AssessorAttendanceData).filter_by(id=attend_id).first()
+            attend_data = (
+                db.session.query(AssessorAttendanceData).filter_by(id=attend_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load ScheduleAttempt record from database"})
+            self.update_state(
+                "FAILURE",
+                meta={"msg": "Could not load ScheduleAttempt record from database"},
+            )
             raise self.retry()
 
         if attend_data is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load AssessorAttendanceData record from database"})
+            self.update_state(
+                "FAILURE",
+                meta={
+                    "msg": "Could not load AssessorAttendanceData record from database"
+                },
+            )
             raise self.retry()
 
         faculty = attend_data.faculty
@@ -1854,7 +2413,12 @@ def register_scheduling_tasks(celery):
                     template_type=EmailTemplate.SCHEDULING_DRAFT_NOTIFY_FACULTY,
                     to=[user.email],
                     subject_kwargs={"name": event.name},
-                    body_kwargs={"user": user, "event": event, "slots": slots, "schedule": record},
+                    body_kwargs={
+                        "user": user,
+                        "event": event,
+                        "slots": slots,
+                        "schedule": record,
+                    },
                 )
             else:
                 msg = EmailTemplate.apply_(
@@ -1869,7 +2433,12 @@ def register_scheduling_tasks(celery):
                     template_type=EmailTemplate.SCHEDULING_FINAL_NOTIFY_FACULTY,
                     to=[user.email],
                     subject_kwargs={"name": event.name},
-                    body_kwargs={"user": user, "event": event, "slots": slots, "schedule": record},
+                    body_kwargs={
+                        "user": user,
+                        "event": event,
+                        "slots": slots,
+                        "schedule": record,
+                    },
                 )
             else:
                 msg = EmailTemplate.apply_(
@@ -1880,7 +2449,10 @@ def register_scheduling_tasks(celery):
                 )
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description="Send schedule email to {r}".format(r=", ".join(msg.to)))
+        task_id = register_task(
+            msg.subject,
+            description="Send schedule email to {r}".format(r=", ".join(msg.to)),
+        )
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1

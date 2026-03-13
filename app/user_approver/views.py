@@ -68,7 +68,12 @@ def validate():
     )
 
     return render_template_context(
-        "user_approver/validate.html", url=url, text=text, prog_filter=prog_filter, year_filter=year_filter, programmes=programmes
+        "user_approver/validate.html",
+        url=url,
+        text=text,
+        prog_filter=prog_filter,
+        year_filter=year_filter,
+        programmes=programmes,
     )
 
 
@@ -89,8 +94,14 @@ def validate_ajax():
         .filter(
             StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
             or_(
-                and_(StudentData.last_edit_id == None, StudentData.creator_id != current_user.id),
-                and_(StudentData.last_edit_id != None, StudentData.last_edit_id != current_user.id),
+                and_(
+                    StudentData.last_edit_id == None,
+                    StudentData.creator_id != current_user.id,
+                ),
+                and_(
+                    StudentData.last_edit_id != None,
+                    StudentData.last_edit_id != current_user.id,
+                ),
             ),
         )
     )
@@ -101,7 +112,10 @@ def validate_ajax():
 
     flag, year_value = is_integer(year_filter)
     if flag:
-        base_query = base_query.filter(StudentData.academic_year <= DegreeType.duration, StudentData.academic_year == year_value)
+        base_query = base_query.filter(
+            StudentData.academic_year <= DegreeType.duration,
+            StudentData.academic_year == year_value,
+        )
     elif year_filter == "grad":
         base_query = base_query.filter(StudentData.academic_year > DegreeType.duration)
 
@@ -110,9 +124,20 @@ def validate_ajax():
         "order": [User.last_name, User.first_name],
         "search_collation": "utf8_general_ci",
     }
-    email = {"search": User.email, "order": User.email, "search_collation": "utf8_general_ci"}
-    registration_number = {"search": func.cast(StudentData.registration_number, String), "order": StudentData.registration_number}
-    programme = {"search": DegreeProgramme.name, "order": DegreeProgramme.name, "search_collation": "utf8_general_ci"}
+    email = {
+        "search": User.email,
+        "order": User.email,
+        "search_collation": "utf8_general_ci",
+    }
+    registration_number = {
+        "search": func.cast(StudentData.registration_number, String),
+        "order": StudentData.registration_number,
+    }
+    programme = {
+        "search": DegreeProgramme.name,
+        "order": DegreeProgramme.name,
+        "search_collation": "utf8_general_ci",
+    }
     year = {"order": StudentData.academic_year}
 
     columns = {
@@ -124,7 +149,9 @@ def validate_ajax():
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(partial(ajax.user_approver.validate_data, url, text))
+        return handler.build_payload(
+            partial(ajax.user_approver.validate_data, url, text)
+        )
 
 
 @user_approver.route("/approve/<int:id>")
@@ -200,7 +227,12 @@ def correct():
     )
 
     return render_template_context(
-        "user_approver/correct.html", url=url, text=text, prog_filter=prog_filter, year_filter=year_filter, programmes=programmes
+        "user_approver/correct.html",
+        url=url,
+        text=text,
+        prog_filter=prog_filter,
+        year_filter=year_filter,
+        programmes=programmes,
     )
 
 
@@ -219,14 +251,22 @@ def correct_ajax():
     base_query = (
         db.session.query(StudentData)
         .join(student_user, student_user.id == StudentData.id)
-        .join(validator_user, validator_user.id == StudentData.validator_id, isouter=True)
+        .join(
+            validator_user, validator_user.id == StudentData.validator_id, isouter=True
+        )
         .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
         .filter(
             StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED,
             or_(
-                and_(StudentData.last_edit_id == None, StudentData.creator_id == current_user.id),
-                and_(StudentData.last_edit_id != None, StudentData.last_edit_id == current_user.id),
+                and_(
+                    StudentData.last_edit_id == None,
+                    StudentData.creator_id == current_user.id,
+                ),
+                and_(
+                    StudentData.last_edit_id != None,
+                    StudentData.last_edit_id == current_user.id,
+                ),
             ),
         )
     )
@@ -237,7 +277,10 @@ def correct_ajax():
 
     flag, year_value = is_integer(year_filter)
     if flag:
-        base_query = base_query.filter(StudentData.academic_year <= DegreeType.duration, StudentData.academic_year == year_value)
+        base_query = base_query.filter(
+            StudentData.academic_year <= DegreeType.duration,
+            StudentData.academic_year == year_value,
+        )
     elif year_filter == "grad":
         base_query = base_query.filter(StudentData.academic_year > DegreeType.duration)
 
@@ -246,13 +289,34 @@ def correct_ajax():
         "order": [student_user.last_name, student_user.first_name],
         "search_collation": "utf8_general_ci",
     }
-    email = {"search": student_user.email, "order": student_user.email, "search_collation": "utf8_general_ci"}
-    registration_number = {"search": func.cast(StudentData.registration_number, String), "order": StudentData.registration_number}
-    programme = {"search": DegreeProgramme.name, "order": DegreeProgramme.name, "search_collation": "utf8_general_ci"}
+    email = {
+        "search": student_user.email,
+        "order": student_user.email,
+        "search_collation": "utf8_general_ci",
+    }
+    registration_number = {
+        "search": func.cast(StudentData.registration_number, String),
+        "order": StudentData.registration_number,
+    }
+    programme = {
+        "search": DegreeProgramme.name,
+        "order": DegreeProgramme.name,
+        "search_collation": "utf8_general_ci",
+    }
     year = {"order": StudentData.academic_year}
     rejected_by = {
-        "search": func.concat(validator_user.first_name, " ", validator_user.last_name, " ", validator_user.email),
-        "order": [validator_user.last_name, validator_user.first_name, validator_user.email],
+        "search": func.concat(
+            validator_user.first_name,
+            " ",
+            validator_user.last_name,
+            " ",
+            validator_user.email,
+        ),
+        "order": [
+            validator_user.last_name,
+            validator_user.first_name,
+            validator_user.email,
+        ],
         "search_collation": "utf8_general_ci",
     }
 
@@ -266,4 +330,6 @@ def correct_ajax():
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(partial(ajax.user_approver.correction_data, url, text))
+        return handler.build_payload(
+            partial(ajax.user_approver.correction_data, url, text)
+        )

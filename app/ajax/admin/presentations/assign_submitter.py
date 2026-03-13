@@ -173,11 +173,23 @@ def assign_submitter_data(slots, old_slot, talk, url=None, text=None):
 
     data = [
         {
-            "session": {"display": render_template(name_templ, s=s, simple_label=simple_label), "sortvalue": s.session.date.isoformat()},
+            "session": {
+                "display": render_template(name_templ, s=s, simple_label=simple_label),
+                "sortvalue": s.session.date.isoformat(),
+            },
             "room": render_template(room_templ, room=s.room, simple_label=simple_label),
-            "assessors": render_template(assessors_templ, s=s, t=talk, url=url, text=text),
+            "assessors": render_template(
+                assessors_templ, s=s, t=talk, url=url, text=text
+            ),
             "talks": render_template(talks_templ, s=s, url=url, text=text),
-            "menu": render_template(menu_templ, old_slot=old_slot, new_slot=s, talk=talk, back_url=url, back_text=text),
+            "menu": render_template(
+                menu_templ,
+                old_slot=old_slot,
+                new_slot=s,
+                talk=talk,
+                back_url=url,
+                back_text=text,
+            ),
         }
         for s in slots
     ]

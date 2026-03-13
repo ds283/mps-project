@@ -90,9 +90,11 @@ def submitter_session_availability_data(assessment, session, talks, editable=Fal
         {
             "student": {
                 "display": '<a class="text-decoration-none" href="mailto:{email}">{name}</a>'.format(
-                    email=s.submitter.owner.student.user.email, name=s.submitter.owner.student.user.name
+                    email=s.submitter.owner.student.user.email,
+                    name=s.submitter.owner.student.user.name,
                 ),
-                "sortstring": s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name,
+                "sortstring": s.submitter.owner.student.user.last_name
+                              + s.submitter.owner.student.user.first_name,
             },
             "pclass": render_template_string(_pclass, config=s.submitter.owner.config),
             "project": render_template_string(
@@ -109,7 +111,13 @@ def submitter_session_availability_data(assessment, session, talks, editable=Fal
                 url=url_for("admin.submitter_session_availability", id=session.id),
                 text="submitter availability for session",
             ),
-            "menu": render_template_string(_session_actions, s=s.submitter, a=assessment, sess=session, editable=editable),
+            "menu": render_template_string(
+                _session_actions,
+                s=s.submitter,
+                a=assessment,
+                sess=session,
+                editable=editable,
+            ),
         }
         for s in talks
     ]
@@ -122,7 +130,8 @@ def presentation_attendees_data(assessment, talks, editable=False):
         {
             "student": {
                 "display": render_template_string(_global_name, s=s, a=assessment),
-                "sortstring": s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name,
+                "sortstring": s.submitter.owner.student.user.last_name
+                              + s.submitter.owner.student.user.first_name,
             },
             "pclass": render_template_string(_pclass, config=s.submitter.owner.config),
             "project": render_template_string(
@@ -139,7 +148,9 @@ def presentation_attendees_data(assessment, talks, editable=False):
                 url=url_for("admin.assessment_manage_attendees", id=assessment.id),
                 text="submitter management view",
             ),
-            "menu": render_template_string(_submitter_actions, s=s.submitter, a=assessment, editable=editable),
+            "menu": render_template_string(
+                _submitter_actions, s=s.submitter, a=assessment, editable=editable
+            ),
         }
         for s in talks
     ]

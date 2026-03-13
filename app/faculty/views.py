@@ -65,9 +65,16 @@ from ..models import (
     StudentData,
     SubmittingStudent,
     SubmissionPeriodRecord,
-    SubmissionRole, Tenant, MainConfig,
+    SubmissionRole,
+    Tenant,
+    MainConfig,
 )
-from ..shared.actions import render_project, do_confirm, do_cancel_confirm, do_deconfirm_to_pending
+from ..shared.actions import (
+    render_project,
+    do_confirm,
+    do_cancel_confirm,
+    do_deconfirm_to_pending,
+)
 from ..shared.context.global_context import render_template_context
 from ..shared.context.root_dashboard import get_root_dashboard_data
 from ..shared.conversions import is_integer
@@ -250,10 +257,16 @@ def affiliations():
             ResearchGroup.active == True,
             ResearchGroup.tenants.any(Tenant.id.in_(user_tenant_ids)),
         )
-        .order_by(ResearchGroup.name).all()
+        .order_by(ResearchGroup.name)
+        .all()
     )
 
-    return render_template_context("faculty/affiliations.html", user=current_user, data=data, research_groups=research_groups)
+    return render_template_context(
+        "faculty/affiliations.html",
+        user=current_user,
+        data=data,
+        research_groups=research_groups,
+    )
 
 
 @faculty.route("/add_affiliation/<int:groupid>")
@@ -283,19 +296,23 @@ def remove_affiliation(groupid):
 @faculty.route("/edit_projects")
 @roles_required("faculty")
 def edit_projects():
-    groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
+    groups = (
+        SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
+    )
 
-    state_filter = request.args.get('state_filter')
+    state_filter = request.args.get("state_filter")
 
     if state_filter is None and session.get("project_library_state_filter"):
         state_filter = session["project_library_state_filter"]
 
-    if state_filter not in ['all', 'active', 'not-active']:
+    if state_filter not in ["all", "active", "not-active"]:
         state_filter = "active"
 
     session["project_library_state_filter"] = state_filter
 
-    return render_template_context("faculty/edit_projects.html", groups=groups, state_filter=state_filter)
+    return render_template_context(
+        "faculty/edit_projects.html", groups=groups, state_filter=state_filter
+    )
 
 
 @faculty.route("/projects_ajax", methods=["POST"])
@@ -308,13 +325,13 @@ def projects_ajax():
 
     base_query = db.session.query(Project).filter_by(owner_id=current_user.id)
 
-    state_filter = request.args.get('state_filter')
-    if state_filter not in ['all', 'active', 'not-active']:
-        state_filter = 'all'
+    state_filter = request.args.get("state_filter")
+    if state_filter not in ["all", "active", "not-active"]:
+        state_filter = "all"
 
-    if state_filter == 'active':
+    if state_filter == "active":
         base_query = base_query.filter(Project.active)
-    elif state_filter == 'not-active':
+    elif state_filter == "not-active":
         base_query = base_query.filter(~Project.active)
 
     return project_list_SQL_handler(
@@ -343,10 +360,21 @@ def assessor_for():
     if pclass_filter is not None:
         session["view_marker_pclass_filter"] = pclass_filter
 
-    groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
-    pclasses = ProjectClass.query.filter_by(active=True, publish=True).order_by(ProjectClass.name.asc()).all()
+    groups = (
+        SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
+    )
+    pclasses = (
+        ProjectClass.query.filter_by(active=True, publish=True)
+        .order_by(ProjectClass.name.asc())
+        .all()
+    )
 
-    return render_template_context("faculty/assessor_for.html", groups=groups, pclasses=pclasses, pclass_filter=pclass_filter)
+    return render_template_context(
+        "faculty/assessor_for.html",
+        groups=groups,
+        pclasses=pclasses,
+        pclass_filter=pclass_filter,
+    )
 
 
 @faculty.route("/marking_ajax", methods=["POST"])
@@ -363,7 +391,13 @@ def marking_ajax():
     if flag:
         base_query = base_query.filter(Project.project_classes.any(id=pclass_value))
 
-    return project_list_SQL_handler(request, base_query, current_user=current_user, show_approvals=False, show_errors=False)
+    return project_list_SQL_handler(
+        request,
+        base_query,
+        current_user=current_user,
+        show_approvals=False,
+        show_errors=False,
+    )
 
 
 @faculty.route("/edit_descriptions/<int:id>")
@@ -379,7 +413,12 @@ def edit_descriptions(id):
 
     missing_aims = [x for x in project.descriptions if x.has_warning("aims")]
 
-    return render_template_context("faculty/edit_descriptions.html", project=project, create=create, missing_aims=missing_aims)
+    return render_template_context(
+        "faculty/edit_descriptions.html",
+        project=project,
+        create=create,
+        missing_aims=missing_aims,
+    )
 
 
 @faculty.route("/descriptions_ajax/<int:id>")
@@ -427,8 +466,12 @@ def add_project():
     uses_research_groups = enrolled_for_pclasses_using_research_groups(fd)
 
     # set up form
-    AddProjectForm = AddProjectFormFactory(current_user.tenants, convenor_editing=False, uses_tags=uses_tags,
-                                           uses_research_groups=uses_research_groups)
+    AddProjectForm = AddProjectFormFactory(
+        current_user.tenants,
+        convenor_editing=False,
+        uses_tags=uses_tags,
+        uses_research_groups=uses_research_groups,
+    )
     form = AddProjectForm(request.form)
 
     if form.validate_on_submit():
@@ -462,14 +505,24 @@ def add_project():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add new project due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not add new project due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         if form.submit.data:
             return redirect(url_for("faculty.edit_descriptions", id=data.id, create=1))
         elif form.save_and_exit.data:
             return redirect(url_for("faculty.edit_projects"))
         elif form.save_and_preview:
-            return redirect(url_for("faculty.project_preview", id=data.id, text="project list", url=url_for("faculty.edit_projects")))
+            return redirect(
+                url_for(
+                    "faculty.project_preview",
+                    id=data.id,
+                    text="project list",
+                    url=url_for("faculty.edit_projects"),
+                )
+            )
         else:
             raise RuntimeError("Unknown submit button in faculty.add_project")
 
@@ -519,8 +572,12 @@ def edit_project(id):
         text = "project library"
 
     allowed_tenants = [pcl.tenant_id for pcl in project.project_classes]
-    EditProjectForm = EditProjectFormFactory(allowed_tenants, convenor_editing=False, uses_tags=uses_tags,
-                                             uses_research_groups=uses_research_groups)
+    EditProjectForm = EditProjectFormFactory(
+        allowed_tenants,
+        convenor_editing=False,
+        uses_tags=uses_tags,
+        uses_research_groups=uses_research_groups,
+    )
     form = EditProjectForm(obj=project)
     form.project = project
 
@@ -550,10 +607,15 @@ def edit_project(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         if form.save_and_preview.data:
-            return redirect(url_for("faculty.project_preview", id=id, text=text, url=url))
+            return redirect(
+                url_for("faculty.project_preview", id=id, text=text, url=url)
+            )
         else:
             return redirect(url)
 
@@ -585,7 +647,10 @@ def remove_project_pclass(proj_id, pclass_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes due to a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -644,7 +709,12 @@ def delete_project(id):
     submit_label = "Delete project"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -671,7 +741,10 @@ def perform_delete_project(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not delete project due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not delete project due to a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(url)
 
@@ -717,7 +790,10 @@ def add_description(pid):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add new description due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not add new description due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("faculty.edit_descriptions", id=pid, create=create))
 
@@ -725,7 +801,13 @@ def add_description(pid):
         if request.method == "GET":
             form.capacity.data = proj.owner.project_capacity
 
-    return render_template_context("faculty/edit_description.html", project=proj, form=form, title="Add new description", create=create)
+    return render_template_context(
+        "faculty/edit_description.html",
+        project=proj,
+        form=form,
+        title="Add new description",
+        create=create,
+    )
 
 
 @faculty.route("/edit_description/<int:did>", methods=["GET", "POST"])
@@ -776,12 +858,22 @@ def edit_description(did):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not edit project description due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not edit project description due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url)
 
     return render_template_context(
-        "faculty/edit_description.html", project=desc.parent, desc=desc, form=form, title="Edit description", create=create, url=url, text=text
+        "faculty/edit_description.html",
+        project=desc.parent,
+        desc=desc,
+        form=form,
+        title="Edit description",
+        create=create,
+        url=url,
+        text=text,
     )
 
 
@@ -814,7 +906,10 @@ def edit_description_content(did):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not edit project description due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not edit project description due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url)
 
@@ -846,9 +941,15 @@ def description_modules(did, level_id=None):
 
     if not form.validate_on_submit() and request.method == "GET":
         if level_id is None:
-            form.selector.data = FHEQ_Level.query.filter(FHEQ_Level.active == True).order_by(FHEQ_Level.numeric_level.asc()).first()
+            form.selector.data = (
+                FHEQ_Level.query.filter(FHEQ_Level.active == True)
+                .order_by(FHEQ_Level.numeric_level.asc())
+                .first()
+            )
         else:
-            form.selector.data = FHEQ_Level.query.filter(FHEQ_Level.active == True, FHEQ_Level.id == level_id).first()
+            form.selector.data = FHEQ_Level.query.filter(
+                FHEQ_Level.active == True, FHEQ_Level.id == level_id
+            ).first()
 
     # get list of modules for the current level_id
     if form.selector.data is not None:
@@ -857,7 +958,11 @@ def description_modules(did, level_id=None):
         modules = []
 
     level_id = form.selector.data.id if form.selector.data is not None else None
-    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.numeric_level.asc()).all()
+    levels = (
+        FHEQ_Level.query.filter_by(active=True)
+        .order_by(FHEQ_Level.numeric_level.asc())
+        .all()
+    )
 
     return render_template_context(
         "faculty/description_modules.html",
@@ -894,12 +999,18 @@ def description_attach_module(did, mod_id, level_id):
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 flash(
-                    'Could not attach module "{name}" due to a database error. ' "Please contact a system administrator".format(name=module.name),
+                    'Could not attach module "{name}" due to a database error. '
+                    "Please contact a system administrator".format(name=module.name),
                     "error",
                 )
 
         else:
-            flash('Could not attach module "{name}" because it is already attached.'.format(name=module.name), "warning")
+            flash(
+                'Could not attach module "{name}" because it is already attached.'.format(
+                    name=module.name
+                ),
+                "warning",
+            )
 
     else:
         flash(
@@ -910,7 +1021,11 @@ def description_attach_module(did, mod_id, level_id):
             "warning",
         )
 
-    return redirect(url_for("faculty.description_modules", did=did, level_id=level_id, create=create))
+    return redirect(
+        url_for(
+            "faculty.description_modules", did=did, level_id=level_id, create=create
+        )
+    )
 
 
 @faculty.route("/description_detach_module/<int:did>/<int:mod_id>/<int:level_id>")
@@ -934,13 +1049,23 @@ def description_detach_module(did, mod_id, level_id):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             flash(
-                'Could not detach module "{name}" due to a database error. ' "Please contact a system administrator".format(name=module.name), "error"
+                'Could not detach module "{name}" due to a database error. '
+                "Please contact a system administrator".format(name=module.name),
+                "error",
             )
 
     else:
-        flash('Could not detach specified module "{name}" because it was not previously ' "attached.".format(name=module.name), "warning")
+        flash(
+            'Could not detach specified module "{name}" because it was not previously '
+            "attached.".format(name=module.name),
+            "warning",
+        )
 
-    return redirect(url_for("faculty.description_modules", did=did, level_id=level_id, create=create))
+    return redirect(
+        url_for(
+            "faculty.description_modules", did=did, level_id=level_id, create=create
+        )
+    )
 
 
 @faculty.route("/delete_description/<int:did>")
@@ -958,7 +1083,10 @@ def delete_description(did):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not delete project description due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not delete project description due to a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -976,13 +1104,22 @@ def duplicate_description(did):
     while suffix < 100:
         new_label = "{label} #{suffix}".format(label=desc.label, suffix=suffix)
 
-        if ProjectDescription.query.filter_by(parent_id=desc.parent_id, label=new_label).first() is None:
+        if (
+                ProjectDescription.query.filter_by(
+                    parent_id=desc.parent_id, label=new_label
+                ).first()
+                is None
+        ):
             break
 
         suffix += 1
 
     if suffix >= 100:
-        flash('Could not duplicate variant "{label}" because a new unique label could not ' "be generated".format(label=desc.label), "error")
+        flash(
+            'Could not duplicate variant "{label}" because a new unique label could not '
+            "be generated".format(label=desc.label),
+            "error",
+        )
         return redirect(redirect_url())
 
     data = ProjectDescription(
@@ -1008,7 +1145,10 @@ def duplicate_description(did):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not duplicate project description due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not duplicate project description due to a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1025,7 +1165,9 @@ def move_description(did):
 
     create = request.args.get("create", default=None)
 
-    MoveDescriptionForm = MoveDescriptionFormFactory(old_project.owner_id, old_project.id)
+    MoveDescriptionForm = MoveDescriptionFormFactory(
+        old_project.owner_id, old_project.id
+    )
     form = MoveDescriptionForm(request.form)
 
     if form.validate_on_submit():
@@ -1065,7 +1207,14 @@ def move_description(did):
                 if get_count(new_project.project_classes.filter_by(id=pclass.id)) == 0:
                     remove.add(pclass)
 
-                elif get_count(new_project.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id))) > 0:
+                elif (
+                        get_count(
+                            new_project.descriptions.filter(
+                                ProjectDescription.project_classes.any(id=pclass.id)
+                            )
+                        )
+                        > 0
+                ):
                     remove.add(pclass)
 
             for pclass in remove:
@@ -1080,21 +1229,41 @@ def move_description(did):
 
             try:
                 db.session.commit()
-                flash('Variant "{name}" successfully moved to project ' '"{pname}"'.format(name=desc.label, pname=new_project.name), "info")
+                flash(
+                    'Variant "{name}" successfully moved to project "{pname}"'.format(
+                        name=desc.label, pname=new_project.name
+                    ),
+                    "info",
+                )
             except SQLAlchemyError as e:
                 db.session.rollback()
-                flash('Variant "{name}" could not be moved due to a database error'.format(name=desc.label), "error")
+                flash(
+                    'Variant "{name}" could not be moved due to a database error'.format(
+                        name=desc.label
+                    ),
+                    "error",
+                )
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         else:
-            flash('Variant "{name}" could not be moved because its parent project is ' "missing".format(name=desc.label), "error")
+            flash(
+                'Variant "{name}" could not be moved because its parent project is '
+                "missing".format(name=desc.label),
+                "error",
+            )
 
         if create:
-            return redirect(url_for("faculty.edit_descriptions", id=old_project.id, create=True))
+            return redirect(
+                url_for("faculty.edit_descriptions", id=old_project.id, create=True)
+            )
         else:
             return redirect(url_for("faculty.edit_descriptions", id=new_project.id))
 
     return render_template_context(
-        "faculty/move_description.html", form=form, desc=desc, create=create, title='Move "{name}" to a new project'.format(name=desc.label)
+        "faculty/move_description.html",
+        form=form,
+        desc=desc,
+        create=create,
+        title='Move "{name}" to a new project'.format(name=desc.label),
     )
 
 
@@ -1142,21 +1311,37 @@ def attach_skills(id, sel_id=None):
     # (otherwise the form annoyingly resets itself everytime the page reloads)
     if not form.validate_on_submit() and request.method == "GET":
         if sel_id is None:
-            form.selector.data = SkillGroup.query.filter(SkillGroup.active == True).order_by(SkillGroup.name.asc()).first()
+            form.selector.data = (
+                SkillGroup.query.filter(SkillGroup.active == True)
+                .order_by(SkillGroup.name.asc())
+                .first()
+            )
         else:
-            form.selector.data = SkillGroup.query.filter(SkillGroup.active == True, SkillGroup.id == sel_id).first()
+            form.selector.data = SkillGroup.query.filter(
+                SkillGroup.active == True, SkillGroup.id == sel_id
+            ).first()
 
     # get list of active skills matching selector
     if form.selector.data is not None:
-        skills = TransferableSkill.query.filter(TransferableSkill.active == True, TransferableSkill.group_id == form.selector.data.id).order_by(
+        skills = TransferableSkill.query.filter(
+            TransferableSkill.active == True,
+            TransferableSkill.group_id == form.selector.data.id,
+        ).order_by(TransferableSkill.name.asc())
+    else:
+        skills = TransferableSkill.query.filter_by(active=True).order_by(
             TransferableSkill.name.asc()
         )
-    else:
-        skills = TransferableSkill.query.filter_by(active=True).order_by(TransferableSkill.name.asc())
 
     create = request.args.get("create", default=None)
 
-    return render_template_context("faculty/attach_skills.html", data=proj, skills=skills, form=form, sel_id=form.selector.data.id, create=create)
+    return render_template_context(
+        "faculty/attach_skills.html",
+        data=proj,
+        skills=skills,
+        form=form,
+        sel_id=form.selector.data.id,
+        create=create,
+    )
 
 
 @faculty.route("/add_skill/<int:projectid>/<int:skillid>/<int:sel_id>")
@@ -1177,7 +1362,9 @@ def add_skill(projectid, skillid, sel_id):
         proj.add_skill(skill)
         db.session.commit()
 
-    return redirect(url_for("faculty.attach_skills", id=projectid, sel_id=sel_id, create=create))
+    return redirect(
+        url_for("faculty.attach_skills", id=projectid, sel_id=sel_id, create=create)
+    )
 
 
 @faculty.route("/remove_skill/<int:projectid>/<int:skillid>/<int:sel_id>")
@@ -1198,7 +1385,9 @@ def remove_skill(projectid, skillid, sel_id):
         proj.remove_skill(skill)
         db.session.commit()
 
-    return redirect(url_for("faculty.attach_skills", id=projectid, sel_id=sel_id, create=create))
+    return redirect(
+        url_for("faculty.attach_skills", id=projectid, sel_id=sel_id, create=create)
+    )
 
 
 @faculty.route("/attach_programmes/<int:id>")
@@ -1215,7 +1404,9 @@ def attach_programmes(id):
 
     create = request.args.get("create", default=None)
 
-    return render_template_context("faculty/attach_programmes.html", data=proj, programmes=q.all(), create=create)
+    return render_template_context(
+        "faculty/attach_programmes.html", data=proj, programmes=q.all(), create=create
+    )
 
 
 @faculty.route("/add_programme/<int:id>/<int:prog_id>")
@@ -1302,7 +1493,13 @@ def attach_assessors(id):
     # get list of project classes to which this project is attached, and which require assignment of
     # second markers
     pclasses = proj.project_classes.filter(
-        and_(ProjectClass.active == True, or_(ProjectClass.uses_marker == True, ProjectClass.uses_presentations == True))
+        and_(
+            ProjectClass.active == True,
+            or_(
+                ProjectClass.uses_marker == True,
+                ProjectClass.uses_presentations == True,
+            ),
+        )
     ).all()
 
     return render_template_context(
@@ -1334,7 +1531,11 @@ def attach_assessors_ajax(id):
     faculty = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
     return ajax.project.build_assessor_data(
-        faculty, proj, _marker_menu, disable_enrollment_links=True, url=url_for("faculty.attach_assessors", id=id)
+        faculty,
+        proj,
+        _marker_menu,
+        disable_enrollment_links=True,
+        url=url_for("faculty.attach_assessors", id=id),
     )
 
 
@@ -1496,24 +1697,44 @@ def project_preview(id):
         form.comment.data = None
 
     # defaults for comments pane
-    form.limit_visibility.data = True if current_user.has_role("project_approver") else False
-
-    allow_approval = (
-        (current_user.has_role("project_approver") or current_user.has_role("root")) and desc is not None and allow_approval_for_description(desc.id)
+    form.limit_visibility.data = (
+        True if current_user.has_role("project_approver") else False
     )
 
-    show_comments = allow_approval or (data.owner is not None and current_user.id == data.owner.id) or current_user.has_role("convenor")
+    allow_approval = (
+            (current_user.has_role("project_approver") or current_user.has_role("root"))
+            and desc is not None
+            and allow_approval_for_description(desc.id)
+    )
+
+    show_comments = (
+            allow_approval
+            or (data.owner is not None and current_user.id == data.owner.id)
+            or current_user.has_role("convenor")
+    )
 
     if desc is not None:
         if all_workflow:
-            workflow_history = desc.workflow_history.order_by(ProjectDescriptionWorkflowHistory.timestamp.asc()).all()
+            workflow_history = desc.workflow_history.order_by(
+                ProjectDescriptionWorkflowHistory.timestamp.asc()
+            ).all()
         else:
-            workflow_history = desc.workflow_history.filter_by(year=current_year).order_by(ProjectDescriptionWorkflowHistory.timestamp.asc()).all()
+            workflow_history = (
+                desc.workflow_history.filter_by(year=current_year)
+                .order_by(ProjectDescriptionWorkflowHistory.timestamp.asc())
+                .all()
+            )
 
         if all_comments:
-            comments = desc.comments.order_by(DescriptionComment.creation_timestamp.asc()).all()
+            comments = desc.comments.order_by(
+                DescriptionComment.creation_timestamp.asc()
+            ).all()
         else:
-            comments = desc.comments.filter_by(year=current_year).order_by(DescriptionComment.creation_timestamp.asc()).all()
+            comments = (
+                desc.comments.filter_by(year=current_year)
+                .order_by(DescriptionComment.creation_timestamp.asc())
+                .all()
+            )
     else:
         workflow_history = []
         comments = []
@@ -1550,11 +1771,13 @@ def dashboard():
     main_config: MainConfig = get_main_config()
     if main_config.enable_2026_ATAS_campaign:
         # only consider jumping to landing page if this user belongs to a tenant participating in the campaign
-        if get_count(current_user.tenants.filter(Tenant.in_2026_ATAS_campaign == True)) > 0:
+        if (
+                get_count(current_user.tenants.filter(Tenant.in_2026_ATAS_campaign == True))
+                > 0
+        ):
             data = check_2026_ATAS(fd)
             if len(data["projects"]) > 0:
                 return redirect(url_for("campaigns.atas_2026"))
-
 
     num_unofferable = fd.projects_unofferable
     if num_unofferable > 0:
@@ -1580,12 +1803,20 @@ def dashboard():
             include = False
 
             if (
-                (pclass.uses_supervisor and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
-                or (config.uses_marker and config.display_marker and record.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+                    (
+                            pclass.uses_supervisor
+                            and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
+                    )
+                    or (
+                    config.uses_marker
+                    and config.display_marker
+                    and record.marker_state == EnrollmentRecord.MARKER_ENROLLED
+            )
                 or (
                     config.uses_presentations
                     and config.display_presentations
-                    and record.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED
+                    and record.presentations_state
+                    == EnrollmentRecord.PRESENTATIONS_ENROLLED
                 )
             ):
                 include = True
@@ -1599,14 +1830,28 @@ def dashboard():
                     num_mo_records = period.number_moderator_records(current_user.id)
 
                     pres_slots = (
-                        period.get_faculty_presentation_slots(current_user.id) if (period.has_presentation and period.has_deployed_schedule) else []
+                        period.get_faculty_presentation_slots(current_user.id)
+                        if (period.has_presentation and period.has_deployed_schedule)
+                        else []
                     )
 
                     if (
                         (pclass.uses_supervisor and num_s_records > 0)
-                        or (config.uses_marker and config.display_marker and num_mk_records > 0)
-                        or (config.uses_moderator and config.display_marker and num_mo_records > 0)
-                        or (config.uses_presentations and config.display_presentations and len(pres_slots) > 0)
+                            or (
+                            config.uses_marker
+                            and config.display_marker
+                            and num_mk_records > 0
+                    )
+                            or (
+                            config.uses_moderator
+                            and config.display_marker
+                            and num_mo_records > 0
+                    )
+                            or (
+                            config.uses_presentations
+                            and config.display_presentations
+                            and len(pres_slots) > 0
+                    )
                     ):
                         include = True
                         break
@@ -1615,7 +1860,9 @@ def dashboard():
                 # get live projects belonging to both this config item and the active user
                 live_projects = config.live_projects.filter_by(owner_id=current_user.id)
 
-                enrolments.append({"config": config, "projects": live_projects, "record": record})
+                enrolments.append(
+                    {"config": config, "projects": live_projects, "record": record}
+                )
                 enrolment_panes.append(str(config.id))
                 enrolment_labels[str(config.id)] = config.name
 
@@ -1623,7 +1870,10 @@ def dashboard():
     messages = []
     for message in (
             db.session.query(MessageOfTheDay)
-                    .filter(MessageOfTheDay.show_faculty, ~MessageOfTheDay.dismissed_by.any(id=current_user.id))
+                    .filter(
+                MessageOfTheDay.show_faculty,
+                ~MessageOfTheDay.dismissed_by.any(id=current_user.id),
+            )
                     .order_by(MessageOfTheDay.issue_date.desc())
                     .all()
     ):
@@ -1721,21 +1971,31 @@ def confirm_pclass(id):
     if not config.requests_issued:
         flash(
             "Confirmation requests have not yet been issued for {project} "
-            "{yeara}-{yearb}".format(project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b)
+            "{yeara}-{yearb}".format(
+                project=config.name,
+                yeara=config.submit_year_a,
+                yearb=config.submit_year_b,
+            )
         )
         return redirect(redirect_url())
 
     if config.live:
         flash(
             "Confirmation is no longer required for {project} {yeara}-{yearb} because this project "
-            "has already gone live".format(project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b)
+            "has already gone live".format(
+                project=config.name,
+                yeara=config.submit_year_a,
+                yearb=config.submit_year_b,
+            )
         )
         return redirect(redirect_url())
 
     if not config.is_confirmation_required(current_user.faculty_data):
         flash(
             "You have no outstanding confirmation requests for {project} {yeara}-{yearb}".format(
-                project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b
+                project=config.name,
+                yeara=config.submit_year_a,
+                yearb=config.submit_year_b,
             )
         )
         return redirect(redirect_url())
@@ -1749,7 +2009,8 @@ def confirm_pclass(id):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            'Could not projects for class "{pclass}" due to a database error. ' "Please contact a system administrator".format(pclass=config.name),
+            'Could not projects for class "{pclass}" due to a database error. '
+            "Please contact a system administrator".format(pclass=config.name),
             "error",
         )
 
@@ -1779,7 +2040,9 @@ def confirm_description(did, pclass_id):
     if not config.requests_issued:
         flash(
             "Confirmation requests have not yet been issued for {project} {yeara}-{yearb}".format(
-                project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b
+                project=config.name,
+                yeara=config.submit_year_a,
+                yearb=config.submit_year_b,
             )
         )
         return redirect(redirect_url())
@@ -1787,7 +2050,11 @@ def confirm_description(did, pclass_id):
     if config.live:
         flash(
             "Confirmation is no longer required for {project} {yeara}-{yearb} because this project "
-            "has already gone live".format(project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b)
+            "has already gone live".format(
+                project=config.name,
+                yeara=config.submit_year_a,
+                yearb=config.submit_year_b,
+            )
         )
         return redirect(redirect_url())
 
@@ -1818,7 +2085,9 @@ def confirm_description(did, pclass_id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
             'Could not confirm description "{desc}" for project "{proj}" due to a database error. '
-            "Please contact a system administrator".format(desc=desc.label, proj=desc.parent.name),
+            "Please contact a system administrator".format(
+                desc=desc.label, proj=desc.parent.name
+            ),
             "error",
         )
 
@@ -1952,16 +2221,24 @@ def edit_feedback(id):
     record: SubmissionRecord = role.submission
 
     if record.retired:
-        flash("It is not possible to edit feedback for submissions that have been retired.", "error")
+        flash(
+            "It is not possible to edit feedback for submissions that have been retired.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    if not validate_submission_role(role, allow_roles=["supervisor", "marker", "moderator"]):
+    if not validate_submission_role(
+            role, allow_roles=["supervisor", "marker", "moderator"]
+    ):
         return redirect(redirect_url())
 
     period: SubmissionPeriodRecord = record.period
 
     if not period.collect_project_feedback:
-        flash("This operation is not permitted. Feedback collection has been disabled for this submission period.", "info")
+        flash(
+            "This operation is not permitted. Feedback collection has been disabled for this submission period.",
+            "info",
+        )
         return redirect(redirect_url())
 
     if not period.is_feedback_open:
@@ -1973,7 +2250,10 @@ def edit_feedback(id):
         return redirect(redirect_url())
 
     if period.closed and role.submitted_feedback:
-        flash("It is not possible to edit feedback after the convenor has closed this submission period.", "warning")
+        flash(
+            "It is not possible to edit feedback after the convenor has closed this submission period.",
+            "warning",
+        )
         return redirect(redirect_url())
 
     form = SubmissionRoleFeedbackForm(request.form)
@@ -1994,7 +2274,10 @@ def edit_feedback(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save feedback due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save feedback due to a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url)
 
@@ -2008,7 +2291,8 @@ def edit_feedback(id):
         form=form,
         title="Edit feedback",
         unique_id="role-{id}".format(id=role.id),
-        formtitle='Edit feedback for <i class="fas fa-user-circle"></i> ' "<strong>{name}</strong>".format(name=record.student_identifier["label"]),
+        formtitle='Edit feedback for <i class="fas fa-user-circle"></i> '
+                  "<strong>{name}</strong>".format(name=record.student_identifier["label"]),
         submit_url=url_for("faculty.edit_feedback", id=id, url=url),
         period=period,
         record=role,
@@ -2023,17 +2307,25 @@ def submit_feedback(id):
     record: SubmissionRecord = role.submission
 
     if record.retired:
-        flash("It is not possible to submit feedback for submissions that have been retired.", "error")
+        flash(
+            "It is not possible to submit feedback for submissions that have been retired.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    if not validate_submission_role(role, allow_roles=["supervisor", "marker", "moderator"]):
+    if not validate_submission_role(
+            role, allow_roles=["supervisor", "marker", "moderator"]
+    ):
         return redirect(redirect_url())
 
     record: SubmissionRecord = role.submission
     period: SubmissionPeriodRecord = record.period
 
     if not period.collect_project_feedback:
-        flash("This operation is not permitted. Feedback collection has been disabled for this submission period.", "info")
+        flash(
+            "This operation is not permitted. Feedback collection has been disabled for this submission period.",
+            "info",
+        )
         return redirect(redirect_url())
 
     if not period.is_feedback_open:
@@ -2045,7 +2337,10 @@ def submit_feedback(id):
         return redirect(redirect_url())
 
     if period.closed and role.submitted_feedback:
-        flash("It is not possible to submit feedback after the convenor has closed this submission period.", "warning")
+        flash(
+            "It is not possible to submit feedback after the convenor has closed this submission period.",
+            "warning",
+        )
         return redirect(redirect_url())
 
     if not role.feedback_valid:
@@ -2067,7 +2362,10 @@ def submit_feedback(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not submit feedback due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not submit feedback due to a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -2080,25 +2378,39 @@ def unsubmit_feedback(id):
     record: SubmissionRecord = role.submission
 
     if record.retired:
-        flash("It is not possible to unsubmit feedback for submissions that have been retired.", "error")
+        flash(
+            "It is not possible to unsubmit feedback for submissions that have been retired.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    if not validate_submission_role(role, allow_roles=["supervisor", "marker", "moderator"]):
+    if not validate_submission_role(
+            role, allow_roles=["supervisor", "marker", "moderator"]
+    ):
         return redirect(redirect_url())
 
     record: SubmissionRecord = role.submission
     period: SubmissionPeriodRecord = record.period
 
     if not period.collect_project_feedback:
-        flash("This operation is not permitted. Feedback collection has been disabled for this submission period.", "info")
+        flash(
+            "This operation is not permitted. Feedback collection has been disabled for this submission period.",
+            "info",
+        )
         return redirect(redirect_url())
 
     if not role.submitted_feedback:
-        flash("Your feedback has not yet been submitted, and cannot be unsubmitted.", "info")
+        flash(
+            "Your feedback has not yet been submitted, and cannot be unsubmitted.",
+            "info",
+        )
         return redirect(redirect_url())
 
     if period.closed and role.submitted_feedback:
-        flash("It is not possible to unsubmit after the feedback period has closed.", "warning")
+        flash(
+            "It is not possible to unsubmit after the feedback period has closed.",
+            "warning",
+        )
         return redirect(redirect_url())
 
     try:
@@ -2109,7 +2421,10 @@ def unsubmit_feedback(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not unsubmit feedback due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not unsubmit feedback due to a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -2121,7 +2436,10 @@ def acknowledge_feedback(id):
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
 
     if record.retired:
-        flash("It is not possible to acknowledge student feedback for submissions that have been retired.", "error")
+        flash(
+            "It is not possible to acknowledge student feedback for submissions that have been retired.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not validate_submission_supervisor(record):
@@ -2133,11 +2451,17 @@ def acknowledge_feedback(id):
     period: SubmissionPeriodRecord = record.period
 
     if not period.is_feedback_open and not period.closed:
-        flash("It is not possible to submit before the feedback period has opened.", "error")
+        flash(
+            "It is not possible to submit before the feedback period has opened.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not record.student_feedback_submitted:
-        flash("Cannot acknowledge student feedback because none has been submitted.", "error")
+        flash(
+            "Cannot acknowledge student feedback because none has been submitted.",
+            "error",
+        )
         return redirect(redirect_url())
 
     record.acknowledge_feedback = True
@@ -2146,7 +2470,9 @@ def acknowledge_feedback(id):
     return redirect(redirect_url())
 
 
-@faculty.route("/presentation_edit_feedback/<int:slot_id>/<int:talk_id>", methods=["GET", "POST"])
+@faculty.route(
+    "/presentation_edit_feedback/<int:slot_id>/<int:talk_id>", methods=["GET", "POST"]
+)
 @roles_required("faculty")
 def presentation_edit_feedback(slot_id, talk_id):
     # slot_id labels a ScheduleSlot
@@ -2165,16 +2491,31 @@ def presentation_edit_feedback(slot_id, talk_id):
         return redirect(redirect_url())
 
     if not slot.owner.deployed:
-        flash("Can not edit feedback because the schedule containing this slot has not been deployed.", "error")
+        flash(
+            "Can not edit feedback because the schedule containing this slot has not been deployed.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    if not slot.owner.owner.is_feedback_open and talk.presentation_assessor_submitted(current_user.id):
-        flash("It is not possible to edit feedback after an assessment event has been closed.", "error")
+    if not slot.owner.owner.is_feedback_open and talk.presentation_assessor_submitted(
+            current_user.id
+    ):
+        flash(
+            "It is not possible to edit feedback after an assessment event has been closed.",
+            "error",
+        )
         return redirect(redirect_url())
 
     feedback = talk.presentation_feedback.filter_by(assessor_id=current_user.id).first()
     if feedback is None:
-        feedback = PresentationFeedback(owner_id=talk.id, assessor_id=current_user.id, positive=None, negative=None, submitted=False, timestamp=None)
+        feedback = PresentationFeedback(
+            owner_id=talk.id,
+            assessor_id=current_user.id,
+            positive=None,
+            negative=None,
+            submitted=False,
+            timestamp=None,
+        )
         db.session.add(feedback)
         db.session.commit()
 
@@ -2205,8 +2546,15 @@ def presentation_edit_feedback(slot_id, talk_id):
         form=form,
         unique_id="pres-{id}".format(id=id),
         title="Edit presentation feedback",
-        formtitle="Edit presentation feedback for <strong>{num}</strong>".format(num=talk.owner.student.user.name),
-        submit_url=url_for("faculty.presentation_edit_feedback", slot_id=slot_id, talk_id=talk_id, url=url),
+        formtitle="Edit presentation feedback for <strong>{num}</strong>".format(
+            num=talk.owner.student.user.name
+        ),
+        submit_url=url_for(
+            "faculty.presentation_edit_feedback",
+            slot_id=slot_id,
+            talk_id=talk_id,
+            url=url,
+        ),
         assessment=slot.owner.owner,
     )
 
@@ -2230,7 +2578,10 @@ def presentation_submit_feedback(slot_id, talk_id):
         return redirect(redirect_url())
 
     if not slot.owner.deployed:
-        flash("Can not submit feedback because the schedule containing this slot has not been deployed.", "error")
+        flash(
+            "Can not submit feedback because the schedule containing this slot has not been deployed.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not talk.is_presentation_assessor_valid(current_user.id):
@@ -2265,7 +2616,10 @@ def presentation_unsubmit_feedback(slot_id, talk_id):
         return redirect(redirect_url())
 
     if not slot.owner.deployed:
-        flash("Can not submit feedback because the schedule containing this slot has not been deployed.", "error")
+        flash(
+            "Can not submit feedback because the schedule containing this slot has not been deployed.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not slot.owner.owner.is_feedback_open:
@@ -2297,7 +2651,13 @@ def view_feedback(id):
 
     preview = request.args.get("preview", None)
 
-    return render_template_context("faculty/dashboard/view_feedback.html", record=record, text=text, url=url, preview=preview)
+    return render_template_context(
+        "faculty/dashboard/view_feedback.html",
+        record=record,
+        text=text,
+        url=url,
+        preview=preview,
+    )
 
 
 @faculty.route("/edit_response/<int:id>", methods=["GET", "POST"])
@@ -2308,7 +2668,10 @@ def edit_response(id):
     record: SubmissionRecord = role.submission
 
     if record.retired:
-        flash("It is not possible to edit a response to the submitted for submissions that have been retired.", "error")
+        flash(
+            "It is not possible to edit a response to the submitted for submissions that have been retired.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not validate_submission_role(role, allow_roles=["supervisor"]):
@@ -2326,11 +2689,17 @@ def edit_response(id):
         return redirect(redirect_url())
 
     if period.closed and role.submitted_response:
-        flash("It is not possible to edit your response once it has been submitted", "info")
+        flash(
+            "It is not possible to edit your response once it has been submitted",
+            "info",
+        )
         return redirect(redirect_url())
 
     if period.closed and not record.student_feedback_submitted:
-        flash("It is not possible to write a response to feedback from your student before they have submitted it.", "info")
+        flash(
+            "It is not possible to write a response to feedback from your student before they have submitted it.",
+            "info",
+        )
         return redirect(redirect_url())
 
     form = SubmissionRoleResponseForm(request.form)
@@ -2347,7 +2716,10 @@ def edit_response(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save response due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save response due to a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url)
 
@@ -2356,7 +2728,11 @@ def edit_response(id):
             form.feedback.data = role.response
 
     return render_template_context(
-        "faculty/dashboard/edit_response.html", form=form, record=role, submit_url=url_for("faculty.edit_response", id=id, url=url), url=url
+        "faculty/dashboard/edit_response.html",
+        form=form,
+        record=role,
+        submit_url=url_for("faculty.edit_response", id=id, url=url),
+        url=url,
     )
 
 
@@ -2368,7 +2744,10 @@ def submit_response(id):
     record: SubmissionRecord = role.submission
 
     if record.retired:
-        flash("It is not possible to submit a response to the submitter for submissions that have been retired.", "error")
+        flash(
+            "It is not possible to submit a response to the submitter for submissions that have been retired.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not validate_submission_role(role, allow_roles=["supervisor"]):
@@ -2389,11 +2768,17 @@ def submit_response(id):
         return redirect(redirect_url())
 
     if period.closed and not record.student_feedback_submitted:
-        flash("It is not possible to respond to feedback from your student before they have submitted it.", "info")
+        flash(
+            "It is not possible to respond to feedback from your student before they have submitted it.",
+            "info",
+        )
         return redirect(redirect_url())
 
     if not role.response_valid:
-        flash("Your response cannot be submitted because it is incomplete. Please ensure that you have provided responses for each category.", "info")
+        flash(
+            "Your response cannot be submitted because it is incomplete. Please ensure that you have provided responses for each category.",
+            "info",
+        )
         return redirect(redirect_url())
 
     try:
@@ -2404,7 +2789,10 @@ def submit_response(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not submit response due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not submit response due to a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -2425,11 +2813,17 @@ def set_availability(id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability:
-        flash("Cannot set availability for this assessment because it has not yet been opened", "info")
+        flash(
+            "Cannot set availability for this assessment because it has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.availability_closed:
-        flash("Cannot set availability for this assessment because it has been closed", "info")
+        flash(
+            "Cannot set availability for this assessment because it has been closed",
+            "info",
+        )
         return redirect(redirect_url())
 
     include_confirm = assessment.is_faculty_outstanding(current_user.id)
@@ -2444,12 +2838,17 @@ def set_availability(id):
         assessment.faculty_set_comment(current_user.faculty_data, comment)
 
         if hasattr(form, "confirm") and form.confirm:
-            record = assessment.assessor_list.filter_by(faculty_id=current_user.id, confirmed=False).first()
+            record = assessment.assessor_list.filter_by(
+                faculty_id=current_user.id, confirmed=False
+            ).first()
             if record is not None:
                 record.confirmed = True
                 record.confirmed_timestamp = datetime.now()
 
-            flash("Your availability details have been recorded. Thank you for responding.", "info")
+            flash(
+                "Your availability details have been recorded. Thank you for responding.",
+                "info",
+            )
 
         elif hasattr(form, "update") and form.update:
             flash("Thank you: your availability details have been updated", "info")
@@ -2462,15 +2861,26 @@ def set_availability(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return home_dashboard()
 
     else:
         if request.method == "GET":
-            form.comment.data = assessment.faculty_get_comment(current_user.faculty_data)
+            form.comment.data = assessment.faculty_get_comment(
+                current_user.faculty_data
+            )
 
-    return render_template_context("faculty/set_availability.html", form=form, assessment=assessment, url=url, text=text)
+    return render_template_context(
+        "faculty/set_availability.html",
+        form=form,
+        assessment=assessment,
+        url=url,
+        text=text,
+    )
 
 
 @faculty.route("/session_available/<int:sess_id>")
@@ -2487,11 +2897,17 @@ def session_available(sess_id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot set availability for this assessment because availability collection has not yet been opened", "info")
+        flash(
+            "Cannot set availability for this assessment because availability collection has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.availability_closed:
-        flash("Cannot set availability for this session because its parent assessment has been closed", "info")
+        flash(
+            "Cannot set availability for this session because its parent assessment has been closed",
+            "info",
+        )
         return redirect(redirect_url())
 
     session.faculty_make_available(current_user.faculty_data)
@@ -2501,7 +2917,10 @@ def session_available(sess_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes due to a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -2520,11 +2939,17 @@ def session_ifneeded(sess_id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot set availability for this session because availability collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot set availability for this session because availability collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.availability_closed:
-        flash("Cannot set availability for this session because its parent assessment has been closed", "info")
+        flash(
+            "Cannot set availability for this session because its parent assessment has been closed",
+            "info",
+        )
         return redirect(redirect_url())
 
     session.faculty_make_ifneeded(current_user.faculty_data)
@@ -2534,7 +2959,10 @@ def session_ifneeded(sess_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes due to a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -2553,11 +2981,17 @@ def session_unavailable(sess_id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot set availability for this session because availability collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot set availability for this session because availability collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.availability_closed:
-        flash("Cannot set availability for this session because its parent assessment has been closed", "info")
+        flash(
+            "Cannot set availability for this session because its parent assessment has been closed",
+            "info",
+        )
         return redirect(redirect_url())
 
     session.faculty_make_unavailable(current_user.faculty_data)
@@ -2567,7 +3001,10 @@ def session_unavailable(sess_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes due to a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -2578,18 +3015,26 @@ def session_all_available(sess_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(sess_id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(
+        sess_id
+    )
 
     current_year = get_current_year()
     if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot set availability for this session because availability collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot set availability for this session because availability collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.availability_closed:
-        flash("Cannot set availability for this session because its parent assessment has been closed", "info")
+        flash(
+            "Cannot set availability for this session because its parent assessment has been closed",
+            "info",
+        )
         return redirect(redirect_url())
 
     for session in assessment.sessions:
@@ -2606,18 +3051,26 @@ def session_all_unavailable(sess_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(sess_id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(
+        sess_id
+    )
 
     current_year = get_current_year()
     if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot set availability for this session because availability collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot set availability for this session because availability collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.availability_closed:
-        flash("Cannot set availability for this session because its parent assessment has been closed", "info")
+        flash(
+            "Cannot set availability for this session because its parent assessment has been closed",
+            "info",
+        )
         return redirect(redirect_url())
 
     for session in assessment.sessions:
@@ -2657,7 +3110,7 @@ def show_enrollments():
         .filter(
             and_(
                 ProjectClass.active == True,
-        ProjectClass.publish == True,
+                ProjectClass.publish == True,
                 ProjectClass.tenant_id.in_(user_tenant_ids),
             ),
         )
@@ -2665,10 +3118,18 @@ def show_enrollments():
         .all()
     )
     pclasses_binned = [(p, data.is_enrolled(p)) for p in pclasses]
-    enrolled_pclasses = [data.get_enrollment_record(p) for p, flag in pclasses_binned if flag]
+    enrolled_pclasses = [
+        data.get_enrollment_record(p) for p, flag in pclasses_binned if flag
+    ]
     unenrolled_pclasses = [p for p, flag in pclasses_binned if not flag]
 
-    return render_template_context("faculty/show_enrollments.html", data=data, url=url, enrolment_records=enrolled_pclasses, unenrolled_pclasses=unenrolled_pclasses)
+    return render_template_context(
+        "faculty/show_enrollments.html",
+        data=data,
+        url=url,
+        enrolment_records=enrolled_pclasses,
+        unenrolled_pclasses=unenrolled_pclasses,
+    )
 
 
 @faculty.route("/show_workload")
@@ -2699,7 +3160,11 @@ def settings():
 
     main_config = get_main_config()
 
-    FacultySettingsForm = FacultySettingsFormFactory(user, current_user, enable_canvas=main_config.enable_canvas_sync and data.is_convenor)
+    FacultySettingsForm = FacultySettingsFormFactory(
+        user,
+        current_user,
+        enable_canvas=main_config.enable_canvas_sync and data.is_convenor,
+    )
     form = FacultySettingsForm(obj=data)
     form.user = user
 
@@ -2761,7 +3226,9 @@ def settings():
             if hasattr(form, "mask_roles"):
                 form.mask_roles.data = user.mask_roles
 
-    return render_template_context("faculty/settings.html", settings_form=form, data=data)
+    return render_template_context(
+        "faculty/settings.html", settings_form=form, data=data
+    )
 
 
 @faculty.route("/past_feedback/<int:student_id>")
@@ -2775,11 +3242,16 @@ def past_feedback(student_id):
     user: User = User.query.get_or_404(student_id)
 
     if not user.has_role("student"):
-        flash("It is only possible to view past feedback for a student account.", "info")
+        flash(
+            "It is only possible to view past feedback for a student account.", "info"
+        )
         return redirect(redirect_url())
 
     if user.student_data is None:
-        flash("Cannot display past feedback for this student account because the corresponding StudentData record is missing.", "error")
+        flash(
+            "Cannot display past feedback for this student account because the corresponding StudentData record is missing.",
+            "error",
+        )
         return redirect(redirect_url())
 
     data: StudentData = user.student_data
@@ -2822,7 +3294,9 @@ def past_feedback(student_id):
 
     student_text = "student feedback"
     generic_text = "student feedback"
-    return_url = url_for("faculty.past_feedback", student_id=data.id, text=text, url=url)
+    return_url = url_for(
+        "faculty.past_feedback", student_id=data.id, text=text, url=url
+    )
 
     return render_template_context(
         "student/timeline.html",

@@ -116,12 +116,20 @@ def build_faculty_data(current_user: User, faculty: List[FacultyData]):
 
     return [
         {
-            "name": render_template(name_templ, u=fd.user, f=fd, simple_label=simple_label),
+            "name": render_template(
+                name_templ, u=fd.user, f=fd, simple_label=simple_label
+            ),
             "active": render_template(active_templ, u=fd.user),
             "settings": render_template(settings_templ, f=fd),
-            "affiliation": render_template(affiliation_templ, f=fd, simple_label=simple_label),
-            "enrolled": render_template(enrolled_templ, f=fd, small_swatch=small_swatch),
-            "menu": render_template(menu_templ, user=fd.user, cuser=current_user, pane="faculty"),
+            "affiliation": render_template(
+                affiliation_templ, f=fd, simple_label=simple_label
+            ),
+            "enrolled": render_template(
+                enrolled_templ, f=fd, small_swatch=small_swatch
+            ),
+            "menu": render_template(
+                menu_templ, user=fd.user, cuser=current_user, pane="faculty"
+            ),
         }
         for fd in faculty
     ]

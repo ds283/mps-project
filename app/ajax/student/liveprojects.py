@@ -12,7 +12,12 @@ from typing import List
 from flask import url_for, get_template_attribute, current_app, render_template
 from jinja2 import Template, Environment
 
-from ...models import SelectingStudent, LiveProject, ProjectClassConfig, SubmittingStudent
+from ...models import (
+    SelectingStudent,
+    LiveProject,
+    ProjectClassConfig,
+    SubmittingStudent,
+)
 
 # language=jinja2
 _meeting = """
@@ -240,7 +245,9 @@ def _build_selector_menu_templ() -> Template:
     return env.from_string(_selector_menu)
 
 
-def selector_liveprojects_data(sel: SelectingStudent, is_live: bool, projects: List[LiveProject]):
+def selector_liveprojects_data(
+        sel: SelectingStudent, is_live: bool, projects: List[LiveProject]
+):
     if hasattr(projects, "len") and len(projects) == 0:
         return []
 
@@ -259,12 +266,29 @@ def selector_liveprojects_data(sel: SelectingStudent, is_live: bool, projects: L
 
     def _process(p: LiveProject, is_live: bool):
         base = {
-            "name": render_template(name_templ, project=p, is_live=is_live, sel=sel, config=config),
+            "name": render_template(
+                name_templ, project=p, is_live=is_live, sel=sel, config=config
+            ),
             "supervisor": render_template(owner_templ, project=p),
-            "group": render_template(group_templ, sel=sel, project=p, config=config, simple_label=simple_label),
-            "skills": render_template(skills_templ, sel=sel, skills=p.ordered_skills, simple_label=simple_label),
-            "prefer": render_template(prefer_templ, project=p, simple_label=simple_label),
-            "menu": render_template(menu_templ, sel=sel, project=p, is_live=is_live, config=config),
+            "group": render_template(
+                group_templ,
+                sel=sel,
+                project=p,
+                config=config,
+                simple_label=simple_label,
+            ),
+            "skills": render_template(
+                skills_templ,
+                sel=sel,
+                skills=p.ordered_skills,
+                simple_label=simple_label,
+            ),
+            "prefer": render_template(
+                prefer_templ, project=p, simple_label=simple_label
+            ),
+            "menu": render_template(
+                menu_templ, sel=sel, project=p, is_live=is_live, config=config
+            ),
         }
 
         if is_live:
@@ -295,12 +319,26 @@ def submitter_liveprojects_data(sub: SubmittingStudent, projects: List[LiveProje
     def _process(p: LiveProject):
         return {
             "name": '<a class="text-decoration-none" href="{url}">{name}</a>'.format(
-                name=p.name, url=url_for("student.submitter_view_project", sid=sub.id, pid=p.id)
+                name=p.name,
+                url=url_for("student.submitter_view_project", sid=sub.id, pid=p.id),
             ),
             "supervisor": render_template(owner_templ, project=p),
-            "group": render_template(group_templ, sel=None, project=p, config=config, simple_label=simple_label),
-            "skills": render_template(skills_templ, sel=None, skills=p.ordered_skills, simple_label=simple_label),
-            "prefer": render_template(prefer_templ, project=p, simple_label=simple_label),
+            "group": render_template(
+                group_templ,
+                sel=None,
+                project=p,
+                config=config,
+                simple_label=simple_label,
+            ),
+            "skills": render_template(
+                skills_templ,
+                sel=None,
+                skills=p.ordered_skills,
+                simple_label=simple_label,
+            ),
+            "prefer": render_template(
+                prefer_templ, project=p, simple_label=simple_label
+            ),
             "menu": render_template(menu_templ, sub=sub, project=p),
         }
 

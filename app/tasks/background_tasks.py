@@ -36,7 +36,11 @@ def register_background_tasks(celery):
         try:
             db.session.query(TaskRecord).filter(
                 and_(
-                    or_(TaskRecord.status == TaskRecord.SUCCESS, TaskRecord.status == TaskRecord.FAILURE, TaskRecord.status == TaskRecord.TERMINATED),
+                    or_(
+                        TaskRecord.status == TaskRecord.SUCCESS,
+                        TaskRecord.status == TaskRecord.FAILURE,
+                        TaskRecord.status == TaskRecord.TERMINATED,
+                    ),
                     TaskRecord.start_date < limit,
                 )
             ).delete()
@@ -44,7 +48,9 @@ def register_background_tasks(celery):
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception in prune_background_tasks()", exc_info=e)
+            current_app.logger.exception(
+                "SQLAlchemyError exception in prune_background_tasks()", exc_info=e
+            )
             raise self.retry()
 
         self.update_state(state="FINISHED")

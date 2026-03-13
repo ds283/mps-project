@@ -51,7 +51,9 @@ def acl_role(role_list, asset, attachment, type):
         {
             "name": render_template_string(_name, r=r, simple_label=simple_label),
             "access": render_template_string(_access, asset=asset, role=r),
-            "actions": render_template_string(_actions, asset=asset, role=r, attachment=attachment, type=type),
+            "actions": render_template_string(
+                _actions, asset=asset, role=r, attachment=attachment, type=type
+            ),
         }
         for r in role_list
     ]

@@ -16,7 +16,6 @@ from flask import current_app
 
 
 class ScratchFileManager:
-
     def __init__(self, suffix: str = None):
         folder = Path(current_app.config.get("SCRATCH_FOLDER"))
         name = str(uuid4())

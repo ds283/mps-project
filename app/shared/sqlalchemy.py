@@ -42,7 +42,9 @@ def clone_model(model, **kwargs):
     for c in class_list:
         if hasattr(c, "__table__"):
             table = c.__table__
-            non_pk_columns = [k for k in table.columns.keys() if k not in table.primary_key]
+            non_pk_columns = [
+                k for k in table.columns.keys() if k not in table.primary_key
+            ]
             data = data | {c: getattr(model, c) for c in non_pk_columns}
 
     # merge any fields supplied in kwargs

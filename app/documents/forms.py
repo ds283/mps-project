@@ -9,7 +9,14 @@
 #
 
 from flask_security.forms import Form
-from wtforms import SubmitField, StringField, BooleanField, SelectField, DateTimeField, TextAreaField
+from wtforms import (
+    SubmitField,
+    StringField,
+    BooleanField,
+    SelectField,
+    DateTimeField,
+    TextAreaField,
+)
 from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy import QuerySelectField
 
@@ -21,7 +28,11 @@ from ..models import SubmissionAttachment
 
 class LicenseMixin:
     license = QuerySelectField(
-        "License", query_factory=GetActiveAssetLicenses, get_label="name", allow_blank=True, blank_text="Unset (no license specified)"
+        "License",
+        query_factory=GetActiveAssetLicenses,
+        get_label="name",
+        allow_blank=True,
+        blank_text="Unset (no license specified)",
     )
 
 
@@ -46,23 +57,35 @@ class EditReportForm(Form, LicenseMixin, DownloadableAttachmentMixin, SaveChange
 
 def AttachmentMixinFactory(admin=False):
     class AttachmentMixin:
-        description = StringField("Comment", description="Give a short description of the attachment")
+        description = StringField(
+            "Comment", description="Give a short description of the attachment"
+        )
 
         if admin:
             _types = [
                 (SubmissionAttachment.ATTACHMENT_TYPE_UNSET, "Unset"),
                 (SubmissionAttachment.ATTACHMENT_MARKING_REPORT, "Marking report"),
-                (SubmissionAttachment.ATTACHMENT_SIMILARITY_REPORT, "Similarity report"),
-                (SubmissionAttachment.ATTACHMENT_FEEDBACK_DOCUMENT, "Feedback document"),
+                (
+                    SubmissionAttachment.ATTACHMENT_SIMILARITY_REPORT,
+                    "Similarity report",
+                ),
+                (
+                    SubmissionAttachment.ATTACHMENT_FEEDBACK_DOCUMENT,
+                    "Feedback document",
+                ),
                 (SubmissionAttachment.ATTACHMENT_OTHER, "Other"),
             ]
             type = SelectField("Attachment type", choices=_types, coerce=int)
 
             publish_to_students = BooleanField("Publish this document to students")
 
-            include_marker_emails = BooleanField("Attach this document to marking notifications sent to examiners")
+            include_marker_emails = BooleanField(
+                "Attach this document to marking notifications sent to examiners"
+            )
 
-            include_supervisor_emails = BooleanField("Attach this document to marking notifications sent to supervisors")
+            include_supervisor_emails = BooleanField(
+                "Attach this document to marking notifications sent to supervisors"
+            )
 
     return AttachmentMixin
 
@@ -70,7 +93,9 @@ def AttachmentMixinFactory(admin=False):
 def UploadSubmitterAttachmentFormFactory(admin=False):
     AttachmentMixin = AttachmentMixinFactory(admin=admin)
 
-    class UploadSubmitterAttachmentForm(Form, LicenseMixin, AttachmentMixin, DownloadableAttachmentMixin):
+    class UploadSubmitterAttachmentForm(
+        Form, LicenseMixin, AttachmentMixin, DownloadableAttachmentMixin
+    ):
         submit = SubmitField("Upload attachment")
 
     return UploadSubmitterAttachmentForm
@@ -79,7 +104,13 @@ def UploadSubmitterAttachmentFormFactory(admin=False):
 def EditSubmitterAttachmentFormFactory(admin=False):
     AttachmentMixin = AttachmentMixinFactory(admin=admin)
 
-    class EditSubmitterAttachmentForm(Form, LicenseMixin, AttachmentMixin, DownloadableAttachmentMixin, SaveChangesMixin):
+    class EditSubmitterAttachmentForm(
+        Form,
+        LicenseMixin,
+        AttachmentMixin,
+        DownloadableAttachmentMixin,
+        SaveChangesMixin,
+    ):
         pass
 
     return EditSubmitterAttachmentForm
@@ -95,16 +126,26 @@ class PeriodAttachmentMixin:
 
     publish_to_students = BooleanField("Publish this document to students")
 
-    include_marker_emails = BooleanField("Attach this document to marking notifications sent to examiners")
+    include_marker_emails = BooleanField(
+        "Attach this document to marking notifications sent to examiners"
+    )
 
-    include_supervisor_emails = BooleanField("Attach this document to marking notifications sent to supervisors")
+    include_supervisor_emails = BooleanField(
+        "Attach this document to marking notifications sent to supervisors"
+    )
 
     license = QuerySelectField(
-        "License", query_factory=GetActiveAssetLicenses, get_label="name", allow_blank=True, blank_text="Unset (no license specified)"
+        "License",
+        query_factory=GetActiveAssetLicenses,
+        get_label="name",
+        allow_blank=True,
+        blank_text="Unset (no license specified)",
     )
 
 
-class UploadPeriodAttachmentForm(Form, PeriodAttachmentMixin, DownloadableAttachmentMixin):
+class UploadPeriodAttachmentForm(
+    Form, PeriodAttachmentMixin, DownloadableAttachmentMixin
+):
     submit = SubmitField("Upload attachment")
 
 

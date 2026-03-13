@@ -33,7 +33,10 @@ from .matching.match_view_faculty import faculty_view_data
 from .matching.match_view_student import student_view_data
 from .matching.matches import matches_data
 
-from .presentations.assessor_availability import assessor_session_availability_data, presentation_assessors_data
+from .presentations.assessor_availability import (
+    assessor_session_availability_data,
+    presentation_assessors_data,
+)
 from .presentations.assign_assessor import assign_assessor_data
 from .presentations.assign_submitter import assign_submitter_data
 from .presentations.compare_schedules import compare_schedule_data
@@ -43,4 +46,7 @@ from .presentations.schedule_view_sessions import schedule_view_sessions
 from .presentations.schedule_view_faculty import schedule_view_faculty
 from .presentations.schedules import assessment_schedules_data
 from .presentations.sessions import assessment_sessions_data
-from .presentations.submitter_availability import submitter_session_availability_data, presentation_attendees_data
+from .presentations.submitter_availability import (
+    submitter_session_availability_data,
+    presentation_attendees_data,
+)

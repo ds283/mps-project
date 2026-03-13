@@ -22,8 +22,25 @@ from bokeh.embed import components
 from bokeh.models import Label
 from bokeh.plotting import figure
 from celery import chain, group
-from flask import current_app, redirect, url_for, flash, request, jsonify, session, stream_with_context, abort, send_file
-from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
+from flask import (
+    current_app,
+    redirect,
+    url_for,
+    flash,
+    request,
+    jsonify,
+    session,
+    stream_with_context,
+    abort,
+    send_file,
+)
+from flask_security import (
+    login_required,
+    roles_required,
+    roles_accepted,
+    current_user,
+    login_user,
+)
 from math import pi
 from numpy import histogram
 from sqlalchemy import or_
@@ -103,7 +120,9 @@ from .forms import (
     UploadFeedbackAssetForm,
     EditFeedbackAssetForm,
     AddFeedbackRecipeForm,
-    EditFeedbackRecipeForm, AddProjectClassFormFactory, EditProjectClassFormFactory,
+    EditFeedbackRecipeForm,
+    AddProjectClassFormFactory,
+    EditProjectClassFormFactory,
     AddEmailTemplateForm,
     EditEmailTemplateForm,
 )
@@ -163,8 +182,11 @@ from ..models import (
     BackupLabel,
     FeedbackAsset,
     TemplateTag,
-    FeedbackRecipe, DownloadCentreItem, Tenant,
-    EmailTemplate, EmailTemplateLabel,
+    FeedbackRecipe,
+    DownloadCentreItem,
+    Tenant,
+    EmailTemplate,
+    EmailTemplateLabel,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
@@ -176,7 +198,10 @@ from ..shared.backup import (
     create_new_backup_labels,
 )
 from ..shared.context.global_context import render_template_context
-from ..shared.context.matching import get_ready_to_match_data, get_matching_dashboard_data
+from ..shared.context.matching import (
+    get_ready_to_match_data,
+    get_matching_dashboard_data,
+)
 from ..shared.context.rollover import get_rollover_data
 from ..shared.conversions import is_integer
 from ..shared.formatters import format_size
@@ -231,7 +256,10 @@ def global_config():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return home_dashboard()
 
@@ -257,13 +285,35 @@ def groups_ajax():
     """
     base_query = db.session.query(ResearchGroup)
 
-    abbrv = {"search": ResearchGroup.abbreviation, "order": ResearchGroup.abbreviation, "search_collation": "utf8_general_ci"}
+    abbrv = {
+        "search": ResearchGroup.abbreviation,
+        "order": ResearchGroup.abbreviation,
+        "search_collation": "utf8_general_ci",
+    }
     active = {"order": ResearchGroup.active}
-    name = {"search": ResearchGroup.name, "order": ResearchGroup.name, "search_collation": "utf8_general_ci"}
-    colour = {"search": ResearchGroup.colour, "order": ResearchGroup.colour, "search_collation": "utf8_general_ci"}
-    website = {"search": ResearchGroup.website, "order": ResearchGroup.website, "search_collation": "utf8_general_ci"}
+    name = {
+        "search": ResearchGroup.name,
+        "order": ResearchGroup.name,
+        "search_collation": "utf8_general_ci",
+    }
+    colour = {
+        "search": ResearchGroup.colour,
+        "order": ResearchGroup.colour,
+        "search_collation": "utf8_general_ci",
+    }
+    website = {
+        "search": ResearchGroup.website,
+        "order": ResearchGroup.website,
+        "search_collation": "utf8_general_ci",
+    }
 
-    columns = {"abbrv": abbrv, "active": active, "name": name, "colour": colour, "website": website}
+    columns = {
+        "abbrv": abbrv,
+        "active": active,
+        "name": name,
+        "colour": colour,
+        "website": website,
+    }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.admin.groups_data)
@@ -301,11 +351,16 @@ def add_group():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add this affiliation group because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not add this affiliation group because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_groups"))
 
-    return render_template_context("admin/edit_group.html", group_form=form, title="Add new affiliation")
+    return render_template_context(
+        "admin/edit_group.html", group_form=form, title="Add new affiliation"
+    )
 
 
 @admin.route("/edit_group/<int:id>", methods=["GET", "POST"])
@@ -340,11 +395,16 @@ def edit_group(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_groups"))
 
-    return render_template_context("admin/edit_group.html", group_form=form, group=group, title="Edit affiliation")
+    return render_template_context(
+        "admin/edit_group.html", group_form=form, group=group, title="Edit affiliation"
+    )
 
 
 @admin.route("/activate_group/<int:id>")
@@ -363,7 +423,10 @@ def activate_group(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -384,7 +447,10 @@ def deactivate_group(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -396,7 +462,9 @@ def edit_degree_types():
     View for editing degree types
     :return:
     """
-    return render_template_context("admin/degree_types/edit_degrees.html", subpane="degrees")
+    return render_template_context(
+        "admin/degree_types/edit_degrees.html", subpane="degrees"
+    )
 
 
 @admin.route("/edit_degree_programmes")
@@ -406,7 +474,9 @@ def edit_degree_programmes():
     View for editing degree programmes
     :return:
     """
-    return render_template_context("admin/degree_types/edit_programmes.html", subpane="programmes")
+    return render_template_context(
+        "admin/degree_types/edit_programmes.html", subpane="programmes"
+    )
 
 
 @admin.route("/edit_modules")
@@ -416,7 +486,9 @@ def edit_modules():
     View for editing modules
     :return:
     """
-    return render_template_context("admin/degree_types/edit_modules.html", subpane="modules")
+    return render_template_context(
+        "admin/degree_types/edit_modules.html", subpane="modules"
+    )
 
 
 @admin.route("/edit_levels")
@@ -426,7 +498,9 @@ def edit_levels():
     View for editing FHEQ levels
     :return:
     """
-    return render_template_context("admin/degree_types/edit_levels.html", subpane="levels")
+    return render_template_context(
+        "admin/degree_types/edit_levels.html", subpane="levels"
+    )
 
 
 @admin.route("/edit_levels_ajax", methods=["POST"])
@@ -438,13 +512,34 @@ def edit_levels_ajax():
     """
     base_query = db.session.query(FHEQ_Level)
 
-    name = {"search": FHEQ_Level.name, "order": FHEQ_Level.name, "search_collation": "utf8_general_ci"}
-    short_name = {"search": FHEQ_Level.short_name, "order": FHEQ_Level.short_name, "search_collation": "utf8_general_ci"}
-    colour = {"search": FHEQ_Level.colour, "order": FHEQ_Level.colour, "search_collation": "utf8_general_ci"}
-    numeric_level = {"order": FHEQ_Level.numeric_level, "search": cast(FHEQ_Level.numeric_level, String)}
+    name = {
+        "search": FHEQ_Level.name,
+        "order": FHEQ_Level.name,
+        "search_collation": "utf8_general_ci",
+    }
+    short_name = {
+        "search": FHEQ_Level.short_name,
+        "order": FHEQ_Level.short_name,
+        "search_collation": "utf8_general_ci",
+    }
+    colour = {
+        "search": FHEQ_Level.colour,
+        "order": FHEQ_Level.colour,
+        "search_collation": "utf8_general_ci",
+    }
+    numeric_level = {
+        "order": FHEQ_Level.numeric_level,
+        "search": cast(FHEQ_Level.numeric_level, String),
+    }
     status = {"order": FHEQ_Level.active}
 
-    columns = {"name": name, "short_name": short_name, "colour": colour, "numeric_level": numeric_level, "status": status}
+    columns = {
+        "name": name,
+        "short_name": short_name,
+        "colour": colour,
+        "numeric_level": numeric_level,
+        "status": status,
+    }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.admin.FHEQ_levels_data)
@@ -459,13 +554,30 @@ def degree_types_ajax():
     """
     base_query = db.session.query(DegreeType)
 
-    name = {"search": DegreeType.name, "order": DegreeType.name, "search_collation": "utf8_general_ci"}
+    name = {
+        "search": DegreeType.name,
+        "order": DegreeType.name,
+        "search_collation": "utf8_general_ci",
+    }
     level = {"order": DegreeType.level}
-    duration = {"search": cast(DegreeType.duration, String), "order": DegreeType.duration}
-    colour = {"search": DegreeType.colour, "order": DegreeType.colour, "search_collation": "utf8_general_ci"}
+    duration = {
+        "search": cast(DegreeType.duration, String),
+        "order": DegreeType.duration,
+    }
+    colour = {
+        "search": DegreeType.colour,
+        "order": DegreeType.colour,
+        "search_collation": "utf8_general_ci",
+    }
     active = {"order": DegreeType.active}
 
-    columns = {"name": name, "level": level, "duration": duration, "colour": colour, "active": active}
+    columns = {
+        "name": name,
+        "level": level,
+        "duration": duration,
+        "colour": colour,
+        "active": active,
+    }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.admin.degree_types_data)
@@ -478,15 +590,35 @@ def degree_programmes_ajax():
     Ajax data point for degree programmes tables
     :return:
     """
-    base_query = db.session.query(DegreeProgramme).join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
+    base_query = db.session.query(DegreeProgramme).join(
+        DegreeType, DegreeType.id == DegreeProgramme.type_id
+    )
 
-    name = {"search": DegreeProgramme.name, "order": DegreeProgramme.name, "search_collation": "utf8_general_ci"}
-    type = {"search": DegreeType.name, "order": DegreeType.name, "search_collation": "utf8_general_ci"}
+    name = {
+        "search": DegreeProgramme.name,
+        "order": DegreeProgramme.name,
+        "search_collation": "utf8_general_ci",
+    }
+    type = {
+        "search": DegreeType.name,
+        "order": DegreeType.name,
+        "search_collation": "utf8_general_ci",
+    }
     show_type = {"order": DegreeProgramme.show_type}
-    course_code = {"search": DegreeProgramme.course_code, "order": DegreeProgramme.course_code, "search_collation": "utf8_general_ci"}
+    course_code = {
+        "search": DegreeProgramme.course_code,
+        "order": DegreeProgramme.course_code,
+        "search_collation": "utf8_general_ci",
+    }
     active = {"order": DegreeProgramme.active}
 
-    columns = {"name": name, "type": type, "show_type": show_type, "course_code": course_code, "active": active}
+    columns = {
+        "name": name,
+        "type": type,
+        "show_type": show_type,
+        "course_code": course_code,
+        "active": active,
+    }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.admin.degree_programmes_data)
@@ -499,11 +631,25 @@ def modules_ajax():
     Ajax data point for module table
     :return:
     """
-    base_query = db.session.query(Module).join(FHEQ_Level, FHEQ_Level.id == Module.level_id)
+    base_query = db.session.query(Module).join(
+        FHEQ_Level, FHEQ_Level.id == Module.level_id
+    )
 
-    code = {"search": Module.code, "order": Module.code, "search_collation": "utf8_general_ci"}
-    name = {"search": Module.name, "order": Module.name, "search_collation": "utf8_general_ci"}
-    level = {"search": FHEQ_Level.short_name, "order": FHEQ_Level.short_name, "search_collation": "utf8_general_ci"}
+    code = {
+        "search": Module.code,
+        "order": Module.code,
+        "search_collation": "utf8_general_ci",
+    }
+    name = {
+        "search": Module.name,
+        "order": Module.name,
+        "search_collation": "utf8_general_ci",
+    }
+    level = {
+        "search": FHEQ_Level.short_name,
+        "order": FHEQ_Level.short_name,
+        "search_collation": "utf8_general_ci",
+    }
     status = {"order": Module.active}
 
     columns = {"code": code, "name": name, "level": level, "status": status}
@@ -539,11 +685,18 @@ def add_degree_type():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add a degree type because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not add a degree type because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_degree_types"))
 
-    return render_template_context("admin/degree_types/edit_degree.html", type_form=form, title="Add new degree type")
+    return render_template_context(
+        "admin/degree_types/edit_degree.html",
+        type_form=form,
+        title="Add new degree type",
+    )
 
 
 @admin.route("/edit_type/<int:id>", methods=["GET", "POST"])
@@ -573,11 +726,19 @@ def edit_degree_type(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_degree_types"))
 
-    return render_template_context("admin/degree_types/edit_degree.html", type_form=form, type=type, title="Edit degree type")
+    return render_template_context(
+        "admin/degree_types/edit_degree.html",
+        type_form=form,
+        type=type,
+        title="Edit degree type",
+    )
 
 
 @admin.route("/make_type_active/<int:id>")
@@ -597,7 +758,10 @@ def activate_degree_type(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -619,7 +783,10 @@ def deactivate_degree_type(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -633,7 +800,10 @@ def add_degree_programme():
     """
     # check whether any active degree types exist, and raise an error if not
     if not DegreeType.query.filter_by(active=True).first():
-        flash("No degree types are available. Set up at least one active degree type before adding a degree programme.", "error")
+        flash(
+            "No degree types are available. Set up at least one active degree type before adding a degree programme.",
+            "error",
+        )
         return redirect(redirect_url())
 
     form = AddDegreeProgrammeForm(request.form)
@@ -661,11 +831,18 @@ def add_degree_programme():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add a degree programme because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not add a degree programme because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_degree_programmes"))
 
-    return render_template_context("admin/degree_types/edit_programme.html", programme_form=form, title="Add new degree programme")
+    return render_template_context(
+        "admin/degree_types/edit_programme.html",
+        programme_form=form,
+        title="Add new degree programme",
+    )
 
 
 @admin.route("/edit_programme/<int:id>", methods=["GET", "POST"])
@@ -690,7 +867,9 @@ def edit_degree_programme(id):
         programme.course_code = form.course_code.data
         programme.foundation_year = form.foundation_year.data
         programme.year_out = form.year_out.data
-        programme.year_out_value = form.year_out_value.data if programme.year_out else None
+        programme.year_out_value = (
+            form.year_out_value.data if programme.year_out else None
+        )
         programme.type_id = form.degree_type.data.id
         programme.last_edit_id = current_user.id
         programme.last_edit_timestamp = datetime.now()
@@ -700,11 +879,19 @@ def edit_degree_programme(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_degree_programmes"))
 
-    return render_template_context("admin/degree_types/edit_programme.html", programme_form=form, programme=programme, title="Edit degree programme")
+    return render_template_context(
+        "admin/degree_types/edit_programme.html",
+        programme_form=form,
+        programme=programme,
+        title="Edit degree programme",
+    )
 
 
 @admin.route("/activate_programme/<int:id>")
@@ -723,7 +910,10 @@ def activate_degree_programme(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -744,7 +934,10 @@ def deactivate_degree_programme(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -764,24 +957,40 @@ def attach_modules(id, level_id=None):
 
     if not form.validate_on_submit() and request.method == "GET":
         if level_id is None:
-            form.selector.data = FHEQ_Level.query.filter(FHEQ_Level.active == True).order_by(FHEQ_Level.numeric_level.asc()).first()
+            form.selector.data = (
+                FHEQ_Level.query.filter(FHEQ_Level.active == True)
+                .order_by(FHEQ_Level.numeric_level.asc())
+                .first()
+            )
         else:
-            form.selector.data = FHEQ_Level.query.filter(FHEQ_Level.active == True, FHEQ_Level.id == level_id).first()
+            form.selector.data = FHEQ_Level.query.filter(
+                FHEQ_Level.active == True, FHEQ_Level.id == level_id
+            ).first()
 
     # get list of modules for the current level_id
     if form.selector.data is not None:
-        modules = Module.query.filter(Module.active == True, Module.level_id == form.selector.data.id).order_by(
-            Module.semester.asc(), Module.name.asc()
-        )
+        modules = Module.query.filter(
+            Module.active == True, Module.level_id == form.selector.data.id
+        ).order_by(Module.semester.asc(), Module.name.asc())
     else:
         modules = []
 
     level_id = form.selector.data.id if form.selector.data is not None else None
 
-    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.numeric_level.asc()).all()
+    levels = (
+        FHEQ_Level.query.filter_by(active=True)
+        .order_by(FHEQ_Level.numeric_level.asc())
+        .all()
+    )
 
     return render_template_context(
-        "admin/degree_types/attach_modules.html", prog=programme, modules=modules, form=form, level_id=level_id, levels=levels, title="Attach modules"
+        "admin/degree_types/attach_modules.html",
+        prog=programme,
+        modules=modules,
+        form=form,
+        level_id=level_id,
+        levels=levels,
+        title="Attach modules",
     )
 
 
@@ -805,7 +1014,10 @@ def attach_module(prog_id, mod_id, level_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator",
+                "error",
+            )
 
     return redirect(url_for("admin.attach_modules", id=prog_id, level_id=level_id))
 
@@ -830,7 +1042,10 @@ def detach_module(prog_id, mod_id, level_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator",
+                "error",
+            )
 
     return redirect(url_for("admin.attach_modules", id=prog_id, level_id=level_id))
 
@@ -863,11 +1078,16 @@ def add_level():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could add a FHEQ level because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could add a FHEQ level because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_levels"))
 
-    return render_template_context("admin/degree_types/edit_level.html", form=form, title="Add new FHEQ Level")
+    return render_template_context(
+        "admin/degree_types/edit_level.html", form=form, title="Add new FHEQ Level"
+    )
 
 
 @admin.route("/edit_level/<int:id>", methods=["GET", "POST"])
@@ -894,11 +1114,19 @@ def edit_level(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_levels"))
 
-    return render_template_context("admin/degree_types/edit_level.html", form=form, level=level, title="Edit FHEQ Level")
+    return render_template_context(
+        "admin/degree_types/edit_level.html",
+        form=form,
+        level=level,
+        title="Edit FHEQ Level",
+    )
 
 
 @admin.route("/activate_level/<int:id>")
@@ -917,7 +1145,10 @@ def activate_level(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -938,7 +1169,10 @@ def deactivate_level(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -952,7 +1186,10 @@ def add_module():
     """
     # check whether any active FHEQ levels exist, and raise an error if not
     if not FHEQ_Level.query.filter_by(active=True).first():
-        flash("No FHEQ Levels are available. Set up at least one active FHEQ Level before adding a module.", "error")
+        flash(
+            "No FHEQ Levels are available. Set up at least one active FHEQ Level before adding a module.",
+            "error",
+        )
         return redirect(redirect_url())
 
     form = AddModuleForm(request.form)
@@ -977,11 +1214,16 @@ def add_module():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add a module because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not add a module because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_modules"))
 
-    return render_template_context("admin/degree_types/edit_module.html", form=form, title="Add new module")
+    return render_template_context(
+        "admin/degree_types/edit_module.html", form=form, title="Add new module"
+    )
 
 
 @admin.route("/edit_module/<int:id>", methods=["GET", "POST"])
@@ -995,7 +1237,12 @@ def edit_module(id):
     module = Module.query.get_or_404(id)
 
     if not module.active:
-        flash('Module "{code} {name}" cannot be edited because it is ' "retired.".format(code=module.code, name=module.name), "info")
+        flash(
+            'Module "{code} {name}" cannot be edited because it is retired.'.format(
+                code=module.code, name=module.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     form = EditModuleForm(obj=module)
@@ -1014,11 +1261,19 @@ def edit_module(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_modules"))
 
-    return render_template_context("admin/degree_types/edit_module.html", form=form, title="Edit module", module=module)
+    return render_template_context(
+        "admin/degree_types/edit_module.html",
+        form=form,
+        title="Edit module",
+        module=module,
+    )
 
 
 @admin.route("/retire_module/<int:id>")
@@ -1037,7 +1292,10 @@ def retire_module(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1058,7 +1316,10 @@ def unretire_module(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1073,7 +1334,9 @@ def edit_skills():
     if not validate_is_admin_or_convenor("edit_tags"):
         return home_dashboard()
 
-    return render_template_context("admin/transferable_skills/edit_skills.html", subpane="skills")
+    return render_template_context(
+        "admin/transferable_skills/edit_skills.html", subpane="skills"
+    )
 
 
 @admin.route("/skills_ajax", methods=["POST"])
@@ -1086,10 +1349,20 @@ def skills_ajax():
     if not validate_is_admin_or_convenor("edit_tags"):
         return jsonify({})
 
-    base_query = db.session.query(TransferableSkill).join(SkillGroup, SkillGroup.id == TransferableSkill.group_id)
+    base_query = db.session.query(TransferableSkill).join(
+        SkillGroup, SkillGroup.id == TransferableSkill.group_id
+    )
 
-    name = {"search": TransferableSkill.name, "order": TransferableSkill.name, "search_collation": "utf8_general_ci"}
-    group = {"search": SkillGroup.name, "order": SkillGroup.name, "search_collation": "utf8_general_ci"}
+    name = {
+        "search": TransferableSkill.name,
+        "order": TransferableSkill.name,
+        "search_collation": "utf8_general_ci",
+    }
+    group = {
+        "search": SkillGroup.name,
+        "order": SkillGroup.name,
+        "search_collation": "utf8_general_ci",
+    }
     active = {"order": TransferableSkill.active}
 
     columns = {"name": name, "group": group, "active": active}
@@ -1110,14 +1383,21 @@ def add_skill():
 
     # check whether any skill groups exist, and raise an error if not
     if not db.session.query(SkillGroup).filter_by(active=True).first():
-        flash("No skill groups are available. Set up at least one active skill group before adding a transferable skill.", "error")
+        flash(
+            "No skill groups are available. Set up at least one active skill group before adding a transferable skill.",
+            "error",
+        )
         return redirect(redirect_url())
 
     form = AddTransferableSkillForm(request.form)
 
     if form.validate_on_submit():
         skill = TransferableSkill(
-            name=form.name.data, group=form.group.data, active=True, creator_id=current_user.id, creation_timestamp=datetime.now()
+            name=form.name.data,
+            group=form.group.data,
+            active=True,
+            creator_id=current_user.id,
+            creation_timestamp=datetime.now(),
         )
 
         try:
@@ -1126,11 +1406,18 @@ def add_skill():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add this skill group because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not add this skill group because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_skills"))
 
-    return render_template_context("admin/transferable_skills/edit_skill.html", skill_form=form, title="Add new transferable skill")
+    return render_template_context(
+        "admin/transferable_skills/edit_skill.html",
+        skill_form=form,
+        title="Add new transferable skill",
+    )
 
 
 @admin.route("/edit_skill/<int:id>", methods=["GET", "POST"])
@@ -1160,11 +1447,19 @@ def edit_skill(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_skills"))
 
-    return render_template_context("admin/transferable_skills/edit_skill.html", skill_form=form, skill=skill, title="Edit transferable skill")
+    return render_template_context(
+        "admin/transferable_skills/edit_skill.html",
+        skill_form=form,
+        skill=skill,
+        title="Edit transferable skill",
+    )
 
 
 @admin.route("/activate_skill/<int:id>")
@@ -1186,7 +1481,10 @@ def activate_skill(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not activate this transferable skill because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not activate this transferable skill because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1210,7 +1508,10 @@ def deactivate_skill(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not deactivate this transferable skill because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not deactivate this transferable skill because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1225,7 +1526,9 @@ def edit_skill_groups():
     if not validate_is_admin_or_convenor("edit_tags"):
         return home_dashboard()
 
-    return render_template_context("admin/transferable_skills/edit_skill_groups.html", subpane="groups")
+    return render_template_context(
+        "admin/transferable_skills/edit_skill_groups.html", subpane="groups"
+    )
 
 
 @admin.route("/skill_groups_ajax", methods=["POST"])
@@ -1240,7 +1543,11 @@ def skill_groups_ajax():
 
     base_query = db.session.query(SkillGroup)
 
-    name = {"search": SkillGroup.name, "order": SkillGroup.name, "search_collation": "utf8_general_ci"}
+    name = {
+        "search": SkillGroup.name,
+        "order": SkillGroup.name,
+        "search_collation": "utf8_general_ci",
+    }
     include = {"order": SkillGroup.add_group}
     active = {"order": SkillGroup.active}
 
@@ -1278,11 +1585,18 @@ def add_skill_group():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add new transferable skill group because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not add new transferable skill group because of a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_skill_groups"))
 
-    return render_template_context("admin/transferable_skills/edit_skill_group.html", group_form=form, title="Add new transferable skill group")
+    return render_template_context(
+        "admin/transferable_skills/edit_skill_group.html",
+        group_form=form,
+        title="Add new transferable skill group",
+    )
 
 
 @admin.route("/edit_skill_group/<int:id>", methods=["GET", "POST"])
@@ -1312,12 +1626,18 @@ def edit_skill_group(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_skill_groups"))
 
     return render_template_context(
-        "admin/transferable_skills/edit_skill_group.html", group=group, group_form=form, title="Edit transferable skill group"
+        "admin/transferable_skills/edit_skill_group.html",
+        group=group,
+        group_form=form,
+        title="Edit transferable skill group",
     )
 
 
@@ -1340,7 +1660,10 @@ def activate_skill_group(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not activate this skill group because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not activate this skill group because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1364,7 +1687,10 @@ def deactivate_skill_group(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not deactivate this skill group because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not deactivate this skill group because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1379,7 +1705,9 @@ def edit_project_tag_groups():
     if not validate_is_admin_or_convenor("edit_tags"):
         return home_dashboard()
 
-    return render_template_context("admin/project_tags/edit_tag_groups.html", subpane="groups")
+    return render_template_context(
+        "admin/project_tags/edit_tag_groups.html", subpane="groups"
+    )
 
 
 @admin.route("/edit_project_tag_groups_ajax", methods=["POST"])
@@ -1394,7 +1722,11 @@ def edit_project_tag_groups_ajax():
 
     base_query = db.session.query(ProjectTagGroup)
 
-    name = {"search": ProjectTagGroup.name, "order": ProjectTagGroup.name, "search_collation": "utf8_general_ci"}
+    name = {
+        "search": ProjectTagGroup.name,
+        "order": ProjectTagGroup.name,
+        "search_collation": "utf8_general_ci",
+    }
     include = {"order": ProjectTagGroup.add_group}
     active = {"order": ProjectTagGroup.active}
 
@@ -1433,11 +1765,18 @@ def add_project_tag_group():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add new project tag group because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not add new project tag group because of a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_project_tag_groups"))
 
-    return render_template_context("admin/project_tags/edit_tag_group.html", group_form=form, title="Add new project tag group")
+    return render_template_context(
+        "admin/project_tags/edit_tag_group.html",
+        group_form=form,
+        title="Add new project tag group",
+    )
 
 
 @admin.route("/edit_project_tag_group/<int:gid>", methods=["GET", "POST"])
@@ -1470,11 +1809,19 @@ def edit_project_tag_group(gid):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_project_tag_groups"))
 
-    return render_template_context("admin/project_tags/edit_tag_group.html", group=group, group_form=form, title="Edit project tag group")
+    return render_template_context(
+        "admin/project_tags/edit_tag_group.html",
+        group=group,
+        group_form=form,
+        title="Edit project tag group",
+    )
 
 
 @admin.route("/activate_project_tag_group/<int:gid>")
@@ -1496,7 +1843,10 @@ def activate_project_tag_group(gid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not activate this project tag group because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not activate this project tag group because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1515,7 +1865,10 @@ def deactivate_project_tag_group(gid):
     group: ProjectTagGroup = ProjectTagGroup.query.get_or_404(gid)
 
     if group.default:
-        flash("Cannot disable this project tag group becuase it is currently the default group for new tags", "info")
+        flash(
+            "Cannot disable this project tag group becuase it is currently the default group for new tags",
+            "info",
+        )
         return redirect(redirect_url())
 
     group.disable()
@@ -1525,7 +1878,10 @@ def deactivate_project_tag_group(gid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not disable this project tag group because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not disable this project tag group because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1553,10 +1909,20 @@ def edit_project_tags_ajax():
     if not validate_is_admin_or_convenor("edit_tags"):
         return jsonify({})
 
-    base_query = db.session.query(ProjectTag).join(ProjectTagGroup, ProjectTagGroup.id == ProjectTag.group_id)
+    base_query = db.session.query(ProjectTag).join(
+        ProjectTagGroup, ProjectTagGroup.id == ProjectTag.group_id
+    )
 
-    name = {"search": ProjectTag.name, "order": ProjectTag.name, "search_collation": "utf8_general_ci"}
-    group = {"search": ProjectTagGroup.name, "order": ProjectTagGroup.name, "search_collation": "utf8_general_ci"}
+    name = {
+        "search": ProjectTag.name,
+        "order": ProjectTag.name,
+        "search_collation": "utf8_general_ci",
+    }
+    group = {
+        "search": ProjectTagGroup.name,
+        "order": ProjectTagGroup.name,
+        "search_collation": "utf8_general_ci",
+    }
     active = {"order": ProjectTag.active}
 
     columns = {"name": name, "group": group, "active": active}
@@ -1577,7 +1943,10 @@ def add_project_tag():
 
     # check whether any ProjectTagGroups exist, and raise an error if not
     if not db.session.query(ProjectTagGroup).filter_by(active=True).first():
-        flash("No project tag groups are available. Set up at least one active tag group before adding a tag.", "error")
+        flash(
+            "No project tag groups are available. Set up at least one active tag group before adding a tag.",
+            "error",
+        )
         return redirect(redirect_url())
 
     form: AddProjectTagForm = AddProjectTagForm(request.form)
@@ -1601,11 +1970,16 @@ def add_project_tag():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add this project tag because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not add this project tag because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_project_tags"))
 
-    return render_template_context("admin/project_tags/edit_tag.html", tag_form=form, title="Add new project tag")
+    return render_template_context(
+        "admin/project_tags/edit_tag.html", tag_form=form, title="Add new project tag"
+    )
 
 
 @admin.route("/edit_project_tag/<int:tid>", methods=["GET", "POST"])
@@ -1639,11 +2013,19 @@ def edit_project_tag(tid):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_project_tags"))
 
-    return render_template_context("admin/project_tags/edit_tag.html", tag=tag, tag_form=form, title="Edit project tag")
+    return render_template_context(
+        "admin/project_tags/edit_tag.html",
+        tag=tag,
+        tag_form=form,
+        title="Edit project tag",
+    )
 
 
 @admin.route("/activate_project_tag/<int:tid>")
@@ -1665,7 +2047,10 @@ def activate_project_tag(tid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not activate this project tag because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not activate this project tag because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1689,7 +2074,10 @@ def deactivate_project_tag(tid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not disable this project tag because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not disable this project tag because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1744,11 +2132,16 @@ def add_license():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add new license because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not add new license because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.edit_licenses"))
 
-    return render_template_context("admin/edit_license.html", form=form, title="Add new content license")
+    return render_template_context(
+        "admin/edit_license.html", form=form, title="Add new content license"
+    )
 
 
 @admin.route("/edit_license/<int:lid>", methods=["GET", "POST"])
@@ -1782,13 +2175,19 @@ def edit_license(lid):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             flash(
-                'Could not edit license "{name}" because of a database error. ' "Please contact a system administrator".format(name=license.name),
+                'Could not edit license "{name}" because of a database error. '
+                "Please contact a system administrator".format(name=license.name),
                 "error",
             )
 
         return redirect(url_for("admin.edit_licenses"))
 
-    return render_template_context("admin/edit_license.html", form=form, title="Edit content license", license=license)
+    return render_template_context(
+        "admin/edit_license.html",
+        form=form,
+        title="Edit content license",
+        license=license,
+    )
 
 
 @admin.route("/activate_license/<int:lid>")
@@ -1808,7 +2207,9 @@ def activate_license(lid):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            'Could not activate license "{name}" due to a database error. ' "Please contact a system administrator".format(name=license.name), "error"
+            'Could not activate license "{name}" due to a database error. '
+            "Please contact a system administrator".format(name=license.name),
+            "error",
         )
 
     return redirect(redirect_url())
@@ -1831,7 +2232,8 @@ def deactivate_license(lid):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            'Could not deactivate license "{name}" due to a database error. ' "Please contact a system administrator".format(name=license.name),
+            'Could not deactivate license "{name}" due to a database error. '
+            "Please contact a system administrator".format(name=license.name),
             "error",
         )
 
@@ -1868,7 +2270,9 @@ def add_pclass():
     """
     # check whether any active degree types exist, and raise an error if not
     if not DegreeType.query.filter_by(active=True).first():
-        flash("No degree types are available. Set up at least one active degree type before adding a project class.")
+        flash(
+            "No degree types are available. Set up at least one active degree type before adding a project class."
+        )
         return redirect(redirect_url())
 
     all_tenants: List[Tenant] = db.session.query(Tenant).all()
@@ -2015,11 +2419,18 @@ def add_pclass():
             db.session.commit()
 
         except SQLAlchemyError as e:
-            flash("Could not create new project class because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not create new project class because of a database error. Please contact a system administrator.",
+                "error",
+            )
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        flash('Set convenor for "{title}" to {name}.'.format(name=data.convenor_name, title=data.name))
+        flash(
+            'Set convenor for "{title}" to {name}.'.format(
+                name=data.convenor_name, title=data.name
+            )
+        )
 
         return redirect(url_for("admin.edit_project_classes"))
 
@@ -2042,7 +2453,9 @@ def add_pclass():
             form.use_project_tags.data = False
             form.force_tag_groups.data = []
 
-    return render_template_context("admin/edit_project_class.html", pclass_form=form, title="Add new project class")
+    return render_template_context(
+        "admin/edit_project_class.html", pclass_form=form, title="Add new project class"
+    )
 
 
 @admin.route("/edit_pclass/<int:id>", methods=["GET", "POST"])
@@ -2127,13 +2540,20 @@ def edit_pclass(id):
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash("Could not save project class configuration because of a database error. Please check the logs for further information.", "error")
+            flash(
+                "Could not save project class configuration because of a database error. Please check the logs for further information.",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         if pclass.convenor.id != old_convenor.id:
             flash(
                 'Set convenor for "{title}" to {name}. The previous convenor was {oldname} and has been '
-                "removed".format(name=pclass.convenor_name, oldname=old_convenor.user.name, title=pclass.name)
+                "removed".format(
+                    name=pclass.convenor_name,
+                    oldname=old_convenor.user.name,
+                    title=pclass.name,
+                )
             )
 
         return redirect(url_for("admin.edit_project_classes"))
@@ -2185,7 +2605,12 @@ def edit_pclass(id):
             if form.force_tag_groups.data is None:
                 form.force_tag_groups.data = []
 
-    return render_template_context("admin/edit_project_class.html", pclass_form=form, pclass=pclass, title="Edit project class")
+    return render_template_context(
+        "admin/edit_project_class.html",
+        pclass_form=form,
+        pclass=pclass,
+        title="Edit project class",
+    )
 
 
 @admin.route("/edit_pclass_text/<int:id>", methods=["GET", "POST"])
@@ -2206,7 +2631,9 @@ def edit_pclass_text(id):
 
         return redirect(url_for("admin.edit_project_classes"))
 
-    return render_template_context("admin/edit_pclass_text.html", form=form, pclass=data)
+    return render_template_context(
+        "admin/edit_pclass_text.html", form=form, pclass=data
+    )
 
 
 @admin.route("/activate_pclass/<int:id>")
@@ -2321,7 +2748,9 @@ def regenerate_period_records(id):
     config = data.get_config(current_year)
 
     templates = config.template_periods.all()
-    records = config.periods.order_by(SubmissionPeriodRecord.submission_period.asc()).all()
+    records = config.periods.order_by(
+        SubmissionPeriodRecord.submission_period.asc()
+    ).all()
 
     # work through existing recrods and templates in pairs, overwriting each record with the content
     # of the corresponding template
@@ -2417,7 +2846,9 @@ def regenerate_period_records(id):
         c = records.pop(0)
 
         # remove any attached SubmissionRecords
-        db.session.query(SubmissionRecord).filter_by(period_id=c.id, retired=False).delete()
+        db.session.query(SubmissionRecord).filter_by(
+            period_id=c.id, retired=False
+        ).delete()
         db.session.delete(c)
 
     try:
@@ -2430,7 +2861,10 @@ def regenerate_period_records(id):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
     else:
-        flash("Successfully updated submission period records for this project class", "info")
+        flash(
+            "Successfully updated submission period records for this project class",
+            "info",
+        )
 
     return redirect(redirect_url())
 
@@ -2497,13 +2931,21 @@ def add_period_definition(id):
             modified: bool = pclass.validate_presentations()
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not add new submission period definition because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not add new submission period definition because of a database error. Please contact a system administrator.",
+                "error",
+            )
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for("admin.edit_period_definitions", id=pclass.id))
 
-    return render_template_context("admin/edit_period_definition.html", form=form, pclass_id=pclass.id, title="Add new submission period")
+    return render_template_context(
+        "admin/edit_period_definition.html",
+        form=form,
+        pclass_id=pclass.id,
+        title="Add new submission period",
+    )
 
 
 @admin.route("/edit_period_definition/<int:id>", methods=["GET", "POST"])
@@ -2553,13 +2995,21 @@ def edit_period_definition(id):
             modified: bool = pd.owner.validate_presentations()
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not save changes because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator.",
+                "error",
+            )
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for("admin.edit_period_definitions", id=pd.owner.id))
 
-    return render_template_context("admin/edit_period_definition.html", form=form, period=pd, title="Edit submission period")
+    return render_template_context(
+        "admin/edit_period_definition.html",
+        form=form,
+        period=pd,
+        title="Edit submission period",
+    )
 
 
 @admin.route("/delete_period_definition/<int:id>")
@@ -2580,7 +3030,10 @@ def delete_period_definition(id):
         modified: bool = pclass.validate_presentations()
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not delete submission period definition because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete submission period definition because of a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -2612,7 +3065,11 @@ def supervisors_ajax():
 
     base_query = db.session.query(Supervisor)
 
-    role = {"search": Supervisor.name, "order": Supervisor.name, "search_collation": "utf8_general_ci"}
+    role = {
+        "search": Supervisor.name,
+        "order": Supervisor.name,
+        "search_collation": "utf8_general_ci",
+    }
     active = {"order": Supervisor.active}
 
     columns = {"role": role, "active": active}
@@ -2646,13 +3103,20 @@ def add_supervisor():
             db.session.add(data)
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not add new supervisory team member definition because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not add new supervisory team member definition because of a database error. Please contact a system administrator.",
+                "error",
+            )
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for("admin.edit_supervisors"))
 
-    return render_template_context("admin/edit_supervisor.html", supervisor_form=form, title="Add new supervisory role")
+    return render_template_context(
+        "admin/edit_supervisor.html",
+        supervisor_form=form,
+        title="Add new supervisory role",
+    )
 
 
 @admin.route("/edit_supervisor/<int:id>", methods=["GET", "POST"])
@@ -2681,13 +3145,21 @@ def edit_supervisor(id):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not save changes because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator.",
+                "error",
+            )
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for("admin.edit_supervisors"))
 
-    return render_template_context("admin/edit_supervisor.html", supervisor_form=form, role=data, title="Edit supervisory role")
+    return render_template_context(
+        "admin/edit_supervisor.html",
+        supervisor_form=form,
+        role=data,
+        title="Edit supervisory role",
+    )
 
 
 @admin.route("/activate_supervisor/<int:id>")
@@ -2707,7 +3179,10 @@ def activate_supervisor(id):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not activate supervisory team member because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not activate supervisory team member because of a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -2732,7 +3207,10 @@ def deactivate_supervisor(id):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not deactivate supervisory team member because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not deactivate supervisory team member because of a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -2749,17 +3227,27 @@ def confirm_global_rollover():
     data = get_rollover_data()
 
     if not data["rollover_ready"]:
-        flash("Can not initiate a rollover of the academic year because no project classes are ready", "info")
+        flash(
+            "Can not initiate a rollover of the academic year because no project classes are ready",
+            "info",
+        )
         return redirect(redirect_url())
 
     if data["rollover_in_progress"]:
-        flash("Can not initiate a rollover of the academic year because one is already in progress", "info")
+        flash(
+            "Can not initiate a rollover of the academic year because one is already in progress",
+            "info",
+        )
         return redirect(redirect_url())
 
     next_year = get_current_year() + 1
 
-    title = "Global rollover to {yeara}&ndash;{yearb}".format(yeara=next_year, yearb=next_year + 1)
-    panel_title = "Global rollover of academic year to {yeara}&ndash;{yearb}".format(yeara=next_year, yearb=next_year + 1)
+    title = "Global rollover to {yeara}&ndash;{yearb}".format(
+        yeara=next_year, yearb=next_year + 1
+    )
+    panel_title = "Global rollover of academic year to {yeara}&ndash;{yearb}".format(
+        yeara=next_year, yearb=next_year + 1
+    )
     action_url = url_for("admin.perform_global_rollover")
     message = (
         "<p><strong>Please confirm that you wish to advance the global academic year to "
@@ -2769,12 +3257,21 @@ def confirm_global_rollover():
         '<p class="mt-1">After the current academic year has been incremented, '
         "a routine database maintenance process will be "
         "run.</p>"
-        '<p class="mt-2">This action cannot be undone.</p>'.format(yeara=next_year, yearb=next_year + 1)
+        '<p class="mt-2">This action cannot be undone.</p>'.format(
+            yeara=next_year, yearb=next_year + 1
+        )
     )
-    submit_label = "Rollover to {yra}&ndash;{yrb}".format(yra=next_year, yrb=next_year + 1)
+    submit_label = "Rollover to {yra}&ndash;{yrb}".format(
+        yra=next_year, yrb=next_year + 1
+    )
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -2791,11 +3288,17 @@ def perform_global_rollover():
     current_config = get_main_config()
 
     if not data["rollover_ready"]:
-        flash("Can not initiate a rollover of the academic year because no project classes are ready", "info")
+        flash(
+            "Can not initiate a rollover of the academic year because no project classes are ready",
+            "info",
+        )
         return redirect(redirect_url())
 
     if data["rollover_in_progress"]:
-        flash("Can not initiate a rollover of the academic year because one is already in progress", "info")
+        flash(
+            "Can not initiate a rollover of the academic year because one is already in progress",
+            "info",
+        )
         return redirect(redirect_url())
 
     current_year = get_current_year()
@@ -2803,17 +3306,26 @@ def perform_global_rollover():
 
     try:
         # insert new MainConfig instance for next year, rolling over most current settings
-        new_year = MainConfig(year=next_year, enable_canvas_sync=current_config.enable_canvas_sync, canvas_url=current_config.canvas_url)
+        new_year = MainConfig(
+            year=next_year,
+            enable_canvas_sync=current_config.enable_canvas_sync,
+            canvas_url=current_config.canvas_url,
+        )
         db.session.add(new_year)
         db.session.commit()
 
     except SQLAlchemyError as e:
-        flash("Could not complete rollover due to database error. Please check the logs.", "error")
+        flash(
+            "Could not complete rollover due to database error. Please check the logs.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
     else:
-        tk_name = "Perform global rollover to academic year {yra}-{yrb}".format(yra=next_year, yrb=next_year + 1)
+        tk_name = "Perform global rollover to academic year {yra}-{yrb}".format(
+            yra=next_year, yrb=next_year + 1
+        )
         tk_description = "Perform global rollover"
         uuid = register_task(tk_name, owner=current_user, description=tk_description)
 
@@ -2830,9 +3342,11 @@ def perform_global_rollover():
         #  this has still to be done
 
         # schedule all parts of the rollover+maintenance cycle
-        seq = chain(init.si(uuid, tk_name), maintenance_cycle.si(), final.si(uuid, tk_name, current_user.id)).on_error(
-            error.si(uuid, tk_name, current_user.id)
-        )
+        seq = chain(
+            init.si(uuid, tk_name),
+            maintenance_cycle.si(),
+            final.si(uuid, tk_name, current_user.id),
+        ).on_error(error.si(uuid, tk_name, current_user.id))
         seq.apply_async(task_id=uuid)
 
     return home_dashboard()
@@ -2852,7 +3366,9 @@ def email_log():
 
     if form is not None and form.validate_on_submit():
         if form.delete_age.data is True:
-            return redirect(url_for("admin.confirm_delete_email_cutoff", cutoff=(form.weeks.data)))
+            return redirect(
+                url_for("admin.confirm_delete_email_cutoff", cutoff=(form.weeks.data))
+            )
 
     return render_template_context("admin/email_log.html", form=form)
 
@@ -2873,11 +3389,27 @@ def email_log_ajax():
         "search_collection": EmailLog.recipients,
         "search_collation": "utf8_general_ci",
     }
-    address = {"search": User.email, "search_collection": EmailLog.recipients, "search_collation": "utf8_general_ci"}
-    date = {"search": func.date_format(EmailLog.send_date, "%a %d %b %Y %H:%M:%S"), "order": EmailLog.send_date}
-    subject = {"search": EmailLog.subject, "order": EmailLog.subject, "search_collaboration": "utf8_general_ci"}
+    address = {
+        "search": User.email,
+        "search_collection": EmailLog.recipients,
+        "search_collation": "utf8_general_ci",
+    }
+    date = {
+        "search": func.date_format(EmailLog.send_date, "%a %d %b %Y %H:%M:%S"),
+        "order": EmailLog.send_date,
+    }
+    subject = {
+        "search": EmailLog.subject,
+        "order": EmailLog.subject,
+        "search_collaboration": "utf8_general_ci",
+    }
 
-    columns = {"recipient": recipient, "address": address, "date": date, "subject": subject}
+    columns = {
+        "recipient": recipient,
+        "address": address,
+        "date": date,
+        "subject": subject,
+    }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.site.email_log_data)
@@ -2900,7 +3432,9 @@ def display_email(id):
         url = url_for("admin.email_log")
         text = "email log"
 
-    return render_template_context("admin/display_email.html", email=email, text=text, url=url)
+    return render_template_context(
+        "admin/display_email.html", email=email, text=text, url=url
+    )
 
 
 @admin.route("/delete_email/<int:id>")
@@ -2917,7 +3451,10 @@ def delete_email(id):
         db.session.delete(email)
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not delete email because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete email because of a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -2936,11 +3473,19 @@ def confirm_delete_all_emails():
     panel_title = "Confirm delete of all emails retained in log"
 
     action_url = url_for("admin.delete_all_emails")
-    message = "<p>Please confirm that you wish to delete all emails retained in the log.</p>" "<p>This action cannot be undone.</p>"
+    message = (
+        "<p>Please confirm that you wish to delete all emails retained in the log.</p>"
+        "<p>This action cannot be undone.</p>"
+    )
     submit_label = "Delete all"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -2964,9 +3509,11 @@ def delete_all_emails():
     final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
     error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-    seq = chain(init.si(task_id, tk_name), delete_email.si(), final.si(task_id, tk_name, current_user.id)).on_error(
-        error.si(task_id, tk_name, current_user.id)
-    )
+    seq = chain(
+        init.si(task_id, tk_name),
+        delete_email.si(),
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
     return redirect(url_for("admin.email_log"))
@@ -2985,16 +3532,24 @@ def confirm_delete_email_cutoff(cutoff):
         pl = ""
 
     title = "Confirm delete"
-    panel_title = "Confirm delete all emails older than {c} week{pl}".format(c=cutoff, pl=pl)
+    panel_title = "Confirm delete all emails older than {c} week{pl}".format(
+        c=cutoff, pl=pl
+    )
 
     action_url = url_for("admin.delete_email_cutoff", cutoff=cutoff)
-    message = "<p>Please confirm that you wish to delete all emails older than {c} week{pl}.</p>" "<p>This action cannot be undone.</p>".format(
-        c=cutoff, pl=pl
+    message = (
+        "<p>Please confirm that you wish to delete all emails older than {c} week{pl}.</p>"
+        "<p>This action cannot be undone.</p>".format(c=cutoff, pl=pl)
     )
     submit_label = "Delete"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -3016,16 +3571,20 @@ def delete_email_cutoff(cutoff):
     prune_email = celery.tasks["app.tasks.prune_email.prune_email_log"]
 
     tk_name = "Manual delete email"
-    tk_description = "Manually delete email older than {c} week{pl}".format(c=cutoff, pl=pl)
+    tk_description = "Manually delete email older than {c} week{pl}".format(
+        c=cutoff, pl=pl
+    )
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
     final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
     error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-    seq = chain(init.si(task_id, tk_name), prune_email.si(duration=cutoff, interval="weeks"), final.si(task_id, tk_name, current_user.id)).on_error(
-        error.si(task_id, tk_name, current_user.id)
-    )
+    seq = chain(
+        init.si(task_id, tk_name),
+        prune_email.si(duration=cutoff, interval="weeks"),
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
     return redirect(url_for("admin.email_log"))
@@ -3048,14 +3607,19 @@ def scheduled_email_ajax():
     AJAX data point for scheduled email list
     :return:
     """
-    base_query = db.session.query(EmailNotification).join(User, User.id == EmailNotification.owner_id)
+    base_query = db.session.query(EmailNotification).join(
+        User, User.id == EmailNotification.owner_id
+    )
 
     recipient = {
         "search": func.concat(User.first_name, " ", User.last_name),
         "order": [User.last_name, User.first_name],
         "search_collation": "utf8_general_ci",
     }
-    timestamp = {"search": func.date_format(EmailNotification.timestamp, "%a %d %b %Y %H:%M:%S"), "order": EmailNotification.timestamp}
+    timestamp = {
+        "search": func.date_format(EmailNotification.timestamp, "%a %d %b %Y %H:%M:%S"),
+        "order": EmailNotification.timestamp,
+    }
     type = {"order": EmailNotification.event_type}
 
     columns = {"recipient": recipient, "timestamp": timestamp, "type": type}
@@ -3078,7 +3642,10 @@ def hold_notification(eid):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not mark notification as held because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not mark notification as held because of a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -3099,7 +3666,10 @@ def release_notification(eid):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not mark notification as released because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not mark notification as released because of a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -3131,7 +3701,13 @@ def delete_notification(eid):
     submit_label = "Delete"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label, url=url
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
+        url=url,
     )
 
 
@@ -3152,7 +3728,10 @@ def do_delete_notification(eid):
         db.session.delete(notification)
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not delete notification because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete notification because of a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -3236,13 +3815,18 @@ def add_message():
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not add message because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not add message because of a database error. Please contact a system administrator.",
+                "error",
+            )
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for("admin.edit_messages"))
 
-    return render_template_context("admin/edit_message.html", form=form, title="Add new broadcast message")
+    return render_template_context(
+        "admin/edit_message.html", form=form, title="Add new broadcast message"
+    )
 
 
 @admin.route("/edit_message/<int:id>", methods=["GET", "POST"])
@@ -3289,13 +3873,21 @@ def edit_message(id):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not save edited message because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save edited message because of a database error. Please contact a system administrator.",
+                "error",
+            )
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for("admin.edit_messages"))
 
-    return render_template_context("admin/edit_message.html", message=data, form=form, title="Edit broadcast message")
+    return render_template_context(
+        "admin/edit_message.html",
+        message=data,
+        form=form,
+        title="Edit broadcast message",
+    )
 
 
 @admin.route("/delete_message/<int:id>")
@@ -3355,7 +3947,9 @@ def reset_dismissals(id):
     # convenors can only reset their own messages
     if not current_user.has_role("admin") and not current_user.has_role("root"):
         if message.user_id != current_user.id:
-            flash("Only administrative users can reset dismissals for messages that are not their own.")
+            flash(
+                "Only administrative users can reset dismissals for messages that are not their own."
+            )
             return home_dashboard()
 
     message.dismissed_by = []
@@ -3405,10 +3999,14 @@ def add_scheduled_task():
             return redirect(url_for("admin.add_crontab_task"))
 
         else:
-            flash("The task type was not recognized. If this error persists, please contact the system administrator.")
+            flash(
+                "The task type was not recognized. If this error persists, please contact the system administrator."
+            )
             return redirect(url_for("admin.scheduled_tasks"))
 
-    return render_template_context("admin/scheduled_type.html", form=form, title="Select schedule type")
+    return render_template_context(
+        "admin/scheduled_type.html", form=form, title="Select schedule type"
+    )
 
 
 @admin.route("/add_interval_task", methods=["GET", "POST"])
@@ -3423,7 +4021,9 @@ def add_interval_task():
 
     if form.validate_on_submit():
         # build or lookup an appropriate IntervalSchedule record from the database
-        sch = IntervalSchedule.query.filter_by(every=form.every.data, period=form.period.data).first()
+        sch = IntervalSchedule.query.filter_by(
+            every=form.every.data, period=form.period.data
+        ).first()
 
         if sch is None:
             sch = IntervalSchedule(every=form.every.data, period=form.period.data)
@@ -3457,7 +4057,9 @@ def add_interval_task():
 
         return redirect(url_for("admin.scheduled_tasks"))
 
-    return render_template_context("admin/edit_scheduled_task.html", form=form, title="Add new fixed-interval task")
+    return render_template_context(
+        "admin/edit_scheduled_task.html", form=form, title="Add new fixed-interval task"
+    )
 
 
 @admin.route("/add_crontab_task", methods=["GET", "POST"])
@@ -3518,7 +4120,9 @@ def add_crontab_task():
 
         return redirect(url_for("admin.scheduled_tasks"))
 
-    return render_template_context("admin/edit_scheduled_task.html", form=form, title="Add new crontab task")
+    return render_template_context(
+        "admin/edit_scheduled_task.html", form=form, title="Add new crontab task"
+    )
 
 
 @admin.route("/edit_interval_task/<int:id>", methods=["GET", "POST"])
@@ -3534,7 +4138,9 @@ def edit_interval_task(id):
 
     if form.validate_on_submit():
         # build or lookup an appropriate IntervalSchedule record from the database
-        sch = IntervalSchedule.query.filter_by(every=form.every.data, period=form.period.data).first()
+        sch = IntervalSchedule.query.filter_by(
+            every=form.every.data, period=form.period.data
+        ).first()
 
         if sch is None:
             sch = IntervalSchedule(every=form.every.data, period=form.period.data)
@@ -3564,7 +4170,12 @@ def edit_interval_task(id):
             form.every.data = data.interval.every
             form.period.data = data.interval.period
 
-    return render_template_context("admin/edit_scheduled_task.html", task=data, form=form, title="Edit fixed-interval task")
+    return render_template_context(
+        "admin/edit_scheduled_task.html",
+        task=data,
+        form=form,
+        title="Edit fixed-interval task",
+    )
 
 
 @admin.route("/edit_crontab_task/<int:id>", methods=["GET", "POST"])
@@ -3625,7 +4236,12 @@ def edit_crontab_task(id):
             form.day_of_month.data = data.crontab.day_of_month
             form.month_of_year.data = data.crontab.month_of_year
 
-    return render_template_context("admin/edit_scheduled_task.html", task=data, form=form, title="Add new crontab task")
+    return render_template_context(
+        "admin/edit_scheduled_task.html",
+        task=data,
+        form=form,
+        title="Add new crontab task",
+    )
 
 
 @admin.route("/delete_scheduled_task/<int:id>")
@@ -3687,7 +4303,9 @@ def launch_scheduled_task(id):
 
     record = DatabaseSchedulerEntry.query.get_or_404(id)
 
-    task_id = register_task(record.name, current_user, "Scheduled task launched from web user interface")
+    task_id = register_task(
+        record.name, current_user, "Scheduled task launched from web user interface"
+    )
 
     celery = current_app.extensions["celery"]
     tk = celery.tasks[record.task]
@@ -3729,7 +4347,12 @@ def backups_overview():
         size = format_size(backup_total_size)
 
     if form.validate_on_submit():
-        set_backup_config(form.keep_hourly.data, form.keep_daily.data, form.backup_limit.data, form.limit_units.data)
+        set_backup_config(
+            form.keep_hourly.data,
+            form.keep_daily.data,
+            form.backup_limit.data,
+            form.limit_units.data,
+        )
         flash("Your new backup configuration has been saved", "success")
 
     else:
@@ -3742,9 +4365,17 @@ def backups_overview():
     # if there are enough datapoints, generate some plots showing how the backup size is scaling with time
     if backup_count > 1:
         # extract lists of data points
-        backup_dates = db.session.query(BackupRecord.date).order_by(BackupRecord.date).all()
-        archive_size = db.session.query(BackupRecord.archive_size).order_by(BackupRecord.date).all()
-        backup_size = db.session.query(BackupRecord.backup_size).order_by(BackupRecord.date).all()
+        backup_dates = (
+            db.session.query(BackupRecord.date).order_by(BackupRecord.date).all()
+        )
+        archive_size = (
+            db.session.query(BackupRecord.archive_size)
+            .order_by(BackupRecord.date)
+            .all()
+        )
+        backup_size = (
+            db.session.query(BackupRecord.backup_size).order_by(BackupRecord.date).all()
+        )
 
         MB_SIZE = 1024 * 1024
 
@@ -3753,20 +4384,40 @@ def backups_overview():
         bk_size = [x[0] / MB_SIZE for x in backup_size]
 
         archive_plot = figure(
-            title="Archive size as a function of time", x_axis_label="Time of backup", x_axis_type="datetime", width=800, height=300
+            title="Archive size as a function of time",
+            x_axis_label="Time of backup",
+            x_axis_type="datetime",
+            width=800,
+            height=300,
         )
         archive_plot.sizing_mode = "scale_width"
-        archive_plot.line(dates, arc_size, legend_label="archive size in Mb", line_color="blue", line_width=2)
+        archive_plot.line(
+            dates,
+            arc_size,
+            legend_label="archive size in Mb",
+            line_color="blue",
+            line_width=2,
+        )
         archive_plot.toolbar.logo = None
         archive_plot.border_fill_color = None
         archive_plot.background_fill_color = "lightgrey"
         archive_plot.legend.location = "bottom_right"
 
         backup_plot = figure(
-            title="Total backup size as a function of time", x_axis_label="Time of backup", x_axis_type="datetime", width=800, height=300
+            title="Total backup size as a function of time",
+            x_axis_label="Time of backup",
+            x_axis_type="datetime",
+            width=800,
+            height=300,
         )
         backup_plot.sizing_mode = "scale_width"
-        backup_plot.line(dates, bk_size, legend_label="backup size in Mb", line_color="red", line_width=2)
+        backup_plot.line(
+            dates,
+            bk_size,
+            legend_label="backup size in Mb",
+            line_color="red",
+            line_width=2,
+        )
         backup_plot.toolbar.logo = None
         backup_plot.border_fill_color = None
         backup_plot.background_fill_color = "lightgrey"
@@ -3872,7 +4523,16 @@ def manage_backups():
     if type_filter is None:
         type_filter = session.get("admin_backup_type_filter")
 
-    if type_filter is not None and type_filter not in ["all", "scheduled", "rollover", "golive", "close", "confirm", "batch-student", "batch-faculty"]:
+    if type_filter is not None and type_filter not in [
+        "all",
+        "scheduled",
+        "rollover",
+        "golive",
+        "close",
+        "confirm",
+        "batch-student",
+        "batch-faculty",
+    ]:
         type_filter = "all"
 
     if type_filter is not None:
@@ -3894,7 +4554,9 @@ def manage_backups():
     form = BackupManageForm(request.form)
 
     if form.validate_on_submit() and form.delete_age.data is True:
-        return redirect(url_for("admin.confirm_delete_backup_cutoff", cutoff=(form.weeks.data)))
+        return redirect(
+            url_for("admin.confirm_delete_backup_cutoff", cutoff=(form.weeks.data))
+        )
 
     return render_template_context(
         "admin/backup_dashboard/manage.html",
@@ -3916,35 +4578,60 @@ def manage_backups_ajax():
     type_filter = request.args.get("type_filter")
     property_filter = request.args.get("property_filter")
 
-    base_query = db.session.query(BackupRecord).join(User, User.id == BackupRecord.owner_id)
+    base_query = db.session.query(BackupRecord).join(
+        User, User.id == BackupRecord.owner_id
+    )
 
     if type_filter == "scheduled":
-        base_query = base_query.filter(BackupRecord.type == BackupRecord.SCHEDULED_BACKUP)
+        base_query = base_query.filter(
+            BackupRecord.type == BackupRecord.SCHEDULED_BACKUP
+        )
     elif type_filter == "rollover":
-        base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_ROLLOVER_FALLBACK)
+        base_query = base_query.filter(
+            BackupRecord.type == BackupRecord.PROJECT_ROLLOVER_FALLBACK
+        )
     elif type_filter == "golive":
-        base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_GOLIVE_FALLBACK)
+        base_query = base_query.filter(
+            BackupRecord.type == BackupRecord.PROJECT_GOLIVE_FALLBACK
+        )
     elif type_filter == "close":
-        base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_CLOSE_FALLBACK)
+        base_query = base_query.filter(
+            BackupRecord.type == BackupRecord.PROJECT_CLOSE_FALLBACK
+        )
     elif type_filter == "confirm":
-        base_query = base_query.filter(BackupRecord.type == BackupRecord.PROJECT_ISSUE_CONFIRM_FALLBACK)
+        base_query = base_query.filter(
+            BackupRecord.type == BackupRecord.PROJECT_ISSUE_CONFIRM_FALLBACK
+        )
     elif type_filter == "batch-student":
-        base_query = base_query.filter(BackupRecord.type == BackupRecord.BATCH_STUDENT_IMPORT_FALLBACK)
+        base_query = base_query.filter(
+            BackupRecord.type == BackupRecord.BATCH_STUDENT_IMPORT_FALLBACK
+        )
 
     if property_filter == "labels":
         base_query = base_query.filter(BackupRecord.labels.any(BackupLabel.id != None))
     elif property_filter == "lock":
         base_query = base_query.filter(BackupRecord.locked)
 
-    date = {"search": func.date_format(BackupRecord.date, "%a %d %b %Y %H:%M:%S"), "order": BackupRecord.date}
+    date = {
+        "search": func.date_format(BackupRecord.date, "%a %d %b %Y %H:%M:%S"),
+        "order": BackupRecord.date,
+    }
     initiated = {
         "search": func.concat(User.first_name, " ", User.last_name),
         "order": [User.last_name, User.first_name],
         "search_collation": "utf8_general_ci",
     }
     type = {"order": BackupRecord.type}
-    description = {"search": BackupRecord.description, "order": BackupRecord.description, "search_collation": "utf8_general_ci"}
-    key = {"search": BackupRecord.unique_name, "order": BackupRecord.unique_name, "search_collation": "utf8_general_ci"}
+    description = {
+        "search": BackupRecord.description,
+        "order": BackupRecord.description,
+        "search_collation": "utf8_general_ci",
+    }
+    key = {
+        "search": BackupRecord.unique_name,
+        "order": BackupRecord.unique_name,
+        "search_collation": "utf8_general_ci",
+    }
     db_size = {"order": BackupRecord.db_size}
     archive_size = {"order": BackupRecord.archive_size}
 
@@ -3986,8 +4673,18 @@ def manual_backup():
         final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
         error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-        unlock_date_str = str(form.unlock_date.data) if form.unlock_date.data is not None else None
-        args = (current_user.id, BackupRecord.MANUAL_BACKUP, "backup", form.description.data, form.locked.data, unlock_date_str, label_ids)
+        unlock_date_str = (
+            str(form.unlock_date.data) if form.unlock_date.data is not None else None
+        )
+        args = (
+            current_user.id,
+            BackupRecord.MANUAL_BACKUP,
+            "backup",
+            form.description.data,
+            form.locked.data,
+            unlock_date_str,
+            label_ids,
+        )
 
         seq = chain(
             init.si(task_id, tk_name),
@@ -4022,7 +4719,12 @@ def confirm_delete_all_backups():
     submit_label = "Delete all"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -4048,9 +4750,11 @@ def delete_all_backups():
     backups = db.session.query(BackupRecord.id).filter_by(~BackupRecord.locked).all()
     work_group = group(del_backup.si(id[0]) for id in backups)
 
-    seq = chain(init.si(task_id, tk_name), work_group, final.si(task_id, tk_name, current_user.id)).on_error(
-        error.si(task_id, tk_name, current_user.id)
-    )
+    seq = chain(
+        init.si(task_id, tk_name),
+        work_group,
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
     return redirect(url_for("admin.manage_backups"))
@@ -4069,16 +4773,24 @@ def confirm_delete_backup_cutoff(cutoff):
         pl = ""
 
     title = "Confirm delete"
-    panel_title = "Confirm delete all backups older than {c} week{pl}".format(c=cutoff, pl=pl)
+    panel_title = "Confirm delete all backups older than {c} week{pl}".format(
+        c=cutoff, pl=pl
+    )
 
     action_url = url_for("admin.delete_backup_cutoff", cutoff=cutoff)
-    message = "<p>Please confirm that you wish to delete all backups older than {c} week{pl}.</p>" "<p>This action cannot be undone.</p>".format(
-        c=cutoff, pl=pl
+    message = (
+        "<p>Please confirm that you wish to delete all backups older than {c} week{pl}.</p>"
+        "<p>This action cannot be undone.</p>".format(c=cutoff, pl=pl)
     )
     submit_label = "Delete"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -4099,7 +4811,9 @@ def delete_backup_cutoff(cutoff):
     del_backup = celery.tasks["app.tasks.backup.prune_backup_cutoff"]
 
     tk_name = "Manual delete backups"
-    tk_description = "Manually delete backups older than {c} week{pl}".format(c=cutoff, pl=pl)
+    tk_description = "Manually delete backups older than {c} week{pl}".format(
+        c=cutoff, pl=pl
+    )
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
@@ -4113,9 +4827,11 @@ def delete_backup_cutoff(cutoff):
     backups = db.session.query(BackupRecord.id).all()
     work_group = group(del_backup.si(id[0], limit) for id in backups)
 
-    seq = chain(init.si(task_id, tk_name), work_group, final.si(task_id, tk_name, current_user.id)).on_error(
-        error.si(task_id, tk_name, current_user.id)
-    )
+    seq = chain(
+        init.si(task_id, tk_name),
+        work_group,
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
     return redirect(url_for("admin.manage_backups"))
@@ -4132,20 +4848,33 @@ def confirm_delete_backup(id):
     backup: BackupRecord = BackupRecord.query.get_or_404(id)
 
     if backup.locked:
-        flash(f'Backup {backup.date.trftime("%a %d %b %Y %H:%M:%S")} cannot be deleted because it is locked.', "info")
+        flash(
+            f"Backup {backup.date.trftime('%a %d %b %Y %H:%M:%S')} cannot be deleted because it is locked.",
+            "info",
+        )
         return redirect(redirect_url())
 
     title = "Confirm delete"
-    panel_title = "Confirm delete of backup {d}".format(d=backup.date.strftime("%a %d %b %Y %H:%M:%S"))
+    panel_title = "Confirm delete of backup {d}".format(
+        d=backup.date.strftime("%a %d %b %Y %H:%M:%S")
+    )
 
     action_url = url_for("admin.delete_backup", id=id)
-    message = "<p>Please confirm that you wish to delete the backup {d}.</p>" "<p>This action cannot be undone.</p>".format(
-        d=backup.date.strftime("%a %d %b %Y %H:%M:%S")
+    message = (
+        "<p>Please confirm that you wish to delete the backup {d}.</p>"
+        "<p>This action cannot be undone.</p>".format(
+            d=backup.date.strftime("%a %d %b %Y %H:%M:%S")
+        )
     )
     submit_label = "Delete"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -4156,13 +4885,19 @@ def delete_backup(id):
     backup: BackupRecord = BackupRecord.query.get_or_404(id)
 
     if backup.locked:
-        flash(f'Backup {backup.date.trftime("%a %d %b %Y %H:%M:%S")} cannot be deleted because it is locked.', "info")
+        flash(
+            f"Backup {backup.date.trftime('%a %d %b %Y %H:%M:%S')} cannot be deleted because it is locked.",
+            "info",
+        )
         return redirect(redirect_url())
 
     success, msg = remove_backup(id)
 
     if not success:
-        flash(f'Could not delete backup. Backend message = "{msg}". Please contact a system administrator.', "error")
+        flash(
+            f'Could not delete backup. Backend message = "{msg}". Please contact a system administrator.',
+            "error",
+        )
 
     return redirect(url_for("admin.manage_backups"))
 
@@ -4184,7 +4919,9 @@ def background_tasks():
             status_filter = "all"
         session["background_task_status_filter"] = status_filter
 
-    return render_template_context("admin/background_tasks.html", status_filter=status_filter)
+    return render_template_context(
+        "admin/background_tasks.html", status_filter=status_filter
+    )
 
 
 @admin.route("/background_ajax", methods=["POST"])
@@ -4205,21 +4942,45 @@ def background_ajax():
     elif status_filter == "success":
         base_query = base_query.filter(TaskRecord.status == TaskRecord.SUCCESS)
     elif status_filter == "failure":
-        base_query = base_query.filter(or_(TaskRecord.status == TaskRecord.FAILURE, TaskRecord.status == TaskRecord.TERMINATED))
+        base_query = base_query.filter(
+            or_(
+                TaskRecord.status == TaskRecord.FAILURE,
+                TaskRecord.status == TaskRecord.TERMINATED,
+            )
+        )
 
     identifier = {"search": TaskRecord.id, "order": TaskRecord.id}
-    name = {"search": TaskRecord.name, "order": TaskRecord.id, "search_collation": "utf8_general_ci"}
+    name = {
+        "search": TaskRecord.name,
+        "order": TaskRecord.id,
+        "search_collation": "utf8_general_ci",
+    }
     owner = {
         "search": func.concat(User.first_name, " ", User.last_name),
         "order": [User.last_name, User.first_name],
         "search_collation": "utf8_general_ci",
     }
-    start_time = {"search": func.date_format(TaskRecord.start_date, "%a %d %b %Y %H:%M:%S"), "order": TaskRecord.start_date}
+    start_time = {
+        "search": func.date_format(TaskRecord.start_date, "%a %d %b %Y %H:%M:%S"),
+        "order": TaskRecord.start_date,
+    }
     status = {"order": TaskRecord.status}
     progress = {"order": TaskRecord.progress}
-    message = {"search": TaskRecord.message, "order": TaskRecord.message, "search_collation": "utf8_general_ci"}
+    message = {
+        "search": TaskRecord.message,
+        "order": TaskRecord.message,
+        "search_collation": "utf8_general_ci",
+    }
 
-    columns = {"id": identifier, "name": name, "owner": owner, "start_at": start_time, "status": status, "progress": progress, "message": message}
+    columns = {
+        "id": identifier,
+        "name": name,
+        "owner": owner,
+        "start_at": start_time,
+        "status": status,
+        "progress": progress,
+        "message": message,
+    }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.site.background_task_data)
@@ -4230,8 +4991,17 @@ def background_ajax():
 def terminate_background_task(id):
     record = TaskRecord.query.get_or_404(id)
 
-    if record.status == TaskRecord.SUCCESS or record.status == TaskRecord.FAILURE or record.status == TaskRecord.TERMINATED:
-        flash('Could not terminate background task "{name}" because it has finished.'.format(name=record.name), "error")
+    if (
+            record.status == TaskRecord.SUCCESS
+            or record.status == TaskRecord.FAILURE
+            or record.status == TaskRecord.TERMINATED
+    ):
+        flash(
+            'Could not terminate background task "{name}" because it has finished.'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     celery = current_app.extensions["celery"]
@@ -4239,14 +5009,22 @@ def terminate_background_task(id):
 
     try:
         # update progress bar
-        progress_update(record.id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+        progress_update(
+            record.id,
+            TaskRecord.TERMINATED,
+            100,
+            "Task terminated by user",
+            autocommit=False,
+        )
 
         # remove task from database
         db.session.delete(record)
         db.session.commit()
     except SQLAlchemyError as e:
         flash(
-            'Could not terminate task "{name}" due to a database error. ' "Please contact a system administrator.".format(name=record.name), "error"
+            'Could not terminate task "{name}" due to a database error. '
+            "Please contact a system administrator.".format(name=record.name),
+            "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
@@ -4260,7 +5038,12 @@ def delete_background_task(id):
     record = TaskRecord.query.get_or_404(id)
 
     if record.status == TaskRecord.PENDING or record.status == TaskRecord.RUNNING:
-        flash('Could not delete match "{name}" because it has not terminated.'.format(name=record.name), "error")
+        flash(
+            'Could not delete match "{name}" because it has not terminated.'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     try:
@@ -4269,7 +5052,11 @@ def delete_background_task(id):
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash('Could not delete match "{name}" due to a database error. ' "Please contact a system administrator.".format(name=record.name), "error")
+        flash(
+            'Could not delete match "{name}" due to a database error. '
+            "Please contact a system administrator.".format(name=record.name),
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
@@ -4296,9 +5083,16 @@ def notifications_ajax():
     redis.hset("_pings", str(current_user.id), str((datetime.now().isoformat(), since)))
 
     # query for all notifications associated with the current user
-    notifications = current_user.notifications.filter(Notification.timestamp >= since).order_by(Notification.timestamp.asc()).all()
+    notifications = (
+        current_user.notifications.filter(Notification.timestamp >= since)
+        .order_by(Notification.timestamp.asc())
+        .all()
+    )
 
-    data = [{"uuid": n.uuid, "type": n.type, "payload": n.payload, "timestamp": n.timestamp} for n in notifications]
+    data = [
+        {"uuid": n.uuid, "type": n.type, "payload": n.payload, "timestamp": n.timestamp}
+        for n in notifications
+    ]
 
     return jsonify(data)
 
@@ -4306,7 +5100,7 @@ def notifications_ajax():
 def _compute_allowed_matching_years(current_year):
     # check which year we are going to offer, and whether any project classes are ready to match
     pre_allowed_years = db.session.query(MatchingAttempt.year).distinct().all()
-    allowed_years = {y for y, in pre_allowed_years}
+    allowed_years = {y for (y,) in pre_allowed_years}
 
     data = get_ready_to_match_data()
     if data["matching_ready"] and not data["rollover_in_progress"]:
@@ -4330,14 +5124,25 @@ def manage_matching():
 
     if len(allowed_years) == 0:
         if not data["matching_ready"]:
-            flash("Automated matching is not yet available because some project classes are not ready", "error")
+            flash(
+                "Automated matching is not yet available because some project classes are not ready",
+                "error",
+            )
             return redirect(redirect_url())
 
         if data["rollover_in_progress"]:
-            flash("Automated matching is not available because a rollover of the academic year is underway", "info"),
+            (
+                flash(
+                    "Automated matching is not available because a rollover of the academic year is underway",
+                    "info",
+                ),
+            )
             return redirect(redirect_url())
 
-        flash("Automated matching is not available because no years are currently eligible", category="info")
+        flash(
+            "Automated matching is not available because no years are currently eligible",
+            category="info",
+        )
         return redirect(redirect_url())
 
     SelectMatchingYearForm = SelectMatchingYearFormFactory(allowed_years)
@@ -4345,7 +5150,11 @@ def manage_matching():
 
     if flag and requested_year is not None and requested_year in allowed_years:
         selected_year = requested_year
-    elif hasattr(form, "selector") and form.selector.data is not None and form.selector.data in allowed_years:
+    elif (
+            hasattr(form, "selector")
+            and form.selector.data is not None
+            and form.selector.data in allowed_years
+    ):
         selected_year = form.selector.data
     else:
         selected_year = max(allowed_years)
@@ -4355,7 +5164,13 @@ def manage_matching():
 
     info = get_matching_dashboard_data(selected_year)
 
-    return render_template_context("admin/matching/manage.html", pane="manage", info=info, form=form, year=selected_year)
+    return render_template_context(
+        "admin/matching/manage.html",
+        pane="manage",
+        info=info,
+        form=form,
+        year=selected_year,
+    )
 
 
 @admin.route("/matches_ajax")
@@ -4377,7 +5192,12 @@ def matches_ajax():
 
     matches = db.session.query(MatchingAttempt).filter_by(year=selected_year).all()
 
-    return ajax.admin.matches_data(matches, is_root=True, text="matching dashboard", url=url_for("admin.manage_matching", year=selected_year))
+    return ajax.admin.matches_data(
+        matches,
+        is_root=True,
+        text="matching dashboard",
+        url=url_for("admin.manage_matching", year=selected_year),
+    )
 
 
 @admin.route("/skip_matching")
@@ -4389,7 +5209,12 @@ def skip_matching():
     """
     current_year = get_current_year()
 
-    pcs = db.session.query(ProjectClass).filter_by(active=True).order_by(ProjectClass.name.asc()).all()
+    pcs = (
+        db.session.query(ProjectClass)
+        .filter_by(active=True)
+        .order_by(ProjectClass.name.asc())
+        .all()
+    )
 
     for pclass in pcs:
         # get current configuration record for this project class
@@ -4402,7 +5227,10 @@ def skip_matching():
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash("Can not skip matching due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Can not skip matching due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
@@ -4422,7 +5250,12 @@ def create_match():
     data = get_ready_to_match_data()
 
     if selected_year == current_year and data["rollover_in_progress"]:
-        flash("Automated matching is not available because a rollover of the academic year is underway", "info"),
+        (
+            flash(
+                "Automated matching is not available because a rollover of the academic year is underway",
+                "info",
+            ),
+        )
         return redirect(redirect_url())
 
     info = get_matching_dashboard_data(selected_year)
@@ -4442,19 +5275,25 @@ def create_match():
             )
             return redirect(redirect_url())
 
-    NewMatchForm = NewMatchFormFactory(current_year, base_id=base_id, base_match=base_match)
+    NewMatchForm = NewMatchFormFactory(
+        current_year, base_id=base_id, base_match=base_match
+    )
     form = NewMatchForm(request.form)
 
     if form.validate_on_submit():
         offline = False
 
         if form.submit.data:
-            task_name = 'Perform project matching for "{name}"'.format(name=form.name.data)
+            task_name = 'Perform project matching for "{name}"'.format(
+                name=form.name.data
+            )
             desc = "Automated project matching task"
 
         elif form.offline.data:
             offline = True
-            task_name = 'Generate file for offline matching for "{name}"'.format(name=form.name.data)
+            task_name = 'Generate file for offline matching for "{name}"'.format(
+                name=form.name.data
+            )
             desc = "Produce .LP file for download and offline matching"
 
         else:
@@ -4468,9 +5307,9 @@ def create_match():
         #   T/F     None    T/F based on form
         #   T/F     True    T/F based on form
         #   absent  False   False
-        include_only_submitted = (include_control.data if include_control is not None else False) and (
-            base_match.include_only_submitted if base_match is not None else True
-        )
+        include_only_submitted = (
+                                     include_control.data if include_control is not None else False
+                                 ) and (base_match.include_only_submitted if base_match is not None else True)
 
         base_bias_control = getattr(form, "base_bias", None)
         force_base_control = getattr(form, "force_base", None)
@@ -4479,7 +5318,9 @@ def create_match():
             year=selected_year,
             base_id=base_id,
             base_bias=base_bias_control.data if base_bias_control is not None else None,
-            force_base=force_base_control.data if force_base_control is not None else None,
+            force_base=force_base_control.data
+            if force_base_control is not None
+            else None,
             name=form.name.data,
             celery_id=uuid,
             finished=False,
@@ -4541,7 +5382,10 @@ def create_match():
                     attempt.config_members.append(config)
 
         if count == 0:
-            flash("No project classes were specified for inclusion, so no match was computed.", "error")
+            flash(
+                "No project classes were specified for inclusion, so no match was computed.",
+                "error",
+            )
             return redirect(url_for("admin.manage_caching"))
 
         def _validate_included_match(match):
@@ -4553,7 +5397,9 @@ def create_match():
                         ok = False
                         flash(
                             'Excluded CATS from existing match "{name}" since it contains project class '
-                            '"{pname}" which overlaps with the current match'.format(name=match.name, pname=config_a.name)
+                            '"{pname}" which overlaps with the current match'.format(
+                                name=match.name, pname=config_a.name
+                            )
                         )
                         break
 
@@ -4590,7 +5436,10 @@ def create_match():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not perform matching due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not perform matching due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.manage_matching"))
 
@@ -4610,8 +5459,12 @@ def create_match():
                 form.supervising_limit.data = base_match.supervising_limit
                 form.marking_limit.data = base_match.marking_limit
                 form.max_marking_multiplicity.data = base_match.max_marking_multiplicity
-                form.max_different_group_projects.data = base_match.max_different_group_projects
-                form.max_different_all_projects.data = base_match.max_different_all_projects
+                form.max_different_group_projects.data = (
+                    base_match.max_different_group_projects
+                )
+                form.max_different_all_projects.data = (
+                    base_match.max_different_all_projects
+                )
 
                 form.levelling_bias.data = base_match.levelling_bias
                 form.supervising_pressure.data = base_match.supervising_pressure
@@ -4634,7 +5487,14 @@ def create_match():
     # estimate equitable CATS loading
     data = estimate_CATS_load()
 
-    return render_template_context("admin/matching/create.html", pane="create", info=info, form=form, data=data, base_match=base_match)
+    return render_template_context(
+        "admin/matching/create.html",
+        pane="create",
+        info=info,
+        form=form,
+        data=data,
+        base_match=base_match,
+    )
 
 
 @admin.route("/terminate_match/<int:id>")
@@ -4643,7 +5503,12 @@ def terminate_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if record.finished:
-        flash('Can not terminate matching task "{name}" because it has finished.'.format(name=record.name), "error")
+        flash(
+            'Can not terminate matching task "{name}" because it has finished.'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     title = "Terminate match"
@@ -4658,7 +5523,12 @@ def terminate_match(id):
     submit_label = "Terminate job"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -4672,7 +5542,12 @@ def perform_terminate_match(id):
         url = url_for("admin.manage_matching")
 
     if record.finished:
-        flash('Can not terminate matching task "{name}" because it has finished.'.format(name=record.name), "error")
+        flash(
+            'Can not terminate matching task "{name}" because it has finished.'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(url)
 
     if not record.celery_finished:
@@ -4681,7 +5556,13 @@ def perform_terminate_match(id):
 
     try:
         if not record.celery_finished:
-            progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+            progress_update(
+                record.celery_id,
+                TaskRecord.TERMINATED,
+                100,
+                "Task terminated by user",
+                autocommit=False,
+            )
 
         # delete all MatchingRecords associated with this MatchingAttempt; in fact should not be any, but this
         # is just to be sure
@@ -4698,7 +5579,8 @@ def perform_terminate_match(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
-            'Can not terminate matching task "{name}" due to a database error. ' "Please contact a system administrator.".format(name=record.name),
+            'Can not terminate matching task "{name}" due to a database error. '
+            "Please contact a system administrator.".format(name=record.name),
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -4716,7 +5598,10 @@ def delete_match(id):
 
     year = get_current_year()
     if attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle',
+            "info",
+        )
         return redirect(redirect_url())
 
     if not current_user.has_role("root") and current_user.id != attempt.creator_id:
@@ -4760,7 +5645,12 @@ def delete_match(id):
     submit_label = "Delete match"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -4778,7 +5668,10 @@ def perform_delete_match(id):
 
     year = get_current_year()
     if attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle',
+            "info",
+        )
         return redirect(url)
 
     if not current_user.has_role("root") and current_user.id != attempt.creator_id:
@@ -4786,7 +5679,12 @@ def perform_delete_match(id):
         return redirect(url)
 
     if not attempt.finished:
-        flash('Can not delete match "{name}" because it has not terminated.'.format(name=attempt.name), "error")
+        flash(
+            'Can not delete match "{name}" because it has not terminated.'.format(
+                name=attempt.name
+            ),
+            "error",
+        )
         return redirect(url)
 
     if attempt.selected:
@@ -4814,10 +5712,17 @@ def perform_delete_match(id):
 
         db.session.delete(attempt)
         db.session.commit()
-        flash('Match "{name}" was successfully deleted.'.format(name=attempt.name), "success")
+        flash(
+            'Match "{name}" was successfully deleted.'.format(name=attempt.name),
+            "success",
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash('Can not delete match "{name}" due to a database error. ' "Please contact a system administrator.".format(name=attempt.name), "error")
+        flash(
+            'Can not delete match "{name}" due to a database error. '
+            "Please contact a system administrator.".format(name=attempt.name),
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
@@ -4833,11 +5738,19 @@ def clean_up_match(id):
 
     year = get_current_year()
     if attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle',
+            "info",
+        )
         return redirect(redirect_url())
 
     if not attempt.finished:
-        flash('Can not clean up match "{name}" because it has not terminated.'.format(name=attempt.name), "error")
+        flash(
+            'Can not clean up match "{name}" because it has not terminated.'.format(
+                name=attempt.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     title = "Clean up match"
@@ -4853,7 +5766,12 @@ def clean_up_match(id):
     submit_label = "Clean up match"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -4871,11 +5789,19 @@ def perform_clean_up_match(id):
 
     year = get_current_year()
     if attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle',
+            "info",
+        )
         return redirect(url)
 
     if not attempt.finished:
-        flash('Can not clean up match "{name}" because it has not terminated.'.format(name=attempt.name), "error")
+        flash(
+            'Can not clean up match "{name}" because it has not terminated.'.format(
+                name=attempt.name
+            ),
+            "error",
+        )
         return redirect(url)
 
     if not current_user.has_role("root") and current_user.id != attempt.creator_id:
@@ -4889,10 +5815,17 @@ def perform_clean_up_match(id):
                 db.session.delete(rec)
 
         db.session.commit()
-        flash('Match "{name}" was successfully cleaned up.'.format(name=attempt.name), "success")
+        flash(
+            'Match "{name}" was successfully cleaned up.'.format(name=attempt.name),
+            "success",
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash('Can not clean up match "{name}" due to a database error. ' "Please contact a system administrator.".format(name=attempt.name), "error")
+        flash(
+            'Can not clean up match "{name}" due to a database error. '
+            "Please contact a system administrator.".format(name=attempt.name),
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
@@ -4908,18 +5841,35 @@ def revert_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle',
+            "info",
+        )
         return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Can not revert match "{name}" because it is still awaiting ' "manual upload.".format(name=record.name), "error")
+            flash(
+                'Can not revert match "{name}" because it is still awaiting '
+                "manual upload.".format(name=record.name),
+                "error",
+            )
         else:
-            flash('Can not revert match "{name}" because it has not yet terminated.'.format(name=record.name), "error")
+            flash(
+                'Can not revert match "{name}" because it has not yet terminated.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Can not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name), "error")
+        flash(
+            'Can not revert match "{name}" because it did not yield a usable outcome.'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     title = "Revert match"
@@ -4934,7 +5884,12 @@ def revert_match(id):
     submit_label = "Revert match"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -4948,7 +5903,10 @@ def perform_revert_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle',
+            "info",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -4958,13 +5916,27 @@ def perform_revert_match(id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Can not revert match "{name}" because it is still awaiting ' "manual upload.".format(name=record.name), "error")
+            flash(
+                'Can not revert match "{name}" because it is still awaiting '
+                "manual upload.".format(name=record.name),
+                "error",
+            )
         else:
-            flash('Can not revert match "{name}" because it has not yet terminated.'.format(name=record.name), "error")
+            flash(
+                'Can not revert match "{name}" because it has not yet terminated.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Can not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name), "error")
+        flash(
+            'Can not revert match "{name}" because it did not yield a usable outcome.'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     # hand off revert job to asynchronous queue
@@ -4979,9 +5951,11 @@ def perform_revert_match(id):
     final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
     error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-    seq = chain(init.si(task_id, tk_name), revert.si(record.id), final.si(task_id, tk_name, current_user.id)).on_error(
-        error.si(task_id, tk_name, current_user.id)
-    )
+    seq = chain(
+        init.si(task_id, tk_name),
+        revert.si(record.id),
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
     return redirect(url)
@@ -4997,18 +5971,35 @@ def duplicate_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle.', "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle.',
+            "info",
+        )
         return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Can not duplicate match "{name}" because it is still awaiting ' "manual upload".format(name=record.name), "error")
+            flash(
+                'Can not duplicate match "{name}" because it is still awaiting '
+                "manual upload".format(name=record.name),
+                "error",
+            )
         else:
-            flash('Can not duplicate match "{name}" because it has not yet terminated.'.format(name=record.name), "error")
+            flash(
+                'Can not duplicate match "{name}" because it has not yet terminated.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Can not duplicate match "{name}" because it did not yield a usable outcome.'.format(name=record.name), "error")
+        flash(
+            'Can not duplicate match "{name}" because it did not yield a usable outcome.'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     suffix = 2
@@ -5021,7 +6012,11 @@ def duplicate_match(id):
         suffix += 1
 
     if suffix >= 100:
-        flash('Can not duplicate match "{name}" because a new unique tag could not ' "be generated.".format(name=record.name), "error")
+        flash(
+            'Can not duplicate match "{name}" because a new unique tag could not '
+            "be generated.".format(name=record.name),
+            "error",
+        )
         return redirect(redirect_url())
 
     # hand off duplicate job to asynchronous queue
@@ -5036,9 +6031,11 @@ def duplicate_match(id):
     final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
     error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-    seq = chain(init.si(task_id, tk_name), duplicate.si(record.id, new_name, current_user.id), final.si(task_id, tk_name, current_user.id)).on_error(
-        error.si(task_id, tk_name, current_user.id)
-    )
+    seq = chain(
+        init.si(task_id, tk_name),
+        duplicate.si(record.id, new_name, current_user.id),
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
     return redirect(redirect_url())
@@ -5054,7 +6051,10 @@ def rename_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle',
+            "info",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -5072,13 +6072,17 @@ def rename_match(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(
-                'Could not rename match "{name}" due to a database error. ' "Please contact a system administrator.".format(name=record.name), "error"
+                'Could not rename match "{name}" due to a database error. '
+                "Please contact a system administrator.".format(name=record.name),
+                "error",
             )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url)
 
-    return render_template_context("admin/match_inspector/rename.html", form=form, record=record, url=url)
+    return render_template_context(
+        "admin/match_inspector/rename.html", form=form, record=record, url=url
+    )
 
 
 @admin.route("/compare_match/<int:id>", methods=["GET", "POST"])
@@ -5091,12 +6095,26 @@ def compare_match(id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Can not compare match "{name}" because it is still awaiting ' "manual upload.".format(name=record.name), "error")
+            flash(
+                'Can not compare match "{name}" because it is still awaiting '
+                "manual upload.".format(name=record.name),
+                "error",
+            )
         else:
-            flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record.name), "error")
+            flash(
+                'Can not compare match "{name}" because it has not yet terminated.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
 
     if not record.solution_usable:
-        flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record.name), "error")
+        flash(
+            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -5105,14 +6123,26 @@ def compare_match(id):
     year = get_current_year()
     our_pclasses = {x.id for x in record.available_pclasses}
 
-    CompareMatchForm = CompareMatchFormFactory(year, record.id, our_pclasses, current_user.has_role("root"))
+    CompareMatchForm = CompareMatchFormFactory(
+        year, record.id, our_pclasses, current_user.has_role("root")
+    )
     form = CompareMatchForm(request.form)
 
     if form.validate_on_submit():
         comparator = form.target.data
-        return redirect(url_for("admin.do_match_compare", id1=id, id2=comparator.id, text=text, url=url))
+        return redirect(
+            url_for(
+                "admin.do_match_compare", id1=id, id2=comparator.id, text=text, url=url
+            )
+        )
 
-    return render_template_context("admin/match_inspector/compare_setup.html", form=form, record=record, text=text, url=url)
+    return render_template_context(
+        "admin/match_inspector/compare_setup.html",
+        form=form,
+        record=record,
+        text=text,
+        url=url,
+    )
 
 
 @admin.route("/do_match_compare/<int:id1>/<int:id2>")
@@ -5134,24 +6164,52 @@ def do_match_compare(id1, id2):
 
     if not record1.finished:
         if record1.awaiting_upload:
-            flash('Can not compare match "{name}" because it is still awaiting ' "manual upload.".format(name=record1.name), "error")
+            flash(
+                'Can not compare match "{name}" because it is still awaiting '
+                "manual upload.".format(name=record1.name),
+                "error",
+            )
         else:
-            flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record1.name), "error")
+            flash(
+                'Can not compare match "{name}" because it has not yet terminated.'.format(
+                    name=record1.name
+                ),
+                "error",
+            )
         return redirect(url)
 
     if not record1.solution_usable:
-        flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record1.name), "error")
+        flash(
+            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(
+                name=record1.name
+            ),
+            "error",
+        )
         return redirect(url)
 
     if not record2.finished:
         if record2.awaiting_upload:
-            flash('Can not compare match "{name}" because it is still awaiting ' "manual upload.".format(name=record2.name), "error")
+            flash(
+                'Can not compare match "{name}" because it is still awaiting '
+                "manual upload.".format(name=record2.name),
+                "error",
+            )
         else:
-            flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record2.name), "error")
+            flash(
+                'Can not compare match "{name}" because it has not yet terminated.'.format(
+                    name=record2.name
+                ),
+                "error",
+            )
         return redirect(url)
 
     if not record2.solution_usable:
-        flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record2.name), "error")
+        flash(
+            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(
+                name=record2.name
+            ),
+            "error",
+        )
         return redirect(url)
 
     pclasses1 = record1.available_pclasses
@@ -5179,10 +6237,10 @@ def do_match_compare(id1, id2):
     flag, pclass_value = is_integer(pclass_filter)
     if flag:
         if pclass_value not in pclass_values_ids:
-            pclass_filter = 'all'
+            pclass_filter = "all"
     else:
-        if pclass_filter is not None and pclass_filter not in ['all']:
-            pclass_filter = 'all'
+        if pclass_filter is not None and pclass_filter not in ["all"]:
+            pclass_filter = "all"
 
     if pclass_filter is not None:
         session["admin_match_pclass_filter"] = pclass_filter
@@ -5191,8 +6249,14 @@ def do_match_compare(id1, id2):
     if diff_filter is None and session.get("admin_match_diff_filter"):
         diff_filter = session["admin_match_diff_filter"]
 
-    if diff_filter is not None and diff_filter not in ['all', 'project', 'supervisor', 'marker', 'moderator']:
-        diff_filter = 'all'
+    if diff_filter is not None and diff_filter not in [
+        "all",
+        "project",
+        "supervisor",
+        "marker",
+        "moderator",
+    ]:
+        diff_filter = "all"
 
     if diff_filter is not None:
         session["admin_match_diff_filter"] = diff_filter
@@ -5220,24 +6284,54 @@ def do_match_compare_ajax(id1, id2):
 
     if not attempt1.finished:
         if attempt1.awaiting_upload:
-            flash('Can not compare match "{name}" because it is still awaiting upload of an offline solution.'.format(name=attempt1.name), "error")
+            flash(
+                'Can not compare match "{name}" because it is still awaiting upload of an offline solution.'.format(
+                    name=attempt1.name
+                ),
+                "error",
+            )
         else:
-            flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=attempt1.name), "error")
+            flash(
+                'Can not compare match "{name}" because it has not yet terminated.'.format(
+                    name=attempt1.name
+                ),
+                "error",
+            )
         return jsonify({})
 
     if attempt1.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
-        flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=attempt1.name), "error")
+        flash(
+            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(
+                name=attempt1.name
+            ),
+            "error",
+        )
         return jsonify({})
 
     if not attempt2.finished:
         if attempt2.awaiting_upload:
-            flash('Can not compare match "{name}" because it is still awaiting upload of an offline solution.'.format(name=attempt2.name), "error")
+            flash(
+                'Can not compare match "{name}" because it is still awaiting upload of an offline solution.'.format(
+                    name=attempt2.name
+                ),
+                "error",
+            )
         else:
-            flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=attempt2.name), "error")
+            flash(
+                'Can not compare match "{name}" because it has not yet terminated.'.format(
+                    name=attempt2.name
+                ),
+                "error",
+            )
         return jsonify({})
 
     if not attempt2.solution_usable:
-        flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=attempt2.name), "error")
+        flash(
+            'Can not compare match "{name}" because it did not yield a usable outcome.'.format(
+                name=attempt2.name
+            ),
+            "error",
+        )
         return jsonify({})
 
     pclass_filter = request.args.get("pclass_filter")
@@ -5245,12 +6339,20 @@ def do_match_compare_ajax(id1, id2):
 
     diff_filter = request.args.get("diff_filter")
 
-    discrepant_records = _build_match_changes(attempt1, attempt2, diff_filter, flag, pclass_value)
+    discrepant_records = _build_match_changes(
+        attempt1, attempt2, diff_filter, flag, pclass_value
+    )
     return ajax.admin.compare_match_data(discrepant_records, attempt1, attempt2)
 
 
-def _build_match_changes(attempt1: MatchingAttempt, attempt2: MatchingAttempt, diff_filter: str, filter_pclasses: bool, pclass_id_value: int,
-                         include_only_common_records: bool = False):
+def _build_match_changes(
+        attempt1: MatchingAttempt,
+        attempt2: MatchingAttempt,
+        diff_filter: str,
+        filter_pclasses: bool,
+        pclass_id_value: int,
+        include_only_common_records: bool = False,
+):
     # perform a symmetric comparison between the MatchingRecord instances
     # first, we need to build a dictionary of the MatchingRecord instances in each MatchingAttempt, so that we can
     # quickly perform lookups
@@ -5261,17 +6363,26 @@ def _build_match_changes(attempt1: MatchingAttempt, attempt2: MatchingAttempt, d
     def build_record_dict(attempt: MatchingAttempt) -> RecordDictType:
         # query supplied MatchingAttempt for an ordered list of records, restricting by project class if required
         if filter_pclasses:
-            query = (attempt.records
-                     .join(SelectingStudent, SelectingStudent.id == MatchingRecord.selector_id)
-                     .join(ProjectClassConfig, ProjectClassConfig.id == SelectingStudent.config_id)
-                     .filter(ProjectClassConfig.pclass_id == pclass_id_value)
-                     )
+            query = (
+                attempt.records.join(
+                    SelectingStudent, SelectingStudent.id == MatchingRecord.selector_id
+                )
+                .join(
+                    ProjectClassConfig,
+                    ProjectClassConfig.id == SelectingStudent.config_id,
+                )
+                .filter(ProjectClassConfig.pclass_id == pclass_id_value)
+            )
         else:
             query = attempt.records
-        recs: List[MatchingRecord] = query.order_by(MatchingRecord.selector_id.asc(), MatchingRecord.submission_period.asc())
+        recs: List[MatchingRecord] = query.order_by(
+            MatchingRecord.selector_id.asc(), MatchingRecord.submission_period.asc()
+        )
 
         # convert to a dictionary, indexed by
-        rec_dict: RecordDictType = {(rec.selector_id, rec.submission_period): rec for rec in recs}
+        rec_dict: RecordDictType = {
+            (rec.selector_id, rec.submission_period): rec for rec in recs
+        }
 
         return rec_dict
 
@@ -5299,25 +6410,39 @@ def _build_match_changes(attempt1: MatchingAttempt, attempt2: MatchingAttempt, d
         rec2: MatchingRecord = recs2[key]
 
         if rec1.selector_id != rec2.selector_id:
-            raise RuntimeError("do_match_compare_ajax: rec1.selector_id and rec2.selector_id do not match")
+            raise RuntimeError(
+                "do_match_compare_ajax: rec1.selector_id and rec2.selector_id do not match"
+            )
 
         if rec1.submission_period != rec2.submission_period:
-            raise RuntimeError("do_match_compare_ajax: rec1.submission_period and rec2.submission_period do not match")
+            raise RuntimeError(
+                "do_match_compare_ajax: rec1.submission_period and rec2.submission_period do not match"
+            )
 
         # dictionary is indexed by user_id
         RoleDictType = Dict[int, MatchingRole]
 
-        def get_role_dict(rec: MatchingRecord, roles: Union[int, List[int]]) -> RoleDictType:
+        def get_role_dict(
+                rec: MatchingRecord, roles: Union[int, List[int]]
+        ) -> RoleDictType:
             if not isinstance(roles, list):
                 roles = [roles]
 
-            role_records: List[MatchingRole] = rec.roles.filter(MatchingRole.role.in_(roles))
+            role_records: List[MatchingRole] = rec.roles.filter(
+                MatchingRole.role.in_(roles)
+            )
             role_dict: RoleDictType = {role.user_id: role for role in role_records}
 
             return role_dict
 
         def get_supervisor_roles(rec: MatchingRecord) -> RoleDictType:
-            return get_role_dict(rec, [MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR])
+            return get_role_dict(
+                rec,
+                [
+                    MatchingRole.ROLE_SUPERVISOR,
+                    MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                ],
+            )
 
         def get_marker_roles(rec: MatchingRecord) -> RoleDictType:
             return get_role_dict(rec, MatchingRole.ROLE_MARKER)
@@ -5325,37 +6450,39 @@ def _build_match_changes(attempt1: MatchingAttempt, attempt2: MatchingAttempt, d
         def get_moderator_roles(rec: MatchingRecord) -> RoleDictType:
             return get_role_dict(rec, MatchingRole.ROLE_MODERATOR)
 
-        def find_record_changes(rec1: MatchingRecord, rec2: MatchingRecord, diff_filter: str) -> List[str]:
+        def find_record_changes(
+                rec1: MatchingRecord, rec2: MatchingRecord, diff_filter: str
+        ) -> List[str]:
             # is the project assignment different?
             changes = []
 
-            if diff_filter == 'all' or diff_filter == 'project':
+            if diff_filter == "all" or diff_filter == "project":
                 if rec1.project_id != rec2.project_id:
-                    changes.append('project')
+                    changes.append("project")
 
             # check for differing supervisor roles
-            if diff_filter == 'all' or diff_filter == 'supervisor':
+            if diff_filter == "all" or diff_filter == "supervisor":
                 supervisors1: RoleDictType = get_supervisor_roles(rec1)
                 supervisors2: RoleDictType = get_supervisor_roles(rec2)
                 supervisors_diff = supervisors1.keys() ^ supervisors2.keys()
                 if len(supervisors_diff) > 0:
-                    changes.append('supervisor')
+                    changes.append("supervisor")
 
             # check for differing marker roles
-            if diff_filter == 'all' or diff_filter == 'marker':
+            if diff_filter == "all" or diff_filter == "marker":
                 markers1: RoleDictType = get_marker_roles(rec1)
                 markers2: RoleDictType = get_marker_roles(rec2)
                 markers_diff = markers1.keys() ^ markers2.keys()
                 if len(markers_diff) > 0:
-                    changes.append('marker')
+                    changes.append("marker")
 
             # check for differing moderator roles
-            if diff_filter == 'all' or diff_filter == 'moderator':
+            if diff_filter == "all" or diff_filter == "moderator":
                 moderators1: RoleDictType = get_moderator_roles(rec1)
                 moderators2: RoleDictType = get_moderator_roles(rec2)
                 moderators_diff = moderators1.keys() ^ moderators2.keys()
                 if len(moderators_diff) > 0:
-                    changes.append('moderator')
+                    changes.append("moderator")
 
             return changes
 
@@ -5372,12 +6499,12 @@ def _build_match_changes(attempt1: MatchingAttempt, attempt2: MatchingAttempt, d
             key: RecordIndexType
             rec: MatchingRecord = recs1[key]
 
-            discrepant_records.append((rec, None, ['all']))
+            discrepant_records.append((rec, None, ["all"]))
         for key in attempt2_only_keys:
             key: RecordIndexType
             rec: MatchingRecord = recs2[key]
 
-            discrepant_records.append((None, rec, ['all']))
+            discrepant_records.append((None, rec, ["all"]))
 
     return discrepant_records
 
@@ -5388,20 +6515,31 @@ def replace_matching_record(src_id, dest_id):
     source: MatchingRecord = MatchingRecord.query.get_or_404(src_id)
     dest: MatchingRecord = MatchingRecord.query.get_or_404(dest_id)
 
-    if not validate_match_inspector(source.matching_attempt) or not validate_match_inspector(dest.matching_attempt):
+    if not validate_match_inspector(
+            source.matching_attempt
+    ) or not validate_match_inspector(dest.matching_attempt):
         return redirect(redirect_url())
 
     year = get_current_year()
     if dest.matching_attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle',
+            "info",
+        )
         return redirect(redirect_url())
 
     if source.selector_id != dest.selector_id:
-        flash("Cannot merge these matching records because they do not refer to the same selector", "error")
+        flash(
+            "Cannot merge these matching records because they do not refer to the same selector",
+            "error",
+        )
         return redirect(redirect_url())
 
     if source.submission_period != dest.submission_period:
-        flash("Cannot merge these matching records because they do not refer to the same submission period", "error")
+        flash(
+            "Cannot merge these matching records because they do not refer to the same submission period",
+            "error",
+        )
         return redirect(redirect_url())
 
     try:
@@ -5433,7 +6571,10 @@ def replace_matching_record(src_id, dest_id):
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash("Can not replace matching record due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Can not replace matching record due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
@@ -5445,19 +6586,25 @@ def insert_matching_record(src_id, attempt_id):
     source_record: MatchingRecord = MatchingRecord.query.get_or_404(src_id)
     dest_attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(attempt_id)
 
-    if not validate_match_inspector(source_record.matching_attempt) or not validate_match_inspector(dest_attempt):
+    if not validate_match_inspector(
+            source_record.matching_attempt
+    ) or not validate_match_inspector(dest_attempt):
         return redirect(redirect_url())
 
     year = get_current_year()
     if dest_attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle', "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle',
+            "info",
+        )
         return redirect(redirect_url())
 
     sel: SelectingStudent = source_record.selector
     if sel.config not in dest_attempt.config_members:
         flash(
             f'Cannot insert this matching record into attempt "{dest_attempt.name}" because it does not contain matches for projects of type "{sel.config.name}"',
-            'error')
+            "error",
+        )
         return redirect(redirect_url())
 
     try:
@@ -5500,7 +6647,10 @@ def insert_matching_record(src_id, attempt_id):
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash("Can not insert matching record due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Can not insert matching record due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
@@ -5513,13 +6663,28 @@ def match_export_excel(matching_id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Match "{name}" is not yet available for export because it is still awaiting manual upload.'.format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for export because it is still awaiting manual upload.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         else:
-            flash('Match "{name}" is not yet available for export because it has not yet completed.'.format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for export because it has not yet completed.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Match "{name}" is not available for export because it did not yield a useable solution'.format(name=record.name), "error")
+        flash(
+            'Match "{name}" is not available for export because it did not yield a useable solution'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     if not validate_match_inspector(record):
@@ -5535,7 +6700,9 @@ def match_export_excel(matching_id):
     task = celery.tasks["app.tasks.matching.generate_excel_matching_report"]
 
     task.apply_async(args=(matching_id, current_user.id, task_id), task_id=task_id)
-    flash(f'An Excel report for "{record.name}" is being generated, and you will be notified when it is available.')
+    flash(
+        f'An Excel report for "{record.name}" is being generated, and you will be notified when it is available.'
+    )
 
     return redirect(redirect_url())
 
@@ -5547,13 +6714,28 @@ def match_student_view(id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Match "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         else:
-            flash('Match "{name}" is not yet available for inspection because it has not yet completed.'.format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for inspection because it has not yet completed.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Match "{name}" is not available for inspection because it did not yield a useable solution'.format(name=record.name), "error")
+        flash(
+            'Match "{name}" is not available for inspection because it did not yield a useable solution'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     if not validate_match_inspector(record):
@@ -5613,13 +6795,28 @@ def match_faculty_view(id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Match "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         else:
-            flash('Match "{name}" is not yet available for inspection because it has not yet terminated.'.format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for inspection because it has not yet terminated.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Match "{name}" is not available for inspection because it did not yield an optimal solution.'.format(name=record.name), "error")
+        flash(
+            'Match "{name}" is not available for inspection because it did not yield an optimal solution.'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     if not validate_match_inspector(record):
@@ -5691,14 +6888,24 @@ def match_dists_view(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for inspection because it is still awaiting ' "manual upload.".format(name=record.name), "error"
+                'Match "{name}" is not yet available for inspection because it is still awaiting '
+                "manual upload.".format(name=record.name),
+                "error",
             )
         else:
-            flash('Match "{name}" is not yet available for inspection because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for inspection because it has not yet '
+                "terminated.".format(name=record.name),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Match "{name}" is not available for inspection ' "because it did not yield an optimal solution.".format(name=record.name), "error")
+        flash(
+            'Match "{name}" is not available for inspection '
+            "because it did not yield an optimal solution.".format(name=record.name),
+            "error",
+        )
         return redirect(redirect_url())
 
     if not validate_match_inspector(record):
@@ -5722,11 +6929,23 @@ def match_dists_view(id):
 
     fsum = lambda x: x[0] + x[1] + x[2]
     query = record.faculty_list_query()
-    CATS_tot = [fsum(record.get_faculty_CATS(f.id, pclass_value if flag else None)) for f in query.all()]
+    CATS_tot = [
+        fsum(record.get_faculty_CATS(f.id, pclass_value if flag else None))
+        for f in query.all()
+    ]
 
-    CATS_plot = figure(title="Workload distribution", x_axis_label="CATS", width=800, height=300)
+    CATS_plot = figure(
+        title="Workload distribution", x_axis_label="CATS", width=800, height=300
+    )
     CATS_hist, CATS_edges = histogram(CATS_tot, bins="auto")
-    CATS_plot.quad(top=CATS_hist, bottom=0, left=CATS_edges[:-1], right=CATS_edges[1:], fill_color="#036564", line_color="#033649")
+    CATS_plot.quad(
+        top=CATS_hist,
+        bottom=0,
+        left=CATS_edges[:-1],
+        right=CATS_edges[1:],
+        fill_color="#036564",
+        line_color="#033649",
+    )
     CATS_plot.sizing_mode = "scale_width"
     CATS_plot.toolbar.logo = None
     CATS_plot.border_fill_color = None
@@ -5741,7 +6960,9 @@ def match_dists_view(id):
             if s.config.pclass_id != pclass_value:
                 return None
 
-        records: List[MatchingRecord] = s.matching_records.filter(MatchingRecord.matching_id == record.id).all()
+        records: List[MatchingRecord] = s.matching_records.filter(
+            MatchingRecord.matching_id == record.id
+        ).all()
 
         deltas = [r.delta for r in records]
         return sum(deltas) if None not in deltas else None
@@ -5749,9 +6970,18 @@ def match_dists_view(id):
     delta_set = [_get_deltas(s) for s in selectors]
     delta_set = [x for x in delta_set if x is not None]
 
-    delta_plot = figure(title="Delta distribution", x_axis_label="Total delta", width=800, height=300)
+    delta_plot = figure(
+        title="Delta distribution", x_axis_label="Total delta", width=800, height=300
+    )
     delta_hist, delta_edges = histogram(delta_set, bins="auto")
-    delta_plot.quad(top=delta_hist, bottom=0, left=delta_edges[:-1], right=delta_edges[1:], fill_color="#036564", line_color="#033649")
+    delta_plot.quad(
+        top=delta_hist,
+        bottom=0,
+        left=delta_edges[:-1],
+        right=delta_edges[1:],
+        fill_color="#036564",
+        line_color="#033649",
+    )
     delta_plot.sizing_mode = "scale_width"
     delta_plot.toolbar.logo = None
     delta_plot.border_fill_color = None
@@ -5813,7 +7043,9 @@ def match_student_view_ajax(id):
         return config.name
 
     def search_projects(row: SelectingStudent):
-        records: List[MatchingRecord] = row.matching_records.filter(MatchingRecord.matching_id == record.id).all()
+        records: List[MatchingRecord] = row.matching_records.filter(
+            MatchingRecord.matching_id == record.id
+        ).all()
 
         def _get_data(rec: MatchingRecord):
             yield rec.project.name if rec.project is not None else ""
@@ -5825,18 +7057,26 @@ def match_student_view_ajax(id):
 
     def sort_projects(row: SelectingStudent):
         records: List[MatchingRecord] = (
-            row.matching_records.filter(MatchingRecord.matching_id == record.id).order_by(MatchingRecord.submission_period).all()
+            row.matching_records.filter(MatchingRecord.matching_id == record.id)
+            .order_by(MatchingRecord.submission_period)
+            .all()
         )
 
-        return list(rec.project.name if rec.project is not None else "" for rec in records)
+        return list(
+            rec.project.name if rec.project is not None else "" for rec in records
+        )
 
     def sort_rank(row: SelectingStudent):
-        records: List[MatchingRecord] = row.matching_records.filter(MatchingRecord.matching_id == record.id).all()
+        records: List[MatchingRecord] = row.matching_records.filter(
+            MatchingRecord.matching_id == record.id
+        ).all()
 
         return sum(rec.total_rank for rec in records)
 
     def sort_score(row: SelectingStudent):
-        records: List[MatchingRecord] = row.matching_records.filter(MatchingRecord.matching_id == record.id).all()
+        records: List[MatchingRecord] = row.matching_records.filter(
+            MatchingRecord.matching_id == record.id
+        ).all()
 
         return sum(rec.current_score for rec in records)
 
@@ -5845,7 +7085,13 @@ def match_student_view_ajax(id):
     projects = {"search": search_projects, "order": sort_projects}
     rank = {"order": sort_rank}
     score = {"order": sort_score}
-    columns = {"student": student, "pclass": pclass, "projects": projects, "rank": rank, "scores": score}
+    columns = {
+        "student": student,
+        "pclass": pclass,
+        "projects": projects,
+        "rank": rank,
+        "scores": score,
+    }
 
     filter_list = []
 
@@ -5885,17 +7131,28 @@ def match_student_view_ajax(id):
         filter_list.append(filt)
 
     def row_filter(row: SelectingStudent):
-        records: List[MatchingRecord] = row.matching_records.filter(MatchingRecord.matching_id == record.id).all()
+        records: List[MatchingRecord] = row.matching_records.filter(
+            MatchingRecord.matching_id == record.id
+        ).all()
 
         return all(f(records) for f in filter_list)
 
-    with ServerSideInMemoryHandler(request, base_query, columns, row_filter=row_filter if len(filter_list) > 0 else None) as handler:
+    with ServerSideInMemoryHandler(
+            request,
+            base_query,
+            columns,
+            row_filter=row_filter if len(filter_list) > 0 else None,
+    ) as handler:
 
         def row_formatter(selectors: List[SelectingStudent]):
             def _internal_format(ss: List[SelectingStudent]):
                 for s in ss:
                     records: List[MatchingRecord] = (
-                        s.matching_records.filter(MatchingRecord.matching_id == record.id).order_by(MatchingRecord.submission_period).all()
+                        s.matching_records.filter(
+                            MatchingRecord.matching_id == record.id
+                        )
+                        .order_by(MatchingRecord.submission_period)
+                        .all()
                     )
 
                     deltas = [r.delta for r in records]
@@ -5906,7 +7163,9 @@ def match_student_view_ajax(id):
 
                     yield (records, delta, score)
 
-            return ajax.admin.student_view_data(_internal_format(selectors), record.id, url=url, text=text)
+            return ajax.admin.student_view_data(
+                _internal_format(selectors), record.id, url=url, text=text
+            )
 
         return handler.build_payload(row_formatter)
 
@@ -5964,7 +7223,12 @@ def match_faculty_view_ajax(id):
     projects = {"search": search_projects, "order": sort_projects}
     marking = {"search": search_marker, "order": sort_marker}
     workload = {"order": sort_workload}
-    columns = {"name": name, "projects": projects, "marking": marking, "workload": workload}
+    columns = {
+        "name": name,
+        "projects": projects,
+        "marking": marking,
+        "workload": workload,
+    }
 
     filter_list = []
 
@@ -6008,11 +7272,21 @@ def match_faculty_view_ajax(id):
 
         return all(f(records) for f in filter_list)
 
-    with ServerSideInMemoryHandler(request, base_query, columns, row_filter=row_filter if len(filter_list) > 0 else None) as handler:
+    with ServerSideInMemoryHandler(
+            request,
+            base_query,
+            columns,
+            row_filter=row_filter if len(filter_list) > 0 else None,
+    ) as handler:
 
         def row_formatter(records: List[FacultyData]):
             return ajax.admin.faculty_view_data(
-                records, record, pclass_value if pclass_flag else None, type_filter, hint_filter, show_includes == "true"
+                records,
+                record,
+                pclass_value if pclass_flag else None,
+                type_filter,
+                hint_filter,
+                show_includes == "true",
             )
 
         return handler.build_payload(row_formatter)
@@ -6029,19 +7303,28 @@ def delete_match_record(attempt_id, selector_id):
     if attempt.selected:
         flash(
             'Match "{name}" cannot be edited because an administrative user has marked it as '
-            '"selected" for use during rollover of the academic year.'.format(name=attempt.name),
+            '"selected" for use during rollover of the academic year.'.format(
+                name=attempt.name
+            ),
             "info",
         )
         return redirect(redirect_url())
 
     year = get_current_year()
     if attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=attempt.name), "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
+                name=attempt.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     try:
         # remove all matching records associated with this selector
-        records = db.session.query(MatchingRecord).filter_by(matching_id=attempt.id, selector_id=selector_id)
+        records = db.session.query(MatchingRecord).filter_by(
+            matching_id=attempt.id, selector_id=selector_id
+        )
         for record in records:
             records: MatchingRecord
             db.session.delete(record)
@@ -6049,7 +7332,10 @@ def delete_match_record(attempt_id, selector_id):
         db.session.commit()
 
     except SQLAlchemyError as e:
-        flash("Could not delete matching records for this selector because a database error was encountered.", "error")
+        flash(
+            "Could not delete matching records for this selector because a database error was encountered.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -6067,14 +7353,21 @@ def reassign_match_project(id, pid):
     if record.matching_attempt.selected:
         flash(
             'Match "{name}" cannot be edited because an administrative user has marked it as '
-            '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
+            '"selected" for use during rollover of the academic year.'.format(
+                name=record.matching_attempt.name
+            ),
             "info",
         )
         return redirect(redirect_url())
 
     year = get_current_year()
     if record.matching_attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     project: LiveProject = LiveProject.query.get_or_404(pid)
@@ -6090,25 +7383,42 @@ def reassign_match_project(id, pid):
 
             else:
                 if project.owner is not None:
-                    enroll_record = project.owner.get_enrollment_record(project.config.pclass_id)
+                    enroll_record = project.owner.get_enrollment_record(
+                        project.config.pclass_id
+                    )
 
-                    if enroll_record is not None and enroll_record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
+                    if (
+                            enroll_record is not None
+                            and enroll_record.supervisor_state
+                            == EnrollmentRecord.SUPERVISOR_ENROLLED
+                    ):
                         adjust = True
 
                         # remove any previous supervision roles and replace with a supervision role for the new project
                         existing_supv = record.roles.filter(
-                            MatchingRole.role.in_([MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR])
+                            MatchingRole.role.in_(
+                                [
+                                    MatchingRole.ROLE_SUPERVISOR,
+                                    MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                                ]
+                            )
                         ).all()
                         for item in existing_supv:
                             record.roles.remove(item)
 
-                        new_supv = MatchingRole(user_id=project.owner_id, role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR)
+                        new_supv = MatchingRole(
+                            user_id=project.owner_id,
+                            role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                        )
                         record.roles.add(new_supv)
 
                     else:
                         flash(
                             "Could not reassign '{proj}' to {name} because this project's supervisor is no longer "
-                            "enrolled for this project class.".format(proj=project.name, name=record.selector.student.user.name)
+                            "enrolled for this project class.".format(
+                                proj=project.name,
+                                name=record.selector.student.user.name,
+                            )
                         )
 
             if adjust:
@@ -6121,14 +7431,21 @@ def reassign_match_project(id, pid):
                 try:
                     db.session.commit()
                 except SQLAlchemyError as e:
-                    flash("Could not reassign matched project because a database error was encountered.", "error")
+                    flash(
+                        "Could not reassign matched project because a database error was encountered.",
+                        "error",
+                    )
                     db.session.rollback()
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    current_app.logger.exception(
+                        "SQLAlchemyError exception", exc_info=e
+                    )
 
         else:
             flash(
                 "Could not reassign '{proj}' to {name} because this project "
-                "was not included in this selector's choices".format(proj=project.name, name=record.selector.student.user.name),
+                "was not included in this selector's choices".format(
+                    proj=project.name, name=record.selector.student.user.name
+                ),
                 "error",
             )
 
@@ -6146,14 +7463,21 @@ def reassign_match_marker(id, mid):
     if record.matching_attempt.selected:
         flash(
             'Match "{name}" cannot be edited because an administrative user has marked it as '
-            '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
+            '"selected" for use during rollover of the academic year.'.format(
+                name=record.matching_attempt.name
+            ),
             "info",
         )
         return redirect(redirect_url())
 
     year = get_current_year()
     if record.matching_attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     # check intended mid is in list of attached second markers
@@ -6163,7 +7487,9 @@ def reassign_match_marker(id, mid):
         marker = FacultyData.query.get_or_404(mid)
         flash(
             "Could not assign {name} as marker since "
-            'not tagged as available for assigned project "{proj}"'.format(name=marker.user.name, proj=record.project.name),
+            'not tagged as available for assigned project "{proj}"'.format(
+                name=marker.user.name, proj=record.project.name
+            ),
             "error",
         )
 
@@ -6176,7 +7502,12 @@ def reassign_match_marker(id, mid):
         db.session.commit()
 
     else:
-        flash("Inconsistent marker counts for matching record (id={id}). Please contact a system administrator".format(id=record.id), "error")
+        flash(
+            "Inconsistent marker counts for matching record (id={id}). Please contact a system administrator".format(
+                id=record.id
+            ),
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -6192,14 +7523,21 @@ def reassign_supervisor_roles(rec_id):
     if record.matching_attempt.selected:
         flash(
             'Match "{name}" cannot be edited because an administrative user has marked it as '
-            '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
+            '"selected" for use during rollover of the academic year.'.format(
+                name=record.matching_attempt.name
+            ),
             "info",
         )
         return redirect(redirect_url())
 
     year = get_current_year()
     if record.matching_attempt.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     text = request.args.get("text", None)
@@ -6217,7 +7555,10 @@ def reassign_supervisor_roles(rec_id):
         for item in record.roles:
             item: MatchingRole
 
-            if item.role in [MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR]:
+            if item.role in [
+                MatchingRole.ROLE_SUPERVISOR,
+                MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR,
+            ]:
                 if not any(fd.id == item.user_id for fd in new_supv_roles):
                     record.roles.remove(item)
                 else:
@@ -6225,13 +7566,18 @@ def reassign_supervisor_roles(rec_id):
 
         for fd in new_supv_roles:
             if fd.id not in existing_roles:
-                new_item = MatchingRole(role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR, user_id=fd.id)
+                new_item = MatchingRole(
+                    role=MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR, user_id=fd.id
+                )
                 record.roles.add(new_item)
 
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not reassign supervisors for this matching record because a database error was encountered.", "error")
+            flash(
+                "Could not reassign supervisors for this matching record because a database error was encountered.",
+                "error",
+            )
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -6240,11 +7586,23 @@ def reassign_supervisor_roles(rec_id):
     else:
         if request.method == "GET":
             supv_roles = [
-                x.user.faculty_data for x in record.roles if x.role in [MatchingRole.ROLE_SUPERVISOR, MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR]
+                x.user.faculty_data
+                for x in record.roles
+                if x.role
+                   in [
+                       MatchingRole.ROLE_SUPERVISOR,
+                       MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                   ]
             ]
             assign_form.supervisors.data = supv_roles
 
-    return render_template_context("admin/match_inspector/reassign_supervisor.html", form=assign_form, record=record, url=url, text=text)
+    return render_template_context(
+        "admin/match_inspector/reassign_supervisor.html",
+        form=assign_form,
+        record=record,
+        url=url,
+        text=text,
+    )
 
 
 @admin.route("/publish_matching_selectors/<int:id>")
@@ -6257,14 +7615,27 @@ def publish_matching_selectors(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Match "{name}" is not yet available for email because it is still awaiting ' "manual upload.".format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for email because it is still awaiting '
+                "manual upload.".format(name=record.name),
+                "error",
+            )
         else:
-            flash('Match "{name}" is not yet available for email because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for email because it has not yet '
+                "terminated.".format(name=record.name),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
@@ -6285,7 +7656,11 @@ def publish_matching_selectors(id):
         return redirect(redirect_url())
 
     task_id = register_task(
-        "Send matching to selectors", owner=current_user, description='Email details of match "{name}" to submitters'.format(name=record.name)
+        "Send matching to selectors",
+        owner=current_user,
+        description='Email details of match "{name}" to submitters'.format(
+            name=record.name
+        ),
     )
 
     celery = current_app.extensions["celery"]
@@ -6306,14 +7681,27 @@ def publish_matching_supervisors(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Match "{name}" is not yet available for email because it is still awaiting ' "manual upload.".format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for email because it is still awaiting '
+                "manual upload.".format(name=record.name),
+                "error",
+            )
         else:
-            flash('Match "{name}" is not yet available for email because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for email because it has not yet '
+                "terminated.".format(name=record.name),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
@@ -6334,7 +7722,11 @@ def publish_matching_supervisors(id):
         return redirect(redirect_url())
 
     task_id = register_task(
-        "Send matching to supervisors", owner=current_user, description='Email details of match "{name}" to supervisors'.format(name=record.name)
+        "Send matching to supervisors",
+        owner=current_user,
+        description='Email details of match "{name}" to supervisors'.format(
+            name=record.name
+        ),
     )
 
     celery = current_app.extensions["celery"]
@@ -6355,16 +7747,27 @@ def publish_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for publication because it is still awaiting ' "manual upload.".format(name=record.name), "error"
+                'Match "{name}" is not yet available for publication because it is still awaiting '
+                "manual upload.".format(name=record.name),
+                "error",
             )
         else:
-            flash('Match "{name}" is not yet available for publication because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for publication because it has not yet '
+                "terminated.".format(name=record.name),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
@@ -6391,17 +7794,27 @@ def unpublish_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for unpublication because it is still awaiting ' "manual upload.".format(name=record.name),
+                'Match "{name}" is not yet available for unpublication because it is still awaiting '
+                "manual upload.".format(name=record.name),
                 "error",
             )
         else:
-            flash('Match "{name}" is not yet available for unpublication because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for unpublication because it has not yet '
+                "terminated.".format(name=record.name),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
@@ -6436,20 +7849,35 @@ def select_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for selection because it is still awaiting ' "manual upload.".format(name=record.name), "error"
+                'Match "{name}" is not yet available for selection because it is still awaiting '
+                "manual upload.".format(name=record.name),
+                "error",
             )
         else:
-            flash('Match "{name}" is not yet available for selection because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for selection because it has not yet '
+                "terminated.".format(name=record.name),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Match "{name}" did not yield an optimal solution ' "and is not available for use.".format(name=record.name), "info")
+        flash(
+            'Match "{name}" did not yield an optimal solution '
+            "and is not available for use.".format(name=record.name),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not record.is_valid and not force:
@@ -6465,7 +7893,12 @@ def select_match(id):
         submit_label = "Force selection"
 
         return render_template_context(
-            "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+            "admin/danger_confirm.html",
+            title=title,
+            panel_title=panel_title,
+            action_url=action_url,
+            message=message,
+            submit_label=submit_label,
         )
 
     # determine whether any already-selected projects have allocations for a pclass we own
@@ -6474,7 +7907,9 @@ def select_match(id):
         our_pclasses.add(item.id)
 
     selected_pclasses = set()
-    selected = db.session.query(MatchingAttempt).filter_by(year=year, selected=True).all()
+    selected = (
+        db.session.query(MatchingAttempt).filter_by(year=year, selected=True).all()
+    )
     for match in selected:
         for item in match.available_pclasses:
             selected_pclasses.add(item.id)
@@ -6504,20 +7939,35 @@ def deselect_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(name=record.name), "info")
+        flash(
+            'Match "{name}" can no longer be modified because it belongs to a previous selection cycle'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Match "{name}" is not yet available for deselection because it is still awaiting ' "manual upload.".format(name=record.name), "error"
+                'Match "{name}" is not yet available for deselection because it is still awaiting '
+                "manual upload.".format(name=record.name),
+                "error",
             )
         else:
-            flash('Match "{name}" is not yet available for deselection because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for deselection because it has not yet '
+                "terminated.".format(name=record.name),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Match "{name}" did not yield an optimal solution ' "and is not available for use.".format(name=record.name), "info")
+        flash(
+            'Match "{name}" did not yield an optimal solution '
+            "and is not available for use.".format(name=record.name),
+            "info",
+        )
         return redirect(redirect_url())
 
     record.selected = False
@@ -6526,18 +7976,26 @@ def deselect_match(id):
     return redirect(redirect_url())
 
 
-def _validate_match_populate_submitters(record: MatchingAttempt, config: ProjectClassConfig):
+def _validate_match_populate_submitters(
+        record: MatchingAttempt, config: ProjectClassConfig
+):
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" cannot be used to populate submitter records because it belongs to a previous selection cycle'.format(name=record.name),
-              "info")
+        flash(
+            'Match "{name}" cannot be used to populate submitter records because it belongs to a previous selection cycle'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return False
 
     if config.year != record.year:
         flash(
             'Match "{match_name}" cannot be used to populate submitter records for project type "{pcl_name}", '
             "year = {config_year} because this configuration belongs to a previous "
-            "year".format(match_name=record.name, pcl_name=config.name, config_year=config.year)
+            "year".format(
+                match_name=record.name, pcl_name=config.name, config_year=config.year
+            )
         )
         return False
 
@@ -6551,13 +8009,25 @@ def _validate_match_populate_submitters(record: MatchingAttempt, config: Project
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Match "{name}" is not yet available for use because it is still awaiting ' "manual upload.".format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for use because it is still awaiting '
+                "manual upload.".format(name=record.name),
+                "error",
+            )
         else:
-            flash('Match "{name}" is not yet available for use because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash(
+                'Match "{name}" is not yet available for use because it has not yet '
+                "terminated.".format(name=record.name),
+                "error",
+            )
         return False
 
     if not record.solution_usable:
-        flash('Match "{name}" did not yield an optimal solution ' "and is not available for use.".format(name=record.name), "info")
+        flash(
+            'Match "{name}" did not yield an optimal solution '
+            "and is not available for use.".format(name=record.name),
+            "info",
+        )
         return False
 
     if not record.published:
@@ -6585,9 +8055,16 @@ def populate_submitters_from_match(match_id, config_id):
         return redirect(redirect_url())
 
     title = "Populate submitters from match"
-    panel_title = 'Populate submitters for "{name}" from match ' '"{match_name}"'.format(name=config.name, match_name=record.name)
+    panel_title = 'Populate submitters for "{name}" from match "{match_name}"'.format(
+        name=config.name, match_name=record.name
+    )
 
-    action_url = url_for("admin.do_populate_submitters_from_match", match_id=record.id, config_id=config.id, url=redirect_url())
+    action_url = url_for(
+        "admin.do_populate_submitters_from_match",
+        match_id=record.id,
+        config_id=config.id,
+        url=redirect_url(),
+    )
     message = (
         "<p>Please confirm that you wish to populate submitters for <strong>{name}</strong> from match "
         "<strong>{match_name}</strong>.</p>"
@@ -6600,7 +8077,12 @@ def populate_submitters_from_match(match_id, config_id):
     submit_label = "Populate submitters"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -6629,7 +8111,9 @@ def do_populate_submitters_from_match(match_id, config_id):
     celery = current_app.extensions["celery"]
     task = celery.tasks["app.tasks.matching.populate_submitters"]
 
-    task.apply_async(args=(match_id, config_id, current_user.id, task_id), task_id=task_id)
+    task.apply_async(
+        args=(match_id, config_id, current_user.id, task_id), task_id=task_id
+    )
 
     return redirect(url)
 
@@ -6658,7 +8142,9 @@ def presentation_assessments_ajax():
         return jsonify({})
 
     current_year = get_current_year()
-    assessments = db.session.query(PresentationAssessment).filter_by(year=current_year).all()
+    assessments = (
+        db.session.query(PresentationAssessment).filter_by(year=current_year).all()
+    )
 
     return ajax.admin.presentation_assessments_data(assessments)
 
@@ -6678,7 +8164,9 @@ def add_assessment():
     form = AddPresentationAssessmentForm(request.form)
 
     if not hasattr(form, "submission_periods"):
-        flash("An internal error occurred. Please contact a system administrator", "error")
+        flash(
+            "An internal error occurred. Please contact a system administrator", "error"
+        )
         return redirect(redirect_url())
 
     if form.validate_on_submit():
@@ -6702,7 +8190,11 @@ def add_assessment():
 
         return redirect(url_for("admin.manage_assessments"))
 
-    return render_template_context("admin/presentations/edit_assessment.html", form=form, title="Add new presentation assessment event")
+    return render_template_context(
+        "admin/presentations/edit_assessment.html",
+        form=form,
+        title="Add new presentation assessment event",
+    )
 
 
 @admin.route("/edit_assessment/<int:id>", methods=["GET", "POST"])
@@ -6718,14 +8210,19 @@ def edit_assessment(id):
     assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     if assessment.requested_availability:
-        flash("It is no longer possible to change settings for an assessment once availability requests have been issued.", "info")
+        flash(
+            "It is no longer possible to change settings for an assessment once availability requests have been issued.",
+            "info",
+        )
         return redirect(redirect_url())
 
     current_year = get_current_year()
     if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    EditPresentationAssessmentForm = EditPresentationAssessmentFormFactory(current_year, assessment)
+    EditPresentationAssessmentForm = EditPresentationAssessmentFormFactory(
+        current_year, assessment
+    )
     form = EditPresentationAssessmentForm(obj=assessment)
     form.assessment = assessment
 
@@ -6743,7 +8240,10 @@ def edit_assessment(id):
         return redirect(url_for("admin.manage_assessments"))
 
     return render_template_context(
-        "admin/presentations/edit_assessment.html", form=form, assessment=assessment, title="Edit existing presentation assessment event"
+        "admin/presentations/edit_assessment.html",
+        form=form,
+        assessment=assessment,
+        title="Edit existing presentation assessment event",
     )
 
 
@@ -6765,11 +8265,18 @@ def delete_assessment(id):
         return redirect(redirect_url())
 
     if assessment.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(name=assessment.name), "info")
+        flash(
+            'Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(
+                name=assessment.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     title = "Delete presentation assessment"
-    panel_title = "Delete presentation assessment <strong>{name}</strong>".format(name=assessment.name)
+    panel_title = "Delete presentation assessment <strong>{name}</strong>".format(
+        name=assessment.name
+    )
 
     action_url = url_for("admin.perform_delete_assessment", id=id, url=request.referrer)
     message = (
@@ -6780,7 +8287,12 @@ def delete_assessment(id):
     submit_label = "Delete assessment"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -6802,7 +8314,12 @@ def perform_delete_assessment(id):
         return redirect(redirect_url())
 
     if assessment.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(name=assessment.name), "info")
+        flash(
+            'Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(
+                name=assessment.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", url_for("admin.manage_assessments"))
@@ -6842,7 +8359,9 @@ def close_assessment(id):
         return redirect(redirect_url())
 
     title = "Close feedback for assessment"
-    panel_title = "Close feedback for assessment <strong>{name}</strong>".format(name=assessment.name)
+    panel_title = "Close feedback for assessment <strong>{name}</strong>".format(
+        name=assessment.name
+    )
 
     action_url = url_for("admin.perform_close_assessment", id=id, url=request.referrer)
     message = (
@@ -6853,7 +8372,12 @@ def close_assessment(id):
     submit_label = "Close feedback"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -6910,8 +8434,15 @@ def initialize_assessment(id):
     if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not assessment.is_valid and assessment.availability_lifecycle < PresentationAssessment.AVAILABILITY_REQUESTED:
-        flash("Cannot request availability for an invalid assessment. Correct any validation errors before attempting to proceed.", "info")
+    if (
+            not assessment.is_valid
+            and assessment.availability_lifecycle
+            < PresentationAssessment.AVAILABILITY_REQUESTED
+    ):
+        flash(
+            "Cannot request availability for an invalid assessment. Correct any validation errors before attempting to proceed.",
+            "info",
+        )
         return redirect(redirect_url())
 
     return_url = url_for("admin.manage_assessments")
@@ -6922,20 +8453,31 @@ def initialize_assessment(id):
     if form.is_submitted():
         if hasattr(form, "issue_requests") and form.issue_requests.data:
             if assessment.skip_availability:
-                flash("Cannot issue availability requests because they have been skipped for this assessment", "info")
+                flash(
+                    "Cannot issue availability requests because they have been skipped for this assessment",
+                    "info",
+                )
                 return redirect(return_url)
 
             if not assessment.requested_availability:
                 if get_count(assessment.submission_periods) == 0:
-                    flash("Availability requests not issued since this assessment is not attached to any submission periods", "info")
+                    flash(
+                        "Availability requests not issued since this assessment is not attached to any submission periods",
+                        "info",
+                    )
                     return redirect(return_url)
 
                 if get_count(assessment.sessions) == 0:
-                    flash("Availability requests not issued since this assessment does not contain any sessions", "info")
+                    flash(
+                        "Availability requests not issued since this assessment does not contain any sessions",
+                        "info",
+                    )
                     return redirect(return_url)
 
                 _do_initialize_assessment(
-                    'Issue availability requests for "{name}"'.format(name=assessment.name),
+                    'Issue availability requests for "{name}"'.format(
+                        name=assessment.name
+                    ),
                     "Issue availability requests to faculty assessors",
                     assessment.id,
                     form.availability_deadline.data,
@@ -6949,18 +8491,33 @@ def initialize_assessment(id):
             if form.availability_deadline.data is None:
                 form.availability_deadline.data = date.today() + timedelta(weeks=2)
 
-    if PresentationAssessment.AVAILABILITY_NOT_REQUESTED < assessment.availability_lifecycle < PresentationAssessment.AVAILABILITY_SKIPPED:
+    if (
+            PresentationAssessment.AVAILABILITY_NOT_REQUESTED
+            < assessment.availability_lifecycle
+            < PresentationAssessment.AVAILABILITY_SKIPPED
+    ):
         if hasattr(form, "issue_requests"):
             form.issue_requests.label.text = "Save changes"
 
-    return render_template_context("admin/presentations/availability.html", form=form, assessment=assessment)
+    return render_template_context(
+        "admin/presentations/availability.html", form=form, assessment=assessment
+    )
 
 
-def _do_initialize_assessment(title: str, description: str, assessment_id: int, deadline: datetime, skip_availability: bool):
+def _do_initialize_assessment(
+        title: str,
+        description: str,
+        assessment_id: int,
+        deadline: datetime,
+        skip_availability: bool,
+):
     uuid = register_task(title, owner=current_user, description=description)
     celery = current_app.extensions["celery"]
     availability_task = celery.tasks["app.tasks.availability.initialize"]
-    availability_task.apply_async(args=(assessment_id, current_user.id, uuid, deadline, skip_availability), task_id=uuid)
+    availability_task.apply_async(
+        args=(assessment_id, current_user.id, uuid, deadline, skip_availability),
+        task_id=uuid,
+    )
 
 
 @admin.route("/skip_availability/<int:id>")
@@ -6979,12 +8536,17 @@ def skip_availability(id):
         return redirect(return_url)
 
     if assessment.requested_availability:
-        flash("Cannot skip availability collection for this assessment because it has already been opened", "info")
+        flash(
+            "Cannot skip availability collection for this assessment because it has already been opened",
+            "info",
+        )
         return redirect(return_url)
 
     if not assessment.skip_availability:
         _do_initialize_assessment(
-            'Attach assessor and submitter records for "{name}"'.format(name=assessment.name),
+            'Attach assessor and submitter records for "{name}"'.format(
+                name=assessment.name
+            ),
             "Attach assessor and submitter records",
             assessment.id,
             None,
@@ -7007,11 +8569,17 @@ def close_availability(id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability:
-        flash("Cannot close availability collection for this assessment because it has not yet been opened", "info")
+        flash(
+            "Cannot close availability collection for this assessment because it has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.skip_availability:
-        flash("Cannot close availability collection for this assessment because it has been skipped", "info")
+        flash(
+            "Cannot close availability collection for this assessment because it has been skipped",
+            "info",
+        )
         return redirect(redirect_url())
 
     assessment.availability_closed = True
@@ -7033,11 +8601,17 @@ def availability_reminder(id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability:
-        flash("Cannot issue reminder emails for this assessment because availability collection has not yet been opened", "info")
+        flash(
+            "Cannot issue reminder emails for this assessment because availability collection has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.skip_availability:
-        flash("Cannot issue reminder emails for this assessment because availabilty collection has been skipped", "info")
+        flash(
+            "Cannot issue reminder emails for this assessment because availabilty collection has been skipped",
+            "info",
+        )
         return redirect(redirect_url())
 
     celery = current_app.extensions["celery"]
@@ -7062,18 +8636,26 @@ def availability_reminder_individual(id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability:
-        flash("Cannot send a reminder email for this assessment because availability collection has not yet been opened", "info")
+        flash(
+            "Cannot send a reminder email for this assessment because availability collection has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.skip_availability:
-        flash("Cannot issue a reminder email for this assessment because availability collection has been skipped", "info")
+        flash(
+            "Cannot issue a reminder email for this assessment because availability collection has been skipped",
+            "info",
+        )
         return redirect(redirect_url())
 
     celery = current_app.extensions["celery"]
     email_task = celery.tasks["app.tasks.availability.send_reminder_email"]
     notify_task = celery.tasks["app.tasks.utilities.email_notification"]
 
-    tk = email_task.si(record.id) | notify_task.s(current_user.id, "Reminder email has been sent", "info")
+    tk = email_task.si(record.id) | notify_task.s(
+        current_user.id, "Reminder email has been sent", "info"
+    )
     tk.apply_async()
 
     return redirect(redirect_url())
@@ -7092,19 +8674,31 @@ def reopen_availability(id):
         return redirect(redirect_url())
 
     if assessment.skip_availability:
-        flash("Cannot reopen availability collection for this assessment because it has been skipped", "info")
+        flash(
+            "Cannot reopen availability collection for this assessment because it has been skipped",
+            "info",
+        )
         return redirect(redirect_url())
 
     if not assessment.requested_availability:
-        flash("Cannot reopen availability collection for this assessment because it has not yet been opened", "info")
+        flash(
+            "Cannot reopen availability collection for this assessment because it has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if not assessment.availability_closed:
-        flash("Cannot reopen availability collection for this assessment because it has not yet been closed", "info")
+        flash(
+            "Cannot reopen availability collection for this assessment because it has not yet been closed",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.is_deployed:
-        flash("Cannot reopen availability collection for this assessment because it has a deployed schedule", "info")
+        flash(
+            "Cannot reopen availability collection for this assessment because it has a deployed schedule",
+            "info",
+        )
         return redirect(redirect_url())
 
     assessment.availability_closed = False
@@ -7129,10 +8723,15 @@ def outstanding_availability(id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability:
-        flash("Cannot show outstanding availability responses for this assessment because it has not yet been opened", "info")
+        flash(
+            "Cannot show outstanding availability responses for this assessment because it has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
-    return render_template_context("admin/presentations/availability/outstanding.html", assessment=assessment)
+    return render_template_context(
+        "admin/presentations/availability/outstanding.html", assessment=assessment
+    )
 
 
 @admin.route("/outstanding_availability_ajax/<int:id>")
@@ -7148,10 +8747,15 @@ def outstanding_availability_ajax(id):
         return jsonify({})
 
     if not assessment.requested_availability:
-        flash("Cannot show outstanding availability responses for this assessment because it has not yet been opened", "info")
+        flash(
+            "Cannot show outstanding availability responses for this assessment because it has not yet been opened",
+            "info",
+        )
         return jsonify({})
 
-    return ajax.admin.outstanding_availability_data(assessment.outstanding_assessors.all(), assessment)
+    return ajax.admin.outstanding_availability_data(
+        assessment.outstanding_assessors.all(), assessment
+    )
 
 
 @admin.route("/force_confirm_availability/<int:assessment_id>/<int:faculty_id>")
@@ -7160,18 +8764,26 @@ def force_confirm_availability(assessment_id, faculty_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(
+        assessment_id
+    )
 
     current_year = get_current_year()
     if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
     if not assessment.requested_availability:
-        flash("Cannot force confirm an availability response for this assessment because it has not yet been opened", "info")
+        flash(
+            "Cannot force confirm an availability response for this assessment because it has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.is_deployed:
-        flash("Cannot force confirm availability for this assessment because it is currently deployed", "info")
+        flash(
+            "Cannot force confirm availability for this assessment because it is currently deployed",
+            "info",
+        )
         return redirect(redirect_url())
 
     faculty: FacultyData = FacultyData.query.get_or_404(faculty_id)
@@ -7184,7 +8796,9 @@ def force_confirm_availability(assessment_id, faculty_id):
         )
         return redirect(redirect_url())
 
-    record = assessment.assessor_list.filter_by(faculty_id=faculty_id, confirmed=False).first()
+    record = assessment.assessor_list.filter_by(
+        faculty_id=faculty_id, confirmed=False
+    ).first()
 
     if record is not None:
         record.confirmed = True
@@ -7194,13 +8808,18 @@ def force_confirm_availability(assessment_id, faculty_id):
     return redirect(redirect_url())
 
 
-@admin.route("/set_assignment_limit/<int:assessment_id>/<int:faculty_id>", methods=["GET", "POST"])
+@admin.route(
+    "/set_assignment_limit/<int:assessment_id>/<int:faculty_id>",
+    methods=["GET", "POST"],
+)
 @roles_required("root")
 def schedule_set_limit(assessment_id, faculty_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(
+        assessment_id
+    )
 
     url = request.args.get("url", None)
     text = request.args.get("text", None)
@@ -7214,11 +8833,17 @@ def schedule_set_limit(assessment_id, faculty_id):
         return redirect(url)
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot adjust limits from this assessment because availability collection has not yet been opened", "info")
+        flash(
+            "Cannot adjust limits from this assessment because availability collection has not yet been opened",
+            "info",
+        )
         return redirect(url)
 
     if assessment.is_deployed:
-        flash("Cannot adjust limits for this assessment because it is currently deployed", "info")
+        flash(
+            "Cannot adjust limits for this assessment because it is currently deployed",
+            "info",
+        )
         return redirect(url)
 
     faculty: FacultyData = FacultyData.query.get_or_404(faculty_id)
@@ -7226,7 +8851,9 @@ def schedule_set_limit(assessment_id, faculty_id):
     if not assessment.includes_faculty(faculty_id):
         flash(
             'Cannot remove assessor "{name}" from "{assess_name}" because this faculty member is not attached '
-            "to this assessment".format(name=faculty.user.name, assess_name=assessment.name),
+            "to this assessment".format(
+                name=faculty.user.name, assess_name=assessment.name
+            ),
             "error",
         )
         return redirect(url)
@@ -7245,7 +8872,13 @@ def schedule_set_limit(assessment_id, faculty_id):
         return redirect(url)
 
     return render_template_context(
-        "admin/presentations/edit_assigned_limit.html", form=form, fac=faculty, rec=record, a=assessment, url=url, text=text
+        "admin/presentations/edit_assigned_limit.html",
+        form=form,
+        fac=faculty,
+        rec=record,
+        a=assessment,
+        url=url,
+        text=text,
     )
 
 
@@ -7255,18 +8888,26 @@ def remove_assessor(assessment_id, faculty_id):
     if not validate_using_assessment():
         return redirect(redirect_url())
 
-    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
+    assessment: PresentationAssessment = PresentationAssessment.query.get_or_404(
+        assessment_id
+    )
 
     current_year = get_current_year()
     if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
     if not assessment.requested_availability:
-        flash("Cannot remove assessors from this assessment because it has not yet been opened", "info")
+        flash(
+            "Cannot remove assessors from this assessment because it has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     if assessment.is_deployed:
-        flash("Cannot remove assessors from this assessment because it is currently deployed", "info")
+        flash(
+            "Cannot remove assessors from this assessment because it is currently deployed",
+            "info",
+        )
         return redirect(redirect_url())
 
     faculty: FacultyData = FacultyData.query.get_or_404(faculty_id)
@@ -7274,7 +8915,9 @@ def remove_assessor(assessment_id, faculty_id):
     if not assessment.includes_faculty(faculty_id):
         flash(
             'Cannot remove assessor "{name}" from "{assess_name}" because this faculty member is not attached '
-            "to this assessment".format(name=faculty.user.name, assess_name=assessment.name),
+            "to this assessment".format(
+                name=faculty.user.name, assess_name=assessment.name
+            ),
             "error",
         )
         return redirect(redirect_url())
@@ -7305,7 +8948,10 @@ def availability_as_csv(id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability:
-        flash("Cannot generate availability data for this assessment because it has not yet been collected.", "info")
+        flash(
+            "Cannot generate availability data for this assessment because it has not yet been collected.",
+            "info",
+        )
         return redirect(redirect_url())
 
     # add a filename
@@ -7313,7 +8959,11 @@ def availability_as_csv(id):
     headers.set("Content-Disposition", "attachment", filename="availability.csv")
 
     # stream the response as the data is generated
-    return Response(stream_with_context(availability_CSV_generator(assessment)), mimetype="text/csv", headers=headers)
+    return Response(
+        stream_with_context(availability_CSV_generator(assessment)),
+        mimetype="text/csv",
+        headers=headers,
+    )
 
 
 @admin.route("/assessment_manage_sessions/<int:id>")
@@ -7332,7 +8982,9 @@ def assessment_manage_sessions(id):
     if not validate_assessment(assessment):
         return redirect(redirect_url())
 
-    return render_template_context("admin/presentations/manage_sessions.html", assessment=assessment)
+    return render_template_context(
+        "admin/presentations/manage_sessions.html", assessment=assessment
+    )
 
 
 @admin.route("/manage_sessions_ajax/<int:id>")
@@ -7366,7 +9018,11 @@ def add_session(id):
         return redirect(redirect_url())
 
     if not assessment.is_feedback_open:
-        flash('Event "{name}" has been closed to feedback and its sessions can no longer be ' "edited".format(name=assessment.name), "info")
+        flash(
+            'Event "{name}" has been closed to feedback and its sessions can no longer be '
+            "edited".format(name=assessment.name),
+            "info",
+        )
         return redirect(redirect_url())
 
     form = AddSessionForm(request.form)
@@ -7388,7 +9044,10 @@ def add_session(id):
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash("Could not add new session due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not add new session due to a database error. Please contact a system administrator.",
+                "error",
+            )
 
         else:
             # add this session to all attendance data records attached for this assessment
@@ -7399,7 +9058,9 @@ def add_session(id):
 
         return redirect(url_for("admin.assessment_manage_sessions", id=id))
 
-    return render_template_context("admin/presentations/edit_session.html", form=form, assessment=assessment)
+    return render_template_context(
+        "admin/presentations/edit_session.html", form=form, assessment=assessment
+    )
 
 
 @admin.route("/edit_session/<int:id>", methods=["GET", "POST"])
@@ -7419,7 +9080,11 @@ def edit_session(id):
         return redirect(redirect_url())
 
     if not sess.owner.is_feedback_open:
-        flash('Event "{name}" has been closed to feedback and its sessions can no longer be ' "edited".format(name=sess.owner.name), "info")
+        flash(
+            'Event "{name}" has been closed to feedback and its sessions can no longer be '
+            "edited".format(name=sess.owner.name),
+            "info",
+        )
         return redirect(redirect_url())
 
     form = EditSessionForm(obj=sess)
@@ -7439,11 +9104,19 @@ def edit_session(id):
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash("Could not save edited session data due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save edited session data due to a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url_for("admin.assessment_manage_sessions", id=sess.owner_id))
 
-    return render_template_context("admin/presentations/edit_session.html", form=form, assessment=sess.owner, sess=sess)
+    return render_template_context(
+        "admin/presentations/edit_session.html",
+        form=form,
+        assessment=sess.owner,
+        sess=sess,
+    )
 
 
 @admin.route("/delete_session/<int:id>", methods=["GET", "POST"])
@@ -7463,7 +9136,11 @@ def delete_session(id):
         return redirect(redirect_url())
 
     if not sess.owner.is_feedback_open:
-        flash('Event "{name}" has been closed to feedback and its sessions can no longer be ' "edited".format(name=sess.owner.name), "info")
+        flash(
+            'Event "{name}" has been closed to feedback and its sessions can no longer be '
+            "edited".format(name=sess.owner.name),
+            "info",
+        )
         return redirect(redirect_url())
 
     # deletion can't be done asynchronously, because we want the database to be updated
@@ -7519,7 +9196,9 @@ def manage_attendees_ajax(id):
     elif attend_filter == "not-attending":
         talks = [t for t in talks if not t.attending]
 
-    return ajax.admin.presentation_attendees_data(data, talks, editable=not data.is_deployed)
+    return ajax.admin.presentation_attendees_data(
+        data, talks, editable=not data.is_deployed
+    )
 
 
 @admin.route("/assessment_attending/<int:a_id>/<int:s_id>")
@@ -7539,13 +9218,20 @@ def assessment_attending(a_id, s_id):
         return redirect(redirect_url())
 
     if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be ' "altered".format(name=data.name), "info")
+        flash(
+            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+            "altered".format(name=data.name),
+            "info",
+        )
         return redirect(redirect_url())
 
     talk: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
 
     if talk not in data.available_talks:
-        flash("Cannot mark the specified presenter as attending because they are not included in this presentation assessment", "error")
+        flash(
+            "Cannot mark the specified presenter as attending because they are not included in this presentation assessment",
+            "error",
+        )
         return redirect(redirect_url())
 
     data.submitter_attending(talk)
@@ -7571,13 +9257,20 @@ def assessment_not_attending(a_id, s_id):
         return redirect(redirect_url())
 
     if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be ' "altered".format(name=data.name), "info")
+        flash(
+            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+            "altered".format(name=data.name),
+            "info",
+        )
         return redirect(redirect_url())
 
     talk = SubmissionRecord.query.get_or_404(s_id)
 
     if talk not in data.available_talks:
-        flash("Cannot mark the specified presenter as not attending because they are not included in this presentation assessment", "error")
+        flash(
+            "Cannot mark the specified presenter as not attending because they are not included in this presentation assessment",
+            "error",
+        )
         return redirect(redirect_url())
 
     data.submitter_not_attending(talk)
@@ -7609,14 +9302,21 @@ def assessment_submitter_availability(a_id, s_id):
     submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
 
     if not data.includes_submitter(s_id):
-        flash("Cannot set availability for the specified presenter because they are not included in this presentation assessment", "error")
+        flash(
+            "Cannot set availability for the specified presenter because they are not included in this presentation assessment",
+            "error",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
     return render_template_context(
-        "admin/presentations/availability/submitter_availability.html", assessment=data, submitter=submitter, url=url, text=text
+        "admin/presentations/availability/submitter_availability.html",
+        assessment=data,
+        submitter=submitter,
+        url=url,
+        text=text,
     )
 
 
@@ -7640,14 +9340,21 @@ def assessment_assessor_availability(a_id, f_id):
     assessor: FacultyData = FacultyData.query.get_or_404(f_id)
 
     if not data.includes_faculty(f_id):
-        flash("Cannot set availability for the specified assessor because they are not included in this presentation assessment", "error")
+        flash(
+            "Cannot set availability for the specified assessor because they are not included in this presentation assessment",
+            "error",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
     return render_template_context(
-        "admin/presentations/availability/assessor_availability.html", assessment=data, assessor=assessor, url=url, text=text
+        "admin/presentations/availability/assessor_availability.html",
+        assessment=data,
+        assessor=assessor,
+        url=url,
+        text=text,
     )
 
 
@@ -7665,7 +9372,11 @@ def submitter_session_availability(id):
     sess: PresentationSession = PresentationSession.query.get_or_404(id)
 
     if sess.owner.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be' " altered".format(name=sess.owner.name), "info")
+        flash(
+            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
+            " altered".format(name=sess.owner.name),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not validate_assessment(sess.owner):
@@ -7712,12 +9423,16 @@ def submitter_session_availability_ajax(id):
     pclass_filter = request.args.get("pclass_filter")
 
     data = sess.owner
-    talks = data.submitter_list.filter_by(attending=True)  # only include students who are marked as attending
+    talks = data.submitter_list.filter_by(
+        attending=True
+    )  # only include students who are marked as attending
     flag, pclass_value = is_integer(pclass_filter)
     if flag:
         talks = [t for t in talks if t.submitter.owner.config.pclass_id == pclass_value]
 
-    return ajax.admin.submitter_session_availability_data(data, sess, talks, editable=not sess.owner.is_deployed)
+    return ajax.admin.submitter_session_availability_data(
+        data, sess, talks, editable=not sess.owner.is_deployed
+    )
 
 
 @admin.route("/submitter_available/<int:sess_id>/<int:s_id>")
@@ -7743,7 +9458,10 @@ def submitter_available(sess_id, s_id):
     submitter = SubmissionRecord.query.get_or_404(s_id)
 
     if submitter not in data.available_talks:
-        flash("Cannot specify availability for the specified presenter because they are not included in this presentation assessment", "error")
+        flash(
+            "Cannot specify availability for the specified presenter because they are not included in this presentation assessment",
+            "error",
+        )
         return redirect(redirect_url())
 
     sess.submitter_make_available(submitter)
@@ -7775,7 +9493,10 @@ def submitter_unavailable(sess_id, s_id):
     submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
 
     if submitter not in data.available_talks:
-        flash("Cannot specify availability for the specified presenter because they are not included in this presentation assessment", "error")
+        flash(
+            "Cannot specify availability for the specified presenter because they are not included in this presentation assessment",
+            "error",
+        )
         return redirect(redirect_url())
 
     sess.submitter_make_unavailable(submitter)
@@ -7796,17 +9517,27 @@ def submitter_available_all_sessions(a_id, s_id):
         return redirect(redirect_url())
 
     if assessment.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be ' "altered".format(name=assessment.name), "info")
+        flash(
+            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+            "altered".format(name=assessment.name),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot change availability because collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot change availability because collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
 
     if submitter not in assessment.available_talks:
-        flash("Cannot specify availability for the specified presenter because they are not included in this presentation assessment", "error")
+        flash(
+            "Cannot specify availability for the specified presenter because they are not included in this presentation assessment",
+            "error",
+        )
         return redirect(redirect_url())
 
     for s in assessment.sessions:
@@ -7829,17 +9560,27 @@ def submitter_unavailable_all_sessions(a_id, s_id):
         return redirect(redirect_url())
 
     if assessment.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be ' "altered".format(name=assessment.name), "info")
+        flash(
+            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+            "altered".format(name=assessment.name),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot change availability because collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot change availability because collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
 
     if submitter not in assessment.available_talks:
-        flash("Cannot specify availability for the specified presenter because they are not included in this presentation assessment", "error")
+        flash(
+            "Cannot specify availability for the specified presenter because they are not included in this presentation assessment",
+            "error",
+        )
         return redirect(redirect_url())
 
     for s in assessment.sessions:
@@ -7871,7 +9612,10 @@ def session_all_submitters_available(sess_id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot change availability because collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot change availability because collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     for s in assessment.submitter_list:
@@ -7906,7 +9650,10 @@ def session_all_submitters_unavailable(sess_id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot change availability because collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot change availability because collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     for s in assessment.submitter_list:
@@ -7944,7 +9691,11 @@ def assessment_manage_assessors(id):
     if state_filter is not None:
         session["assessors_state_filter"] = state_filter
 
-    return render_template_context("admin/presentations/manage_assessors.html", assessment=data, state_filter=state_filter)
+    return render_template_context(
+        "admin/presentations/manage_assessors.html",
+        assessment=data,
+        state_filter=state_filter,
+    )
 
 
 @admin.route("/manage_assessors_ajax/<int:id>")
@@ -7985,7 +9736,9 @@ def manage_assessors_ajax(id):
     else:
         assessors = data.assessor_list.all()
 
-    return ajax.admin.presentation_assessors_data(data, assessors, editable=not data.is_deployed)
+    return ajax.admin.presentation_assessors_data(
+        data, assessors, editable=not data.is_deployed
+    )
 
 
 @admin.route("/assessor_session_availability/<int:id>")
@@ -8002,7 +9755,11 @@ def assessor_session_availability(id):
     sess: PresentationSession = PresentationSession.query.get_or_404(id)
 
     if not sess.owner.is_feedback_open:
-        flash('Event "{name}" has been closed to feedback and its sessions can no longer be ' "edited".format(name=sess.owner.name), "info")
+        flash(
+            'Event "{name}" has been closed to feedback and its sessions can no longer be '
+            "edited".format(name=sess.owner.name),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not validate_assessment(sess.owner):
@@ -8017,7 +9774,10 @@ def assessor_session_availability(id):
         session["assessors_session_state_filter"] = state_filter
 
     return render_template_context(
-        "admin/presentations/availability/assessor_session_availability.html", assessment=sess.owner, sess=sess, state_filter=state_filter
+        "admin/presentations/availability/assessor_session_availability.html",
+        assessment=sess.owner,
+        sess=sess,
+        state_filter=state_filter,
     )
 
 
@@ -8063,7 +9823,9 @@ def assessor_session_availability_ajax(id):
     else:
         assessors = data.assessor_list.all()
 
-    return ajax.admin.assessor_session_availability_data(data, sess, assessors, editable=not sess.owner.is_deployed)
+    return ajax.admin.assessor_session_availability_data(
+        data, sess, assessors, editable=not sess.owner.is_deployed
+    )
 
 
 @admin.route("/assessor_available/<int:sess_id>/<int:f_id>")
@@ -8088,7 +9850,10 @@ def assessor_available(sess_id, f_id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot change availability because collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot change availability because collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     fac: FacultyData = FacultyData.query.get_or_404(f_id)
@@ -8121,7 +9886,10 @@ def assessor_ifneeded(sess_id, f_id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot change availability because collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot change availability because collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     fac: FacultyData = FacultyData.query.get_or_404(f_id)
@@ -8154,7 +9922,10 @@ def assessor_unavailable(sess_id, f_id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot change availability because collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot change availability because collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     fac: FacultyData = FacultyData.query.get_or_404(f_id)
@@ -8178,11 +9949,18 @@ def assessor_available_all_sessions(a_id, f_id):
         return redirect(redirect_url())
 
     if assessment.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be ' "altered".format(name=assessment.name), "info")
+        flash(
+            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+            "altered".format(name=assessment.name),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot change availability because collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot change availability because collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     fac: FacultyData = FacultyData.query.get_or_404(f_id)
@@ -8208,11 +9986,18 @@ def assessor_unavailable_all_sessions(a_id, f_id):
         return redirect(redirect_url())
 
     if assessment.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be ' "altered".format(name=assessment.name), "info")
+        flash(
+            'Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+            "altered".format(name=assessment.name),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot change availability because collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot change availability because collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     fac: FacultyData = FacultyData.query.get_or_404(f_id)
@@ -8246,7 +10031,10 @@ def session_all_assessors_available(sess_id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot change availability because collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot change availability because collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     for f in assessment.assessor_list:
@@ -8281,7 +10069,10 @@ def session_all_assessors_unavailable(sess_id):
         return redirect(redirect_url())
 
     if not assessment.requested_availability and not assessment.skip_availability:
-        flash("Cannot change availability because collection for its parent assessment has not yet been opened", "info")
+        flash(
+            "Cannot change availability because collection for its parent assessment has not yet been opened",
+            "info",
+        )
         return redirect(redirect_url())
 
     for f in assessment.assessor_list:
@@ -8313,12 +10104,20 @@ def assessment_schedules(id):
         return redirect(redirect_url())
 
     if not assessment.availability_closed and not assessment.skip_availability:
-        flash("It is only possible to generate schedules once collection of faculty availabilities is closed (or has been skipped).", "info")
+        flash(
+            "It is only possible to generate schedules once collection of faculty availabilities is closed (or has been skipped).",
+            "info",
+        )
         return redirect(redirect_url())
 
     matches = get_count(assessment.scheduling_attempts)
 
-    return render_template_context("admin/presentations/scheduling/manage.html", pane="manage", info=matches, assessment=assessment)
+    return render_template_context(
+        "admin/presentations/scheduling/manage.html",
+        pane="manage",
+        info=matches,
+        assessment=assessment,
+    )
 
 
 @admin.route("/assessment_schedules_ajax/<int:id>")
@@ -8342,7 +10141,9 @@ def assessment_schedules_ajax(id):
         return jsonify({})
 
     return ajax.admin.assessment_schedules_data(
-        assessment.scheduling_attempts, text="assessment schedule manager", url=url_for("admin.assessment_schedules", id=id)
+        assessment.scheduling_attempts,
+        text="assessment schedule manager",
+        url=url_for("admin.assessment_schedules", id=id),
     )
 
 
@@ -8364,7 +10165,10 @@ def create_assessment_schedule(id):
         return redirect(redirect_url())
 
     if not assessment.availability_closed and not assessment.skip_availability:
-        flash("It is only possible to generate schedules once collection of faculty availabilities is closed (or has been skipped).", "info")
+        flash(
+            "It is only possible to generate schedules once collection of faculty availabilities is closed (or has been skipped).",
+            "info",
+        )
         return redirect(redirect_url())
 
     if not assessment.is_valid:
@@ -8376,7 +10180,10 @@ def create_assessment_schedule(id):
         return redirect(redirect_url())
 
     if assessment.number_slots <= 0:
-        flash("It is not possible to generate a schedule for this assessment, because it does not yet have any defined session slots.", "info")
+        flash(
+            "It is not possible to generate a schedule for this assessment, because it does not yet have any defined session slots.",
+            "info",
+        )
         return redirect(redirect_url())
 
     NewScheduleForm = NewScheduleFormFactory(assessment)
@@ -8386,12 +10193,16 @@ def create_assessment_schedule(id):
         offline = False
 
         if form.submit.data:
-            task_name = 'Perform optimal scheduling for "{name}"'.format(name=form.name.data)
+            task_name = 'Perform optimal scheduling for "{name}"'.format(
+                name=form.name.data
+            )
             desc = "Automated assessment scheduling task"
 
         elif form.offline.data:
             offline = True
-            task_name = 'Generate file for offline scheduling for "{name}"'.format(name=form.name.data)
+            task_name = 'Generate file for offline scheduling for "{name}"'.format(
+                name=form.name.data
+            )
             desc = "Produce .LP file for download and offline scheduling"
 
         else:
@@ -8452,7 +10263,13 @@ def create_assessment_schedule(id):
 
     matches = get_count(assessment.scheduling_attempts)
 
-    return render_template_context("admin/presentations/scheduling/create.html", pane="create", info=matches, form=form, assessment=assessment)
+    return render_template_context(
+        "admin/presentations/scheduling/create.html",
+        pane="create",
+        info=matches,
+        form=form,
+        assessment=assessment,
+    )
 
 
 @admin.route("/adjust_assessment_schedule/<int:id>", methods=["GET", "POST"])
@@ -8474,7 +10291,10 @@ def adjust_assessment_schedule(id):
         return redirect(redirect_url())
 
     if not assessment.availability_closed and not assessment.skip_availability:
-        flash("It is only possible to adjust a schedule once collection of faculty availabilities is closed (or has been skipped).", "info")
+        flash(
+            "It is only possible to adjust a schedule once collection of faculty availabilities is closed (or has been skipped).",
+            "info",
+        )
         return redirect(redirect_url())
 
     if not assessment.is_valid:
@@ -8486,7 +10306,10 @@ def adjust_assessment_schedule(id):
         return redirect(redirect_url())
 
     if schedule.is_valid:
-        flash("This schedule does not contain any validation errors, so does not require adjustment.", "info")
+        flash(
+            "This schedule does not contain any validation errors, so does not require adjustment.",
+            "info",
+        )
         return redirect(redirect_url())
 
     ImposeConstraintsScheduleForm = ImposeConstraintsScheduleFormFactory(assessment)
@@ -8497,7 +10320,15 @@ def adjust_assessment_schedule(id):
         name = form.name.data
         tag = form.tag.data
 
-        return redirect(url_for("admin.perform_adjust_assessment_schedule", id=id, name=name, tag=tag, new_slots=allow_new_slots))
+        return redirect(
+            url_for(
+                "admin.perform_adjust_assessment_schedule",
+                id=id,
+                name=name,
+                tag=tag,
+                new_slots=allow_new_slots,
+            )
+        )
 
     else:
         if request.method == "GET":
@@ -8506,13 +10337,22 @@ def adjust_assessment_schedule(id):
             while suffix < 100:
                 new_name = "{name} #{suffix}".format(name=schedule.name, suffix=suffix)
 
-                if ScheduleAttempt.query.filter_by(name=new_name, owner_id=schedule.owner_id).first() is None:
+                if (
+                        ScheduleAttempt.query.filter_by(
+                            name=new_name, owner_id=schedule.owner_id
+                        ).first()
+                        is None
+                ):
                     break
 
                 suffix += 1
 
             if suffix > 100:
-                flash('Can not adjust schedule "{name}" because a new unique tag could not ' "be generated.".format(name=schedule.name), "error")
+                flash(
+                    'Can not adjust schedule "{name}" because a new unique tag could not '
+                    "be generated.".format(name=schedule.name),
+                    "error",
+                )
                 return redirect(redirect_url())
 
             form.name.data = new_name
@@ -8522,7 +10362,9 @@ def adjust_assessment_schedule(id):
 
             form.tag.data = new_tag
 
-    return render_template_context("admin/presentations/scheduling/adjust_options.html", record=schedule, form=form)
+    return render_template_context(
+        "admin/presentations/scheduling/adjust_options.html", record=schedule, form=form
+    )
 
 
 @admin.route("/perform_adjust_assessment_schedule/<int:id>")
@@ -8544,7 +10386,10 @@ def perform_adjust_assessment_schedule(id):
         return redirect(redirect_url())
 
     if not assessment.availability_closed and not assessment.skip_availability:
-        flash("It is only possible to adjust a schedule once collection of faculty availabilities is closed (or has been skipped).", "info")
+        flash(
+            "It is only possible to adjust a schedule once collection of faculty availabilities is closed (or has been skipped).",
+            "info",
+        )
         return redirect(redirect_url())
 
     if not assessment.is_valid:
@@ -8556,7 +10401,10 @@ def perform_adjust_assessment_schedule(id):
         return redirect(redirect_url())
 
     if old_schedule.is_valid:
-        flash("This schedule does not contain any validation errors, so does not require adjustment.", "info")
+        flash(
+            "This schedule does not contain any validation errors, so does not require adjustment.",
+            "info",
+        )
         return redirect(redirect_url())
 
     new_name = request.args.get("name", None)
@@ -8572,7 +10420,11 @@ def perform_adjust_assessment_schedule(id):
 
     allow_new_slots = request.args.get("new_slots", False)
 
-    uuid = register_task('Schedule job "{name}"'.format(name=new_name), owner=current_user, description="Automated assessment scheduling task")
+    uuid = register_task(
+        'Schedule job "{name}"'.format(name=new_name),
+        owner=current_user,
+        description="Automated assessment scheduling task",
+    )
 
     new_schedule = ScheduleAttempt(
         owner_id=old_schedule.owner_id,
@@ -8606,7 +10458,10 @@ def perform_adjust_assessment_schedule(id):
         db.session.commit()
 
     except SQLAlchemyError as e:
-        flash("A database error was encountered. Please check that the supplied name and tag are unique.", "error")
+        flash(
+            "A database error was encountered. Please check that the supplied name and tag are unique.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -8615,7 +10470,9 @@ def perform_adjust_assessment_schedule(id):
     celery = current_app.extensions["celery"]
     schedule_task = celery.tasks["app.tasks.scheduling.recompute_schedule"]
 
-    schedule_task.apply_async(args=(new_schedule.id, old_schedule.id, allow_new_slots), task_id=uuid)
+    schedule_task.apply_async(
+        args=(new_schedule.id, old_schedule.id, allow_new_slots), task_id=uuid
+    )
 
     return redirect(url_for("admin.assessment_schedules", id=old_schedule.owner.id))
 
@@ -8626,13 +10483,20 @@ def terminate_schedule(id):
     record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if record.finished:
-        flash('Can not terminate scheduling task "{name}" because it has finished.'.format(name=record.name), "error")
+        flash(
+            'Can not terminate scheduling task "{name}" because it has finished.'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     title = "Terminate schedule"
     panel_title = "Terminate schedule <strong>{name}</strong>".format(name=record.name)
 
-    action_url = url_for("admin.perform_terminate_schedule", id=id, url=request.referrer)
+    action_url = url_for(
+        "admin.perform_terminate_schedule", id=id, url=request.referrer
+    )
     message = (
         "<p>Please confirm that you wish to terminate the scheduling job "
         "<strong>{name}</strong>.</p>"
@@ -8641,7 +10505,12 @@ def terminate_schedule(id):
     submit_label = "Terminate job"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -8655,7 +10524,12 @@ def perform_terminate_schedule(id):
         url = url_for("admin.assessment_schedules", id=record.owner_id)
 
     if record.finished:
-        flash('Can not terminate scheduling task "{name}" because it has finished.'.format(name=record.name), "error")
+        flash(
+            'Can not terminate scheduling task "{name}" because it has finished.'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(url)
 
     if not record.celery_finished:
@@ -8664,7 +10538,13 @@ def perform_terminate_schedule(id):
 
     try:
         if not record.celery_finished:
-            progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+            progress_update(
+                record.celery_id,
+                TaskRecord.TERMINATED,
+                100,
+                "Task terminated by user",
+                autocommit=False,
+            )
 
         # delete all ScheduleSlot records associated with this ScheduleAttempt; in fact should not be any, but this
         # is just to be sure
@@ -8681,7 +10561,8 @@ def perform_terminate_schedule(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
-            'Can not terminate scheduling task "{name}" due to a database error. ' "Please contact a system administrator.".format(name=record.name),
+            'Can not terminate scheduling task "{name}" due to a database error. '
+            "Please contact a system administrator.".format(name=record.name),
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -8701,15 +10582,28 @@ def delete_schedule(id):
         return redirect(redirect_url())
 
     if not record.finished:
-        flash('Can not delete schedule "{name}" because it has not terminated.'.format(name=record.name), "info")
+        flash(
+            'Can not delete schedule "{name}" because it has not terminated.'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     if record.deployed:
-        flash('Can not delete schedule "{name}" because it has been deployed.'.format(name=record.name), "info")
+        flash(
+            'Can not delete schedule "{name}" because it has been deployed.'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not current_user.has_role("root") and current_user.id != record.creator_id:
-        flash('Schedule "{name}" cannot be deleted because it belongs to another user', "info")
+        flash(
+            'Schedule "{name}" cannot be deleted because it belongs to another user',
+            "info",
+        )
         return redirect(redirect_url())
 
     title = "Delete schedule"
@@ -8734,7 +10628,12 @@ def delete_schedule(id):
     submit_label = "Delete schedule"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -8754,15 +10653,28 @@ def perform_delete_schedule(id):
         return redirect(redirect_url())
 
     if not record.finished:
-        flash('Can not delete schedule "{name}" because it has not terminated.'.format(name=record.name), "info")
+        flash(
+            'Can not delete schedule "{name}" because it has not terminated.'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(url)
 
     if record.deployed:
-        flash('Can not delete schedule "{name}" because it has been deployed.'.format(name=record.name), "info")
+        flash(
+            'Can not delete schedule "{name}" because it has been deployed.'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(url)
 
     if not current_user.has_role("root") and current_user.id != record.creator_id:
-        flash('Schedule "{name}" cannot be deleted because it belongs to another user', "info")
+        flash(
+            'Schedule "{name}" cannot be deleted because it belongs to another user',
+            "info",
+        )
         return redirect(url)
 
     try:
@@ -8783,7 +10695,11 @@ def perform_delete_schedule(id):
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash('Can not delete schedule "{name}" due to a database error. ' "Please contact a system administrator.".format(name=record.name), "error")
+        flash(
+            'Can not delete schedule "{name}" due to a database error. '
+            "Please contact a system administrator.".format(name=record.name),
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
@@ -8802,13 +10718,27 @@ def revert_schedule(id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Can not revert schedule "{name}" because it is still awaiting ' "manual upload".format(name=record.name), "error")
+            flash(
+                'Can not revert schedule "{name}" because it is still awaiting '
+                "manual upload".format(name=record.name),
+                "error",
+            )
         else:
-            flash('Can not revert schedule "{name}" because it has not yet terminated.'.format(name=record.name), "error")
+            flash(
+                'Can not revert schedule "{name}" because it has not yet terminated.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Can not revert schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name), "error")
+        flash(
+            'Can not revert schedule "{name}" because it did not yield a usable outcome.'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     title = "Revert schedule"
@@ -8823,7 +10753,12 @@ def revert_schedule(id):
     submit_label = "Revert schedule"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -8845,13 +10780,27 @@ def perform_revert_schedule(id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Can not revert schedule "{name}" because it is still awaiting ' "manual upload".format(name=record.name), "error")
+            flash(
+                'Can not revert schedule "{name}" because it is still awaiting '
+                "manual upload".format(name=record.name),
+                "error",
+            )
         else:
-            flash('Can not revert schedule "{name}" because it has not yet terminated.'.format(name=record.name), "error")
+            flash(
+                'Can not revert schedule "{name}" because it has not yet terminated.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Can not revert schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name), "error")
+        flash(
+            'Can not revert schedule "{name}" because it did not yield a usable outcome.'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     # hand off revert job to asynchronous queue
@@ -8866,9 +10815,11 @@ def perform_revert_schedule(id):
     final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
     error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-    seq = chain(init.si(task_id, tk_name), revert.si(record.id), final.si(task_id, tk_name, current_user.id)).on_error(
-        error.si(task_id, tk_name, current_user.id)
-    )
+    seq = chain(
+        init.si(task_id, tk_name),
+        revert.si(record.id),
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
     return redirect(url)
@@ -8895,11 +10846,21 @@ def duplicate_schedule(id):
                 )
                 return redirect(redirect_url())
         else:
-            flash('Can not duplicate schedule "{name}" because it has not yet terminated.'.format(name=record.name), "error")
+            flash(
+                'Can not duplicate schedule "{name}" because it has not yet terminated.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
             return redirect(redirect_url())
 
     if record.finished and not record.solution_usable:
-        flash('Can not duplicate schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name), "error")
+        flash(
+            'Can not duplicate schedule "{name}" because it did not yield a usable outcome.'.format(
+                name=record.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     suffix = 2
@@ -8912,7 +10873,11 @@ def duplicate_schedule(id):
         suffix += 1
 
     if suffix >= 100:
-        flash('Can not duplicate schedule "{name}" because a new unique tag could not ' "be generated.".format(name=record.name), "error")
+        flash(
+            'Can not duplicate schedule "{name}" because a new unique tag could not '
+            "be generated.".format(name=record.name),
+            "error",
+        )
         return redirect(redirect_url())
 
     # hand off duplicate job to asynchronous queue
@@ -8927,9 +10892,11 @@ def duplicate_schedule(id):
     final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
     error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-    seq = chain(init.si(task_id, tk_name), duplicate.si(record.id, new_name, current_user.id), final.si(task_id, tk_name, current_user.id)).on_error(
-        error.si(task_id, tk_name, current_user.id)
-    )
+    seq = chain(
+        init.si(task_id, tk_name),
+        duplicate.si(record.id, new_name, current_user.id),
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
     return redirect(redirect_url())
@@ -8963,14 +10930,17 @@ def rename_schedule(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(
-                'Could not rename schedule "{name}" due to a database error. ' "Please contact a system administrator.".format(name=record.name),
+                'Could not rename schedule "{name}" due to a database error. '
+                "Please contact a system administrator.".format(name=record.name),
                 "error",
             )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url)
 
-    return render_template_context("admin/presentations/scheduling/rename.html", form=form, record=record, url=url)
+    return render_template_context(
+        "admin/presentations/scheduling/rename.html", form=form, record=record, url=url
+    )
 
 
 @admin.route("/compare_schedule/<int:id>", methods=["GET", "POST"])
@@ -8987,11 +10957,16 @@ def compare_schedule(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it is still awaiting ' "manual upload.".format(name=record.name),
+                'Schedule "{name}" is not yet available for comparison because it is still awaiting '
+                "manual upload.".format(name=record.name),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for comparison because it has not yet ' "terminated.".format(name=record.name), "error")
+            flash(
+                'Schedule "{name}" is not yet available for comparison because it has not yet '
+                "terminated.".format(name=record.name),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
@@ -9005,14 +10980,30 @@ def compare_schedule(id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    CompareScheduleForm = CompareScheduleFormFactory(record.owner_id, record.id, current_user.has_role("root"))
+    CompareScheduleForm = CompareScheduleFormFactory(
+        record.owner_id, record.id, current_user.has_role("root")
+    )
     form = CompareScheduleForm(request.form)
 
     if form.validate_on_submit():
         comparator = form.target.data
-        return redirect(url_for("admin.do_schedule_compare", id1=id, id2=comparator.id, text=text, url=url))
+        return redirect(
+            url_for(
+                "admin.do_schedule_compare",
+                id1=id,
+                id2=comparator.id,
+                text=text,
+                url=url,
+            )
+        )
 
-    return render_template_context("admin/presentations/schedule_inspector/compare_setup.html", form=form, record=record, text=text, url=url)
+    return render_template_context(
+        "admin/presentations/schedule_inspector/compare_setup.html",
+        form=form,
+        record=record,
+        text=text,
+        url=url,
+    )
 
 
 @admin.route("/do_schedule_compare/<int:id1>/<int:id2>")
@@ -9028,7 +11019,9 @@ def do_schedule_compare(id1, id2):
     if url is None:
         url = redirect_url()
 
-    if not validate_schedule_inspector(record1) or not validate_schedule_inspector(record2):
+    if not validate_schedule_inspector(record1) or not validate_schedule_inspector(
+            record2
+    ):
         return redirect(url)
 
     if record1.owner_id != record2.owner_id:
@@ -9036,7 +11029,10 @@ def do_schedule_compare(id1, id2):
             "It is only possible to compare two schedules belonging to the same assessment. "
             'Schedule "{name1}" belongs to assessment "{assess1}", but schedule '
             '"{name2}" belongs to assessment "{assess2}"'.format(
-                name1=record1.name, name2=record2.name, assess1=record1.owner.name, assess2=record2.owner.name
+                name1=record1.name,
+                name2=record2.name,
+                assess1=record1.owner.name,
+                assess2=record2.owner.name,
             )
         )
         return redirect(url)
@@ -9047,11 +11043,16 @@ def do_schedule_compare(id1, id2):
     if not record1.finished:
         if record1.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it is still awaiting ' "manual upload.".format(name=record1.name),
+                'Schedule "{name}" is not yet available for comparison because it is still awaiting '
+                "manual upload.".format(name=record1.name),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for comparison because it has not yet ' "terminated.".format(name=record1.name), "error")
+            flash(
+                'Schedule "{name}" is not yet available for comparison because it has not yet '
+                "terminated.".format(name=record1.name),
+                "error",
+            )
         return redirect(url)
 
     if not record1.solution_usable:
@@ -9065,11 +11066,16 @@ def do_schedule_compare(id1, id2):
     if not record2.finished:
         if record2.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it is still awaiting ' "manual upload.".format(name=record2.name),
+                'Schedule "{name}" is not yet available for comparison because it is still awaiting '
+                "manual upload.".format(name=record2.name),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for comparison because it has not yet ' "terminated.".format(name=record2.name), "error")
+            flash(
+                'Schedule "{name}" is not yet available for comparison because it has not yet '
+                "terminated.".format(name=record2.name),
+                "error",
+            )
         return redirect(url)
 
     if not record2.solution_usable:
@@ -9103,7 +11109,9 @@ def do_schedule_compare_ajax(id1, id2):
     record1: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id1)
     record2: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id2)
 
-    if not validate_schedule_inspector(record1) or not validate_schedule_inspector(record2):
+    if not validate_schedule_inspector(record1) or not validate_schedule_inspector(
+            record2
+    ):
         return jsonify({})
 
     if record1.owner_id != record2.owner_id:
@@ -9111,7 +11119,10 @@ def do_schedule_compare_ajax(id1, id2):
             "It is only possible to compare two schedules belonging to the same assessment. "
             'Schedule "{name1}" belongs to assessment "{assess1}", but schedule '
             '"{name2}" belongs to assessment "{assess2}"'.format(
-                name1=record1.name, name2=record2.name, assess1=record1.owner.name, assess2=record2.owner.name
+                name1=record1.name,
+                name2=record2.name,
+                assess1=record1.owner.name,
+                assess2=record2.owner.name,
             )
         )
         return jsonify({})
@@ -9122,11 +11133,16 @@ def do_schedule_compare_ajax(id1, id2):
     if not record1.finished:
         if record1.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it is still awaiting ' "manual upload.".format(name=record1.name),
+                'Schedule "{name}" is not yet available for comparison because it is still awaiting '
+                "manual upload.".format(name=record1.name),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for comparison because it has not yet ' "terminated.".format(name=record1.name), "error")
+            flash(
+                'Schedule "{name}" is not yet available for comparison because it has not yet '
+                "terminated.".format(name=record1.name),
+                "error",
+            )
         return jsonify({})
 
     if not record1.solution_usable:
@@ -9140,11 +11156,16 @@ def do_schedule_compare_ajax(id1, id2):
     if not record2.finished:
         if record2.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for comparison because it is still awaiting ' "manual upload.".format(name=record2.name),
+                'Schedule "{name}" is not yet available for comparison because it is still awaiting '
+                "manual upload.".format(name=record2.name),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for comparison because it has not yet ' "terminated.".format(name=record2.name), "error")
+            flash(
+                'Schedule "{name}" is not yet available for comparison because it has not yet '
+                "terminated.".format(name=record2.name),
+                "error",
+            )
         return jsonify({})
 
     if not record2.solution_usable:
@@ -9177,11 +11198,18 @@ def publish_schedule(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for publication because it is still awaiting manual upload.'.format(name=record.name),
+                'Schedule "{name}" is not yet available for publication because it is still awaiting manual upload.'.format(
+                    name=record.name
+                ),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for publication because it has not yet terminated.'.format(name=record.name), "error")
+            flash(
+                'Schedule "{name}" is not yet available for publication because it has not yet terminated.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
@@ -9193,7 +11221,12 @@ def publish_schedule(id):
         return redirect(redirect_url())
 
     if record.deployed:
-        flash('Schedule "{name}" is deployed and is not available to be published.'.format(name=record.name), "info")
+        flash(
+            'Schedule "{name}" is deployed and is not available to be published.'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     try:
@@ -9204,7 +11237,7 @@ def publish_schedule(id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
             f'Could not publish schedule "{record.name}" because of a database error. '
-            'Please contact a system administrator',
+            "Please contact a system administrator",
             "error",
         )
 
@@ -9225,17 +11258,22 @@ def unpublish_schedule(id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                f'Schedule "{record.name}" is not yet available for unpublication because it is still awaiting ' "manual upload.",
+                f'Schedule "{record.name}" is not yet available for unpublication because it is still awaiting '
+                "manual upload.",
                 "error",
             )
         else:
-            flash(f'Schedule "{record.name}" is not yet available for unpublication because it has not yet ' "terminated.", "error")
+            flash(
+                f'Schedule "{record.name}" is not yet available for unpublication because it has not yet '
+                "terminated.",
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
             f'Schedule "{record.name}" did not yield an optimal solution and is not available for use. '
-            'It cannot be shared with convenors.',
+            "It cannot be shared with convenors.",
             "info",
         )
         return redirect(redirect_url())
@@ -9248,7 +11286,7 @@ def unpublish_schedule(id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
             f'Could not unpublish schedule "{record.name}" because of a database error. '
-            'Please contact a system administrator',
+            "Please contact a system administrator",
             "error",
         )
 
@@ -9275,7 +11313,8 @@ def publish_schedule_submitters(id):
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for sharing with submitters because it has not yet ' "terminated.".format(name=record.name),
+                'Schedule "{name}" is not yet available for sharing with submitters because it has not yet '
+                "terminated.".format(name=record.name),
                 "error",
             )
         return redirect(redirect_url())
@@ -9289,7 +11328,11 @@ def publish_schedule_submitters(id):
         return redirect(redirect_url())
 
     task_id = register_task(
-        "Send schedule to submitters", owner=current_user, description='Email details of schedule "{name}" to submitters'.format(name=record.name)
+        "Send schedule to submitters",
+        owner=current_user,
+        description='Email details of schedule "{name}" to submitters'.format(
+            name=record.name
+        ),
     )
 
     celery = current_app.extensions["celery"]
@@ -9321,7 +11364,9 @@ def publish_schedule_assessors(id):
             )
         else:
             flash(
-                'Schedule "{name}" is not yet available for sharing with assessors because it has not yet terminated.'.format(name=record.name),
+                'Schedule "{name}" is not yet available for sharing with assessors because it has not yet terminated.'.format(
+                    name=record.name
+                ),
                 "error",
             )
         return redirect(redirect_url())
@@ -9335,7 +11380,11 @@ def publish_schedule_assessors(id):
         return redirect(redirect_url())
 
     task_id = register_task(
-        "Send draft schedule to assessors", owner=current_user, description='Email details of schedule "{name}" to assessors'.format(name=record.name)
+        "Send draft schedule to assessors",
+        owner=current_user,
+        description='Email details of schedule "{name}" to assessors'.format(
+            name=record.name
+        ),
     )
 
     celery = current_app.extensions["celery"]
@@ -9370,11 +11419,17 @@ def deploy_schedule(id):
                 "error",
             )
         else:
-            flash(f'Schedule "{record.name}" is not yet available for deployment because it has not yet terminated.', "info")
+            flash(
+                f'Schedule "{record.name}" is not yet available for deployment because it has not yet terminated.',
+                "info",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash(f'Schedule "{record.name}" did not yield an optimal solution and is not available for deployment.', "info")
+        flash(
+            f'Schedule "{record.name}" did not yield an optimal solution and is not available for deployment.',
+            "info",
+        )
         return redirect(redirect_url())
 
     try:
@@ -9386,7 +11441,7 @@ def deploy_schedule(id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
             f'Could not deploy schedule "{record.name}" because of a database error. '
-            'Please contact a system administrator',
+            "Please contact a system administrator",
             "error",
         )
 
@@ -9411,11 +11466,17 @@ def undeploy_schedule(id):
                 "error",
             )
         else:
-            flash(f'Schedule "{record.name}" is not yet available for undeployment because it has not yet terminated.', "error")
+            flash(
+                f'Schedule "{record.name}" is not yet available for undeployment because it has not yet terminated.',
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash(f'Schedule "{record.name}" did not yield an optimal solution and is not available for deployment.', "info")
+        flash(
+            f'Schedule "{record.name}" did not yield an optimal solution and is not available for deployment.',
+            "info",
+        )
         return redirect(redirect_url())
 
     if not record.is_revokable:
@@ -9432,7 +11493,7 @@ def undeploy_schedule(id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
             f'Could not revoke deployment of schedule "{record.name}" because of a database error. '
-            'Please contact a system administrator',
+            "Please contact a system administrator",
             "error",
         )
 
@@ -9460,11 +11521,17 @@ def schedule_view_sessions(id):
                 "error",
             )
         else:
-            flash(f'Schedule "{record.name}" is not yet available for inspection because it has not yet terminated.', "error")
+            flash(
+                f'Schedule "{record.name}" is not yet available for inspection because it has not yet terminated.',
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash(f'Schedule "{record.name}" is not available for inspection because it did not yield an optimal solution.', "info")
+        flash(
+            f'Schedule "{record.name}" is not available for inspection because it did not yield an optimal solution.',
+            "info",
+        )
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -9473,7 +11540,9 @@ def schedule_view_sessions(id):
     text = request.args.get("text", None)
     url = request.args.get("url", None)
 
-    building_filter, pclass_filter, room_filter, session_filter = _store_schedule_filters()
+    building_filter, pclass_filter, room_filter, session_filter = (
+        _store_schedule_filters()
+    )
 
     pclasses = record.available_pclasses
     buildings = record.available_buildings
@@ -9518,12 +11587,18 @@ def schedule_view_faculty(id):
                 "error",
             )
         else:
-            flash(f'Schedule "{record.name}" is not yet available for inspection because it has not yet terminated.', "error")
+            flash(
+                f'Schedule "{record.name}" is not yet available for inspection because it has not yet terminated.',
+                "error",
+            )
 
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash(f'Schedule "{record.name}" is not available for inspection because it did not yield an optimal solution.', "info")
+        flash(
+            f'Schedule "{record.name}" is not available for inspection because it did not yield an optimal solution.',
+            "info",
+        )
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -9532,7 +11607,9 @@ def schedule_view_faculty(id):
     text = request.args.get("text", None)
     url = request.args.get("url", None)
 
-    building_filter, pclass_filter, room_filter, session_filter = _store_schedule_filters()
+    building_filter, pclass_filter, room_filter, session_filter = (
+        _store_schedule_filters()
+    )
 
     pclasses = record.available_pclasses
     buildings = record.available_buildings
@@ -9631,7 +11708,9 @@ def schedule_view_sessions_ajax(id):
 
     flag, building_value = is_integer(building_filter)
     if flag:
-        slots = slots.join(Room, Room.id == ScheduleSlot.room_id).filter(Room.building_id == building_value)
+        slots = slots.join(Room, Room.id == ScheduleSlot.room_id).filter(
+            Room.building_id == building_value
+        )
         joined_room = True
 
     flag, room_value = is_integer(room_filter)
@@ -9691,7 +11770,9 @@ def schedule_view_faculty_ajax(id):
 
         flag, building_value = is_integer(building_filter)
         if flag:
-            slots = slots.join(Room, Room.id == ScheduleSlot.room_id).filter(Room.building_id == building_value)
+            slots = slots.join(Room, Room.id == ScheduleSlot.room_id).filter(
+                Room.building_id == building_value
+            )
             joined_room = True
 
         flag, room_value = is_integer(room_filter)
@@ -9727,7 +11808,7 @@ def schedule_delete_slot(id):
         return redirect(redirect_url())
 
     if not slot.is_empty:
-        flash('This schedule slot cannot be deleted because it is not empty.', 'error')
+        flash("This schedule slot cannot be deleted because it is not empty.", "error")
         return redirect(redirect_url())
 
     try:
@@ -9764,11 +11845,17 @@ def schedule_adjust_assessors(id):
                 "error",
             )
         else:
-            flash(f'Schedule "{record.name}" is not yet available for inspection because it has not yet terminated.', "error")
+            flash(
+                f'Schedule "{record.name}" is not yet available for inspection because it has not yet terminated.',
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash(f'Schedule "{record.name}" is not available for inspection because it did not yield an optimal solution.', "info")
+        flash(
+            f'Schedule "{record.name}" is not available for inspection because it did not yield an optimal solution.',
+            "info",
+        )
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -9777,7 +11864,13 @@ def schedule_adjust_assessors(id):
     text = request.args.get("text", None)
     url = request.args.get("url", None)
 
-    return render_template_context("admin/presentations/schedule_inspector/assign_assessors.html", url=url, text=text, slot=slot, rec=record)
+    return render_template_context(
+        "admin/presentations/schedule_inspector/assign_assessors.html",
+        url=url,
+        text=text,
+        slot=slot,
+        rec=record,
+    )
 
 
 @admin.route("/schedule_assign_assessors_ajax/<int:id>")
@@ -9810,13 +11903,19 @@ def schedule_assign_assessors_ajax(id):
     for assessor in record.owner.ordered_assessors:
         assessor: AssessorAttendanceData
         # candidate assessors should be available in this slot
-        if slot.session.faculty_available(assessor.faculty_id) or slot.session.faculty_ifneeded(assessor.faculty_id):
+        if slot.session.faculty_available(
+                assessor.faculty_id
+        ) or slot.session.faculty_ifneeded(assessor.faculty_id):
             is_candidate = True
 
             if pclass is not None:
                 # assessors should also be enrolled for the project class corresponding to this slot
                 enrolment = assessor.faculty.get_enrollment_record(pclass.id)
-                available = enrolment is not None and enrolment.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED
+                available = (
+                        enrolment is not None
+                        and enrolment.presentations_state
+                        == EnrollmentRecord.PRESENTATIONS_ENROLLED
+                )
 
                 if not available:
                     is_candidate = False
@@ -9824,7 +11923,9 @@ def schedule_assign_assessors_ajax(id):
             # check whether this faculty has any existing assignments in this session
             num_existing = get_count(
                 db.session.query(ScheduleSlot).filter(
-                    ScheduleSlot.owner_id == record.id, ScheduleSlot.session_id == slot.session_id, ScheduleSlot.assessors.any(id=assessor.faculty_id)
+                    ScheduleSlot.owner_id == record.id,
+                    ScheduleSlot.session_id == slot.session_id,
+                    ScheduleSlot.assessors.any(id=assessor.faculty_id),
                 )
             )
 
@@ -9833,7 +11934,9 @@ def schedule_assign_assessors_ajax(id):
                 is_candidate = False
 
             if is_candidate:
-                slots: List[ScheduleSlot] = record.get_faculty_slots(assessor.faculty_id).all()
+                slots: List[ScheduleSlot] = record.get_faculty_slots(
+                    assessor.faculty_id
+                ).all()
 
                 score = len(slots)
 
@@ -9863,25 +11966,41 @@ def schedule_attach_assessor(slot_id, fac_id):
     if not record.finished:
         if record.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(name=record.name),
+                'Schedule "{name}" is not yet available for inspection because it is still awaiting manual upload.'.format(
+                    name=record.name
+                ),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for inspection because it has not yet terminated.'.format(name=record.name), "error")
+            flash(
+                'Schedule "{name}" is not yet available for inspection because it has not yet terminated.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" is not available for inspection because it did not yield an optimal solution.'.format(name=record.name), "info")
+        flash(
+            'Schedule "{name}" is not available for inspection because it did not yield an optimal solution.'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
         return redirect(redirect_url())
 
     if not record.owner.includes_faculty(fac_id):
-        flash("The specified faculty member is not attached to this assessment", "error")
+        flash(
+            "The specified faculty member is not attached to this assessment", "error"
+        )
         return redirect(redirect_url())
 
-    item: AssessorAttendanceData = record.owner.assessors_query.filter(AssessorAttendanceData.faculty_id == fac_id).first()
+    item: AssessorAttendanceData = record.owner.assessors_query.filter(
+        AssessorAttendanceData.faculty_id == fac_id
+    ).first()
 
     if item is None:
         flash("Could not attach this faculty member due to a database error", "error")
@@ -9902,7 +12021,7 @@ def schedule_attach_assessor(slot_id, fac_id):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             flash(
                 f'Could not attach assessor "{user.name}" to this slot in schedule "{record.name}" because of a database error. '
-                'Please contact a system administrator',
+                "Please contact a system administrator",
                 "error",
             )
 
@@ -9923,23 +12042,42 @@ def schedule_remove_assessor(slot_id, fac_id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(name=record.name), "error")
+            flash(
+                'Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         else:
-            flash('Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(name=record.name), "error")
+            flash(
+                'Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(name=record.name), "info")
+        flash(
+            'Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
         return redirect(redirect_url())
 
     if not record.owner.includes_faculty(fac_id):
-        flash("The specified faculty member is not attached to this assessment", "error")
+        flash(
+            "The specified faculty member is not attached to this assessment", "error"
+        )
         return redirect(redirect_url())
 
-    item = record.owner.assessors_query.filter(AssessorAttendanceData.faculty_id == fac_id).first()
+    item = record.owner.assessors_query.filter(
+        AssessorAttendanceData.faculty_id == fac_id
+    ).first()
 
     if item is None:
         flash("Could not attach this faculty member due to a database error", "error")
@@ -9970,13 +12108,28 @@ def schedule_adjust_submitter(slot_id, talk_id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(name=record.name), "error")
+            flash(
+                'Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         else:
-            flash('Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(name=record.name), "error")
+            flash(
+                'Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(name=record.name), "info")
+        flash(
+            'Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -9988,7 +12141,12 @@ def schedule_adjust_submitter(slot_id, talk_id):
     url = request.args.get("url", None)
 
     return render_template_context(
-        "admin/presentations/schedule_inspector/assign_presentation.html", url=url, text=text, slot=slot, rec=record, talk=talk
+        "admin/presentations/schedule_inspector/assign_presentation.html",
+        url=url,
+        text=text,
+        slot=slot,
+        rec=record,
+        talk=talk,
     )
 
 
@@ -10043,7 +12201,10 @@ def schedule_move_submitter(old_id, new_id, talk_id):
     record: ScheduleAttempt = old_slot.owner  # = ScheduleAttempt
 
     if old_slot.owner_id != new_slot.owner_id:
-        flash("Cannot move specified talk because destination slot does not belong to the same ScheduleAttempt instance.", "error")
+        flash(
+            "Cannot move specified talk because destination slot does not belong to the same ScheduleAttempt instance.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not validate_assessment(record.owner):
@@ -10051,13 +12212,28 @@ def schedule_move_submitter(old_id, new_id, talk_id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(name=record.name), "error")
+            flash(
+                'Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         else:
-            flash('Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(name=record.name), "error")
+            flash(
+                'Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(name=record.name), "info")
+        flash(
+            'Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -10066,7 +12242,10 @@ def schedule_move_submitter(old_id, new_id, talk_id):
     talk = SubmissionRecord.query.get_or_404(talk_id)
 
     if not record.owner.includes_submitter(talk.id):
-        flash("The specified submitting student is not attached to this assessment", "error")
+        flash(
+            "The specified submitting student is not attached to this assessment",
+            "error",
+        )
         return redirect(redirect_url())
 
     text = request.args.get("text", None)
@@ -10083,7 +12262,15 @@ def schedule_move_submitter(old_id, new_id, talk_id):
 
     db.session.commit()
 
-    return redirect(url_for("admin.schedule_adjust_submitter", slot_id=new_id, talk_id=talk_id, url=url, text=text))
+    return redirect(
+        url_for(
+            "admin.schedule_adjust_submitter",
+            slot_id=new_id,
+            talk_id=talk_id,
+            url=url,
+            text=text,
+        )
+    )
 
 
 @admin.route("/schedule_move_room/<int:slot_id>/<int:room_id>")
@@ -10099,13 +12286,28 @@ def schedule_move_room(slot_id, room_id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(name=record.name), "error")
+            flash(
+                'Schedule "{name}" cannot yet be adjusted because it is still awaiting manual upload.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         else:
-            flash('Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(name=record.name), "error")
+            flash(
+                'Schedule "{name}" cannot yet be adjusted because it has not yet terminated.'.format(
+                    name=record.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not record.solution_usable:
-        flash('Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(name=record.name), "info")
+        flash(
+            'Schedule "{name}" cannot yet be adjusted because it did not yield an optimal solution.'.format(
+                name=record.name
+            ),
+            "info",
+        )
         return redirect(redirect_url())
 
     if not validate_schedule_inspector(record):
@@ -10160,11 +12362,17 @@ def assessment_manage_attendees(id):
     pclasses = data.available_pclasses
 
     return render_template_context(
-        "admin/presentations/manage_attendees.html", assessment=data, pclass_filter=pclass_filter, attend_filter=attend_filter, pclasses=pclasses
+        "admin/presentations/manage_attendees.html",
+        assessment=data,
+        pclass_filter=pclass_filter,
+        attend_filter=attend_filter,
+        pclasses=pclasses,
     )
 
 
-@admin.route("/merge_change_schedule/<int:source_id>/<int:target_id>/<int:source_sched>/<int:target_sched>")
+@admin.route(
+    "/merge_change_schedule/<int:source_id>/<int:target_id>/<int:source_sched>/<int:target_sched>"
+)
 @roles_accepted("root", "faculty", "admin")
 def merge_change_schedule(source_id, target_id, source_sched, target_sched):
     """
@@ -10186,7 +12394,9 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
     source_schedule = ScheduleAttempt.query.get_or_404(source_sched)
     target_schedule = ScheduleAttempt.query.get_or_404(target_sched)
 
-    if not validate_schedule_inspector(source_schedule) or not validate_schedule_inspector(target_schedule):
+    if not validate_schedule_inspector(
+            source_schedule
+    ) or not validate_schedule_inspector(target_schedule):
         return redirect(redirect_url())
 
     # check that source and target schedules are owned by the same assessent
@@ -10195,7 +12405,10 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
             "It is only possible to merge two schedules belonging to the same assessment. "
             'Schedule "{name1}" belongs to assessment "{assess1}", but schedule '
             '"{name2}" belongs to assessment "{assess2}"'.format(
-                name1=source_schedule.name, name2=target_schedule.name, assess1=source_schedule.owner.name, assess2=target_schedule.owner.name
+                name1=source_schedule.name,
+                name2=target_schedule.name,
+                assess1=source_schedule.owner.name,
+                assess2=target_schedule.owner.name,
             )
         )
         return redirect(redirect_url())
@@ -10206,11 +12419,18 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
     if not source_schedule.finished:
         if source_schedule.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for merging because it is still awaiting manual upload.'.format(name=source_schedule.name),
+                'Schedule "{name}" is not yet available for merging because it is still awaiting manual upload.'.format(
+                    name=source_schedule.name
+                ),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for merging because it has not yet terminated.'.format(name=source_schedule.name), "error")
+            flash(
+                'Schedule "{name}" is not yet available for merging because it has not yet terminated.'.format(
+                    name=source_schedule.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if not source_schedule.solution_usable:
@@ -10224,11 +12444,18 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
     if target_schedule is not None and not target_schedule.finished:
         if target_schedule.awaiting_upload:
             flash(
-                'Schedule "{name}" is not yet available for merging because it is still awaiting manual upload.'.format(name=target_schedule.name),
+                'Schedule "{name}" is not yet available for merging because it is still awaiting manual upload.'.format(
+                    name=target_schedule.name
+                ),
                 "error",
             )
         else:
-            flash('Schedule "{name}" is not yet available for merging because it has not yet terminated.'.format(name=target_schedule.name), "error")
+            flash(
+                'Schedule "{name}" is not yet available for merging because it has not yet terminated.'.format(
+                    name=target_schedule.name
+                ),
+                "error",
+            )
         return redirect(redirect_url())
 
     if target_schedule is not None and not target_schedule.solution_usable:
@@ -10247,7 +12474,11 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
         # find first free occupancy label for this room in the target schedule
         max_label = (
             db.session.query(func.max(ScheduleSlot.occupancy_label))
-            .filter_by(owner_id=target_schedule.id, session_id=source.session_id, room_id=source.room_id)
+            .filter_by(
+                owner_id=target_schedule.id,
+                session_id=source.session_id,
+                room_id=source.room_id,
+            )
             .scalar()
         )
 
@@ -10310,7 +12541,10 @@ def rooms_ajax():
 def add_room():
     # check whether any active buildings exist, and raise an error if not
     if not db.session.query(Building).filter_by(active=True).first():
-        flash("No buildings are available. Set up at least one active building before adding a room.", "error")
+        flash(
+            "No buildings are available. Set up at least one active building before adding a room.",
+            "error",
+        )
         return redirect(redirect_url())
 
     form: AddRoomForm = AddRoomForm(request.form)
@@ -10332,7 +12566,9 @@ def add_room():
 
         return redirect(url_for("admin.edit_rooms"))
 
-    return render_template_context("admin/presentations/edit_room.html", form=form, title="Add new venue")
+    return render_template_context(
+        "admin/presentations/edit_room.html", form=form, title="Add new venue"
+    )
 
 
 @admin.route("/edit_room/<int:id>", methods=["GET", "POST"])
@@ -10358,7 +12594,9 @@ def edit_room(id):
 
         return redirect(url_for("admin.edit_rooms"))
 
-    return render_template_context("admin/presentations/edit_room.html", form=form, room=data, title="Edit venue")
+    return render_template_context(
+        "admin/presentations/edit_room.html", form=form, room=data, title="Edit venue"
+    )
 
 
 @admin.route("/activate_room/<int:id>")
@@ -10393,7 +12631,9 @@ def edit_buildings():
     Essentially used to identify rooms in the same building with a coloured tag.
     :return:
     """
-    return render_template_context("admin/presentations/edit_buildings.html", pane="buildings")
+    return render_template_context(
+        "admin/presentations/edit_buildings.html", pane="buildings"
+    )
 
 
 @admin.route("/buildings_ajax")
@@ -10414,14 +12654,22 @@ def add_building():
     form = AddBuildingForm(request.form)
 
     if form.validate_on_submit():
-        data = Building(name=form.name.data, colour=form.colour.data, active=True, creator_id=current_user.id, creation_timestamp=datetime.now())
+        data = Building(
+            name=form.name.data,
+            colour=form.colour.data,
+            active=True,
+            creator_id=current_user.id,
+            creation_timestamp=datetime.now(),
+        )
 
         db.session.add(data)
         db.session.commit()
 
         return redirect(url_for("admin.edit_buildings"))
 
-    return render_template_context("admin/presentations/edit_building.html", form=form, title="Add new building")
+    return render_template_context(
+        "admin/presentations/edit_building.html", form=form, title="Add new building"
+    )
 
 
 @admin.route("/edit_building/<int:id>", methods=["GET", "POST"])
@@ -10444,7 +12692,12 @@ def edit_building(id):
 
         return redirect(url_for("admin.edit_buildings"))
 
-    return render_template_context("admin/presentations/edit_building.html", form=form, building=data, title="Edit building")
+    return render_template_context(
+        "admin/presentations/edit_building.html",
+        form=form,
+        building=data,
+        title="Edit building",
+    )
 
 
 @admin.route("/activate_building/<int:id>")
@@ -10474,7 +12727,9 @@ def deactivate_building(id):
 @admin.route("/launch_test_task")
 @roles_required("root")
 def launch_test_task():
-    task_id = register_task("Test task", owner=current_user, description="Long-running test task")
+    task_id = register_task(
+        "Test task", owner=current_user, description="Long-running test task"
+    )
 
     celery = current_app.extensions["celery"]
     test_task = celery.tasks["app.tasks.test.test_task"]
@@ -10494,7 +12749,11 @@ def login_as(id):
     # variables can not be edited, inspected or faked by the user
     session["previous_login"] = current_user.id
 
-    current_app.logger.info("{real} used superuser powers to log in as alternative user {fake}".format(real=current_user.name, fake=user.name))
+    current_app.logger.info(
+        "{real} used superuser powers to log in as alternative user {fake}".format(
+            real=current_user.name, fake=user.name
+        )
+    )
 
     login_user(user, remember=False)
     # don't commit changes to database to avoid confusing this with a real login
@@ -10509,7 +12768,10 @@ def download_generated_asset(asset_id):
     asset = GeneratedAsset.query.get_or_404(asset_id)
 
     if not asset.has_access(current_user.id):
-        flash("You do not have permissions to download this asset. If you think this is a mistake, please contact a system administrator.", "info")
+        flash(
+            "You do not have permissions to download this asset. If you think this is a mistake, please contact a system administrator.",
+            "info",
+        )
         return redirect(redirect_url())
 
     filename = request.args.get("filename", None)
@@ -10534,12 +12796,16 @@ def download_generated_asset(asset_id):
     # log this download
     download_item_id = request.args.get("download_item_id", None)
     if download_item_id is not None:
-        download_item: DownloadCentreItem = DownloadCentreItem.query.get_or_404(download_item_id)
+        download_item: DownloadCentreItem = DownloadCentreItem.query.get_or_404(
+            download_item_id
+        )
 
         download_item.last_downloaded_at = datetime.now()
         download_item.number_downloads += 1
 
-    record = GeneratedAssetDownloadRecord(asset_id=asset.id, downloader_id=current_user.id, timestamp=datetime.now())
+    record = GeneratedAssetDownloadRecord(
+        asset_id=asset.id, downloader_id=current_user.id, timestamp=datetime.now()
+    )
 
     try:
         db.session.add(record)
@@ -10555,7 +12821,11 @@ def download_generated_asset(asset_id):
         return redirect(redirect_url())
 
     object_store = BUCKET_MAP[asset.bucket]
-    storage = AssetCloudAdapter(asset, object_store, audit_data=f"download_generated_asset (asset id #{asset_id})")
+    storage = AssetCloudAdapter(
+        asset,
+        object_store,
+        audit_data=f"download_generated_asset (asset id #{asset_id})",
+    )
     return_data = BytesIO()
     with storage.download_to_scratch() as scratch_path:
         file_path = scratch_path.path
@@ -10564,7 +12834,12 @@ def download_generated_asset(asset_id):
             return_data.write(f.read())
         return_data.seek(0)
 
-    return send_file(return_data, mimetype=asset.mimetype, download_name=filename if filename else asset.target_name, as_attachment=True)
+    return send_file(
+        return_data,
+        mimetype=asset.mimetype,
+        download_name=filename if filename else asset.target_name,
+        as_attachment=True,
+    )
 
 
 @admin.route("/download_submitted_asset/<int:asset_id>")
@@ -10576,7 +12851,13 @@ def download_submitted_asset(asset_id):
     sub_attachment: SubmissionAttachment = asset.submission_attachment
     period_attachment: PeriodAttachment = asset.period_attachment
 
-    attachment = sub_attachment if sub_attachment is not None else period_attachment if period_attachment is not None else None
+    attachment = (
+        sub_attachment
+        if sub_attachment is not None
+        else period_attachment
+        if period_attachment is not None
+        else None
+    )
 
     # attachment may be 'None' if this is an asset that does not have a specific attachment record, e.g., the
     # unprocessed report is usually of this type
@@ -10588,7 +12869,10 @@ def download_submitted_asset(asset_id):
             abort(404)
 
     if not asset.has_access(current_user.id):
-        flash("You do not have permissions to download this asset. If you think this is a mistake, please contact a system administrator.", "info")
+        flash(
+            "You do not have permissions to download this asset. If you think this is a mistake, please contact a system administrator.",
+            "info",
+        )
         return redirect(redirect_url())
 
     filename = request.args.get("filename", None)
@@ -10611,7 +12895,9 @@ def download_submitted_asset(asset_id):
         return redirect(redirect_url())
 
     # log this download
-    record = SubmittedAssetDownloadRecord(asset_id=asset.id, downloader_id=current_user.id, timestamp=datetime.now())
+    record = SubmittedAssetDownloadRecord(
+        asset_id=asset.id, downloader_id=current_user.id, timestamp=datetime.now()
+    )
 
     try:
         db.session.add(record)
@@ -10627,7 +12913,11 @@ def download_submitted_asset(asset_id):
         return redirect(redirect_url())
 
     object_store = BUCKET_MAP[asset.bucket]
-    storage = AssetCloudAdapter(asset, current_app.config["OBJECT_STORAGE_ASSETS"], audit_data=f"download_submitted_asset (asset id #{asset_id})")
+    storage = AssetCloudAdapter(
+        asset,
+        current_app.config["OBJECT_STORAGE_ASSETS"],
+        audit_data=f"download_submitted_asset (asset id #{asset_id})",
+    )
     return_data = BytesIO()
     with storage.download_to_scratch() as scratch_path:
         file_path = scratch_path.path
@@ -10636,7 +12926,12 @@ def download_submitted_asset(asset_id):
             return_data.write(f.read())
         return_data.seek(0)
 
-    return send_file(return_data, mimetype=asset.mimetype, download_name=filename if filename else asset.target_name, as_attachment=True)
+    return send_file(
+        return_data,
+        mimetype=asset.mimetype,
+        download_name=filename if filename else asset.target_name,
+        as_attachment=True,
+    )
 
 
 @admin.route("/download_backup/<int:backup_id>")
@@ -10648,7 +12943,10 @@ def download_backup(backup_id):
     filename = request.args.get("filename", None)
 
     storage = AssetCloudAdapter(
-        backup, current_app.config["OBJECT_STORAGE_BACKUP"], audit_data=f"download_backup (backup id #{backup_id})", size_attr="archive_size"
+        backup,
+        current_app.config["OBJECT_STORAGE_BACKUP"],
+        audit_data=f"download_backup (backup id #{backup_id})",
+        size_attr="archive_size",
     )
     return_data = BytesIO()
     with storage.download_to_scratch() as scratch_path:
@@ -10662,7 +12960,12 @@ def download_backup(backup_id):
     while fname.suffix:
         fname = fname.with_suffix("")
     fname = fname.with_suffix(".tar.gz")
-    return send_file(return_data, mimetype="application/gzip", download_name=str(fname), as_attachment=True)
+    return send_file(
+        return_data,
+        mimetype="application/gzip",
+        download_name=str(fname),
+        as_attachment=True,
+    )
 
 
 @admin.route("/lock_backup/<int:backup_id>")
@@ -10677,7 +12980,10 @@ def lock_backup(backup_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not lock this backup because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not lock this backup because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -10694,7 +13000,10 @@ def unlock_backup(backup_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not lock this backup because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not lock this backup because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -10723,7 +13032,10 @@ def edit_backup(backup_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemy exception", exc_info=e)
-            flash("Could not save labels for this backup record due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save labels for this backup record due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("admin.manage_backups"))
 
@@ -10754,13 +13066,19 @@ def upload_schedule(schedule_id):
 
             if extension in (".sol", ".lp", ".mps"):
                 if (
-                    form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED or form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD
+                        form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED
+                        or form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD
                 ) and extension not in (".lp",):
-                    flash("Solution files for the CBC optimizer must be in .LP format", "error")
+                    flash(
+                        "Solution files for the CBC optimizer must be in .LP format",
+                        "error",
+                    )
 
                 else:
                     now = datetime.now()
-                    asset = TemporaryAsset(timestamp=now, expiry=now + timedelta(days=1))
+                    asset = TemporaryAsset(
+                        timestamp=now, expiry=now + timedelta(days=1)
+                    )
 
                     object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
                     with AssetUploadManager(
@@ -10776,7 +13094,9 @@ def upload_schedule(schedule_id):
                     asset.grant_user(current_user)
 
                     uuid = register_task(
-                        'Process offline solution for "{name}"'.format(name=record.name),
+                        'Process offline solution for "{name}"'.format(
+                            name=record.name
+                        ),
                         owner=current_user,
                         description="Import a solution file that has been produced offline and convert to a schedule",
                     )
@@ -10791,25 +13111,43 @@ def upload_schedule(schedule_id):
                         db.session.commit()
                     except SQLAlchemyError as e:
                         db.session.rollback()
-                        flash("Could not upload offline solution due to a database issue. Please contact an administrator.", "error")
-                        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                        return redirect(url_for("admin.assessment_schedules", id=record.owner_id))
+                        flash(
+                            "Could not upload offline solution due to a database issue. Please contact an administrator.",
+                            "error",
+                        )
+                        current_app.logger.exception(
+                            "SQLAlchemyError exception", exc_info=e
+                        )
+                        return redirect(
+                            url_for("admin.assessment_schedules", id=record.owner_id)
+                        )
 
                     celery = current_app.extensions["celery"]
-                    schedule_task = celery.tasks["app.tasks.scheduling.process_offline_solution"]
+                    schedule_task = celery.tasks[
+                        "app.tasks.scheduling.process_offline_solution"
+                    ]
 
-                    schedule_task.apply_async(args=(record.id, asset.id, current_user.id), task_id=uuid)
+                    schedule_task.apply_async(
+                        args=(record.id, asset.id, current_user.id), task_id=uuid
+                    )
 
-                    return redirect(url_for("admin.assessment_schedules", id=record.owner_id))
+                    return redirect(
+                        url_for("admin.assessment_schedules", id=record.owner_id)
+                    )
 
             else:
-                flash("Optimizer solution files should have extension .sol or .mps.", "error")
+                flash(
+                    "Optimizer solution files should have extension .sol or .mps.",
+                    "error",
+                )
 
     else:
         if request.method == "GET":
             form.solver.data = record.solver
 
-    return render_template_context("admin/presentations/scheduling/upload.html", schedule=record, form=form)
+    return render_template_context(
+        "admin/presentations/scheduling/upload.html", schedule=record, form=form
+    )
 
 
 @admin.route("/upload_match/<int:match_id>", methods=["GET", "POST"])
@@ -10830,13 +13168,19 @@ def upload_match(match_id):
 
             if extension in (".sol", ".lp", ".mps"):
                 if (
-                    form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED or form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD
+                        form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED
+                        or form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD
                 ) and extension not in (".lp",):
-                    flash("Solution files for the CBC optimizer must be in .LP format", "error")
+                    flash(
+                        "Solution files for the CBC optimizer must be in .LP format",
+                        "error",
+                    )
 
                 else:
                     now = datetime.now()
-                    asset = TemporaryAsset(timestamp=now, expiry=now + timedelta(days=1))
+                    asset = TemporaryAsset(
+                        timestamp=now, expiry=now + timedelta(days=1)
+                    )
 
                     object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
                     with AssetUploadManager(
@@ -10852,7 +13196,9 @@ def upload_match(match_id):
                     asset.grant_user(current_user)
 
                     uuid = register_task(
-                        'Process offline solution for "{name}"'.format(name=record.name),
+                        'Process offline solution for "{name}"'.format(
+                            name=record.name
+                        ),
                         owner=current_user,
                         description="Import a solution file that has been produced offline and convert to a project match",
                     )
@@ -10867,36 +13213,52 @@ def upload_match(match_id):
                         db.session.commit()
                     except SQLAlchemyError as e:
                         db.session.rollback()
-                        flash("Could not upload offline solution due to a database issue. Please contact an administrator.", "error")
-                        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                        flash(
+                            "Could not upload offline solution due to a database issue. Please contact an administrator.",
+                            "error",
+                        )
+                        current_app.logger.exception(
+                            "SQLAlchemyError exception", exc_info=e
+                        )
                         return redirect(url_for("admin.manage_matching"))
 
                     celery = current_app.extensions["celery"]
-                    schedule_task = celery.tasks["app.tasks.matching.process_offline_solution"]
+                    schedule_task = celery.tasks[
+                        "app.tasks.matching.process_offline_solution"
+                    ]
 
-                    schedule_task.apply_async(args=(record.id, asset.id, current_user.id), task_id=uuid)
+                    schedule_task.apply_async(
+                        args=(record.id, asset.id, current_user.id), task_id=uuid
+                    )
 
                     return redirect(url_for("admin.manage_matching"))
 
             else:
-                flash("Optimizer solution files should have extension .sol or .mps.", "error")
+                flash(
+                    "Optimizer solution files should have extension .sol or .mps.",
+                    "error",
+                )
 
     else:
         if request.method == "GET":
             form.solver.data = record.solver
 
-    return render_template_context("admin/matching/upload.html", match=record, form=form)
+    return render_template_context(
+        "admin/matching/upload.html", match=record, form=form
+    )
 
 
 @admin.route("/view_schedule/<string:tag>", methods=["GET", "POST"])
 def view_schedule(tag):
-    schedule: ScheduleAttempt = db.session.query(ScheduleAttempt).filter_by(tag=tag).first()
+    schedule: ScheduleAttempt = (
+        db.session.query(ScheduleAttempt).filter_by(tag=tag).first()
+    )
     if schedule is None:
         abort(404)
 
     # TODO: need UI for setting redirect_tag
     if schedule.redirect_tag is not None:
-        return redirect(url_for('admin.view_schedule', tag=schedule.redirect_tag))
+        return redirect(url_for("admin.view_schedule", tag=schedule.redirect_tag))
 
     # deployed schedules are automatically unpublished, so we should allow public viewing if either flag is set
     if not (schedule.published or schedule.deployed):
@@ -10915,7 +13277,10 @@ def view_schedule(tag):
     if selected_session is not None:
         slots = (
             db.session.query(ScheduleSlot)
-            .filter(ScheduleSlot.owner_id == schedule.id, ScheduleSlot.session_id == selected_session.id)
+            .filter(
+                ScheduleSlot.owner_id == schedule.id,
+                ScheduleSlot.session_id == selected_session.id,
+            )
             .join(Room, ScheduleSlot.room_id == Room.id)
             .join(Building, Room.building_id == Building.id)
             .order_by(Building.name.asc(), Room.name.asc())
@@ -10925,7 +13290,13 @@ def view_schedule(tag):
     else:
         slots = []
 
-    return render_template_context("admin/presentations/public/schedule.html", form=form, event=event, schedule=schedule, slots=slots)
+    return render_template_context(
+        "admin/presentations/public/schedule.html",
+        form=form,
+        event=event,
+        schedule=schedule,
+        slots=slots,
+    )
 
 
 @admin.route("/reset_tasks")
@@ -10960,7 +13331,11 @@ def move_selector(sid):
 
     available = set()
 
-    pclasses: List[ProjectClass] = db.session.query(ProjectClass).filter(ProjectClass.active, ProjectClass.id != sel.config.pclass_id).all()
+    pclasses: List[ProjectClass] = (
+        db.session.query(ProjectClass)
+        .filter(ProjectClass.active, ProjectClass.id != sel.config.pclass_id)
+        .all()
+    )
 
     for pcl in pclasses:
         config: ProjectClassConfig = pcl.most_recent_config
@@ -10970,7 +13345,14 @@ def move_selector(sid):
             continue
 
         # reject if this student is already a selector for this project class
-        if get_count(config.selecting_students.filter(SelectingStudent.student_id == sel.student_id)) > 0:
+        if (
+                get_count(
+                    config.selecting_students.filter(
+                        SelectingStudent.student_id == sel.student_id
+                    )
+                )
+                > 0
+        ):
             continue
 
         available.add(config)
@@ -10978,12 +13360,21 @@ def move_selector(sid):
     if len(available) == 0:
         flash(
             'Selector <i class="fas fa-user-circle"></i> {name} cannot be moved at this time because there are no '
-            "live project classes available as destinations.".format(name=sel.student.user.name),
+            "live project classes available as destinations.".format(
+                name=sel.student.user.name
+            ),
             "info",
         )
         return redirect(url)
 
-    return render_template_context("admin/move_selector.html", sel=sel, student=sel.student, available=available, url=url, text=text)
+    return render_template_context(
+        "admin/move_selector.html",
+        sel=sel,
+        student=sel.student,
+        available=available,
+        url=url,
+        text=text,
+    )
 
 
 @admin.route("/do_move_selector/<int:sid>/<int:dest_id>")
@@ -11000,7 +13391,9 @@ def do_move_selector(sid, dest_id):
     if sel.config_id == dest_config.id:
         flash(
             'Cannot move selector <i class="fas fa-user-circle"></i> {name} to project class "{pcl}" because it '
-            "is already attached.".format(name=sel.student.user.name, pcl=dest_config.name),
+            "is already attached.".format(
+                name=sel.student.user.name, pcl=dest_config.name
+            ),
             "error",
         )
         return redirect(url)
@@ -11016,7 +13409,14 @@ def do_move_selector(sid, dest_id):
         return redirect(url)
 
     # reject is this student is already selecting for destination
-    if get_count(dest_config.selecting_students.filter(SelectingStudent.student_id == sel.student_id)) > 0:
+    if (
+            get_count(
+                dest_config.selecting_students.filter(
+                    SelectingStudent.student_id == sel.student_id
+                )
+            )
+            > 0
+    ):
         flash(
             'Cannot move selector <i class="fas fa-user-circle"></i> {name} to project class "{pcl}" '
             "because this student is already selecting for "
@@ -11030,16 +13430,20 @@ def do_move_selector(sid, dest_id):
     move_selector = celery.tasks["app.tasks.selecting.move_selector"]
 
     tk_name = "Move selector"
-    tk_description = 'Move selector {name} to project class "{pcl}"'.format(name=sel.student.user.name, pcl=dest_config.name)
+    tk_description = 'Move selector {name} to project class "{pcl}"'.format(
+        name=sel.student.user.name, pcl=dest_config.name
+    )
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
     final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
     error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-    seq = chain(init.si(task_id, tk_name), move_selector.si(sid, dest_id, current_user.id), final.si(task_id, tk_name, current_user.id)).on_error(
-        error.si(task_id, tk_name, current_user.id)
-    )
+    seq = chain(
+        init.si(task_id, tk_name),
+        move_selector.si(sid, dest_id, current_user.id),
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
     return redirect(url)
@@ -11051,13 +13455,21 @@ def create_new_template_tags(form):
     if len(unmatched) > 0:
         now = datetime.now()
         for tag in unmatched:
-            new_tag = TemplateTag(name=tag, colour=None, creator_id=current_user.id, creation_timestamp=now)
+            new_tag = TemplateTag(
+                name=tag,
+                colour=None,
+                creator_id=current_user.id,
+                creation_timestamp=now,
+            )
             try:
                 db.session.add(new_tag)
                 matched.append(new_tag)
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                flash(f'Could not add newly defined tag "{tag}" due to a database error. Please contact a system administrator.', "error")
+                flash(
+                    f'Could not add newly defined tag "{tag}" due to a database error. Please contact a system administrator.',
+                    "error",
+                )
 
     return matched
 
@@ -11178,7 +13590,10 @@ def asset_remove_expiry(asset_type, asset_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not remove expiry date because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not remove expiry date because of a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -11212,10 +13627,12 @@ def asset_add_expiry(asset_type, asset_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not add expiry date because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not add expiry date because of a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
-
 
 
 @admin.route("/upload_feedback_asset", methods=["GET", "POST"])
@@ -11234,7 +13651,11 @@ def upload_feedback_asset():
             # AssetUploadManager will populate most fields later
             with db.session.no_autoflush:
                 asset = SubmittedAsset(
-                    timestamp=datetime.now(), uploaded_id=current_user.id, expiry=None, target_name=form.label.data, license=form.license.data
+                    timestamp=datetime.now(),
+                    uploaded_id=current_user.id,
+                    expiry=None,
+                    target_name=form.label.data,
+                    license=form.license.data,
                 )
 
                 object_store = current_app.config.get("OBJECT_STORAGE_PROJECT")
@@ -11254,7 +13675,10 @@ def upload_feedback_asset():
                 db.session.flush()
             except SQLAlchemyError as e:
                 db.session.rollback()
-                flash("Could not upload feedback asset due to a database issue. Please contact an administrator.", "error")
+                flash(
+                    "Could not upload feedback asset due to a database issue. Please contact an administrator.",
+                    "error",
+                )
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 return redirect(url)
 
@@ -11276,7 +13700,10 @@ def upload_feedback_asset():
                 db.session.commit()
             except SQLAlchemyError as e:
                 db.session.rollback()
-                flash("Feedback asset was uploaded, but there was a database issue. Please contact an administrator.", "error")
+                flash(
+                    "Feedback asset was uploaded, but there was a database issue. Please contact an administrator.",
+                    "error",
+                )
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
             return redirect(url)
@@ -11284,7 +13711,9 @@ def upload_feedback_asset():
         else:
             flash("No upload was supplied", "error")
 
-    return render_template_context("admin/feedback/upload_feedback_asset.html", form=form, url=url)
+    return render_template_context(
+        "admin/feedback/upload_feedback_asset.html", form=form, url=url
+    )
 
 
 @admin.route("/edit_feedback_asset/<int:asset_id>", methods=["GET", "POST"])
@@ -11319,14 +13748,19 @@ def edit_feedback_asset(asset_id):
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash("Could not save changes to this asset due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save changes to this asset due to a database error. Please contact a system administrator.",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url)
     elif request.method == "GET":
         form.license.data = asset_record.license
 
-    return render_template_context("admin/feedback/edit_feedback_asset.html", form=form, url=url, asset=asset)
+    return render_template_context(
+        "admin/feedback/edit_feedback_asset.html", form=form, url=url, asset=asset
+    )
 
 
 @admin.route("/add_feedback_recipe", methods=["GET", "POST"])
@@ -11353,12 +13787,17 @@ def add_feedback_recipe():
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash("Could not add feedback recipe due to a database issue. Please contact an administrator.", "error")
+            flash(
+                "Could not add feedback recipe due to a database issue. Please contact an administrator.",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url)
 
-    return render_template_context("admin/feedback/add_feedback_recipe.html", form=form, url=url)
+    return render_template_context(
+        "admin/feedback/add_feedback_recipe.html", form=form, url=url
+    )
 
 
 @admin.route("/edit_feedback_recipe/<int:recipe_id>", methods=["GET", "POST"])
@@ -11386,12 +13825,17 @@ def edit_feedback_recipe(recipe_id):
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash("Could not save changes to this recipe due to a database issue. Please contact an administrator.", "error")
+            flash(
+                "Could not save changes to this recipe due to a database issue. Please contact an administrator.",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url)
 
-    return render_template_context("admin/feedback/edit_feedback_recipe.html", form=form, url=url, recipe=recipe)
+    return render_template_context(
+        "admin/feedback/edit_feedback_recipe.html", form=form, url=url, recipe=recipe
+    )
 
 
 # ======================================================================================================================
@@ -11419,12 +13863,22 @@ def email_templates_ajax():
     base_query = db.session.query(EmailTemplate)
 
     type_col = {"order": EmailTemplate.type}
-    subject = {"search": EmailTemplate.subject, "order": EmailTemplate.subject, "search_collation": "utf8_general_ci"}
+    subject = {
+        "search": EmailTemplate.subject,
+        "order": EmailTemplate.subject,
+        "search_collation": "utf8_general_ci",
+    }
     version = {"order": EmailTemplate.version}
     scope = {"order": [EmailTemplate.tenant_id, EmailTemplate.pclass_id]}
     status = {"order": EmailTemplate.active}
 
-    columns = {"type": type_col, "subject": subject, "version": version, "scope": scope, "status": status}
+    columns = {
+        "type": type_col,
+        "subject": subject,
+        "version": version,
+        "scope": scope,
+        "status": status,
+    }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.admin.email_templates_data)
@@ -11436,13 +13890,21 @@ def create_new_email_template_labels(form):
     if len(unmatched) > 0:
         now = datetime.now()
         for label in unmatched:
-            new_label = EmailTemplateLabel(name=label, colour=None, creator_id=current_user.id, creation_timestamp=now)
+            new_label = EmailTemplateLabel(
+                name=label,
+                colour=None,
+                creator_id=current_user.id,
+                creation_timestamp=now,
+            )
             try:
                 db.session.add(new_label)
                 matched.append(new_label)
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                flash(f'Could not add newly defined label "{label}" due to a database error. Please contact a system administrator.', "error")
+                flash(
+                    f'Could not add newly defined label "{label}" due to a database error. Please contact a system administrator.',
+                    "error",
+                )
 
     return matched
 
@@ -11473,11 +13935,19 @@ def edit_email_template(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url_for("admin.email_templates"))
 
-    return render_template_context("admin/email_templates/edit.html", form=form, email_template=template, title="Edit email template")
+    return render_template_context(
+        "admin/email_templates/edit.html",
+        form=form,
+        email_template=template,
+        title="Edit email template",
+    )
 
 
 @admin.route("/activate_email_template/<int:id>")
@@ -11496,7 +13966,10 @@ def activate_email_template(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not activate this email template because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not activate this email template because of a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -11514,7 +13987,10 @@ def deactivate_email_template(id):
 
     # Enforce: the global fallback must always remain active
     if template.tenant_id is None and template.pclass_id is None:
-        flash("The global fallback template for this type must always remain active and cannot be deactivated.", "error")
+        flash(
+            "The global fallback template for this type must always remain active and cannot be deactivated.",
+            "error",
+        )
         return redirect(redirect_url())
 
     template.active = False
@@ -11524,7 +14000,10 @@ def deactivate_email_template(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not deactivate this email template because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not deactivate this email template because of a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -11573,11 +14052,14 @@ def duplicate_email_template(id):
     try:
         db.session.add(new_template)
         db.session.commit()
-        flash(f'Email template duplicated as version {new_version}.', "success")
+        flash(f"Email template duplicated as version {new_version}.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not duplicate this email template because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not duplicate this email template because of a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -11595,7 +14077,10 @@ def delete_email_template(id):
 
     # Cannot delete the global fallback (tenant_id=None, pclass_id=None)
     if template.tenant_id is None and template.pclass_id is None:
-        flash("The global fallback template cannot be deleted. At least one global fallback must exist for each template type.", "error")
+        flash(
+            "The global fallback template cannot be deleted. At least one global fallback must exist for each template type.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # Ensure at least one instance of this type remains with tenant_id=None and pclass_id=None
@@ -11610,13 +14095,18 @@ def delete_email_template(id):
     )
 
     if fallback_count == 0:
-        flash("Cannot delete this template because no global fallback exists for this template type.", "error")
+        flash(
+            "Cannot delete this template because no global fallback exists for this template type.",
+            "error",
+        )
         return redirect(redirect_url())
 
     title = "Delete email template"
     panel_title = f"Delete email template: <strong>{template.subject}</strong>"
 
-    action_url = url_for("admin.perform_delete_email_template", id=id, url=redirect_url())
+    action_url = url_for(
+        "admin.perform_delete_email_template", id=id, url=redirect_url()
+    )
     message = (
         f"<p>Please confirm that you wish to delete the email template "
         f"<strong>{template.subject}</strong> (version {template.version}).</p>"
@@ -11625,7 +14115,12 @@ def delete_email_template(id):
     submit_label = "Delete template"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -11658,7 +14153,10 @@ def perform_delete_email_template(id):
     )
 
     if fallback_count == 0:
-        flash("Cannot delete this template because no global fallback exists for this template type.", "error")
+        flash(
+            "Cannot delete this template because no global fallback exists for this template type.",
+            "error",
+        )
         return redirect(url)
 
     try:
@@ -11668,6 +14166,9 @@ def perform_delete_email_template(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not delete this email template because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete this email template because of a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(url)

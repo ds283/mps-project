@@ -427,7 +427,12 @@ def _build_availability_templ() -> Template:
     return env.from_string(_availability)
 
 
-def _element_base(f: FacultyData, enrolment_template: Template, allocation_template: Template, workload_template: Template):
+def _element_base(
+        f: FacultyData,
+        enrolment_template: Template,
+        allocation_template: Template,
+        workload_template: Template,
+):
     CATS_workload = {}
 
     CATS_supervising = {}
@@ -495,7 +500,9 @@ def _element_base(f: FacultyData, enrolment_template: Template, allocation_templ
     total_moderating = sum(num_moderating.values())
     total_presentations = sum(num_presentations.values())
 
-    total_allocation = total_supervising + total_marking + total_moderating + total_presentations
+    total_allocation = (
+            total_supervising + total_marking + total_moderating + total_presentations
+    )
 
     availability, unbounded = f.student_availability
 
@@ -511,11 +518,19 @@ def _element_base(f: FacultyData, enrolment_template: Template, allocation_templ
     availability_templ: Template = _build_availability_templ()
 
     return {
-        "name": {"display": render_template(name_templ, f=f), "sortstring": f.user.last_name + f.user.first_name},
+        "name": {
+            "display": render_template(name_templ, f=f),
+            "sortstring": f.user.last_name + f.user.first_name,
+        },
         "groups": render_template(groups_templ, f=f, simple_label=simple_label),
         "enrollments": {
             "display": render_template(
-                enrolment_template, f=f, enrolments=enrolments, configs=configs, medium_swatch=medium_swatch, small_swatch=small_swatch
+                enrolment_template,
+                f=f,
+                enrolments=enrolments,
+                configs=configs,
+                medium_swatch=medium_swatch,
+                small_swatch=small_swatch,
             ),
             "sortvalue": get_count(f.enrollments),
         },

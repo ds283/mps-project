@@ -12,8 +12,23 @@ from functools import partial
 from typing import List
 
 from flask_security.forms import Form
-from wtforms import SubmitField, IntegerField, StringField, BooleanField, TextAreaField, DateTimeField, SelectField
-from wtforms.validators import InputRequired, Optional, Email, Length, ValidationError, NumberRange
+from wtforms import (
+    SubmitField,
+    IntegerField,
+    StringField,
+    BooleanField,
+    TextAreaField,
+    DateTimeField,
+    SelectField,
+)
+from wtforms.validators import (
+    InputRequired,
+    Optional,
+    Email,
+    Length,
+    ValidationError,
+    NumberRange,
+)
 from wtforms_alchemy import QuerySelectField, QuerySelectMultipleField
 
 from ..faculty.forms import ProjectMixinFactory
@@ -28,9 +43,18 @@ from ..models import (
     SubmissionRecord,
     FacultyData,
     AlternativesPriorityMixin,
-    Project, Tenant, SubmissionPeriodRecord, SupervisionEventTemplate, SubmissionPeriodUnit,
+    Project,
+    Tenant,
+    SubmissionPeriodRecord,
+    SupervisionEventTemplate,
+    SubmissionPeriodUnit,
 )
-from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, PeriodPresentationsMixin, PeriodSelectorMixinFactory
+from ..shared.forms.mixins import (
+    FeedbackMixin,
+    SaveChangesMixin,
+    PeriodPresentationsMixin,
+    PeriodSelectorMixinFactory,
+)
 from ..shared.forms.queries import (
     GetPresentationFeedbackFaculty,
     GetPresentationAssessorFaculty,
@@ -45,11 +69,21 @@ from ..shared.forms.queries import (
     AllProjectClasses,
     AllResearchGroups,
 )
-from ..shared.forms.wtf_validators import NotOptionalIf, globally_unique_project, globally_unique_submission_unit, unique_or_original_submission_unit, \
-    globally_unique_supervision_event_template, unique_or_original_supervision_event_template
+from ..shared.forms.wtf_validators import (
+    NotOptionalIf,
+    globally_unique_project,
+    globally_unique_submission_unit,
+    unique_or_original_submission_unit,
+    globally_unique_supervision_event_template,
+    unique_or_original_supervision_event_template,
+)
 
 
-def GoLiveFormFactory(submit_label="Go live", live_and_close_label="Go live and immediately close", datebox_label="Deadline"):
+def GoLiveFormFactory(
+        submit_label="Go live",
+        live_and_close_label="Go live and immediately close",
+        datebox_label="Deadline",
+):
     class GoLiveForm(Form):
         # Go Live
         live = SubmitField(submit_label)
@@ -59,7 +93,9 @@ def GoLiveFormFactory(submit_label="Go live", live_and_close_label="Go live and 
             live_and_close = SubmitField(live_and_close_label)
 
         # deadline field
-        live_deadline = DateTimeField(datebox_label, format="%d/%m/%Y", validators=[InputRequired()])
+        live_deadline = DateTimeField(
+            datebox_label, format="%d/%m/%Y", validators=[InputRequired()]
+        )
 
         # notify faculty checkbox
         notify_faculty = BooleanField("Send e-mail notifications to faculty")
@@ -97,7 +133,11 @@ def GoLiveFormFactory(submit_label="Go live", live_and_close_label="Go live and 
     return GoLiveForm
 
 
-def ChangeDeadlineFormFactory(submit_label="Close selections", change_label="Change deadline", datebox_label="The current deadline is"):
+def ChangeDeadlineFormFactory(
+        submit_label="Close selections",
+        change_label="Change deadline",
+        datebox_label="The current deadline is",
+):
     class ChangeDeadlineForm(Form):
         # Close selections
         close = SubmitField(submit_label)
@@ -106,18 +146,28 @@ def ChangeDeadlineFormFactory(submit_label="Close selections", change_label="Cha
         change = SubmitField(change_label)
 
         # deadline field
-        live_deadline = DateTimeField(datebox_label, format="%d/%m/%Y", validators=[InputRequired()])
+        live_deadline = DateTimeField(
+            datebox_label, format="%d/%m/%Y", validators=[InputRequired()]
+        )
 
         # send email notifications to convenor and office contacts?
-        notify_convenor = BooleanField("On closure, send e-mail notification to convenor and office staff")
+        notify_convenor = BooleanField(
+            "On closure, send e-mail notification to convenor and office staff"
+        )
 
     return ChangeDeadlineForm
 
 
-def IssueFacultyConfirmRequestFormFactory(submit_label="Issue confirmation requests", skip_label="Skip confirmation step", datebox_label="Deadline"):
+def IssueFacultyConfirmRequestFormFactory(
+        submit_label="Issue confirmation requests",
+        skip_label="Skip confirmation step",
+        datebox_label="Deadline",
+):
     class IssueFacultyConfirmRequestForm(Form):
         # deadline for confirmation responses
-        request_deadline = DateTimeField(datebox_label, format="%d/%m/%Y", validators=[InputRequired()])
+        request_deadline = DateTimeField(
+            datebox_label, format="%d/%m/%Y", validators=[InputRequired()]
+        )
 
         # skip button, if used
         if skip_label is not None:
@@ -130,11 +180,17 @@ def IssueFacultyConfirmRequestFormFactory(submit_label="Issue confirmation reque
 
 
 def OpenFeedbackFormFactory(
-    submit_label="Open feedback period", datebox_label="Deadline", include_send_button=False, include_test_button=False, include_close_button=False
+        submit_label="Open feedback period",
+        datebox_label="Deadline",
+        include_send_button=False,
+        include_test_button=False,
+        include_close_button=False,
 ):
     class OpenFeedbackForm(Form):
         # deadline for feedback
-        feedback_deadline = DateTimeField(datebox_label, format="%d/%m/%Y", validators=[InputRequired()])
+        feedback_deadline = DateTimeField(
+            datebox_label, format="%d/%m/%Y", validators=[InputRequired()]
+        )
 
         # CC emails to convenor?
         cc_me = BooleanField("CC myself in notification emails")
@@ -181,23 +237,32 @@ class TestOpenFeedbackForm(Form):
 
 class CustomCATSLimitForm(Form, SaveChangesMixin):
     # custom CATS limit for supervision
-    CATS_supervision = IntegerField("Maximum CATS allocation for supervision", validators=[Optional()])
+    CATS_supervision = IntegerField(
+        "Maximum CATS allocation for supervision", validators=[Optional()]
+    )
 
     # custom CATS limit for marking
-    CATS_marking = IntegerField("Maximum CATS allocation for marking", validators=[Optional()])
+    CATS_marking = IntegerField(
+        "Maximum CATS allocation for marking", validators=[Optional()]
+    )
 
     # custom CATS limit for moderation
-    CATS_moderation = IntegerField("Maximum CATS allocation for moderation", validators=[Optional()])
+    CATS_moderation = IntegerField(
+        "Maximum CATS allocation for moderation", validators=[Optional()]
+    )
 
     # custom CATS limit for presentations
-    CATS_presentation = IntegerField("Maximum CATS allocation for presentation assessment", validators=[Optional()])
+    CATS_presentation = IntegerField(
+        "Maximum CATS allocation for presentation assessment", validators=[Optional()]
+    )
 
 
 def PeriodRecordMixinFactory(enable_canvas=True):
     class PeriodRecordMixin:
         name = StringField(
             "Name",
-            description="Optional. Enter a textual name for this submission " 'period, such as "Autumn Term". Leave blank to use the default name.',
+            description="Optional. Enter a textual name for this submission "
+                        'period, such as "Autumn Term". Leave blank to use the default name.',
             validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
         )
 
@@ -207,7 +272,10 @@ def PeriodRecordMixinFactory(enable_canvas=True):
             description="Number of markers that should be assigned to each project.",
             validators=[
                 InputRequired("Please enter the required number of markers"),
-                NumberRange(min=0, message="The required number of markers should not be negative"),
+                NumberRange(
+                    min=0,
+                    message="The required number of markers should not be negative",
+                ),
             ],
         )
 
@@ -219,22 +287,32 @@ def PeriodRecordMixinFactory(enable_canvas=True):
             "workflow.",
             validators=[
                 InputRequired("Please enter the required number of moderators"),
-                NumberRange(min=0, message="The required number of moderators should not be negative"),
+                NumberRange(
+                    min=0,
+                    message="The required number of moderators should not be negative",
+                ),
             ],
         )
 
         @staticmethod
         def validate_number_markers(form, field):
             if form._config.uses_marker and field.data == 0:
-                raise ValidationError("This project class uses markers. The number of markers should be 1 or greater.")
+                raise ValidationError(
+                    "This project class uses markers. The number of markers should be 1 or greater."
+                )
 
         @staticmethod
         def validate_number_moderators(form, field):
             if form._config.uses_moderator and field.data == 0:
-                raise ValidationError("This project class uses moderators. This number of moderators should be 1 or greater.")
+                raise ValidationError(
+                    "This project class uses moderators. This number of moderators should be 1 or greater."
+                )
 
         start_date = DateTimeField(
-            "Period start date", format="%d/%m/%Y", validators=[Optional()], description="Enter an optional start date for this submission period."
+            "Period start date",
+            format="%d/%m/%Y",
+            validators=[Optional()],
+            description="Enter an optional start date for this submission period.",
         )
 
         hand_in_date = DateTimeField(
@@ -278,7 +356,9 @@ def EditPeriodRecordFormFactory(config: ProjectClassConfig):
     return EditPeriodRecordForm
 
 
-class EditSubmissionPeriodRecordPresentationsForm(Form, PeriodPresentationsMixin, SaveChangesMixin):
+class EditSubmissionPeriodRecordPresentationsForm(
+    Form, PeriodPresentationsMixin, SaveChangesMixin
+):
     pass
 
 
@@ -286,29 +366,42 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
     canvas_enabled = config.main_config.enable_canvas_sync
 
     class EditProjectConfigForm(Form, SaveChangesMixin):
-        skip_matching = BooleanField("Skip matching", description="Opt out of automated matching for this academic year")
+        skip_matching = BooleanField(
+            "Skip matching",
+            description="Opt out of automated matching for this academic year",
+        )
 
         requests_skipped = BooleanField(
-            "Skip confirmation requests", description="Disable confirmation of project descriptions for this academic year"
+            "Skip confirmation requests",
+            description="Disable confirmation of project descriptions for this academic year",
         )
 
         uses_supervisor = BooleanField(
-            "Uses supervisor roles", description="Select if the project is actively supervised by one or more members of staff"
+            "Uses supervisor roles",
+            description="Select if the project is actively supervised by one or more members of staff",
         )
 
-        uses_marker = BooleanField("Uses marker roles", description="Select if the submissions are assessed by one or more members of staff")
+        uses_marker = BooleanField(
+            "Uses marker roles",
+            description="Select if the submissions are assessed by one or more members of staff",
+        )
 
         uses_moderator = BooleanField(
-            "Uses moderator roles", default=False, description="Select if submissions are moderated by one or more members of staff"
+            "Uses moderator roles",
+            default=False,
+            description="Select if submissions are moderated by one or more members of staff",
         )
 
         uses_presentations = BooleanField(
-            "Includes one or more assessed presentations", description="Select if submissions are moderated by one or more members of staff"
+            "Includes one or more assessed presentations",
+            description="Select if submissions are moderated by one or more members of staff",
         )
 
         display_marker = BooleanField("Display assessor information")
 
-        display_presentations = BooleanField("Display presentation assessment information")
+        display_presentations = BooleanField(
+            "Display presentation assessment information"
+        )
 
         full_CATS = IntegerField(
             "CAT threshold for supervisors to be full",
@@ -317,27 +410,52 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
             "as full for the purposes of further allocation. If left blank, "
             "the maximum number of CATS is taken from the settings for the "
             "matching.",
-            validators=[Optional(), NumberRange(min=0, message="The specified number of CATS should not be negative")],
+            validators=[
+                Optional(),
+                NumberRange(
+                    min=0, message="The specified number of CATS should not be negative"
+                ),
+            ],
         )
 
         CATS_supervision = IntegerField(
             "CATS awarded for project supervision",
-            validators=[NotOptionalIf("uses_supervisor"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
+            validators=[
+                NotOptionalIf("uses_supervisor"),
+                NumberRange(
+                    min=0, message="The specified number of CATS should not be negative"
+                ),
+            ],
         )
 
         CATS_marking = IntegerField(
             "CATS awarded for marking submissions",
-            validators=[NotOptionalIf("uses_marker"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
+            validators=[
+                NotOptionalIf("uses_marker"),
+                NumberRange(
+                    min=0, message="The specified number of CATS should not be negative"
+                ),
+            ],
         )
 
         CATS_moderation = IntegerField(
             "CATS awarded for moderating submissions",
-            validators=[NotOptionalIf("uses_moderator"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
+            validators=[
+                NotOptionalIf("uses_moderator"),
+                NumberRange(
+                    min=0, message="The specified number of CATS should not be negative"
+                ),
+            ],
         )
 
         CATS_presentation = IntegerField(
             "CATS awarded for assessing presentations",
-            validators=[NotOptionalIf("uses_presentations"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
+            validators=[
+                NotOptionalIf("uses_presentations"),
+                NumberRange(
+                    min=0, message="The specified number of CATS should not be negative"
+                ),
+            ],
         )
 
         # only include Canvas-related fields if Canvas integration is actually switched on
@@ -349,7 +467,10 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
             )
 
             canvas_login = QuerySelectField(
-                "Canvas login account", query_factory=partial(GetCanvasEnabledConvenors, config), allow_blank=True, get_label=BuildCanvasLoginUserName
+                "Canvas login account",
+                query_factory=partial(GetCanvasEnabledConvenors, config),
+                allow_blank=True,
+                get_label=BuildCanvasLoginUserName,
             )
 
     return EditProjectConfigForm
@@ -371,14 +492,20 @@ def AssignPresentationFeedbackFormFactory(record_id, slot_id=None):
         qf = partial(GetPresentationAssessorFaculty, record_id, slot_id)
 
     class AssignPresentationFeedbackForm(Form, FeedbackMixin):
-        assessor = QuerySelectField("Assign feedback to assessor", query_factory=qf, get_label=BuildActiveFacultyName)
+        assessor = QuerySelectField(
+            "Assign feedback to assessor",
+            query_factory=qf,
+            get_label=BuildActiveFacultyName,
+        )
 
     return AssignPresentationFeedbackForm
 
 
 class ConvenorTaskMixin:
     description = StringField(
-        "Description", description="Briefly summarize the task", validators=[InputRequired(), Length(max=DEFAULT_STRING_LENGTH)]
+        "Description",
+        description="Briefly summarize the task",
+        validators=[InputRequired(), Length(max=DEFAULT_STRING_LENGTH)],
     )
 
     notes = TextAreaField(
@@ -394,7 +521,11 @@ class ConvenorTaskMixin:
         default=False,
     )
 
-    complete = BooleanField("Task has been completed", default=False, description="Select if the task has been finished.")
+    complete = BooleanField(
+        "Task has been completed",
+        default=False,
+        description="Select if the task has been finished.",
+    )
 
     dropped = BooleanField(
         "Task is dropped",
@@ -410,16 +541,23 @@ class ConvenorTaskMixin:
     )
 
     due_date = DateTimeField(
-        "Due date", format="%d/%m/%Y %H:%M", description="If the task is due by a certain date, enter it here.", validators=[Optional()]
+        "Due date",
+        format="%d/%m/%Y %H:%M",
+        description="If the task is due by a certain date, enter it here.",
+        validators=[Optional()],
     )
 
 
 class ConvenorGenericTaskMixin:
     repeat = BooleanField("Repeat task")
 
-    repeat_interval = SelectField("Repeat interval", choices=ConvenorGenericTask.repeat_options, coerce=int)
+    repeat_interval = SelectField(
+        "Repeat interval", choices=ConvenorGenericTask.repeat_options, coerce=int
+    )
 
-    repeat_frequency = IntegerField("Repeat frequency", validators=[NotOptionalIf("repeat")])
+    repeat_frequency = IntegerField(
+        "Repeat frequency", validators=[NotOptionalIf("repeat")]
+    )
 
     repeat_from_due_date = BooleanField(
         "Repeat from due date",
@@ -447,7 +585,9 @@ class AddConvenorGenericTask(Form, ConvenorTaskMixin, ConvenorGenericTaskMixin):
     submit = SubmitField("Create new task")
 
 
-class EditConvenorGenericTask(Form, ConvenorTaskMixin, ConvenorGenericTaskMixin, SaveChangesMixin):
+class EditConvenorGenericTask(
+    Form, ConvenorTaskMixin, ConvenorGenericTaskMixin, SaveChangesMixin
+):
     pass
 
 
@@ -467,13 +607,19 @@ class EditSubmissionRoleForm(Form, SaveChangesMixin):
 
     grade = IntegerField(
         "Grade",
-        validators=[Optional(), NumberRange(min=0, max=100, message="Grade should be between 0 and 100.")],
+        validators=[
+            Optional(),
+            NumberRange(min=0, max=100, message="Grade should be between 0 and 100."),
+        ],
         description="Optional. Enter the returned mark as a percentage (0–100).",
     )
 
     weight = IntegerField(
         "Weight",
-        validators=[Optional(), NumberRange(min=0, message="Weight should not be negative.")],
+        validators=[
+            Optional(),
+            NumberRange(min=0, message="Weight should not be negative."),
+        ],
         description="Optional. Enter the resolved weight for this score.",
     )
 
@@ -488,7 +634,12 @@ class EditSubmissionRoleForm(Form, SaveChangesMixin):
 class AddSubmitterRoleForm(Form):
     role = SelectField("Role type", choices=SubmissionRole.role_options, coerce=int)
 
-    user = QuerySelectField("Assign which user?", query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName, allow_blank=True)
+    user = QuerySelectField(
+        "Assign which user?",
+        query_factory=GetActiveFaculty,
+        get_label=BuildActiveFacultyName,
+        allow_blank=True,
+    )
 
     @staticmethod
     def validate_user(form, field):
@@ -511,7 +662,10 @@ class AddSubmitterRoleForm(Form):
                 #         "a different role type.".format(name=fd.user.name)
                 #     )
 
-            if role_type in [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]:
+            if role_type in [
+                SubmissionRole.ROLE_SUPERVISOR,
+                SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+            ]:
                 if project.generic:
                     if fd not in project.supervisor_list:
                         raise ValidationError(
@@ -562,7 +716,9 @@ def EditProjectSupervisorsFactory(project: Project):
             "Supervisors",
             query_factory=GetAllPossibleSupervisors,
             get_label=BuildSupervisorName,
-            validators=[InputRequired(message="Please specify at least one supervisor")],
+            validators=[
+                InputRequired(message="Please specify at least one supervisor")
+            ],
         )
 
     return EditProjectSupervisors
@@ -574,7 +730,9 @@ def EditLiveProjectSupervisorsFactory(project: LiveProject):
             "Supervisors",
             query_factory=partial(GetPossibleSupervisors, project.config.pclass_id),
             get_label=BuildSupervisorName,
-            validators=[InputRequired(message="Please specify at least one supervisor")],
+            validators=[
+                InputRequired(message="Please specify at least one supervisor")
+            ],
         )
 
     return EditLiveProjectSupervisors
@@ -583,11 +741,22 @@ def EditLiveProjectSupervisorsFactory(project: LiveProject):
 def DuplicateProjectFormFactory(allowed_tenants: List[Tenant]):
     class DuplicateProjectForm(
         Form,
-        ProjectMixinFactory(allowed_tenants, convenor_editing=True, uses_tags=True, uses_research_groups=True, project_classes_qf=AllProjectClasses,
-                            group_qf=AllResearchGroups),
+        ProjectMixinFactory(
+            allowed_tenants,
+            convenor_editing=True,
+            uses_tags=True,
+            uses_research_groups=True,
+            project_classes_qf=AllProjectClasses,
+            group_qf=AllResearchGroups,
+        ),
     ):
         name = StringField(
-            "Title", validators=[InputRequired(message="Project title is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_project]
+            "Title",
+            validators=[
+                InputRequired(message="Project title is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+                globally_unique_project,
+            ],
         )
 
         submit = SubmitField("Duplicate project")
@@ -601,12 +770,19 @@ def _CustomOfferFormMixinFactory(pclass: ProjectClassConfig, year: int):
             "Comment",
             render_kw={"rows": 3},
             description="Please enter a brief explanation or justification for this offer",
-            validators=[InputRequired(message="A brief comment is required to help document the reason this offer has been made")],
+            validators=[
+                InputRequired(
+                    message="A brief comment is required to help document the reason this offer has been made"
+                )
+            ],
         )
 
         if pclass.number_submissions > 1:
             period = QuerySelectField(
-                "Preferred submission period", blank_text="No preferred period", allow_blank=True, get_label=lambda d: d.display_name(year)
+                "Preferred submission period",
+                blank_text="No preferred period",
+                allow_blank=True,
+                get_label=lambda d: d.display_name(year),
             )
 
     return CustomOfferFormMixin
@@ -631,9 +807,19 @@ def EditCustomOfferFormFactory(pclass: ProjectClassConfig, year: int):
 
 
 class SubmissionPeriodUnitMixin:
-    start_date = DateTimeField("Start date", format="%d/%m/%Y", validators=[InputRequired()], description="Specify the (inclusive) start date for this unit")
+    start_date = DateTimeField(
+        "Start date",
+        format="%d/%m/%Y",
+        validators=[InputRequired()],
+        description="Specify the (inclusive) start date for this unit",
+    )
 
-    end_date = DateTimeField("End date", format="%d/%m/%Y", validators=[InputRequired()], description="Specify the (inclusive) end date for this unit")
+    end_date = DateTimeField(
+        "End date",
+        format="%d/%m/%Y",
+        validators=[InputRequired()],
+        description="Specify the (inclusive) end date for this unit",
+    )
 
 
 def AddSubmissionPeriodUnitFormFactory(period: SubmissionPeriodRecord):
@@ -658,7 +844,9 @@ def AddSubmissionPeriodUnitFormFactory(period: SubmissionPeriodRecord):
 def EditSubmissionPeriodUnitFormFactory(period: SubmissionPeriodRecord):
     unique_name = partial(unique_or_original_submission_unit, period.id)
 
-    class EditSubmissionPeriodUnitForm(Form, SubmissionPeriodUnitMixin, SaveChangesMixin):
+    class EditSubmissionPeriodUnitForm(
+        Form, SubmissionPeriodUnitMixin, SaveChangesMixin
+    ):
         name = StringField(
             "Name",
             validators=[
@@ -677,7 +865,7 @@ class SupervisionEventTemplateMixin:
         "Target role",
         choices=SupervisionEventTemplate.role_options,
         coerce=int,
-        description="When this event is distributed, it will be assigned to all staff with the specified submission role."
+        description="When this event is distributed, it will be assigned to all staff with the specified submission role.",
     )
 
     type = SelectField(
@@ -689,7 +877,7 @@ class SupervisionEventTemplateMixin:
     monitor_attendance = BooleanField(
         "Monitor attendance",
         default=True,
-        description="If selected, attendance data will be collected for instances of this event."
+        description="If selected, attendance data will be collected for instances of this event.",
     )
 
 
@@ -715,7 +903,9 @@ def AddSupervisionEventTemplateFormFactory(unit: SubmissionPeriodUnit):
 def EditSupervisionEventTemplateFormFactory(unit: SubmissionPeriodUnit):
     unique_name = partial(unique_or_original_supervision_event_template, unit.id)
 
-    class EditSupervisionEventTemplateForm(Form, SupervisionEventTemplateMixin, SaveChangesMixin):
+    class EditSupervisionEventTemplateForm(
+        Form, SupervisionEventTemplateMixin, SaveChangesMixin
+    ):
         name = StringField(
             "Name",
             validators=[

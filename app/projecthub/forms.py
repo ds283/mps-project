@@ -19,12 +19,19 @@ from ..shared.forms.mixins import SaveChangesMixin
 
 class FormattedArticleForm(Form):
     title = StringField(
-        "Article title", validators=[InputRequired("Please enter a title for your article or news story"), Length(max=DEFAULT_STRING_LENGTH)]
+        "Article title",
+        validators=[
+            InputRequired("Please enter a title for your article or news story"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
     article = TextAreaField("Article", validators=[Optional()], render_kw={"rows": 10})
 
-    published = BooleanField("Published", description="Select this option to make your article visible to other users")
+    published = BooleanField(
+        "Published",
+        description="Select this option to make your article visible to other users",
+    )
 
     publish_on = DateTimeField(
         "Automatically publish at a specified time",
@@ -87,11 +94,7 @@ def build_event_team_form(event):
     record: SubmissionRecord = event.sub_record
 
     def _query_factory():
-        return [
-            role
-            for role in record.supervisor_roles
-            if role.id != owner_id
-        ]
+        return [role for role in record.supervisor_roles if role.id != owner_id]
 
     class EventTeamForm(Form):
         team = QuerySelectMultipleField(

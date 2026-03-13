@@ -89,7 +89,11 @@ class ServerSideSQLHandler(ServerSideBase):
         self._data = data
 
         # was a filter supplied? if so, then we should use it to restrict the base query
-        if hasattr(self, "_request_filter") and self._request_filter is not None and len(self._request_filter) > 0:
+        if (
+                hasattr(self, "_request_filter")
+                and self._request_filter is not None
+                and len(self._request_filter) > 0
+        ):
             # filter_columns will contain a list of SQL conditions, one for each column that can be searched;
             # notice that DataTables mandates that a query is applied against *all* searchable columns
             # https://datatables.net/manual/server-side
@@ -112,7 +116,9 @@ class ServerSideSQLHandler(ServerSideBase):
                         collation = item_data["search_collation"]
 
                     if collation:
-                        search_expr = collate(search_col, collation).contains(self._request_filter)
+                        search_expr = collate(search_col, collation).contains(
+                            self._request_filter
+                        )
                     else:
                         search_expr = search_col.contains(self._request_filter)
 
@@ -154,12 +160,16 @@ class ServerSideSQLHandler(ServerSideBase):
 
                     if dir == "asc":
                         if isinstance(order_col, Iterable):
-                            self._query = self._query.order_by(*(x.asc() for x in order_col))
+                            self._query = self._query.order_by(
+                                *(x.asc() for x in order_col)
+                            )
                         else:
                             self._query = self._query.order_by(order_col.asc())
                     else:
                         if isinstance(order_col, Iterable):
-                            self._query = self._query.order_by(*(x.desc() for x in order_col))
+                            self._query = self._query.order_by(
+                                *(x.desc() for x in order_col)
+                            )
                         else:
                             self._query = self._query.order_by(order_col.desc())
 
@@ -198,7 +208,11 @@ def _slow_map_row(row, data):
     """
     mapped_row = {
         "columns": {
-            col: {property: (getter(row) if callable(getter) else getter) for property, getter in fields.items()} for col, fields in data.items()
+            col: {
+                property: (getter(row) if callable(getter) else getter)
+                for property, getter in fields.items()
+            }
+            for col, fields in data.items()
         },
         "row": row,
     }
@@ -312,8 +326,14 @@ class ServerSideInMemoryHandler(ServerSideBase):
 
         # use these to build a list of dictionaries, with members corresponding to the filter/sort
         # values determined by the column data
-        has_filtering = hasattr(self, "_request_filter") and self._request_filter is not None and len(self._request_filter) > 0
-        has_ordering = hasattr(self, "_request_order") and self._request_order is not None
+        has_filtering = (
+                hasattr(self, "_request_filter")
+                and self._request_filter is not None
+                and len(self._request_filter) > 0
+        )
+        has_ordering = (
+                hasattr(self, "_request_order") and self._request_order is not None
+        )
 
         needs_slow_map = has_ordering or has_filtering
 
@@ -326,7 +346,11 @@ class ServerSideInMemoryHandler(ServerSideBase):
         if has_filtering:
             # convert search value to lower case; note it's guaranteed to be a str
             self._request_filter = self._request_filter.lower()
-            self._filtered_rows = [row for row in self._mapped_rows if _filter_row(row, self._request_filter)]
+            self._filtered_rows = [
+                row
+                for row in self._mapped_rows
+                if _filter_row(row, self._request_filter)
+            ]
 
         else:
             self._filtered_rows = self._mapped_rows
@@ -346,7 +370,12 @@ class ServerSideInMemoryHandler(ServerSideBase):
                 if col_name in self._data:
                     ordering_data.append((col_name, dir))
 
-            self._ordered_rows = sorted(self._filtered_rows, key=functools.cmp_to_key(functools.partial(_compare_rows, ordering_data)))
+            self._ordered_rows = sorted(
+                self._filtered_rows,
+                key=functools.cmp_to_key(
+                    functools.partial(_compare_rows, ordering_data)
+                ),
+            )
 
         else:
             self._ordered_rows = self._filtered_rows

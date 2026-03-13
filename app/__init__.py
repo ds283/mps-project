@@ -25,7 +25,13 @@ from flask_healthz import Healthz
 from flask_login.signals import user_logged_in
 from flask_mailman import Mail, EmailMultiAlternatives
 from flask_migrate import Migrate
-from flask_security import current_user, SQLAlchemyUserDatastore, Security, LoginForm, MailUtil
+from flask_security import (
+    current_user,
+    SQLAlchemyUserDatastore,
+    Security,
+    LoginForm,
+    MailUtil,
+)
 from flask_sqlalchemy.record_queries import get_recorded_queries
 from pyinstrument import Profiler as PyInstrumentProfiler
 from pymongo import MongoClient
@@ -38,7 +44,11 @@ from .database import db
 from .instance.version import site_revision, site_copyright_dates
 from .limiter import limiter
 from .models import User, MessageOfTheDay, Notification
-from .shared.context.global_context import get_global_context_data, build_static_context_data, render_template_context
+from .shared.context.global_context import (
+    get_global_context_data,
+    build_static_context_data,
+    render_template_context,
+)
 from .shared.utils import home_dashboard_url
 from .task_queue import make_celery, register_task, background_task
 from .thirdparty.flask_bleach import Bleach
@@ -56,17 +66,23 @@ class PatchedLoginForm(LoginForm):
 
 class PatchedMailUtil(MailUtil):
     # make Flask-Security use Celery deferred email sender
-    def send_mail(self, template, subject, recipient, sender, body, html, user, **kwargs):
+    def send_mail(
+        self, template, subject, recipient, sender, body, html, user, **kwargs
+    ):
         # get send-log-email celery task
         celery = current_app.extensions["celery"]
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
 
-        msg = EmailMultiAlternatives(subject=subject, from_email=sender, to=[recipient], body=body)
+        msg = EmailMultiAlternatives(
+            subject=subject, from_email=sender, to=[recipient], body=body
+        )
         if html:
             msg.attach_alternative(html, "text/html")
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description="Email to {r}".format(r=", ".join(msg.to)))
+        task_id = register_task(
+            msg.subject, description="Email to {r}".format(r=", ".join(msg.to))
+        )
 
         # queue Celery task to send the email
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
@@ -107,8 +123,14 @@ def configure_logging(app: Flask):
 
     log_file = app.config.get("LOG_FILE")
     if log_file is not None:
-        file_handler = RotatingFileHandler(app.config["LOG_FILE"], "a", 1 * 1024 * 1024, 10)
-        file_handler.setFormatter(Formatter("%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"))
+        file_handler = RotatingFileHandler(
+            app.config["LOG_FILE"], "a", 1 * 1024 * 1024, 10
+        )
+        file_handler.setFormatter(
+            Formatter(
+                "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
+            )
+        )
         app.logger.setLevel(INFO)
         file_handler.setLevel(INFO)
         app.logger.addHandler(file_handler)
@@ -121,18 +143,24 @@ def create_app():
     # load configuration files from 'instance' folder
     instance_folder = os.environ.get("INSTANCE_FOLDER")
     print(f'-- using instance folder "{instance_folder}"', file=stderr)
-    app = Flask(__name__, instance_relative_config=True, instance_path=str(instance_folder))
+    app = Flask(
+        __name__, instance_relative_config=True, instance_path=str(instance_folder)
+    )
 
     read_configuration(app, config_name)
     configure_logging(app)
 
     app_name = app.config.get("APP_NAME", "mpsprojects")
-    app.logger.info(f"{app_name} projects management web app starting (version {site_revision})...")
+    app.logger.info(
+        f"{app_name} projects management web app starting (version {site_revision})..."
+    )
     app.logger.info(f"Copyright University of Sussex {site_copyright_dates}")
 
     # create a long-lived Redis connection for Flask-Caching
     app.logger.info("-- creating Redis session for Flask-Caching")
-    app.config["REDIS_SESSION"] = redis.Redis.from_url(url=app.config["CACHE_REDIS_URL"])
+    app.config["REDIS_SESSION"] = redis.Redis.from_url(
+        url=app.config["CACHE_REDIS_URL"]
+    )
 
     # create long-lived Mongo connection for Flask-Sessionstore
     app.logger.info("-- creating MongoDB session for Flask-Sessionstore")
@@ -174,9 +202,13 @@ def create_app():
 
         profile_dir = app.config.get("PROFILE_DIRECTORY")
         restrictions = app.config.get("PROFILE_RESTRICTIONS")
-        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=profile_dir, restrictions=restrictions)
+        app.wsgi_app = ProfilerMiddleware(
+            app.wsgi_app, profile_dir=profile_dir, restrictions=restrictions
+        )
 
-        app.logger.info("** Profiling to disk enabled (directory = {dir})".format(dir=profile_dir))
+        app.logger.info(
+            "** Profiling to disk enabled (directory = {dir})".format(dir=profile_dir)
+        )
 
     # configure Flask-Security, which needs access to the database models for User and Role
     app.logger.info("-- importing ORM models")
@@ -186,7 +218,9 @@ def create_app():
 
     app.logger.info("-- patching Flask-Security-Too assets")
     # patch Flask-Security's login form to include some descriptive text on the email field
-    security = Security(app, user_datastore, login_form=PatchedLoginForm, mail_util_cls=PatchedMailUtil)
+    security = Security(
+        app, user_datastore, login_form=PatchedLoginForm, mail_util_cls=PatchedMailUtil
+    )
     if config_name == "production":
         # set up more stringent limits for login view and forgot-password view
         # add to a particular view function.
@@ -255,10 +289,10 @@ def create_app():
         # we only include those labelled as "show_login"
         messages = []
         for message in (
-                db.session.query(MessageOfTheDay)
-                        .filter(MessageOfTheDay.show_login == True)
-                        .order_by(MessageOfTheDay.issue_date.desc())
-                        .all()
+            db.session.query(MessageOfTheDay)
+            .filter(MessageOfTheDay.show_login == True)
+            .order_by(MessageOfTheDay.issue_date.desc())
+            .all()
         ):
             if message.project_classes.first() is None:
                 messages.append(message)
@@ -277,7 +311,9 @@ def create_app():
                     Notification.query.filter_by(remove_on_pageload=True).delete()
                     db.session.commit()
                 except SQLAlchemyError as e:
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    current_app.logger.exception(
+                        "SQLAlchemyError exception", exc_info=e
+                    )
 
     if use_pyinstrument:
 
@@ -293,7 +329,10 @@ def create_app():
     @app.template_filter("latextomarkdown")
     def latextomarkdown(latex_string):
         if latex_string is None:
-            return r'<div class="alert alert-danger">An empty string was supplied. ' r"Please check your project description.</div>"
+            return (
+                r'<div class="alert alert-danger">An empty string was supplied. '
+                r"Please check your project description.</div>"
+            )
 
         l2m_obj = latex2markdown.LaTeX2Markdown(latex_string)
         return l2m_obj.to_markdown()
@@ -344,7 +383,12 @@ def create_app():
                 if query.duration >= timeout:
                     app.logger.warning(
                         "SLOW QUERY: %s\nParameters: %s\nDuration: %fs\nLocation: %s\n"
-                        % (query.statement, query.parameters, query.duration, query.location)
+                        % (
+                            query.statement,
+                            query.parameters,
+                            query.duration,
+                            query.location,
+                        )
                     )
             return response
 
@@ -371,7 +415,11 @@ def create_app():
 
             # 'id' is required, 'username' and 'email' are indexed but optional.
             # all values are strings.
-            return {"id": str(current_user.id), "username": str(current_user.username), "email": str(current_user.email)}
+            return {
+                "id": str(current_user.id),
+                "username": str(current_user.username),
+                "email": str(current_user.email),
+            }
 
     app.request_class = CustomRequest
 

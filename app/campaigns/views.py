@@ -18,7 +18,7 @@ from ..shared.context.global_context import render_template_context
 from ..database import db
 
 
-@campaigns.route('/atas_2026', methods=['GET', 'POST'])
+@campaigns.route("/atas_2026", methods=["GET", "POST"])
 @roles_required("faculty")
 def atas_2026():
     fd: FacultyData = FacultyData.query.get_or_404(current_user.id)
@@ -47,9 +47,17 @@ def atas_2026():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes because of a database error. Please contact a system administrator",
+                "error",
+            )
         else:
-            flash("Thank you for updating your projects. Your changes have been saved successfully", "info")
-            return redirect(url_for('faculty.dashboard'))
+            flash(
+                "Thank you for updating your projects. Your changes have been saved successfully",
+                "info",
+            )
+            return redirect(url_for("faculty.dashboard"))
 
-    return render_template_context('campaigns/2026_ATAS.html', input_form=form, projects=projects)
+    return render_template_context(
+        "campaigns/2026_ATAS.html", input_form=form, projects=projects
+    )

@@ -221,8 +221,12 @@ def presentation_assessments_data(assessments):
     data = [
         {
             "name": render_template(name_templ, a=a),
-            "periods": render_template(periods_templ, a=a, unformatted_label=unformatted_label),
-            "sessions": render_template(sessions_templ, a=a, unformatted_label=unformatted_label),
+            "periods": render_template(
+                periods_templ, a=a, unformatted_label=unformatted_label
+            ),
+            "sessions": render_template(
+                sessions_templ, a=a, unformatted_label=unformatted_label
+            ),
             "menu": render_template(menu_templ, a=a),
         }
         for a in assessments

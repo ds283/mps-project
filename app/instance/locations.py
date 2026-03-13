@@ -10,5 +10,5 @@
 
 import os
 
-INSTANCE_FOLDER = os.environ.get('INSTANCE_FOLDER')
-SCRATCH_FOLDER = os.environ.get('SCRATCH_FOLDER')
+INSTANCE_FOLDER = os.environ.get("INSTANCE_FOLDER")
+SCRATCH_FOLDER = os.environ.get("SCRATCH_FOLDER")

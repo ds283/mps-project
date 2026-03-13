@@ -18,7 +18,14 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import User, TaskRecord, Notification, MatchingAttempt, ScheduleAttempt, StudentBatch
+from ..models import (
+    User,
+    TaskRecord,
+    Notification,
+    MatchingAttempt,
+    ScheduleAttempt,
+    StudentBatch,
+)
 from ..shared.internal_redis import get_redis
 
 
@@ -26,9 +33,19 @@ def register_system_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def reset_tasks(self, user_id):
         try:
-            in_progress_matching = db.session.query(MatchingAttempt.id).filter_by(celery_finished=False).all()
-            in_progress_scheduling = db.session.query(ScheduleAttempt.id).filter_by(celery_finished=False).all()
-            in_progress_batches = db.session.query(StudentBatch.id).filter_by(celery_finished=False).all()
+            in_progress_matching = (
+                db.session.query(MatchingAttempt.id)
+                .filter_by(celery_finished=False)
+                .all()
+            )
+            in_progress_scheduling = (
+                db.session.query(ScheduleAttempt.id)
+                .filter_by(celery_finished=False)
+                .all()
+            )
+            in_progress_batches = (
+                db.session.query(StudentBatch.id).filter_by(celery_finished=False).all()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -39,12 +56,16 @@ def register_system_tasks(celery):
             task = task | group(reset_matching.si(t[0]) for t in in_progress_matching)
 
         if len(in_progress_scheduling) > 0:
-            task = task | group(reset_scheduling.si(t[0]) for t in in_progress_scheduling)
+            task = task | group(
+                reset_scheduling.si(t[0]) for t in in_progress_scheduling
+            )
 
         if len(in_progress_batches) > 0:
             task = task | group(reset_batch.si(t[0]) for t in in_progress_batches)
 
-        task = (task | reset_tasks_notify.si(user_id)).on_error(reset_tasks_fail.si(user_id))
+        task = (task | reset_tasks_notify.si(user_id)).on_error(
+            reset_tasks_fail.si(user_id)
+        )
 
         raise self.replace(task)
 
@@ -89,7 +110,9 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         record.finished = True
@@ -114,7 +137,9 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         record.finished = True
@@ -139,7 +164,9 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         record.celery_finished = True
@@ -163,11 +190,17 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         try:
-            user.post_message("All background tasks have been reset successfully.", "success", autocommit=True)
+            user.post_message(
+                "All background tasks have been reset successfully.",
+                "success",
+                autocommit=True,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -181,12 +214,16 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         try:
             user.post_message(
-                "An error occurred while attempting to reset background tasks. Please check the appropriate server logs.", "error", autocommit=True
+                "An error occurred while attempting to reset background tasks. Please check the appropriate server logs.",
+                "error",
+                autocommit=True,
             )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -207,7 +244,9 @@ def register_system_tasks(celery):
         redis_db.set("_processing_pings", 1, ex=300)
 
         ping_list = redis_db.hgetall("_pings")
-        redis_db.delete("_pings")  # delete as close as possible to read, to avoid race conditions from other threads/instances
+        redis_db.delete(
+            "_pings"
+        )  # delete as close as possible to read, to avoid race conditions from other threads/instances
         task_list = []
 
         for key in ping_list:
@@ -217,11 +256,19 @@ def register_system_tasks(celery):
             data_tuple = literal_eval(value.decode("utf-8"))
 
             if not isinstance(user_id, int):
-                print('process_pings: decoded "user_id" is not of type int (value={v}, data_tuple={d})'.format(v=user_id, d=data_tuple))
+                print(
+                    'process_pings: decoded "user_id" is not of type int (value={v}, data_tuple={d})'.format(
+                        v=user_id, d=data_tuple
+                    )
+                )
                 continue
 
             if not isinstance(data_tuple, tuple):
-                print('process_pings: decoded "data_tuple" is not of type tuple (user_id={v}, data_tuple={d})'.format(v=user_id, d=data_tuple))
+                print(
+                    'process_pings: decoded "data_tuple" is not of type tuple (user_id={v}, data_tuple={d})'.format(
+                        v=user_id, d=data_tuple
+                    )
+                )
                 continue
 
             try:
@@ -250,7 +297,9 @@ def register_system_tasks(celery):
             except IndexError:
                 pass
 
-        tasks = group(handle_ping.si(v[0], v[1], v[2]).set(queue="priority") for v in task_list) | finalize_pings.si().set(queue="priority")
+        tasks = group(
+            handle_ping.si(v[0], v[1], v[2]).set(queue="priority") for v in task_list
+        ) | finalize_pings.si().set(queue="priority")
         self.replace(tasks)
 
     @celery.task(bind=True, default_retry_delay=3, queue="priority")
@@ -275,14 +324,24 @@ def register_system_tasks(celery):
             timestamp = parser.parse(timestamp)
 
         if not isinstance(timestamp, datetime):
-            self.update_state("FAILURE", meta={"msg": "Could not decode timestamp parameter"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not decode timestamp parameter"}
+            )
             raise Ignore()
 
-        notifications = user.notifications.filter(Notification.timestamp >= since).order_by(Notification.timestamp.asc()).all()
+        notifications = (
+            user.notifications.filter(Notification.timestamp >= since)
+            .order_by(Notification.timestamp.asc())
+            .all()
+        )
 
         # mark any messages or instructions (as opposed to task progress updates) for removal on next page load
         for n in notifications:
-            if n.type == Notification.USER_MESSAGE or n.type == Notification.SHOW_HIDE_REQUEST or n.type == Notification.REPLACE_TEXT_REQUEST:
+            if (
+                    n.type == Notification.USER_MESSAGE
+                    or n.type == Notification.SHOW_HIDE_REQUEST
+                    or n.type == Notification.REPLACE_TEXT_REQUEST
+            ):
                 n.remove_on_pageload = True
 
         user.last_active = timestamp

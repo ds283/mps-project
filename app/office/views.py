@@ -43,7 +43,10 @@ def dashboard():
     # they apply to
     messages = (
         db.session.query(MessageOfTheDay)
-        .filter(MessageOfTheDay.show_office, ~MessageOfTheDay.dismissed_by.any(id=current_user.id))
+        .filter(
+            MessageOfTheDay.show_office,
+            ~MessageOfTheDay.dismissed_by.any(id=current_user.id),
+        )
         .order_by(MessageOfTheDay.issue_date.desc())
         .all()
     )
@@ -51,7 +54,13 @@ def dashboard():
     root_data = get_root_dashboard_data()
     approvals_data = get_approval_queue_data()
 
-    return render_template_context("office/dashboard.html", messages=messages, root_data=root_data, approvals_data=approvals_data, pane=pane)
+    return render_template_context(
+        "office/dashboard.html",
+        messages=messages,
+        root_data=root_data,
+        approvals_data=approvals_data,
+        pane=pane,
+    )
 
 
 @office.route("/settings", methods=["GET", "POST"])
@@ -77,4 +86,6 @@ def settings():
 
         return home_dashboard()
 
-    return render_template_context("office/settings.html", settings_form=form, user=user)
+    return render_template_context(
+        "office/settings.html", settings_form=form, user=user
+    )

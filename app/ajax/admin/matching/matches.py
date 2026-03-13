@@ -414,7 +414,9 @@ def matches_data(matches, config=None, text=None, url=None, is_root=False):
     :return:
     """
     simple_label = get_template_attribute("labels.html", "simple_label")
-    error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
+    error_block_popover = get_template_attribute(
+        "error_block.html", "error_block_popover"
+    )
 
     number = len(matches)
     allow_compare = number > 1
@@ -427,11 +429,28 @@ def matches_data(matches, config=None, text=None, url=None, is_root=False):
 
     data = [
         {
-            "name": render_template(name_templ, m=m, text=text, url=url, simple_label=simple_label),
+            "name": render_template(
+                name_templ, m=m, text=text, url=url, simple_label=simple_label
+            ),
             "status": render_template(status_templ, m=m),
-            "score": {"display": render_template(score_templ, m=m), "value": float(m.score) if m.solution_usable and m.score is not None else 0},
-            "info": render_template(info_templ, m=m, error_block_popover=error_block_popover),
-            "menu": render_template(menu_templ, m=m, text=text, url=url, compare=allow_compare, is_root=is_root, config=config),
+            "score": {
+                "display": render_template(score_templ, m=m),
+                "value": float(m.score)
+                if m.solution_usable and m.score is not None
+                else 0,
+            },
+            "info": render_template(
+                info_templ, m=m, error_block_popover=error_block_popover
+            ),
+            "menu": render_template(
+                menu_templ,
+                m=m,
+                text=text,
+                url=url,
+                compare=allow_compare,
+                is_root=is_root,
+                config=config,
+            ),
         }
         for m in matches
     ]

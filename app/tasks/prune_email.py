@@ -35,7 +35,9 @@ def register_prune_email(celery):
             # need to use SQLAlchemy session.delete() if we want the ORM unit of work to remove rows from the
             # email_log_recipients association table; if we just build a query and execute it as a DELETE command, we don't
             # get any session support from SQLAlchemy to manage related objects
-            to_delete: List[EmailLog] = db.session.query(EmailLog).filter(EmailLog.send_date < limit)
+            to_delete: List[EmailLog] = db.session.query(EmailLog).filter(
+                EmailLog.send_date < limit
+            )
             for email in to_delete:
                 email: EmailLog
                 db.session.delete(email)
@@ -44,7 +46,9 @@ def register_prune_email(celery):
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception in prune_email_log()", exc_info=e)
+            current_app.logger.exception(
+                "SQLAlchemyError exception in prune_email_log()", exc_info=e
+            )
             raise self.retry()
 
         self.update_state(state="FINISHED")
@@ -59,7 +63,9 @@ def register_prune_email(celery):
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception in delete_all_email()", exc_info=e)
+            current_app.logger.exception(
+                "SQLAlchemyError exception in delete_all_email()", exc_info=e
+            )
             raise self.retry()
 
         self.update_state(state="FINISHED")

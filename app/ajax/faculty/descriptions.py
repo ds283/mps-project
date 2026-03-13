@@ -57,9 +57,15 @@ def _get_pclass(desc):
     return first.id
 
 
-def descriptions_data(descs, label, menu, pclass_id=None, create=None, config=None, desc_validator=None):
-    error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
-    error_block_popover = get_template_attribute("error_block.html", "error_block_popover")
+def descriptions_data(
+        descs, label, menu, pclass_id=None, create=None, config=None, desc_validator=None
+):
+    error_block_inline = get_template_attribute(
+        "error_block.html", "error_block_inline"
+    )
+    error_block_popover = get_template_attribute(
+        "error_block.html", "error_block_popover"
+    )
 
     simple_label = get_template_attribute("labels.html", "simple_label")
 
@@ -79,7 +85,13 @@ def descriptions_data(descs, label, menu, pclass_id=None, create=None, config=No
             "pclasses": render_template_string(_pclasses, d=d),
             "team": render_template_string(_team, d=d, simple_label=simple_label),
             "capacity": d.capacity,
-            "menu": render_template_string(menu, d=d, pclass_id=pclass_id, create=create, desc_validator=desc_validator),
+            "menu": render_template_string(
+                menu,
+                d=d,
+                pclass_id=pclass_id,
+                create=create,
+                desc_validator=desc_validator,
+            ),
         }
         for d in descs
     ]

@@ -234,13 +234,29 @@ def faculty_workload_data(config: ProjectClassConfig, faculty):
 
         data.append(
             {
-                "name": '<a class="text-decoration-none" href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
-                "supervising": render_template(supervising_templ, f=fd, config=config, recs=projects),
-                "marking": render_template(assessing_templ, f=fd, config=config, recs=marking),
-                "moderating": render_template(assessing_templ, f=fd, config=config, recs=moderating),
-                "presentations": render_template(presentations_templ, f=fd, config=config, slots=presentations),
+                "name": '<a class="text-decoration-none" href="mailto:{email}">{name}</a>'.format(
+                    email=u.email, name=u.name
+                ),
+                "supervising": render_template(
+                    supervising_templ, f=fd, config=config, recs=projects
+                ),
+                "marking": render_template(
+                    assessing_templ, f=fd, config=config, recs=marking
+                ),
+                "moderating": render_template(
+                    assessing_templ, f=fd, config=config, recs=moderating
+                ),
+                "presentations": render_template(
+                    presentations_templ, f=fd, config=config, slots=presentations
+                ),
                 "workload": render_template(
-                    workload_templ, CATS_sup=CATS_sup, CATS_mark=CATS_mark, CATS_moderate=CATS_moderate, CATS_pres=CATS_pres, f=fd, config=config
+                    workload_templ,
+                    CATS_sup=CATS_sup,
+                    CATS_mark=CATS_mark,
+                    CATS_moderate=CATS_moderate,
+                    CATS_pres=CATS_pres,
+                    f=fd,
+                    config=config,
                 ),
             }
         )

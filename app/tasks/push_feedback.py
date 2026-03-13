@@ -42,13 +42,17 @@ def register_push_feedback_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def push_period(self, period_id, user_id, cc_convenor, test_email):
         try:
-            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            period: SubmissionPeriodRecord = (
+                db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if period is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load database records"}
+            )
             print("!! push_period: ignored because cannot load SubmissionPeriodRecord")
             raise Ignore()
 
@@ -71,19 +75,29 @@ def register_push_feedback_tasks(celery):
                 for role in record.roles:
                     role: SubmissionRole
                     if not role.feedback_sent:
-                        if role.role in [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]:
+                        if role.role in [
+                            SubmissionRole.ROLE_SUPERVISOR,
+                            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                        ]:
                             supervisors.add(role.user_id)
 
                         if role.role in [SubmissionRole.ROLE_MARKER]:
                             markers.add(role.user_id)
 
-        submitter_tasks = [push_student_feedback.s(rec_id, user_id, cc_convenor, test_email) for rec_id in submitters if rec_id is not None]
+        submitter_tasks = [
+            push_student_feedback.s(rec_id, user_id, cc_convenor, test_email)
+            for rec_id in submitters
+            if rec_id is not None
+        ]
         supervisor_tasks = [
             push_role_feedback.s(
                 supervisor_id,
                 period_id,
                 user_id,
-                [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+                [
+                    SubmissionRole.ROLE_SUPERVISOR,
+                    SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                ],
                 "push_to_supervisor",
                 "Feedback for supervision students",
                 cc_convenor,
@@ -109,7 +123,9 @@ def register_push_feedback_tasks(celery):
             if marker_id is not None
         ]
 
-        tasks = group(submitter_tasks + supervisor_tasks + marker_tasks) | notify_feedback_push.s(period_id, user_id)
+        tasks = group(
+            submitter_tasks + supervisor_tasks + marker_tasks
+        ) | notify_feedback_push.s(period_id, user_id)
 
         raise self.replace(tasks)
 
@@ -134,9 +150,18 @@ def register_push_feedback_tasks(celery):
             asset: GeneratedAsset = report.asset
             object_store = buckets[asset.bucket]
 
-            storage = AssetCloudAdapter(asset, object_store, audit_data=f"push_feedback.attach_reports")
-            d = attach_asset_to_email_msg(msg, storage, current_size, filename=asset.target_name, max_attached_size=MAX_ATTACHMENT_SIZE,
-                                          description="feedback report", endpoint="download_generated_asset")
+            storage = AssetCloudAdapter(
+                asset, object_store, audit_data=f"push_feedback.attach_reports"
+            )
+            d = attach_asset_to_email_msg(
+                msg,
+                storage,
+                current_size,
+                filename=asset.target_name,
+                max_attached_size=MAX_ATTACHMENT_SIZE,
+                description="feedback report",
+                endpoint="download_generated_asset",
+            )
             current_size += d.attached_size
             manifest.extend(d.manifest)
 
@@ -145,13 +170,17 @@ def register_push_feedback_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def push_student_feedback(self, record_id, user_id, cc_convenor, test_email):
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load database records"}
+            )
             return {"error": 1}
 
         period: SubmissionPeriodRecord = record.period
@@ -164,14 +193,24 @@ def register_push_feedback_tasks(celery):
 
         # do nothing if feedback has already been sent
         if record.feedback_sent:
-            return {"ignored": 1, "source": f"push_student_feedback (student={student.name})"}
+            return {
+                "ignored": 1,
+                "source": f"push_student_feedback (student={student.name})",
+            }
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         msg = EmailTemplate.apply_(
             template_type=EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT,
             to=[test_email if test_email is not None else student.email],
             subject_kwargs={"proj": pclass.name, "name": period.display_name},
-            body_kwargs={"sub": sub, "sd": sd, "student": student, "period": period, "pclass": pclass, "record": record},
+            body_kwargs={
+                "sub": sub,
+                "sd": sd,
+                "student": student,
+                "period": period,
+                "pclass": pclass,
+                "record": record,
+            },
             body_attachments={"attached_docs": partial(_attach_reports, record)},
         )
 
@@ -180,7 +219,10 @@ def register_push_feedback_tasks(celery):
 
         # register a new task in the database
         task_id = register_task(
-            msg.subject, description="{proj}: Push {name} feedback to {r}".format(r=", ".join(msg.to), proj=pclass.name, name=period.display_name)
+            msg.subject,
+            description="{proj}: Push {name} feedback to {r}".format(
+                r=", ".join(msg.to), proj=pclass.name, name=period.display_name
+            ),
         )
 
         send_tasks = chain(
@@ -191,15 +233,30 @@ def register_push_feedback_tasks(celery):
         return self.replace(send_tasks)
 
     @celery.task(bind=True, default_retry_delay=30)
-    def push_role_feedback(self, person_id, period_id, user_id, target_roles, template_name, email_subject, cc_convenor, test_email, outcome_label):
+    def push_role_feedback(
+            self,
+            person_id,
+            period_id,
+            user_id,
+            target_roles,
+            template_name,
+            email_subject,
+            cc_convenor,
+            test_email,
+            outcome_label,
+    ):
         try:
-            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            period: SubmissionPeriodRecord = (
+                db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if period is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load database records"}
+            )
             return {"error": 1}
 
         try:
@@ -209,7 +266,9 @@ def register_push_feedback_tasks(celery):
             raise self.retry()
 
         if person is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load database records"}
+            )
             return {"error": 1}
 
         # build list of submitters for which we need to send emails to this person
@@ -218,7 +277,11 @@ def register_push_feedback_tasks(celery):
             record: SubmissionRecord
             for role in record.roles:
                 role: SubmissionRole
-                if not role.feedback_sent and role.user_id == person_id and role.role in target_roles:
+                if (
+                        not role.feedback_sent
+                        and role.user_id == person_id
+                        and role.role in target_roles
+                ):
                     submitters.append(record)
 
         if len(submitters) == 0:
@@ -234,30 +297,48 @@ def register_push_feedback_tasks(celery):
         }
         email_template_type = _TEMPLATE_TYPE_MAP.get(template_name)
         if email_template_type is None:
-            raise RuntimeError(f"push_role_feedback: unknown template_name '{template_name}'")
+            raise RuntimeError(
+                f"push_role_feedback: unknown template_name '{template_name}'"
+            )
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
 
         msg = EmailTemplate.apply_(
             template_type=email_template_type,
             to=[test_email if test_email is not None else person.email],
-            subject_kwargs={"pclass_name": pclass.name, "period_name": period.display_name, "email_subject": email_subject},
-            body_kwargs={"person": person, "submitters": submitters, "period": period, "pclass": pclass},
-            body_attachments={f'submitter_{submitter.id}': partial(_attach_reports, submitter) for submitter in submitters},
+            subject_kwargs={
+                "pclass_name": pclass.name,
+                "period_name": period.display_name,
+                "email_subject": email_subject,
+            },
+            body_kwargs={
+                "person": person,
+                "submitters": submitters,
+                "period": period,
+                "pclass": pclass,
+            },
+            body_attachments={
+                f"submitter_{submitter.id}": partial(_attach_reports, submitter)
+                for submitter in submitters
+            },
         )
 
         if test_email is None and cc_convenor:
             msg.cc = [config.convenor_email]
 
-
         # register a new task in the database
         task_id = register_task(
-            msg.subject, description="{proj}: Push {name} feedback to {r}".format(r=", ".join(msg.to), proj=pclass.name, name=period.display_name)
+            msg.subject,
+            description="{proj}: Push {name} feedback to {r}".format(
+                r=", ".join(msg.to), proj=pclass.name, name=period.display_name
+            ),
         )
 
         send_tasks = chain(
             send_log_email.s(task_id, msg),
-            mark_role_feedback_sent.s(person_id, period_id, user_id, target_roles, test_email, outcome_label),
+            mark_role_feedback_sent.s(
+                person_id, period_id, user_id, target_roles, test_email, outcome_label
+            ),
         )
 
         return self.replace(send_tasks)
@@ -265,16 +346,22 @@ def register_push_feedback_tasks(celery):
     @celery.task(bind=True, default_retry_delay=5)
     def mark_submitter_feedback_sent(self, result_data, record_id, user_id, test_email):
         if "outcome" not in result_data:
-            print(f"!! mark_submitter_feedback_sent: no outcome in result_data (result_data={result_data})")
+            print(
+                f"!! mark_submitter_feedback_sent: no outcome in result_data (result_data={result_data})"
+            )
             return {"error": 1}
 
         outcome = result_data["outcome"]
         if outcome in ["unknown", "failure"]:
-            print(f"!! mark_submitter_feedback_sent: outcome was unknown or failure (result_data={result_data})")
+            print(
+                f"!! mark_submitter_feedback_sent: outcome was unknown or failure (result_data={result_data})"
+            )
             return {"error": 1}
 
         if outcome in ["no-store"]:
-            print(f"!! mark_submitter_feedback_sent: outcome was marked no-store (result_data={result_data})")
+            print(
+                f"!! mark_submitter_feedback_sent: outcome was marked no-store (result_data={result_data})"
+            )
             return {"push_submitter": 1}
 
         user: Optional[User] = None
@@ -293,17 +380,23 @@ def register_push_feedback_tasks(celery):
             )
 
         if test_email is not None:
-            print(f">> mark_submitter_feedback_sent: not marking as sent because test_email={test_email}")
+            print(
+                f">> mark_submitter_feedback_sent: not marking as sent because test_email={test_email}"
+            )
             return {"push_submitter": 1}
 
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load database records"}
+            )
             print("!! mark_submitter_feedback_sent: Could not load SubmissionRecord")
             data = {"error": 1}
             if "key" in result_data:
@@ -312,7 +405,9 @@ def register_push_feedback_tasks(celery):
 
         if "key" in result_data:
             try:
-                email: Optional[EmailLog] = db.session.query(EmailLog).filter_by(id=result_data["key"]).first()
+                email: Optional[EmailLog] = (
+                    db.session.query(EmailLog).filter_by(id=result_data["key"]).first()
+                )
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
@@ -332,18 +427,33 @@ def register_push_feedback_tasks(celery):
         return {"push_submitter": 1}
 
     @celery.task(bind=True, default_retry_delay=5)
-    def mark_role_feedback_sent(self, result_data, person_id, period_id, user_id, target_roles, test_email, outcome_label):
+    def mark_role_feedback_sent(
+            self,
+            result_data,
+            person_id,
+            period_id,
+            user_id,
+            target_roles,
+            test_email,
+            outcome_label,
+    ):
         if "outcome" not in result_data:
-            print(f"!! mark_role_feedback_sent: no outcome in result_data (result_data={result_data})")
+            print(
+                f"!! mark_role_feedback_sent: no outcome in result_data (result_data={result_data})"
+            )
             return {"error": 1}
 
         outcome = result_data["outcome"]
         if outcome in ["unknown", "failure"]:
-            print(f"!! mark_role_feedback_sent: outcome was unknown or failure (result_data={result_data})")
+            print(
+                f"!! mark_role_feedback_sent: outcome was unknown or failure (result_data={result_data})"
+            )
             return {"error": 1}
 
         if outcome in ["no-store"]:
-            print(f"!! mark_role_feedback_sent: outcome was no-store (result_data={result_data})")
+            print(
+                f"!! mark_role_feedback_sent: outcome was no-store (result_data={result_data})"
+            )
             return {outcome_label: 1}
 
         try:
@@ -353,7 +463,9 @@ def register_push_feedback_tasks(celery):
             raise self.retry()
 
         if person is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load database records"}
+            )
             return {"error": 1}
 
         user: Optional[User] = None
@@ -372,17 +484,23 @@ def register_push_feedback_tasks(celery):
             )
 
         if test_email is not None:
-            print(f">> mark_role_feedback_sent: not marking as sent because test_email={test_email}")
+            print(
+                f">> mark_role_feedback_sent: not marking as sent because test_email={test_email}"
+            )
             return {outcome_label: 1}
 
         try:
-            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            period: SubmissionPeriodRecord = (
+                db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if period is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load database records"}
+            )
             print("!! mark_role_feedback_sent: Could not load SubmissionRecord")
             data = {"error": 1}
             if "key" in result_data:
@@ -392,7 +510,9 @@ def register_push_feedback_tasks(celery):
         email: Optional[EmailLog] = None
         if "key" in result_data:
             try:
-                email = db.session.query(EmailLog).filter_by(id=result_data["key"]).first()
+                email = (
+                    db.session.query(EmailLog).filter_by(id=result_data["key"]).first()
+                )
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
@@ -401,7 +521,11 @@ def register_push_feedback_tasks(celery):
             record: SubmissionRecord
             for role in record.roles:
                 role: SubmissionRole
-                if not role.feedback_sent and role.user_id == person_id and role.role in target_roles:
+                if (
+                        not role.feedback_sent
+                        and role.user_id == person_id
+                        and role.role in target_roles
+                ):
                     role.feedback_sent = True
                     role.feedback_push_id = user_id
                     role.feedback_push_timestamp = datetime.now()
@@ -423,14 +547,20 @@ def register_push_feedback_tasks(celery):
             return
 
         try:
-            period = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            period = (
+                db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if period is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load database records"})
-            print("!! notify_feedback_push: ignored because cannot load SubmissionPeriodRecord")
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load database records"}
+            )
+            print(
+                "!! notify_feedback_push: ignored because cannot load SubmissionPeriodRecord"
+            )
             raise Ignore()
 
         config: ProjectClassConfig = period.config
@@ -442,7 +572,9 @@ def register_push_feedback_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load User record from database"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load User record from database"}
+            )
             print("!! notify_feedback_push: ignored because cannot load User")
             raise Ignore()
 
@@ -465,11 +597,15 @@ def register_push_feedback_tasks(celery):
                             push_supervisor += result["push_supervisor"]
                         if "ignored" in result:
                             ignored += result["ignored"]
-                            print(f'!! notify_feedback_push: notified that a push was ignored: "{result}"')
+                            print(
+                                f'!! notify_feedback_push: notified that a push was ignored: "{result}"'
+                            )
                         if "error" in result:
                             error += result["error"]
                     else:
-                        raise RuntimeError("Expected individual group results to be dictionaries")
+                        raise RuntimeError(
+                            "Expected individual group results to be dictionaries"
+                        )
             else:
                 raise RuntimeError("Expected record result data to be a list")
 

@@ -96,7 +96,9 @@ def pastproject_data(projects):
     truncate = get_template_attribute("macros.html", "truncate")
 
     project_metadata = get_template_attribute("faculty/macros.html", "project_metadata")
-    project_selection_data = get_template_attribute("faculty/macros.html", "project_selection_data")
+    project_selection_data = get_template_attribute(
+        "faculty/macros.html", "project_selection_data"
+    )
 
     name_templ: Template = _build_name_templ()
     pclass_templ: Template = _build_pclass_templ()
@@ -109,8 +111,18 @@ def pastproject_data(projects):
             "year": "{c}".format(c=p.config.year),
             "name": render_template(name_templ, p=p),
             "pclass": render_template(pclass_templ, config=p.config),
-            "group": render_template(affiliation_templ, project=p, simple_label=simple_label, truncate=truncate),
-            "metadata": render_template(metadata_templ, p=p, project_selection_data=project_selection_data, project_metadata=project_metadata),
+            "group": render_template(
+                affiliation_templ,
+                project=p,
+                simple_label=simple_label,
+                truncate=truncate,
+            ),
+            "metadata": render_template(
+                metadata_templ,
+                p=p,
+                project_selection_data=project_selection_data,
+                project_metadata=project_metadata,
+            ),
             "students": '<i class="fas fa-ban"></i> Not yet implemented',
             "menu": render_template(menu_templ, project=p),
         }

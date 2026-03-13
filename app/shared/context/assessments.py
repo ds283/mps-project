@@ -37,7 +37,11 @@ def get_schedule_message_data(configs=None):
                                         "error",
                                         'Event "{event}" and deployed schedule "{name}" for project class '
                                         '"{pclass}" contain validation errors. Please attend to these as soon '
-                                        "as possible.".format(name=schedule.name, event=schedule.event_name, pclass=config.project_class.name),
+                                        "as possible.".format(
+                                            name=schedule.name,
+                                            event=schedule.event_name,
+                                            pclass=config.project_class.name,
+                                        ),
                                     )
                                 )
                                 error_events.add(schedule.event_name)
@@ -49,7 +53,11 @@ def get_schedule_message_data(configs=None):
                                         "error",
                                         'Deployed schedule "{name}" for event "{event}" and project class "{pclass}" '
                                         "contains validation errors. Please attend to these as soon as "
-                                        "possible.".format(name=schedule.name, event=schedule.event_name, pclass=config.project_class.name),
+                                        "possible.".format(
+                                            name=schedule.name,
+                                            event=schedule.event_name,
+                                            pclass=config.project_class.name,
+                                        ),
                                     )
                                 )
                                 error_schedules.add(schedule.name)
@@ -61,7 +69,11 @@ def get_schedule_message_data(configs=None):
                                         "warning",
                                         'Deployed schedule "{name}" for event "{event}" and project class '
                                         '"{pclass}" contains validation'
-                                        " warnings.".format(name=schedule.name, event=schedule.event_name, pclass=config.project_class.name),
+                                        " warnings.".format(
+                                            name=schedule.name,
+                                            event=schedule.event_name,
+                                            pclass=config.project_class.name,
+                                        ),
                                     )
                                 )
                                 error_schedules.add(schedule.name)

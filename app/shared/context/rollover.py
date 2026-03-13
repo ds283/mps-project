@@ -46,4 +46,7 @@ def get_rollover_data(configs=None, current_year=None):
     if not rollover_ready and not some_pclass_published:
         rollover_ready = True
 
-    return {"rollover_ready": rollover_ready, "rollover_in_progress": rollover_in_progress}
+    return {
+        "rollover_ready": rollover_ready,
+        "rollover_in_progress": rollover_in_progress,
+    }

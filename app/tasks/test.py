@@ -26,19 +26,33 @@ def register_test_tasks(celery):
         noun = ["solar array", "particle reshaper", "cosmic ray", "orbiter", "bit"]
 
         message = ""
-        progress_update(task_id, TaskRecord.RUNNING, 0, "Test task initializing", autocommit=True)
+        progress_update(
+            task_id, TaskRecord.RUNNING, 0, "Test task initializing", autocommit=True
+        )
 
         total = random.randint(50, 100)
 
         for i in range(total):
             if not message or random.random() < 0.25:
-                message = "{0} {1} {2}...".format(random.choice(verb), random.choice(adjective), random.choice(noun))
-            self.update_state(state="PROGRESS", meta={"current": i, "total": total, "status": message})
+                message = "{0} {1} {2}...".format(
+                    random.choice(verb), random.choice(adjective), random.choice(noun)
+                )
+            self.update_state(
+                state="PROGRESS", meta={"current": i, "total": total, "status": message}
+            )
 
-            progress_update(task_id, TaskRecord.RUNNING, round(100.0 * float(i) / float(total)), message, autocommit=True)
+            progress_update(
+                task_id,
+                TaskRecord.RUNNING,
+                round(100.0 * float(i) / float(total)),
+                message,
+                autocommit=True,
+            )
 
             time.sleep(1)
 
-        progress_update(task_id, TaskRecord.SUCCESS, 100, "Test task finalized", autocommit=True)
+        progress_update(
+            task_id, TaskRecord.SUCCESS, 100, "Test task finalized", autocommit=True
+        )
 
         return {"current": 100, "total": 100, "status": "Task completed!", "result": 42}

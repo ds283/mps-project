@@ -147,7 +147,9 @@ def _build_selections_templ() -> Template:
 def selector_grid_data(students: List[SelectingStudent], config: ProjectClassConfig):
     simple_label = get_template_attribute("labels.html", "simple_label")
     small_swatch = get_template_attribute("swatch.html", "small_swatch")
-    render_formatted_project = get_template_attribute("macros.html", "render_formatted_project")
+    render_formatted_project = get_template_attribute(
+        "macros.html", "render_formatted_project"
+    )
 
     name_templ: Template = _build_name_templ()
     programme_templ: Template = _build_programme_templ()
@@ -169,11 +171,29 @@ def selector_grid_data(students: List[SelectingStudent], config: ProjectClassCon
 
     data = [
         {
-            "name": {"display": render_template(name_templ, sel=s), "sortstring": s.student.user.last_name + s.student.user.first_name},
-            "programme": render_template(programme_templ, s=s, simple_label=simple_label),
-            "cohort": {"display": render_template(cohort_templ, sel=s, simple_label=simple_label), "value": s.student.cohort},
-            "selections": {"display": render_template(selections_templ, sel=s, config=config, small_swatch=small_swatch,
-                                                      render_formatted_project=render_formatted_project), "sortvalue": sel_count(s)},
+            "name": {
+                "display": render_template(name_templ, sel=s),
+                "sortstring": s.student.user.last_name + s.student.user.first_name,
+            },
+            "programme": render_template(
+                programme_templ, s=s, simple_label=simple_label
+            ),
+            "cohort": {
+                "display": render_template(
+                    cohort_templ, sel=s, simple_label=simple_label
+                ),
+                "value": s.student.cohort,
+            },
+            "selections": {
+                "display": render_template(
+                    selections_templ,
+                    sel=s,
+                    config=config,
+                    small_swatch=small_swatch,
+                    render_formatted_project=render_formatted_project,
+                ),
+                "sortvalue": sel_count(s),
+            },
         }
         for s in students
     ]

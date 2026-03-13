@@ -122,7 +122,11 @@ def _build_menu_templ() -> Template:
     return env.from_string(_menu)
 
 
-def liveproject_alternatives(alternatives: List[LiveProjectAlternative], url: Optional[str] = None, text: Optional[str] = None):
+def liveproject_alternatives(
+        alternatives: List[LiveProjectAlternative],
+        url: Optional[str] = None,
+        text: Optional[str] = None,
+):
     project_templ: Template = _build_project_templ()
     priority_templ: Template = _build_priority_templ()
     supervision_templ: Template = _build_supervision_templ()
@@ -130,7 +134,9 @@ def liveproject_alternatives(alternatives: List[LiveProjectAlternative], url: Op
 
     data = [
         {
-            "project": render_template(project_templ, alt=alt, lp=alt.alternative, url=url, text=text),
+            "project": render_template(
+                project_templ, alt=alt, lp=alt.alternative, url=url, text=text
+            ),
             "priority": render_template(priority_templ, alt=alt),
             "supervision": render_template(supervision_templ, lp=alt.alternative),
             "menu": render_template(menu_templ, alt=alt, url=url, text=text),
@@ -189,7 +195,9 @@ def _build_alt_actions_templ() -> Template:
     return env.from_string(_alt_actions)
 
 
-def new_liveproject_alternative(projects: List[LiveProject], parent: LiveProject, url: Optional[str] = None):
+def new_liveproject_alternative(
+        projects: List[LiveProject], parent: LiveProject, url: Optional[str] = None
+):
     alternative_templ: Template = _build_alternative_templ()
     owner_templ: Template = _build_owner_templ()
     alt_actions_templ: Template = _build_alt_actions_templ()
@@ -198,9 +206,13 @@ def new_liveproject_alternative(projects: List[LiveProject], parent: LiveProject
 
     data = [
         {
-            "project": render_template(alternative_templ, alt_lp=lp, parent=parent, url=url),
+            "project": render_template(
+                alternative_templ, alt_lp=lp, parent=parent, url=url
+            ),
             "owner": render_template(owner_templ, alt_lp=lp, simple_label=simple_label),
-            "actions": render_template(alt_actions_templ, alt_lp=lp, parent=parent, url=url)
+            "actions": render_template(
+                alt_actions_templ, alt_lp=lp, parent=parent, url=url
+            ),
         }
         for lp in projects
     ]

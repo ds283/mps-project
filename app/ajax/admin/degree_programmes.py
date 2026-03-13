@@ -8,7 +8,12 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, get_template_attribute, render_template, current_app
+from flask import (
+    render_template_string,
+    get_template_attribute,
+    render_template,
+    current_app,
+)
 from jinja2 import Template, Environment
 
 # language=jinja2
@@ -159,7 +164,9 @@ def degree_programmes_data(programmes):
     data = [
         {
             "name": render_template(name_templ, p=p, simple_label=simple_label),
-            "type": render_template(type_templ, t=p.degree_type, simple_label=simple_label),
+            "type": render_template(
+                type_templ, t=p.degree_type, simple_label=simple_label
+            ),
             "show_type": render_template(show_type_templ, p=p),
             "course_code": render_template(course_code_templ, p=p),
             "active": render_template(active_templ, p=p),

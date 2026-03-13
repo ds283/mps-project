@@ -25,7 +25,15 @@ from wtforms import (
     RadioField,
     ValidationError,
 )
-from wtforms.validators import InputRequired, Optional, Length, URL, NumberRange, Regexp, DataRequired
+from wtforms.validators import (
+    InputRequired,
+    Optional,
+    Length,
+    URL,
+    NumberRange,
+    Regexp,
+    DataRequired,
+)
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..documents.forms import LicenseMixin
@@ -48,7 +56,8 @@ from ..models import (
     DEFAULT_ASSIGNED_MARKERS,
     DEFAULT_ASSIGNED_MODERATORS,
     DEFAULT_STRING_LENGTH,
-    ProjectClassConfig, Tenant,
+    ProjectClassConfig,
+    Tenant,
     EmailTemplate,
 )
 from ..shared.forms.mixins import SaveChangesMixin, PeriodPresentationsMixin
@@ -87,8 +96,11 @@ from ..shared.forms.queries import (
     GetActiveTemplateTags,
     BuildTemplateTagName,
     GetAllFeedbackTemplates,
-    GetAllNonTemplateFeedbackAssets, GetAllTenants, BuildTenantName,
-    GetActiveEmailTemplateLabels, BuildEmailTemplateLabelName,
+    GetAllNonTemplateFeedbackAssets,
+    GetAllTenants,
+    BuildTenantName,
+    GetActiveEmailTemplateLabels,
+    BuildEmailTemplateLabelName,
 )
 from ..shared.forms.widgets import BasicTagSelectField
 from ..shared.forms.wtf_validators import (
@@ -162,7 +174,11 @@ class GlobalConfigForm(Form):
 
     canvas_url = StringField(
         "Root Canvas URL",
-        validators=[NotOptionalIf("enable_canvas_sync"), Length(max=DEFAULT_STRING_LENGTH), URL()],
+        validators=[
+            NotOptionalIf("enable_canvas_sync"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            URL(),
+        ],
         description="Provide the root URL for the Canvas instance that should be used for push or pull of student data.",
     )
 
@@ -180,30 +196,57 @@ class EditTenantsMixin:
         description="Assign to one or more tenants. At least one tenant is required.",
     )
 
+
 class AddResearchGroupForm(Form, ResearchGroupMixin, EditTenantsMixin):
-    name = StringField("Name", validators=[InputRequired(message="Name is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_group_name])
+    name = StringField(
+        "Name",
+        validators=[
+            InputRequired(message="Name is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            globally_unique_group_name,
+        ],
+    )
 
     abbreviation = StringField(
         "Abbreviation",
-        validators=[InputRequired(message="Abbreviation is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_group_abbreviation],
+        validators=[
+            InputRequired(message="Abbreviation is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            globally_unique_group_abbreviation,
+        ],
     )
 
     submit = SubmitField("Add new group")
 
 
-class EditResearchGroupForm(Form, ResearchGroupMixin, EditTenantsMixin, SaveChangesMixin):
+class EditResearchGroupForm(
+    Form, ResearchGroupMixin, EditTenantsMixin, SaveChangesMixin
+):
     name = StringField(
-        "Name", validators=[InputRequired(message="Name is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_group_name]
+        "Name",
+        validators=[
+            InputRequired(message="Name is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            unique_or_original_group_name,
+        ],
     )
 
     abbreviation = StringField(
         "Abbreviation",
-        validators=[InputRequired(message="Abbreviation is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_group_abbreviation],
+        validators=[
+            InputRequired(message="Abbreviation is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            unique_or_original_group_abbreviation,
+        ],
     )
 
 
 class DegreeTypeMixin:
-    colour = StringField("Colour", description="Assign a colour to help identify this degree type.", validators=[Length(max=DEFAULT_STRING_LENGTH)])
+    colour = StringField(
+        "Colour",
+        description="Assign a colour to help identify this degree type.",
+        validators=[Length(max=DEFAULT_STRING_LENGTH)],
+    )
 
     duration = IntegerField(
         "Duration",
@@ -212,18 +255,30 @@ class DegreeTypeMixin:
     )
 
     level = SelectField(
-        "Student level", description="Is this degree type associated with UG, PGT or PGT students?", choices=student_level_choices, coerce=int
+        "Student level",
+        description="Is this degree type associated with UG, PGT or PGT students?",
+        choices=student_level_choices,
+        coerce=int,
     )
 
 
 class AddDegreeTypeForm(Form, DegreeTypeMixin):
     name = StringField(
-        "Name", validators=[InputRequired(message="Degree type name is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_degree_type]
+        "Name",
+        validators=[
+            InputRequired(message="Degree type name is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            globally_unique_degree_type,
+        ],
     )
 
     abbreviation = StringField(
         "Abbreviation",
-        validators=[InputRequired(message="Abbreviation is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_degree_abbreviation],
+        validators=[
+            InputRequired(message="Abbreviation is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            globally_unique_degree_abbreviation,
+        ],
     )
 
     submit = SubmitField("Add new degree type")
@@ -231,17 +286,28 @@ class AddDegreeTypeForm(Form, DegreeTypeMixin):
 
 class EditDegreeTypeForm(Form, DegreeTypeMixin, SaveChangesMixin):
     name = StringField(
-        "Name", validators=[InputRequired(message="Degree type name is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_degree_type]
+        "Name",
+        validators=[
+            InputRequired(message="Degree type name is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            unique_or_original_degree_type,
+        ],
     )
 
     abbreviation = StringField(
         "Abbreviation",
-        validators=[InputRequired(message="Abbreviation is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_degree_abbreviation],
+        validators=[
+            InputRequired(message="Abbreviation is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            unique_or_original_degree_abbreviation,
+        ],
     )
 
 
 class DegreeProgrammeMixin:
-    degree_type = QuerySelectField("Degree type", query_factory=GetActiveDegreeTypes, get_label="name")
+    degree_type = QuerySelectField(
+        "Degree type", query_factory=GetActiveDegreeTypes, get_label="name"
+    )
 
     show_type = BooleanField(
         "Show degree type in name",
@@ -269,22 +335,37 @@ class DegreeProgrammeMixin:
 class AddDegreeProgrammeForm(Form, EditTenantsMixin, DegreeProgrammeMixin):
     name = StringField(
         "Name",
-        validators=[InputRequired(message="Degree programme name is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_degree_programme],
+        validators=[
+            InputRequired(message="Degree programme name is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            globally_unique_degree_programme,
+        ],
     )
 
     abbreviation = StringField(
         "Abbreviation",
-        validators=[InputRequired(message="Abbreviation is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_programme_abbreviation],
+        validators=[
+            InputRequired(message="Abbreviation is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            globally_unique_programme_abbreviation,
+        ],
     )
 
     course_code = StringField(
-        "Course code", validators=[InputRequired(message="Course code is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_course_code]
+        "Course code",
+        validators=[
+            InputRequired(message="Course code is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            globally_unique_course_code,
+        ],
     )
 
     submit = SubmitField("Add new degree programme")
 
 
-class EditDegreeProgrammeForm(Form, DegreeProgrammeMixin, EditTenantsMixin, SaveChangesMixin):
+class EditDegreeProgrammeForm(
+    Form, DegreeProgrammeMixin, EditTenantsMixin, SaveChangesMixin
+):
     name = StringField(
         "Name",
         validators=[
@@ -296,17 +377,31 @@ class EditDegreeProgrammeForm(Form, DegreeProgrammeMixin, EditTenantsMixin, Save
 
     abbreviation = StringField(
         "Abbreviation",
-        validators=[InputRequired(message="Abbreviation is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_programme_abbreviation],
+        validators=[
+            InputRequired(message="Abbreviation is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            unique_or_original_programme_abbreviation,
+        ],
     )
 
     course_code = StringField(
         "Course code",
-        validators=[InputRequired(message="Course code is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_course_code],
+        validators=[
+            InputRequired(message="Course code is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            unique_or_original_course_code,
+        ],
     )
 
 
 class ModuleMixin:
-    name = StringField("Module name", validators=[InputRequired(message="Module name is required"), Length(max=DEFAULT_STRING_LENGTH)])
+    name = StringField(
+        "Module name",
+        validators=[
+            InputRequired(message="Module name is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
+    )
 
     level = QuerySelectField("Level", query_factory=GetFHEQLevels, get_label="name")
 
@@ -315,7 +410,12 @@ class ModuleMixin:
 
 class AddModuleForm(Form, ModuleMixin):
     code = StringField(
-        "Module code", validators=[InputRequired(message="Module code is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_module_code]
+        "Module code",
+        validators=[
+            InputRequired(message="Module code is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            globally_unique_module_code,
+        ],
     )
 
     submit = SubmitField("Add new module")
@@ -324,7 +424,11 @@ class AddModuleForm(Form, ModuleMixin):
 class EditModuleForm(Form, ModuleMixin, SaveChangesMixin):
     code = StringField(
         "Module code",
-        validators=[InputRequired(message="Module code is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_module_code],
+        validators=[
+            InputRequired(message="Module code is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            unique_or_original_module_code,
+        ],
     )
 
 
@@ -334,21 +438,33 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
 
     class ProjectClassMixin:
         tenant = QuerySelectField(
-            "Tenant", description="Assign a tenant to this project class", query_factory=GetAllTenants, get_label=BuildTenantName,
+            "Tenant",
+            description="Assign a tenant to this project class",
+            query_factory=GetAllTenants,
+            get_label=BuildTenantName,
         )
 
         colour = StringField(
-            "Colour", description="Assign a colour to help students identify this project class.", validators=[Length(max=DEFAULT_STRING_LENGTH)]
+            "Colour",
+            description="Assign a colour to help students identify this project class.",
+            validators=[Length(max=DEFAULT_STRING_LENGTH)],
         )
 
-        do_matching = BooleanField("Use automated global matching of faculty to projects", default=True)
+        do_matching = BooleanField(
+            "Use automated global matching of faculty to projects", default=True
+        )
 
         number_assessors = IntegerField(
             "Number of assessors required per project",
             description="Assessors are used to assign markers, moderators and presentation assessors. "
             "Significantly more than one assessor is required per project to allow "
             "sufficient flexibility during matching.",
-            validators=[NotOptionalIf("do_matching"), NumberRange(min=0, message="Required number of assessors cannot be zero")],
+            validators=[
+                NotOptionalIf("do_matching"),
+                NumberRange(
+                    min=0, message="Required number of assessors cannot be zero"
+                ),
+            ],
         )
 
         student_level = SelectField(
@@ -366,7 +482,10 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
         )
 
         extent = SelectField(
-            "Duration", choices=extent_choices, coerce=int, description="For how many academic years do students participate in the project?"
+            "Duration",
+            choices=extent_choices,
+            coerce=int,
+            description="For how many academic years do students participate in the project?",
         )
 
         is_optional = BooleanField("This project is optional", default=False)
@@ -377,38 +496,63 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
             description="Disable for projects types where only the project list is published, and selection takes place through a different workflow.",
         )
 
-        uses_submission = BooleanField("Students submit work requiring marking or feedback", default=True)
+        uses_submission = BooleanField(
+            "Students submit work requiring marking or feedback", default=True
+        )
 
-        require_confirm = BooleanField("Require faculty to confirm projects yearly", default=True)
+        require_confirm = BooleanField(
+            "Require faculty to confirm projects yearly", default=True
+        )
 
-        supervisor_carryover = BooleanField("For multi-year projects, automatically carry over supervisor year-to-year")
+        supervisor_carryover = BooleanField(
+            "For multi-year projects, automatically carry over supervisor year-to-year"
+        )
 
-        include_available = BooleanField("Include this project class in supervisor availability calculations")
+        include_available = BooleanField(
+            "Include this project class in supervisor availability calculations"
+        )
 
         uses_supervisor = BooleanField(
-            "Uses supervisor roles", default=True, description="Select if the project is actively supervised by one or more members of staff"
+            "Uses supervisor roles",
+            default=True,
+            description="Select if the project is actively supervised by one or more members of staff",
         )
 
         uses_marker = BooleanField(
-            "Uses marker roles", default=True, description="Select if the submissions are assessed by one or more members of staff"
+            "Uses marker roles",
+            default=True,
+            description="Select if the submissions are assessed by one or more members of staff",
         )
 
         uses_moderator = BooleanField(
-            "Uses moderator roles", default=False, description="Select if submissions are moderated by one or more members of staff"
+            "Uses moderator roles",
+            default=False,
+            description="Select if submissions are moderated by one or more members of staff",
         )
 
         uses_presentations = BooleanField("Includes one or more assessed presentations")
 
         display_marker = BooleanField("Display assessor information")
 
-        display_presentations = BooleanField("Display presentation assessment information")
+        display_presentations = BooleanField(
+            "Display presentation assessment information"
+        )
 
-        reenroll_supervisors_early = BooleanField("Re-enroll supervisors one year before end of sabbatical/buyout", default=True)
+        reenroll_supervisors_early = BooleanField(
+            "Re-enroll supervisors one year before end of sabbatical/buyout",
+            default=True,
+        )
 
         initial_choices = IntegerField(
             "Number of initial project preferences",
             description="Select number of preferences students should list before joining.",
-            validators=[NotOptionalIf("uses_selection"), NumberRange(min=1, message="The required number of preferences should be at least 1")],
+            validators=[
+                NotOptionalIf("uses_selection"),
+                NumberRange(
+                    min=1,
+                    message="The required number of preferences should be at least 1",
+                ),
+            ],
         )
 
         allow_switching = BooleanField(
@@ -421,7 +565,13 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
         switch_choices = IntegerField(
             "Number of subsequent project preferences",
             description="Number of preferences to allow in subsequent years, if switching is allowed.",
-            validators=[NotOptionalIf("uses_selection"), NumberRange(min=1, message="The required number of preferences should be at least 1")],
+            validators=[
+                NotOptionalIf("uses_selection"),
+                NumberRange(
+                    min=1,
+                    message="The required number of preferences should be at least 1",
+                ),
+            ],
         )
 
         faculty_maximum = IntegerField(
@@ -429,27 +579,50 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
             description="Optional. Specify a maximum number of projects that "
             "students can select if they are offered by the same "
             "faculty supervisor. Leave blank to disable.",
-            validators=[Optional(), NumberRange(min=1, message="Specified maximum cannot be less than 1")],
+            validators=[
+                Optional(),
+                NumberRange(min=1, message="Specified maximum cannot be less than 1"),
+            ],
         )
 
         CATS_supervision = IntegerField(
             "CATS awarded for project supervision",
-            validators=[NotOptionalIf("uses_supervisor"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
+            validators=[
+                NotOptionalIf("uses_supervisor"),
+                NumberRange(
+                    min=0, message="The specified number of CATS should not be negative"
+                ),
+            ],
         )
 
         CATS_marking = IntegerField(
             "CATS awarded for marking submissions",
-            validators=[NotOptionalIf("uses_marker"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
+            validators=[
+                NotOptionalIf("uses_marker"),
+                NumberRange(
+                    min=0, message="The specified number of CATS should not be negative"
+                ),
+            ],
         )
 
         CATS_moderation = IntegerField(
             "CATS awarded for moderating submissions",
-            validators=[NotOptionalIf("uses_moderator"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
+            validators=[
+                NotOptionalIf("uses_moderator"),
+                NumberRange(
+                    min=0, message="The specified number of CATS should not be negative"
+                ),
+            ],
         )
 
         CATS_presentation = IntegerField(
             "CATS awarded for assessing presentations",
-            validators=[NotOptionalIf("uses_presentations"), NumberRange(min=0, message="The specified number of CATS should not be negative")],
+            validators=[
+                NotOptionalIf("uses_presentations"),
+                NumberRange(
+                    min=0, message="The specified number of CATS should not be negative"
+                ),
+            ],
         )
 
         hourly_choices = [
@@ -468,12 +641,29 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
             (13, "13 days"),
             (14, "14 days"),
         ]
-        keep_hourly_popularity = SelectField("Keep hourly popularity data for", choices=hourly_choices, coerce=int)
+        keep_hourly_popularity = SelectField(
+            "Keep hourly popularity data for", choices=hourly_choices, coerce=int
+        )
 
-        daily_choices = [(1, "1 week"), (2, "2 weeks"), (3, "3 weeks"), (4, "4 weeks"), (5, "5 weeks"), (6, "6 weeks"), (7, "7 weeks"), (8, "8 weeks")]
-        keep_daily_popularity = SelectField("Keep daily popularity data for", choices=daily_choices, coerce=int)
+        daily_choices = [
+            (1, "1 week"),
+            (2, "2 weeks"),
+            (3, "3 weeks"),
+            (4, "4 weeks"),
+            (5, "5 weeks"),
+            (6, "6 weeks"),
+            (7, "7 weeks"),
+            (8, "8 weeks"),
+        ]
+        keep_daily_popularity = SelectField(
+            "Keep daily popularity data for", choices=daily_choices, coerce=int
+        )
 
-        convenor = QuerySelectField("Convenor", query_factory=GetPossibleConvenors, get_label=BuildConvenorRealName)
+        convenor = QuerySelectField(
+            "Convenor",
+            query_factory=GetPossibleConvenors,
+            get_label=BuildConvenorRealName,
+        )
 
         coconvenors = QuerySelectMultipleField(
             "Co-convenors",
@@ -509,8 +699,14 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
 
         @staticmethod
         def validate_approvals_team(form, field):
-            if field.data is None or not isinstance(field.data, list) or len(field.data) == 0:
-                raise ValidationError("At least one member of the approvals pool should be selected to join the approvals team.")
+            if (
+                    field.data is None
+                    or not isinstance(field.data, list)
+                    or len(field.data) == 0
+            ):
+                raise ValidationError(
+                    "At least one member of the approvals pool should be selected to join the approvals team."
+                )
 
         select_in_previous_cycle = BooleanField(
             "Project selection occurs in previous cycle",
@@ -534,10 +730,16 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
             "selectors during rollover of the academic year.",
         )
 
-        auto_enroll_years = RadioField("In which years should students be auto-enrolled as selectors?", choices=auto_enrol_year_choices, coerce=int)
+        auto_enroll_years = RadioField(
+            "In which years should students be auto-enrolled as selectors?",
+            choices=auto_enrol_year_choices,
+            coerce=int,
+        )
 
         programmes = QuerySelectMultipleField(
-            "Auto-enrol students as selectors from degree programmes", query_factory=get_programmes, get_label=BuildDegreeProgrammeName
+            "Auto-enrol students as selectors from degree programmes",
+            query_factory=get_programmes,
+            get_label=BuildDegreeProgrammeName,
         )
 
         # validate_programmes() is an inline validator that is called automatically by WTForms to validate
@@ -549,15 +751,23 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
                 return
 
             # otherwise, at least one programme should be specified
-            if field.data is None or not isinstance(field.data, list) or len(field.data) == 0:
-                raise ValidationError("At least one degree programme should be selected")
+            if (
+                    field.data is None
+                    or not isinstance(field.data, list)
+                    or len(field.data) == 0
+            ):
+                raise ValidationError(
+                    "At least one degree programme should be selected"
+                )
 
             # check all programmes are consistent with the specified project level
             for programme in field.data:
                 programme: DegreeProgramme
                 programme_type: DegreeType = programme.degree_type
                 if programme_type.level != form.student_level.data:
-                    raise ValidationError("The selected degree programmes are not consistent with the required student level")
+                    raise ValidationError(
+                        "The selected degree programmes are not consistent with the required student level"
+                    )
 
         advertise_research_group = BooleanField(
             "Advertise affiliations/research groups to students",
@@ -568,7 +778,10 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
             "within the department.",
         )
 
-        use_project_tags = BooleanField("Use tags", description="Each project variant can be given one or more tags, which are advertised to students.")
+        use_project_tags = BooleanField(
+            "Use tags",
+            description="Each project variant can be given one or more tags, which are advertised to students.",
+        )
 
         force_tag_groups = QuerySelectMultipleField(
             "Require tags from specific groups",
@@ -589,12 +802,20 @@ def AddProjectClassFormFactory(allowed_tenants: List[Tenant]):
     class AddProjectClassForm(Form, ProjectClassMixin):
         name = StringField(
             "Name",
-            validators=[InputRequired(message="Name of project class is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_project_class],
+            validators=[
+                InputRequired(message="Name of project class is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+                globally_unique_project_class,
+            ],
         )
 
         abbreviation = StringField(
             "Abbreviation",
-            validators=[InputRequired(message="An abbreviation is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_project_class_abbrev],
+            validators=[
+                InputRequired(message="An abbreviation is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+                globally_unique_project_class_abbrev,
+            ],
         )
 
         submit = SubmitField("Add new project class")
@@ -608,38 +829,68 @@ def EditProjectClassFormFactory(allowed_tenants: List[Tenant]):
     class EditProjectClassForm(Form, ProjectClassMixin, SaveChangesMixin):
         name = StringField(
             "Name",
-            validators=[InputRequired(message="Name of project class is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_project_class],
+            validators=[
+                InputRequired(message="Name of project class is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+                unique_or_original_project_class,
+            ],
         )
 
         abbreviation = StringField(
             "Abbreviation",
-            validators=[InputRequired(message="An abbreviation is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_project_class_abbrev],
+            validators=[
+                InputRequired(message="An abbreviation is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+                unique_or_original_project_class_abbrev,
+            ],
         )
 
     return EditProjectClassForm
 
 
 class EditProjectTextForm(Form, SaveChangesMixin):
-    card_text_normal = TextAreaField("Text seen by normal selectors", render_kw={"rows": 5}, validators=[Optional()])
+    card_text_normal = TextAreaField(
+        "Text seen by normal selectors", render_kw={"rows": 5}, validators=[Optional()]
+    )
 
-    card_text_optional = TextAreaField("Text seen by selectors for whom this project is optional", render_kw={"rows": 5}, validators=[Optional()])
+    card_text_optional = TextAreaField(
+        "Text seen by selectors for whom this project is optional",
+        render_kw={"rows": 5},
+        validators=[Optional()],
+    )
 
-    card_text_noninitial = TextAreaField("Text seen by selectors who may be changing supervisor", render_kw={"rows": 5}, validators=[Optional()])
+    card_text_noninitial = TextAreaField(
+        "Text seen by selectors who may be changing supervisor",
+        render_kw={"rows": 5},
+        validators=[Optional()],
+    )
 
-    email_text_draft_match_preamble = TextAreaField("Preamble for notification of draft matching", render_kw={"rows": 5}, validators=[Optional()])
+    email_text_draft_match_preamble = TextAreaField(
+        "Preamble for notification of draft matching",
+        render_kw={"rows": 5},
+        validators=[Optional()],
+    )
 
-    email_text_final_match_preamble = TextAreaField("Preamble for notification of final matching", render_kw={"rows": 5}, validators=[Optional()])
+    email_text_final_match_preamble = TextAreaField(
+        "Preamble for notification of final matching",
+        render_kw={"rows": 5},
+        validators=[Optional()],
+    )
 
 
 class PeriodDefinitionMixin:
     name = StringField(
         "Name",
-        description="Optional. Enter an alternative text name for this submission " 'period, such as "Autumn Term"',
+        description="Optional. Enter an alternative text name for this submission "
+                    'period, such as "Autumn Term"',
         validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
     )
 
     start_date = DateTimeField(
-        "Period start date", format="%d/%m/%Y", validators=[Optional()], description="The year will increment when a rollover takes place"
+        "Period start date",
+        format="%d/%m/%Y",
+        validators=[Optional()],
+        description="The year will increment when a rollover takes place",
     )
 
     number_markers = IntegerField(
@@ -648,7 +899,9 @@ class PeriodDefinitionMixin:
         description="Number of markers that should be assigned to each project. Used during automated matching.",
         validators=[
             InputRequired("Please enter the required number of markers"),
-            NumberRange(min=0, message="The required number of markers should not be negative"),
+            NumberRange(
+                min=0, message="The required number of markers should not be negative"
+            ),
         ],
     )
 
@@ -661,25 +914,34 @@ class PeriodDefinitionMixin:
         "the marking workflow.",
         validators=[
             InputRequired("Please enter the required number of moderators"),
-            NumberRange(min=0, message="The required number of moderators should not be negative"),
+            NumberRange(
+                min=0,
+                message="The required number of moderators should not be negative",
+            ),
         ],
     )
 
     @staticmethod
     def validate_number_markers(form, field):
         if form._pclass.uses_marker and field.data == 0:
-            raise ValidationError("This project class uses markers. The number of markers should be 1 or greater.")
+            raise ValidationError(
+                "This project class uses markers. The number of markers should be 1 or greater."
+            )
 
     @staticmethod
     def validate_number_moderators(form, field):
         if form._pclass.uses_moderator and field.data == 0:
-            raise ValidationError("This project class uses moderators. This number of moderators should be 1 or greater.")
+            raise ValidationError(
+                "This project class uses moderators. This number of moderators should be 1 or greater."
+            )
 
     collect_project_feedback = BooleanField("Collect project feedback online")
 
 
 def AddPeriodDefinitionFormFactory(pclass: ProjectClass):
-    class AddPeriodDefinitionForm(Form, PeriodDefinitionMixin, PeriodPresentationsMixin):
+    class AddPeriodDefinitionForm(
+        Form, PeriodDefinitionMixin, PeriodPresentationsMixin
+    ):
         _pclass = pclass
 
         submit = SubmitField("Add new submission period")
@@ -688,7 +950,9 @@ def AddPeriodDefinitionFormFactory(pclass: ProjectClass):
 
 
 def EditPeriodDefinitionFormFactory(pclass: ProjectClass):
-    class EditPeriodDefinitionForm(Form, PeriodDefinitionMixin, PeriodPresentationsMixin, SaveChangesMixin):
+    class EditPeriodDefinitionForm(
+        Form, PeriodDefinitionMixin, PeriodPresentationsMixin, SaveChangesMixin
+    ):
         _pclass = pclass
 
     return EditPeriodDefinitionForm
@@ -696,19 +960,29 @@ def EditPeriodDefinitionFormFactory(pclass: ProjectClass):
 
 class SupervisorMixin:
     colour = StringField(
-        "Colour", validators=[Length(max=DEFAULT_STRING_LENGTH)], description="Assign a colour to help students identify the roles of team members"
+        "Colour",
+        validators=[Length(max=DEFAULT_STRING_LENGTH)],
+        description="Assign a colour to help students identify the roles of team members",
     )
 
 
 class AddSupervisorForm(Form, SupervisorMixin):
     name = StringField(
         "Name",
-        validators=[InputRequired(message="Name of supervisory role is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_supervisor],
+        validators=[
+            InputRequired(message="Name of supervisory role is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            globally_unique_supervisor,
+        ],
     )
 
     abbreviation = StringField(
         "Abbreviation",
-        validators=[InputRequired(message="An abbreviation is required"), Length(max=DEFAULT_STRING_LENGTH), globally_unique_supervisor_abbrev],
+        validators=[
+            InputRequired(message="An abbreviation is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            globally_unique_supervisor_abbrev,
+        ],
     )
     submit = SubmitField("Add new supervisory role")
 
@@ -716,18 +990,31 @@ class AddSupervisorForm(Form, SupervisorMixin):
 class EditSupervisorForm(Form, SupervisorMixin, SaveChangesMixin):
     name = StringField(
         "Name",
-        validators=[InputRequired(message="Name of supervisory role is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_supervisor],
+        validators=[
+            InputRequired(message="Name of supervisory role is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            unique_or_original_supervisor,
+        ],
     )
 
     abbreviation = StringField(
         "Abbreviation",
-        validators=[InputRequired(message="An abbreviation is required"), Length(max=DEFAULT_STRING_LENGTH), unique_or_original_supervisor_abbrev],
+        validators=[
+            InputRequired(message="An abbreviation is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+            unique_or_original_supervisor_abbrev,
+        ],
     )
 
 
 class EmailLogForm(Form):
     weeks = IntegerField(
-        "Age cutoff in weeks", validators=[InputRequired(message="Cutoff is required. Emails older than the limit will be removed.")]
+        "Age cutoff in weeks",
+        validators=[
+            InputRequired(
+                message="Cutoff is required. Emails older than the limit will be removed."
+            )
+        ],
     )
 
     delete_age = SubmitField("Delete older emails")
@@ -735,7 +1022,12 @@ class EmailLogForm(Form):
 
 class BackupManageForm(Form):
     weeks = IntegerField(
-        "Age cutoff in weeks", validators=[InputRequired(message="Cutoff is required. Backups older than the limit will be removed.")]
+        "Age cutoff in weeks",
+        validators=[
+            InputRequired(
+                message="Cutoff is required. Backups older than the limit will be removed."
+            )
+        ],
     )
 
     delete_age = SubmitField("Delete older backups")
@@ -755,7 +1047,9 @@ def MessageMixinFactory(query_factory, convenor_editing):
         dismissible = BooleanField("Allow message to be dismissed")
 
         title = StringField(
-            "Title", validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)], description="Optional. Briefly summarize your message."
+            "Title",
+            validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
+            description="Optional. Briefly summarize your message.",
         )
 
         # TODO: would prefer to validate that the message length is not zero, but this is not trivial
@@ -765,19 +1059,30 @@ def MessageMixinFactory(query_factory, convenor_editing):
         #    https://stackoverflow.com/questions/38558091/tinymce-empty-validation-check
         body = TextAreaField("Message", render_kw={"rows": 10})
 
-        project_classes = QuerySelectMultipleField("Display to users enrolled for", query_factory=query_factory, get_label="name")
+        project_classes = QuerySelectMultipleField(
+            "Display to users enrolled for",
+            query_factory=query_factory,
+            get_label="name",
+        )
 
     return MessageMixin
 
 
 # we *must* implement this form using a factory function because we have to adjust its class members
 def AddMessageFormFactory(convenor_editing=False):
-    Mixin = MessageMixinFactory(GetConvenorProjectClasses if convenor_editing else GetAllProjectClasses, convenor_editing=convenor_editing)
+    Mixin = MessageMixinFactory(
+        GetConvenorProjectClasses if convenor_editing else GetAllProjectClasses,
+        convenor_editing=convenor_editing,
+    )
 
     class AddMessageForm(Form, Mixin):
         submit = SubmitField("Add new message")
 
-        _validator = InputRequired(message="At least one project class should be selected") if convenor_editing else Optional()
+        _validator = (
+            InputRequired(message="At least one project class should be selected")
+            if convenor_editing
+            else Optional()
+        )
 
         @staticmethod
         def validate_project_classes(form, field):
@@ -787,10 +1092,17 @@ def AddMessageFormFactory(convenor_editing=False):
 
 
 def EditMessageFormFactory(convenor_editing=False):
-    Mixin = MessageMixinFactory(GetConvenorProjectClasses if convenor_editing else GetAllProjectClasses, convenor_editing=convenor_editing)
+    Mixin = MessageMixinFactory(
+        GetConvenorProjectClasses if convenor_editing else GetAllProjectClasses,
+        convenor_editing=convenor_editing,
+    )
 
     class EditMessageForm(Form, Mixin, SaveChangesMixin):
-        _validator = InputRequired(message="At least one project class should be selected") if convenor_editing else Optional()
+        _validator = (
+            InputRequired(message="At least one project class should be selected")
+            if convenor_editing
+            else Optional()
+        )
 
         @staticmethod
         def validate_project_classes(form, field):
@@ -809,9 +1121,17 @@ class ScheduleTypeForm(Form, ScheduleTypeMixin):
 
 
 class ScheduledTaskMixin:
-    name = StringField("Name", validators=[InputRequired(message="A task name is required"), Length(max=DEFAULT_STRING_LENGTH)])
+    name = StringField(
+        "Name",
+        validators=[
+            InputRequired(message="A task name is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
+    )
 
-    owner = QuerySelectField("Owner", query_factory=GetSysadminUsers, get_label=BuildSysadminUserName)
+    owner = QuerySelectField(
+        "Owner", query_factory=GetSysadminUsers, get_label=BuildSysadminUserName
+    )
 
     tasks_available = [
         ("app.tasks.prune_email.prune_email_log", "Prune email log"),
@@ -821,62 +1141,138 @@ class ScheduledTaskMixin:
         ("app.tasks.backup.limit_size", "Enforce limit on size of backup folder"),
         ("app.tasks.backup.clean_up", "Clean up backup folder"),
         ("app.tasks.backup.drop_absent_backups", "Drop absent backups"),
-        ("app.tasks.popularity.update_popularity_data", "Update LiveProject popularity data"),
+        (
+            "app.tasks.popularity.update_popularity_data",
+            "Update LiveProject popularity data",
+        ),
         ("app.tasks.popularity.thin", "Thin LiveProject popularity data"),
         ("app.tasks.maintenance.maintenance", "Perform regular database maintenance"),
-        ("app.tasks.maintenance.fix_unencrypted_assets", "Test for and fix unencrypted assets"),
-        ("app.tasks.email_notifications.send_daily_notifications", "Send daily email notifications"),
-        ("app.tasks.maintenance.asset_garbage_collection", "Garbage collection for expired assets"),
-        ("app.tasks.batch_create.garbage_collection", "Garbage collection for batch student import"),
+        (
+            "app.tasks.maintenance.fix_unencrypted_assets",
+            "Test for and fix unencrypted assets",
+        ),
+        (
+            "app.tasks.email_notifications.send_daily_notifications",
+            "Send daily email notifications",
+        ),
+        (
+            "app.tasks.maintenance.asset_garbage_collection",
+            "Garbage collection for expired assets",
+        ),
+        (
+            "app.tasks.batch_create.garbage_collection",
+            "Garbage collection for batch student import",
+        ),
         ("app.tasks.maintenance.asset_check_lost", "Test for lost assets"),
         ("app.tasks.maintenance.asset_check_unattached", "Test for unattached assets"),
         ("app.tasks.system.process_pings", "Process pings from front end instances"),
         ("app.tasks.sessions.sift_sessions", "Perform MongoDB session maintenance"),
-        ("app.tasks.canvas.canvas_user_checkin", "Synchronize Canvas user database with submitter databases"),
-        ("app.tasks.canvas.canvas_submission_checkin", "Synchronize Canvas submission availability for active submission periods"),
-        ("app.tasks.marking.conflate_marks_for_period", "Conflate marks for a specified submission period"),
-        ("app.tasks.marking.generate_feedback_reports", "Generate feedback reports for a specified submission period and recipe"),
-        ("app.tasks.cloud_api_audit.send_api_events_to_telemetry", "Send Cloud API audit events to telemetry object store"),
+        (
+            "app.tasks.canvas.canvas_user_checkin",
+            "Synchronize Canvas user database with submitter databases",
+        ),
+        (
+            "app.tasks.canvas.canvas_submission_checkin",
+            "Synchronize Canvas submission availability for active submission periods",
+        ),
+        (
+            "app.tasks.marking.conflate_marks_for_period",
+            "Conflate marks for a specified submission period",
+        ),
+        (
+            "app.tasks.marking.generate_feedback_reports",
+            "Generate feedback reports for a specified submission period and recipe",
+        ),
+        (
+            "app.tasks.cloud_api_audit.send_api_events_to_telemetry",
+            "Send Cloud API audit events to telemetry object store",
+        ),
         ("celery.backend_cleanup", "Periodic Celery backend cleanup"),
     ]
 
     task = SelectField("Task", choices=tasks_available)
 
-    queues_available = [("default", "Default (for ordinary or long-running tasks)"), ("priority", "High-priority")]
+    queues_available = [
+        ("default", "Default (for ordinary or long-running tasks)"),
+        ("priority", "High-priority"),
+    ]
 
     queue = SelectField("Queue", choices=queues_available)
 
-    arguments = StringField("Arguments", validators=[valid_json, Length(max=DEFAULT_STRING_LENGTH)], description="Format as a JSON list.")
-
-    keyword_arguments = StringField(
-        "Keyword arguments", validators=[valid_json, Length(max=DEFAULT_STRING_LENGTH)], description="Format as a JSON dictionary."
+    arguments = StringField(
+        "Arguments",
+        validators=[valid_json, Length(max=DEFAULT_STRING_LENGTH)],
+        description="Format as a JSON list.",
     )
 
-    expires = DateTimeField("Expires at", validators=[Optional()], description="Optional. Format YYYY-mm-dd HH:MM:SS. Leave blank for no expiry.")
+    keyword_arguments = StringField(
+        "Keyword arguments",
+        validators=[valid_json, Length(max=DEFAULT_STRING_LENGTH)],
+        description="Format as a JSON dictionary.",
+    )
+
+    expires = DateTimeField(
+        "Expires at",
+        validators=[Optional()],
+        description="Optional. Format YYYY-mm-dd HH:MM:SS. Leave blank for no expiry.",
+    )
 
 
 class IntervalMixin:
-    every = IntegerField("Run every", validators=[InputRequired(message="You must enter a nonzero interval")])
+    every = IntegerField(
+        "Run every",
+        validators=[InputRequired(message="You must enter a nonzero interval")],
+    )
 
-    available_periods = [("seconds", "seconds"), ("minutes", "minutes"), ("hours", "hours"), ("days", "days"), ("weeks", "weeks")]
+    available_periods = [
+        ("seconds", "seconds"),
+        ("minutes", "minutes"),
+        ("hours", "hours"),
+        ("days", "days"),
+        ("weeks", "weeks"),
+    ]
     period = SelectField("Period", choices=available_periods)
 
 
 class CrontabMixin:
-    minute = StringField("Minute pattern", validators=[InputRequired(message="You must enter a pattern"), Length(max=DEFAULT_STRING_LENGTH)])
+    minute = StringField(
+        "Minute pattern",
+        validators=[
+            InputRequired(message="You must enter a pattern"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
+    )
 
-    hour = StringField("Hour pattern", validators=[InputRequired(message="You must enter a pattern"), Length(max=DEFAULT_STRING_LENGTH)])
+    hour = StringField(
+        "Hour pattern",
+        validators=[
+            InputRequired(message="You must enter a pattern"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
+    )
 
     day_of_week = StringField(
-        "Day-of-week pattern", validators=[InputRequired(message="You must enter a pattern"), Length(max=DEFAULT_STRING_LENGTH)]
+        "Day-of-week pattern",
+        validators=[
+            InputRequired(message="You must enter a pattern"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
     day_of_month = StringField(
-        "Day-of-month pattern", validators=[InputRequired(message="You must enter a pattern"), Length(max=DEFAULT_STRING_LENGTH)]
+        "Day-of-month pattern",
+        validators=[
+            InputRequired(message="You must enter a pattern"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
     month_of_year = StringField(
-        "Month-of-year pattern", validators=[InputRequired(message="You must enter a pattern"), Length(max=DEFAULT_STRING_LENGTH)]
+        "Month-of-year pattern",
+        validators=[
+            InputRequired(message="You must enter a pattern"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
 
@@ -884,7 +1280,9 @@ class AddIntervalScheduledTask(Form, ScheduledTaskMixin, IntervalMixin):
     submit = SubmitField("Add new task")
 
 
-class EditIntervalScheduledTask(Form, ScheduledTaskMixin, IntervalMixin, SaveChangesMixin):
+class EditIntervalScheduledTask(
+    Form, ScheduledTaskMixin, IntervalMixin, SaveChangesMixin
+):
     pass
 
 
@@ -892,7 +1290,9 @@ class AddCrontabScheduledTask(Form, ScheduledTaskMixin, CrontabMixin):
     submit = SubmitField("Add new task")
 
 
-class EditCrontabScheduledTask(Form, ScheduledTaskMixin, CrontabMixin, SaveChangesMixin):
+class EditCrontabScheduledTask(
+    Form, ScheduledTaskMixin, CrontabMixin, SaveChangesMixin
+):
     pass
 
 
@@ -913,9 +1313,20 @@ class BackupOptionsMixin:
         (13, "13 days"),
         (14, "14 days"),
     ]
-    keep_hourly = SelectField("Keep hourly backups for", choices=hourly_choices, coerce=int)
+    keep_hourly = SelectField(
+        "Keep hourly backups for", choices=hourly_choices, coerce=int
+    )
 
-    daily_choices = [(1, "1 week"), (2, "2 weeks"), (3, "3 weeks"), (4, "4 weeks"), (5, "5 weeks"), (6, "6 weeks"), (7, "7 weeks"), (8, "8 weeks")]
+    daily_choices = [
+        (1, "1 week"),
+        (2, "2 weeks"),
+        (3, "3 weeks"),
+        (4, "4 weeks"),
+        (5, "5 weeks"),
+        (6, "6 weeks"),
+        (7, "7 weeks"),
+        (8, "8 weeks"),
+    ]
     keep_daily = SelectField(
         "Keep daily backups for",
         choices=daily_choices,
@@ -926,9 +1337,17 @@ class BackupOptionsMixin:
     )
 
     # field names for limits are blank; to get formatting right they're included directly on the template
-    backup_limit = FloatField("Limit total size of backups", validators=[Optional()], description="Leave blank for no limit.")
+    backup_limit = FloatField(
+        "Limit total size of backups",
+        validators=[Optional()],
+        description="Leave blank for no limit.",
+    )
 
-    units_choices = [(BackupConfiguration.KEY_MB, "Mb"), (BackupConfiguration.KEY_GB, "Gb"), (BackupConfiguration.KEY_TB, "Tb")]
+    units_choices = [
+        (BackupConfiguration.KEY_MB, "Mb"),
+        (BackupConfiguration.KEY_GB, "Gb"),
+        (BackupConfiguration.KEY_TB, "Tb"),
+    ]
     limit_units = SelectField("Units", choices=units_choices, coerce=int)
 
 
@@ -943,7 +1362,10 @@ class SkillGroupMixin:
         description="Assign a colour to help students identify skills belonging to this group",
     )
 
-    add_group = BooleanField("Add group name to skill labels", description="Skills in this group to be labelled as group-name: skill-name")
+    add_group = BooleanField(
+        "Add group name to skill labels",
+        description="Skills in this group to be labelled as group-name: skill-name",
+    )
 
 
 class AddSkillGroupForm(Form, SkillGroupMixin):
@@ -971,7 +1393,9 @@ class EditSkillGroupForm(Form, SkillGroupMixin, SaveChangesMixin):
 
 
 class TransferableSkillMixin:
-    group = QuerySelectField("Skill group", query_factory=GetActiveSkillGroups, get_label="name")
+    group = QuerySelectField(
+        "Skill group", query_factory=GetActiveSkillGroups, get_label="name"
+    )
 
 
 class AddTransferableSkillForm(Form, TransferableSkillMixin):
@@ -999,9 +1423,15 @@ class EditTransferableSkillForm(Form, TransferableSkillMixin, SaveChangesMixin):
 
 
 class ProjectTagGroupMixin:
-    add_group = BooleanField("Add group name to tag labels", description="Tags in this group will be labelled as group-name: tag-name")
+    add_group = BooleanField(
+        "Add group name to tag labels",
+        description="Tags in this group will be labelled as group-name: tag-name",
+    )
 
-    default = BooleanField("Default group for new tags", description="New dynamically generated tags will be added to this group")
+    default = BooleanField(
+        "Default group for new tags",
+        description="New dynamically generated tags will be added to this group",
+    )
 
 
 class AddProjectTagGroupForm(Form, ProjectTagGroupMixin, EditTenantsMixin):
@@ -1017,7 +1447,9 @@ class AddProjectTagGroupForm(Form, ProjectTagGroupMixin, EditTenantsMixin):
     submit = SubmitField("Add new group")
 
 
-class EditProjectTagGroupForm(Form, ProjectTagGroupMixin, EditTenantsMixin, SaveChangesMixin):
+class EditProjectTagGroupForm(
+    Form, ProjectTagGroupMixin, EditTenantsMixin, SaveChangesMixin
+):
     name = StringField(
         "Name",
         validators=[
@@ -1029,10 +1461,14 @@ class EditProjectTagGroupForm(Form, ProjectTagGroupMixin, EditTenantsMixin, Save
 
 
 class ProjectTagMixin:
-    group = QuerySelectField("Tag group", query_factory=GetActiveProjectTagGroups, get_label="name")
+    group = QuerySelectField(
+        "Tag group", query_factory=GetActiveProjectTagGroups, get_label="name"
+    )
 
     colour = StringField(
-        "Colour", validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)], description="Assign a colour to help students recognize this tag"
+        "Colour",
+        validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
+        description="Assign a colour to help students recognize this tag",
     )
 
 
@@ -1080,30 +1516,51 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
         name = StringField(
             "Name",
             description="Enter a short tag to identify this match",
-            validators=[InputRequired(message="Please supply a unique name"), Length(max=DEFAULT_STRING_LENGTH)],
+            validators=[
+                InputRequired(message="Please supply a unique name"),
+                Length(max=DEFAULT_STRING_LENGTH),
+            ],
         )
 
         pclasses_to_include = QuerySelectMultipleField(
-            "Select project classes to include in this match", query_factory=pclasses_query, get_label="name"
+            "Select project classes to include in this match",
+            query_factory=pclasses_query,
+            get_label="name",
         )
 
         if base_match is None or base_match.include_only_submitted is True:
-            include_only_submitted = BooleanField("Include only selectors who submitted preferences")
+            include_only_submitted = BooleanField(
+                "Include only selectors who submitted preferences"
+            )
 
-        ignore_per_faculty_limits = BooleanField("Ignore CATS limits specified in faculty accounts")
+        ignore_per_faculty_limits = BooleanField(
+            "Ignore CATS limits specified in faculty accounts"
+        )
 
         ignore_programme_prefs = BooleanField("Ignore degree programme preferences")
 
-        years_memory = SelectField("Include how many years history when levelling workloads?", choices=matching_history_choices, coerce=int)
+        years_memory = SelectField(
+            "Include how many years history when levelling workloads?",
+            choices=matching_history_choices,
+            coerce=int,
+        )
 
         supervising_limit = IntegerField(
             "CATS limit for supervising",
-            validators=[InputRequired(message="Please specify the maximum number of CATS that can be allocated per faculty")],
+            validators=[
+                InputRequired(
+                    message="Please specify the maximum number of CATS that can be allocated per faculty"
+                )
+            ],
         )
 
         marking_limit = IntegerField(
             "CATS limit for marking",
-            validators=[InputRequired(message="Please specify the maximum number of CATS that can be allocated per faculty")],
+            validators=[
+                InputRequired(
+                    message="Please specify the maximum number of CATS that can be allocated per faculty"
+                )
+            ],
         )
 
         max_marking_multiplicity = IntegerField(
@@ -1120,7 +1577,13 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
             "project type. This determines the maximum number of "
             "different project types assigned to a single "
             "supervisor. Leave blank to impose no limit.",
-            validators=[Optional(), NumberRange(min=1, message="The maximum number of group project types cannot be less than 1.")],
+            validators=[
+                Optional(),
+                NumberRange(
+                    min=1,
+                    message="The maximum number of group project types cannot be less than 1.",
+                ),
+            ],
         )
 
         max_different_all_projects = IntegerField(
@@ -1130,7 +1593,13 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
             "If a limit has been specified for group projects, this "
             "limit must be at least as large. Leave blank to "
             "impose no limit.",
-            validators=[Optional(), NumberRange(min=1, message="The maximum number of project types cannot be less than 1.")],
+            validators=[
+                Optional(),
+                NumberRange(
+                    min=1,
+                    message="The maximum number of project types cannot be less than 1.",
+                ),
+            ],
         )
 
         @staticmethod
@@ -1144,10 +1613,14 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
                 return
 
             if field.data < form.max_different_group_projects.data:
-                raise ValidationError("The maximum number of project types must be at least as large as the maximum number of group project types.")
+                raise ValidationError(
+                    "The maximum number of project types must be at least as large as the maximum number of group project types."
+                )
 
         include_matches = QuerySelectMultipleField(
-            "When levelling workloads, include CATS from existing matches", query_factory=include_matches_query, get_label="name"
+            "When levelling workloads, include CATS from existing matches",
+            query_factory=include_matches_query,
+            get_label="name",
         )
 
         if base_match is not None:
@@ -1162,7 +1635,11 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
                 validators=[InputRequired(message="Please specify a base bias")],
             )
 
-            force_base = BooleanField('Force agreement with assignments in "{name}"'.format(name=base_match.name))
+            force_base = BooleanField(
+                'Force agreement with assignments in "{name}"'.format(
+                    name=base_match.name
+                )
+            )
 
         levelling_bias = FloatField(
             "Workload levelling bias",
@@ -1223,7 +1700,9 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
             "on given degree programmes with projects that "
             "are marked as preferring that programme. "
             "A value of 1 disables this preference.",
-            validators=[InputRequired(message="Please specify a programme preference bias")],
+            validators=[
+                InputRequired(message="Please specify a programme preference bias")
+            ],
         )
 
         bookmark_bias = FloatField(
@@ -1259,16 +1738,28 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
             "specified, making the problem over-determined.",
         )
 
-        encourage_bias = FloatField('Bias for convenor "encouraged" hint', default=2.0, validators=[InputRequired(message="Please specify a bias")])
+        encourage_bias = FloatField(
+            'Bias for convenor "encouraged" hint',
+            default=2.0,
+            validators=[InputRequired(message="Please specify a bias")],
+        )
 
-        discourage_bias = FloatField('Bias for convenor "discouraged" hint', default=0.5, validators=[InputRequired(message="Please specify a bias")])
+        discourage_bias = FloatField(
+            'Bias for convenor "discouraged" hint',
+            default=0.5,
+            validators=[InputRequired(message="Please specify a bias")],
+        )
 
         strong_encourage_bias = FloatField(
-            'Bias for convenor "strongly encouraged" hint', default=5.0, validators=[InputRequired(message="Please specify a bias")]
+            'Bias for convenor "strongly encouraged" hint',
+            default=5.0,
+            validators=[InputRequired(message="Please specify a bias")],
         )
 
         strong_discourage_bias = FloatField(
-            'Bias for convenor "strongly discouraged" hint', default=0.2, validators=[InputRequired(message="Please specify a bias")]
+            'Bias for convenor "strongly discouraged" hint',
+            default=0.2,
+            validators=[InputRequired(message="Please specify a bias")],
         )
 
     return MatchingMixin
@@ -1276,7 +1767,9 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
 
 def NewMatchFormFactory(year, base_id=None, base_match=None):
     Mixin = MatchingMixinFactory(
-        partial(GetAutomatedMatchPClasses, year, base_id), partial(GetMatchingAttempts, year, base_id), base_match=base_match
+        partial(GetAutomatedMatchPClasses, year, base_id),
+        partial(GetMatchingAttempts, year, base_id),
+        base_match=base_match,
     )
 
     class NewMatchForm(Form, Mixin, PuLPSolverMixin):
@@ -1293,7 +1786,10 @@ def NewMatchFormFactory(year, base_id=None, base_match=None):
 
 class UploadMatchForm(Form):
     solver = SelectField(
-        "Solver", choices=solver_choices, coerce=int, description="Select the solver used to produce the solution file you are uploading."
+        "Solver",
+        choices=solver_choices,
+        coerce=int,
+        description="Select the solver used to produce the solution file you are uploading.",
     )
 
     submit = SubmitField("Upload solution")
@@ -1304,7 +1800,10 @@ def RenameMatchFormFactory(year):
         name = StringField(
             "New name",
             description="Enter a short tag to identify this match",
-            validators=[InputRequired(message="Please supply a unique name"), Length(max=DEFAULT_STRING_LENGTH)],
+            validators=[
+                InputRequired(message="Please supply a unique name"),
+                Length(max=DEFAULT_STRING_LENGTH),
+            ],
         )
 
         submit = SubmitField("Rename match")
@@ -1316,9 +1815,20 @@ def RenameMatchFormFactory(year):
     return RenameMatchForm
 
 
-def CompareMatchFormFactory(year: int, self_id: int, pclasses: ProjectClassConfig | int | List[int] | None, is_root: bool):
+def CompareMatchFormFactory(
+        year: int,
+        self_id: int,
+        pclasses: ProjectClassConfig | int | List[int] | None,
+        is_root: bool,
+):
     class CompareMatchForm(Form):
-        target = QuerySelectField("Compare to", query_factory=partial(GetComparatorMatches, year, self_id, pclasses, is_root), get_label="name")
+        target = QuerySelectField(
+            "Compare to",
+            query_factory=partial(
+                GetComparatorMatches, year, self_id, pclasses, is_root
+            ),
+            get_label="name",
+        )
 
         compare = SubmitField("Compare")
 
@@ -1326,25 +1836,40 @@ def CompareMatchFormFactory(year: int, self_id: int, pclasses: ProjectClassConfi
 
 
 class EditSupervisorRolesForm(Form):
-    supervisors = QuerySelectMultipleField("Supervisors", query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName)
+    supervisors = QuerySelectMultipleField(
+        "Supervisors", query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName
+    )
 
     @staticmethod
     def validate_supervisors(form, field):
-        if field.data is None or not isinstance(field.data, list) or len(field.data) == 0:
+        if (
+                field.data is None
+                or not isinstance(field.data, list)
+                or len(field.data) == 0
+        ):
             raise ValidationError("At least one supervisor should be selected.")
 
     submit = SubmitField("Save changes")
 
 
-def PresentationAssessmentMixinFactory(assessment: PresentationAssessment, query_factory):
+def PresentationAssessmentMixinFactory(
+        assessment: PresentationAssessment, query_factory
+):
     class PresentationAssessmentMixin:
         name = StringField(
             "Name",
             description="Enter a short name to identify this assessment event",
-            validators=[InputRequired(message="Please supply a unique name"), Length(max=DEFAULT_STRING_LENGTH)],
+            validators=[
+                InputRequired(message="Please supply a unique name"),
+                Length(max=DEFAULT_STRING_LENGTH),
+            ],
         )
 
-        if assessment is None or (assessment is not None and not assessment.requested_availability and not assessment.skip_availability):
+        if assessment is None or (
+                assessment is not None
+                and not assessment.requested_availability
+                and not assessment.skip_availability
+        ):
             submission_periods = QuerySelectMultipleField(
                 "Select those submission periods for which project presentations will be given",
                 query_factory=query_factory,
@@ -1355,7 +1880,9 @@ def PresentationAssessmentMixinFactory(assessment: PresentationAssessment, query
 
 
 def AddPresentationAssessmentFormFactory(year):
-    Mixin = PresentationAssessmentMixinFactory(None, partial(GetUnattachedSubmissionPeriods, None))
+    Mixin = PresentationAssessmentMixinFactory(
+        None, partial(GetUnattachedSubmissionPeriods, None)
+    )
 
     class AddPresentationAssessmentForm(Form, Mixin):
         submit = SubmitField("Add new assessment")
@@ -1368,7 +1895,9 @@ def AddPresentationAssessmentFormFactory(year):
 
 
 def EditPresentationAssessmentFormFactory(year, assessment: PresentationAssessment):
-    Mixin = PresentationAssessmentMixinFactory(assessment, partial(GetUnattachedSubmissionPeriods, assessment.id))
+    Mixin = PresentationAssessmentMixinFactory(
+        assessment, partial(GetUnattachedSubmissionPeriods, assessment.id)
+    )
 
     class EditPresentationAssessmentForm(Form, Mixin, SaveChangesMixin):
         @staticmethod
@@ -1379,13 +1908,24 @@ def EditPresentationAssessmentFormFactory(year, assessment: PresentationAssessme
 
 
 class SessionMixin:
-    name = StringField("Session label", validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
+    name = StringField(
+        "Session label", validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)]
+    )
 
-    date = DateTimeField("Date", format="%d/%m/%Y", validators=[InputRequired()], description="Specify the date for this session")
+    date = DateTimeField(
+        "Date",
+        format="%d/%m/%Y",
+        validators=[InputRequired()],
+        description="Specify the date for this session",
+    )
 
     session_type = SelectField("Session type", choices=session_choices, coerce=int)
 
-    rooms = QuerySelectMultipleField("Select the rooms that are available for this session", query_factory=GetAllRooms, get_label=BuildRoomLabel)
+    rooms = QuerySelectMultipleField(
+        "Select the rooms that are available for this session",
+        query_factory=GetAllRooms,
+        get_label=BuildRoomLabel,
+    )
 
 
 class AddSessionForm(Form, SessionMixin):
@@ -1400,11 +1940,16 @@ class BuildingMixin:
     name = StringField(
         "Name",
         description="Enter a short name or identifier for the building",
-        validators=[InputRequired("A unique name is required"), Length(max=DEFAULT_STRING_LENGTH)],
+        validators=[
+            InputRequired("A unique name is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
     colour = StringField(
-        "Colour", validators=[Length(max=DEFAULT_STRING_LENGTH)], description="Specify a colour to help identify rooms located in this building"
+        "Colour",
+        validators=[Length(max=DEFAULT_STRING_LENGTH)],
+        description="Specify a colour to help identify rooms located in this building",
     )
 
 
@@ -1426,15 +1971,22 @@ class RoomMixin:
     name = StringField(
         "Name",
         description="Enter a number or label for the venue",
-        validators=[InputRequired("A unique name is required"), Length(max=DEFAULT_STRING_LENGTH)],
+        validators=[
+            InputRequired("A unique name is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
-    building = QuerySelectField("Building", query_factory=GetAllBuildings, get_label="name")
+    building = QuerySelectField(
+        "Building", query_factory=GetAllBuildings, get_label="name"
+    )
 
     capacity = IntegerField(
         "Capacity",
         description="How many people will this room accommodate?",
-        validators=[InputRequired("Enter the number of people who can be accommodated")],
+        validators=[
+            InputRequired("Enter the number of people who can be accommodated")
+        ],
     )
 
     maximum_occupancy = IntegerField(
@@ -1445,8 +1997,14 @@ class RoomMixin:
         'groups will be assigned to the same "venue" even though they are '
         "really distinct.",
         validators=[
-            InputRequired("Enter the maximum number of occupying groups. Enter 1 if the room can only be singly occupupied."),
-            NumberRange(min=1, max=100, message="The specified occupancy should be between 1 and 100."),
+            InputRequired(
+                "Enter the maximum number of occupying groups. Enter 1 if the room can only be singly occupupied."
+            ),
+            NumberRange(
+                min=1,
+                max=100,
+                message="The specified occupancy should be between 1 and 100.",
+            ),
         ],
     )
 
@@ -1471,30 +2029,49 @@ class AssetLicenseMixin:
     name = StringField(
         "Name",
         description="Enter a name to identify this license",
-        validators=[InputRequired(message="Please supply a unique name"), Length(max=DEFAULT_STRING_LENGTH)],
+        validators=[
+            InputRequired(message="Please supply a unique name"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
     colour = StringField(
-        "Colour", validators=[Length(max=DEFAULT_STRING_LENGTH)], description="Assign a colour to identify assets tagged with this license"
+        "Colour",
+        validators=[Length(max=DEFAULT_STRING_LENGTH)],
+        description="Assign a colour to identify assets tagged with this license",
     )
 
     abbreviation = StringField(
         "Abbreviation",
         description="Enter a short name used to visually tag content provided under this license",
-        validators=[InputRequired(message="Please supply a unique abbreviation"), Length(max=DEFAULT_STRING_LENGTH)],
+        validators=[
+            InputRequired(message="Please supply a unique abbreviation"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
     description = TextAreaField(
-        "Description", render_kw={"rows": 5}, validators=[InputRequired(message="Please supply a brief description of the license conditions")]
+        "Description",
+        render_kw={"rows": 5},
+        validators=[
+            InputRequired(
+                message="Please supply a brief description of the license conditions"
+            )
+        ],
     )
 
     version = StringField(
         "Version",
         description="Please enter a version number or identifier for this license",
-        validators=[InputRequired(message="Please supply a valid version string"), Length(max=DEFAULT_STRING_LENGTH)],
+        validators=[
+            InputRequired(message="Please supply a valid version string"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
-    url = StringField("Web address", description="Optional. Enter a web address for this license.")
+    url = StringField(
+        "Web address", description="Optional. Enter a web address for this license."
+    )
 
     allows_redistribution = BooleanField("License allows content to be redistributed")
 
@@ -1532,7 +2109,9 @@ class EditAssetLicenseForm(Form, AssetLicenseMixin, SaveChangesMixin):
 def AvailabilityFormFactory(assessment: PresentationAssessment):
     class AvailabilityForm(Form):
         # deadline for response
-        availability_deadline = DateTimeField("Deadline", format="%d/%m/%Y", validators=[InputRequired()])
+        availability_deadline = DateTimeField(
+            "Deadline", format="%d/%m/%Y", validators=[InputRequired()]
+        )
 
         if not assessment.skip_availability:
             # submit button: open feedback
@@ -1545,13 +2124,19 @@ class ScheduleNameMixin:
     name = StringField(
         "Name",
         description="Enter a short name to identify this schedule",
-        validators=[InputRequired(message="Please supply a unique name"), Length(max=DEFAULT_STRING_LENGTH)],
+        validators=[
+            InputRequired(message="Please supply a unique name"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
     tag = StringField(
         "Tag",
         description="Enter a unique tag (containing no white space) for use as part of a URL",
-        validators=[InputRequired(message="Please supply a unique tag"), Length(max=DEFAULT_STRING_LENGTH)],
+        validators=[
+            InputRequired(message="Please supply a unique tag"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
 
@@ -1565,7 +2150,9 @@ def ScheduleNameCreateValidatorFactory(assessment: PresentationAssessment):
         def validate_tag(form, field):
             isvalid = re.match(r"[\w-]*$", field.data)
             if not isvalid:
-                raise ValidationError("The tag should contain only letters, numbers, underscores or dashes, and be valid as part of a URL")
+                raise ValidationError(
+                    "The tag should contain only letters, numbers, underscores or dashes, and be valid as part of a URL"
+                )
 
             return globally_unique_schedule_tag(form, field)
 
@@ -1582,7 +2169,9 @@ def ScheduleNameRenameValidatorFactory(assessment: PresentationAssessment):
         def validate_tag(form, field):
             isvalid = re.match(r"[\w-]*$", field.data)
             if not isvalid:
-                raise ValidationError("The tag should contain only letters, numbers, underscores or dashes, and be valid as part of a URL")
+                raise ValidationError(
+                    "The tag should contain only letters, numbers, underscores or dashes, and be valid as part of a URL"
+                )
 
             return unique_or_original_schedule_tag(form, field)
 
@@ -1594,7 +2183,10 @@ class ScheduleSettingsMixin:
         "Maximum number of assignments per assessor",
         default=3,
         description="Enter the maximum number of times each assessor can be scheduled.",
-        validators=[InputRequired("Please enter a positive integer"), NumberRange(min=0, message="Please enter a postive integer")],
+        validators=[
+            InputRequired("Please enter a positive integer"),
+            NumberRange(min=0, message="Please enter a postive integer"),
+        ],
     )
 
     if_needed_cost = FloatField(
@@ -1623,7 +2215,10 @@ class ScheduleSettingsMixin:
         description="This can be useful for presentations delivered "
         "remotely via Zoom or Teams. In this case, "
         "assessors need not necessarily form fixed groups.",
-        validators=[InputRequired("Please enter a positive integer"), NumberRange(min=1, message="Please enter a positive integer")],
+        validators=[
+            InputRequired("Please enter a positive integer"),
+            NumberRange(min=1, message="Please enter a positive integer"),
+        ],
     )
 
     @staticmethod
@@ -1633,15 +2228,21 @@ class ScheduleSettingsMixin:
 
         if multiplicity is not None and assigned_limit is not None:
             if multiplicity > assigned_limit:
-                raise ValidationError("The specified multiplicity should be less than or equal to the maximum number of assignments per assessor")
+                raise ValidationError(
+                    "The specified multiplicity should be less than or equal to the maximum number of assignments per assessor"
+                )
 
-    all_assessors_in_pool = RadioField("Assessor configuration", choices=ScheduleAttempt.ASSESSOR_CHOICES, coerce=int)
+    all_assessors_in_pool = RadioField(
+        "Assessor configuration", choices=ScheduleAttempt.ASSESSOR_CHOICES, coerce=int
+    )
 
 
 def NewScheduleFormFactory(assessment):
     validator = ScheduleNameCreateValidatorFactory(assessment)
 
-    class NewScheduleForm(Form, ScheduleNameMixin, validator, ScheduleSettingsMixin, PuLPSolverMixin):
+    class NewScheduleForm(
+        Form, ScheduleNameMixin, validator, ScheduleSettingsMixin, PuLPSolverMixin
+    ):
         submit = SubmitField("Run scheduling in the cloud")
 
         offline = SubmitField("Generate .LP file for processing offline")
@@ -1651,7 +2252,10 @@ def NewScheduleFormFactory(assessment):
 
 class UploadScheduleForm(Form):
     solver = SelectField(
-        "Solver", choices=solver_choices, coerce=int, description="Select the solver used to produce the solution file you are uploading."
+        "Solver",
+        choices=solver_choices,
+        coerce=int,
+        description="Select the solver used to produce the solution file you are uploading.",
     )
 
     submit = SubmitField("Upload solution")
@@ -1678,11 +2282,15 @@ def ImposeConstraintsScheduleFormFactory(assessment):
 
 
 class AssignmentLimitForm(Form, SaveChangesMixin):
-    assigned_limit = IntegerField("Maximum number of sessions to assign to this assessor", validators=[Optional()])
+    assigned_limit = IntegerField(
+        "Maximum number of sessions to assign to this assessor", validators=[Optional()]
+    )
 
 
 class LevelSelectorMixin:
-    selector = QuerySelectField("Select courses from FHEQ level", query_factory=GetFHEQLevels, get_label="name")
+    selector = QuerySelectField(
+        "Select courses from FHEQ level", query_factory=GetFHEQLevels, get_label="name"
+    )
 
 
 class LevelSelectorForm(Form, LevelSelectorMixin):
@@ -1691,7 +2299,9 @@ class LevelSelectorForm(Form, LevelSelectorMixin):
 
 class FHEQLevelMixin:
     colour = StringField(
-        "Colour", validators=[Length(max=DEFAULT_STRING_LENGTH)], description="Assign a colour to help distinguish modules belonging to this level"
+        "Colour",
+        validators=[Length(max=DEFAULT_STRING_LENGTH)],
+        description="Assign a colour to help distinguish modules belonging to this level",
     )
 
 
@@ -1717,7 +2327,11 @@ class AddFHEQLevelForm(Form, FHEQLevelMixin):
     )
 
     numeric_level = IntegerField(
-        "Numerical level", validators=[InputRequired(message="Please specify a numerical level"), globally_unique_FHEQ_numeric_level]
+        "Numerical level",
+        validators=[
+            InputRequired(message="Please specify a numerical level"),
+            globally_unique_FHEQ_numeric_level,
+        ],
     )
 
     submit = SubmitField("Create new level")
@@ -1745,14 +2359,20 @@ class EditFHEQLevelForm(Form, FHEQLevelMixin, SaveChangesMixin):
     )
 
     numeric_level = IntegerField(
-        "Numerical level", validators=[InputRequired(message="Please specify a numerical level"), unique_or_original_FHEQ_numeric_level]
+        "Numerical level",
+        validators=[
+            InputRequired(message="Please specify a numerical level"),
+            unique_or_original_FHEQ_numeric_level,
+        ],
     )
 
 
 def PublicScheduleFormFactory(schedule):
     class PublicScheduleForm(Form):
         selector = QuerySelectField(
-            "Select the session you wish to view:", query_factory=partial(ScheduleSessionQuery, schedule.id), get_label=BuildScheduleSessionLabel
+            "Select the session you wish to view:",
+            query_factory=partial(ScheduleSessionQuery, schedule.id),
+            get_label=BuildScheduleSessionLabel,
         )
 
     return PublicScheduleForm
@@ -1760,7 +2380,13 @@ def PublicScheduleFormFactory(schedule):
 
 def CompareScheduleFormFactory(assessment_id, self_id, is_root):
     class CompareScheduleForm(Form):
-        target = QuerySelectField("Compare to", query_factory=partial(GetComparatorSchedules, assessment_id, self_id, is_root), get_label="name")
+        target = QuerySelectField(
+            "Compare to",
+            query_factory=partial(
+                GetComparatorSchedules, assessment_id, self_id, is_root
+            ),
+            get_label="name",
+        )
 
         compare = SubmitField("Compare")
 
@@ -1784,7 +2410,9 @@ def BackupMixinFactory(lock_default=False):
             blank_text="Add labels...",
         )
 
-        locked = BooleanField("Lock this backup to prevent removal during thinning", default=lock_default)
+        locked = BooleanField(
+            "Lock this backup to prevent removal during thinning", default=lock_default
+        )
 
         unlock_date = DateTimeField(
             "Automatically unlock on",
@@ -1804,14 +2432,21 @@ class ManualBackupForm(Form, BackupMixinFactory(lock_default=True)):
     description = StringField(
         "Description",
         description="Provide a short description of the purpose of this backup",
-        validators=[InputRequired(message="Please provide a description"), Length(max=DEFAULT_STRING_LENGTH)],
+        validators=[
+            InputRequired(message="Please provide a description"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
     submit = SubmitField("Backup now")
 
 
 class FeedbackAssetMixin(LicenseMixin):
-    project_classes = QuerySelectMultipleField("Available for use with project classes", query_factory=GetAllProjectClasses, get_label="name")
+    project_classes = QuerySelectMultipleField(
+        "Available for use with project classes",
+        query_factory=GetAllProjectClasses,
+        get_label="name",
+    )
 
     tags = BasicTagSelectField(
         "Add tags to identify this asset",
@@ -1821,7 +2456,10 @@ class FeedbackAssetMixin(LicenseMixin):
         blank_text="Add tags...",
     )
 
-    is_template = BooleanField("This is a template that can be used to generate a feedback report", default=False)
+    is_template = BooleanField(
+        "This is a template that can be used to generate a feedback report",
+        default=False,
+    )
 
     description = StringField(
         "Description",
@@ -1829,7 +2467,7 @@ class FeedbackAssetMixin(LicenseMixin):
         validators=[
             Optional(),
             Length(max=DEFAULT_STRING_LENGTH),
-        ]
+        ],
     )
 
 
@@ -1840,7 +2478,10 @@ class UploadFeedbackAssetForm(Form, FeedbackAssetMixin):
         validators=[
             InputRequired(message="Please provide a label"),
             Length(max=DEFAULT_STRING_LENGTH),
-            Regexp(r"^[\w.]+$", message="The label should contain only letters, numbers and the underscore."),
+            Regexp(
+                r"^[\w.]+$",
+                message="The label should contain only letters, numbers and the underscore.",
+            ),
             globally_unique_feedback_asset_label,
         ],
     )
@@ -1855,14 +2496,21 @@ class EditFeedbackAssetForm(Form, FeedbackAssetMixin, SaveChangesMixin):
         validators=[
             InputRequired(message="Please provide a label"),
             Length(max=DEFAULT_STRING_LENGTH),
-            Regexp(r"^[\w.]+$", message="The label should contain only letters, numbers and the underscore."),
+            Regexp(
+                r"^[\w.]+$",
+                message="The label should contain only letters, numbers and the underscore.",
+            ),
             unique_or_original_feedback_asset_label,
         ],
     )
 
 
 class FeedbackRecipeMixin:
-    project_classes = QuerySelectMultipleField("Available for use with project classes", query_factory=GetAllProjectClasses, get_label="name")
+    project_classes = QuerySelectMultipleField(
+        "Available for use with project classes",
+        query_factory=GetAllProjectClasses,
+        get_label="name",
+    )
 
     template = QuerySelectField(
         "Select a primary template to be used to generate the feedback report",
@@ -1872,7 +2520,10 @@ class FeedbackRecipeMixin:
     )
 
     asset_list = QuerySelectMultipleField(
-        "Optionally, make the following assets available", query_factory=GetAllNonTemplateFeedbackAssets, get_label="label", validators=[Optional()]
+        "Optionally, make the following assets available",
+        query_factory=GetAllNonTemplateFeedbackAssets,
+        get_label="label",
+        validators=[Optional()],
     )
 
     @staticmethod
@@ -1884,7 +2535,9 @@ class FeedbackRecipeMixin:
                 pclass_list.pop(pc.id)
 
         if len(pclass_list) > 0:
-            raise ValidationError(f'Template "{form.template.data.label}" is not available for project classes {", ".join(pclass_list.values())}')
+            raise ValidationError(
+                f'Template "{form.template.data.label}" is not available for project classes {", ".join(pclass_list.values())}'
+            )
 
     @staticmethod
     def validate_asset_list(form, field):
@@ -1896,7 +2549,9 @@ class FeedbackRecipeMixin:
                     pclass_list.pop(pc.id)
 
             if len(pclass_list) > 0:
-                raise ValidationError(f'Asset "{asset.label}" is not available for project classes {", ".join(pclass_list.values())}')
+                raise ValidationError(
+                    f'Asset "{asset.label}" is not available for project classes {", ".join(pclass_list.values())}'
+                )
 
 
 class AddFeedbackRecipeForm(Form, FeedbackRecipeMixin):
@@ -1906,7 +2561,10 @@ class AddFeedbackRecipeForm(Form, FeedbackRecipeMixin):
         validators=[
             InputRequired(message="Please provide a label"),
             Length(max=DEFAULT_STRING_LENGTH),
-            Regexp(r"^[\w.]+$", message="The label should contain only letters, numbers and the underscore."),
+            Regexp(
+                r"^[\w.]+$",
+                message="The label should contain only letters, numbers and the underscore.",
+            ),
             globally_unique_feedback_recipe_label,
         ],
     )
@@ -1921,7 +2579,10 @@ class EditFeedbackRecipeForm(Form, FeedbackRecipeMixin, SaveChangesMixin):
         validators=[
             InputRequired(message="Please provide a label"),
             Length(max=DEFAULT_STRING_LENGTH),
-            Regexp(r"^[\w.]+$", message="The label should contain only letters, numbers and the underscore."),
+            Regexp(
+                r"^[\w.]+$",
+                message="The label should contain only letters, numbers and the underscore.",
+            ),
             unique_or_original_feedback_recipe_label,
         ],
     )
@@ -1933,7 +2594,10 @@ class EmailTemplateMixin:
     subject = StringField(
         "Subject",
         description="Enter the email subject line",
-        validators=[InputRequired(message="Please provide a subject line"), Length(max=DEFAULT_STRING_LENGTH)],
+        validators=[
+            InputRequired(message="Please provide a subject line"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
     # html_body is rendered by TinyMCE; the TextAreaField is used as the backing field

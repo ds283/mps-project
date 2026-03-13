@@ -15,7 +15,14 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import ConfirmRequest, LiveProject, ProjectClassConfig, SelectingStudent, User, TaskRecord
+from ..models import (
+    ConfirmRequest,
+    LiveProject,
+    ProjectClassConfig,
+    SelectingStudent,
+    User,
+    TaskRecord,
+)
 from ..shared.tasks import post_task_update_msg
 
 
@@ -23,7 +30,9 @@ def _reassign_liveprojects(item_list, dest_config):
     delete_items = set()
 
     for item in item_list:
-        new_liveproject = dest_config.live_projects.filter_by(parent_id=item.liveproject.parent_id).first()
+        new_liveproject = dest_config.live_projects.filter_by(
+            parent_id=item.liveproject.parent_id
+        ).first()
 
         # delete record if no match; otherwise reassign
         if new_liveproject is None:
@@ -43,14 +52,22 @@ def register_selecting_tasks(celery):
             config_id = int(config_id)
 
         try:
-            lps = db.session.query(LiveProject).filter(LiveProject.config_id == config_id, LiveProject.owner_id == faculty_id).all()
+            lps = (
+                db.session.query(LiveProject)
+                .filter(
+                    LiveProject.config_id == config_id,
+                    LiveProject.owner_id == faculty_id,
+                )
+                .all()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         for lp in lps:
             unseen_confirmations = lp.confirmation_requests.filter(
-                ConfirmRequest.state == ConfirmRequest.REQUESTED, ConfirmRequest.viewed != True
+                ConfirmRequest.state == ConfirmRequest.REQUESTED,
+                ConfirmRequest.viewed != True,
             ).all()
 
             for confirm in unseen_confirmations:
@@ -66,8 +83,12 @@ def register_selecting_tasks(celery):
     @celery.task(bind=True, default_retry_delay=10)
     def move_selector(self, sel_id, dest_id, user_id):
         try:
-            sel: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sel_id).first()
-            dest_config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=dest_id).first()
+            sel: SelectingStudent = (
+                db.session.query(SelectingStudent).filter_by(id=sel_id).first()
+            )
+            dest_config: ProjectClassConfig = (
+                db.session.query(ProjectClassConfig).filter_by(id=dest_id).first()
+            )
             user: User = db.session.query(User).filter_by(id=user_id).first()
 
         except SQLAlchemyError as e:
@@ -75,15 +96,36 @@ def register_selecting_tasks(celery):
             raise self.retry()
 
         if sel is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load SelectingStudent id={id} from database".format(od=sel_id)})
+            self.update_state(
+                "FAILURE",
+                meta={
+                    "msg": "Could not load SelectingStudent id={id} from database".format(
+                        od=sel_id
+                    )
+                },
+            )
             raise Ignore()
 
         if dest_config is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load ProjectClassConfig id={id} from database".format(id=dest_id)})
+            self.update_state(
+                "FAILURE",
+                meta={
+                    "msg": "Could not load ProjectClassConfig id={id} from database".format(
+                        id=dest_id
+                    )
+                },
+            )
             raise Ignore()
 
         if user is None:
-            self.update_date("FAILURE", meta={"msg": "Could not load User id={id} from database".format(id=user_id)})
+            self.update_date(
+                "FAILURE",
+                meta={
+                    "msg": "Could not load User id={id} from database".format(
+                        id=user_id
+                    )
+                },
+            )
             raise Ignore()
 
         # # detach any matches of which this selector is a part; they won't make sense after the move
@@ -108,17 +150,30 @@ def register_selecting_tasks(celery):
             raise self.retry()
 
         user.post_message(
-            'Selector "{name}" has been moved to project class "{pcl}".'.format(name=sel.student.user.name, pcl=dest_config.name),
+            'Selector "{name}" has been moved to project class "{pcl}".'.format(
+                name=sel.student.user.name, pcl=dest_config.name
+            ),
             "success",
             autocommit=True,
         )
 
     @celery.task(bind=True, default_retry_delay=10)
-    def approve_outstanding_confirms(self, task_id: str, config_id: int, approver_id: int):
-        post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 10, "Initializing task...")
+    def approve_outstanding_confirms(
+            self, task_id: str, config_id: int, approver_id: int
+    ):
+        post_task_update_msg(
+            self,
+            task_id,
+            states.STARTED,
+            TaskRecord.RUNNING,
+            10,
+            "Initializing task...",
+        )
 
         try:
-            config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+            config: ProjectClassConfig = (
+                db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+            )
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -126,11 +181,19 @@ def register_selecting_tasks(celery):
 
         if config is None:
             post_task_update_msg(
-                self, task_id, states.FAILURE, TaskRecord.FAILURE, 0, f"Could not load specified ProjectClassConfig instance id={config_id}"
+                self,
+                task_id,
+                states.FAILURE,
+                TaskRecord.FAILURE,
+                0,
+                f"Could not load specified ProjectClassConfig instance id={config_id}",
             )
             raise Ignore()
 
-        if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+        if (
+                config.selector_lifecycle
+                < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
+        ):
             post_task_update_msg(
                 self,
                 task_id,
@@ -141,7 +204,10 @@ def register_selecting_tasks(celery):
             )
             raise Ignore()
 
-        if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        if (
+                config.selector_lifecycle
+                > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+        ):
             post_task_update_msg(
                 self,
                 task_id,
@@ -152,7 +218,14 @@ def register_selecting_tasks(celery):
             )
             raise Ignore()
 
-        post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 20, "Building list of outstanding confirmation requests...")
+        post_task_update_msg(
+            self,
+            task_id,
+            states.STARTED,
+            TaskRecord.RUNNING,
+            20,
+            "Building list of outstanding confirmation requests...",
+        )
 
         outstanding: List[ConfirmRequest] = (
             db.session.query(ConfirmRequest)
@@ -161,7 +234,14 @@ def register_selecting_tasks(celery):
             .filter(LiveProject.config_id == config.id)
         )
 
-        post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 50, "Approving outstanding confirmation requests...")
+        post_task_update_msg(
+            self,
+            task_id,
+            states.STARTED,
+            TaskRecord.RUNNING,
+            50,
+            "Approving outstanding confirmation requests...",
+        )
 
         for req in outstanding:
             req: ConfirmRequest
@@ -174,14 +254,30 @@ def register_selecting_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
         else:
-            post_task_update_msg(self, task_id, states.SUCCESS, TaskRecord.SUCCESS, 100, "All confirmation requests have been processed")
+            post_task_update_msg(
+                self,
+                task_id,
+                states.SUCCESS,
+                TaskRecord.SUCCESS,
+                100,
+                "All confirmation requests have been processed",
+            )
 
     @celery.task(bind=True, default_retry_delay=10)
     def delete_outstanding_confirms(self, task_id: str, config_id: int):
-        post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 10, "Initializing task...")
+        post_task_update_msg(
+            self,
+            task_id,
+            states.STARTED,
+            TaskRecord.RUNNING,
+            10,
+            "Initializing task...",
+        )
 
         try:
-            config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+            config: ProjectClassConfig = (
+                db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+            )
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -189,11 +285,19 @@ def register_selecting_tasks(celery):
 
         if config is None:
             post_task_update_msg(
-                self, task_id, states.FAILURE, TaskRecord.FAILURE, 0, f"Could not load specified ProjectClassConfig instance id={config_id}"
+                self,
+                task_id,
+                states.FAILURE,
+                TaskRecord.FAILURE,
+                0,
+                f"Could not load specified ProjectClassConfig instance id={config_id}",
             )
             raise Ignore()
 
-        if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+        if (
+                config.selector_lifecycle
+                < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
+        ):
             post_task_update_msg(
                 self,
                 task_id,
@@ -204,7 +308,10 @@ def register_selecting_tasks(celery):
             )
             raise Ignore()
 
-        if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        if (
+                config.selector_lifecycle
+                > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+        ):
             post_task_update_msg(
                 self,
                 task_id,
@@ -215,7 +322,14 @@ def register_selecting_tasks(celery):
             )
             raise Ignore()
 
-        post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 20, "Building list of outstanding confirmation requests...")
+        post_task_update_msg(
+            self,
+            task_id,
+            states.STARTED,
+            TaskRecord.RUNNING,
+            20,
+            "Building list of outstanding confirmation requests...",
+        )
 
         outstanding: List[ConfirmRequest] = (
             db.session.query(ConfirmRequest)
@@ -224,7 +338,14 @@ def register_selecting_tasks(celery):
             .filter(LiveProject.config_id == config.id)
         )
 
-        post_task_update_msg(self, task_id, states.STARTED, TaskRecord.RUNNING, 50, "Removing outstanding confirmation requests...")
+        post_task_update_msg(
+            self,
+            task_id,
+            states.STARTED,
+            TaskRecord.RUNNING,
+            50,
+            "Removing outstanding confirmation requests...",
+        )
 
         for req in outstanding:
             req: ConfirmRequest
@@ -238,4 +359,11 @@ def register_selecting_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
         else:
-            post_task_update_msg(self, task_id, states.SUCCESS, TaskRecord.SUCCESS, 100, "All confirmation requests have been processed")
+            post_task_update_msg(
+                self,
+                task_id,
+                states.SUCCESS,
+                TaskRecord.SUCCESS,
+                100,
+                "All confirmation requests have been processed",
+            )

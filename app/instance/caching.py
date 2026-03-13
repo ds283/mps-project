@@ -12,8 +12,8 @@ import os
 
 # Flask-Caching
 
-CACHE_TYPE = 'RedisCache'
-CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL')
+CACHE_TYPE = "RedisCache"
+CACHE_REDIS_URL = os.environ.get("CACHE_REDIS_URL")
 
 # default timeout = 86400 seconds = 24 hours
 CACHE_DEFAULT_TIMEOUT = 86400

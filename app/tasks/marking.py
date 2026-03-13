@@ -45,7 +45,11 @@ from ..models import (
     LiveProject,
     FeedbackReport,
 )
-from ..shared.asset_tools import AssetCloudAdapter, AssetCloudScratchContextManager, AssetUploadManager
+from ..shared.asset_tools import (
+    AssetCloudAdapter,
+    AssetCloudScratchContextManager,
+    AssetUploadManager,
+)
 from ..shared.scratch import ScratchFileManager, ScratchGroupManager
 from ..shared.security import validate_nonce
 from ..task_queue import register_task
@@ -55,30 +59,50 @@ AssetDictionary = Dict[str, AssetCloudScratchContextManager]
 
 def register_marking_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
-    def send_marking_emails(self, record_id, cc_convenor, max_attachment, test_email, deadline, convenor_id):
+    def send_marking_emails(
+            self, record_id, cc_convenor, max_attachment, test_email, deadline, convenor_id
+    ):
         try:
-            record: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=record_id).first()
+            record: SubmissionPeriodRecord = (
+                db.session.query(SubmissionPeriodRecord).filter_by(id=record_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load SubmissionPeriodRecord from database"})
+            self.update_state(
+                "FAILURE",
+                meta={"msg": "Could not load SubmissionPeriodRecord from database"},
+            )
             raise Ignore()
 
         print(
             '-- Send marking emails for project class "{proj}", submission period '
             '"{period}"'.format(proj=record.config.name, period=record.display_name)
         )
-        print("-- configuration: CC convenor = {cc}, max attachment total = {max} Mb".format(cc=cc_convenor, max=max_attachment))
+        print(
+            "-- configuration: CC convenor = {cc}, max attachment total = {max} Mb".format(
+                cc=cc_convenor, max=max_attachment
+            )
+        )
 
         if test_email is not None:
-            print("-- working in test mode: emails being sent to sink={email}".format(email=test_email))
+            print(
+                "-- working in test mode: emails being sent to sink={email}".format(
+                    email=test_email
+                )
+            )
 
-        print("-- supplied deadline is {deadline}".format(deadline=parser.parse(deadline).date()))
+        print(
+            "-- supplied deadline is {deadline}".format(
+                deadline=parser.parse(deadline).date()
+            )
+        )
 
         email_group = group(
-            dispatch_emails.s(s.id, cc_convenor, max_attachment, test_email, deadline) for s in record.submissions
+            dispatch_emails.s(s.id, cc_convenor, max_attachment, test_email, deadline)
+            for s in record.submissions
         ) | notify_dispatch.s(convenor_id)
 
         raise self.replace(email_group)
@@ -95,7 +119,9 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if convenor is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load User record from database"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load User record from database"}
+            )
             raise Ignore()
 
         # result data should be a list of dicts
@@ -114,9 +140,13 @@ def register_marking_tasks(celery):
                                     if "marker" in result:
                                         mark_sent += result["marker"]
                                 else:
-                                    raise RuntimeError("Expected individual group results to be dictionaries")
+                                    raise RuntimeError(
+                                        "Expected individual group results to be dictionaries"
+                                    )
                         else:
-                            raise RuntimeError("Expected record result data to be a list")
+                            raise RuntimeError(
+                                "Expected record result data to be a list"
+                            )
             else:
                 raise RuntimeError("Expected group result data to be a list")
 
@@ -159,22 +189,33 @@ def register_marking_tasks(celery):
         extension: str = filename_path.suffix.lower()
         user: User = role.user
 
-        print('-- preparing email to supervisor "{name}" for submitter ' '"{sub_name}"'.format(name=user.name, sub_name=student.user.name))
+        print(
+            '-- preparing email to supervisor "{name}" for submitter '
+            '"{sub_name}"'.format(name=user.name, sub_name=student.user.name)
+        )
 
         filename: Path = Path(
-            "{year}_{abbv}_candidate_{number}".format(year=config.year, abbv=pclass.abbreviation, number=student.exam_number)
+            "{year}_{abbv}_candidate_{number}".format(
+                year=config.year, abbv=pclass.abbreviation, number=student.exam_number
+            )
         ).with_suffix(extension)
         print('-- attachment filename = "{path}"'.format(path=str(filename)))
 
         def attach(msg):
-            return _attach_documents(msg, record, filename, max_attachment, role="supervisor")
+            return _attach_documents(
+                msg, record, filename, max_attachment, role="supervisor"
+            )
 
         # inject attached_documents into the body kwargs and re-render
         msg = EmailTemplate.apply_(
             template_type=EmailTemplate.MARKING_SUPERVISOR,
             to=[test_email if test_email is not None else user.email],
             reply_to=[pclass.convenor_email],
-            subject_kwargs={"abbv": pclass.abbreviation, "stu": student.user.name, "deadline": deadline.strftime("%a %d %b")},
+            subject_kwargs={
+                "abbv": pclass.abbreviation,
+                "stu": student.user.name,
+                "deadline": deadline.strftime("%a %d %b"),
+            },
             body_kwargs={
                 "role": role,
                 "config": config,
@@ -188,7 +229,7 @@ def register_marking_tasks(celery):
                 "record": record,
                 "deadline": deadline,
             },
-            body_attachments={"attached_documents": attach}
+            body_attachments={"attached_documents": attach},
         )
 
         if test_email is None and cc_convenor:
@@ -222,23 +263,34 @@ def register_marking_tasks(celery):
         extension: str = filename_path.suffix.lower()
         user: User = role.user
 
-        print('-- preparing email to marker "{name}" for submitter ' '"{sub_name}"'.format(name=user.name, sub_name=student.user.name))
+        print(
+            '-- preparing email to marker "{name}" for submitter "{sub_name}"'.format(
+                name=user.name, sub_name=student.user.name
+            )
+        )
 
         filename: Path = Path(
-            "{year}_{abbv}_candidate_{number}".format(year=config.year, abbv=pclass.abbreviation, number=student.exam_number)
+            "{year}_{abbv}_candidate_{number}".format(
+                year=config.year, abbv=pclass.abbreviation, number=student.exam_number
+            )
         ).with_suffix(extension)
         print('-- attachment filename = "{path}"'.format(path=str(filename)))
 
-
         def attach(msg):
-            return _attach_documents(msg, record, filename, max_attachment, role="marker")
+            return _attach_documents(
+                msg, record, filename, max_attachment, role="marker"
+            )
 
         # inject attached_documents into the body kwargs and re-render
         msg = EmailTemplate.apply_(
             template_type=EmailTemplate.MARKING_MARKER,
             to=[test_email if test_email is not None else user.email],
             reply_to=[pclass.convenor_email],
-            subject_kwargs={"abbv": pclass.abbreviation, "number": student.exam_number, "deadline": deadline.strftime("%a %d %b")},
+            subject_kwargs={
+                "abbv": pclass.abbreviation,
+                "number": student.exam_number,
+                "deadline": deadline.strftime("%a %d %b"),
+            },
             body_kwargs={
                 "role": role,
                 "config": config,
@@ -252,7 +304,7 @@ def register_marking_tasks(celery):
                 "record": record,
                 "deadline": deadline,
             },
-            body_attachments = {
+            body_attachments={
                 "attached_documents": attach,
             },
         )
@@ -263,15 +315,21 @@ def register_marking_tasks(celery):
         return msg
 
     @celery.task(bind=True, default_retry_delay=30)
-    def dispatch_emails(self, record_id, cc_convenor, max_attachment, test_email, deadline):
+    def dispatch_emails(
+            self, record_id, cc_convenor, max_attachment, test_email, deadline
+    ):
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load SubmissionRecord from database"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load SubmissionRecord from database"}
+            )
             raise Ignore()
 
         # nothing to do if either (1) no project assigned, or (2) no report yet uploaded, or
@@ -300,7 +358,9 @@ def register_marking_tasks(celery):
         for role in supervisors:
             role: SubmissionRole
             if not role.marking_distributed:
-                filtered_supervisors: List[SubmissionRole] = [x for x in supervisors if x.id != role.id]
+                filtered_supervisors: List[SubmissionRole] = [
+                    x for x in supervisors if x.id != role.id
+                ]
 
                 msg = _build_supervisor_email(
                     role,
@@ -320,19 +380,29 @@ def register_marking_tasks(celery):
                 )
 
                 # register a new task in the database
-                task_id = register_task(msg.subject, description="Send supervisor marking request to {r}".format(r=", ".join(msg.to)))
+                task_id = register_task(
+                    msg.subject,
+                    description="Send supervisor marking request to {r}".format(
+                        r=", ".join(msg.to)
+                    ),
+                )
 
                 # set up a task to email the supervisor
-                taskchain = chain(send_log_email.si(task_id, msg), record_marking_email_sent.si(role.id, test_email is not None, "supervisor")).set(
-                    serializer="pickle"
-                )
+                taskchain = chain(
+                    send_log_email.si(task_id, msg),
+                    record_marking_email_sent.si(
+                        role.id, test_email is not None, "supervisor"
+                    ),
+                ).set(serializer="pickle")
                 tasks.append(taskchain)
 
         # check which markers need to be sent a marking notification, if any
         for role in markers:
             role: SubmissionRole
             if not role.marking_distributed:
-                filtered_markers: List[SubmissionRole] = [x for x in markers if x.id != role.id]
+                filtered_markers: List[SubmissionRole] = [
+                    x for x in markers if x.id != role.id
+                ]
 
                 msg = _build_marker_email(
                     role,
@@ -352,11 +422,19 @@ def register_marking_tasks(celery):
                 )
 
                 # register a new task in the database
-                task_id = register_task(msg.subject, description="Send examiner marking request to {r}".format(r=", ".join(msg.to)))
-
-                taskchain = chain(send_log_email.si(task_id, msg), record_marking_email_sent.si(role.id, test_email is not None, "marker")).set(
-                    serializer="pickle"
+                task_id = register_task(
+                    msg.subject,
+                    description="Send examiner marking request to {r}".format(
+                        r=", ".join(msg.to)
+                    ),
                 )
+
+                taskchain = chain(
+                    send_log_email.si(task_id, msg),
+                    record_marking_email_sent.si(
+                        role.id, test_email is not None, "marker"
+                    ),
+                ).set(serializer="pickle")
                 tasks.append(taskchain)
 
         if len(tasks) > 0:
@@ -364,7 +442,13 @@ def register_marking_tasks(celery):
 
         return None
 
-    def _attach_documents(msg: EmailMultiAlternatives, record: SubmissionRecord, report_filename: Path, max_attached_size: int, role=None):
+    def _attach_documents(
+            msg: EmailMultiAlternatives,
+            record: SubmissionRecord,
+            report_filename: Path,
+            max_attached_size: int,
+            role=None,
+    ):
         # track cumulative size of added assets, packed on a 'first-come, first-served' system
         current_size = 0
 
@@ -374,15 +458,28 @@ def register_marking_tasks(celery):
         # extract location of (processed) report from SubmissionRecord; we can rely on record.processed_report not being None
         report_asset: GeneratedAsset = record.processed_report
         if report_asset is None:
-            raise RuntimeError("_attach_documents() called with a null processed report")
+            raise RuntimeError(
+                "_attach_documents() called with a null processed report"
+            )
 
         # attach report or generate link for download later]
         buckets = current_app.config.get("OBJECT_STORAGE_BUCKETS")
         object_store = buckets[report_asset.bucket]
 
-        report_storage = AssetCloudAdapter(report_asset, object_store, audit_data=f"marking._attach_documents #1 (submission record #{record.id})")
-        d = attach_asset_to_email_msg(msg, report_storage, current_size, filename=report_filename, max_attached_size=max_attached_size,
-                                      description="student's submitted report", endpoint="download_generated_asset")
+        report_storage = AssetCloudAdapter(
+            report_asset,
+            object_store,
+            audit_data=f"marking._attach_documents #1 (submission record #{record.id})",
+        )
+        d = attach_asset_to_email_msg(
+            msg,
+            report_storage,
+            current_size,
+            filename=report_filename,
+            max_attached_size=max_attached_size,
+            description="student's submitted report",
+            endpoint="download_generated_asset",
+        )
         current_size += d.attached_size
         manifest.extend(d.manifest)
 
@@ -391,30 +488,50 @@ def register_marking_tasks(celery):
             for attachment in record.period.ordered_attachments:
                 attachment: PeriodAttachment
 
-                if (role in ["marker"] and attachment.include_marker_emails) or (role in ["supervisor"] and attachment.include_supervisor_emails):
+                if (role in ["marker"] and attachment.include_marker_emails) or (
+                        role in ["supervisor"] and attachment.include_supervisor_emails
+                ):
                     asset: SubmittedAsset = attachment.attachment
                     object_store = buckets[asset.bucket]
                     asset_storage = AssetCloudAdapter(
-                        asset, object_store, audit_data=f"marking._attach_documents #2 (submission record #{record.id})"
+                        asset,
+                        object_store,
+                        audit_data=f"marking._attach_documents #2 (submission record #{record.id})",
                     )
 
-                    d = attach_asset_to_email_msg(msg, asset_storage, current_size, max_attached_size=max_attached_size,
-                                                  description=attachment.description, endpoint="download_submitted_asset")
+                    d = attach_asset_to_email_msg(
+                        msg,
+                        asset_storage,
+                        current_size,
+                        max_attached_size=max_attached_size,
+                        description=attachment.description,
+                        endpoint="download_submitted_asset",
+                    )
                     current_size += d.attached_size
                     manifest.extend(d.manifest)
 
             for attachment in record.ordered_attachments:
                 attachment: SubmissionAttachment
 
-                if (role in ["marker"] and attachment.include_marker_emails) or (role in ["supervisor"] and attachment.include_supervisor_emails):
+                if (role in ["marker"] and attachment.include_marker_emails) or (
+                        role in ["supervisor"] and attachment.include_supervisor_emails
+                ):
                     asset: SubmittedAsset = attachment.attachment
                     object_store = buckets[asset.bucket]
                     asset_storage = AssetCloudAdapter(
-                        asset, object_store, audit_data=f"marking._attach_documents #3 (submission record #{record.id})"
+                        asset,
+                        object_store,
+                        audit_data=f"marking._attach_documents #3 (submission record #{record.id})",
                     )
 
-                    d = attach_asset_to_email_msg(msg, asset_storage, current_size, max_attached_size=max_attached_size,
-                                                  description=attachment.description, endpoint="download_submitted_asset")
+                    d = attach_asset_to_email_msg(
+                        msg,
+                        asset_storage,
+                        current_size,
+                        max_attached_size=max_attached_size,
+                        description=attachment.description,
+                        endpoint="download_submitted_asset",
+                    )
                     current_size += d.attached_size
                     manifest.extend(d.manifest)
 
@@ -425,13 +542,17 @@ def register_marking_tasks(celery):
         # result_data is forwarded from previous task in the chain, and is not used in the current implementation
 
         try:
-            role: SubmissionRole = db.session.query(SubmissionRole).filter_by(id=role_id).first()
+            role: SubmissionRole = (
+                db.session.query(SubmissionRole).filter_by(id=role_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if role is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load SubmissionRole from database"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load SubmissionRole from database"}
+            )
             raise Ignore()
 
         if not test and not role.marking_distributed:
@@ -448,21 +569,30 @@ def register_marking_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def conflate_marks_for_period(self, period_id: int, convenor_id: Optional[int]):
         try:
-            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            period: SubmissionPeriodRecord = (
+                db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if period is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load SubmissionPeriodRecord from database"})
+            self.update_state(
+                "FAILURE",
+                meta={"msg": "Could not load SubmissionPeriodRecord from database"},
+            )
             raise Ignore()
 
         # set up a task group to perform conflation for each record associated with this period
-        tasks = group(conflate_marks.s(record.id, convenor_id) for record in period.submissions) | notify_period_conflation.s(period.id, convenor_id)
+        tasks = group(
+            conflate_marks.s(record.id, convenor_id) for record in period.submissions
+        ) | notify_period_conflation.s(period.id, convenor_id)
 
         raise self.replace(tasks)
 
-    def sanity_check_grade(role: SubmissionRole, person: User, student: User, convenor: Optional[User]):
+    def sanity_check_grade(
+            role: SubmissionRole, person: User, student: User, convenor: Optional[User]
+    ):
         fail = False
 
         label: str = role.role_as_string.capitalize()
@@ -502,7 +632,9 @@ def register_marking_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def conflate_marks(self, record_id: int, convenor_id: Optional[int]):
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -515,7 +647,9 @@ def register_marking_tasks(celery):
                 convenor = None
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load SubmissionRecord from database"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load SubmissionRecord from database"}
+            )
             return {"not_conflated": 1}
 
         # TODO: allow adjustable conflation rules
@@ -541,7 +675,14 @@ def register_marking_tasks(celery):
             if role.grade is not None:
                 if role.signed_off:
                     fail = sanity_check_grade(role, person, student, convenor)
-                    supervisor_marks.append({"grade": float(role.grade), "weight": float(role.weight) if role.weight is not None else 1.0})
+                    supervisor_marks.append(
+                        {
+                            "grade": float(role.grade),
+                            "weight": float(role.weight)
+                            if role.weight is not None
+                            else 1.0,
+                        }
+                    )
 
                 else:
                     report_info(
@@ -576,7 +717,14 @@ def register_marking_tasks(celery):
             if role.grade is not None:
                 if role.signed_off:
                     fail = sanity_check_grade(role, person, student, convenor)
-                    marker_marks.append({"grade": float(role.grade), "weight": float(role.weight) if role.weight is not None else 1.0})
+                    marker_marks.append(
+                        {
+                            "grade": float(role.grade),
+                            "weight": float(role.weight)
+                            if role.weight is not None
+                            else 1.0,
+                        }
+                    )
 
                 else:
                     report_info(
@@ -604,8 +752,12 @@ def register_marking_tasks(celery):
             return {"not_conflated": 1}
 
         # round up from 0.45%
-        record.supervision_grade = round(sum(m["weight"] * m["grade"] for m in supervisor_marks) + 0.05, 0)
-        record.report_grade = round(sum(m["weight"] * m["grade"] for m in marker_marks) + 0.05, 0)
+        record.supervision_grade = round(
+            sum(m["weight"] * m["grade"] for m in supervisor_marks) + 0.05, 0
+        )
+        record.report_grade = round(
+            sum(m["weight"] * m["grade"] for m in marker_marks) + 0.05, 0
+        )
 
         record.grade_generated_id = convenor_id
         record.grade_generated_timestamp = datetime.now()
@@ -626,23 +778,32 @@ def register_marking_tasks(celery):
     @celery.task(bind=True, default_retry_delay=5)
     def notify_period_conflation(self, result_data, period_id, convenor_id):
         try:
-            convenor: Optional[User] = db.session.query(User).filter_by(id=convenor_id).first()
+            convenor: Optional[User] = (
+                db.session.query(User).filter_by(id=convenor_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if convenor is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load convenor User record from database"})
+            self.update_state(
+                "FAILURE",
+                meta={"msg": "Could not load convenor User record from database"},
+            )
             raise Ignore()
 
         try:
-            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            period: SubmissionPeriodRecord = (
+                db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if period is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load period record from database"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load period record from database"}
+            )
             raise Ignore()
 
         # result data should be a list of lists
@@ -658,7 +819,9 @@ def register_marking_tasks(celery):
                         if "not_conflated" in result:
                             marks_not_conflated += result["not_conflated"]
                     else:
-                        raise RuntimeError("Expected individual results to be dictionaries")
+                        raise RuntimeError(
+                            "Expected individual results to be dictionaries"
+                        )
             else:
                 raise RuntimeError("Expected result data to be a list")
 
@@ -675,28 +838,41 @@ def register_marking_tasks(celery):
             convenor,
         )
 
-        return {"total_conflated": marks_conflated, "total_ignored": marks_not_conflated}
+        return {
+            "total_conflated": marks_conflated,
+            "total_ignored": marks_not_conflated,
+        }
 
     @celery.task(bind=True, default_retry_delay=30)
-    def generate_feedback_reports(self, recipe_id: int, period_id: int, convenor_id: Optional[int]):
+    def generate_feedback_reports(
+            self, recipe_id: int, period_id: int, convenor_id: Optional[int]
+    ):
         try:
-            recipe: FeedbackRecipe = db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
+            recipe: FeedbackRecipe = (
+                db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if recipe is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load recipe record from database"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load recipe record from database"}
+            )
             raise Ignore()
 
         try:
-            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            period: SubmissionPeriodRecord = (
+                db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if period is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load period record from database"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load period record from database"}
+            )
             raise Ignore()
 
         convenor: Optional[User] = None
@@ -716,9 +892,10 @@ def register_marking_tasks(celery):
             self.update_state("FAILURE", meta={"msg": msg})
             raise Ignore()
 
-        tasks = group(generate_feedback_report.s(record.id, recipe_id, convenor_id) for record in period.submissions) | finalize_feedback_reports.s(
-            recipe_id, period_id, convenor_id
-        )
+        tasks = group(
+            generate_feedback_report.s(record.id, recipe_id, convenor_id)
+            for record in period.submissions
+        ) | finalize_feedback_reports.s(recipe_id, period_id, convenor_id)
 
         raise self.replace(tasks)
 
@@ -726,15 +903,21 @@ def register_marking_tasks(celery):
         return markdown.markdown(input)
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
-    def generate_feedback_report(self, record_id: int, recipe_id: int, convenor_id: Optional[int]):
+    def generate_feedback_report(
+            self, record_id: int, recipe_id: int, convenor_id: Optional[int]
+    ):
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load recipe record from database"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load recipe record from database"}
+            )
             raise Ignore()
 
         # if a feedback report has already been generated, do nothing
@@ -753,13 +936,17 @@ def register_marking_tasks(celery):
         pclass: ProjectClass = config.project_class
 
         try:
-            recipe: FeedbackRecipe = db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
+            recipe: FeedbackRecipe = (
+                db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if recipe is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load recipe record from database"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load recipe record from database"}
+            )
             raise Ignore()
 
         convenor: Optional[User] = None
@@ -781,14 +968,20 @@ def register_marking_tasks(celery):
 
         template_asset: FeedbackAsset = recipe.template
         template_storage: AssetCloudAdapter = AssetCloudAdapter(
-            template_asset.asset, object_store, audit_data="generate_feedback_reports.download_template"
+            template_asset.asset,
+            object_store,
+            audit_data="generate_feedback_reports.download_template",
         )
         with template_storage.download_to_scratch() as template_scratch:
             mgr.copy("template", template_scratch.path)
 
         for asset in recipe.asset_list:
             asset: FeedbackAsset
-            asset_storage: AssetCloudAdapter = AssetCloudAdapter(asset.asset, object_store, audit_data="generate_feedback_reports.download_asset")
+            asset_storage: AssetCloudAdapter = AssetCloudAdapter(
+                asset.asset,
+                object_store,
+                audit_data="generate_feedback_reports.download_asset",
+            )
             with asset_storage.download_to_scratch() as asset_scratch:
                 mgr.copy(asset.label, asset_scratch.path)
 
@@ -868,14 +1061,29 @@ def register_marking_tasks(celery):
                 )
                 pdf = HTML(filename=html_mgr.path, base_url=".").write_pdf(
                     pdf_mgr.path,
-                    stylesheets=["https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap", sheet],
+                    stylesheets=[
+                        "https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap",
+                        sheet,
+                    ],
                     font_config=font_config,
                 )
 
-                target_name = sanitize_filename(f"Feedback-{config.year}-{config.abbreviation}-{student.last_name}.pdf")
-                license = db.session.query(AssetLicense).filter_by(abbreviation="Work").first()
+                target_name = sanitize_filename(
+                    f"Feedback-{config.year}-{config.abbreviation}-{student.last_name}.pdf"
+                )
+                license = (
+                    db.session.query(AssetLicense)
+                    .filter_by(abbreviation="Work")
+                    .first()
+                )
 
-                new_asset = GeneratedAsset(timestamp=datetime.now(), expiry=None, parent_asset_id=None, target_name=target_name, license=license)
+                new_asset = GeneratedAsset(
+                    timestamp=datetime.now(),
+                    expiry=None,
+                    parent_asset_id=None,
+                    target_name=target_name,
+                    license=license,
+                )
 
                 object_store = current_app.config.get("OBJECT_STORAGE_FEEDBACK")
                 with open(pdf_mgr.path, "rb") as f:
@@ -895,7 +1103,9 @@ def register_marking_tasks(celery):
                     db.session.flush()
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    current_app.logger.exception(
+                        "SQLAlchemyError exception", exc_info=e
+                    )
                     raise self.retry()
 
                 new_report = FeedbackReport(
@@ -909,7 +1119,9 @@ def register_marking_tasks(celery):
                     db.session.flush()
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    current_app.logger.exception(
+                        "SQLAlchemyError exception", exc_info=e
+                    )
                     raise self.retry()
 
                 # add to the list of feedback reports for this record (there may be more than one)
@@ -938,7 +1150,9 @@ def register_marking_tasks(celery):
                     db.session.commit()
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    current_app.logger.exception(
+                        "SQLAlchemyError exception", exc_info=e
+                    )
                     raise self.retry()
 
         # remove downloaded files from the scratch folder
@@ -947,25 +1161,35 @@ def register_marking_tasks(celery):
         return {"generated": 1}
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=5)
-    def finalize_feedback_reports(self, result_data, recipe_id: int, period_id: int, convenor_id: Optional[int]):
+    def finalize_feedback_reports(
+            self, result_data, recipe_id: int, period_id: int, convenor_id: Optional[int]
+    ):
         try:
-            recipe: FeedbackRecipe = db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
+            recipe: FeedbackRecipe = (
+                db.session.query(FeedbackRecipe).filter_by(id=recipe_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if recipe is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load recipe record from database"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load recipe record from database"}
+            )
             raise Ignore()
 
         try:
-            period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            period: SubmissionPeriodRecord = (
+                db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if period is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load period record from database"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load period record from database"}
+            )
             raise Ignore()
 
         convenor: Optional[User] = None
@@ -989,7 +1213,9 @@ def register_marking_tasks(celery):
                         if "ignored" in result:
                             reports_ignored += result["ignored"]
                     else:
-                        raise RuntimeError("Expected individual results to be dictionaries")
+                        raise RuntimeError(
+                            "Expected individual results to be dictionaries"
+                        )
             else:
                 raise RuntimeError("Expected result data to be a list")
 
@@ -1003,11 +1229,12 @@ def register_marking_tasks(celery):
         if reports_ignored == 1:
             ignored_were = "was"
 
-        msg = (
-            f"{period.display_name}: Used feedback report recipe '{recipe.label}' to generate {reports_generated} feedback report{generated_plural}."
-        )
+        msg = f"{period.display_name}: Used feedback report recipe '{recipe.label}' to generate {reports_generated} feedback report{generated_plural}."
         if reports_ignored > 0:
-            msg += " " + f"{reports_ignored} submitter{ignored_plural} {ignored_were} ignored."
+            msg += (
+                    " "
+                    + f"{reports_ignored} submitter{ignored_plural} {ignored_were} ignored."
+            )
         report_info(
             msg,
             "finalize_feedback_reports",

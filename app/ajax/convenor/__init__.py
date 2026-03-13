@@ -10,12 +10,20 @@
 
 from .add_bookmark import add_student_bookmark
 from .add_ranking import add_student_ranking
-from .custom_offers import project_offer_data, student_offer_data, new_project_offer_selectors, new_student_offer_projects
+from .custom_offers import (
+    project_offer_data,
+    student_offer_data,
+    new_project_offer_selectors,
+    new_student_offer_projects,
+)
 from .edit_roles import edit_roles
 from .enrol_selectors import enrol_selectors_data
 from .enrol_submitters import enrol_submitters_data
 from .faculty import faculty_data
-from .liveproject_alternatives import liveproject_alternatives, new_liveproject_alternative
+from .liveproject_alternatives import (
+    liveproject_alternatives,
+    new_liveproject_alternative,
+)
 from .liveprojects import liveprojects_data
 from .manual_assign import manual_assign_data
 from .outstanding_confirm import outstanding_confirm_data

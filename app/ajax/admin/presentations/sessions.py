@@ -164,7 +164,10 @@ def assessment_sessions_data(sessions):
 
     data = [
         {
-            "datelabel": {"display": render_template(datelabel_templ, s=s), "timestamp": calendar.timegm(s.date.timetuple())},
+            "datelabel": {
+                "display": render_template(datelabel_templ, s=s),
+                "timestamp": calendar.timegm(s.date.timetuple()),
+            },
             "rooms": render_template(rooms_templ, s=s, simple_label=simple_label),
             "availability": render_template(availability_templ, s=s),
             "menu": render_template(menu_templ, s=s),

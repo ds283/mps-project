@@ -22,14 +22,22 @@ from ..meta import ObjectMeta
 
 class GoogleCloudStorageDriver:
     def __init__(self, uri: SplitResult, data: Dict):
-        if data is None or not isinstance(data, dict) or "google_service_account" not in data:
-            raise RuntimeError("cloud_object_store: google_service_account credentials must be supplied")
+        if (
+                data is None
+                or not isinstance(data, dict)
+                or "google_service_account" not in data
+        ):
+            raise RuntimeError(
+                "cloud_object_store: google_service_account credentials must be supplied"
+            )
 
         credentials_file = Path(data["google_service_account"]).resolve()
         with open(credentials_file) as f:
             credentials_data = json.load(f)
 
-        credentials = service_account.Credentials.from_service_account_info(info=credentials_data)
+        credentials = service_account.Credentials.from_service_account_info(
+            info=credentials_data
+        )
         project_id = credentials_data["project_id"]
 
         self._storage: Client = Client(project=project_id, credentials=credentials)
@@ -75,7 +83,9 @@ class GoogleCloudStorageDriver:
     def copy(self, src: Path, dst: Path) -> None:
         try:
             blob: Blob = self._bucket.get_blob(str(src))
-            self._bucket.copy_blob(blob, destination_bucket=self._bucket, new_name=str(dst))
+            self._bucket.copy_blob(
+                blob, destination_bucket=self._bucket, new_name=str(dst)
+            )
         except NotFound as e:
             raise FileNotFoundError(str(e))
 

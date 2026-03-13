@@ -244,8 +244,11 @@ def project_offer_data(proj: LiveProject, items: List[CustomOffer]):
     data = [
         {
             "student": {
-                "display": render_template_string(_student, offer=item, sel=item.selector),
-                "sortvalue": item.selector.student.user.last_name + item.selector.student.user.first_name,
+                "display": render_template_string(
+                    _student, offer=item, sel=item.selector
+                ),
+                "sortvalue": item.selector.student.user.last_name
+                             + item.selector.student.user.first_name,
             },
             "timestamp": {
                 "display": render_template_string(_timestamp, offer=item),
@@ -253,9 +256,18 @@ def project_offer_data(proj: LiveProject, items: List[CustomOffer]):
             },
             "status": {
                 "display": render_template_string(_status, offer=item),
-                "sortvalue": "{x}_{y}".format(x=item.status, y=item.last_edit_timestamp.timestamp() if item.last_edit_timestamp is not None else 0),
+                "sortvalue": "{x}_{y}".format(
+                    x=item.status,
+                    y=item.last_edit_timestamp.timestamp()
+                    if item.last_edit_timestamp is not None
+                    else 0,
+                ),
             },
-            "menu": render_template_string(_menu, offer=item, url=url_for('convenor.project_custom_offers', proj_id=proj.id)),
+            "menu": render_template_string(
+                _menu,
+                offer=item,
+                url=url_for("convenor.project_custom_offers", proj_id=proj.id),
+            ),
         }
         for item in items
     ]
@@ -268,12 +280,17 @@ def student_offer_data(sel: SelectingStudent, items: List[CustomOffer]):
 
     data = [
         {
-            "project": render_template_string(_project, offer=item, sel=item.selector, proj=item.liveproject),
+            "project": render_template_string(
+                _project, offer=item, sel=item.selector, proj=item.liveproject
+            ),
             "owner": {
-                "display": render_template_string(_owner, project=item.liveproject, simple_label=simple_label),
+                "display": render_template_string(
+                    _owner, project=item.liveproject, simple_label=simple_label
+                ),
                 "sortvalue": "Generic"
                 if item.liveproject.generic or item.liveproject.owner is None
-                else item.liveproject.owner.user.last_name + item.liveproject.owner.user.first_name,
+                else item.liveproject.owner.user.last_name
+                     + item.liveproject.owner.user.first_name,
             },
             "timestamp": {
                 "display": render_template_string(_timestamp, offer=item),
@@ -281,9 +298,18 @@ def student_offer_data(sel: SelectingStudent, items: List[CustomOffer]):
             },
             "status": {
                 "display": render_template_string(_status, offer=item),
-                "sortvalue": "{x}_{y}".format(x=item.status, y=item.last_edit_timestamp.timestamp() if item.last_edit_timestamp is not None else 0),
+                "sortvalue": "{x}_{y}".format(
+                    x=item.status,
+                    y=item.last_edit_timestamp.timestamp()
+                    if item.last_edit_timestamp is not None
+                    else 0,
+                ),
             },
-            "menu": render_template_string(_menu, offer=item, url=url_for('convenor.selector_custom_offers', sel_id=sel.id)),
+            "menu": render_template_string(
+                _menu,
+                offer=item,
+                url=url_for("convenor.selector_custom_offers", sel_id=sel.id),
+            ),
         }
         for item in items
     ]
@@ -314,8 +340,12 @@ def new_student_offer_projects(projects, sel):
         {
             "project": render_template_string(_project, sel=sel, proj=project),
             "owner": {
-                "display": render_template_string(_owner, project=project, simple_label=simple_label),
-                "sortvalue": "Generic" if project.generic or project.owner is None else project.owner.user.last_name + project.owner.user.first_name,
+                "display": render_template_string(
+                    _owner, project=project, simple_label=simple_label
+                ),
+                "sortvalue": "Generic"
+                if project.generic or project.owner is None
+                else project.owner.user.last_name + project.owner.user.first_name,
             },
             "offers": render_template_string(_project_offers, record=project),
             "actions": render_template_string(_sel_actions, sel=sel, project=project),

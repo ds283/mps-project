@@ -408,10 +408,17 @@ def assessment_schedules_data(schedules, text, url):
         {
             "name": render_template(name_templ, s=s, text=text, url=url),
             "status": render_template(status_templ, s=s),
-            "score": {"display": render_template(score_templ, s=s), "value": float(s.score) if s.solution_usable and s.score is not None else 0},
+            "score": {
+                "display": render_template(score_templ, s=s),
+                "value": float(s.score)
+                if s.solution_usable and s.score is not None
+                else 0,
+            },
             "timestamp": render_template(timestamp_templ, s=s),
             "info": render_template(info_templ, s=s),
-            "periods": render_template(periods_templ, a=s.owner, simple_label=simple_label),
+            "periods": render_template(
+                periods_templ, a=s.owner, simple_label=simple_label
+            ),
             "menu": render_template(menu_templ, s=s, text=text, url=url),
         }
         for s in schedules

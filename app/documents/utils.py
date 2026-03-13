@@ -12,7 +12,12 @@
 from flask import flash
 from flask_login import current_user
 
-from ..models import SubmissionRecord, SubmissionPeriodRecord, ProjectClassConfig, SubmittedAsset
+from ..models import (
+    SubmissionRecord,
+    SubmissionPeriodRecord,
+    ProjectClassConfig,
+    SubmittedAsset,
+)
 
 
 def is_editable(
@@ -24,7 +29,11 @@ def is_editable(
     allow_student: bool = True,
 ):
     # 'root', 'admin' and 'office' users can always edit SubmissionRecord data
-    if current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("office"):
+    if (
+            current_user.has_role("root")
+            or current_user.has_role("admin")
+            or current_user.has_role("office")
+    ):
         return True
 
     period = period or record.period
@@ -37,7 +46,10 @@ def is_editable(
             return True
 
         if message:
-            flash("Only the project convenor can edit documents attached to this submission record", "info")
+            flash(
+                "Only the project convenor can edit documents attached to this submission record",
+                "info",
+            )
 
         return False
 
@@ -52,12 +64,18 @@ def is_editable(
                 return True
 
         if message:
-            flash("It is not possible to edit this document. You can only edit documents that you have uploaded yourself.", "info")
+            flash(
+                "It is not possible to edit this document. You can only edit documents that you have uploaded yourself.",
+                "info",
+            )
 
         return False
 
     if message:
-        flash("You do not have sufficient privileges to edit the documents attached to this submission record", "info")
+        flash(
+            "You do not have sufficient privileges to edit the documents attached to this submission record",
+            "info",
+        )
 
     return False
 
@@ -74,7 +92,10 @@ def is_deletable(record, period=None, config=None, message=False):
     # otherwise, the project covenor can delete documents from a SubmissionRecord if we are not yet marking
     if not pclass.is_convenor(current_user.id):
         if message:
-            flash("Only the project convenor can delete documents attached to this submission record", "info")
+            flash(
+                "Only the project convenor can delete documents attached to this submission record",
+                "info",
+            )
 
         return False
 
@@ -114,7 +135,12 @@ def is_listable(record, message=False):
     :return:
     """
     # 'root', 'admin', 'faculty' and 'office' users can always list the documents attached to a SubmissionRecord
-    if current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("faculty") or current_user.has_role("office"):
+    if (
+            current_user.has_role("root")
+            or current_user.has_role("admin")
+            or current_user.has_role("faculty")
+            or current_user.has_role("office")
+    ):
         return True
 
     # 'student' users can only list the documents attached if they are the submitter
@@ -123,12 +149,18 @@ def is_listable(record, message=False):
             return True
 
         if message:
-            flash("It is only possible to view the documents attached to this submission record if you are the submitter.", "info")
+            flash(
+                "It is only possible to view the documents attached to this submission record if you are the submitter.",
+                "info",
+            )
 
         return False
 
     if message:
-        flash("You do not have sufficient privileges to view the documents attached to this submission record", "info")
+        flash(
+            "You do not have sufficient privileges to view the documents attached to this submission record",
+            "info",
+        )
 
     return False
 
@@ -143,7 +175,11 @@ def is_uploadable(record, message=False, allow_student=True, allow_faculty=True)
     :return:
     """
     # 'root', 'admin', 'faculty' and 'office' users can always upload new documents to a SubmissionRecord
-    if current_user.has_role("root") or current_user.has_role("admin") or current_user.has_role("office"):
+    if (
+            current_user.has_role("root")
+            or current_user.has_role("admin")
+            or current_user.has_role("office")
+    ):
         return True
 
     if current_user.has_role("faculty"):
@@ -163,7 +199,10 @@ def is_uploadable(record, message=False, allow_student=True, allow_faculty=True)
     if current_user.has_role("student"):
         if not allow_student:
             if message:
-                flash("You do not have sufficient privileges to attach documents to this submission record.", "info")
+                flash(
+                    "You do not have sufficient privileges to attach documents to this submission record.",
+                    "info",
+                )
 
             return False
 
@@ -171,12 +210,18 @@ def is_uploadable(record, message=False, allow_student=True, allow_faculty=True)
             return True
 
         if message:
-            flash("It is only possible to attach documents to this submission record if you are the submitter.", "info")
+            flash(
+                "It is only possible to attach documents to this submission record if you are the submitter.",
+                "info",
+            )
 
         return False
 
     if message:
-        flash("You do not have sufficient privileges to attach documents to this submission record.", "info")
+        flash(
+            "You do not have sufficient privileges to attach documents to this submission record.",
+            "info",
+        )
 
     return False
 
@@ -200,7 +245,10 @@ def is_processable(record, period=None, config=None, message=False):
     # otherwise, the project covenor can initiate processig
     if not pclass.is_convenor(current_user.id):
         if message:
-            flash("Only the project convenor can initiate generation of a processed report", "info")
+            flash(
+                "Only the project convenor can initiate generation of a processed report",
+                "info",
+            )
 
         return False
 

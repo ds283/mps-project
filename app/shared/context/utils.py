@@ -25,7 +25,7 @@ def get_pclass_list() -> List[ProjectClass]:
     )
 
 
-def get_pclass_config_list(pcs: List[ProjectClass]=None) -> List[ProjectClassConfig]:
+def get_pclass_config_list(pcs: List[ProjectClass] = None) -> List[ProjectClassConfig]:
     if pcs is None:
         pcs: List[ProjectClass] = get_pclass_list()
 

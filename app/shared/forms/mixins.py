@@ -11,14 +11,30 @@
 
 from functools import partial
 
-from wtforms import SubmitField, StringField, SelectField, BooleanField, IntegerField, TextAreaField
+from wtforms import (
+    SubmitField,
+    StringField,
+    SelectField,
+    BooleanField,
+    IntegerField,
+    TextAreaField,
+)
 from wtforms.validators import InputRequired, Optional, Length
 from wtforms_alchemy import QuerySelectField
 
-from ...models import academic_titles, email_freq_choices, DEFAULT_STRING_LENGTH, ProjectClassConfig
+from ...models import (
+    academic_titles,
+    email_freq_choices,
+    DEFAULT_STRING_LENGTH,
+    ProjectClassConfig,
+)
 from .wtf_validators import valid_username, unique_or_original_username, NotOptionalIf
 
-from .queries import GetActiveAssetLicenses, GetSubmissionRecords, BuildSubmissionRecordLabel
+from .queries import (
+    GetActiveAssetLicenses,
+    GetSubmissionRecords,
+    BuildSubmissionRecordLabel,
+)
 
 
 class SaveChangesMixin:
@@ -26,13 +42,25 @@ class SaveChangesMixin:
 
 
 class EditUserNameMixin:
-    username = StringField("Username", validators=[InputRequired(message="Username is required"), valid_username, unique_or_original_username])
+    username = StringField(
+        "Username",
+        validators=[
+            InputRequired(message="Username is required"),
+            valid_username,
+            unique_or_original_username,
+        ],
+    )
 
 
 class FirstLastNameMixin:
-    first_name = StringField("First name", validators=[InputRequired(message="First name is required")])
+    first_name = StringField(
+        "First name", validators=[InputRequired(message="First name is required")]
+    )
 
-    last_name = StringField("Last or family name", validators=[InputRequired(message="Last name is required")])
+    last_name = StringField(
+        "Last or family name",
+        validators=[InputRequired(message="Last name is required")],
+    )
 
 
 class DefaultLicenseMixin:
@@ -48,15 +76,21 @@ class DefaultLicenseMixin:
 class EmailSettingsMixin:
     group_summaries = BooleanField("Group notifications into summaries")
 
-    summary_frequency = SelectField("Frequency of summaries", choices=email_freq_choices, coerce=int)
+    summary_frequency = SelectField(
+        "Frequency of summaries", choices=email_freq_choices, coerce=int
+    )
 
 
 def FacultyDataMixinFactory(admin=False, enable_canvas=False):
     class FacultyDataMixin:
-        academic_title = SelectField("Academic title", choices=academic_titles, coerce=int)
+        academic_title = SelectField(
+            "Academic title", choices=academic_titles, coerce=int
+        )
 
         use_academic_title = BooleanField(
-            "Use academic title", default=True, description="Prefix your name with Dr, Professor, or similar in student-facing web pages."
+            "Use academic title",
+            default=True,
+            description="Prefix your name with Dr, Professor, or similar in student-facing web pages.",
         )
 
         # project defaults
@@ -111,7 +145,14 @@ def FacultyDataMixinFactory(admin=False, enable_canvas=False):
             "significantly simpler.",
         )
 
-        office = StringField("Office", validators=[InputRequired(message="Please enter your office details to help students find you")])
+        office = StringField(
+            "Office",
+            validators=[
+                InputRequired(
+                    message="Please enter your office details to help students find you"
+                )
+            ],
+        )
 
         if admin:
             CATS_supervision = IntegerField(
@@ -121,11 +162,15 @@ def FacultyDataMixinFactory(admin=False, enable_canvas=False):
             )
 
             CATS_marking = IntegerField(
-                "Guideline number of CATS available for marking", description="Leave blank for default assignment", validators=[Optional()]
+                "Guideline number of CATS available for marking",
+                description="Leave blank for default assignment",
+                validators=[Optional()],
             )
 
             CATS_moderation = IntegerField(
-                "Guideline number of CATS available for moderation", description="Leave blank for default assignment", validators=[Optional()]
+                "Guideline number of CATS available for moderation",
+                description="Leave blank for default assignment",
+                validators=[Optional()],
             )
 
             CATS_presentation = IntegerField(
@@ -167,7 +212,9 @@ class FeedbackMixin:
 
 
 class PeriodPresentationsMixin:
-    has_presentation = BooleanField("This submission period includes a presentation assessment")
+    has_presentation = BooleanField(
+        "This submission period includes a presentation assessment"
+    )
 
     number_assessors = IntegerField(
         "Number of assessors per group",
@@ -176,7 +223,9 @@ class PeriodPresentationsMixin:
         validators=[NotOptionalIf("has_presentation")],
     )
 
-    lecture_capture = BooleanField("The presentation assessment requires a venue with lecture capture")
+    lecture_capture = BooleanField(
+        "The presentation assessment requires a venue with lecture capture"
+    )
 
     max_group_size = IntegerField(
         "Maximum group size",
@@ -186,17 +235,30 @@ class PeriodPresentationsMixin:
     )
 
     morning_session = StringField(
-        "Times for morning session", description="e.g. 10am-12pm", validators=[NotOptionalIf("has_presentation"), Length(max=DEFAULT_STRING_LENGTH)]
+        "Times for morning session",
+        description="e.g. 10am-12pm",
+        validators=[
+            NotOptionalIf("has_presentation"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
     afternoon_session = StringField(
-        "Times for afternoon session", description="e.g. 2pm-4pm", validators=[NotOptionalIf("has_presentation"), Length(max=DEFAULT_STRING_LENGTH)]
+        "Times for afternoon session",
+        description="e.g. 2pm-4pm",
+        validators=[
+            NotOptionalIf("has_presentation"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
     talk_format = StringField(
         "Specify talk format",
         description="e.g. 15 mins + 3 mins for questions",
-        validators=[NotOptionalIf("has_presentation"), Length(max=DEFAULT_STRING_LENGTH)],
+        validators=[
+            NotOptionalIf("has_presentation"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
     collect_presentation_feedback = BooleanField("Collect presentation feedback online")
@@ -207,7 +269,9 @@ def PeriodSelectorMixinFactory(config: ProjectClassConfig, is_admin: bool):
         # only include selector if user has admin privileges
         if is_admin:
             selector = QuerySelectField(
-                "Select submission period", query_factory=partial(GetSubmissionRecords, config), get_label=BuildSubmissionRecordLabel
+                "Select submission period",
+                query_factory=partial(GetSubmissionRecords, config),
+                get_label=BuildSubmissionRecordLabel,
             )
 
     return PeriodSelectorMixin

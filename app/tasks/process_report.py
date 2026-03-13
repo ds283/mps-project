@@ -20,7 +20,14 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import SubmissionRecord, SubmittedAsset, User, ProjectClassConfig, GeneratedAsset, StudentData
+from ..models import (
+    SubmissionRecord,
+    SubmittedAsset,
+    User,
+    ProjectClassConfig,
+    GeneratedAsset,
+    StudentData,
+)
 from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.scratch import ScratchFileManager
@@ -94,7 +101,11 @@ def transform_date(date_str):
             date_info["tzinfo"] = tzutc()
         else:
             multiplier = 1 if date_info["tz_offset"] == "+" else -1
-            date_info["tzinfo"] = tzoffset(None, multiplier * (3600 * date_info["tz_hour"] + 60 * date_info["tz_minute"]))
+            date_info["tzinfo"] = tzoffset(
+                None,
+                multiplier
+                * (3600 * date_info["tz_hour"] + 60 * date_info["tz_minute"]),
+            )
 
         for k in ("tz_offset", "tz_hour", "tz_minute"):  # no longer needed
             del date_info[k]
@@ -126,7 +137,9 @@ def _process_report(source: Path, dest: Path, record: SubmissionRecord):
 
     ytop = _coverpage_title(coverpage_label, page, w, ytop)
     ytop = _coverpage_candidate_number(candidate_label, page, w, ytop)
-    ytop = _coverpage_metadata(creation_date, metadata, modified_date, num_pages, page, w, ytop)
+    ytop = _coverpage_metadata(
+        creation_date, metadata, modified_date, num_pages, page, w, ytop
+    )
 
     # embed dyslexia sticker if required
     if data.dyslexia_sticker:
@@ -134,26 +147,48 @@ def _process_report(source: Path, dest: Path, record: SubmissionRecord):
 
     # embed dyspraxia sticker if required
     if data.dyspraxia_sticker:
-        ytop = _attach_sticker(page, w, ytop, _dyspraxia_sticker_colour, _dyspraxic_label)
+        ytop = _attach_sticker(
+            page, w, ytop, _dyspraxia_sticker_colour, _dyspraxic_label
+        )
 
     doc.save(str(dest))
 
 
-def _coverpage_metadata(creation_date, metadata, modified_date, num_pages, page, w, ytop):
+def _coverpage_metadata(
+        creation_date, metadata, modified_date, num_pages, page, w, ytop
+):
     x0 = _initial_x_position
     y0 = ytop + _text_label_size + _vertical_margin
     p2 = fitz.Point(x0, y0)
-    rc = page.insert_text(p2, "Number of pages: {n}".format(n=num_pages), color=_black, fontname="Helvetica", fontsize=_text_label_size)
+    rc = page.insert_text(
+        p2,
+        "Number of pages: {n}".format(n=num_pages),
+        color=_black,
+        fontname="Helvetica",
+        fontsize=_text_label_size,
+    )
 
     x0 = int(w / 2)
     p3 = fitz.Point(x0, y0)
-    rc = page.insert_text(p3, "Producer: {p}".format(p=metadata["producer"]), color=_black, fontname="Helvetica", fontsize=_text_label_size)
+    rc = page.insert_text(
+        p3,
+        "Producer: {p}".format(p=metadata["producer"]),
+        color=_black,
+        fontname="Helvetica",
+        fontsize=_text_label_size,
+    )
     ytop = ytop + _text_label_size + _vertical_margin
 
     x0 = _initial_x_position
     y0 = ytop + _text_label_size + _vertical_margin
     p4 = fitz.Point(x0, y0)
-    rc = page.insert_text(p4, "Format: {p}".format(p=metadata["format"]), color=_black, fontname="Helvetica", fontsize=_text_label_size)
+    rc = page.insert_text(
+        p4,
+        "Format: {p}".format(p=metadata["format"]),
+        color=_black,
+        fontname="Helvetica",
+        fontsize=_text_label_size,
+    )
     ytop = ytop + _text_label_size + _vertical_margin
 
     x0 = _initial_x_position
@@ -171,7 +206,9 @@ def _coverpage_metadata(creation_date, metadata, modified_date, num_pages, page,
     p7 = fitz.Point(x0, y0)
     rc = page.insert_text(
         p7,
-        "Last modified: {date}".format(date=modified_date.strftime("%a %d %b %Y %H:%M:%S")),
+        "Last modified: {date}".format(
+            date=modified_date.strftime("%a %d %b %Y %H:%M:%S")
+        ),
         color=_black,
         fontname="Helvetica",
         fontsize=_text_label_size,
@@ -182,14 +219,22 @@ def _coverpage_metadata(creation_date, metadata, modified_date, num_pages, page,
 
 
 def _coverpage_candidate_number(candidate_label, page, w, ytop):
-    candidate_label_width = fitz.get_text_length(candidate_label, fontname="Helvetica", fontsize=_subtitle_label_size)
+    candidate_label_width = fitz.get_text_length(
+        candidate_label, fontname="Helvetica", fontsize=_subtitle_label_size
+    )
 
     x0 = (w - candidate_label_width) / 2
     y0 = ytop + _subtitle_label_size + _vertical_margin
 
     p_subtitle = fitz.Point(x0, y0)
 
-    rc = page.insert_text(p_subtitle, candidate_label, color=_black, fontname="Helvetica", fontsize=_subtitle_label_size)
+    rc = page.insert_text(
+        p_subtitle,
+        candidate_label,
+        color=_black,
+        fontname="Helvetica",
+        fontsize=_subtitle_label_size,
+    )
 
     return ytop + _subtitle_label_size + _vertical_margin + _subtitle_label_size
 
@@ -210,7 +255,9 @@ def _coverpage_title(coverpage_label, page, w, ytop):
     now = datetime.now()
     rc = shape.insert_textbox(
         r1,
-        "This page was automatically generated on {now}".format(now=now.strftime("%a %d %b %Y %H:%M:%S")),
+        "This page was automatically generated on {now}".format(
+            now=now.strftime("%a %d %b %Y %H:%M:%S")
+        ),
         color=_black,
         fontname="Helvetica",
         align=fitz.TEXT_ALIGN_CENTER,
@@ -219,14 +266,22 @@ def _coverpage_title(coverpage_label, page, w, ytop):
     shape.commit()
     ytop = ytop + rheight + _text_label_size
 
-    coverpage_label_width = fitz.get_text_length(coverpage_label, fontname="Helvetica", fontsize=_title_label_size)
+    coverpage_label_width = fitz.get_text_length(
+        coverpage_label, fontname="Helvetica", fontsize=_title_label_size
+    )
 
     x0 = (w - coverpage_label_width) / 2
     y0 = ytop + _title_label_size + _vertical_margin
 
     p_title = fitz.Point(x0, y0)
 
-    rc = page.insert_text(p_title, coverpage_label, color=_black, fontname="Helvetica", fontsize=_title_label_size)
+    rc = page.insert_text(
+        p_title,
+        coverpage_label,
+        color=_black,
+        fontname="Helvetica",
+        fontsize=_title_label_size,
+    )
 
     return ytop + _title_label_size + _vertical_margin + _title_label_size
 
@@ -245,7 +300,14 @@ def _attach_sticker(page, w, ytop, colour, text):
     shape = page.new_shape()
     shape.draw_rect(r1)
     shape.finish(color=colour, fill=colour, width=0.3)
-    rc = shape.insert_textbox(r1, text, color=_black, fontname="Helvetica", align=fitz.TEXT_ALIGN_CENTER, fontsize=_sticker_text_size)
+    rc = shape.insert_textbox(
+        r1,
+        text,
+        color=_black,
+        fontname="Helvetica",
+        align=fitz.TEXT_ALIGN_CENTER,
+        fontsize=_sticker_text_size,
+    )
     shape.commit()
 
     return ytop + _title_label_size + rheight + _vertical_margin
@@ -255,13 +317,18 @@ def register_process_report_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def process(self, record_id):
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
-            self.update_state("FAILURE", meta={"msg": "Could not load SubmissionRecord instance from database"})
+            self.update_state(
+                "FAILURE",
+                meta={"msg": "Could not load SubmissionRecord instance from database"},
+            )
             raise Ignore()
 
         asset: SubmittedAsset = record.report
@@ -271,10 +338,16 @@ def register_process_report_tasks(celery):
             raise Ignore()
 
         object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
-        input_storage = AssetCloudAdapter(asset, object_store, audit_data=f"process_report.process #1 (record id #{record_id})")
+        input_storage = AssetCloudAdapter(
+            asset,
+            object_store,
+            audit_data=f"process_report.process #1 (record id #{record_id})",
+        )
 
         if not input_storage.exists():
-            self.update_state("FAILURE", meta={"msg": "Could not find report in object store"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not find report in object store"}
+            )
             raise Ignore()
 
         # generate scratch names
@@ -314,7 +387,9 @@ def register_process_report_tasks(celery):
                         db.session.flush()
                     except SQLAlchemyError as e:
                         db.session.rollback()
-                        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                        current_app.logger.exception(
+                            "SQLAlchemyError exception", exc_info=e
+                        )
                         raise self.retry()
 
                     # attach asset to the SubmissionRecord
@@ -334,13 +409,18 @@ def register_process_report_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def finalize(self, record_id):
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
-            self.update_state(state="FAILURE", meta={"msg": "Could not load SubmissionRecord instance from database"})
+            self.update_state(
+                state="FAILURE",
+                meta={"msg": "Could not load SubmissionRecord instance from database"},
+            )
             raise Ignore()
 
         record.celery_finished = True
@@ -358,22 +438,31 @@ def register_process_report_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def error(self, record_id, user_id):
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
             user: User = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
-            self.update_state(state="FAILURE", meta={"msg": "Could not load SubmissionRecord instance from database"})
+            self.update_state(
+                state="FAILURE",
+                meta={"msg": "Could not load SubmissionRecord instance from database"},
+            )
             raise Ignore()
 
         if user is None:
-            self.update_state(state="FAILURE", meta={"msg": "Could not load User model from database"})
+            self.update_state(
+                state="FAILURE", meta={"msg": "Could not load User model from database"}
+            )
             raise Ignore()
 
         user.post_message(
-            "Errors occurred when processing uploaded report for submitter {name}".format(name=record.owner.student.user.name),
+            "Errors occurred when processing uploaded report for submitter {name}".format(
+                name=record.owner.student.user.name
+            ),
             "danger",
             autocommit=True,
         )

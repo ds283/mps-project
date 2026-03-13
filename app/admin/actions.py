@@ -31,7 +31,11 @@ def estimate_CATS_load():
     year = get_current_year()
 
     # get list of project classes that participate in automatic matching
-    pclasses = db.session.query(ProjectClass).filter_by(active=True, publish=True, do_matching=True).all()
+    pclasses = (
+        db.session.query(ProjectClass)
+        .filter_by(active=True, publish=True, do_matching=True)
+        .all()
+    )
 
     supervision_CATS = 0
     marking_CATS = 0
@@ -50,10 +54,18 @@ def estimate_CATS_load():
         config: ProjectClassConfig = pclass.get_config(year)
 
         if config is None:
-            raise RuntimeError('Configuration record for "{name}" and year={yr} is missing'.format(name=pclass.name, yr=year))
+            raise RuntimeError(
+                'Configuration record for "{name}" and year={yr} is missing'.format(
+                    name=pclass.name, yr=year
+                )
+            )
 
         # find number of selectors for this project class
-        num_selectors = get_count(db.session.query(SelectingStudent).filter_by(retired=False, convert_to_submitter=True, config_id=config.id))
+        num_selectors = get_count(
+            db.session.query(SelectingStudent).filter_by(
+                retired=False, convert_to_submitter=True, config_id=config.id
+            )
+        )
 
         if pclass.uses_supervisor:
             if pclass.CATS_supervision is not None and pclass.CATS_supervision > 0:
@@ -62,7 +74,10 @@ def estimate_CATS_load():
             # find supervising faculty enrolled for this project
             supervisors = (
                 db.session.query(EnrollmentRecord)
-                .filter_by(pclass_id=pclass.id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED)
+                .filter_by(
+                    pclass_id=pclass.id,
+                    supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED,
+                )
                 .join(User, User.id == EnrollmentRecord.owner_id)
                 .filter(User.active)
                 .all()
@@ -75,12 +90,16 @@ def estimate_CATS_load():
             if pclass.CATS_marking is not None and pclass.CATS_marking > 0:
                 for period in pclass.periods:
                     period: SubmissionPeriodDefinition
-                    marking_CATS += pclass.CATS_marking * num_selectors * period.number_markers
+                    marking_CATS += (
+                        pclass.CATS_marking * num_selectors * period.number_markers
+                    )
 
             # find marking faculty enrolled for this project
             markers = (
                 db.session.query(EnrollmentRecord)
-                .filter_by(pclass_id=pclass.id, marker_state=EnrollmentRecord.MARKER_ENROLLED)
+                .filter_by(
+                    pclass_id=pclass.id, marker_state=EnrollmentRecord.MARKER_ENROLLED
+                )
                 .join(User, User.id == EnrollmentRecord.owner_id)
                 .filter(User.active)
                 .all()
@@ -93,12 +112,19 @@ def estimate_CATS_load():
             if pclass.CATS_moderation is not None and pclass.CATS_moderation > 0:
                 for period in pclass.periods:
                     period: SubmissionPeriodDefinition
-                    moderation_CATS += pclass.CATS_moderation * num_selectors * period.number_moderators
+                    moderation_CATS += (
+                        pclass.CATS_moderation
+                        * num_selectors
+                        * period.number_moderators
+                    )
 
             # find moderating faculty enrolled for this project
             moderators = (
                 db.session.query(EnrollmentRecord)
-                .filter_by(pclass_id=pclass.id, moderator_state=EnrollmentRecord.MODERATOR_ENROLLED)
+                .filter_by(
+                    pclass_id=pclass.id,
+                    moderator_state=EnrollmentRecord.MODERATOR_ENROLLED,
+                )
                 .join(User, User.id == EnrollmentRecord.owner_id)
                 .filter(User.active)
                 .all()
@@ -112,12 +138,19 @@ def estimate_CATS_load():
                 for period in pclass.periods:
                     period: SubmissionPeriodDefinition
                     if period.has_presentation:
-                        presentation_CATS += pclass.CATS_presentation * num_selectors * period.number_assessors
+                        presentation_CATS += (
+                            pclass.CATS_presentation
+                            * num_selectors
+                            * period.number_assessors
+                        )
 
             # find assessor faculty enrolled for this project
             markers = (
                 db.session.query(EnrollmentRecord)
-                .filter_by(pclass_id=pclass.id, presentations_state=EnrollmentRecord.PRESENTATIONS_ENROLLED)
+                .filter_by(
+                    pclass_id=pclass.id,
+                    presentations_state=EnrollmentRecord.PRESENTATIONS_ENROLLED,
+                )
                 .join(User, User.id == EnrollmentRecord.owner_id)
                 .filter(User.active)
                 .all()
@@ -140,10 +173,18 @@ def estimate_CATS_load():
         "marking_faculty": num_marking_faculty,
         "moderation_faculty": num_moderation_faculty,
         "presentation_faculty": num_presentation_faculty,
-        "supervision_workload": supervision_CATS / num_supervision_faculty if num_supervision_faculty > 0 else 0,
-        "marking_workload": marking_CATS / num_marking_faculty if num_marking_faculty > 0 else 0,
-        "moderation_workload": moderation_CATS / num_moderation_faculty if num_moderation_faculty > 0 else 0,
-        "presentation_owrkload": presentation_CATS / num_presentation_faculty if num_presentation_faculty > 0 else 0,
+        "supervision_workload": supervision_CATS / num_supervision_faculty
+        if num_supervision_faculty > 0
+        else 0,
+        "marking_workload": marking_CATS / num_marking_faculty
+        if num_marking_faculty > 0
+        else 0,
+        "moderation_workload": moderation_CATS / num_moderation_faculty
+        if num_moderation_faculty > 0
+        else 0,
+        "presentation_owrkload": presentation_CATS / num_presentation_faculty
+        if num_presentation_faculty > 0
+        else 0,
     }
 
 
@@ -268,7 +309,11 @@ def _slot_exists(slot, slot_list):
     :param slot_list:
     :return:
     """
-    sublist = [s for s in slot_list if s.session_id == slot.session_id and s.room_id == slot.room_id]
+    sublist = [
+        s
+        for s in slot_list
+        if s.session_id == slot.session_id and s.room_id == slot.room_id
+    ]
 
     if len(sublist) > 1:
         raise RuntimeError("Multiple slots present in _slot_exists")
@@ -285,12 +330,32 @@ def pair_slots(s1, s2, flag=False, pclass_value=None):
         assert pclass_value is not None
 
     # break slots1 into slots that have been deleted in slots2, and those that are still present
-    slots1_deleted = deque(sorted([s for s in s1 if not _slot_exists(s, s2)], key=lambda x: (x.session_id, x.room_id)))
-    slots1_shared = deque(sorted([s for s in s1 if _slot_exists(s, s2)], key=lambda x: (x.session_id, x.room_id)))
+    slots1_deleted = deque(
+        sorted(
+            [s for s in s1 if not _slot_exists(s, s2)],
+            key=lambda x: (x.session_id, x.room_id),
+        )
+    )
+    slots1_shared = deque(
+        sorted(
+            [s for s in s1 if _slot_exists(s, s2)],
+            key=lambda x: (x.session_id, x.room_id),
+        )
+    )
 
     # break slots2 into slots that are new compared to slots1, and those that are shared
-    slots2_new = deque(sorted([s for s in s2 if not _slot_exists(s, s1)], key=lambda x: (x.session_id, x.room_id)))
-    slots2_shared = deque(sorted([s for s in s2 if _slot_exists(s, s1)], key=lambda x: (x.session_id, x.room_id)))
+    slots2_new = deque(
+        sorted(
+            [s for s in s2 if not _slot_exists(s, s1)],
+            key=lambda x: (x.session_id, x.room_id),
+        )
+    )
+    slots2_shared = deque(
+        sorted(
+            [s for s in s2 if _slot_exists(s, s1)],
+            key=lambda x: (x.session_id, x.room_id),
+        )
+    )
 
     # pairs is a list of (op, source, target), where op is one of 'add', 'delete', 'move' or 'edit'
     pairs = []

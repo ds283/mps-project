@@ -22,30 +22,30 @@ from ..shared.utils import redirect_url
 from ..tools import ServerSideSQLHandler
 
 
-@tenants.route('/edit_tenants')
+@tenants.route("/edit_tenants")
 @roles_required("root")
 def edit_tenants():
     return render_template_context("tenants/edit_tenants.html")
 
 
-@tenants.route('/tenants_ajax', methods=["POST"])
+@tenants.route("/tenants_ajax", methods=["POST"])
 @roles_required("root")
 def tenants_ajax():
     base_query = db.session.query(Tenant)
-    
+
     name = {"search": Tenant.name, "order": Tenant.name}
-    
+
     columns = {"name": name}
-    
+
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.tenants.tenants_data)
 
 
-@tenants.route('/add_tenant', methods=["GET", "POST"])
+@tenants.route("/add_tenant", methods=["GET", "POST"])
 @roles_required("root")
 def add_tenant():
     form = AddTenantForm(request.form)
-    
+
     if form.validate_on_submit():
         tenant = Tenant(
             name=form.name.data,
@@ -60,21 +60,26 @@ def add_tenant():
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add new tenant because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not add new tenant because of a database error. Please contact a system administrator.",
+                "error",
+            )
 
-        return redirect(url_for('tenants.edit_tenants'))
-        
-    return render_template_context("tenants/edit_tenant.html", tenant_form=form, title="Add new tenant")
+        return redirect(url_for("tenants.edit_tenants"))
+
+    return render_template_context(
+        "tenants/edit_tenant.html", tenant_form=form, title="Add new tenant"
+    )
 
 
-@tenants.route('/edit_tenant/<int:id>', methods=["GET", "POST"])
+@tenants.route("/edit_tenant/<int:id>", methods=["GET", "POST"])
 @roles_required("root")
 def edit_tenant(id):
     tenant = db.session.query(Tenant).get_or_404(id)
-    
+
     form = EditTenantForm(obj=tenant)
     form.tenant = tenant
-    
+
     if form.validate_on_submit():
         tenant.name = form.name.data
         tenant.colour = form.colour.data
@@ -86,8 +91,13 @@ def edit_tenant(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not rename tenant because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not rename tenant because of a database error. Please contact a system administrator.",
+                "error",
+            )
 
-        return redirect(url_for('tenants.edit_tenants'))
-        
-    return render_template_context("tenants/edit_tenant.html", tenant_form=form, title="Edit tenant")
+        return redirect(url_for("tenants.edit_tenants"))
+
+    return render_template_context(
+        "tenants/edit_tenant.html", tenant_form=form, title="Edit tenant"
+    )

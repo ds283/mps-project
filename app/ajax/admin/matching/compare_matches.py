@@ -14,7 +14,14 @@ from flask import jsonify, get_template_attribute, render_template, current_app
 from jinja2 import Template, Environment
 
 from .match_view_student import get_match_student_emails
-from ....models import MatchingRecord, SelectingStudent, StudentData, User, ProjectClassConfig, MatchingAttempt
+from ....models import (
+    MatchingRecord,
+    SelectingStudent,
+    StudentData,
+    User,
+    ProjectClassConfig,
+    MatchingAttempt,
+)
 
 # language=jinja2
 _student = """
@@ -90,7 +97,6 @@ _rank = """
 """
 
 
-
 # language=jinja2
 _menu = """
 <div class="dropdown">
@@ -134,6 +140,7 @@ def _build_rank_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_rank)
 
+
 def _build_record_delta_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_record_delta)
@@ -148,12 +155,22 @@ RecordDeltaType = Tuple[Optional[MatchingRecord], Optional[MatchingRecord], List
 RecordDeltaListType = List[RecordDeltaType]
 
 
-def compare_match_data(records: RecordDeltaListType, left_attempt: MatchingAttempt, right_attempt: MatchingAttempt):
+def compare_match_data(
+        records: RecordDeltaListType,
+        left_attempt: MatchingAttempt,
+        right_attempt: MatchingAttempt,
+):
     small_swatch = get_template_attribute("swatch.html", "small_swatch")
 
-    student_offcanvas = get_template_attribute("admin/matching/student_offcanvas.html", "student_offcanvas")
-    project_tag = get_template_attribute("admin/matching/project_tag.html", "project_tag")
-    student_marker_tag = get_template_attribute("admin/matching/marker_tag.html", "student_marker_tag")
+    student_offcanvas = get_template_attribute(
+        "admin/matching/student_offcanvas.html", "student_offcanvas"
+    )
+    project_tag = get_template_attribute(
+        "admin/matching/project_tag.html", "project_tag"
+    )
+    student_marker_tag = get_template_attribute(
+        "admin/matching/marker_tag.html", "student_marker_tag"
+    )
 
     student_templ: Template = _build_student_templ()
     pclass_templ: Template = _build_pclass_templ()
@@ -198,22 +215,40 @@ def compare_match_data(records: RecordDeltaListType, left_attempt: MatchingAttem
                     l_attempt_id=left_attempt.id,
                     r_attempt_id=right_attempt.id,
                 ),
-                "sortvalue": sort_value
+                "sortvalue": sort_value,
             },
             "pclass": render_template(pclass_templ, sel=sel, small_swatch=small_swatch),
-            "record1": render_template(record_delta_templ, rec=l, config=config, changes=changes, project_tag=project_tag,
-                                       student_marker_tag=student_marker_tag),
+            "record1": render_template(
+                record_delta_templ,
+                rec=l,
+                config=config,
+                changes=changes,
+                project_tag=project_tag,
+                student_marker_tag=student_marker_tag,
+            ),
             "rank1": {
                 "display": render_template(rank_templ, rec=l, changes=changes),
-                "sortvalue": l.delta if l is not None else -1
+                "sortvalue": l.delta if l is not None else -1,
             },
-            "record2": render_template(record_delta_templ, rec=r, config=config, changes=changes, project_tag=project_tag,
-                                       student_marker_tag=student_marker_tag),
+            "record2": render_template(
+                record_delta_templ,
+                rec=r,
+                config=config,
+                changes=changes,
+                project_tag=project_tag,
+                student_marker_tag=student_marker_tag,
+            ),
             "rank2": {
                 "display": render_template(rank_templ, rec=r, changes=changes),
-                "sortvalue": r.delta if r is not None else -1
+                "sortvalue": r.delta if r is not None else -1,
             },
-            "menu": render_template(menu_templ, l=l, r=r, l_attempt_id=left_attempt.id, r_attempt_id=right_attempt.id),
+            "menu": render_template(
+                menu_templ,
+                l=l,
+                r=r,
+                l_attempt_id=left_attempt.id,
+                r_attempt_id=right_attempt.id,
+            ),
         }
 
     data = [build_render_data(pair) for pair in records]

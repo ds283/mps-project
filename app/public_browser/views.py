@@ -40,7 +40,9 @@ def browse():
     else:
         pclass_id = form.selector.data.id
 
-    return render_template("public_browser/browser.html", form=form, pclass_id=pclass_id)
+    return render_template(
+        "public_browser/browser.html", form=form, pclass_id=pclass_id
+    )
 
 
 @public_browser.route("/browse_ajax", methods=["POST"])
@@ -72,13 +74,21 @@ def browse_ajax():
         .join(ResearchGroup, ResearchGroup.id == Project.group_id, isouter=True)
     )
 
-    name = {"search": Project.name, "order": Project.name, "search_collation": "utf8_general_ci"}
+    name = {
+        "search": Project.name,
+        "order": Project.name,
+        "search_collation": "utf8_general_ci",
+    }
     supervisor = {
         "search": func.concat(User.first_name, " ", User.last_name),
         "order": [User.last_name, User.first_name],
         "search_collation": "utf8_general_ci",
     }
-    group = {"search": ResearchGroup.name, "order": ResearchGroup.name, "search_collation": "utf8_general_ci"}
+    group = {
+        "search": ResearchGroup.name,
+        "order": ResearchGroup.name,
+        "search_collation": "utf8_general_ci",
+    }
 
     columns = {"name": name, "supervisor": supervisor, "group": group}
 
@@ -103,4 +113,11 @@ def project(pclass_id, proj_id):
     text = "browse projects view"
     url = url_for("public_browser.browse", pclass_id=pclass.id)
 
-    return render_template("public_browser/project.html", title=project.name, project=project, desc=desc, text=text, url=url)
+    return render_template(
+        "public_browser/project.html",
+        title=project.name,
+        project=project,
+        desc=desc,
+        text=text,
+        url=url,
+    )

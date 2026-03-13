@@ -289,16 +289,20 @@ def _build_menu_templ() -> Template:
     return env.from_string(_menu)
 
 
-def selectors_data(students: List[SelectingStudent], config: ProjectClassConfig, quickfix_factory=None):
+def selectors_data(
+        students: List[SelectingStudent], config: ProjectClassConfig, quickfix_factory=None
+):
     # cache selector lifecycle information
     state = config.selector_lifecycle
 
     is_admin = current_user.has_role("admin") or current_user.has_role("root")
 
     simple_label = get_template_attribute("labels.html", "simple_label")
-    error_block_inline = get_template_attribute("error_block.html", "error_block_inline")
+    error_block_inline = get_template_attribute(
+        "error_block.html", "error_block_inline"
+    )
 
-    truncate = get_template_attribute("macros.html","truncate")
+    truncate = get_template_attribute("macros.html", "truncate")
 
     # build and cache template strings
     name_templ: Template = _build_name_templ()
@@ -312,13 +316,45 @@ def selectors_data(students: List[SelectingStudent], config: ProjectClassConfig,
         is_valid_selection = s.is_valid_selection[0]
 
         return {
-            "name": {"display": render_template(name_templ, sel=s, error_block_inline=error_block_inline, quickfix_factory=quickfix_factory),
-                     "sortstring": s.student.user.last_name + s.student.user.first_name},
-            "cohort": {"display": render_template(cohort_templ, sel=s, simple_label=simple_label), "value": s.student.cohort},
-            "bookmarks": {"display": render_template(bookmarks_templ, sel=s), "value": s.number_bookmarks},
-            "confirmations": {"display": render_template(confirmations_templ, sel=s), "value": s.number_pending + s.number_confirmed},
-            "submitted": render_template(submitted_templ, sel=s, config=config, state=state, is_valid_selection=is_valid_selection, truncate=truncate),
-            "menu": render_template(menu_templ, student=s, config=config, state=state, is_admin=is_admin, is_valid_selection=is_valid_selection),
+            "name": {
+                "display": render_template(
+                    name_templ,
+                    sel=s,
+                    error_block_inline=error_block_inline,
+                    quickfix_factory=quickfix_factory,
+                ),
+                "sortstring": s.student.user.last_name + s.student.user.first_name,
+            },
+            "cohort": {
+                "display": render_template(
+                    cohort_templ, sel=s, simple_label=simple_label
+                ),
+                "value": s.student.cohort,
+            },
+            "bookmarks": {
+                "display": render_template(bookmarks_templ, sel=s),
+                "value": s.number_bookmarks,
+            },
+            "confirmations": {
+                "display": render_template(confirmations_templ, sel=s),
+                "value": s.number_pending + s.number_confirmed,
+            },
+            "submitted": render_template(
+                submitted_templ,
+                sel=s,
+                config=config,
+                state=state,
+                is_valid_selection=is_valid_selection,
+                truncate=truncate,
+            ),
+            "menu": render_template(
+                menu_templ,
+                student=s,
+                config=config,
+                state=state,
+                is_admin=is_admin,
+                is_valid_selection=is_valid_selection,
+            ),
         }
 
     data = [_process(s) for s in students]

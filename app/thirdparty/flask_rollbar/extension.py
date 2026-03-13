@@ -27,6 +27,7 @@ Here's a quick example of initializing this plugin:
     def this_will_fail():
         1/0
 """
+
 import os
 
 import rollbar
@@ -36,7 +37,12 @@ from werkzeug.exceptions import Unauthorized, Forbidden, NotFound, BadRequest
 
 
 class Rollbar(object):
-    def __init__(self, app=None, ignore_exc=[BadRequest, Unauthorized, Forbidden, NotFound], **kwargs):
+    def __init__(
+            self,
+            app=None,
+            ignore_exc=[BadRequest, Unauthorized, Forbidden, NotFound],
+            **kwargs,
+    ):
         """By default, it ignores the following Werkzeug exceptions:
         BadRequest (400), Unauthorized (401),  Forbidden (403), and
         NotFound(404).
@@ -64,7 +70,7 @@ class Rollbar(object):
             root=os.path.dirname(os.path.realpath(__file__)),
             allow_logging_basic_config=False,
             exception_level_filters=ignored,
-            **self.init_kwargs
+            **self.init_kwargs,
         )
 
         # send exceptions from `app` to rollbar using flask's signal system.

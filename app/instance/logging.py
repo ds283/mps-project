@@ -13,4 +13,4 @@ import os
 # Logging
 
 # if LOG_FILE is none, then logging to a file is disabled
-LOG_FILE = os.environ.get('LOG_FILE')
+LOG_FILE = os.environ.get("LOG_FILE")

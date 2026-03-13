@@ -51,7 +51,9 @@ def download_centre_ajax():
     """
     AJAX endpoint that supplies DataTables data for the download centre table.
     """
-    base_query = db.session.query(DownloadCentreItem).filter(DownloadCentreItem.user_id == current_user.id)
+    base_query = db.session.query(DownloadCentreItem).filter(
+        DownloadCentreItem.user_id == current_user.id
+    )
 
     # None of the columns are searchable (no text-based search columns available on DownloadCentreItem),
     # so we only specify ordering keys.

@@ -13,12 +13,12 @@ from datetime import timedelta
 
 # Flask-Sessionstore
 
-SESSION_MONGO_URL = os.environ.get('SESSION_MONGO_URL')
+SESSION_MONGO_URL = os.environ.get("SESSION_MONGO_URL")
 
-SESSION_TYPE = 'mongodb'
+SESSION_TYPE = "mongodb"
 SESSION_PERMANENT = True
 PERMANENT_SESSION_LIFETIME = timedelta(days=7)
 
-SESSION_MONGODB_DB = 'flask_sessionstore'
-SESSION_MONGODB_COLLECT = 'sessions'
-SESSION_KEY_PREFIX = 'session:'
+SESSION_MONGODB_DB = "flask_sessionstore"
+SESSION_MONGODB_COLLECT = "sessions"
+SESSION_KEY_PREFIX = "session:"

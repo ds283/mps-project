@@ -10,7 +10,12 @@
 
 from typing import List
 
-from flask import render_template_string, get_template_attribute, current_app, render_template
+from flask import (
+    render_template_string,
+    get_template_attribute,
+    current_app,
+    render_template,
+)
 from jinja2 import Template, Environment
 
 from ...models import SubmittingStudent
@@ -176,13 +181,16 @@ _records = """
 {% endif %}
 """
 
+
 def _build_name_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_name)
 
+
 def _build_year_templ() -> Template:
     env: Environment = current_app.jinja_env
     return env.from_string(_year)
+
 
 def _build_records_templ() -> Template:
     env: Environment = current_app.jinja_env
@@ -199,11 +207,15 @@ def retired_reports(students: List[SubmittingStudent]):
     data = [
         {
             "name": {
-                "display": render_template(name_templ, sub=s, simple_label=simple_label),
+                "display": render_template(
+                    name_templ, sub=s, simple_label=simple_label
+                ),
                 "sortstring": s.student.user.last_name + s.student.user.first_name,
             },
             "year": {
-                "display": render_template(year_templ, sub=s, simple_label=simple_label),
+                "display": render_template(
+                    year_templ, sub=s, simple_label=simple_label
+                ),
                 "sortvalue": s.config.year,
             },
             "records": render_template(records_templ, sub=s, simple_label=simple_label),

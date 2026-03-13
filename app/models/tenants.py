@@ -12,6 +12,7 @@ from .defaults import DEFAULT_STRING_LENGTH
 from .models import ColouredLabelMixin
 from ..database import db
 
+
 class Tenant(db.Model, ColouredLabelMixin):
     """
     Model an individual tenant

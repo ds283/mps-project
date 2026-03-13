@@ -11,7 +11,12 @@
 from flask import flash
 from flask_login import current_user
 
-from app.models import ProjectClassConfig, SubmittingStudent, SubmissionRecord, SelectingStudent
+from app.models import (
+    ProjectClassConfig,
+    SubmittingStudent,
+    SubmissionRecord,
+    SelectingStudent,
+)
 from app.shared.sqlalchemy import get_count
 from app.shared.validators import validate_is_convenor
 
@@ -27,7 +32,8 @@ def verify_submitter(sub: SubmittingStudent, message: bool = False):
 
     if message:
         flash(
-            "You do not have permission to perform operations for this user. " "If you believe this is incorrect, contract the system administrator.",
+            "You do not have permission to perform operations for this user. "
+            "If you believe this is incorrect, contract the system administrator.",
             "error",
         )
     return False
@@ -60,7 +66,8 @@ def verify_selector(sel: SelectingStudent, message=False):
     # convenor is able to take actions on a student's behalf
     if message:
         flash(
-            "You do not have permission to perform operations for this user. " "If you believe this is incorrect, contract the system administrator.",
+            "You do not have permission to perform operations for this user. "
+            "If you believe this is incorrect, contract the system administrator.",
             "error",
         )
     return False
@@ -96,11 +103,19 @@ def verify_open(config, state=None, strict=False, message=False):
         state = config.selector_lifecycle
 
     if strict and state != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-        flash("It is not possible to perform this operations because selections for " '"{proj}" are not open.'.format(proj=config.name), "error")
+        flash(
+            "It is not possible to perform this operations because selections for "
+            '"{proj}" are not open.'.format(proj=config.name),
+            "error",
+        )
         return False
 
     if not strict and state < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-        flash("It is not possible to perform this operations because selections for " '"{proj}" are not yet open.'.format(proj=config.name), "error")
+        flash(
+            "It is not possible to perform this operations because selections for "
+            '"{proj}" are not yet open.'.format(proj=config.name),
+            "error",
+        )
         return False
 
     return True

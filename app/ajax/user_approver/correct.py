@@ -53,7 +53,9 @@ def _build_actions_templ() -> Template:
     return env.from_string(_actions)
 
 
-def correction_data(url: Optional[str], text: Optional[str], records: List[StudentData]):
+def correction_data(
+        url: Optional[str], text: Optional[str], records: List[StudentData]
+):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
     academic_year_templ = _build_academic_year_templ()
@@ -67,7 +69,9 @@ def correction_data(url: Optional[str], text: Optional[str], records: List[Stude
             "exam_number": r.exam_number,
             "registration_number": r.registration_number,
             "programme": r.programme.full_name,
-            "year": render_template(academic_year_templ, r=r, simple_label=simple_label),
+            "year": render_template(
+                academic_year_templ, r=r, simple_label=simple_label
+            ),
             "rejected_by": render_template(rejected_templ, s=r),
             "menu": render_template(actions_templ, s=r, url=url, text=text),
         }

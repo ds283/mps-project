@@ -64,7 +64,9 @@ def _project_list_data(pclass_id: int, p: Project):
         "name": render_template_string(_name, pclass_id=pclass_id, project=p),
         "supervisor": render_template_string(_owner, project=p),
         "group": render_template_string(_group, project=p, simple_label=simple_label),
-        "skills": render_template_string(_skills, skills=p.ordered_skills, simple_label=simple_label),
+        "skills": render_template_string(
+            _skills, skills=p.ordered_skills, simple_label=simple_label
+        ),
     }
 
 

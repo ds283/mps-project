@@ -46,10 +46,15 @@ from ..models import (
     BackupRecord,
     SubmittingStudent,
     SelectingStudent,
-    PopularityRecord, DownloadCentreItem,
+    PopularityRecord,
+    DownloadCentreItem,
 )
 from ..shared.security import validate_nonce
-from ..shared.asset_tools import AssetCloudAdapter, AssetCloudScratchContextManager, AssetUploadManager
+from ..shared.asset_tools import (
+    AssetCloudAdapter,
+    AssetCloudScratchContextManager,
+    AssetUploadManager,
+)
 from ..shared.cloud_object_store import ObjectStore
 from ..shared.utils import get_current_year, get_count
 
@@ -67,28 +72,44 @@ def register_maintenance_tasks(celery):
         print("database maintenance: performing maintenance for LiveProject records")
         liveprojects_maintenance(self)
 
-        print("database maintenance: performing maintenance for ProjectDescription records")
+        print(
+            "database maintenance: performing maintenance for ProjectDescription records"
+        )
         project_descriptions_maintenance(self)
 
         print("database maintenance: performing maintenance for StudentData records")
         students_data_maintenance(self)
-        print("database maintenance: performing maintenance for SubmittingStudent records")
+        print(
+            "database maintenance: performing maintenance for SubmittingStudent records"
+        )
         submitting_student_maintenance(self)
 
-        print("database maintenance: performing maintenance for AssessorAttendanceData records")
+        print(
+            "database maintenance: performing maintenance for AssessorAttendanceData records"
+        )
         assessor_attendance_maintenance(self)
-        print("database maintenance: performing maintenance for SubmitterAttendanceData records")
+        print(
+            "database maintenance: performing maintenance for SubmitterAttendanceData records"
+        )
         submitter_attendance_maintenance(self)
 
-        print("database maintenance: performing maintenance for MatchingEnumeration records")
+        print(
+            "database maintenance: performing maintenance for MatchingEnumeration records"
+        )
         matching_enumeration_maintenance(self)
-        print("database maintenance: performing maintenance for ScheduleEnumeration records")
+        print(
+            "database maintenance: performing maintenance for ScheduleEnumeration records"
+        )
         schedule_enumeration_maintenance(self)
 
-        print("database maintenance: performing maintenance for SubmissionRecord records")
+        print(
+            "database maintenance: performing maintenance for SubmissionRecord records"
+        )
         submission_record_maintenance(self)
 
-        print("database maintenance: performing maintenance for PopularityRecord records")
+        print(
+            "database maintenance: performing maintenance for PopularityRecord records"
+        )
         popularity_record_maintenance(self)
 
         self.update_state(state=states.SUCCESS)
@@ -134,8 +155,14 @@ def register_maintenance_tasks(celery):
             records = (
                 db.session.query(SubmittingStudent)
                 .filter(SubmittingStudent.retired == False)
-                .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id)
-                .filter(ProjectClassConfig.live == True, ProjectClassConfig.selection_closed == False)
+                .join(
+                    ProjectClassConfig,
+                    ProjectClassConfig.id == SubmittingStudent.config_id,
+                )
+                .filter(
+                    ProjectClassConfig.live == True,
+                    ProjectClassConfig.selection_closed == False,
+                )
             )
 
         except SQLAlchemyError as e:
@@ -150,7 +177,10 @@ def register_maintenance_tasks(celery):
         try:
             records = (
                 db.session.query(SubmitterAttendanceData)
-                .join(PresentationAssessment, PresentationAssessment.id == SubmitterAttendanceData.assessment_id)
+                .join(
+                    PresentationAssessment,
+                    PresentationAssessment.id == SubmitterAttendanceData.assessment_id,
+                )
                 .filter(PresentationAssessment.year == current_year)
                 .all()
             )
@@ -167,7 +197,10 @@ def register_maintenance_tasks(celery):
         try:
             records = (
                 db.session.query(AssessorAttendanceData)
-                .join(PresentationAssessment, PresentationAssessment.id == AssessorAttendanceData.assessment_id)
+                .join(
+                    PresentationAssessment,
+                    PresentationAssessment.id == AssessorAttendanceData.assessment_id,
+                )
                 .filter(PresentationAssessment.year == current_year)
                 .all()
             )
@@ -181,7 +214,11 @@ def register_maintenance_tasks(celery):
 
     def project_classes_maintenance(self):
         try:
-            records = db.session.query(ProjectClass).filter(ProjectClass.active, ProjectClass.publish).all()
+            records = (
+                db.session.query(ProjectClass)
+                .filter(ProjectClass.active, ProjectClass.publish)
+                .all()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -209,7 +246,13 @@ def register_maintenance_tasks(celery):
                 .join(User, User.id == StudentData.id)
                 .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
                 .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
-                .filter(User.active, or_(StudentData.academic_year <= DegreeType.duration + 1, StudentData.academic_year == None))
+                .filter(
+                    User.active,
+                    or_(
+                        StudentData.academic_year <= DegreeType.duration + 1,
+                        StudentData.academic_year == None,
+                    ),
+                )
                 .all()
             )
         except SQLAlchemyError as e:
@@ -229,12 +272,18 @@ def register_maintenance_tasks(celery):
                 config: ProjectClassConfig = pcl.most_recent_config
 
                 if config is not None:
-                    records = db.session.query(LiveProject).filter_by(config_id=config.id).all()
+                    records = (
+                        db.session.query(LiveProject)
+                        .filter_by(config_id=config.id)
+                        .all()
+                    )
 
                     if task is None:
                         task = [liveproject_record_maintenance.s(p.id) for p in records]
                     else:
-                        task += [liveproject_record_maintenance.s(p.id) for p in records]
+                        task += [
+                            liveproject_record_maintenance.s(p.id) for p in records
+                        ]
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -255,7 +304,9 @@ def register_maintenance_tasks(celery):
 
     def matching_enumeration_maintenance(self):
         try:
-            records: List[MatchingEnumeration] = db.session.query(MatchingEnumeration).all()
+            records: List[MatchingEnumeration] = db.session.query(
+                MatchingEnumeration
+            ).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -266,7 +317,9 @@ def register_maintenance_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def student_data_maintenance(self, sid):
         try:
-            record: StudentData = db.session.query(StudentData).filter_by(id=sid).first()
+            record: StudentData = (
+                db.session.query(StudentData).filter_by(id=sid).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -287,7 +340,9 @@ def register_maintenance_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def submitting_student_record_maintenance(self, sid):
         try:
-            record: SubmittingStudent = db.session.query(SubmittingStudent).filter_by(id=sid).first()
+            record: SubmittingStudent = (
+                db.session.query(SubmittingStudent).filter_by(id=sid).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -312,7 +367,10 @@ def register_maintenance_tasks(celery):
             # test whether there is a corresponding SelectingStudent instance
             paired_selector: SelectingStudent = (
                 db.session.query(SelectingStudent)
-                .filter(SelectingStudent.student_id == record.student_id, SelectingStudent.config_id == record.config_id)
+                .filter(
+                    SelectingStudent.student_id == record.student_id,
+                    SelectingStudent.config_id == record.config_id,
+                )
                 .first()
             )
 
@@ -511,7 +569,9 @@ def register_maintenance_tasks(celery):
     def _collect_expirable_assets(self, AssetType):
         try:
             # only filter out records that have a finite lifetime set
-            records: List[AssetType] = db.session.query(AssetType).filter(AssetType.expiry != None).all()
+            records: List[AssetType] = (
+                db.session.query(AssetType).filter(AssetType.expiry != None).all()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -561,18 +621,29 @@ def register_maintenance_tasks(celery):
         )
 
         raise self.replace(
-            group(*tasks) | issue_asset_report.s("email/maintenance/lost_assets.txt", "[{app_name}] Lost asset report at {time}", notify_email)
+            group(*tasks)
+            | issue_asset_report.s(
+                "email/maintenance/lost_assets.txt",
+                "[{app_name}] Lost asset report at {time}",
+                notify_email,
+            )
         )
 
     @celery.task(bind=True, default_retry_delay=30)
     def asset_check_unattached(self, notify_email):
         submitted_records = _collect_all_assets(self, SubmittedAsset)
 
-        tasks = [asset_test_attached.si(r.id, SubmittedAsset) for r in submitted_records]
+        tasks = [
+            asset_test_attached.si(r.id, SubmittedAsset) for r in submitted_records
+        ]
 
         raise self.replace(
             group(*tasks)
-            | issue_asset_report.s("email/maintenance/unattached_assets.txt", "[{app_name}] Unattached asset report at {time}", notify_email)
+            | issue_asset_report.s(
+                "email/maintenance/unattached_assets.txt",
+                "[{app_name}] Unattached asset report at {time}",
+                notify_email,
+            )
         )
 
     @celery.task(bind=True, default_retry_delay=30, serializer="pickle")
@@ -590,7 +661,11 @@ def register_maintenance_tasks(celery):
             return
 
         if hasattr(record, "target_name"):
-            asset_name = record.target_name if record.target_name is not None else record.unique_name
+            asset_name = (
+                record.target_name
+                if record.target_name is not None
+                else record.unique_name
+            )
         else:
             asset_name = record.unique_name
 
@@ -599,10 +674,14 @@ def register_maintenance_tasks(celery):
         bucket_type = record.bucket
         bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
         if bucket_type not in bucket_map:
-            raise RuntimeError(f"Asset #{id} of type {RecordType} requires bucket type {bucket_type}, but this is not available in the object store")
+            raise RuntimeError(
+                f"Asset #{id} of type {RecordType} requires bucket type {bucket_type}, but this is not available in the object store"
+            )
 
         storage = AssetCloudAdapter(
-            record, bucket_map[bucket_type], audit_data=f'maintenance.asset_test_expiry (record type="{asset_type}", record id #{id})'
+            record,
+            bucket_map[bucket_type],
+            audit_data=f'maintenance.asset_test_expiry (record type="{asset_type}", record id #{id})',
         )
         try:
             storage.delete()
@@ -623,7 +702,9 @@ def register_maintenance_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        print(f'** Garbage collection removed expired {asset_type} object "{asset_name}" (id={record.id})')
+        print(
+            f'** Garbage collection removed expired {asset_type} object "{asset_name}" (id={record.id})'
+        )
         return asset_name
 
     @celery.task(bind=True, default_retry_delay=30, serializer="pickle")
@@ -638,7 +719,11 @@ def register_maintenance_tasks(celery):
             return
 
         if hasattr(record, "target_name"):
-            asset_name = record.target_name if record.target_name is not None else record.unique_name
+            asset_name = (
+                record.target_name
+                if record.target_name is not None
+                else record.unique_name
+            )
         else:
             asset_name = record.unique_name
 
@@ -647,10 +732,14 @@ def register_maintenance_tasks(celery):
         bucket_type = record.bucket
         bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
         if bucket_type not in bucket_map:
-            raise RuntimeError(f"Asset #{id} of type {RecordType} requires bucket type {bucket_type}, but this is not available in the object store")
+            raise RuntimeError(
+                f"Asset #{id} of type {RecordType} requires bucket type {bucket_type}, but this is not available in the object store"
+            )
 
         storage = AssetCloudAdapter(
-            record, bucket_map[bucket_type], audit_data=f'maintenance.asset_test_lost (record type="{asset_type}", record id #{id})'
+            record,
+            bucket_map[bucket_type],
+            audit_data=f'maintenance.asset_test_lost (record type="{asset_type}", record id #{id})',
         )
 
         # check if asset exists in the object store
@@ -680,20 +769,34 @@ def register_maintenance_tasks(celery):
         if attached:
             return None
 
-        asset_name = record.target_name if record.target_name is not None else record.unique_name
+        asset_name = (
+            record.target_name if record.target_name is not None else record.unique_name
+        )
         asset_type = RecordType.get_type()
 
-        print(f'** Detected unattached {asset_type} object "{asset_name}" (id={record.id})')
+        print(
+            f'** Detected unattached {asset_type} object "{asset_name}" (id={record.id})'
+        )
         return {"type": f"{asset_type}", "id": record.id, "name": asset_name}
 
     @celery.task(bind=True, default_retry_delay=30)
-    def issue_asset_report(self, lost_assets, template: str, subject: str, notify_email: Union[str, List[str]]):
+    def issue_asset_report(
+            self,
+            lost_assets,
+            template: str,
+            subject: str,
+            notify_email: Union[str, List[str]],
+    ):
         now = datetime.now()
         now_human = now.strftime("%a %d %b %Y %H:%M:%S")
 
         app_name = current_app.config.get("APP_NAME", "mpsprojects")
 
-        to_list = notify_email if isinstance(notify_email, Iterable) and not isinstance(notify_email, str) else [notify_email]
+        to_list = (
+            notify_email
+            if isinstance(notify_email, Iterable) and not isinstance(notify_email, str)
+            else [notify_email]
+        )
 
         stripped_assets = [x for x in lost_assets if isinstance(x, Mapping)]
         if len(stripped_assets) == 0:
@@ -707,7 +810,10 @@ def register_maintenance_tasks(celery):
         )
         msg.body = render_template(template, assets=stripped_assets, date=now)
 
-        task_id = register_task(msg.subject, description="Send assets report to {r}".format(r=", ".join(to_list)))
+        task_id = register_task(
+            msg.subject,
+            description="Send assets report to {r}".format(r=", ".join(to_list)),
+        )
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
@@ -727,7 +833,9 @@ def register_maintenance_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def subrecord_maintenance(self, rec_id):
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=rec_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=rec_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -771,13 +879,17 @@ def register_maintenance_tasks(celery):
         bucket_type = asset.bucket
         bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
         if bucket_type not in bucket_map:
-            raise RuntimeError(f"Asset #{id} of type {RecordType} requires bucket type {bucket_type}, but this is not available in the object store")
+            raise RuntimeError(
+                f"Asset #{id} of type {RecordType} requires bucket type {bucket_type}, but this is not available in the object store"
+            )
         object_store = bucket_map[bucket_type]
 
         # ensure object is encrypted, if storage supports that
         if object_store.encrypted and asset.encryption == encryptions.ENCRYPTION_NONE:
             storage: AssetCloudAdapter = AssetCloudAdapter(
-                asset, object_store, audit_data=f'maintenance.assetrecord_maintenance #1 (record type="{asset_type}", record id #{id})'
+                asset,
+                object_store,
+                audit_data=f'maintenance.assetrecord_maintenance #1 (record type="{asset_type}", record id #{id})',
             )
 
             try:
@@ -792,7 +904,9 @@ def register_maintenance_tasks(celery):
                             storage=object_store,
                             audit_data=f'maintenance.assetrecord_maintenance #2 (record type="{asset_type}", record id #{rec_id})',
                             length=asset.filesize,
-                            mimetype=asset.mimetype if hasattr(asset, "mimetype") else None,
+                                mimetype=asset.mimetype
+                                if hasattr(asset, "mimetype")
+                                else None,
                             validate_nonce=validate_nonce,
                         ) as upload_mgr:
                             pass
@@ -801,11 +915,16 @@ def register_maintenance_tasks(celery):
                     db.session.commit()
                     storage.delete()
                 except SQLAlchemyError as e:
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    current_app.logger.exception(
+                        "SQLAlchemyError exception", exc_info=e
+                    )
                     raise self.retry()
 
             except FileNotFoundError:
-                print(f"!! Was not able to perform maintenance on asset #{asset.id}, " f'key="{asset.unique_name}"')
+                print(
+                    f"!! Was not able to perform maintenance on asset #{asset.id}, "
+                    f'key="{asset.unique_name}"'
+                )
 
     def backup_maintenance(self):
         try:
@@ -820,7 +939,9 @@ def register_maintenance_tasks(celery):
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
     def backuprecord_maintenance(self, rec_id):
         try:
-            record: BackupRecord = db.session.query(BackupRecord).filter_by(id=rec_id).first()
+            record: BackupRecord = (
+                db.session.query(BackupRecord).filter_by(id=rec_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -833,7 +954,10 @@ def register_maintenance_tasks(celery):
         # ensure object is encrypted, if storage supports that
         if object_store.encrypted and record.encryption == encryptions.ENCRYPTION_NONE:
             storage: AssetCloudAdapter = AssetCloudAdapter(
-                record, object_store, audit_data=f"maintenance.backuprecord_maintenance #1 (record if #{rec_id})", size_attr="archive_size"
+                record,
+                object_store,
+                audit_data=f"maintenance.backuprecord_maintenance #1 (record if #{rec_id})",
+                size_attr="archive_size",
             )
 
             old_key: Path = Path(record.unique_name)
@@ -867,14 +991,23 @@ def register_maintenance_tasks(celery):
                     db.session.commit()
                     storage.delete()
                 except SQLAlchemyError as e:
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    current_app.logger.exception(
+                        "SQLAlchemyError exception", exc_info=e
+                    )
                     raise self.retry()
 
             except FileNotFoundError:
-                print(f"!! Was not able to perform maintenance on backup record #{record.id}, " f'key="{record.unique_name}"')
+                print(
+                    f"!! Was not able to perform maintenance on backup record #{record.id}, "
+                    f'key="{record.unique_name}"'
+                )
 
         now = date.today()
-        if record.locked and record.unlock_date is not None and now >= record.unlock_date:
+        if (
+                record.locked
+                and record.unlock_date is not None
+                and now >= record.unlock_date
+        ):
             record.locked = False
             record.unlock_date = None
 

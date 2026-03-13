@@ -19,7 +19,9 @@ def SendEmailFormFactory(use_recipients=True):
         # "clear recipients" button
         if use_recipients:
             recipient = StringField(
-                "To", validators=[InputRequired()], description="Enter a list of comma-separated email addresses for the recipients"
+                "To",
+                validators=[InputRequired()],
+                description="Enter a list of comma-separated email addresses for the recipients",
             )
         else:
             clear_recipients = SubmitField("Clear recipients")

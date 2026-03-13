@@ -11,7 +11,7 @@
 
 from datetime import date, datetime, timedelta
 from functools import partial
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 from uuid import uuid4
 
 import parse
@@ -19,154 +19,180 @@ from celery import chain
 from celery.result import AsyncResult
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
-from flask import redirect, url_for, flash, request, jsonify, current_app, session, abort, render_template_string
-from flask_security import roles_accepted, current_user
+from flask import (
+    abort,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template_string,
+    request,
+    session,
+    url_for,
+)
+from flask_security import current_user, roles_accepted
 from ordered_set import OrderedSet
 from sqlalchemy import and_, or_
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from sqlalchemy.orm import with_polymorphic, class_mapper
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import class_mapper, with_polymorphic
 from sqlalchemy.orm.exc import StaleDataError
 from sqlalchemy.sql import func, literal_column
 
 import app.ajax as ajax
-from . import convenor
-from .forms import (
-    GoLiveFormFactory,
-    IssueFacultyConfirmRequestFormFactory,
-    OpenFeedbackFormFactory,
-    ManualAssignFormFactory,
-    AssignPresentationFeedbackFormFactory,
-    CustomCATSLimitForm,
-    EditPeriodRecordFormFactory,
-    ChangeDeadlineFormFactory,
-    TestOpenFeedbackForm,
-    EditProjectConfigFormFactory,
-    AddConvenorStudentTask,
-    EditConvenorStudentTask,
-    AddConvenorGenericTask,
-    EditConvenorGenericTask,
-    EditSubmissionPeriodRecordPresentationsForm,
-    AddSubmitterRoleForm,
-    EditSubmissionRoleForm,
-    EditRolesFormFactory,
-    EditLiveProjectAlternativeForm,
-    EditProjectAlternativeForm,
-    EditProjectSupervisorsFactory,
-    EditLiveProjectSupervisorsFactory,
-    CreateCustomOfferFormFactory,
-    EditCustomOfferFormFactory, DuplicateProjectFormFactory,
-    AddSubmissionPeriodUnitFormFactory, EditSubmissionPeriodUnitFormFactory,
-    AddSupervisionEventTemplateFormFactory, EditSupervisionEventTemplateFormFactory,
-)
-from ..projecthub.forms import ReassignEventOwnerFormFactory
+
 from ..admin.forms import LevelSelectorForm
 from ..database import db
-from ..documents.forms import UploadPeriodAttachmentForm, EditPeriodAttachmentForm
+from ..documents.forms import EditPeriodAttachmentForm, UploadPeriodAttachmentForm
 from ..faculty.forms import (
-    AddProjectFormFactory,
-    EditProjectFormFactory,
-    SkillSelectorForm,
     AddDescriptionFormFactory,
+    AddProjectFormFactory,
+    EditDescriptionContentForm,
     EditDescriptionSettingsFormFactory,
+    EditProjectFormFactory,
     MoveDescriptionFormFactory,
     PresentationFeedbackForm,
+    SkillSelectorForm,
     SubmissionRoleFeedbackForm,
     SubmissionRoleResponseForm,
-    EditDescriptionContentForm,
 )
 from ..models import (
-    User,
-    FacultyData,
-    StudentData,
-    TransferableSkill,
-    ProjectClass,
-    ProjectClassConfig,
-    LiveProject,
-    SelectingStudent,
-    Project,
-    EnrollmentRecord,
-    ResearchGroup,
-    SkillGroup,
-    PopularityRecord,
-    FilterRecord,
-    DegreeProgramme,
-    ProjectDescription,
-    SelectionRecord,
-    SubmittingStudent,
-    SubmissionRecord,
-    PresentationFeedback,
-    Module,
-    FHEQ_Level,
-    DegreeType,
-    ConfirmRequest,
-    SubmissionPeriodRecord,
-    WorkflowMixin,
-    CustomOffer,
     BackupRecord,
-    SubmittedAsset,
-    PeriodAttachment,
     Bookmark,
-    ConvenorTask,
+    ConfirmRequest,
+    ConvenorGenericTask,
     ConvenorSelectorTask,
     ConvenorSubmitterTask,
-    ConvenorGenericTask,
-    SubmissionRole,
-    MatchingRecord,
-    MatchingRole,
-    LiveProjectAlternative,
-    ProjectAlternative,
+    ConvenorTask,
+    CustomOffer,
+    DegreeProgramme,
+    DegreeType,
+    EmailTemplate,
+    EnrollmentRecord,
+    FacultyData,
     FeedbackRecipe,
     FeedbackReport,
-    GeneratedAsset, Tenant,
+    FHEQ_Level,
+    FilterRecord,
+    GeneratedAsset,
+    LiveProject,
+    LiveProjectAlternative,
+    MatchingRecord,
+    MatchingRole,
+    Module,
+    PeriodAttachment,
+    PopularityRecord,
+    PresentationFeedback,
+    Project,
+    ProjectAlternative,
+    ProjectClass,
+    ProjectClassConfig,
+    ProjectDescription,
+    ResearchGroup,
+    SelectingStudent,
+    SelectionRecord,
+    SkillGroup,
+    StudentData,
+    SubmissionPeriodRecord,
     SubmissionPeriodUnit,
-    SupervisionEventTemplate,
+    SubmissionRecord,
+    SubmissionRole,
+    SubmittedAsset,
+    SubmittingStudent,
     SupervisionEvent,
-    EmailTemplate,
+    SupervisionEventTemplate,
+    Tenant,
+    TransferableSkill,
+    User,
+    WorkflowMixin,
 )
-from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm_to_pending
+from ..projecthub.forms import ReassignEventOwnerFormFactory
+from ..shared.actions import do_cancel_confirm, do_confirm, do_deconfirm_to_pending
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.convenor_dashboard import (
+    build_convenor_tasks_query,
+    get_capacity_data,
+    get_convenor_approval_data,
     get_convenor_dashboard_data,
     get_convenor_todo_data,
-    build_convenor_tasks_query,
-    get_convenor_approval_data,
-    get_capacity_data,
 )
 from ..shared.context.global_context import render_template_context
-from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter, build_outstanding_confirmations_query
+from ..shared.convenor import (
+    add_blank_submitter,
+    add_liveproject,
+    add_selector,
+    build_outstanding_confirmations_query,
+)
 from ..shared.conversions import is_integer
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
-from ..shared.projects import create_new_tags, get_filter_list_for_groups_and_skills, project_list_SQL_handler, \
-    project_list_in_memory_handler
-from ..shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE, \
-    QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_UNAVAILABLE
+from ..shared.projects import (
+    create_new_tags,
+    get_filter_list_for_groups_and_skills,
+    project_list_in_memory_handler,
+    project_list_SQL_handler,
+)
+from ..shared.quickfixes import (
+    QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE,
+    QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_UNAVAILABLE,
+)
 from ..shared.security import validate_nonce
-from ..shared.sqlalchemy import get_count, clone_model
+from ..shared.sqlalchemy import clone_model, get_count
 from ..shared.utils import (
-    get_current_year,
-    home_dashboard,
-    get_convenor_filter_record,
-    filter_assessors,
     build_enrol_selector_candidates,
     build_enrol_submitter_candidates,
     build_submitters_data,
-    redirect_url,
+    filter_assessors,
+    get_convenor_filter_record,
+    get_current_year,
+    home_dashboard,
     home_dashboard_url,
+    redirect_url,
 )
 from ..shared.validators import (
-    validate_is_convenor,
-    validate_is_administrator,
-    validate_edit_project,
-    validate_project_open,
     validate_assign_feedback,
-    validate_project_class,
     validate_edit_description,
-    validate_view_project,
+    validate_edit_project,
     validate_is_admin_or_convenor,
+    validate_is_administrator,
+    validate_is_convenor,
+    validate_project_class,
+    validate_project_open,
+    validate_view_project,
 )
 from ..student.actions import store_selection
 from ..task_queue import register_task
-from ..tools import ServerSideSQLHandler, ServerSideInMemoryHandler
+from ..tools import ServerSideInMemoryHandler, ServerSideSQLHandler
+from . import convenor
+from .forms import (
+    AddConvenorGenericTask,
+    AddConvenorStudentTask,
+    AddSubmissionPeriodUnitFormFactory,
+    AddSubmitterRoleForm,
+    AddSupervisionEventTemplateFormFactory,
+    AssignPresentationFeedbackFormFactory,
+    ChangeDeadlineFormFactory,
+    CreateCustomOfferFormFactory,
+    CustomCATSLimitForm,
+    DuplicateProjectFormFactory,
+    EditConvenorGenericTask,
+    EditConvenorStudentTask,
+    EditCustomOfferFormFactory,
+    EditLiveProjectAlternativeForm,
+    EditLiveProjectSupervisorsFactory,
+    EditPeriodRecordFormFactory,
+    EditProjectAlternativeForm,
+    EditProjectConfigFormFactory,
+    EditProjectSupervisorsFactory,
+    EditRolesFormFactory,
+    EditSubmissionPeriodRecordPresentationsForm,
+    EditSubmissionPeriodUnitFormFactory,
+    EditSubmissionRoleForm,
+    EditSupervisionEventTemplateFormFactory,
+    GoLiveFormFactory,
+    IssueFacultyConfirmRequestFormFactory,
+    ManualAssignFormFactory,
+    OpenFeedbackFormFactory,
+    TestOpenFeedbackForm,
+)
 
 STUDENT_TASKS_SELECTOR = SelectingStudent.polymorphic_identity()
 STUDENT_TASKS_SUBMITTER = SubmittingStudent.polymorphic_identity()
@@ -326,7 +352,10 @@ def status(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # BUILD FORMS
@@ -343,11 +372,15 @@ def status(id):
     # change labels and text for issuing confirmation requests depending on current lifecycle state
     if config.requests_issued:
         IssueFacultyConfirmRequestForm = IssueFacultyConfirmRequestFormFactory(
-            submit_label="Change deadline", skip_label=None, datebox_label="The current deadline for responses is"
+            submit_label="Change deadline",
+            skip_label=None,
+            datebox_label="The current deadline for responses is",
         )
     else:
         IssueFacultyConfirmRequestForm = IssueFacultyConfirmRequestFormFactory(
-            submit_label="Issue confirmation requests", skip_label="Skip confirmation step", datebox_label="Deadline"
+            submit_label="Issue confirmation requests",
+            skip_label="Skip confirmation step",
+            datebox_label="Deadline",
         )
 
     issue_form = IssueFacultyConfirmRequestForm(request.form)
@@ -405,13 +438,21 @@ def periods(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # get record for current submission period
-    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
+    period: SubmissionPeriodRecord = config.periods.filter_by(
+        submission_period=config.submission_period
+    ).first()
     if period is None and config.number_submissions > 0:
-        flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # BUILD FORMS
@@ -436,7 +477,10 @@ def periods(id):
             )
         else:
             OpenFeedbackForm = OpenFeedbackFormFactory(
-                submit_label="Close period", include_send_button=False, include_test_button=False, include_close_button=False
+                submit_label="Close period",
+                include_send_button=False,
+                include_test_button=False,
+                include_close_button=False,
             )
 
     feedback_form = OpenFeedbackForm(request.form)
@@ -477,13 +521,21 @@ def capacity(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # get record for current submission period
-    period = config.periods.filter_by(submission_period=config.submission_period).first()
+    period = config.periods.filter_by(
+        submission_period=config.submission_period
+    ).first()
     if period is None and config.number_submissions > 0:
-        flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     data = get_convenor_dashboard_data(pclass, config)
@@ -519,7 +571,10 @@ def attached(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     valid_filter = request.args.get("valid_filter")
@@ -570,7 +625,10 @@ def attached_ajax(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return jsonify({})
 
     valid_filter = request.args.get("valid_filter")
@@ -578,29 +636,44 @@ def attached_ajax(id):
     # build list of projects attached to this project class
     base_query = db.session.query(Project).filter(Project.project_classes.any(id=id))
 
-    if valid_filter == "valid" or valid_filter == "not-valid" or valid_filter == "reject" or valid_filter == "pending":
+    if (
+        valid_filter == "valid"
+        or valid_filter == "not-valid"
+        or valid_filter == "reject"
+        or valid_filter == "pending"
+    ):
         if pclass.require_confirm:
-            base_query = base_query.join(ProjectDescription, ProjectDescription.parent_id == Project.id).filter(
-                ProjectDescription.project_classes.any(id=pclass.id)
-            )
+            base_query = base_query.join(
+                ProjectDescription, ProjectDescription.parent_id == Project.id
+            ).filter(ProjectDescription.project_classes.any(id=pclass.id))
 
             if valid_filter == "pending":
                 base_query = base_query.filter(ProjectDescription.confirmed == False)
 
         if valid_filter == "valid":
             base_query = base_query.filter(
-                ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_QUEUED,
-                ProjectDescription.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_REJECTED,
+                ProjectDescription.workflow_state
+                != ProjectDescription.WORKFLOW_APPROVAL_QUEUED,
+                ProjectDescription.workflow_state
+                != ProjectDescription.WORKFLOW_APPROVAL_REJECTED,
             )
 
         if valid_filter == "not-valid":
-            base_query = base_query.filter(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED)
+            base_query = base_query.filter(
+                ProjectDescription.workflow_state
+                == ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+            )
 
         if valid_filter == "reject":
-            base_query = base_query.filter(ProjectDescription.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED)
+            base_query = base_query.filter(
+                ProjectDescription.workflow_state
+                == ProjectDescription.WORKFLOW_APPROVAL_REJECTED
+            )
 
     # restrict query to projects owned by active users, or generic projects
-    base_query = base_query.join(User, User.id == Project.owner_id, isouter=True).filter(or_(Project.generic == True, User.active == True))
+    base_query = base_query.join(
+        User, User.id == Project.owner_id, isouter=True
+    ).filter(or_(Project.generic == True, User.active == True))
 
     # get FilterRecord for currently logged-in user
     filter_record: FilterRecord = get_convenor_filter_record(config)
@@ -612,7 +685,9 @@ def attached_ajax(id):
         base_query = base_query.filter(Project.group_id.in_(valid_group_ids))
 
     if len(valid_skill_ids) > 0:
-        base_query = base_query.filter(Project.skills.any(TransferableSkill.id.in_(valid_skill_ids)))
+        base_query = base_query.filter(
+            Project.skills.any(TransferableSkill.id.in_(valid_skill_ids))
+        )
 
     return project_list_SQL_handler(
         request,
@@ -669,7 +744,15 @@ def faculty(id):
     if state_filter is None and session.get("convenor_faculty_state_filter"):
         state_filter = session["convenor_faculty_state_filter"]
 
-    if state_filter not in ["all", "no-projects", "unofferable", "no-supervisor", "supervisor-pool", "no-marker", "custom-cats"]:
+    if state_filter not in [
+        "all",
+        "no-projects",
+        "unofferable",
+        "no-supervisor",
+        "supervisor-pool",
+        "no-marker",
+        "custom-cats",
+    ]:
         state_filter = "all"
 
     if state_filter is not None:
@@ -681,7 +764,10 @@ def faculty(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     data = get_convenor_dashboard_data(pclass, config)
@@ -716,7 +802,10 @@ def faculty_ajax(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return jsonify({})
 
     if enrol_filter == "enrolled":
@@ -728,7 +817,13 @@ def faculty_ajax(id):
                 User.tenants.any(Tenant.id == pclass.tenant_id),
             )
             .join(FacultyData, FacultyData.id == User.id)
-            .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id, EnrollmentRecord.pclass_id == pclass.id))
+            .join(
+                EnrollmentRecord,
+                and_(
+                    EnrollmentRecord.owner_id == FacultyData.id,
+                    EnrollmentRecord.pclass_id == pclass.id,
+                ),
+            )
         )
 
     elif enrol_filter == "not-enrolled":
@@ -740,14 +835,42 @@ def faculty_ajax(id):
                 User.tenants.any(Tenant.id == pclass.tenant_id),
             )
             .join(FacultyData, FacultyData.id == User.id)
-            .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id, EnrollmentRecord.pclass_id == pclass.id), isouter=True)
+            .join(
+                EnrollmentRecord,
+                and_(
+                    EnrollmentRecord.owner_id == FacultyData.id,
+                    EnrollmentRecord.pclass_id == pclass.id,
+                ),
+                isouter=True,
+            )
             .filter(EnrollmentRecord.id == None)
         )
 
     elif (
-        ((enrol_filter == "supv-active" or enrol_filter == "supv-sabbatical" or enrol_filter == "supv-exempt") and pclass.uses_supervisor)
-        or ((enrol_filter == "mark-active" or enrol_filter == "mark-sabbatical" or enrol_filter == "mark-exempt") and pclass.uses_marker)
-        or ((enrol_filter == "pres-active" or enrol_filter == "pres-sabbatical" or enrol_filter == "pres-exempt") and pclass.uses_presentations)
+        (
+            (
+                enrol_filter == "supv-active"
+                or enrol_filter == "supv-sabbatical"
+                or enrol_filter == "supv-exempt"
+            )
+            and pclass.uses_supervisor
+        )
+        or (
+            (
+                enrol_filter == "mark-active"
+                or enrol_filter == "mark-sabbatical"
+                or enrol_filter == "mark-exempt"
+            )
+            and pclass.uses_marker
+        )
+        or (
+            (
+                enrol_filter == "pres-active"
+                or enrol_filter == "pres-sabbatical"
+                or enrol_filter == "pres-exempt"
+            )
+            and pclass.uses_presentations
+        )
     ):
         base_query = (
             db.session.query(User, FacultyData, EnrollmentRecord)
@@ -756,27 +879,56 @@ def faculty_ajax(id):
                 User.tenants.any(Tenant.id == pclass.tenant_id),
             )
             .join(FacultyData, FacultyData.id == User.id)
-            .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id, EnrollmentRecord.pclass_id == pclass.id))
+            .join(
+                EnrollmentRecord,
+                and_(
+                    EnrollmentRecord.owner_id == FacultyData.id,
+                    EnrollmentRecord.pclass_id == pclass.id,
+                ),
+            )
         )
 
         if enrol_filter == "supv-active":
-            base_query = base_query.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+            base_query = base_query.filter(
+                EnrollmentRecord.supervisor_state
+                == EnrollmentRecord.SUPERVISOR_ENROLLED
+            )
         elif enrol_filter == "supv-sabbatical":
-            base_query = base_query.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_SABBATICAL)
+            base_query = base_query.filter(
+                EnrollmentRecord.supervisor_state
+                == EnrollmentRecord.SUPERVISOR_SABBATICAL
+            )
         elif enrol_filter == "supv-exempt":
-            base_query = base_query.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_EXEMPT)
+            base_query = base_query.filter(
+                EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_EXEMPT
+            )
         elif enrol_filter == "mark-active":
-            base_query = base_query.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+            base_query = base_query.filter(
+                EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED
+            )
         elif enrol_filter == "mark-sabbatical":
-            base_query = base_query.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL)
+            base_query = base_query.filter(
+                EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL
+            )
         elif enrol_filter == "mark-exempt":
-            base_query = base_query.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT)
+            base_query = base_query.filter(
+                EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT
+            )
         elif enrol_filter == "pres-active":
-            base_query = base_query.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)
+            base_query = base_query.filter(
+                EnrollmentRecord.presentations_state
+                == EnrollmentRecord.PRESENTATIONS_ENROLLED
+            )
         elif enrol_filter == "pres-sabbatical":
-            base_query = base_query.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL)
+            base_query = base_query.filter(
+                EnrollmentRecord.presentations_state
+                == EnrollmentRecord.PRESENTATIONS_SABBATICAL
+            )
         elif enrol_filter == "pres-exempt":
-            base_query = base_query.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_EXEMPT)
+            base_query = base_query.filter(
+                EnrollmentRecord.presentations_state
+                == EnrollmentRecord.PRESENTATIONS_EXEMPT
+            )
 
     else:
         # build list of all active faculty, together with their FacultyData records
@@ -787,13 +939,22 @@ def faculty_ajax(id):
                 User.tenants.any(Tenant.id == pclass.tenant_id),
             )
             .join(FacultyData, FacultyData.id == User.id)
-            .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id, EnrollmentRecord.pclass_id == pclass.id), isouter=True)
+            .join(
+                EnrollmentRecord,
+                and_(
+                    EnrollmentRecord.owner_id == FacultyData.id,
+                    EnrollmentRecord.pclass_id == pclass.id,
+                ),
+                isouter=True,
+            )
         )
 
     return _faculty_ajax_handler(base_query, pclass, config, state_filter)
 
 
-def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClassConfig, state_filter: str):
+def _faculty_ajax_handler(
+    base_query, pclass: ProjectClass, config: ProjectClassConfig, state_filter: str
+):
     def search_name(row: Tuple[User, FacultyData, EnrollmentRecord]):
         u, fd, er = row
         u: User
@@ -851,7 +1012,11 @@ def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClass
         fd: FacultyData
         er: EnrollmentRecord
 
-        return config.require_confirm and config.requests_issued and config.is_confirmation_required(fd)
+        return (
+            config.require_confirm
+            and config.requests_issued
+            and config.is_confirmation_required(fd)
+        )
 
     def sort_projects(row: Tuple[User, FacultyData, EnrollmentRecord]):
         u, fd, er = row
@@ -867,7 +1032,13 @@ def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClass
     golive = {"order": sort_golive}
     projects = {"order": sort_projects}
 
-    columns = {"name": name, "email": email, "enrolled": enrolled, "golive": golive, "projects": projects}
+    columns = {
+        "name": name,
+        "email": email,
+        "enrolled": enrolled,
+        "golive": golive,
+        "projects": projects,
+    }
 
     def _filter(state_filter: str, pclass: ProjectClass, row):
         u, fd, er = row
@@ -876,19 +1047,35 @@ def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClass
         er: EnrollmentRecord
 
         if state_filter == "no-projects" and pclass.uses_supervisor:
-            return er is not None and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED and fd.number_projects_offered(pclass) == 0
+            return (
+                er is not None
+                and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
+                and fd.number_projects_offered(pclass) == 0
+            )
 
         if state_filter == "no-supervisor" and pclass.uses_supervisor:
-            return er is not None and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED and fd.number_projects_supervisable(pclass) == 0
+            return (
+                er is not None
+                and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
+                and fd.number_projects_supervisable(pclass) == 0
+            )
 
         if state_filter == "supervisor-pool" and pclass.uses_supervisor:
             return fd.number_supervisor_pool(pclass) > 0
 
         if state_filter == "no-marker" and pclass.uses_marker:
-            return er is not None and er.marker_state == EnrollmentRecord.SUPERVISOR_ENROLLED and fd.number_assessor == 0
+            return (
+                er is not None
+                and er.marker_state == EnrollmentRecord.SUPERVISOR_ENROLLED
+                and fd.number_assessor == 0
+            )
 
         if state_filter == "unofferable":
-            return er is not None and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED and fd.projects_unofferable > 0
+            return (
+                er is not None
+                and er.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
+                and fd.projects_unofferable > 0
+            )
 
         if state_filter == "custom-cats":
             return (
@@ -903,8 +1090,12 @@ def _faculty_ajax_handler(base_query, pclass: ProjectClass, config: ProjectClass
 
         return True
 
-    with ServerSideInMemoryHandler(request, base_query, columns, row_filter=partial(_filter, state_filter, pclass)) as handler:
-        return handler.build_payload(partial(ajax.convenor.faculty_data, pclass, config))
+    with ServerSideInMemoryHandler(
+        request, base_query, columns, row_filter=partial(_filter, state_filter, pclass)
+    ) as handler:
+        return handler.build_payload(
+            partial(ajax.convenor.faculty_data, pclass, config)
+        )
 
 
 def _has_custom_CATS(fac_data, pclass):
@@ -945,7 +1136,10 @@ def selectors(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # build a list of live students selecting from this project class
@@ -977,7 +1171,11 @@ def selectors(id):
     if cohort_filter is None and session.get("convenor_selectors_cohort_filter"):
         cohort_filter = session["convenor_selectors_cohort_filter"]
 
-    if isinstance(cohort_filter, str) and cohort_filter not in ["all", "twd"] and int(cohort_filter) not in cohorts:
+    if (
+        isinstance(cohort_filter, str)
+        and cohort_filter not in ["all", "twd"]
+        and int(cohort_filter) not in cohorts
+    ):
         cohort_filter = "all"
 
     if cohort_filter is not None:
@@ -986,7 +1184,11 @@ def selectors(id):
     if prog_filter is None and session.get("convenor_selectors_prog_filter"):
         prog_filter = session["convenor_selectors_prog_filter"]
 
-    if isinstance(prog_filter, str) and prog_filter != "all" and int(prog_filter) not in programmes:
+    if (
+        isinstance(prog_filter, str)
+        and prog_filter != "all"
+        and int(prog_filter) not in programmes
+    ):
         prog_filter = "all"
 
     if prog_filter is not None:
@@ -995,7 +1197,14 @@ def selectors(id):
     if state_filter is None and session.get("convenor_selectors_state_filter"):
         state_filter = session["convenor_selectors_state_filter"]
 
-    if isinstance(state_filter, str) and state_filter not in ["all", "submitted", "bookmarks", "none", "confirmations", "custom"]:
+    if isinstance(state_filter, str) and state_filter not in [
+        "all",
+        "submitted",
+        "bookmarks",
+        "none",
+        "confirmations",
+        "custom",
+    ]:
         state_filter = "all"
 
     if state_filter is not None:
@@ -1004,7 +1213,11 @@ def selectors(id):
     if convert_filter is None and session.get("convenor_selectors_convert_filter"):
         convert_filter = session["convenor_selectors_convert_filter"]
 
-    if isinstance(convert_filter, str) and convert_filter not in ["all", "convert", "no-convert"]:
+    if isinstance(convert_filter, str) and convert_filter not in [
+        "all",
+        "convert",
+        "no-convert",
+    ]:
         convert_filter = "all"
 
     if convert_filter is not None:
@@ -1013,7 +1226,11 @@ def selectors(id):
     if year_filter is None and session.get("convenor_selectors_year_filter"):
         year_filter = session["convenor_selectors_year_filter"]
 
-    if isinstance(year_filter, str) and year_filter != "all" and int(year_filter) not in years:
+    if (
+        isinstance(year_filter, str)
+        and year_filter != "all"
+        and int(year_filter) not in years
+    ):
         year_filter = "all"
 
     if year_filter is not None:
@@ -1037,7 +1254,11 @@ def selectors(id):
         match_filter = "all"
         match_show = "all"
     else:
-        if isinstance(match_filter, str) and match_filter != "all" and int(match_filter) not in match_ids:
+        if (
+            isinstance(match_filter, str)
+            and match_filter != "all"
+            and int(match_filter) not in match_ids
+        ):
             match_filter = "all"
             match_show = "all"
 
@@ -1051,7 +1272,16 @@ def selectors(id):
         session["convenor_selectors_match_show"] = match_show
 
     # build list of student emails for passing to local email client via mailto: list
-    selectors = _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter, match_filter, match_show)
+    selectors = _build_selector_data(
+        config,
+        cohort_filter,
+        prog_filter,
+        state_filter,
+        convert_filter,
+        year_filter,
+        match_filter,
+        match_show,
+    )
     emails = [s.student.user.email for s in selectors]
 
     data = get_convenor_dashboard_data(pclass, config)
@@ -1105,29 +1335,68 @@ def selectors_ajax(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return jsonify({})
 
-    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter, match_filter, match_show)
+    data = _build_selector_data(
+        config,
+        cohort_filter,
+        prog_filter,
+        state_filter,
+        convert_filter,
+        year_filter,
+        match_filter,
+        match_show,
+    )
 
     def _quickfixes(s: SelectingStudent):
         return {
             QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE: {
                 "msg": "Populate (available only)...",
-                "url": url_for("convenor.force_convert_bookmarks", sel_id=s.id, converted=0, no_submit_IP=1, force=1, reset=0, force_unavailable=0),
+                "url": url_for(
+                    "convenor.force_convert_bookmarks",
+                    sel_id=s.id,
+                    converted=0,
+                    no_submit_IP=1,
+                    force=1,
+                    reset=0,
+                    force_unavailable=0,
+                ),
             },
             QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_UNAVAILABLE: {
                 "msg": "Populate (incl. unavailable)...",
-                "url": url_for("convenor.force_convert_bookmarks", sel_id=s.id, converted=0, no_submit_IP=1, force=1, reset=0, force_unavailable=1),
+                "url": url_for(
+                    "convenor.force_convert_bookmarks",
+                    sel_id=s.id,
+                    converted=0,
+                    no_submit_IP=1,
+                    force=1,
+                    reset=0,
+                    force_unavailable=1,
+                ),
             },
         }
 
     return ajax.convenor.selectors_data(data, config, quickfix_factory=_quickfixes)
 
 
-def _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter, match_filter, match_show):
+def _build_selector_data(
+    config,
+    cohort_filter,
+    prog_filter,
+    state_filter,
+    convert_filter,
+    year_filter,
+    match_filter,
+    match_show,
+):
     # build a list of live students selecting from this project class
-    selectors: List[SelectingStudent] = config.selecting_students.filter_by(retired=False)
+    selectors: List[SelectingStudent] = config.selecting_students.filter_by(
+        retired=False
+    )
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
@@ -1136,7 +1405,9 @@ def _build_selector_data(config, cohort_filter, prog_filter, state_filter, conve
     match_flag, match_value = is_integer(match_filter)
 
     if cohort_flag or prog_flag:
-        selectors = selectors.join(StudentData, StudentData.id == SelectingStudent.student_id)
+        selectors = selectors.join(
+            StudentData, StudentData.id == SelectingStudent.student_id
+        )
 
     if cohort_flag:
         selectors = selectors.filter(StudentData.cohort == cohort_value)
@@ -1152,9 +1423,17 @@ def _build_selector_data(config, cohort_filter, prog_filter, state_filter, conve
     if state_filter == "submitted":
         data = [rec for rec in selectors.all() if rec.has_submitted]
     elif state_filter == "bookmarks":
-        data = [rec for rec in selectors.all() if not rec.has_submitted and rec.has_bookmarks]
+        data = [
+            rec
+            for rec in selectors.all()
+            if not rec.has_submitted and rec.has_bookmarks
+        ]
     elif state_filter == "none":
-        data = [rec for rec in selectors.all() if not rec.has_submitted and not rec.has_bookmarks]
+        data = [
+            rec
+            for rec in selectors.all()
+            if not rec.has_submitted and not rec.has_bookmarks
+        ]
     elif state_filter == "confirmations":
         data = [rec for rec in selectors.all() if rec.number_pending > 0]
     elif state_filter == "custom":
@@ -1166,7 +1445,11 @@ def _build_selector_data(config, cohort_filter, prog_filter, state_filter, conve
         data = [rec for rec in selectors.all() if rec.student.intermitting]
 
     if year_flag:
-        data = [s for s in data if (s.academic_year is None or s.academic_year == year_value)]
+        data = [
+            s
+            for s in data
+            if (s.academic_year is None or s.academic_year == year_value)
+        ]
 
     if match_flag:
         match = config.published_matches.filter_by(id=match_value).first()
@@ -1196,14 +1479,21 @@ def enrol_selectors(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if (
         not (current_user.has_role("admin") or current_user.has_role("root"))
-        and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+        and config.selector_lifecycle
+        >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
     ):
-        flash("Manual enrolment of selectors is only possible before student choices are closed", "error")
+        flash(
+            "Manual enrolment of selectors is only possible before student choices are closed",
+            "error",
+        )
         return redirect(redirect_url())
 
     cohort_filter = request.args.get("cohort_filter", "all")
@@ -1219,8 +1509,16 @@ def enrol_selectors(id):
         if prog_filter not in ["all", "off"]:
             prog_filter = "all"
 
-    disable = True if (prog_flag or (isinstance(prog_filter, str) and prog_filter.lower() == "off")) else False
-    candidates = build_enrol_selector_candidates(config, disable_programme_filter=disable)
+    disable = (
+        True
+        if (
+            prog_flag or (isinstance(prog_filter, str) and prog_filter.lower() == "off")
+        )
+        else False
+    )
+    candidates = build_enrol_selector_candidates(
+        config, disable_programme_filter=disable
+    )
 
     # build list of available cohorts and degree programmes
     cohorts = set()
@@ -1246,13 +1544,21 @@ def enrol_selectors(id):
     if cohort_filter is None and session.get("convenor_sel_enroll_cohort_filter"):
         cohort_filter = session["convenor_sel_enroll_cohort_filter"]
 
-    if isinstance(cohort_filter, str) and cohort_filter not in ["all"] and int(cohort_filter) not in cohorts:
+    if (
+        isinstance(cohort_filter, str)
+        and cohort_filter not in ["all"]
+        and int(cohort_filter) not in cohorts
+    ):
         cohort_filter = "all"
 
     if cohort_filter is not None:
         session["convenor_sel_enroll_cohort_filter"] = cohort_filter
 
-    if isinstance(prog_filter, str) and prog_filter not in ["all", "off"] and int(prog_filter) not in programmes:
+    if (
+        isinstance(prog_filter, str)
+        and prog_filter not in ["all", "off"]
+        and int(prog_filter) not in programmes
+    ):
         prog_filter = "all"
 
     if prog_filter is not None:
@@ -1261,7 +1567,11 @@ def enrol_selectors(id):
     if year_filter is None and session.get("convenor_sel_enroll_year_filter"):
         year_filter = session["convenor_sel_enroll_year_filter"]
 
-    if isinstance(year_filter, str) and year_filter not in ["all"] and int(year_filter) not in years:
+    if (
+        isinstance(year_filter, str)
+        and year_filter not in ["all"]
+        and int(year_filter) not in years
+    ):
         year_filter = "all"
 
     if year_filter is not None:
@@ -1307,12 +1617,16 @@ def enrol_selectors_ajax(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return jsonify({})
 
     if (
         not (current_user.has_role("admin") or current_user.has_role("root"))
-        and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+        and config.selector_lifecycle
+        >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
     ):
         return jsonify({})
 
@@ -1321,8 +1635,16 @@ def enrol_selectors_ajax(id):
     prog_flag, prog_value = is_integer(prog_filter)
     year_flag, year_value = is_integer(year_filter)
 
-    disable = True if (prog_flag or (isinstance(prog_filter, str) and prog_filter.lower() == "off")) else False
-    candidates = build_enrol_selector_candidates(config, disable_programme_filter=disable)
+    disable = (
+        True
+        if (
+            prog_flag or (isinstance(prog_filter, str) and prog_filter.lower() == "off")
+        )
+        else False
+    )
+    candidates = build_enrol_selector_candidates(
+        config, disable_programme_filter=disable
+    )
 
     if cohort_flag:
         candidates = candidates.filter(StudentData.cohort == cohort_value)
@@ -1330,7 +1652,9 @@ def enrol_selectors_ajax(id):
     if prog_flag:
         candidates = candidates.filter(StudentData.programme_id == prog_value)
     elif prog_filter.lower() == "all":
-        candidates = candidates.filter(or_(StudentData.programme_id == p.id for p in pclass.programmes))
+        candidates = candidates.filter(
+            or_(StudentData.programme_id == p.id for p in pclass.programmes)
+        )
 
     if not year_flag:
         # use SQL server-side handler for performance if it is possible
@@ -1354,7 +1678,9 @@ def _filter_candidates(year: int, row: StudentData):
     return True
 
 
-def _enrol_selectors_ajax_handler(request, candidates, config: ProjectClassConfig, year_value: int = None):
+def _enrol_selectors_ajax_handler(
+    request, candidates, config: ProjectClassConfig, year_value: int = None
+):
     def search_name(row: StudentData):
         u: User = row.user
         return u.name
@@ -1397,10 +1723,20 @@ def _enrol_selectors_ajax_handler(request, candidates, config: ProjectClassConfi
     cohort = {"search": search_cohort, "order": sort_cohort}
     current_year = {"search": search_current_year, "order": sort_current_year}
 
-    columns = {"name": name, "userid": userid, "programme": programme, "cohort": cohort, "current_year": current_year}
+    columns = {
+        "name": name,
+        "userid": userid,
+        "programme": programme,
+        "cohort": cohort,
+        "current_year": current_year,
+    }
 
-    with ServerSideInMemoryHandler(request, candidates, columns, row_filter=partial(_filter_candidates, year_value)) as handler:
-        return handler.build_payload(partial(ajax.convenor.enrol_selectors_data, config))
+    with ServerSideInMemoryHandler(
+        request, candidates, columns, row_filter=partial(_filter_candidates, year_value)
+    ) as handler:
+        return handler.build_payload(
+            partial(ajax.convenor.enrol_selectors_data, config)
+        )
 
 
 @convenor.route("/enroll_all_selectors/<int:configid>")
@@ -1408,7 +1744,10 @@ def _enrol_selectors_ajax_handler(request, candidates, config: ProjectClassConfi
 def enrol_all_selectors(configid):
     config = ProjectClassConfig.query.get_or_404(configid)
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # reject user if not a convenor for this project class
@@ -1417,9 +1756,13 @@ def enrol_all_selectors(configid):
 
     if (
         not (current_user.has_role("admin") or current_user.has_role("root"))
-        and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+        and config.selector_lifecycle
+        >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
     ):
-        flash("Manual enrolment of selectors is only possible before student choices are closed", "error")
+        flash(
+            "Manual enrolment of selectors is only possible before student choices are closed",
+            "error",
+        )
         return redirect(redirect_url())
 
     convert = bool(int(request.args.get("convert", 1)))
@@ -1429,7 +1772,10 @@ def enrol_all_selectors(configid):
     year_filter = request.args.get("year_filter")
 
     candidates = build_enrol_selector_candidates(
-        config, disable_programme_filter=True if isinstance(prog_filter, str) and prog_filter.lower() != "all" else False
+        config,
+        disable_programme_filter=True
+        if isinstance(prog_filter, str) and prog_filter.lower() != "all"
+        else False,
     )
 
     # filter by cohort and programme if required
@@ -1453,10 +1799,18 @@ def enrol_all_selectors(configid):
             add_selector(c, configid, convert=convert, autocommit=False)
 
         db.session.commit()
-        flash('Added {count} selectors to project "{proj}"'.format(count=len(c_list), proj=config.project_class.name), "info")
+        flash(
+            'Added {count} selectors to project "{proj}"'.format(
+                count=len(c_list), proj=config.project_class.name
+            ),
+            "info",
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash("Could not add selectors because a database error occurred. Please check the logs for further information.", "error")
+        flash(
+            "Could not add selectors because a database error occurred. Please check the logs for further information.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
@@ -1473,7 +1827,10 @@ def enrol_selector(sid, configid):
     """
     config = ProjectClassConfig.query.get_or_404(configid)
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # reject user if not a convenor for this project class
@@ -1482,9 +1839,13 @@ def enrol_selector(sid, configid):
 
     if (
         not (current_user.has_role("admin") or current_user.has_role("root"))
-        and config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+        and config.selector_lifecycle
+        >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
     ):
-        flash("Manual enrolment of selectors is only possible before student choices are closed", "error")
+        flash(
+            "Manual enrolment of selectors is only possible before student choices are closed",
+            "error",
+        )
         return redirect(redirect_url())
 
     convert = bool(int(request.args.get("convert", 1)))
@@ -1510,9 +1871,13 @@ def delete_selector(sid):
 
     if (
         not (current_user.has_role("admin") or current_user.has_role("root"))
-        and sel.config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
+        and sel.config.selector_lifecycle
+        > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
     ):
-        flash("Manual deletion of selectors is only possible before student choices are closed", "error")
+        flash(
+            "Manual deletion of selectors is only possible before student choices are closed",
+            "error",
+        )
         return redirect(redirect_url())
 
     if sel.has_bookmarks or sel.has_submitted or sel.has_matches:
@@ -1521,7 +1886,9 @@ def delete_selector(sid):
             url = redirect_url()
 
         title = 'Delete selector "{name}"'.format(name=sel.student.user.name)
-        panel_title = 'Delete selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(name=sel.student.user.name)
+        panel_title = 'Delete selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(
+            name=sel.student.user.name
+        )
 
         action_url = url_for("convenor.do_delete_selector", sid=sid, url=url)
         message = (
@@ -1529,12 +1896,19 @@ def delete_selector(sid):
             "<p>This selector has stored bookmarks, submitted a list of project choices, or has been included "
             "in a matching.</p>"
             "<p>This action cannot be undone. Any bookmarks and submitted preferences will be lost, and "
-            "the selector will be deleted from any matches of which they are currently part.</p>".format(name=sel.student.user.name)
+            "the selector will be deleted from any matches of which they are currently part.</p>".format(
+                name=sel.student.user.name
+            )
         )
         submit_label = "Delete selector"
 
         return render_template_context(
-            "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+            "admin/danger_confirm.html",
+            title=title,
+            panel_title=panel_title,
+            action_url=action_url,
+            message=message,
+            submit_label=submit_label,
         )
 
     try:
@@ -1544,7 +1918,10 @@ def delete_selector(sid):
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash("Could not delete selector due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete selector due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
@@ -1566,9 +1943,13 @@ def do_delete_selector(sid):
 
     if (
         not (current_user.has_role("admin") or current_user.has_role("root"))
-        and sel.config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
+        and sel.config.selector_lifecycle
+        > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
     ):
-        flash("Manual deletion of selectors is only possible before student choices are closed", "error")
+        flash(
+            "Manual deletion of selectors is only possible before student choices are closed",
+            "error",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -1582,7 +1963,10 @@ def do_delete_selector(sid):
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash("Could not delete selector due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete selector due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
@@ -1611,11 +1995,17 @@ def selector_grid(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
-        flash("The selector grid view is available only after student choices are closed", "error")
+        flash(
+            "The selector grid view is available only after student choices are closed",
+            "error",
+        )
         return redirect(redirect_url())
 
     # build a list of live students selecting from this project class
@@ -1643,7 +2033,12 @@ def selector_grid(id):
         .all()
     )
     progs = [rec for rec in all_progs if rec.id in programmes]
-    groups = db.session.query(ResearchGroup).filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+    groups = (
+        db.session.query(ResearchGroup)
+        .filter_by(active=True)
+        .order_by(ResearchGroup.name.asc())
+        .all()
+    )
 
     if cohort_filter is None and session.get("convenor_sel_grid_cohort_filter"):
         cohort_filter = session["convenor_sel_grid_cohort_filter"]
@@ -1660,7 +2055,11 @@ def selector_grid(id):
     if year_filter is None and session.get("convenor_sel_grid_year_filter"):
         year_filter = session["convenor_sel_grid_year_filter"]
 
-    if isinstance(year_filter, str) and year_filter != "all" and int(year_filter) not in years:
+    if (
+        isinstance(year_filter, str)
+        and year_filter != "all"
+        and int(year_filter) not in years
+    ):
         year_filter = "all"
 
     if year_filter is not None:
@@ -1693,7 +2092,11 @@ def selector_grid(id):
         match_filter = "all"
         match_show = "all"
     else:
-        if isinstance(match_filter, str) and match_filter != "all" and int(match_filter) not in match_ids:
+        if (
+            isinstance(match_filter, str)
+            and match_filter != "all"
+            and int(match_filter) not in match_ids
+        ):
             match_filter = "all"
             match_show = "all"
 
@@ -1750,7 +2153,10 @@ def selector_grid_ajax(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return jsonify({})
 
     if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
@@ -1766,7 +2172,9 @@ def selector_grid_ajax(id):
     match_flag, match_value = is_integer(match_filter)
 
     if cohort_flag or prog_flag or state_filter != "all":
-        selectors = selectors.join(StudentData, StudentData.id == SelectingStudent.student_id)
+        selectors = selectors.join(
+            StudentData, StudentData.id == SelectingStudent.student_id
+        )
 
     if state_filter == "twd":
         selectors = selectors.filter(StudentData.intermitting == True)
@@ -1778,7 +2186,11 @@ def selector_grid_ajax(id):
         selectors = selectors.filter(StudentData.programme_id == prog_value)
 
     if year_flag:
-        data = [s for s in selectors.all() if (s.academic_year is None or s.academic_year == year_value)]
+        data = [
+            s
+            for s in selectors.all()
+            if (s.academic_year is None or s.academic_year == year_value)
+        ]
     else:
         data = selectors.all()
 
@@ -1817,15 +2229,27 @@ def show_confirmations(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-        flash("The outstanding confirmations view is available only after student choices have opened", "error")
+    if (
+        config.selector_lifecycle
+        < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
+    ):
+        flash(
+            "The outstanding confirmations view is available only after student choices have opened",
+            "error",
+        )
         return redirect(redirect_url())
 
     if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
-        flash("The outstanding confirmations view is not available after matching has been completed", "error")
+        flash(
+            "The outstanding confirmations view is not available after matching has been completed",
+            "error",
+        )
         return redirect(redirect_url())
 
     data = get_convenor_dashboard_data(pclass, config)
@@ -1854,10 +2278,16 @@ def show_confirmations_ajax(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return jsonify({})
 
-    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+    if (
+        config.selector_lifecycle
+        < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
+    ):
         return jsonify({})
 
     if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
@@ -1881,25 +2311,39 @@ def approve_outstanding_confirms(pid):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-        flash("Approval of all outstanding confirmation requests can be performed only after student choices have opened", "error")
+    if (
+        config.selector_lifecycle
+        < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
+    ):
+        flash(
+            "Approval of all outstanding confirmation requests can be performed only after student choices have opened",
+            "error",
+        )
         return redirect(redirect_url())
 
     if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
-        flash("Approval of all outstanding confirmation requests can not be performed after matching has been completed", "error")
+        flash(
+            "Approval of all outstanding confirmation requests can not be performed after matching has been completed",
+            "error",
+        )
         return redirect(redirect_url())
 
     celery = current_app.extensions["celery"]
     approve_task = celery.tasks["app.tasks.selecting.approve_outstanding_confirms"]
 
-    tk_name = f"Approve all outstanding confirmation requests for {pclass.name} {config.year}-{config.year+1}"
+    tk_name = f"Approve all outstanding confirmation requests for {pclass.name} {config.year}-{config.year + 1}"
     tk_description = "Approve all outstanding confirmation requests"
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
-    approve_task.apply_async(args=(task_id, config.id, current_user.id), task_id=task_id)
+    approve_task.apply_async(
+        args=(task_id, config.id, current_user.id), task_id=task_id
+    )
 
     return redirect(redirect_url())
 
@@ -1917,21 +2361,33 @@ def delete_outstanding_confirms(pid):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-        flash("Deletion of all outstanding confirmation requests can be performed only after student choices have opened", "error")
+    if (
+        config.selector_lifecycle
+        < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
+    ):
+        flash(
+            "Deletion of all outstanding confirmation requests can be performed only after student choices have opened",
+            "error",
+        )
         return redirect(redirect_url())
 
     if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
-        flash("Deletion of all outstanding confirmation requests can not be performed after matching has been completed", "error")
+        flash(
+            "Deletion of all outstanding confirmation requests can not be performed after matching has been completed",
+            "error",
+        )
         return redirect(redirect_url())
 
     celery = current_app.extensions["celery"]
     delete_task = celery.tasks["app.tasks.selecting.delete_outstanding_confirms"]
 
-    tk_name = f"Delete all outstanding confirmation requests for {pclass.name} {config.year}-{config.year+1}"
+    tk_name = f"Delete all outstanding confirmation requests for {pclass.name} {config.year}-{config.year + 1}"
     tk_description = "Delete all outstanding confirmation requests"
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
@@ -1962,7 +2418,10 @@ def submitters(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     submitters = config.submitting_students.filter_by(retired=False).all()
@@ -1993,7 +2452,11 @@ def submitters(id):
     if cohort_filter is None and session.get("convenor_submitters_cohort_filter"):
         cohort_filter = session["convenor_submitters_cohort_filter"]
 
-    if isinstance(cohort_filter, str) and cohort_filter != "all" and int(cohort_filter) not in cohorts:
+    if (
+        isinstance(cohort_filter, str)
+        and cohort_filter != "all"
+        and int(cohort_filter) not in cohorts
+    ):
         cohort_filter = "all"
 
     if cohort_filter is not None:
@@ -2002,7 +2465,11 @@ def submitters(id):
     if prog_filter is None and session.get("convenor_submitters_prog_filter"):
         prog_filter = session["convenor_submitters_prog_filter"]
 
-    if isinstance(prog_filter, str) and prog_filter != "all" and int(prog_filter) not in programmes:
+    if (
+        isinstance(prog_filter, str)
+        and prog_filter != "all"
+        and int(prog_filter) not in programmes
+    ):
         prog_filter = "all"
 
     if prog_filter is not None:
@@ -2031,7 +2498,11 @@ def submitters(id):
     if year_filter is None and session.get("convenor_submitters_year_filter"):
         year_filter = session["convenor_submitters_year_filter"]
 
-    if isinstance(year_filter, str) and year_filter != "all" and int(year_filter) not in years:
+    if (
+        isinstance(year_filter, str)
+        and year_filter != "all"
+        and int(year_filter) not in years
+    ):
         year_filter = "all"
 
     if year_filter is not None:
@@ -2040,14 +2511,21 @@ def submitters(id):
     if data_display is None and session.get("convenor_submitters_data_display"):
         data_display = session["convenor_submitters_data_display"]
 
-    if isinstance(data_display, str) and data_display not in ["name", "number", "both-name", "both-number"]:
+    if isinstance(data_display, str) and data_display not in [
+        "name",
+        "number",
+        "both-name",
+        "both-number",
+    ]:
         data_display = "name"
 
     if data_display is not None:
         session["convenor_submitters_data_display"] = data_display
 
     # build list of student emails for passing to local email client via mailto: list
-    submitters = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
+    submitters = build_submitters_data(
+        config, cohort_filter, prog_filter, state_filter, year_filter
+    )
     emails = [s.student.user.email for s in submitters]
 
     data = get_convenor_dashboard_data(pclass, config)
@@ -2088,7 +2566,10 @@ def submitters_ajax(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return jsonify({})
 
     cohort_filter = request.args.get("cohort_filter")
@@ -2111,9 +2592,13 @@ def submitters_ajax(id):
         show_number = True
         sort_number = True
 
-    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
+    data = build_submitters_data(
+        config, cohort_filter, prog_filter, state_filter, year_filter
+    )
 
-    return ajax.convenor.submitters_data(data, config, show_name, show_number, sort_number)
+    return ajax.convenor.submitters_data(
+        data, config, show_name, show_number, sort_number
+    )
 
 
 @convenor.route("/enrol_submitters/<int:id>")
@@ -2132,11 +2617,20 @@ def enrol_submitters(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash("Manual enrolment of selectors is no longer possible at this stage in the project lifecycle.", "error")
+    if (
+        config.submitter_lifecycle
+        >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+    ):
+        flash(
+            "Manual enrolment of selectors is no longer possible at this stage in the project lifecycle.",
+            "error",
+        )
         return redirect(redirect_url())
 
     cohort_filter = request.args.get("cohort_filter")
@@ -2179,7 +2673,11 @@ def enrol_submitters(id):
     if prog_filter is None and session.get("convenor_sub_enroll_prog_filter"):
         prog_filter = session["convenor_sub_enroll_prog_filter"]
 
-    if isinstance(prog_filter, str) and prog_filter != "all" and int(prog_filter) not in programmes:
+    if (
+        isinstance(prog_filter, str)
+        and prog_filter != "all"
+        and int(prog_filter) not in programmes
+    ):
         prog_filter = "all"
 
     if prog_filter is not None:
@@ -2188,7 +2686,11 @@ def enrol_submitters(id):
     if year_filter is None and session.get("convenor_sub_enroll_year_filter"):
         year_filter = session["convenor_sub_enroll_year_filter"]
 
-    if isinstance(year_filter, str) and year_filter != "all" and int(year_filter) not in years:
+    if (
+        isinstance(year_filter, str)
+        and year_filter != "all"
+        and int(year_filter) not in years
+    ):
         year_filter = "all"
 
     if year_filter is not None:
@@ -2236,10 +2738,16 @@ def enrol_submitters_ajax(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return jsonify({})
 
-    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+    if (
+        config.submitter_lifecycle
+        >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+    ):
         return jsonify({})
 
     candidates = build_enrol_submitter_candidates(config)
@@ -2256,7 +2764,12 @@ def enrol_submitters_ajax(id):
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
     if year_flag:
-        candidates = [s for s in candidates.all() if s.academic_year is None or (not s.has_graduated and s.academic_year == year_value)]
+        candidates = [
+            s
+            for s in candidates.all()
+            if s.academic_year is None
+            or (not s.has_graduated and s.academic_year == year_value)
+        ]
     else:
         candidates = candidates.all()
 
@@ -2268,15 +2781,24 @@ def enrol_submitters_ajax(id):
 def enrol_all_submitters(configid):
     config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
-        flash("Manual enrolment of submitters is only possible during normal project activity", "error")
+    if (
+        config.submitter_lifecycle
+        > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+    ):
+        flash(
+            "Manual enrolment of submitters is only possible during normal project activity",
+            "error",
+        )
         return redirect(redirect_url())
 
     cohort_filter = request.args.get("cohort_filter")
@@ -2301,19 +2823,36 @@ def enrol_all_submitters(configid):
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
     if year_flag:
-        candidates = [s for s in candidates.all() if (s.academic_year is None or s.academic_yea == year_value)]
+        candidates = [
+            s
+            for s in candidates.all()
+            if (s.academic_year is None or s.academic_yea == year_value)
+        ]
     else:
         candidates = candidates.all()
 
     for c in candidates:
-        add_blank_submitter(c, old_config.id if old_config is not None else None, configid, autocommit=False)
+        add_blank_submitter(
+            c,
+            old_config.id if old_config is not None else None,
+            configid,
+            autocommit=False,
+        )
 
     try:
         db.session.commit()
-        flash('Added {count} submitters to project "{proj}"'.format(count=len(candidates), proj=config.project_class.name), "info")
+        flash(
+            'Added {count} submitters to project "{proj}"'.format(
+                count=len(candidates), proj=config.project_class.name
+            ),
+            "info",
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash("Could not add submitters because a database error occurred. Please check the logs for further information.", "error")
+        flash(
+            "Could not add submitters because a database error occurred. Please check the logs for further information.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
@@ -2330,7 +2869,10 @@ def enrol_submitter(sid, configid):
     """
     config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # return 404 if student does not exist
@@ -2340,7 +2882,10 @@ def enrol_submitter(sid, configid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
+    if (
+        config.submitter_lifecycle
+        > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+    ):
         if not validate_is_administrator(message=False):
             flash(
                 "Manual enrolment of submitters is only possible during normal project activity. "
@@ -2351,7 +2896,12 @@ def enrol_submitter(sid, configid):
 
     old_config: ProjectClassConfig = config.project_class.get_config(config.year - 1)
 
-    add_blank_submitter(student, old_config.id if old_config is not None else None, configid, autocommit=True)
+    add_blank_submitter(
+        student,
+        old_config.id if old_config is not None else None,
+        configid,
+        autocommit=True,
+    )
 
     return redirect(redirect_url())
 
@@ -2419,8 +2969,14 @@ def delete_submitter(sid):
     if not validate_is_convenor(sub.config.project_class):
         return redirect(redirect_url())
 
-    if sub.config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
-        flash("Manual deletion of submitters is only possible during normal project activity", "error")
+    if (
+        sub.config.submitter_lifecycle
+        > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+    ):
+        flash(
+            "Manual deletion of submitters is only possible during normal project activity",
+            "error",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -2428,7 +2984,9 @@ def delete_submitter(sid):
         url = redirect_url()
 
     title = 'Delete submitter "{name}"'.format(name=sub.student.user.name)
-    panel_title = 'Delete submitter <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(name=sub.student.user.name)
+    panel_title = 'Delete submitter <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(
+        name=sub.student.user.name
+    )
 
     action_url = url_for("convenor.do_delete_submitter", sid=sid, url=url)
     message = (
@@ -2438,7 +2996,12 @@ def delete_submitter(sid):
     submit_label = "Delete submitter"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -2456,8 +3019,14 @@ def do_delete_submitter(sid):
     if not validate_is_convenor(sub.config.project_class):
         return redirect(redirect_url())
 
-    if sub.config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
-        flash("Manual deletion of submitters is only possible during normal project activity", "error")
+    if (
+        sub.config.submitter_lifecycle
+        > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+    ):
+        flash(
+            "Manual deletion of submitters is only possible during normal project activity",
+            "error",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -2471,7 +3040,12 @@ def do_delete_submitter(sid):
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash('Could not delete submitter due to a database error ("{n}"). Please contact a system administrator.'.format(n=e), "error")
+        flash(
+            'Could not delete submitter due to a database error ("{n}"). Please contact a system administrator.'.format(
+                n=e
+            ),
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
@@ -2491,8 +3065,14 @@ def delete_all_submitters(configid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
-        flash("Manual deletion of submitters is only possible during normal project activity", "error")
+    if (
+        config.submitter_lifecycle
+        > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+    ):
+        flash(
+            "Manual deletion of submitters is only possible during normal project activity",
+            "error",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -2502,12 +3082,22 @@ def delete_all_submitters(configid):
     title = "Delete all submitters"
     panel_title = "Delete all submitters"
 
-    action_url = url_for("convenor.do_delete_all_submitters", configid=configid, url=url)
-    message = "<p>Are you sure that you wish to delete <strong>all submitters</strong>?" "<p>This action cannot be undone.</p>"
+    action_url = url_for(
+        "convenor.do_delete_all_submitters", configid=configid, url=url
+    )
+    message = (
+        "<p>Are you sure that you wish to delete <strong>all submitters</strong>?"
+        "<p>This action cannot be undone.</p>"
+    )
     submit_label = "Delete all submitters"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -2525,8 +3115,14 @@ def do_delete_all_submitters(configid):
     if not validate_is_convenor(config.project_class):
         return redirect(redirect_url())
 
-    if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
-        flash("Manual deletion of submitters is only possible during normal project activity", "error")
+    if (
+        config.submitter_lifecycle
+        > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+    ):
+        flash(
+            "Manual deletion of submitters is only possible during normal project activity",
+            "error",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -2543,7 +3139,11 @@ def do_delete_all_submitters(configid):
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash('Could not delete all submitters due to a database error ("{n}"). Please contact a system ' "administrator.".format(n=e), "error")
+        flash(
+            'Could not delete all submitters due to a database error ("{n}"). Please contact a system '
+            "administrator.".format(n=e),
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
@@ -2649,7 +3249,16 @@ def edit_roles_ajax(record_id):
     with ServerSideSQLHandler(request, base_query, columns) as handler:
 
         def row_formatter(roles):
-            return ajax.convenor.edit_roles(roles, return_url=url_for("convenor.edit_roles", sub_id=sub.id, record_id=record.id, url=url, text=text))
+            return ajax.convenor.edit_roles(
+                roles,
+                return_url=url_for(
+                    "convenor.edit_roles",
+                    sub_id=sub.id,
+                    record_id=record.id,
+                    url=url,
+                    text=text,
+                ),
+            )
 
         return handler.build_payload(row_formatter)
 
@@ -2679,20 +3288,27 @@ def delete_role(role_id):
             "convenor.edit_roles",
             sub_id=sub.id,
             record_id=record.id,
-            url=url_for("convenor.submitters", id=config.project_class.id, text="convenor submitters view"),
+            url=url_for(
+                "convenor.submitters",
+                id=config.project_class.id,
+                text="convenor submitters view",
+            ),
         )
 
     title = "Delete role"
     panel_title = f'Delete {role.role_label} role for <i class="fas fa-user-circle"></i> <strong>{sub_user.name}</strong>'
 
     action_url = url_for("convenor.perform_delete_role", role_id=role_id, url=url)
-    message = (
-        f'<p>Please confirm that you wish to delete the {role.role_as_str} role for <i class="fas fa-user-circle"></i> <strong>{role_user.name}</strong> belonging to submitter <i class="fas fa-user-circle"></i> <strong>{sub_user.name}</strong>.</p><p>This action cannot be undone.</p>'
-    )
+    message = f'<p>Please confirm that you wish to delete the {role.role_as_str} role for <i class="fas fa-user-circle"></i> <strong>{role_user.name}</strong> belonging to submitter <i class="fas fa-user-circle"></i> <strong>{sub_user.name}</strong>.</p><p>This action cannot be undone.</p>'
     submit_label = "Delete role"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -2723,7 +3339,10 @@ def perform_delete_role(role_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not delete role due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not delete role due to a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(url)
 
@@ -2795,7 +3414,10 @@ def add_role(record_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add new role due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not add new role due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url)
     elif request.method == "GET":
@@ -2804,7 +3426,15 @@ def add_role(record_id):
         else:
             form.role.data = SubmissionRole.ROLE_MARKER
 
-    return render_template_context("convenor/submitter/add_role.html", form=form, record=record, period=period, config=config, sub=sub, url=url)
+    return render_template_context(
+        "convenor/submitter/add_role.html",
+        form=form,
+        record=record,
+        period=period,
+        config=config,
+        sub=sub,
+        url=url,
+    )
 
 
 @convenor.route("/edit_role/<int:role_id>", methods=["GET", "POST"])
@@ -2832,12 +3462,21 @@ def edit_role(role_id):
         role.role = form.role.data
 
         # only update marking-related fields for supervisor/responsible supervisor roles
-        if form.role.data in [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]:
+        if form.role.data in [
+            SubmissionRole.ROLE_SUPERVISOR,
+            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+        ]:
             role.marking_distributed = form.marking_distributed.data
-            role.external_marking_url = form.external_marking_url.data if form.external_marking_url.data else None
+            role.external_marking_url = (
+                form.external_marking_url.data
+                if form.external_marking_url.data
+                else None
+            )
             role.grade = form.grade.data
             role.weight = form.weight.data
-            role.justification = form.justification.data if form.justification.data else None
+            role.justification = (
+                form.justification.data if form.justification.data else None
+            )
 
         role.last_edit_id = current_user.id
         role.last_edit_timestamp = datetime.now()
@@ -2847,7 +3486,10 @@ def edit_role(role_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes to role due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes to role due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url)
 
@@ -2876,7 +3518,9 @@ def edit_project_alternatives(proj_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    return render_template_context("convenor/projects/edit_alternatives.html", proj=proj, url=url, text=text)
+    return render_template_context(
+        "convenor/projects/edit_alternatives.html", proj=proj, url=url, text=text
+    )
 
 
 @convenor.route("/edit_project_alternatives_ajax/<int:proj_id>", methods=["POST"])
@@ -2892,9 +3536,15 @@ def edit_project_alternatives_ajax(proj_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    base_query = proj.alternatives.join(Project, Project.id == ProjectAlternative.alternative_id)
+    base_query = proj.alternatives.join(
+        Project, Project.id == ProjectAlternative.alternative_id
+    )
 
-    project = {"search": Project.name, "order": Project.name, "search_collation": "utf8_general_ci"}
+    project = {
+        "search": Project.name,
+        "order": Project.name,
+        "search_collation": "utf8_general_ci",
+    }
     priority = {"order": ProjectAlternative.priority}
 
     columns = {"project": project, "priority": priority}
@@ -2921,7 +3571,10 @@ def delete_project_alternative(alt_id):
         db.session.delete(alt)
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not delete project alternative because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete project alternative because of a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -2953,11 +3606,16 @@ def edit_project_alternative(alt_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not modify project alternative properties due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not modify project alternative properties due to a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url)
 
-    return render_template_context("convenor/projects/edit_alternative.html", form=form, alt=alt, url=url)
+    return render_template_context(
+        "convenor/projects/edit_alternative.html", form=form, alt=alt, url=url
+    )
 
 
 @convenor.route("/new_project_alternative/<int:proj_id>")
@@ -2972,7 +3630,9 @@ def new_project_alternative(proj_id):
 
     url = request.args.get("url", None)
 
-    return render_template_context("convenor/projects/new_alternative.html", proj=proj, url=url)
+    return render_template_context(
+        "convenor/projects/new_alternative.html", proj=proj, url=url
+    )
 
 
 @convenor.route("/new_project_alternative_ajax/<int:proj_id>", methods=["POST"])
@@ -2990,12 +3650,20 @@ def new_project_alternative_ajax(proj_id):
     # get list of available projects, excluding any projects that are already alternatives for this one
     base_query = (
         db.session.query(Project)
-        .filter(Project.active, ~Project.alternative_for.any(parent_id=proj.id), Project.id != proj_id)
+        .filter(
+            Project.active,
+            ~Project.alternative_for.any(parent_id=proj.id),
+            Project.id != proj_id,
+        )
         .join(FacultyData, FacultyData.id == Project.owner_id, isouter=True)
         .join(User, User.id == FacultyData.id, isouter=True)
     )
 
-    project = {"search": Project.name, "order": Project.name, "search_collation": "utf8_general_ci"}
+    project = {
+        "search": Project.name,
+        "order": Project.name,
+        "search_collation": "utf8_general_ci",
+    }
     owner = {
         "search": func.concat(User.first_name, " ", User.last_name),
         "search_collation": "utf8_general_ci",
@@ -3029,7 +3697,14 @@ def create_project_alternative(proj_id, alt_proj_id):
         return redirect(url)
 
     # check whether an ProjectAlternative with this parent and alternative already exists
-    q = db.session.query(ProjectAlternative).filter(ProjectAlternative.parent_id == proj_id, ProjectAlternative.alternative_id == alt_proj_id).first()
+    q = (
+        db.session.query(ProjectAlternative)
+        .filter(
+            ProjectAlternative.parent_id == proj_id,
+            ProjectAlternative.alternative_id == alt_proj_id,
+        )
+        .first()
+    )
     if q is not None:
         flash(
             f'A request to create a project alternative for parent "{proj.name}" and alternative '
@@ -3043,7 +3718,10 @@ def create_project_alternative(proj_id, alt_proj_id):
         db.session.add(alt)
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not create alternative due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not create alternative due to a database error. Please contact a system administrator",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -3063,7 +3741,9 @@ def edit_liveproject_alternatives(lp_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    return render_template_context("convenor/liveprojects/edit_alternatives.html", lp=lp, url=url, text=text)
+    return render_template_context(
+        "convenor/liveprojects/edit_alternatives.html", lp=lp, url=url, text=text
+    )
 
 
 @convenor.route("/edit_liveproject_alternatives_ajax/<int:lp_id>", methods=["POST"])
@@ -3079,9 +3759,15 @@ def edit_liveproject_alternatives_ajax(lp_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    base_query = lp.alternatives.join(LiveProject, LiveProject.id == LiveProjectAlternative.alternative_id)
+    base_query = lp.alternatives.join(
+        LiveProject, LiveProject.id == LiveProjectAlternative.alternative_id
+    )
 
-    project = {"search": LiveProject.name, "order": LiveProject.name, "search_collation": "utf8_general_ci"}
+    project = {
+        "search": LiveProject.name,
+        "order": LiveProject.name,
+        "search_collation": "utf8_general_ci",
+    }
     priority = {"order": LiveProjectAlternative.priority}
 
     columns = {"project": project, "priority": priority}
@@ -3089,7 +3775,9 @@ def edit_liveproject_alternatives_ajax(lp_id):
     with ServerSideSQLHandler(request, base_query, columns) as handler:
 
         def row_formatter(alternatives):
-            return ajax.convenor.liveproject_alternatives(alternatives, url=url, text=text)
+            return ajax.convenor.liveproject_alternatives(
+                alternatives, url=url, text=text
+            )
 
         return handler.build_payload(row_formatter)
 
@@ -3108,7 +3796,10 @@ def delete_liveproject_alternative(alt_id):
         db.session.delete(alt)
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not delete LiveProject alternative because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete LiveProject alternative because of a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -3145,11 +3836,16 @@ def edit_liveproject_alternative(alt_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not modify LiveProject alternative properties due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not modify LiveProject alternative properties due to a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url)
 
-    return render_template_context("convenor/liveprojects/edit_alternative.html", form=form, alt=alt, url=url)
+    return render_template_context(
+        "convenor/liveprojects/edit_alternative.html", form=form, alt=alt, url=url
+    )
 
 
 @convenor.route("/new_liveproject_alternative/<int:lp_id>")
@@ -3164,7 +3860,9 @@ def new_liveproject_alternative(lp_id):
 
     url = request.args.get("url", None)
 
-    return render_template_context("convenor/liveprojects/new_alternative.html", lp=lp, url=url)
+    return render_template_context(
+        "convenor/liveprojects/new_alternative.html", lp=lp, url=url
+    )
 
 
 @convenor.route("/new_liveproject_alternative_ajax/<int:lp_id>", methods=["POST"])
@@ -3182,12 +3880,18 @@ def new_liveproject_alternative_ajax(lp_id):
     # get list of available projects, excluding any projects that are already alternatives for this one
     config: ProjectClassConfig = lp.config
     base_query = (
-        config.live_projects.filter(~LiveProject.alternative_for.any(parent_id=lp.id), LiveProject.id != lp_id)
+        config.live_projects.filter(
+            ~LiveProject.alternative_for.any(parent_id=lp.id), LiveProject.id != lp_id
+        )
         .join(FacultyData, FacultyData.id == LiveProject.owner_id, isouter=True)
         .join(User, User.id == FacultyData.id, isouter=True)
     )
 
-    project = {"search": LiveProject.name, "order": LiveProject.name, "search_collation": "utf8_general_ci"}
+    project = {
+        "search": LiveProject.name,
+        "order": LiveProject.name,
+        "search_collation": "utf8_general_ci",
+    }
     owner = {
         "search": func.concat(User.first_name, " ", User.last_name),
         "search_collation": "utf8_general_ci",
@@ -3218,7 +3922,11 @@ def create_liveproject_alternative(lp_id, alt_lp_id):
 
     # reject if lp and alt_lp don't belong to the same ProjectClassConfig
     if lp.config_id != alt_lp.config_id:
-        flash(f'Projects "{lp.name}" and "{alt_lp.name}" do not belong to the same project cycle, ' f"so they cannot be alternatives", "error")
+        flash(
+            f'Projects "{lp.name}" and "{alt_lp.name}" do not belong to the same project cycle, '
+            f"so they cannot be alternatives",
+            "error",
+        )
         return redirect(url)
 
     # reject user if not a convenor (or other suitable administrator) for this project class
@@ -3228,7 +3936,10 @@ def create_liveproject_alternative(lp_id, alt_lp_id):
     # check whether an LiveProjectAlternative with this parent and alternative already exists
     q = (
         db.session.query(LiveProjectAlternative)
-        .filter(LiveProjectAlternative.parent_id == lp_id, LiveProjectAlternative.alternative_id == alt_lp_id)
+        .filter(
+            LiveProjectAlternative.parent_id == lp_id,
+            LiveProjectAlternative.alternative_id == alt_lp_id,
+        )
         .first()
     )
     if q is not None:
@@ -3244,7 +3955,10 @@ def create_liveproject_alternative(lp_id, alt_lp_id):
         db.session.add(alt)
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not create alternative due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not create alternative due to a database error. Please contact a system administrator",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -3265,18 +3979,30 @@ def copy_alternative_to_library(alt_id):
     library_project: Project = lp.parent
 
     if library_project is None:
-        flash("Cannot copy this alternative to the main library, because no library project is linked to the parent LiveProject", "error")
+        flash(
+            "Cannot copy this alternative to the main library, because no library project is linked to the parent LiveProject",
+            "error",
+        )
         return redirect(redirect_url())
 
     alt_lp: LiveProject = alt.alternative
     library_alt_project: Project = alt_lp.parent
 
     if library_alt_project is None:
-        flash("Cannot copy this alternative to the main library, because no library project is linked to the alternative LiveProject", "error")
+        flash(
+            "Cannot copy this alternative to the main library, because no library project is linked to the alternative LiveProject",
+            "error",
+        )
         return redirect(redirect_url())
 
     try:
-        library_alt = db.session.query(ProjectAlternative).filter_by(parent_id=library_project.id, alternative_id=library_alt_project.id).first()
+        library_alt = (
+            db.session.query(ProjectAlternative)
+            .filter_by(
+                parent_id=library_project.id, alternative_id=library_alt_project.id
+            )
+            .first()
+        )
         if library_alt is None:
             library_alt = ProjectAlternative(
                 parent_id=library_project.id,
@@ -3293,7 +4019,10 @@ def copy_alternative_to_library(alt_id):
         db.session.commit()
 
     except SQLAlchemyError as e:
-        flash("Could not create alternative due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not create alternative due to a database error. Please contact a system administrator",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -3312,7 +4041,10 @@ def copy_project_alternative_reciprocal(alt_id):
 
     rcp: Optional[ProjectAlternative] = alt.get_reciprocal()
     if rcp is not None:
-        flash("A request to create a reciprocal alternative was ignored, because the reciprocal is already present", "error")
+        flash(
+            "A request to create a reciprocal alternative was ignored, because the reciprocal is already present",
+            "error",
+        )
         return redirect(redirect_url())
 
     rcp = ProjectAlternative(
@@ -3325,7 +4057,10 @@ def copy_project_alternative_reciprocal(alt_id):
         db.session.add(rcp)
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not create alternative due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not create alternative due to a database error. Please contact a system administrator",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -3344,7 +4079,10 @@ def copy_liveproject_alternative_reciprocal(alt_id):
 
     rcp: Optional[ProjectAlternative] = alt.get_reciprocal()
     if rcp is not None:
-        flash("A request to create a reciprocal alternative was ignored, because the reciprocal is already present", "error")
+        flash(
+            "A request to create a reciprocal alternative was ignored, because the reciprocal is already present",
+            "error",
+        )
         return redirect(redirect_url())
 
     rcp = LiveProjectAlternative(
@@ -3357,7 +4095,10 @@ def copy_liveproject_alternative_reciprocal(alt_id):
         db.session.add(rcp)
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not create alternative due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not create alternative due to a database error. Please contact a system administrator",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -3387,13 +4128,18 @@ def edit_project_supervisors(proj_id):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not save changes to supervisor pool because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes to supervisor pool because of a database error. Please contact a system administrator",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             db.session.rollback()
 
         return redirect(url)
 
-    return render_template_context("convenor/projects/edit_supervisors.html", form=form, proj=proj, url=url)
+    return render_template_context(
+        "convenor/projects/edit_supervisors.html", form=form, proj=proj, url=url
+    )
 
 
 @convenor.route("/edit_liveproject_supervisors/<int:proj_id>", methods=["GET", "POST"])
@@ -3419,13 +4165,18 @@ def edit_liveproject_supervisors(proj_id):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not save changed to supervisor pool because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changed to supervisor pool because of a database error. Please contact a system administrator",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             db.session.rollback()
 
         return redirect(url)
 
-    return render_template_context("convenor/liveprojects/edit_supervisors.html", form=form, proj=proj, url=url)
+    return render_template_context(
+        "convenor/liveprojects/edit_supervisors.html", form=form, proj=proj, url=url
+    )
 
 
 @convenor.route("/liveprojects/<int:id>")
@@ -3444,7 +4195,14 @@ def liveprojects(id):
     if state_filter is None and session.get("convenor_liveprojects_state_filter"):
         state_filter = session["convenor_liveprojects_state_filter"]
 
-    if state_filter not in ["all", "submitted", "bookmarks", "none", "confirmations", "custom"]:
+    if state_filter not in [
+        "all",
+        "submitted",
+        "bookmarks",
+        "none",
+        "confirmations",
+        "custom",
+    ]:
         state_filter = "all"
 
     if state_filter is not None:
@@ -3465,7 +4223,10 @@ def liveprojects(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     data = get_convenor_dashboard_data(pclass, config)
@@ -3514,7 +4275,10 @@ def liveprojects_ajax(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return jsonify({})
 
     popularity_subq = (
@@ -3528,13 +4292,20 @@ def liveprojects_ajax(id):
     )
 
     base_query = (
-        config.live_projects.join(FacultyData, FacultyData.id == LiveProject.owner_id, isouter=True)
+        config.live_projects.join(
+            FacultyData, FacultyData.id == LiveProject.owner_id, isouter=True
+        )
         .join(User, User.id == FacultyData.id, isouter=True)
-        .join(popularity_subq, popularity_subq.c.popq_liveproject_id == LiveProject.id, isouter=True)
+        .join(
+            popularity_subq,
+            popularity_subq.c.popq_liveproject_id == LiveProject.id,
+            isouter=True,
+        )
         .join(
             PopularityRecord,
             and_(
-                PopularityRecord.liveproject_id == popularity_subq.c.popq_liveproject_id,
+                PopularityRecord.liveproject_id
+                == popularity_subq.c.popq_liveproject_id,
                 PopularityRecord.datestamp == popularity_subq.c.popq_datestamp,
             ),
             isouter=True,
@@ -3551,51 +4322,97 @@ def liveprojects_ajax(id):
         base_query = base_query.filter(LiveProject.group_id.in_(valid_group_ids))
 
     if len(valid_skill_ids) > 0:
-        base_query = base_query.filter(LiveProject.skills.any(TransferableSkill.id.in_(valid_skill_ids)))
+        base_query = base_query.filter(
+            LiveProject.skills.any(TransferableSkill.id.in_(valid_skill_ids))
+        )
 
     return _liveprojects_ajax_handler(base_query, config, state_filter, type_filter)
 
 
-def _liveprojects_ajax_handler(base_query, config: ProjectClassConfig, state_filter: str, type_filter: str):
+def _liveprojects_ajax_handler(
+    base_query, config: ProjectClassConfig, state_filter: str, type_filter: str
+):
     if type_filter == "generic":
         base_query = base_query.filter(LiveProject.generic == True)
     elif type_filter == "hidden":
         base_query = base_query.filter(LiveProject.hidden == True)
     elif type_filter == "alternatives":
-        base_query = base_query.join(LiveProjectAlternative, LiveProjectAlternative.parent_id == LiveProject.id).distinct()
+        base_query = base_query.join(
+            LiveProjectAlternative, LiveProjectAlternative.parent_id == LiveProject.id
+        ).distinct()
 
     if state_filter == "submitter":
         base_query = base_query.filter(func.count(LiveProject.submitted) > 0)
     elif state_filter == "bookmarks":
-        base_query = base_query.filter(and_(func.count(LiveProject.selections) == 0, func.count(LiveProject.bookmarks) > 0))
+        base_query = base_query.filter(
+            and_(
+                func.count(LiveProject.selections) == 0,
+                func.count(LiveProject.bookmarks) > 0,
+            )
+        )
     elif state_filter == "none":
-        base_query = base_query.filter(and_(func.count(LiveProject.selections) == 0, func.count(LiveProject.bookmarks) == 0))
+        base_query = base_query.filter(
+            and_(
+                func.count(LiveProject.selections) == 0,
+                func.count(LiveProject.bookmarks) == 0,
+            )
+        )
     elif state_filter == "confirmations":
         base_query = (
-            base_query.join(ConfirmRequest, ConfirmRequest.project_id == LiveProject.id, isouter=True)
+            base_query.join(
+                ConfirmRequest,
+                ConfirmRequest.project_id == LiveProject.id,
+                isouter=True,
+            )
             .filter(ConfirmRequest.state == ConfirmRequest.REQUESTED)
             .distinct()
         )
     elif state_filter == "custom":
-        base_query = base_query.join(CustomOffer, CustomOffer.liveproject_id == LiveProject.id).distinct()
+        base_query = base_query.join(
+            CustomOffer, CustomOffer.liveproject_id == LiveProject.id
+        ).distinct()
 
-    name = {"search": LiveProject.name, "order": LiveProject.name, "search_collation": "utf8_general_ci"}
+    name = {
+        "search": LiveProject.name,
+        "order": LiveProject.name,
+        "search_collation": "utf8_general_ci",
+    }
     owner = {
         "search": func.concat(User.first_name, " ", User.last_name),
         "order": [User.last_name, User.first_name],
         "search_collation": "utf8_general_ci",
     }
-    bookmarks = {"order": [PopularityRecord.bookmarks, PopularityRecord.score, LiveProject.name]}
-    selections = {"order": [PopularityRecord.selections, PopularityRecord.score, LiveProject.name]}
-    popularity = {"order": [PopularityRecord.score_rank, PopularityRecord.selections_rank, PopularityRecord.bookmarks_rank, LiveProject.name]}
+    bookmarks = {
+        "order": [PopularityRecord.bookmarks, PopularityRecord.score, LiveProject.name]
+    }
+    selections = {
+        "order": [PopularityRecord.selections, PopularityRecord.score, LiveProject.name]
+    }
+    popularity = {
+        "order": [
+            PopularityRecord.score_rank,
+            PopularityRecord.selections_rank,
+            PopularityRecord.bookmarks_rank,
+            LiveProject.name,
+        ]
+    }
 
-    columns = {"name": name, "owner": owner, "bookmarks": bookmarks, "selections": selections, "popularity": popularity}
+    columns = {
+        "name": name,
+        "owner": owner,
+        "bookmarks": bookmarks,
+        "selections": selections,
+        "popularity": popularity,
+    }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
 
         def row_formatter(liveprojects):
             return ajax.convenor.liveprojects_data(
-                liveprojects, config, url=url_for("convenor.liveprojects", id=config.pclass_id), text="convenor LiveProjects view"
+                liveprojects,
+                config,
+                url=url_for("convenor.liveprojects", id=config.pclass_id),
+                text="convenor LiveProjects view",
             )
 
         return handler.build_payload(row_formatter)
@@ -3624,31 +4441,54 @@ def delete_live_project(pid):
 
     # reject if project is not deletable
     if not project.is_deletable:
-        flash('Cannot delete live project "{name}" because it is marked as not removable.'.format(name=project.name), "error")
+        flash(
+            'Cannot delete live project "{name}" because it is marked as not removable.'.format(
+                name=project.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     # if this config has closed selections, we cannot delete any live projects
     if config.selection_closed:
         flash(
             'Cannot delete LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
-            "because selections have already closed".format(cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b),
+            "because selections have already closed".format(
+                cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b
+            ),
             "info",
         )
         return redirect(redirect_url())
 
-    title = 'Delete LiveProject "{name}" for project class "{cls}" in ' "{yra}&ndash;{yrb}".format(
-        name=project.name, cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b
+    title = (
+        'Delete LiveProject "{name}" for project class "{cls}" in '
+        "{yra}&ndash;{yrb}".format(
+            name=project.name,
+            cls=config.name,
+            yra=config.submit_year_a,
+            yrb=config.submit_year_b,
+        )
     )
     action_url = url_for("convenor.perform_delete_live_project", pid=pid)
     message = (
         '<p>Please confirm that you wish to delete the live project "{name}" belonging to '
         'project class "{cls}" {yra}&ndash;{yrb}.</p>'
-        "<p>This action cannot be undone.</p>".format(name=project.name, cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b)
+        "<p>This action cannot be undone.</p>".format(
+            name=project.name,
+            cls=config.name,
+            yra=config.submit_year_a,
+            yrb=config.submit_year_b,
+        )
     )
     submit_label = "Delete live project"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -3675,14 +4515,21 @@ def perform_delete_live_project(pid):
 
     # reject if project is not deletable
     if not project.is_deletable:
-        flash('Cannot delete live project "{name}" because it is marked as undeletable.'.format(name=project.name), "error")
+        flash(
+            'Cannot delete live project "{name}" because it is marked as undeletable.'.format(
+                name=project.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     # if this config has closed selections, we cannot delete any live projects
     if config.selection_closed:
         flash(
             'Cannot delete LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
-            "because selections have already closed".format(cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b),
+            "because selections have already closed".format(
+                cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -3723,7 +4570,8 @@ def perform_delete_live_project(pid):
 
     except SQLAlchemyError as e:
         flash(
-            'Could not delete live project "{name}" because of a database error. ' "Please contact a system administrator.".format(name=project.name),
+            'Could not delete live project "{name}" because of a database error. '
+            "Please contact a system administrator.".format(name=project.name),
             "error",
         )
         db.session.rollback()
@@ -3760,7 +4608,9 @@ def hide_liveproject(id):
     if config.selection_closed:
         flash(
             'Cannot hide LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
-            "because selections have already closed".format(cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b),
+            "because selections have already closed".format(
+                cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -3771,7 +4621,8 @@ def hide_liveproject(id):
 
     except SQLAlchemyError as e:
         flash(
-            'Could not hide live project "{name}" because of a database error. ' "Please contact a system administrator.".format(name=project.name),
+            'Could not hide live project "{name}" because of a database error. '
+            "Please contact a system administrator.".format(name=project.name),
             "error",
         )
         db.session.rollback()
@@ -3808,7 +4659,9 @@ def unhide_liveproject(id):
     if config.selection_closed:
         flash(
             'Cannot unhide LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
-            "because selections have already closed".format(cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b),
+            "because selections have already closed".format(
+                cls=config.name, yra=config.submit_year_a, yrb=config.submit_year_b
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -3819,7 +4672,8 @@ def unhide_liveproject(id):
 
     except SQLAlchemyError as e:
         flash(
-            'Could not unhide live project "{name}" because of a database error. ' "Please contact a system administrator.".format(name=project.name),
+            'Could not unhide live project "{name}" because of a database error. '
+            "Please contact a system administrator.".format(name=project.name),
             "error",
         )
         db.session.rollback()
@@ -3846,18 +4700,29 @@ def attach_liveproject(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # reject if project class is not live
     if not config.live:
-        flash("Manual attachment of projects is only possible after Go Live for this academic year", "error")
+        flash(
+            "Manual attachment of projects is only possible after Go Live for this academic year",
+            "error",
+        )
         return redirect(redirect_url())
 
     data = get_convenor_dashboard_data(pclass, config)
 
     return render_template_context(
-        "convenor/dashboard/attach_liveproject.html", pane="live", subpane="attach", pclass=pclass, config=config, convenor_data=data
+        "convenor/dashboard/attach_liveproject.html",
+        pane="live",
+        subpane="attach",
+        pclass=pclass,
+        config=config,
+        convenor_data=data,
     )
 
 
@@ -3892,12 +4757,14 @@ def attach_liveproject_ajax(id):
     base_query = base_query.filter(Project.id.not_in(current_projects))
 
     # restrict query to projects owned by active users, or generic projects
-    base_query = base_query.join(User, User.id == Project.owner_id, isouter=True).filter(or_(Project.generic == True, User.active == True))
+    base_query = base_query.join(
+        User, User.id == Project.owner_id, isouter=True
+    ).filter(or_(Project.generic == True, User.active == True))
 
     # remove projects that don't have a description
-    base_query = base_query.join(ProjectDescription, ProjectDescription.parent_id == Project.id).filter(
-        ProjectDescription.project_classes.any(id=pclass.id)
-    )
+    base_query = base_query.join(
+        ProjectDescription, ProjectDescription.parent_id == Project.id
+    ).filter(ProjectDescription.project_classes.any(id=pclass.id))
 
     return project_list_SQL_handler(
         request,
@@ -3934,7 +4801,10 @@ def manual_attach_project(id, configid):
 
     # reject if project class is not live
     if not config.live:
-        flash("Manual attachment of projects is only possible after Go Live for this academic year", "error")
+        flash(
+            "Manual attachment of projects is only possible after Go Live for this academic year",
+            "error",
+        )
         return redirect(redirect_url())
 
     if config.project_class not in project.project_classes:
@@ -3947,7 +4817,10 @@ def manual_attach_project(id, configid):
 
     desc: ProjectDescription = project.get_description(config.project_class)
     if desc is None:
-        flash('Project "{p}" does not have a description for "{c}" and cannot be ' "attached.".format(p=project.name, c=config.name))
+        flash(
+            'Project "{p}" does not have a description for "{c}" and cannot be '
+            "attached.".format(p=project.name, c=config.name)
+        )
         return redirect(redirect_url())
 
     try:
@@ -3956,9 +4829,14 @@ def manual_attach_project(id, configid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash(f'Could not attach LiveProject "{project.name}" due to a database error. Please contact a system administrator', "error")
+        flash(
+            f'Could not attach LiveProject "{project.name}" due to a database error. Please contact a system administrator',
+            "error",
+        )
     else:
-        flash(f'LiveProject "{project.name}" has been published to students.', "success")
+        flash(
+            f'LiveProject "{project.name}" has been published to students.', "success"
+        )
 
     return redirect(redirect_url())
 
@@ -3986,7 +4864,9 @@ def attach_liveproject_other_ajax(id):
     # find all projects, not already attached as LiveProjects, that are not attached to
     # this project class
     base_query = db.session.query(Project, ProjectDescription).filter(
-        Project.active == True, ~Project.project_classes.any(ProjectClass.id == pclass.id), ProjectDescription.parent_id == Project.id
+        Project.active == True,
+        ~Project.project_classes.any(ProjectClass.id == pclass.id),
+        ProjectDescription.parent_id == Project.id,
     )
 
     # get existing liveprojects attached to this config instance
@@ -3999,7 +4879,9 @@ def attach_liveproject_other_ajax(id):
     base_query = base_query
 
     # restrict query to projects owned by active users, or generic projects
-    base_query = base_query.join(User, User.id == Project.owner_id, isouter=True).filter(or_(Project.generic == True, User.active == True))
+    base_query = base_query.join(
+        User, User.id == Project.owner_id, isouter=True
+    ).filter(or_(Project.generic == True, User.active == True))
 
     return project_list_SQL_handler(
         request,
@@ -4028,7 +4910,10 @@ def manual_attach_other_project(id, configid):
 
     # reject if project class is not live
     if not config.live:
-        flash("Manual attachment of projects is only possible after Go Live for this academic year", "error")
+        flash(
+            "Manual attachment of projects is only possible after Go Live for this academic year",
+            "error",
+        )
         return redirect(redirect_url())
 
     # get number for this project
@@ -4056,7 +4941,10 @@ def todo_list(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     status_filter = request.args.get("status_filter")
@@ -4064,7 +4952,13 @@ def todo_list(id):
     if status_filter is None and session.get("convenor_todo_list_status_filter"):
         status_filter = session["convenor_todo_list_status_filter"]
 
-    if status_filter is not None and status_filter not in ["default", "overdue", "available", "dropped", "completed"]:
+    if status_filter is not None and status_filter not in [
+        "default",
+        "overdue",
+        "available",
+        "dropped",
+        "completed",
+    ]:
         status_filter = "default"
 
     if status_filter is not None:
@@ -4075,7 +4969,11 @@ def todo_list(id):
     if blocking_filter is None and session.get("convenor_todo_list_blocking_filter"):
         blocking_filter = session["convenor_todo_list_blocking_filter"]
 
-    if blocking_filter is not None and blocking_filter not in ["all", "blocking", "not-blocking"]:
+    if blocking_filter is not None and blocking_filter not in [
+        "all",
+        "blocking",
+        "not-blocking",
+    ]:
         blocking_filter = "all"
 
     if blocking_filter is not None:
@@ -4114,12 +5012,21 @@ def todo_list_ajax(id):
     status_filter = request.args.get("status_filter", "all")
     blocking_filter = request.args.get("blocking_filter", "all")
 
-    base_query = build_convenor_tasks_query(config, status_filter=status_filter, blocking_filter=blocking_filter, due_date_order=False)
+    base_query = build_convenor_tasks_query(
+        config,
+        status_filter=status_filter,
+        blocking_filter=blocking_filter,
+        due_date_order=False,
+    )
 
     # set up columns for server-side processing;
     # use column literals because the query returned from base_query is likely to be built using
     # polymorphic objects
-    task = {"search": literal_column("description"), "order": literal_column("description"), "search_collation": "utf8_general_ci"}
+    task = {
+        "search": literal_column("description"),
+        "order": literal_column("description"),
+        "search_collation": "utf8_general_ci",
+    }
     defer_date = {
         "search": literal_column('DATE_FORMAT(defer_date, "%a %d %b %Y %H:%M:%S")'),
         "order": literal_column("defer_date"),
@@ -4131,10 +5038,17 @@ def todo_list_ajax(id):
         "search_collation": "utf8_general_ci",
     }
     status = {
-        "order": literal_column("(NOT(complete OR dropped) * (100*(due_date > CURDATE()) + 50*(defer_date > CURDATE())) + 10*complete + 1*dropped)")
+        "order": literal_column(
+            "(NOT(complete OR dropped) * (100*(due_date > CURDATE()) + 50*(defer_date > CURDATE())) + 10*complete + 1*dropped)"
+        )
     }
 
-    columns = {"task": task, "defer_date": defer_date, "due_date": due_date, "status": status}
+    columns = {
+        "task": task,
+        "defer_date": defer_date,
+        "due_date": due_date,
+        "status": status,
+    }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(partial(ajax.convenor.todo_list_data, pclass.id))
@@ -4180,11 +5094,16 @@ def add_generic_task(config_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not create new task due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not create new task due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url)
 
-    return render_template_context("convenor/tasks/edit_generic_task.html", form=form, url=url, config=config)
+    return render_template_context(
+        "convenor/tasks/edit_generic_task.html", form=form, url=url, config=config
+    )
 
 
 @convenor.route("/edit_generic_task/<int:tid>", methods=["GET", "POST"])
@@ -4232,11 +5151,20 @@ def edit_generic_task(tid):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes to task due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes to task due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url)
 
-    return render_template_context("convenor/tasks/edit_generic_task.html", form=form, url=url, task=task, config=config)
+    return render_template_context(
+        "convenor/tasks/edit_generic_task.html",
+        form=form,
+        url=url,
+        task=task,
+        config=config,
+    )
 
 
 @convenor.route("/edit_descriptions/<int:id>/<int:pclass_id>")
@@ -4263,7 +5191,12 @@ def edit_descriptions(id, pclass_id):
 
     create = request.args.get("create", default=None)
 
-    return render_template_context("convenor/projects/edit_descriptions.html", project=project, pclass_id=pclass_id, create=create)
+    return render_template_context(
+        "convenor/projects/edit_descriptions.html",
+        project=project,
+        pclass_id=pclass_id,
+        create=create,
+    )
 
 
 @convenor.route("/descriptions_ajax/<int:id>/<int:pclass_id>")
@@ -4283,7 +5216,9 @@ def descriptions_ajax(id, pclass_id):
 
     else:
         # get project class details
-        pclass: ProjectClass = db.session.query(ProjectClass).filter_by(id=pclass_id).first()
+        pclass: ProjectClass = (
+            db.session.query(ProjectClass).filter_by(id=pclass_id).first()
+        )
 
         # if logged-in user is not a suitable convenor, or an administrator, object
         if pclass is not None and not validate_is_convenor(pclass):
@@ -4299,7 +5234,13 @@ def descriptions_ajax(id, pclass_id):
     create = request.args.get("create", default=None)
 
     return ajax.faculty.descriptions_data(
-        descs, _desc_label, _desc_menu, pclass_id=pclass_id, create=create, config=config, desc_validator=validate_edit_description
+        descs,
+        _desc_label,
+        _desc_menu,
+        pclass_id=pclass_id,
+        create=create,
+        config=config,
+        desc_validator=validate_edit_description,
     )
 
 
@@ -4320,7 +5261,12 @@ def add_project(pclass_id):
             return redirect(redirect_url())
 
     # set up form
-    AddProjectForm = AddProjectFormFactory(current_user.tenants, convenor_editing=True, uses_tags=True, uses_research_groups=True)
+    AddProjectForm = AddProjectFormFactory(
+        current_user.tenants,
+        convenor_editing=True,
+        uses_tags=True,
+        uses_research_groups=True,
+    )
     form = AddProjectForm(request.form)
 
     if form.validate_on_submit():
@@ -4347,7 +5293,11 @@ def add_project(pclass_id):
             creation_timestamp=datetime.now(),
         )
 
-        if pclass_id != 0 and len(project.project_classes.all()) == 0 and not pclass.uses_supervisor:
+        if (
+            pclass_id != 0
+            and len(project.project_classes.all()) == 0
+            and not pclass.uses_supervisor
+        ):
             project.project_classes.append(pclass)
 
         # ensure that list of preferred degree programmes is consistent
@@ -4359,7 +5309,10 @@ def add_project(pclass_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add new project due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not add new project due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         # auto-enroll if implied by current project class associations
         if not project.generic:
@@ -4369,15 +5322,31 @@ def add_project(pclass_id):
             for pclass in project.project_classes:
                 if not owner.is_enrolled(pclass):
                     owner.add_enrollment(pclass)
-                    flash("Auto-enrolled {name} in {pclass}".format(name=project.owner.user.name, pclass=pclass.name))
+                    flash(
+                        "Auto-enrolled {name} in {pclass}".format(
+                            name=project.owner.user.name, pclass=pclass.name
+                        )
+                    )
 
         if form.submit.data:
-            return redirect(url_for("convenor.edit_descriptions", id=project.id, pclass_id=pclass_id, create=1))
+            return redirect(
+                url_for(
+                    "convenor.edit_descriptions",
+                    id=project.id,
+                    pclass_id=pclass_id,
+                    create=1,
+                )
+            )
         elif form.save_and_exit.data:
             return redirect(url_for("convenor.attached", id=pclass_id))
         elif form.save_and_preview:
             return redirect(
-                url_for("faculty.project_preview", id=project.id, text="attached projects list", url=url_for("convenor.attached", id=pclass_id))
+                url_for(
+                    "faculty.project_preview",
+                    id=project.id,
+                    text="attached projects list",
+                    url=url_for("convenor.attached", id=pclass_id),
+                )
             )
         else:
             raise RuntimeError("Unknown submit button in faculty.add_project")
@@ -4443,7 +5412,12 @@ def edit_project(id, pclass_id):
     # set up form
     project: Project = Project.query.get_or_404(id)
 
-    EditProjectForm = EditProjectFormFactory(current_user.tenants, convenor_editing=True, uses_tags=True, uses_research_groups=True)
+    EditProjectForm = EditProjectFormFactory(
+        current_user.tenants,
+        convenor_editing=True,
+        uses_tags=True,
+        uses_research_groups=True,
+    )
     form = EditProjectForm(obj=project)
     form.project = project
 
@@ -4467,7 +5441,11 @@ def edit_project(id, pclass_id):
         project.last_edit_id = current_user.id
         project.last_edit_timestamp = datetime.now()
 
-        if pclass_id != 0 and len(project.project_classes.all()) == 0 and not pclass.uses_supervisor:
+        if (
+            pclass_id != 0
+            and len(project.project_classes.all()) == 0
+            and not pclass.uses_supervisor
+        ):
             project.project_classes.append(pclass)
 
         # ensure that list of preferred degree programmes is now consistent
@@ -4483,12 +5461,19 @@ def edit_project(id, pclass_id):
 
                     if not project.owner.is_enrolled(pclass):
                         project.owner.add_enrollment(pclass)
-                        flash("Auto-enrolled {name} in {pclass}".format(name=project.owner.user.name, pclass=pclass.name))
+                        flash(
+                            "Auto-enrolled {name} in {pclass}".format(
+                                name=project.owner.user.name, pclass=pclass.name
+                            )
+                        )
 
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes to project due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes to project due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url)
 
@@ -4500,7 +5485,13 @@ def edit_project(id, pclass_id):
         title="Edit library project details",
         url=url,
         text=text,
-        submit_url=url_for("convenor.edit_project", id=project.id, pclass_id=pclass_id, url=url, text=text),
+        submit_url=url_for(
+            "convenor.edit_project",
+            id=project.id,
+            pclass_id=pclass_id,
+            url=url,
+            text=text,
+        ),
     )
 
 
@@ -4576,7 +5567,9 @@ def duplicate_project(id):
                 desc: ProjectDescription
 
                 new_desc = ProjectDescription()
-                for item in [p.key for p in class_mapper(ProjectDescription).iterate_properties]:
+                for item in [
+                    p.key for p in class_mapper(ProjectDescription).iterate_properties
+                ]:
                     if item not in ["id", "parent_id"]:
                         setattr(new_desc, item, getattr(desc, item))
 
@@ -4589,7 +5582,10 @@ def duplicate_project(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not duplicate project due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not duplicate project due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         else:
             flash(f'Successfully duplicated project as "{new_proj.name}"', "success")
@@ -4607,7 +5603,13 @@ def duplicate_project(id):
         title="Duplicate library project",
         url=url,
         text=text,
-        submit_url=url_for("convenor.duplicate_project", id=proj.id, pclass_id=pclass_id, url=url, text=text),
+        submit_url=url_for(
+            "convenor.duplicate_project",
+            id=proj.id,
+            pclass_id=pclass_id,
+            url=url,
+            text=text,
+        ),
     )
 
 
@@ -4637,7 +5639,10 @@ def activate_project(id, pclass_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not activate project due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not activate project due to a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -4672,7 +5677,10 @@ def deactivate_project(id, pclass_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not deactivate project due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not deactivate project due to a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -4727,12 +5735,25 @@ def add_description(pid, pclass_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add new project description due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not add new project description due to a database error. Please contact a system administrator",
+                "error",
+            )
 
-        return redirect(url_for("convenor.edit_descriptions", id=pid, pclass_id=pclass_id, create=create))
+        return redirect(
+            url_for(
+                "convenor.edit_descriptions", id=pid, pclass_id=pclass_id, create=create
+            )
+        )
 
     return render_template_context(
-        "faculty/edit_description.html", project=proj, form=form, pclass_id=pclass_id, title="Add new description", create=create, unique_id=uuid4()
+        "faculty/edit_description.html",
+        project=proj,
+        form=form,
+        pclass_id=pclass_id,
+        title="Add new description",
+        create=create,
+        unique_id=uuid4(),
     )
 
 
@@ -4754,7 +5775,12 @@ def edit_description(did, pclass_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
     if url is None:
-        url = url_for("convenor.edit_descriptions", id=desc.parent_id, pclass_id=pclass_id, create=create)
+        url = url_for(
+            "convenor.edit_descriptions",
+            id=desc.parent_id,
+            pclass_id=pclass_id,
+            create=create,
+        )
         text = "project variants list"
 
     EditDescriptionForm = EditDescriptionSettingsFormFactory(desc.parent_id, did)
@@ -4777,7 +5803,10 @@ def edit_description(did, pclass_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not edit project description due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not edit project description due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url)
 
@@ -4794,7 +5823,9 @@ def edit_description(did, pclass_id):
     )
 
 
-@convenor.route("/edit_description_content/<int:did>/<int:pclass_id>", methods=["GET", "POST"])
+@convenor.route(
+    "/edit_description_content/<int:did>/<int:pclass_id>", methods=["GET", "POST"]
+)
 @roles_accepted("faculty", "admin", "root")
 def edit_description_content(did, pclass_id):
     desc = ProjectDescription.query.get_or_404(did)
@@ -4812,7 +5843,12 @@ def edit_description_content(did, pclass_id):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
     if url is None:
-        url = url_for("convenor.edit_descriptions", id=desc.parent_id, pclass_id=pclass_id, create=create)
+        url = url_for(
+            "convenor.edit_descriptions",
+            id=desc.parent_id,
+            pclass_id=pclass_id,
+            create=create,
+        )
         text = "project variants list"
 
     form = EditDescriptionContentForm(obj=desc)
@@ -4828,7 +5864,10 @@ def edit_description_content(did, pclass_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not edit project description due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not edit project description due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url)
 
@@ -4845,8 +5884,13 @@ def edit_description_content(did, pclass_id):
     )
 
 
-@convenor.route("/description_modules/<int:did>/<int:pclass_id>/<int:level_id>", methods=["GET", "POST"])
-@convenor.route("/description_modules/<int:did>/<int:pclass_id>", methods=["GET", "POST"])
+@convenor.route(
+    "/description_modules/<int:did>/<int:pclass_id>/<int:level_id>",
+    methods=["GET", "POST"],
+)
+@convenor.route(
+    "/description_modules/<int:did>/<int:pclass_id>", methods=["GET", "POST"]
+)
 @roles_accepted("faculty", "admin", "root")
 def description_modules(did, pclass_id, level_id=None):
     desc = ProjectDescription.query.get_or_404(did)
@@ -4867,9 +5911,15 @@ def description_modules(did, pclass_id, level_id=None):
 
     if not form.validate_on_submit() and request.method == "GET":
         if level_id is None:
-            form.selector.data = FHEQ_Level.query.filter(FHEQ_Level.active == True).order_by(FHEQ_Level.numeric_level.asc()).first()
+            form.selector.data = (
+                FHEQ_Level.query.filter(FHEQ_Level.active == True)
+                .order_by(FHEQ_Level.numeric_level.asc())
+                .first()
+            )
         else:
-            form.selector.data = FHEQ_Level.query.filter(FHEQ_Level.active == True, FHEQ_Level.id == level_id).first()
+            form.selector.data = FHEQ_Level.query.filter(
+                FHEQ_Level.active == True, FHEQ_Level.id == level_id
+            ).first()
 
     # get list of modules for the current level_id
     if form.selector.data is not None:
@@ -4878,7 +5928,11 @@ def description_modules(did, pclass_id, level_id=None):
         modules = []
 
     level_id = form.selector.data.id if form.selector.data is not None else None
-    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.numeric_level.asc()).all()
+    levels = (
+        FHEQ_Level.query.filter_by(active=True)
+        .order_by(FHEQ_Level.numeric_level.asc())
+        .all()
+    )
 
     return render_template_context(
         "convenor/projects/description_modules.html",
@@ -4894,7 +5948,9 @@ def description_modules(did, pclass_id, level_id=None):
     )
 
 
-@convenor.route("/description_attach_module/<int:did>/<int:pclass_id>/<int:mod_id>/<int:level_id>")
+@convenor.route(
+    "/description_attach_module/<int:did>/<int:pclass_id>/<int:mod_id>/<int:level_id>"
+)
 @roles_accepted("faculty", "admin", "root")
 def description_attach_module(did, pclass_id, mod_id, level_id):
     desc: ProjectDescription = ProjectDescription.query.get_or_404(did)
@@ -4922,12 +5978,18 @@ def description_attach_module(did, pclass_id, mod_id, level_id):
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 flash(
-                    'Could not attach module "{name}" due to a database error. ' "Please contact a system administrator".format(name=module.name),
+                    'Could not attach module "{name}" due to a database error. '
+                    "Please contact a system administrator".format(name=module.name),
                     "error",
                 )
 
         else:
-            flash('Could not attach module "{name}" because it is already attached.'.format(name=module.name), "warning")
+            flash(
+                'Could not attach module "{name}" because it is already attached.'.format(
+                    name=module.name
+                ),
+                "warning",
+            )
 
     else:
         flash(
@@ -4938,10 +6000,20 @@ def description_attach_module(did, pclass_id, mod_id, level_id):
             "warning",
         )
 
-    return redirect(url_for("convenor.description_modules", did=did, pclass_id=pclass_id, level_id=level_id, create=create))
+    return redirect(
+        url_for(
+            "convenor.description_modules",
+            did=did,
+            pclass_id=pclass_id,
+            level_id=level_id,
+            create=create,
+        )
+    )
 
 
-@convenor.route("/description_detach_module/<int:did>/<int:pclass_id>/<int:mod_id>/<int:level_id>")
+@convenor.route(
+    "/description_detach_module/<int:did>/<int:pclass_id>/<int:mod_id>/<int:level_id>"
+)
 @roles_accepted("faculty", "admin", "root")
 def description_detach_module(did, pclass_id, mod_id, level_id):
     desc: ProjectDescription = ProjectDescription.query.get_or_404(did)
@@ -4968,13 +6040,27 @@ def description_detach_module(did, pclass_id, mod_id, level_id):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             flash(
-                'Could not detach module "{name}" due to a database error. ' "Please contact a system administrator".format(name=module.name), "error"
+                'Could not detach module "{name}" due to a database error. '
+                "Please contact a system administrator".format(name=module.name),
+                "error",
             )
 
     else:
-        flash('Could not detach specified module "{name}" because it was not previously ' "attached.".format(name=module.name), "warning")
+        flash(
+            'Could not detach specified module "{name}" because it was not previously '
+            "attached.".format(name=module.name),
+            "warning",
+        )
 
-    return redirect(url_for("convenor.description_modules", did=did, pclass_id=pclass_id, level_id=level_id, create=create))
+    return redirect(
+        url_for(
+            "convenor.description_modules",
+            did=did,
+            pclass_id=pclass_id,
+            level_id=level_id,
+            create=create,
+        )
+    )
 
 
 @convenor.route("/delete_description/<int:did>/<int:pclass_id>")
@@ -4998,7 +6084,10 @@ def delete_description(did, pclass_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not delete project description due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not delete project description due to a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -5022,13 +6111,22 @@ def duplicate_description(did, pclass_id):
     while suffix < 100:
         new_label = "{label} #{suffix}".format(label=desc.label, suffix=suffix)
 
-        if ProjectDescription.query.filter_by(parent_id=desc.parent_id, label=new_label).first() is None:
+        if (
+            ProjectDescription.query.filter_by(
+                parent_id=desc.parent_id, label=new_label
+            ).first()
+            is None
+        ):
             break
 
         suffix += 1
 
     if suffix >= 100:
-        flash('Could not duplicate variant "{label}" because a new unique label could not ' "be generated".format(label=desc.label), "error")
+        flash(
+            'Could not duplicate variant "{label}" because a new unique label could not '
+            "be generated".format(label=desc.label),
+            "error",
+        )
         return redirect(redirect_url())
 
     data = ProjectDescription(
@@ -5054,7 +6152,10 @@ def duplicate_description(did, pclass_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not duplicate project description due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not duplicate project description due to a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -5077,7 +6178,9 @@ def move_description(did, pclass_id):
 
     create = request.args.get("create", default=None)
 
-    MoveDescriptionForm = MoveDescriptionFormFactory(old_project.owner_id, old_project.id, pclass_id=pclass_id)
+    MoveDescriptionForm = MoveDescriptionFormFactory(
+        old_project.owner_id, old_project.id, pclass_id=pclass_id
+    )
     form = MoveDescriptionForm(request.form)
 
     if form.validate_on_submit():
@@ -5117,7 +6220,14 @@ def move_description(did, pclass_id):
                 if get_count(new_project.project_classes.filter_by(id=pclass.id)) == 0:
                     remove.add(pclass)
 
-                elif get_count(new_project.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id))) > 0:
+                elif (
+                    get_count(
+                        new_project.descriptions.filter(
+                            ProjectDescription.project_classes.any(id=pclass.id)
+                        )
+                    )
+                    > 0
+                ):
                     remove.add(pclass)
 
             for pclass in remove:
@@ -5132,18 +6242,43 @@ def move_description(did, pclass_id):
 
             try:
                 db.session.commit()
-                flash('Variant "{name}" successfully moved to project ' '"{pname}"'.format(name=desc.label, pname=new_project.name), "info")
+                flash(
+                    'Variant "{name}" successfully moved to project "{pname}"'.format(
+                        name=desc.label, pname=new_project.name
+                    ),
+                    "info",
+                )
             except SQLAlchemyError as e:
                 db.session.rollback()
-                flash('Variant "{name}" could not be moved due to a database error'.format(name=desc.label), "error")
+                flash(
+                    'Variant "{name}" could not be moved due to a database error'.format(
+                        name=desc.label
+                    ),
+                    "error",
+                )
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         else:
-            flash('Variant "{name}" could not be moved because its parent project is ' "missing".format(name=desc.label), "error")
+            flash(
+                'Variant "{name}" could not be moved because its parent project is '
+                "missing".format(name=desc.label),
+                "error",
+            )
 
         if create:
-            return redirect(url_for("convenor.edit_descriptions", id=old_project.id, pclass_id=pclass_id, create=True))
+            return redirect(
+                url_for(
+                    "convenor.edit_descriptions",
+                    id=old_project.id,
+                    pclass_id=pclass_id,
+                    create=True,
+                )
+            )
         else:
-            return redirect(url_for("convenor.edit_descriptions", id=new_project.id, pclass_id=pclass_id))
+            return redirect(
+                url_for(
+                    "convenor.edit_descriptions", id=new_project.id, pclass_id=pclass_id
+                )
+            )
 
     return render_template_context(
         "faculty/move_description.html",
@@ -5215,22 +6350,37 @@ def attach_skills(id, pclass_id, sel_id=None):
 
     if not form.validate_on_submit() and request.method == "GET":
         if sel_id is None:
-            form.selector.data = SkillGroup.query.filter(SkillGroup.active == True).order_by(SkillGroup.name.asc()).first()
+            form.selector.data = (
+                SkillGroup.query.filter(SkillGroup.active == True)
+                .order_by(SkillGroup.name.asc())
+                .first()
+            )
         else:
-            form.selector.data = SkillGroup.query.filter(SkillGroup.active == True, SkillGroup.id == sel_id).first()
+            form.selector.data = SkillGroup.query.filter(
+                SkillGroup.active == True, SkillGroup.id == sel_id
+            ).first()
 
     # get list of active skills matching selector
     if form.selector.data is not None:
-        skills = TransferableSkill.query.filter(TransferableSkill.active == True, TransferableSkill.group_id == form.selector.data.id).order_by(
+        skills = TransferableSkill.query.filter(
+            TransferableSkill.active == True,
+            TransferableSkill.group_id == form.selector.data.id,
+        ).order_by(TransferableSkill.name.asc())
+    else:
+        skills = TransferableSkill.query.filter_by(active=True).order_by(
             TransferableSkill.name.asc()
         )
-    else:
-        skills = TransferableSkill.query.filter_by(active=True).order_by(TransferableSkill.name.asc())
 
     create = request.args.get("create", default=None)
 
     return render_template_context(
-        "convenor/projects/attach_skills.html", data=proj, skills=skills, pclass_id=pclass_id, form=form, sel_id=form.selector.data.id, create=create
+        "convenor/projects/attach_skills.html",
+        data=proj,
+        skills=skills,
+        pclass_id=pclass_id,
+        form=form,
+        sel_id=form.selector.data.id,
+        create=create,
     )
 
 
@@ -5252,10 +6402,20 @@ def add_skill(projectid, skillid, pclass_id, sel_id):
         proj.add_skill(skill)
         db.session.commit()
 
-    return redirect(url_for("convenor.attach_skills", id=projectid, pclass_id=pclass_id, sel_id=sel_id, create=create))
+    return redirect(
+        url_for(
+            "convenor.attach_skills",
+            id=projectid,
+            pclass_id=pclass_id,
+            sel_id=sel_id,
+            create=create,
+        )
+    )
 
 
-@convenor.route("/remove_skill/<int:projectid>/<int:skillid>/<int:pclass_id>/<int:sel_id>")
+@convenor.route(
+    "/remove_skill/<int:projectid>/<int:skillid>/<int:pclass_id>/<int:sel_id>"
+)
 @roles_accepted("faculty", "admin", "root")
 def remove_skill(projectid, skillid, pclass_id, sel_id):
     # get project details
@@ -5273,7 +6433,15 @@ def remove_skill(projectid, skillid, pclass_id, sel_id):
         proj.remove_skill(skill)
         db.session.commit()
 
-    return redirect(url_for("convenor.attach_skills", id=projectid, pclass_id=pclass_id, sel_id=sel_id, create=create))
+    return redirect(
+        url_for(
+            "convenor.attach_skills",
+            id=projectid,
+            pclass_id=pclass_id,
+            sel_id=sel_id,
+            create=create,
+        )
+    )
 
 
 @convenor.route("/attach_programmes/<int:id>/<int:pclass_id>")
@@ -5299,7 +6467,13 @@ def attach_programmes(id, pclass_id):
 
     create = request.args.get("create", default=None)
 
-    return render_template_context("convenor/projects/attach_programmes.html", data=proj, programmes=q.all(), pclass_id=pclass_id, create=create)
+    return render_template_context(
+        "convenor/projects/attach_programmes.html",
+        data=proj,
+        programmes=q.all(),
+        pclass_id=pclass_id,
+        create=create,
+    )
 
 
 @convenor.route("/add_programme/<int:id>/<int:pclass_id>/<int:prog_id>")
@@ -5405,7 +6579,13 @@ def attach_assessors(id, pclass_id):
     # get list of project classes to which this project is attached, and which require assignment of
     # second markers
     pclasses: List[ProjectClass] = proj.project_classes.filter(
-        and_(ProjectClass.active == True, or_(ProjectClass.uses_marker == True, ProjectClass.uses_presentations == True))
+        and_(
+            ProjectClass.active == True,
+            or_(
+                ProjectClass.uses_marker == True,
+                ProjectClass.uses_presentations == True,
+            ),
+        )
     ).all()
 
     pcl_list = []
@@ -5416,7 +6596,10 @@ def attach_assessors(id, pclass_id):
         # get current configuration record for this project class
         config: ProjectClassConfig = pcl.most_recent_config
         if config is None:
-            flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+            flash(
+                "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+                "error",
+            )
             return redirect(redirect_url())
 
         pcl_list.append((pcl, config))
@@ -5507,7 +6690,11 @@ def attach_assessors_ajax(id, pclass_id):
         _marker_menu,
         pclass_id=pclass_id,
         url=url_for(
-            "convenor.attach_assessors", id=id, pclass_id=pclass_id, url=url_for("convenor.attached", id=pclass_id), text="convenor dashboard"
+            "convenor.attach_assessors",
+            id=id,
+            pclass_id=pclass_id,
+            url=url_for("convenor.attached", id=pclass_id),
+            text="convenor dashboard",
         ),
     )
 
@@ -5645,7 +6832,9 @@ def liveproject_sync_assessors(proj_id, live_id):
         return redirect(redirect_url())
 
     # copy assessors from library project to live project, if they are current
-    live_project.assessors = [f for f in library_project.assessors if library_project.is_assessor(f.id)]
+    live_project.assessors = [
+        f for f in library_project.assessors if library_project.is_assessor(f.id)
+    ]
     db.session.commit()
 
     return redirect(redirect_url())
@@ -5726,13 +6915,21 @@ def issue_confirm_requests(id):
                     db.session.commit()
                     flash(
                         'The project confirmation deadline for "{proj}" has been successfully changed '
-                        "to {deadline}.".format(proj=config.name, deadline=config.request_deadline.strftime("%a %d %b %Y")),
+                        "to {deadline}.".format(
+                            proj=config.name,
+                            deadline=config.request_deadline.strftime("%a %d %b %Y"),
+                        ),
                         "success",
                     )
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                    flash("Could not modify confirmation deadline due to a database error. Please contact a system administrator", "error")
+                    current_app.logger.exception(
+                        "SQLAlchemyError exception", exc_info=e
+                    )
+                    flash(
+                        "Could not modify confirmation deadline due to a database error. Please contact a system administrator",
+                        "error",
+                    )
 
             # otherwise we need to spawn a background task to issue the confirmation requests
             else:
@@ -5745,15 +6942,23 @@ def issue_confirm_requests(id):
 
                 # register as a new background task and push it to the scheduler
                 task_id = register_task(
-                    'Issue project confirmations for "{proj}" {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year + 1),
+                    'Issue project confirmations for "{proj}" {yra}-{yrb}'.format(
+                        proj=config.name, yra=year, yrb=year + 1
+                    ),
                     owner=current_user,
-                    description='Issue project confirmations for "{proj}"'.format(proj=config.name),
+                    description='Issue project confirmations for "{proj}"'.format(
+                        proj=config.name
+                    ),
                 )
 
                 if deadline < now:
                     deadline = now + timedelta(weeks=2)
 
-                issue.apply_async(args=(task_id, id, current_user.id, deadline), task_id=task_id, link_error=issue_fail.si(task_id, current_user.id))
+                issue.apply_async(
+                    args=(task_id, id, current_user.id, deadline),
+                    task_id=task_id,
+                    link_error=issue_fail.si(task_id, current_user.id),
+                )
 
         elif hasattr(form, "skip_button") and form.skip_button.data is True:
             now = date.today()
@@ -5770,7 +6975,10 @@ def issue_confirm_requests(id):
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                flash("Could not perform skip of confirmation requests due to a dataabase error. Please contact a system administrator", "error")
+                flash(
+                    "Could not perform skip of confirmation requests due to a dataabase error. Please contact a system administrator",
+                    "error",
+                )
 
     return redirect(redirect_url())
 
@@ -5789,7 +6997,11 @@ def outstanding_confirm(id):
     if not validate_project_class(config.project_class):
         return redirect(redirect_url())
 
-    return render_template_context("convenor/dashboard/outstanding_confirm.html", config=config, pclass=config.project_class)
+    return render_template_context(
+        "convenor/dashboard/outstanding_confirm.html",
+        config=config,
+        pclass=config.project_class,
+    )
 
 
 @convenor.route("/outstanding_confirm_ajax/<int:id>", methods=["GET", "POST"])
@@ -5812,7 +7024,9 @@ def outstanding_confirm_ajax(id):
         return jsonify({})
 
     return ajax.convenor.outstanding_confirm_data(
-        config, text="list of outstanding confirmations", url=url_for("convenor.outstanding_confirm", id=id)
+        config,
+        text="list of outstanding confirmations",
+        url=url_for("convenor.outstanding_confirm", id=id),
     )
 
 
@@ -5830,12 +7044,24 @@ def confirmation_reminder(id):
     if not validate_project_class(config.project_class):
         return redirect(redirect_url())
 
-    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
-        flash("Cannot issue reminder emails for this project class because confirmation requests have not yet been generated", "info")
+    if (
+        config.selector_lifecycle
+        < ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
+    ):
+        flash(
+            "Cannot issue reminder emails for this project class because confirmation requests have not yet been generated",
+            "info",
+        )
         return redirect(redirect_url())
 
-    if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
-        flash("Cannot issue reminder emails for this project class because no further confirmation requests are outstanding", "info")
+    if (
+        config.selector_lifecycle
+        > ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
+    ):
+        flash(
+            "Cannot issue reminder emails for this project class because no further confirmation requests are outstanding",
+            "info",
+        )
         return redirect(redirect_url())
 
     celery = current_app.extensions["celery"]
@@ -5859,19 +7085,33 @@ def confirmation_reminder_individual(fac_id, config_id):
     if not validate_project_class(config.project_class):
         return redirect(redirect_url())
 
-    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
-        flash("Cannot issue reminder emails for this project class because confirmation requests have not yet been generated", "info")
+    if (
+        config.selector_lifecycle
+        < ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
+    ):
+        flash(
+            "Cannot issue reminder emails for this project class because confirmation requests have not yet been generated",
+            "info",
+        )
         return redirect(redirect_url())
 
-    if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
-        flash("Cannot issue reminder emails for this project class because no further confirmation requests are outstanding", "info")
+    if (
+        config.selector_lifecycle
+        > ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
+    ):
+        flash(
+            "Cannot issue reminder emails for this project class because no further confirmation requests are outstanding",
+            "info",
+        )
         return redirect(redirect_url())
 
     celery = current_app.extensions["celery"]
     email_task = celery.tasks["app.tasks.issue_confirm.send_reminder_email"]
     notify_task = celery.tasks["app.tasks.utilities.email_notification"]
 
-    tk = email_task.si(fac_id, config_id) | notify_task.s(current_user.id, "Reminder email has been sent", "info")
+    tk = email_task.si(fac_id, config_id) | notify_task.s(
+        current_user.id, "Reminder email has been sent", "info"
+    )
     tk.apply_async()
 
     return redirect(redirect_url())
@@ -5945,7 +7185,9 @@ def force_confirm_all(id):
     if not config.requests_issued:
         flash(
             "Confirmation requests have not yet been issued for {project} {yeara}-{yearb}".format(
-                project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b
+                project=config.name,
+                yeara=config.submit_year_a,
+                yearb=config.submit_year_b,
             )
         )
         return redirect(redirect_url())
@@ -5953,13 +7195,20 @@ def force_confirm_all(id):
     if config.live:
         flash(
             "Confirmation is no longer required for {project} {yeara}-{yearb} because this project "
-            "has already gone live".format(project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b)
+            "has already gone live".format(
+                project=config.name,
+                yeara=config.submit_year_a,
+                yearb=config.submit_year_b,
+            )
         )
         return redirect(redirect_url())
 
     # because we filter on supervisor state, this won't confirm projects from any faculty who are bought-out or
     # on sabbatical
-    records = db.session.query(EnrollmentRecord).filter_by(pclass_id=config.pclass_id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED)
+    records = db.session.query(EnrollmentRecord).filter_by(
+        pclass_id=config.pclass_id,
+        supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED,
+    )
 
     task_args_list = []
     for rec in records:
@@ -6014,7 +7263,9 @@ def force_confirm(id, uid):
     if not config.requests_issued:
         flash(
             "Confirmation requests have not yet been issued for {project} {yeara}-{yearb}".format(
-                project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b
+                project=config.name,
+                yeara=config.submit_year_a,
+                yearb=config.submit_year_b,
             )
         )
         return redirect(redirect_url())
@@ -6022,7 +7273,11 @@ def force_confirm(id, uid):
     if config.live:
         flash(
             "Confirmation is no longer required for {project} {yeara}-{yearb} because this project "
-            "has already gone live".format(project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b)
+            "has already gone live".format(
+                project=config.name,
+                yeara=config.submit_year_a,
+                yearb=config.submit_year_b,
+            )
         )
         return redirect(redirect_url())
 
@@ -6043,7 +7298,9 @@ def force_confirm(id, uid):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
             'Could not force confirmations for user "{user}" and project class "{pclass}" due to a database error. '
-            "Please contact a system administrator".format(user=fac.user.name, pclass=config.name),
+            "Please contact a system administrator".format(
+                user=fac.user.name, pclass=config.name
+            ),
             "error",
         )
 
@@ -6067,7 +7324,9 @@ def confirm_description(config_id, did):
     if not config.requests_issued:
         flash(
             "Confirmation requests have not yet been issued for {project} {yeara}-{yearb}".format(
-                project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b
+                project=config.name,
+                yeara=config.submit_year_a,
+                yearb=config.submit_year_b,
             ),
             "info",
         )
@@ -6076,7 +7335,11 @@ def confirm_description(config_id, did):
     if config.live:
         flash(
             "Confirmation is no longer required for {project} {yeara}-{yearb} because this project "
-            "has already gone live".format(project=config.name, yeara=config.submit_year_a, yearb=config.submit_year_b),
+            "has already gone live".format(
+                project=config.name,
+                yeara=config.submit_year_a,
+                yearb=config.submit_year_b,
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -6115,7 +7378,9 @@ def confirm_description(config_id, did):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
             'Could not confirm description "{desc}" for project "{proj}" due to a database error. '
-            "Please contact a system administrator".format(desc=desc.label, proj=desc.parent.name),
+            "Please contact a system administrator".format(
+                desc=desc.label, proj=desc.parent.name
+            ),
             "error",
         )
 
@@ -6137,7 +7402,11 @@ def go_live(id):
         return redirect(redirect_url())
 
     if config.live:
-        flash('A request to Go Live was ignored, because project "{name}" is already ' "live.".format(name=config.project_class.name), "error")
+        flash(
+            'A request to Go Live was ignored, because project "{name}" is already '
+            "live.".format(name=config.project_class.name),
+            "error",
+        )
         return request.referrer
 
     GoLiveForm = GoLiveFormFactory()
@@ -6159,7 +7428,10 @@ def go_live(id):
         full_CATS = form.full_CATS.data
 
         if deadline is None:
-            flash("A request to Go Live was ignored because no deadline was entered.", "error")
+            flash(
+                "A request to Go Live was ignored because no deadline was entered.",
+                "error",
+            )
         else:
             return redirect(
                 url_for(
@@ -6169,7 +7441,9 @@ def go_live(id):
                     deadline=deadline.isoformat(),
                     notify_faculty=int(notify_faculty),
                     notify_selectors=int(notify_selectors),
-                    accommodate_matching=accommodate_matching.id if accommodate_matching is not None else None,
+                    accommodate_matching=accommodate_matching.id
+                    if accommodate_matching is not None
+                    else None,
                     full_CATS=full_CATS if full_CATS is not None else None,
                 )
             )
@@ -6186,7 +7460,12 @@ def _flash_blocking_tasks(operation: str, blocking):
 
         if flashed_tasks >= max_tasks_to_flash:
             break
-        flash('Submitter task "{name}" is blocking {operation}'.format(name=task.name, operation=operation), "warning")
+        flash(
+            'Submitter task "{name}" is blocking {operation}'.format(
+                name=task.name, operation=operation
+            ),
+            "warning",
+        )
         flashed_tasks += 1
 
     if flashed_tasks >= max_tasks_to_flash:
@@ -6196,7 +7475,12 @@ def _flash_blocking_tasks(operation: str, blocking):
         task: ConvenorTask
         if flashed_tasks >= max_tasks_to_flash:
             break
-        flash('Selector task "{name}" is blocking {operation}'.format(name=task.name, operation=operation), "warning")
+        flash(
+            'Selector task "{name}" is blocking {operation}'.format(
+                name=task.name, operation=operation
+            ),
+            "warning",
+        )
         flashed_tasks += 1
 
     if flashed_tasks >= max_tasks_to_flash:
@@ -6206,7 +7490,12 @@ def _flash_blocking_tasks(operation: str, blocking):
         task: ConvenorTask
         if flashed_tasks >= max_tasks_to_flash:
             break
-        flash('Global project class task "{name}" is blocking {operation}'.format(name=task.name, operation=operation), "warning")
+        flash(
+            'Global project class task "{name}" is blocking {operation}'.format(
+                name=task.name, operation=operation
+            ),
+            "warning",
+        )
         flashed_tasks += 1
 
 
@@ -6225,7 +7514,11 @@ def confirm_go_live(id):
         return redirect(url_for("convenor.status", id=config.pclass_id))
 
     if config.live:
-        flash('A request to Go Live was ignored, because project "{name}" is already ' "live.".format(name=config.project_class.name), "error")
+        flash(
+            'A request to Go Live was ignored, because project "{name}" is already '
+            "live.".format(name=config.project_class.name),
+            "error",
+        )
         return redirect(url_for("convenor.status", id=config.pclass_id))
 
     blocking, num_blocking = config.get_blocking_tasks
@@ -6255,7 +7548,9 @@ def confirm_go_live(id):
 
     year = get_current_year()
 
-    title = 'Go Live for "{name}" {yeara}&ndash;{yearb}'.format(name=config.project_class.name, yeara=year, yearb=year + 1)
+    title = 'Go Live for "{name}" {yeara}&ndash;{yearb}'.format(
+        name=config.project_class.name, yeara=year, yearb=year + 1
+    )
     action_url = url_for(
         "convenor.perform_go_live",
         id=id,
@@ -6270,13 +7565,21 @@ def confirm_go_live(id):
         '<p>Please confirm that you wish to Go Live for project class "{name}" {yeara}&ndash;{yearb}, '
         "with deadline {deadline}.</p>"
         "<p>This action cannot be undone.</p>".format(
-            name=config.project_class.name, yeara=year, yearb=year + 1, deadline=deadline.strftime("%a %d %b %Y")
+            name=config.project_class.name,
+            yeara=year,
+            yearb=year + 1,
+            deadline=deadline.strftime("%a %d %b %Y"),
         )
     )
     submit_label = "Go Live"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -6295,7 +7598,11 @@ def perform_go_live(id):
         return redirect(redirect_url())
 
     if config.live:
-        flash('A request to Go Live was ignored, because project "{name}" is already ' "live.".format(name=config.project_class.name), "error")
+        flash(
+            'A request to Go Live was ignored, because project "{name}" is already '
+            "live.".format(name=config.project_class.name),
+            "error",
+        )
         return redirect(redirect_url())
 
     blocking, num_blocking = config.get_blocking_tasks
@@ -6315,7 +7622,10 @@ def perform_go_live(id):
         full_CATS = int(full_CATS)
 
     if deadline is None:
-        flash("A request to Go Live was ignored because the deadline was not correctly received", "error")
+        flash(
+            "A request to Go Live was ignored because the deadline was not correctly received",
+            "error",
+        )
         return redirect(redirect_url())
 
     deadline = parser.parse(deadline).date()
@@ -6329,21 +7639,43 @@ def perform_go_live(id):
 
     # register Go Live as a new background task and push it to the celery scheduler
     task_id = register_task(
-        'Go Live for "{proj}" {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year + 1),
+        'Go Live for "{proj}" {yra}-{yrb}'.format(
+            proj=config.name, yra=year, yrb=year + 1
+        ),
         owner=current_user,
         description='Perform Go Live of "{proj}"'.format(proj=config.name),
     )
 
     if close:
         seq = chain(
-            golive.si(task_id, id, current_user.id, deadline, True, notify_faculty, notify_selectors, accommodate_matching, full_CATS),
+            golive.si(
+                task_id,
+                id,
+                current_user.id,
+                deadline,
+                True,
+                notify_faculty,
+                notify_selectors,
+                accommodate_matching,
+                full_CATS,
+            ),
             golive_close.si(id, current_user.id),
         ).on_error(golive_fail.si(task_id, current_user.id))
         seq.apply_async()
 
     else:
         golive.apply_async(
-            args=(task_id, id, current_user.id, deadline, False, notify_faculty, notify_selectors, accommodate_matching, full_CATS),
+            args=(
+                task_id,
+                id,
+                current_user.id,
+                deadline,
+                False,
+                notify_faculty,
+                notify_selectors,
+                accommodate_matching,
+                full_CATS,
+            ),
             task_id=task_id,
             link_error=golive_fail.si(task_id, current_user.id),
         )
@@ -6399,7 +7731,9 @@ def adjust_selection_deadline(configid):
     if config.live_deadline is None:
         flash(
             'A request to adjust the selection deadline for "{proj}" was ignored, because '
-            "the deadline has not yet been set for this project class.".format(proj=config.name),
+            "the deadline has not yet been set for this project class.".format(
+                proj=config.name
+            ),
             "error",
         )
         return redirect(redirect_url())
@@ -6414,14 +7748,19 @@ def adjust_selection_deadline(configid):
             try:
                 db.session.commit()
                 flash(
-                    'The deadline for student selections for "{proj}" has been successfully changed to {deadline}.'.format(proj=config.name, deadline=config.live_deadline.strftime("%a %d %b %Y")),
+                    'The deadline for student selections for "{proj}" has been successfully changed to {deadline}.'.format(
+                        proj=config.name,
+                        deadline=config.live_deadline.strftime("%a %d %b %Y"),
+                    ),
                     "success",
                 )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 flash(
-                    'Could not adjust selection deadline for "{proj}" due to database error. Please contact a system administrator.'.format(proj=config.name),
+                    'Could not adjust selection deadline for "{proj}" due to database error. Please contact a system administrator.'.format(
+                        proj=config.name
+                    ),
                     "error",
                 )
 
@@ -6443,7 +7782,12 @@ def adjust_selection_deadline(configid):
             submit_label = "Close selections"
 
             return render_template_context(
-                "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
+                "admin/danger_confirm.html",
+                title=title,
+                panel_title=title,
+                action_url=action_url,
+                message=message,
+                submit_label=submit_label,
             )
 
     return redirect(url_for("convenor.status", id=config.pclass_id))
@@ -6481,14 +7825,18 @@ def perform_close_selections(configid):
 
     # register as new background task and push to celery scheduler
     task_id = register_task(
-        'Close selections for "{proj}" {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year + 1),
+        'Close selections for "{proj}" {yra}-{yrb}'.format(
+            proj=config.name, yra=year, yrb=year + 1
+        ),
         owner=current_user,
         description='Close selections for "{proj}"'.format(proj=config.name),
     )
 
     # pclass_close task posts a user message if the close logic proceeds correctly.
     close.apply_async(
-        args=(task_id, config.id, current_user.id, notify_convenor), task_id=task_id, link_error=close_fail.si(task_id, current_user.id)
+        args=(task_id, config.id, current_user.id, notify_convenor),
+        task_id=task_id,
+        link_error=close_fail.si(task_id, current_user.id),
     )
 
     return redirect(url)
@@ -6526,11 +7874,21 @@ def submit_student_selection(sel_id):
             to=[sel.student.user.email, current_user.email],
             reply_to=[current_user.email],
             subject_kwargs={"pcl": sel.config.project_class.name},
-            body_kwargs={"user": sel.student.user, "pclass": sel.config.project_class, "config": sel.config, "sel": sel},
+            body_kwargs={
+                "user": sel.student.user,
+                "pclass": sel.config.project_class,
+                "config": sel.config,
+                "sel": sel,
+            },
         )
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description="Send project choices confirmation email to {r}".format(r=", ".join(msg.to)))
+        task_id = register_task(
+            msg.subject,
+            description="Send project choices confirmation email to {r}".format(
+                r=", ".join(msg.to)
+            ),
+        )
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         flash(
@@ -6540,7 +7898,10 @@ def submit_student_selection(sel_id):
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash("A database error occurred during submission. Please contact a system administrator.", "error")
+        flash(
+            "A database error occurred during submission. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
@@ -6602,13 +7963,18 @@ def confirm(sid, pid):
     if not validate_project_open(sel.config):
         return redirect(redirect_url())
 
-    if do_confirm(sel, project, resolved_by=current_user, comment="Resolved by convenor action"):
+    if do_confirm(
+        sel, project, resolved_by=current_user, comment="Resolved by convenor action"
+    ):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not confirm request because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not confirm request because of a database error. Please contact a system administrator",
+                "error",
+            )
 
     return redirect(redirect_url())
 
@@ -6631,14 +7997,20 @@ def generate_confirm(sid, pid):
 
     try:
         req = project.make_confirm_request(
-            sel, state="confirmed", resolved_by=current_user, comment="Confirmation generated and resolved by convenor"
+            sel,
+            state="confirmed",
+            resolved_by=current_user,
+            comment="Confirmation generated and resolved by convenor",
         )
         db.session.add(req)
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not generate confirm request because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not generate confirm request because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -6665,7 +8037,10 @@ def deconfirm_to_pending(sid, pid):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not change request status to pending because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not change request status to pending because of a database error. Please contact a system administrator",
+                "error",
+            )
 
     return redirect(redirect_url())
 
@@ -6692,7 +8067,10 @@ def cancel_confirm(sid, pid):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not cancel confirm request because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not cancel confirm request because of a database error. Please contact a system administrator",
+                "error",
+            )
 
     return redirect(redirect_url())
 
@@ -6715,14 +8093,20 @@ def project_confirm_all(pid):
 
     waiting = project.requests_waiting
     for req in waiting:
-        req.confirm(resolved_by=current_user, comment="Resolved by convenor 'Project confirm all' action")
+        req.confirm(
+            resolved_by=current_user,
+            comment="Resolved by convenor 'Project confirm all' action",
+        )
 
     try:
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not confirm requests because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not confirm requests because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -6753,7 +8137,10 @@ def project_clear_requests(pid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not delete confirmation requests because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not delete confirmation requests because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -6784,7 +8171,10 @@ def project_remove_confirms(pid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not remove confirmations because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not remove confirmations because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -6814,7 +8204,10 @@ def project_make_all_confirms_pending(pid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not change confirmation requests to pending because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not change confirmation requests to pending because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -6835,14 +8228,20 @@ def student_confirm_all(sid):
 
     waiting = sel.requests_waiting
     for req in waiting:
-        req.confirm(resolved_by=current_user, comment="Resolved by convenor 'Student confirm all' action")
+        req.confirm(
+            resolved_by=current_user,
+            comment="Resolved by convenor 'Student confirm all' action",
+        )
 
     try:
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not confirm requests because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not confirm requests because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -6871,7 +8270,10 @@ def student_remove_confirms(sid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not remove confirmations because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not remove confirmations because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -6900,7 +8302,10 @@ def student_clear_requests(sid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not clear confirmation requests because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not clear confirmation requests because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -6928,7 +8333,10 @@ def student_make_all_confirms_pending(sid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not change confirmation requests to pending because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not change confirmation requests to pending because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -6950,7 +8358,10 @@ def enable_conversion(sid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not change conversion status because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not change conversion status because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -6972,7 +8383,10 @@ def disable_conversion(sid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not change conversion status because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not change conversion status because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -6995,7 +8409,16 @@ def email_selectors(configid):
     match_filter = request.args.get("match_filter")
     match_show = request.args.get("match_show")
 
-    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter, match_filter, match_show)
+    data = _build_selector_data(
+        config,
+        cohort_filter,
+        prog_filter,
+        state_filter,
+        convert_filter,
+        year_filter,
+        match_filter,
+        match_show,
+    )
 
     if len(data) > 0:
         to_list = []
@@ -7084,7 +8507,9 @@ def email_submitters(configid):
     year_filter = request.args.get("year_filter")
     data_display = request.args.get("data_display")
 
-    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
+    data = build_submitters_data(
+        config, cohort_filter, prog_filter, state_filter, year_filter
+    )
 
     if len(data) > 0:
         to_list = []
@@ -7130,7 +8555,16 @@ def convert_all(configid):
     match_filter = request.args.get("match_filter")
     match_show = request.args.get("match_show")
 
-    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter, match_filter, match_show)
+    data = _build_selector_data(
+        config,
+        cohort_filter,
+        prog_filter,
+        state_filter,
+        convert_filter,
+        year_filter,
+        match_filter,
+        match_show,
+    )
 
     for s in data:
         s.convert_to_submitter = True
@@ -7158,7 +8592,16 @@ def convert_none(configid):
     match_filter = request.args.get("match_filter")
     match_show = request.args.get("match_show")
 
-    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, convert_filter, year_filter, match_filter, match_show)
+    data = _build_selector_data(
+        config,
+        cohort_filter,
+        prog_filter,
+        state_filter,
+        convert_filter,
+        year_filter,
+        match_filter,
+        match_show,
+    )
 
     for s in data:
         s.convert_to_submitter = False
@@ -7209,7 +8652,12 @@ def confirm_rollover(id):
         return redirect(redirect_url())
 
     if not config.project_class.active:
-        flash("{name} is not an active project class, and therefore cannot be rolled over.".format(name=config.name), "error")
+        flash(
+            "{name} is not an active project class, and therefore cannot be rolled over.".format(
+                name=config.name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     blocking, num_blocking = config.get_blocking_tasks
@@ -7217,12 +8665,18 @@ def confirm_rollover(id):
         _flash_blocking_tasks("roll-over to next academic year", blocking)
         return redirect(redirect_url())
 
-    title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(proj=config.name, yeara=year, yearb=year + 1)
-    action_url = url_for("convenor.rollover", id=id, url=request.referrer, markers=int(use_markers))
+    title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(
+        proj=config.name, yeara=year, yearb=year + 1
+    )
+    action_url = url_for(
+        "convenor.rollover", id=id, url=request.referrer, markers=int(use_markers)
+    )
     message = (
         '<p>Please confirm that you wish to rollover project class "{proj}" to '
         "{yeara}&ndash;{yearb}.</p>"
-        "<p>This action cannot be undone.</p>".format(proj=config.name, yeara=year, yearb=year + 1)
+        "<p>This action cannot be undone.</p>".format(
+            proj=config.name, yeara=year, yearb=year + 1
+        )
     )
 
     if config.select_in_previous_cycle:
@@ -7234,7 +8688,12 @@ def confirm_rollover(id):
         submit_label = "Rollover to {yr}".format(yr=year)
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -7263,7 +8722,10 @@ def rollover(id):
         return redirect(url) if url is not None else home_dashboard()
 
     if not config.project_class.active:
-        flash(f'"{config.name}" is not an active project class, and cannot be rolled over.', "error")
+        flash(
+            f'"{config.name}" is not an active project class, and cannot be rolled over.',
+            "error",
+        )
         return redirect(url) if url is not None else home_dashboard()
 
     blocking, num_blocking = config.get_blocking_tasks
@@ -7286,9 +8748,13 @@ def rollover(id):
 
     # register rollover as a new background task and push it to the celery scheduler
     task_id = register_task(
-        'Rollover "{proj}" to {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year + 1),
+        'Rollover "{proj}" to {yra}-{yrb}'.format(
+            proj=config.name, yra=year, yrb=year + 1
+        ),
         owner=current_user,
-        description='Perform rollover of "{proj}" to new academic year'.format(proj=config.name),
+        description='Perform rollover of "{proj}" to new academic year'.format(
+            proj=config.name
+        ),
     )
 
     backup_chain = chain(
@@ -7297,7 +8763,9 @@ def rollover(id):
             current_user.id,
             type=BackupRecord.PROJECT_ROLLOVER_FALLBACK,
             tag="rollover",
-            description="Rollback snapshot for {proj} rollover to {yr}".format(proj=config.name, yr=year),
+            description="Rollback snapshot for {proj} rollover to {yr}".format(
+                proj=config.name, yr=year
+            ),
         ),
     )
     backup_result = backup_chain.apply_async()
@@ -7315,7 +8783,9 @@ def rollover(id):
         return redirect(url) if url is not None else home_dashboard()
 
     rollover_result: AsyncResult = rollover.apply_async(
-        args=(task_id, use_markers, id, current_user.id), task_id=task_id, link_error=rollover_fail.si(task_id, current_user.id)
+        args=(task_id, use_markers, id, current_user.id),
+        task_id=task_id,
+        link_error=rollover_fail.si(task_id, current_user.id),
     )
 
     return redirect(url) if url is not None else home_dashboard()
@@ -7349,7 +8819,12 @@ def reset_popularity_data(id):
     submit_label = "Delete data"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -7381,10 +8856,15 @@ def selector_bookmarks(id):
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to view selector rankings before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to view selector rankings before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/selector_bookmarks.html", sel=sel, now=datetime.now())
+    return render_template_context(
+        "convenor/selector/selector_bookmarks.html", sel=sel, now=datetime.now()
+    )
 
 
 @convenor.route("/project_bookmarks/<int:id>")
@@ -7399,10 +8879,17 @@ def project_bookmarks(id):
 
     state = proj.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to view selector rankings before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to view selector rankings before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/project_bookmarks.html", project=proj, student_emails=[p.owner_email for p in proj.bookmarks])
+    return render_template_context(
+        "convenor/selector/project_bookmarks.html",
+        project=proj,
+        student_emails=[p.owner_email for p in proj.bookmarks],
+    )
 
 
 def _demap_project(item_id):
@@ -7480,24 +8967,38 @@ def delete_student_bookmark(sid, bid):
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to delete selector bookmarks before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to delete selector bookmarks before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(redirect_url())
 
     title = "Delete selector bookmark"
     panel_title = (
         'Delete bookmark for selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>, '
-        "project <strong>{proj}</strong>".format(name=sel.student.user.name, proj=bookmark.liveproject.name)
+        "project <strong>{proj}</strong>".format(
+            name=sel.student.user.name, proj=bookmark.liveproject.name
+        )
     )
-    action_url = url_for("convenor.perform_delete_student_bookmark", sid=sid, bid=bid, url=url)
+    action_url = url_for(
+        "convenor.perform_delete_student_bookmark", sid=sid, bid=bid, url=url
+    )
     message = (
         '<p>Please confirm that you wish to delete the bookmark held by selector <i class="fas fa-user-circle"></i> <strong>{name}</strong> '
         "for project <strong>{proj}</strong>.</p>"
-        "<p>This action cannot be undone.</p>".format(name=sel.student.user.name, proj=bookmark.liveproject.name)
+        "<p>This action cannot be undone.</p>".format(
+            name=sel.student.user.name, proj=bookmark.liveproject.name
+        )
     )
     submit_label = "Delete bookmark"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -7516,7 +9017,10 @@ def perform_delete_student_bookmark(sid, bid):
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to delete selector bookmarks before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to delete selector bookmarks before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(url_for("convenor.selector_bookmarks", id=sid))
 
     bm: Bookmark = sel.bookmarks.filter_by(id=bid).first()
@@ -7528,7 +9032,10 @@ def perform_delete_student_bookmark(sid, bid):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not remove bookmark due to a database error. Please inform a system administrator.", "info")
+            flash(
+                "Could not remove bookmark due to a database error. Please inform a system administrator.",
+                "info",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             db.session.rollback()
 
@@ -7547,7 +9054,10 @@ def add_student_bookmark(sid):
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to add a selector bookmark before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to add a selector bookmark before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(redirect_url())
 
     return render_template_context("convenor/selector/add_bookmark.html", sel=sel)
@@ -7565,7 +9075,10 @@ def add_student_bookmark_ajax(sid):
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to add a selector bookmark before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to add a selector bookmark before the corresponding project class has gone live.",
+            "error",
+        )
         return jsonify({})
 
     config = sel.config
@@ -7591,7 +9104,9 @@ def create_student_bookmark(sel_id, proj_id):
     if proj.config_id != sel.config_id:
         flash(
             'Project "{pname}" and selector "{sname}" do not belong to the same project class, so a '
-            "bookmark cannot be created for this pair.".format(pname=proj.name, sname=sel.student.user.name),
+            "bookmark cannot be created for this pair.".format(
+                pname=proj.name, sname=sel.student.user.name
+            ),
             "error",
         )
         return redirect(url)
@@ -7602,18 +9117,25 @@ def create_student_bookmark(sel_id, proj_id):
     if get_count(q) > 0:
         flash(
             'A request to create a bookmark for project "{pname}" and selector "{sname}" was ignored, '
-            "because a bookmark for this pair already exists".format(pname=proj.name, sname=sel.student.user.name),
+            "because a bookmark for this pair already exists".format(
+                pname=proj.name, sname=sel.student.user.name
+            ),
             "info",
         )
         return redirect(url)
 
-    bm = Bookmark(liveproject_id=proj.id, owner_id=sel.id, rank=sel.number_bookmarks + 1)
+    bm = Bookmark(
+        liveproject_id=proj.id, owner_id=sel.id, rank=sel.number_bookmarks + 1
+    )
 
     try:
         db.session.add(bm)
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not create bookmark due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not create bookmark due to a database error. Please contact a system administrator",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -7639,7 +9161,10 @@ def selector_choices(id):
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to view selector rankings before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to view selector rankings before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not sel.has_submitted:
@@ -7651,7 +9176,9 @@ def selector_choices(id):
         )
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/selector_choices.html", sel=sel, text=text, url=url)
+    return render_template_context(
+        "convenor/selector/selector_choices.html", sel=sel, text=text, url=url
+    )
 
 
 @convenor.route("/project_choices/<int:id>")
@@ -7666,10 +9193,17 @@ def project_choices(id):
 
     state = proj.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to view project rankings before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to view project rankings before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/project_choices.html", project=proj, student_emails=[p.owner_email for p in proj.selections])
+    return render_template_context(
+        "convenor/selector/project_choices.html",
+        project=proj,
+        student_emails=[p.owner_email for p in proj.selections],
+    )
 
 
 @convenor.route("/update_student_choices", methods=["POST"])
@@ -7739,26 +9273,41 @@ def delete_student_choice(sid, cid):
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to delete selector rankings before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to delete selector rankings before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(redirect_url())
 
     title = "Delete selector ranking"
-    panel_title = 'Delete ranking for selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>, ' "project <strong>{proj}</strong>".format(
-        name=sel.student.user.name, proj=record.liveproject.name
+    panel_title = (
+        'Delete ranking for selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>, '
+        "project <strong>{proj}</strong>".format(
+            name=sel.student.user.name, proj=record.liveproject.name
+        )
     )
-    action_url = url_for("convenor.perform_delete_student_choice", sid=sid, cid=cid, url=url)
+    action_url = url_for(
+        "convenor.perform_delete_student_choice", sid=sid, cid=cid, url=url
+    )
     message = (
         '<p>Please confirm that you wish to delete <i class="fas fa-user-circle"></i> <strong>{name}</strong> '
         "ranking #{num} for project <strong>{proj}</strong>.</p>"
         "<p>This action cannot be undone.</p>"
         "<p><strong>Student-submitted rankings should be deleted only when there "
         "is a clear rationale for doing "
-        "so.</strong></p>".format(name=sel.student.user.name, num=record.rank, proj=record.liveproject.name)
+        "so.</strong></p>".format(
+            name=sel.student.user.name, num=record.rank, proj=record.liveproject.name
+        )
     )
     submit_label = "Delete ranking"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -7777,7 +9326,10 @@ def perform_delete_student_choice(sid, cid):
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to delete selector rankings before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to delete selector rankings before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(url_for("convenor.selector_bookmarks", id=sid))
 
     rec: SelectionRecord = sel.selections.filter_by(id=cid).first()
@@ -7789,7 +9341,10 @@ def perform_delete_student_choice(sid, cid):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not remove ranking due to a database error. Please inform a system administrator.", "info")
+            flash(
+                "Could not remove ranking due to a database error. Please inform a system administrator.",
+                "info",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             db.session.rollback()
 
@@ -7808,11 +9363,17 @@ def add_student_ranking(sid):
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to add a selector ranking before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to add a selector ranking before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not sel.has_submitted:
-        flash("It is not possible to add a new ranking until the selector has submitted their own ranked list.", "info")
+        flash(
+            "It is not possible to add a new ranking until the selector has submitted their own ranked list.",
+            "info",
+        )
         return redirect(redirect_url())
 
     return render_template_context("convenor/selector/add_ranking.html", sel=sel)
@@ -7851,7 +9412,10 @@ def create_student_ranking(sel_id, proj_id):
     sel: SelectingStudent = SelectingStudent.query.get_or_404(sel_id)
 
     if not sel.has_submitted:
-        flash("It is not possible to add a new ranking until the selector has submitted their own ranked list.", "info")
+        flash(
+            "It is not possible to add a new ranking until the selector has submitted their own ranked list.",
+            "info",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -7862,7 +9426,9 @@ def create_student_ranking(sel_id, proj_id):
     if proj.config_id != sel.config_id:
         flash(
             'Project "{pname}" and selector "{sname}" do not belong to the same project class, so a '
-            "ranking cannot be created for this pair.".format(pname=proj.name, sname=sel.student.user.name),
+            "ranking cannot be created for this pair.".format(
+                pname=proj.name, sname=sel.student.user.name
+            ),
             "error",
         )
         return redirect(url)
@@ -7873,7 +9439,9 @@ def create_student_ranking(sel_id, proj_id):
     if get_count(q) > 0:
         flash(
             'A request to create a ranking for project "{pname}" and selector "{sname}" was ignored, '
-            "because a ranking for this pair already exists".format(pname=proj.name, sname=sel.student.user.name),
+            "because a ranking for this pair already exists".format(
+                pname=proj.name, sname=sel.student.user.name
+            ),
             "info",
         )
         return redirect(url)
@@ -7890,7 +9458,10 @@ def create_student_ranking(sel_id, proj_id):
         db.session.add(rec)
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not create ranking due to a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not create ranking due to a database error. Please contact a system administrator",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -7909,10 +9480,15 @@ def selector_confirmations(id):
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to view selector confirmations before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to view selector confirmations before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/selector_confirmations.html", sel=sel, now=datetime.now())
+    return render_template_context(
+        "convenor/selector/selector_confirmations.html", sel=sel, now=datetime.now()
+    )
 
 
 @convenor.route("/project_custom_offers/<int:proj_id>")
@@ -7927,10 +9503,17 @@ def project_custom_offers(proj_id):
 
     state = proj.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to view project custom offers before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to view project custom offers before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/project_custom_offers.html", project=proj, pclass_id=proj.config.project_class.id)
+    return render_template_context(
+        "convenor/selector/project_custom_offers.html",
+        project=proj,
+        pclass_id=proj.config.project_class.id,
+    )
 
 
 @convenor.route("/project_custom_offers_ajax/<int:proj_id>")
@@ -7962,10 +9545,17 @@ def selector_custom_offers(sel_id):
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to view selector custom offers before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to view selector custom offers before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/selector_custom_offers.html", sel=sel, pclass_id=sel.config.project_class.id)
+    return render_template_context(
+        "convenor/selector/selector_custom_offers.html",
+        sel=sel,
+        pclass_id=sel.config.project_class.id,
+    )
 
 
 @convenor.route("/selector_custom_offers_ajax/<int:sel_id>")
@@ -7997,10 +9587,17 @@ def new_selector_offer(sel_id):
 
     state = sel.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to set up a new selector custom offer before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to set up a new selector custom offer before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/selector_new_offer.html", sel=sel, pclass_id=sel.config.project_class.id)
+    return render_template_context(
+        "convenor/selector/selector_new_offer.html",
+        sel=sel,
+        pclass_id=sel.config.project_class.id,
+    )
 
 
 @convenor.route("/new_selector_offer_ajax/<int:sel_id>")
@@ -8019,7 +9616,9 @@ def new_selector_offer_ajax(sel_id):
 
     # get list of available projects, excluding any projects for which this selector already holds offers
     config: ProjectClassConfig = sel.config
-    projects = config.live_projects.filter(~LiveProject.custom_offers.any(selector_id=sel_id))
+    projects = config.live_projects.filter(
+        ~LiveProject.custom_offers.any(selector_id=sel_id)
+    )
 
     return ajax.convenor.new_student_offer_projects(projects.all(), sel)
 
@@ -8036,10 +9635,17 @@ def new_project_offer(proj_id):
 
     state = proj.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to set up a new custom offer before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to set up a new custom offer before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(redirect_url())
 
-    return render_template_context("convenor/selector/project_new_offer.html", project=proj, pclass_id=proj.config.project_class.id)
+    return render_template_context(
+        "convenor/selector/project_new_offer.html",
+        project=proj,
+        pclass_id=proj.config.project_class.id,
+    )
 
 
 @convenor.route("/new_project_offer_ajax/<int:proj_id>")
@@ -8054,12 +9660,17 @@ def new_project_offer_ajax(proj_id):
 
     state = proj.config.selector_lifecycle
     if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
-        flash("It is not possible to set up a new custom offer before the corresponding project class has gone live.", "error")
+        flash(
+            "It is not possible to set up a new custom offer before the corresponding project class has gone live.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # get list of available selectors, excluding any selectors who already hold offers for this project
     config: ProjectClassConfig = proj.config
-    selectors = config.selecting_students.filter(~SelectingStudent.custom_offers.any(liveproject_id=proj_id))
+    selectors = config.selecting_students.filter(
+        ~SelectingStudent.custom_offers.any(liveproject_id=proj_id)
+    )
 
     return ajax.convenor.new_project_offer_selectors(selectors.all(), proj)
 
@@ -8086,7 +9697,9 @@ def create_custom_offer(sel_id, proj_id):
     if proj.config_id != sel.config_id:
         flash(
             'Project "{pname}" and selector "{sname}" do not belong to the same project cycle, so a '
-            "custom offer cannot be created for this pair.".format(pname=proj.name, sname=sel.student.user.name),
+            "custom offer cannot be created for this pair.".format(
+                pname=proj.name, sname=sel.student.user.name
+            ),
             "error",
         )
         return redirect(url)
@@ -8096,11 +9709,19 @@ def create_custom_offer(sel_id, proj_id):
         return redirect(redirect_url())
 
     # check whether an offer with this selector and project already exists
-    q = db.session.query(CustomOffer).filter(CustomOffer.liveproject_id == proj_id, CustomOffer.selector_id == sel_id).first()
+    q = (
+        db.session.query(CustomOffer)
+        .filter(
+            CustomOffer.liveproject_id == proj_id, CustomOffer.selector_id == sel_id
+        )
+        .first()
+    )
     if q is not None:
         flash(
             'A request to create a custom offer for project "{pname}" and selector "{sname}" was ignored, '
-            "because an offer for this pair already exists".format(pname=proj.name, sname=sel.student.user.name),
+            "because an offer for this pair already exists".format(
+                pname=proj.name, sname=sel.student.user.name
+            ),
             "info",
         )
         return redirect(url)
@@ -8127,13 +9748,23 @@ def create_custom_offer(sel_id, proj_id):
             db.session.add(offer)
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not create custom offer due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not create custom offer due to a database error. Please contact a system administrator",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             db.session.rollback()
 
         return redirect(url)
 
-    return render_template_context("convenor/selector/create_custom_offer.html", form=form, sel=sel, proj=proj, config=config, url=url)
+    return render_template_context(
+        "convenor/selector/create_custom_offer.html",
+        form=form,
+        sel=sel,
+        proj=proj,
+        config=config,
+        url=url,
+    )
 
 
 @convenor.route("/edit_custom_offer/<int:offer_id>", methods=["GET", "POST"])
@@ -8173,13 +9804,18 @@ def edit_custom_offer(offer_id):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not save edited custom offer due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save edited custom offer due to a database error. Please contact a system administrator",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             db.session.rollback()
 
         return redirect(url)
 
-    return render_template_context("convenor/selector/edit_custom_offer.html", form=form, offer=offer, url=url)
+    return render_template_context(
+        "convenor/selector/edit_custom_offer.html", form=form, offer=offer, url=url
+    )
 
 
 @convenor.route("/accept_custom_offer/<int:offer_id>")
@@ -8199,7 +9835,9 @@ def accept_custom_offer(offer_id):
     if sel.number_offers_accepted() >= sel.number_choices:
         flash(
             "The maximum number of custom offers have already been accepted for selector {name}. "
-            "Please decline this offer before accepting a new one.".format(name=offer.selector.student.user.name),
+            "Please decline this offer before accepting a new one.".format(
+                name=offer.selector.student.user.name
+            ),
             "error",
         )
         return redirect(redirect_url())
@@ -8207,7 +9845,7 @@ def accept_custom_offer(offer_id):
     if offer.period is not None and sel.number_offers_accepted(offer.period) > 0:
         flash(
             f"A custom offer has already been accepted for selector {offer.selector.student.user.name} "
-            f"in period {offer.period.display_name(config.year+1)}. "
+            f"in period {offer.period.display_name(config.year + 1)}. "
             f"Please decline this offer before accepting a new one.",
             "error",
         )
@@ -8220,7 +9858,10 @@ def accept_custom_offer(offer_id):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not mark custom offer as accepted due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not mark custom offer as accepted due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -8244,7 +9885,10 @@ def decline_custom_offer(offer_id):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not mark custom offer as declined due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not mark custom offer as declined due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -8268,7 +9912,10 @@ def undecide_custom_offer(offer_id):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not mark custom offer as pending due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not mark custom offer as pending due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -8289,7 +9936,10 @@ def delete_custom_offer(offer_id):
         db.session.delete(offer)
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not delete custom offer due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete custom offer due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -8306,7 +9956,9 @@ def project_confirmations(id):
     if not validate_is_convenor(proj.config.project_class):
         return home_dashboard()
 
-    return render_template_context("convenor/selector/project_confirmations.html", project=proj, now=datetime.now())
+    return render_template_context(
+        "convenor/selector/project_confirmations.html", project=proj, now=datetime.now()
+    )
 
 
 @convenor.route("/add_group_filter/<int:id>/<int:gid>")
@@ -8458,14 +10110,20 @@ def set_hint(id, hint):
         return redirect(redirect_url())
 
     if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
-        flash("Selection hints may only be set once student choices are closed and the project class is ready to match", "error")
+        flash(
+            "Selection hints may only be set once student choices are closed and the project class is ready to match",
+            "error",
+        )
         return redirect(redirect_url())
 
     try:
         rec.set_hint(hint)
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not set selection hint due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not set selection hint due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -8485,11 +10143,17 @@ def hints_list(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
-        flash("Selection hints may only be set once student choices are closed and the project class is ready to match", "error")
+        flash(
+            "Selection hints may only be set once student choices are closed and the project class is ready to match",
+            "error",
+        )
         return redirect(redirect_url())
 
     hints = (
@@ -8500,7 +10164,9 @@ def hints_list(id):
         .all()
     )
 
-    return render_template_context("convenor/dashboard/hints_list.html", pclass=pclass, hints=hints)
+    return render_template_context(
+        "convenor/dashboard/hints_list.html", pclass=pclass, hints=hints
+    )
 
 
 @convenor.route("/audit_matches/<int:pclass_id>")
@@ -8529,7 +10195,10 @@ def audit_matches_ajax(pclass_id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     matches = config.published_matches.all()
@@ -8553,7 +10222,9 @@ def audit_schedules(pclass_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    return render_template_context("convenor/presentations/audit.html", pclass_id=pclass_id)
+    return render_template_context(
+        "convenor/presentations/audit.html", pclass_id=pclass_id
+    )
 
 
 @convenor.route("/audit_schedules_ajax/<int:pclass_id>")
@@ -8569,13 +10240,18 @@ def audit_schedules_ajax(pclass_id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     matches = config.published_schedules.all()
 
     return ajax.admin.assessment_schedules_data(
-        matches, text="schedule audit dashboard", url=url_for("convenor.audit_schedules", pclass_id=pclass_id)
+        matches,
+        text="schedule audit dashboard",
+        url=url_for("convenor.audit_schedules", pclass_id=pclass_id),
     )
 
 
@@ -8594,24 +10270,46 @@ def open_feedback(id):
         return redirect(redirect_url())
 
     state = config.submitter_lifecycle
-    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
-        flash("Feedback cannot be opened at this stage in the project lifecycle.", "info")
+    if (
+        state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+        and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
+    ):
+        flash(
+            "Feedback cannot be opened at this stage in the project lifecycle.", "info"
+        )
         return redirect(redirect_url())
 
     # get record for current submission period
-    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
+    period: SubmissionPeriodRecord = config.periods.filter_by(
+        submission_period=config.submission_period
+    ).first()
     if period is None and config.number_submissions > 0:
-        flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # set up instance of OpenFeedbackForm to capture form state
     if period is not None and period.is_feedback_open:
-        OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=True, include_test_button=True, include_close_button=False)
+        OpenFeedbackForm = OpenFeedbackFormFactory(
+            include_send_button=True,
+            include_test_button=True,
+            include_close_button=False,
+        )
     else:
         if period.collect_project_feedback:
-            OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=False, include_test_button=True, include_close_button=True)
+            OpenFeedbackForm = OpenFeedbackFormFactory(
+                include_send_button=False,
+                include_test_button=True,
+                include_close_button=True,
+            )
         else:
-            OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=False, include_test_button=False, include_close_button=False)
+            OpenFeedbackForm = OpenFeedbackFormFactory(
+                include_send_button=False,
+                include_test_button=False,
+                include_close_button=False,
+            )
 
     feedback_form = OpenFeedbackForm(request.form)
 
@@ -8626,15 +10324,22 @@ def open_feedback(id):
             if period.feedback_open:
                 response = _process_update_deadline(config, deadline, id, period, url)
             else:
-                response = _open_feedback_request(config, deadline, feedback_form, id, period, url)
+                response = _open_feedback_request(
+                    config, deadline, feedback_form, id, period, url
+                )
 
             if response is None:
                 redirect(redirect_url())
             else:
                 return response
 
-        elif hasattr(feedback_form, "send_notifications") and feedback_form.send_notifications.data:
-            return _send_feedback_notifications_request(config, deadline, feedback_form, id, period, url)
+        elif (
+            hasattr(feedback_form, "send_notifications")
+            and feedback_form.send_notifications.data
+        ):
+            return _send_feedback_notifications_request(
+                config, deadline, feedback_form, id, period, url
+            )
 
         elif hasattr(feedback_form, "test_button") and feedback_form.test_button.data:
             return _test_notifications(deadline, feedback_form, id, url)
@@ -8658,16 +10363,22 @@ def _test_notifications(deadline: datetime, feedback_form, id, url):
     )
 
 
-def _close_period_request(config: ProjectClassConfig, id, period: SubmissionPeriodRecord, url):
+def _close_period_request(
+    config: ProjectClassConfig, id, period: SubmissionPeriodRecord, url
+):
     if period.collect_project_feedback:
-        title = "Immediately close {proj}/{period}".format(proj=config.name, period=period.display_name)
+        title = "Immediately close {proj}/{period}".format(
+            proj=config.name, period=period.display_name
+        )
         panel_title = "Immediately close <strong>{proj}/{period}</strong> without sending marking notifications".format(
             proj=config.name, period=period.display_name
         )
         message = (
             "<p>Are you sure that you wish to immediately close <strong>{proj}/{period}</strong>?</p>"
             "<p>No marking requests will be sent, and the feedback window will be closed.<p>"
-            "<p>These actions cannot be undone.</p>".format(proj=config.name, period=period.display_name)
+            "<p>These actions cannot be undone.</p>".format(
+                proj=config.name, period=period.display_name
+            )
         )
         action_url = url_for("convenor.immediate_close_feedback", id=id, url=url)
         submit_label = "Immediately close {period}".format(period=period.display_name)
@@ -8681,30 +10392,47 @@ def _close_period_request(config: ProjectClassConfig, id, period: SubmissionPeri
         )
 
     title = "Close {proj}/{period}".format(proj=config.name, period=period.display_name)
-    panel_title = "Close {proj}/{period}".format(proj=config.name, period=period.display_name)
+    panel_title = "Close {proj}/{period}".format(
+        proj=config.name, period=period.display_name
+    )
     message = (
         "<p>Marking and feedback is not being collected online for this submission period.</p>"
         "<p><strong>{proj}/{period}</strong> will be closed, and no notifications will be sent.</p>"
-        "<p>These actions cannot be undone.</p>".format(proj=config.name, period=period.display_name)
+        "<p>These actions cannot be undone.</p>".format(
+            proj=config.name, period=period.display_name
+        )
     )
     action_url = url_for("convenor.immediate_close_feedback", id=id, url=url)
     submit_label = "Close {period}".format(period=period.display_name)
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
-def _send_feedback_notifications_request(config, deadline, feedback_form, id, period, url):
+def _send_feedback_notifications_request(
+    config, deadline, feedback_form, id, period, url
+):
     # issue confirmation request
-    title = "Issue unsent marking notifications for {proj}/{period}".format(proj=config.name, period=period.display_name)
-    panel_title = "Issue unsent marking notifications for <strong>{proj}/{period}</strong>".format(proj=config.name, period=period.display_name)
+    title = "Issue unsent marking notifications for {proj}/{period}".format(
+        proj=config.name, period=period.display_name
+    )
+    panel_title = "Issue unsent marking notifications for <strong>{proj}/{period}</strong>".format(
+        proj=config.name, period=period.display_name
+    )
     message = (
         "<p>Are you sure that you wish to issue unsent marking notifications for "
         "<strong>{proj}/{period}</strong>?</p>"
         "<p>Email notifications will be issued to markers where a project report is now "
         "available, but no notification email has previously been issued.</p>"
         "<p>If no report has yet been uploaded, further email notifications can be issued at a later "
-        "date when the report is available.</p>".format(proj=config.name, period=period.display_name)
+        "date when the report is available.</p>".format(
+            proj=config.name, period=period.display_name
+        )
     )
     action_url = url_for(
         "convenor.do_send_notifications",
@@ -8738,7 +10466,9 @@ def _open_feedback_request(config, deadline, feedback_form, id, period, url):
         return None
 
     # issue confirmation request
-    title = "Open feedback for {proj}/{period}".format(proj=config.name, period=period.display_name)
+    title = "Open feedback for {proj}/{period}".format(
+        proj=config.name, period=period.display_name
+    )
     panel_title = "Open feedback for <strong>{proj}/{period}</strong> and issue email notifications to markers".format(
         proj=config.name, period=period.display_name
     )
@@ -8750,7 +10480,11 @@ def _open_feedback_request(config, deadline, feedback_form, id, period, url):
         "<p>If no report has yet been uploaded, email notifications can be issued at a later date "
         "when the report is available.</p>"
         "<p>These actions cannot be "
-        "undone.</p>".format(proj=config.name, period=period.display_name, deadline=deadline.strftime("%a %d %b %Y"))
+        "undone.</p>".format(
+            proj=config.name,
+            period=period.display_name,
+            deadline=deadline.strftime("%a %d %b %Y"),
+        )
     )
     action_url = url_for(
         "convenor.do_open_feedback",
@@ -8772,7 +10506,9 @@ def _open_feedback_request(config, deadline, feedback_form, id, period, url):
     )
 
 
-def _process_update_deadline(config: ProjectClassConfig, deadline, id, period: SubmissionPeriodRecord, url):
+def _process_update_deadline(
+    config: ProjectClassConfig, deadline, id, period: SubmissionPeriodRecord, url
+):
     if not period.collect_project_feedback:
         return _close_period_request(config, id, period, url)
 
@@ -8790,11 +10526,18 @@ def _process_update_deadline(config: ProjectClassConfig, deadline, id, period: S
         db.session.commit()
         flash(
             "The feedback deadline for {proj}/{period} has been successfully changed "
-            "to {deadline}.".format(proj=config.name, period=period.display_name, deadline=deadline.strftime("%a %d %b %Y")),
+            "to {deadline}.".format(
+                proj=config.name,
+                period=period.display_name,
+                deadline=deadline.strftime("%a %d %b %Y"),
+            ),
             "success",
         )
     except SQLAlchemyError as e:
-        flash("Could not modify feedback status due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not modify feedback status due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -8816,14 +10559,24 @@ def test_notifications(id):
         return redirect(redirect_url())
 
     state = config.submitter_lifecycle
-    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
-        flash("Feedback cannot be opened at this stage in the project lifecycle.", "info")
+    if (
+        state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+        and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
+    ):
+        flash(
+            "Feedback cannot be opened at this stage in the project lifecycle.", "info"
+        )
         return redirect(redirect_url())
 
     # get record for current submission period
-    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
+    period: SubmissionPeriodRecord = config.periods.filter_by(
+        submission_period=config.submission_period
+    ).first()
     if period is None and config.number_submissions > 0:
-        flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     cc_me = bool(int(request.args.get("cc_me", 0)))
@@ -8884,14 +10637,24 @@ def do_send_notifications(id):
         return redirect(redirect_url())
 
     state = config.submitter_lifecycle
-    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
-        flash("Feedback cannot be opened at this stage in the project lifecycle.", "info")
+    if (
+        state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+        and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
+    ):
+        flash(
+            "Feedback cannot be opened at this stage in the project lifecycle.", "info"
+        )
         return redirect(redirect_url())
 
     # get record for current submission period
-    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
+    period: SubmissionPeriodRecord = config.periods.filter_by(
+        submission_period=config.submission_period
+    ).first()
     if period is None and config.number_submissions > 0:
-        flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     cc_me = bool(int(request.args.get("cc_me", 0)))
@@ -8924,7 +10687,9 @@ def do_send_notifications(id):
 
     seq = chain(
         init.si(task_id, tk_name),
-        marking_email.si(period.id, cc_me, max_attachment, test_email, deadline, current_user.id),
+        marking_email.si(
+            period.id, cc_me, max_attachment, test_email, deadline, current_user.id
+        ),
         final.si(task_id, tk_name, current_user.id),
     ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
@@ -8947,14 +10712,24 @@ def do_open_feedback(id):
         return redirect(redirect_url())
 
     state = config.submitter_lifecycle
-    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
-        flash("Feedback cannot be opened at this stage in the project lifecycle.", "info")
+    if (
+        state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+        and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
+    ):
+        flash(
+            "Feedback cannot be opened at this stage in the project lifecycle.", "info"
+        )
         return redirect(redirect_url())
 
     # get record for current submission period
-    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
+    period: SubmissionPeriodRecord = config.periods.filter_by(
+        submission_period=config.submission_period
+    ).first()
     if period is None and config.number_submissions > 0:
-        flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     cc_me = bool(int(request.args.get("cc_me", 0)))
@@ -8990,11 +10765,17 @@ def do_open_feedback(id):
         db.session.commit()
         flash(
             'Feedback for "{proj}" has been opened successfully, with deadline '
-            "{deadline}.".format(proj=config.name, deadline=period.feedback_deadline.strftime("%a %d %b %Y")),
+            "{deadline}.".format(
+                proj=config.name,
+                deadline=period.feedback_deadline.strftime("%a %d %b %Y"),
+            ),
             "success",
         )
     except SQLAlchemyError as e:
-        flash("Could not open feedback due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not open feedback due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
         return redirect(url)
@@ -9013,7 +10794,14 @@ def do_open_feedback(id):
 
     seq = chain(
         init.si(task_id, tk_name),
-        marking_email.si(period.id, cc_me, max_attachment, None, deadline.isoformat(), current_user.id),
+        marking_email.si(
+            period.id,
+            cc_me,
+            max_attachment,
+            None,
+            deadline.isoformat(),
+            current_user.id,
+        ),
         final.si(task_id, tk_name, current_user.id),
     ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
@@ -9036,18 +10824,32 @@ def immediate_close_feedback(id):
         return redirect(redirect_url())
 
     state = config.submitter_lifecycle
-    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
-        flash("Feedback cannot be closed at this stage in the project lifecycle.", "info")
+    if (
+        state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+        and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
+    ):
+        flash(
+            "Feedback cannot be closed at this stage in the project lifecycle.", "info"
+        )
         return redirect(redirect_url())
 
     if config.submission_period > config.number_submissions:
-        flash('Feedback close request ignored because "{name}" ' "is already in a rollover state.".format(name=config.name), "info")
+        flash(
+            'Feedback close request ignored because "{name}" '
+            "is already in a rollover state.".format(name=config.name),
+            "info",
+        )
         return request.referrer
 
     # get record for current submission period
-    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
+    period: SubmissionPeriodRecord = config.periods.filter_by(
+        submission_period=config.submission_period
+    ).first()
     if period is None and config.number_submissions > 0:
-        flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -9068,7 +10870,10 @@ def immediate_close_feedback(id):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not modify feedback status due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not modify feedback status due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -9091,11 +10896,17 @@ def close_feedback(id):
 
     state = config.submitter_lifecycle
     if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
-        flash("Feedback cannot be closed at this stage in the project lifecycle.", "info")
+        flash(
+            "Feedback cannot be closed at this stage in the project lifecycle.", "info"
+        )
         return redirect(redirect_url())
 
     if config.submission_period > config.number_submissions:
-        flash('Feedback close request ignored because "{name}" ' "is already in a rollover state.".format(name=config.name), "info")
+        flash(
+            'Feedback close request ignored because "{name}" '
+            "is already in a rollover state.".format(name=config.name),
+            "info",
+        )
         return request.referrer
 
     url = request.args.get("url", None)
@@ -9116,7 +10927,12 @@ def close_feedback(id):
     submit_label = "Close feedback"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -9136,20 +10952,31 @@ def do_close_feedback(id):
 
     state = config.submitter_lifecycle
     if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
-        flash("Feedback cannot be closed at this stage in the project lifecycle.", "info")
+        flash(
+            "Feedback cannot be closed at this stage in the project lifecycle.", "info"
+        )
         return redirect(redirect_url())
 
     if config.submission_period > config.number_submissions:
-        flash('Feedback close request ignored because "{name}" ' "is already in a rollover state.".format(name=config.name), "info")
+        flash(
+            'Feedback close request ignored because "{name}" '
+            "is already in a rollover state.".format(name=config.name),
+            "info",
+        )
         return request.referrer
 
     url = request.args.get("url", None)
     if url is None:
         url = redirect_url()
 
-    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
+    period: SubmissionPeriodRecord = config.periods.filter_by(
+        submission_period=config.submission_period
+    ).first()
     if period is None and config.number_submissions > 0:
-        flash("Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     period.closed = True
@@ -9159,7 +10986,10 @@ def do_close_feedback(id):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not modify feedback status due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not modify feedback status due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -9180,7 +11010,9 @@ def edit_project_config(pid):
     if config.project_class.most_recent_config.id != config.id:
         flash(
             "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(yra=config.submit_year_a, yrb=config.submit_year_b),
+            "because it has been rolled over.".format(
+                yra=config.submit_year_a, yrb=config.submit_year_b
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -9227,16 +11059,23 @@ def edit_project_config(pid):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not save project configuration because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save project configuration because of a database error. Please contact a system administrator.",
+                "error",
+            )
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for("convenor.status", id=config.project_class.id))
 
-    return render_template_context("convenor/dashboard/edit_project_config.html", form=form, config=config)
+    return render_template_context(
+        "convenor/dashboard/edit_project_config.html", form=form, config=config
+    )
 
 
-def _validate_submission_period(record: SubmissionPeriodRecord, config: ProjectClassConfig):
+def _validate_submission_period(
+    record: SubmissionPeriodRecord, config: ProjectClassConfig
+):
     # reject is user is not a convenor for the associated project class
     if not validate_is_convenor(config.project_class):
         return False
@@ -9245,7 +11084,9 @@ def _validate_submission_period(record: SubmissionPeriodRecord, config: ProjectC
     if config.project_class.most_recent_config.id != config.id:
         flash(
             "It is no longer possible to edit the project configuration for academic year {yra}&ndash;{yrb} "
-            "because it has been rolled over.".format(yra=config.submit_year_a, yrb=config.submit_year_b),
+            "because it has been rolled over.".format(
+                yra=config.submit_year_a, yrb=config.submit_year_b
+            ),
             "info",
         )
         return False
@@ -9256,19 +11097,28 @@ def _validate_submission_period(record: SubmissionPeriodRecord, config: ProjectC
 
     # reject if this submission period is in the past
     if config.submission_period > record.submission_period:
-        flash("It is no longer possible to edit this submission period because it has been closed.", "info")
+        flash(
+            "It is no longer possible to edit this submission period because it has been closed.",
+            "info",
+        )
         return False
 
     # reject if period is retired
     if record.retired:
-        flash("It is no longer possible to edit this submission period because it has been retired.", "info")
+        flash(
+            "It is no longer possible to edit this submission period because it has been retired.",
+            "info",
+        )
         return False
 
     # reject if lifecycle stage is marking or later
 
     state = config.submitter_lifecycle
     if state >= ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
-        flash("It is no longer possible to edit this submission period because it is being marked, or is ready to rollover.", "info")
+        flash(
+            "It is no longer possible to edit this submission period because it is being marked, or is ready to rollover.",
+            "info",
+        )
         return False
 
     return True
@@ -9304,13 +11154,21 @@ def edit_period_record(pid):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not save submission period configuration because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save submission period configuration because of a database error. Please contact a system administrator.",
+                "error",
+            )
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for("convenor.periods", id=config.project_class.id))
 
-    return render_template_context("convenor/dashboard/edit_period_record.html", form=edit_form, record=record, config=config)
+    return render_template_context(
+        "convenor/dashboard/edit_period_record.html",
+        form=edit_form,
+        record=record,
+        config=config,
+    )
 
 
 @convenor.route("/edit_period_presentation/<int:pid>", methods=["GET", "POST"])
@@ -9330,7 +11188,9 @@ def edit_period_presentation(pid):
 
         if record.has_presentation:
             record.lecture_capture = edit_form.lecture_capture.data
-            record.collect_presentation_feedback = edit_form.collect_presentation_feedback.data
+            record.collect_presentation_feedback = (
+                edit_form.collect_presentation_feedback.data
+            )
             record.number_assessors = edit_form.number_assessors.data
             record.max_group_size = edit_form.max_group_size.data
             record.morning_session = edit_form.morning_session.data
@@ -9340,13 +11200,20 @@ def edit_period_presentation(pid):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not save submission period configuration because of a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save submission period configuration because of a database error. Please contact a system administrator.",
+                "error",
+            )
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for("convenor.periods", id=config.project_class.id))
 
-    return render_template_context("convenor/dashboard/edit_period_presentation.html", form=edit_form, record=record)
+    return render_template_context(
+        "convenor/dashboard/edit_period_presentation.html",
+        form=edit_form,
+        record=record,
+    )
 
 
 @convenor.route("/publish_assignment/<int:id>")
@@ -9363,8 +11230,14 @@ def publish_assignment(id):
     if not validate_is_convenor(sub.config.project_class):
         return redirect(redirect_url())
 
-    if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash("It is now too late to publish an assignment to students for this project class.", "error")
+    if (
+        sub.config.submitter_lifecycle
+        >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+    ):
+        flash(
+            "It is now too late to publish an assignment to students for this project class.",
+            "error",
+        )
         return redirect(redirect_url())
 
     sub.published = True
@@ -9372,7 +11245,10 @@ def publish_assignment(id):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not publish assignment because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not publish assignment because of a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -9393,14 +11269,23 @@ def unpublish_assignment(id):
     if not validate_project_class(sub.config.project_class):
         return redirect(redirect_url())
 
-    if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash("It is now too late to unpublish an assignment for this project class.", "error")
+    if (
+        sub.config.submitter_lifecycle
+        >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+    ):
+        flash(
+            "It is now too late to unpublish an assignment for this project class.",
+            "error",
+        )
         return redirect(redirect_url())
 
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not unpublish assignment because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not unpublish assignment because of a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -9421,8 +11306,14 @@ def publish_all_assignments(id):
     if not validate_project_class(config.project_class):
         return redirect(redirect_url())
 
-    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash("It is now too late to publish assignments to students for this project class.", "error")
+    if (
+        config.submitter_lifecycle
+        >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+    ):
+        flash(
+            "It is now too late to publish assignments to students for this project class.",
+            "error",
+        )
         return redirect(redirect_url())
 
     cohort_filter = request.args.get("cohort_filter")
@@ -9430,7 +11321,9 @@ def publish_all_assignments(id):
     state_filter = request.args.get("state_filter")
     year_filter = request.args.get("year_filter")
 
-    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
+    data = build_submitters_data(
+        config, cohort_filter, prog_filter, state_filter, year_filter
+    )
 
     for sel in data:
         sel.published = True
@@ -9438,7 +11331,10 @@ def publish_all_assignments(id):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not publish assignments because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not publish assignments because of a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -9459,8 +11355,14 @@ def unpublish_all_assignments(id):
     if not validate_project_class(config.project_class):
         return redirect(redirect_url())
 
-    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash("It is now too late to unpublish assignments for this project class.", "error")
+    if (
+        config.submitter_lifecycle
+        >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+    ):
+        flash(
+            "It is now too late to unpublish assignments for this project class.",
+            "error",
+        )
         return redirect(redirect_url())
 
     cohort_filter = request.args.get("cohort_filter")
@@ -9468,7 +11370,9 @@ def unpublish_all_assignments(id):
     state_filter = request.args.get("state_filter")
     year_filter = request.args.get("year_filter")
 
-    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
+    data = build_submitters_data(
+        config, cohort_filter, prog_filter, state_filter, year_filter
+    )
 
     for sel in data:
         sel.published = False
@@ -9476,7 +11380,10 @@ def unpublish_all_assignments(id):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not unpublish assignments because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not unpublish assignments because of a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -9496,7 +11403,9 @@ def populate_markers(configid):
     uuid = register_task(
         'Populate markers for "{proj}"'.format(proj=config.name),
         owner=current_user,
-        description="Populate missing marker assignments for " '"{proj}"'.format(proj=config.name),
+        description='Populate missing marker assignments for "{proj}"'.format(
+            proj=config.name
+        ),
     )
 
     celery = current_app.extensions["celery"]
@@ -9525,11 +11434,19 @@ def remove_markers(configid):
     panel_title = "Remove all markers"
 
     action_url = url_for("convenor.do_remove_markers", configid=configid, url=url)
-    message = "<p>Are you sure that you wish to remove all marker assignments?</p>" "<p>This action cannot be undone.</p>"
+    message = (
+        "<p>Are you sure that you wish to remove all marker assignments?</p>"
+        "<p>This action cannot be undone.</p>"
+    )
     submit_label = "Remove markers"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -9550,7 +11467,7 @@ def do_remove_markers(configid):
     uuid = register_task(
         'Remove markers for "{proj}"'.format(proj=config.name),
         owner=current_user,
-        description="Remove marker assignments for " '"{proj}"'.format(proj=config.name),
+        description='Remove marker assignments for "{proj}"'.format(proj=config.name),
     )
 
     celery = current_app.extensions["celery"]
@@ -9571,8 +11488,12 @@ def view_feedback():
     if sub_id is None and sid is None:
         abort(404)
 
-    submitter: SubmittingStudent = SubmittingStudent.query.get_or_404(sub_id) if sub_id is not None else None
-    rec: SubmissionRecord = SubmissionRecord.query.get_or_404(sid) if sid is not None else None
+    submitter: SubmittingStudent = (
+        SubmittingStudent.query.get_or_404(sub_id) if sub_id is not None else None
+    )
+    rec: SubmissionRecord = (
+        SubmissionRecord.query.get_or_404(sid) if sid is not None else None
+    )
 
     if submitter is not None:
         config: ProjectClassConfig = submitter.config
@@ -9598,7 +11519,9 @@ def view_feedback():
 
         else:
             if hasattr(form, "selector") and form.selector.data is not None:
-                rec: SubmissionRecord = submitter.get_assignment(period=form.selector.data)
+                rec: SubmissionRecord = submitter.get_assignment(
+                    period=form.selector.data
+                )
             else:
                 rec: SubmissionRecord = submitter.get_assignment()
 
@@ -9628,7 +11551,14 @@ def view_feedback():
         period: SubmissionPeriodRecord = rec.period
         form.selector.data = period
 
-    return render_template_context("convenor/dashboard/view_feedback.html", submitter=submitter, record=rec, form=form, text=text, url=url)
+    return render_template_context(
+        "convenor/dashboard/view_feedback.html",
+        submitter=submitter,
+        record=rec,
+        form=form,
+        text=text,
+        url=url,
+    )
 
 
 @convenor.route("/faculty_workload/<int:id>")
@@ -9669,7 +11599,10 @@ def faculty_workload(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     data = get_convenor_dashboard_data(pclass, config)
@@ -9701,30 +11634,56 @@ def faculty_workload_ajax(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return jsonify({})
 
     # build a list of only enrolled faculty, together with their FacultyData records
-    faculty_ids = db.session.query(EnrollmentRecord.owner_id).filter(EnrollmentRecord.pclass_id == id)
+    faculty_ids = db.session.query(EnrollmentRecord.owner_id).filter(
+        EnrollmentRecord.pclass_id == id
+    )
 
     if enroll_filter == "supv-active":
-        faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+        faculty_ids = faculty_ids.filter(
+            EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
+        )
     elif enroll_filter == "supv-sabbatical":
-        faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_SABBATICAL)
+        faculty_ids = faculty_ids.filter(
+            EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_SABBATICAL
+        )
     elif enroll_filter == "supv-exempt":
-        faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_EXEMPT)
+        faculty_ids = faculty_ids.filter(
+            EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_EXEMPT
+        )
     elif enroll_filter == "mark-active":
-        faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+        faculty_ids = faculty_ids.filter(
+            EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED
+        )
     elif enroll_filter == "mark-sabbatical":
-        faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL)
+        faculty_ids = faculty_ids.filter(
+            EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL
+        )
     elif enroll_filter == "mark-exempt":
-        faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT)
+        faculty_ids = faculty_ids.filter(
+            EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT
+        )
     elif enroll_filter == "pres-active":
-        faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)
+        faculty_ids = faculty_ids.filter(
+            EnrollmentRecord.presentations_state
+            == EnrollmentRecord.PRESENTATIONS_ENROLLED
+        )
     elif enroll_filter == "pres-sabbatical":
-        faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL)
+        faculty_ids = faculty_ids.filter(
+            EnrollmentRecord.presentations_state
+            == EnrollmentRecord.PRESENTATIONS_SABBATICAL
+        )
     elif enroll_filter == "pres-exempt":
-        faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_EXEMPT)
+        faculty_ids = faculty_ids.filter(
+            EnrollmentRecord.presentations_state
+            == EnrollmentRecord.PRESENTATIONS_EXEMPT
+        )
 
     faculty_ids = faculty_ids.subquery()
 
@@ -9763,7 +11722,9 @@ def faculty_workload_ajax(id):
     columns = {"name": name, "workload": workload}
 
     with ServerSideInMemoryHandler(request, base_query, columns) as handler:
-        return handler.build_payload(partial(ajax.convenor.faculty_workload_data, config))
+        return handler.build_payload(
+            partial(ajax.convenor.faculty_workload_data, config)
+        )
 
 
 @convenor.route("/teaching_groups/<int:id>")
@@ -9793,7 +11754,10 @@ def teaching_groups(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # build list of allowed submission periods
@@ -9804,7 +11768,10 @@ def teaching_groups(id):
         period_names.append((p.submission_period, p.display_name))
 
     if len(periods) == 0:
-        flash("Internal error: No submission periods have been set up for this ProjectClassConfig. Please contact a system administator.", "error")
+        flash(
+            "Internal error: No submission periods have been set up for this ProjectClassConfig. Please contact a system administator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     show_period = request.args.get("show_period")
@@ -9855,7 +11822,10 @@ def teaching_groups_ajax(id):
     # get current configuration record for this project class
     config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return jsonify({})
 
     if organize_by not in ["student", "faculty"]:
@@ -9883,7 +11853,11 @@ def teaching_groups_ajax(id):
         show_period = x
 
     if organize_by == "faculty":
-        faculty_ids = db.session.query(EnrollmentRecord.owner_id).filter(EnrollmentRecord.pclass_id == id).subquery()
+        faculty_ids = (
+            db.session.query(EnrollmentRecord.owner_id)
+            .filter(EnrollmentRecord.pclass_id == id)
+            .subquery()
+        )
 
         faculty = (
             db.session.query(FacultyData)
@@ -9895,7 +11869,9 @@ def teaching_groups_ajax(id):
 
         return ajax.convenor.teaching_group_by_faculty(faculty, config, show_period)
 
-    return ajax.convenor.teaching_group_by_student(config.submitting_students, config, show_period)
+    return ajax.convenor.teaching_group_by_student(
+        config.submitting_students, config, show_period
+    )
 
 
 @convenor.route("/manual_assign/", methods=["GET", "POST"])
@@ -9908,8 +11884,12 @@ def manual_assign():
     if sub_id is None and sid is None:
         abort(404)
 
-    submitter: SubmittingStudent = SubmittingStudent.query.get_or_404(sub_id) if sub_id is not None else None
-    rec: SubmissionRecord = SubmissionRecord.query.get_or_404(sid) if sid is not None else None
+    submitter: SubmittingStudent = (
+        SubmittingStudent.query.get_or_404(sub_id) if sub_id is not None else None
+    )
+    rec: SubmissionRecord = (
+        SubmissionRecord.query.get_or_404(sid) if sid is not None else None
+    )
 
     if submitter is not None:
         current_config: ProjectClassConfig = submitter.config
@@ -9935,7 +11915,9 @@ def manual_assign():
 
         else:
             if hasattr(form, "selector") and form.selector.data is not None:
-                rec: SubmissionRecord = submitter.get_assignment(period=form.selector.data)
+                rec: SubmissionRecord = submitter.get_assignment(
+                    period=form.selector.data
+                )
             else:
                 rec: SubmissionRecord = submitter.get_assignment()
 
@@ -9950,7 +11932,10 @@ def manual_assign():
     # selection occurs in a previous cycle)
     select_config = rec.selector_config
     if select_config is None:
-        flash("Can not reassign because the list of available Live Projects could not be found", "error")
+        flash(
+            "Can not reassign because the list of available Live Projects could not be found",
+            "error",
+        )
         return redirect(redirect_url())
 
     # reject if logged-in user is not *currently* a convenor for the project class associated with this submission
@@ -9993,15 +11978,24 @@ def manual_assign_ajax(id):
     # selection occurs in a previous cycle)
     select_config = rec.selector_config
     if select_config is None:
-        flash("Can not reassign because the list of available Live Projects could not be found", "error")
+        flash(
+            "Can not reassign because the list of available Live Projects could not be found",
+            "error",
+        )
         return jsonify({})
 
     if not validate_is_convenor(select_config.project_class):
         return jsonify({})
 
-    base_query = select_config.live_projects.join(FacultyData, FacultyData.id == LiveProject.owner_id).join(User, User.id == FacultyData.id)
+    base_query = select_config.live_projects.join(
+        FacultyData, FacultyData.id == LiveProject.owner_id
+    ).join(User, User.id == FacultyData.id)
 
-    project = {"search": LiveProject.name, "order": LiveProject.name, "search_collation": "utf8_general_ci"}
+    project = {
+        "search": LiveProject.name,
+        "order": LiveProject.name,
+        "search_collation": "utf8_general_ci",
+    }
     supervisor = {
         "search": func.concat(User.first_name, " ", User.last_name),
         "order": [User.last_name, User.first_name],
@@ -10026,19 +12020,29 @@ def assign_revert(id):
     # selection occurs in a previous cycle)
     select_config = rec.selector_config
     if select_config is None:
-        flash("Can not revert assignment because the list of available Live Projects could not be found", "error")
+        flash(
+            "Can not revert assignment because the list of available Live Projects could not be found",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not validate_is_convenor(select_config.project_class):
         return redirect(redirect_url())
 
     if rec.period.is_feedback_open:
-        flash("Can not revert assignment for {name} because feedback is already open".format(name=rec.period.display_name), "error")
+        flash(
+            "Can not revert assignment for {name} because feedback is already open".format(
+                name=rec.period.display_name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     if rec.matching_record is None:
         flash(
-            "Can not revert assignment for {name} because the automated matching data could not be found".format(name=rec.period.display_name),
+            "Can not revert assignment for {name} because the automated matching data could not be found".format(
+                name=rec.period.display_name
+            ),
             "error",
         )
         return redirect(redirect_url())
@@ -10101,7 +12105,10 @@ def assign_revert(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not revert assignment to match because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not revert assignment to match because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -10118,14 +12125,22 @@ def assign_from_selection(id, sel_id):
     # selection occurs in a previous cycle)
     select_config = rec.selector_config
     if select_config is None:
-        flash("Can not reassign because the list of available Live Projects could not be found", "error")
+        flash(
+            "Can not reassign because the list of available Live Projects could not be found",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not validate_is_convenor(select_config.project_class):
         return redirect(redirect_url())
 
     if rec.period.is_feedback_open:
-        flash("Can not reassign for {name} because feedback is already open".format(name=rec.period.display_name), "error")
+        flash(
+            "Can not reassign for {name} because feedback is already open".format(
+                name=rec.period.display_name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     sel: SelectionRecord = SelectionRecord.query.get_or_404(sel_id)
@@ -10137,7 +12152,12 @@ def assign_from_selection(id, sel_id):
             if owner is not None:
                 # remove any SubmissionRole instances which have the owner as supervisor
                 rec.roles.filter(
-                    SubmissionRole.role.in_([SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]),
+                    SubmissionRole.role.in_(
+                        [
+                            SubmissionRole.ROLE_SUPERVISOR,
+                            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                        ]
+                    ),
                     SubmissionRole.user_id == owner.id,
                 ).delete()
 
@@ -10179,7 +12199,10 @@ def assign_from_selection(id, sel_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not assign project because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not assign project because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -10196,14 +12219,22 @@ def assign_liveproject(id, pid):
     # selection occurs in a previous cycle)
     select_config = rec.selector_config
     if select_config is None:
-        flash("Can not reassign because the list of available Live Projects could not be found", "error")
+        flash(
+            "Can not reassign because the list of available Live Projects could not be found",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not validate_is_convenor(select_config.project_class):
         return redirect(redirect_url())
 
     if rec.period.is_feedback_open:
-        flash("Can not reassign for {name} because feedback is already open".format(name=rec.period.display_name), "error")
+        flash(
+            "Can not reassign for {name} because feedback is already open".format(
+                name=rec.period.display_name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     lp: LiveProject = LiveProject.query.get_or_404(pid)
@@ -10223,7 +12254,12 @@ def assign_liveproject(id, pid):
             if owner is not None:
                 # remove any SubmissionRole instances that have the owner as supervisor
                 rec.roles.filter(
-                    SubmissionRole.role.in_([SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]),
+                    SubmissionRole.role.in_(
+                        [
+                            SubmissionRole.ROLE_SUPERVISOR,
+                            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                        ]
+                    ),
                     SubmissionRole.user_id == owner.id,
                 ).delete()
 
@@ -10265,7 +12301,10 @@ def assign_liveproject(id, pid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not assign project because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not assign project because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -10281,14 +12320,22 @@ def deassign_project(id):
     # selection occurs in a previous cycle)
     select_config = rec.selector_config
     if select_config is None:
-        flash("Can not reassign because the list of available Live Projects could not be found", "error")
+        flash(
+            "Can not reassign because the list of available Live Projects could not be found",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not validate_is_convenor(select_config.project_class):
         return redirect(redirect_url())
 
     if rec.period.is_feedback_open:
-        flash("Can not de-assign project for {name} because feedback is already open".format(name=rec.period.display_name), "error")
+        flash(
+            "Can not de-assign project for {name} because feedback is already open".format(
+                name=rec.period.display_name
+            ),
+            "error",
+        )
         return redirect(redirect_url())
 
     # as long as we don't set both project and project_id (or marker and marker_id) simultaneously to zero,
@@ -10299,7 +12346,12 @@ def deassign_project(id):
             if owner is not None:
                 # remove any SubmissionRole instances which have the owner as supervisor
                 rec.roles.filter(
-                    SubmissionRole.role.in_([SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]),
+                    SubmissionRole.role.in_(
+                        [
+                            SubmissionRole.ROLE_SUPERVISOR,
+                            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                        ]
+                    ),
                     SubmissionRole.user_id == owner.id,
                 ).delete()
 
@@ -10308,7 +12360,10 @@ def deassign_project(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not deassign project because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not deassign project because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -10326,7 +12381,9 @@ def assign_presentation_feedback(id):
         return redirect(redirect_url())
 
     slot = talk.schedule_slot
-    AssignPresentationFeedbackForm = AssignPresentationFeedbackFormFactory(record_id=talk.id, slot_id=slot.id if slot is not None else None)
+    AssignPresentationFeedbackForm = AssignPresentationFeedbackFormFactory(
+        record_id=talk.id, slot_id=slot.id if slot is not None else None
+    )
 
     form = AssignPresentationFeedbackForm(request.form)
 
@@ -10354,8 +12411,12 @@ def assign_presentation_feedback(id):
         form=form,
         title="Assign presentation feedback",
         unique_id="assign-{id}".format(id=id),
-        formtitle="Assign presentation feedback for <strong>{num}</strong>".format(num=talk.owner.student.user.name),
-        submit_url=url_for("convenor.assign_presentation_feedback", id=talk.id, url=url),
+        formtitle="Assign presentation feedback for <strong>{num}</strong>".format(
+            num=talk.owner.student.user.name
+        ),
+        submit_url=url_for(
+            "convenor.assign_presentation_feedback", id=talk.id, url=url
+        ),
     )
 
 
@@ -10383,7 +12444,10 @@ def edit_feedback(id):
     record: SubmissionRecord = role.submission
 
     if record.retired:
-        flash("It is not possible to edit feedback for submissions that have been retired.", "error")
+        flash(
+            "It is not possible to edit feedback for submissions that have been retired.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # check is convenor for the project's class
@@ -10391,7 +12455,10 @@ def edit_feedback(id):
         return redirect(redirect_url())
 
     if not record.period.collect_project_feedback:
-        flash("This operation is not permitted. Feedback collection has been disabled for this submission period.", "info")
+        flash(
+            "This operation is not permitted. Feedback collection has been disabled for this submission period.",
+            "info",
+        )
         return redirect(redirect_url())
 
     period: SubmissionPeriodRecord = record.period
@@ -10413,7 +12480,10 @@ def edit_feedback(id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save feedback due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save feedback due to a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url)
 
@@ -10427,7 +12497,8 @@ def edit_feedback(id):
         form=form,
         title="Edit feedback",
         unique_id="role-{id}".format(id=id),
-        formtitle='Edit feedback for <i class="fas fa-user-circle"></i> ' "<strong>{name}</strong>".format(name=record.student_identifier["label"]),
+        formtitle='Edit feedback for <i class="fas fa-user-circle"></i> '
+        "<strong>{name}</strong>".format(name=record.student_identifier["label"]),
         submit_url=url_for("convenor.edit_feedback", id=id, url=url),
         period=period,
         record=role,
@@ -10443,7 +12514,10 @@ def submit_feedback(id):
     record: SubmissionRecord = role.submission
 
     if record.retired:
-        flash("It is not possible to edit feedback for submissions that have been retired.", "error")
+        flash(
+            "It is not possible to edit feedback for submissions that have been retired.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # check is convenor for the project's class
@@ -10451,13 +12525,19 @@ def submit_feedback(id):
         return redirect(redirect_url())
 
     if not record.period.collect_project_feedback:
-        flash("This operation is not permitted. Feedback collection has been disabled for this submission period.", "info")
+        flash(
+            "This operation is not permitted. Feedback collection has been disabled for this submission period.",
+            "info",
+        )
         return redirect(redirect_url())
 
     period: SubmissionPeriodRecord = record.period
 
     if not period.is_feedback_open:
-        flash("This operation is not permitted. It is not possible to submit before the feedback period has opened.", "warning")
+        flash(
+            "This operation is not permitted. It is not possible to submit before the feedback period has opened.",
+            "warning",
+        )
         return redirect(redirect_url())
 
     if not role.feedback_valid:
@@ -10479,7 +12559,10 @@ def submit_feedback(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not submit feedback due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not submit feedback due to a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -10492,7 +12575,10 @@ def unsubmit_feedback(id):
     record: SubmissionRecord = role.submission
 
     if record.retired:
-        flash("It is not possible to edit feedback for submissions that have been retired.", "error")
+        flash(
+            "It is not possible to edit feedback for submissions that have been retired.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # check is convenor for the project's class
@@ -10500,13 +12586,19 @@ def unsubmit_feedback(id):
         return redirect(redirect_url())
 
     if not record.period.collect_project_feedback:
-        flash("This operation is not permitted. Feedback collection has been disabled for this submission period.", "info")
+        flash(
+            "This operation is not permitted. Feedback collection has been disabled for this submission period.",
+            "info",
+        )
         return redirect(redirect_url())
 
     period: SubmissionPeriodRecord = record.period
 
     if period.closed:
-        flash("This operation is not permitted. It is not possible to unsubmit after the feedback period has closed.", "error")
+        flash(
+            "This operation is not permitted. It is not possible to unsubmit after the feedback period has closed.",
+            "error",
+        )
         return redirect(redirect_url())
 
     try:
@@ -10517,12 +12609,17 @@ def unsubmit_feedback(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not unsubmit feedback due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not unsubmit feedback due to a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
 
-@convenor.route("/presentation_edit_feedback/<int:feedback_id>", methods=["GET", "POST"])
+@convenor.route(
+    "/presentation_edit_feedback/<int:feedback_id>", methods=["GET", "POST"]
+)
 @roles_accepted("faculty", "admin", "root")
 def presentation_edit_feedback(feedback_id):
     # feedback_id labels a PresentationFeedback instance
@@ -10538,7 +12635,10 @@ def presentation_edit_feedback(feedback_id):
         return redirect(redirect_url())
 
     if not slot.owner.deployed:
-        flash("Can not edit feedback because the schedule containing this slot has not been deployed.", "error")
+        flash(
+            "Can not edit feedback because the schedule containing this slot has not been deployed.",
+            "error",
+        )
         return redirect(redirect_url())
 
     form = PresentationFeedbackForm(request.form)
@@ -10567,13 +12667,17 @@ def presentation_edit_feedback(feedback_id):
         "faculty/dashboard/edit_feedback.html",
         form=form,
         unique_id="pres-{id}".format(id=id),
-        title="Edit presentation feedback from {supervisor}".format(supervisor=feedback.assessor.user.name),
+        title="Edit presentation feedback from {supervisor}".format(
+            supervisor=feedback.assessor.user.name
+        ),
         formtitle='Edit presentation feedback from <i class="fas fa-user-circle"></i> '
         "<strong>{supervisor}</strong> "
         'for <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(
             supervisor=feedback.assessor.user.name, name=talk.owner.student.user.name
         ),
-        submit_url=url_for("convenor.presentation_edit_feedback", feedback_id=feedback_id, url=url),
+        submit_url=url_for(
+            "convenor.presentation_edit_feedback", feedback_id=feedback_id, url=url
+        ),
         assessment=slot.owner.owner,
         dont_show_warnings=True,
     )
@@ -10595,7 +12699,10 @@ def presentation_submit_feedback(feedback_id):
         return redirect(redirect_url())
 
     if not slot.owner.deployed:
-        flash("Can not edit feedback because the schedule containing this slot has not been deployed.", "error")
+        flash(
+            "Can not edit feedback because the schedule containing this slot has not been deployed.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not talk.is_presentation_assessor_valid(feedback.assessor_id):
@@ -10625,7 +12732,10 @@ def presentation_unsubmit_feedback(feedback_id):
         return redirect(redirect_url())
 
     if not slot.owner.deployed:
-        flash("Can not edit feedback because the schedule containing this slot has not been deployed.", "error")
+        flash(
+            "Can not edit feedback because the schedule containing this slot has not been deployed.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not slot.owner.owner.is_feedback_open:
@@ -10647,7 +12757,10 @@ def edit_response(id):
     record: SubmissionRecord = role.submission
 
     if record.retired:
-        flash("It is not possible to edit a response to the submitted for submissions that have been retired.", "error")
+        flash(
+            "It is not possible to edit a response to the submitted for submissions that have been retired.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # check is convenor for the project's class
@@ -10680,7 +12793,11 @@ def edit_response(id):
             form.feedback.data = record.faculty_response
 
     return render_template_context(
-        "faculty/dashboard/edit_response.html", form=form, record=record, submit_url=url_for("convenor.edit_response", id=id, url=url), url=url
+        "faculty/dashboard/edit_response.html",
+        form=form,
+        record=record,
+        submit_url=url_for("convenor.edit_response", id=id, url=url),
+        url=url,
     )
 
 
@@ -10692,7 +12809,10 @@ def submit_response(id):
     record: SubmissionRecord = role.submission
 
     if record.retired:
-        flash("It is not possible to edit a response to the submitted for submissions that have been retired.", "error")
+        flash(
+            "It is not possible to edit a response to the submitted for submissions that have been retired.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # check is convenor for the project's class
@@ -10703,11 +12823,17 @@ def submit_response(id):
         return redirect(redirect_url())
 
     if not record.student_feedback_submitted:
-        flash("This operation is not permitted. It is not possible to respond to feedback from the student before they have submitted it.", "info")
+        flash(
+            "This operation is not permitted. It is not possible to respond to feedback from the student before they have submitted it.",
+            "info",
+        )
         return redirect(redirect_url())
 
     if not role.response_valid:
-        flash("This response cannot be submitted because it is incomplete. Please ensure that you have provided responses for each category.", "info")
+        flash(
+            "This response cannot be submitted because it is incomplete. Please ensure that you have provided responses for each category.",
+            "info",
+        )
         return redirect(redirect_url())
 
     try:
@@ -10718,7 +12844,10 @@ def submit_response(id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not submit response due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not submit response due to a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -10734,29 +12863,36 @@ def push_feedback(id):
         return redirect(redirect_url())
 
     if not period.closed:
-        flash("It is only possible to push feedback once the submission period is closed.", "info")
+        flash(
+            "It is only possible to push feedback once the submission period is closed.",
+            "info",
+        )
         return redirect(redirect_url())
 
     celery = current_app.extensions["celery"]
     email_task = celery.tasks["app.tasks.push_feedback.push_period"]
 
     tk_name = f"Push feedback reports"
-    tk_description = "Send feedback reports by email for {config.name} {period.display_name}"
+    tk_description = (
+        "Send feedback reports by email for {config.name} {period.display_name}"
+    )
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
     final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
     error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-    seq = chain(init.si(task_id, tk_name), email_task.si(id, current_user.id, True, None), final.si(task_id, tk_name, current_user.id)).on_error(
-        error.si(task_id, tk_name, current_user.id)
-    )
+    seq = chain(
+        init.si(task_id, tk_name),
+        email_task.si(id, current_user.id, True, None),
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
     return redirect(redirect_url())
 
 
-@convenor.route('/populate_supervision_events/<int:period_id>')
+@convenor.route("/populate_supervision_events/<int:period_id>")
 @roles_accepted("faculty", "admin", "root")
 def populate_supervision_events(period_id):
     # period_id is a SubmissionPeriodRecord
@@ -10778,9 +12914,11 @@ def populate_supervision_events(period_id):
     final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
     error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-    seq = chain(init.si(task_id, tk_name), populate.si(task_id, period_id, current_user.id), final.si(task_id, tk_name, current_user.id)).on_error(
-        error.si(task_id, tk_name, current_user.id)
-    )
+    seq = chain(
+        init.si(task_id, tk_name),
+        populate.si(task_id, period_id, current_user.id),
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
     return redirect(redirect_url())
@@ -10825,7 +12963,11 @@ def inspect_period_units_ajax(period_id):
 
     base_query = period.units
 
-    name = {"search": SubmissionPeriodUnit.name, "order": SubmissionPeriodUnit.name, "search_collation": "utf8_general_ci"}
+    name = {
+        "search": SubmissionPeriodUnit.name,
+        "order": SubmissionPeriodUnit.name,
+        "search_collation": "utf8_general_ci",
+    }
     start_date = {"order": SubmissionPeriodUnit.start_date}
     end_date = {"order": SubmissionPeriodUnit.end_date}
 
@@ -10835,7 +12977,14 @@ def inspect_period_units_ajax(period_id):
     text = request.args.get("text", None)
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(partial(ajax.convenor.submission_period_units_data, period=period, url=url, text=text))
+        return handler.build_payload(
+            partial(
+                ajax.convenor.submission_period_units_data,
+                period=period,
+                url=url,
+                text=text,
+            )
+        )
 
 
 @convenor.route("/add_period_unit/<int:period_id>", methods=["GET", "POST"])
@@ -10874,7 +13023,10 @@ def add_period_unit(period_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add new submission period unit due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not add new submission period unit due to a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url)
 
@@ -10920,7 +13072,10 @@ def edit_period_unit(unit_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes to submission period unit due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save changes to submission period unit due to a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url)
 
@@ -10952,7 +13107,10 @@ def delete_period_unit(unit_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not delete submission period unit due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete submission period unit due to a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(url_for("convenor.inspect_period_units", period_id=period.id))
 
@@ -11002,7 +13160,11 @@ def inspect_unit_event_templates_ajax(unit_id):
 
     templates = unit.templates.all()
 
-    return jsonify(ajax.convenor.supervision_event_templates_data(templates, unit, url=url, text=text))
+    return jsonify(
+        ajax.convenor.supervision_event_templates_data(
+            templates, unit, url=url, text=text
+        )
+    )
 
 
 @convenor.route("/add_unit_event_template/<int:unit_id>", methods=["GET", "POST"])
@@ -11043,7 +13205,10 @@ def add_unit_event_template(unit_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add new supervision event template due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not add new supervision event template due to a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url)
 
@@ -11061,7 +13226,9 @@ def add_unit_event_template(unit_id):
 @roles_accepted("faculty", "admin", "root")
 def edit_unit_event_template(template_id):
     # template_id is a SupervisionEventTemplate
-    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(template_id)
+    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(
+        template_id
+    )
     unit: SubmissionPeriodUnit = template.unit
     period: SubmissionPeriodRecord = unit.owner
     config: ProjectClassConfig = period.config
@@ -11091,7 +13258,10 @@ def edit_unit_event_template(template_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes to supervision event template due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not save changes to supervision event template due to a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url)
 
@@ -11110,7 +13280,9 @@ def edit_unit_event_template(template_id):
 @roles_accepted("faculty", "admin", "root")
 def delete_unit_event_template(template_id):
     # template_id is a SupervisionEventTemplate
-    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(template_id)
+    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(
+        template_id
+    )
     unit: SubmissionPeriodUnit = template.unit
     period: SubmissionPeriodRecord = unit.owner
     config: ProjectClassConfig = period.config
@@ -11125,7 +13297,10 @@ def delete_unit_event_template(template_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not delete supervision event template due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete supervision event template due to a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(url_for("convenor.inspect_unit_event_templates", unit_id=unit.id))
 
@@ -11141,7 +13316,10 @@ def generate_feedback_reports(id):
         return redirect(redirect_url())
 
     if not period.closed:
-        flash("It is only possible to push feedback once the submission period is closed.", "info")
+        flash(
+            "It is only possible to push feedback once the submission period is closed.",
+            "info",
+        )
         return redirect(redirect_url())
 
     celery = current_app.extensions["celery"]
@@ -11158,7 +13336,9 @@ def generate_feedback_reports(id):
     error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
     seq = chain(
-        init.si(task_id, tk_name), generate_task.si(recipe.id, period.id, current_user.id), final.si(task_id, tk_name, current_user.id)
+        init.si(task_id, tk_name),
+        generate_task.si(recipe.id, period.id, current_user.id),
+        final.si(task_id, tk_name, current_user.id),
     ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
@@ -11171,7 +13351,10 @@ def update_CATS(config_id):
     # id identifies a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(config_id)
     if config is None:
-        flash("Internal error: could not locate ProjectClassConfig. Please contact a system administrator.", "error")
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
         return redirect(redirect_url())
 
     # reject user if not a convenor for this project class
@@ -11204,25 +13387,41 @@ def force_convert_bookmarks(sel_id):
     if not validate_is_convenor(sel.config.project_class):
         return redirect(redirect_url())
 
-    if sel.config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-        flash("Forced conversion of bookmarks can be performed only after project selection is open.", "info")
+    if (
+        sel.config.selector_lifecycle
+        < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
+    ):
+        flash(
+            "Forced conversion of bookmarks can be performed only after project selection is open.",
+            "info",
+        )
         return redirect(redirect_url())
 
     if not force and sel.has_submitted:
         flash(
-            'Cannot force conversion of bookmarks for selector "{name}" because an existing submission exists.'.format(name=sel.student.user.name),
+            'Cannot force conversion of bookmarks for selector "{name}" because an existing submission exists.'.format(
+                name=sel.student.user.name
+            ),
             "error",
         )
         return redirect(redirect_url())
 
     if not sel.has_bookmarks:
         flash(
-            'Cannot force conversion of bookmarks for selector "{name}" because too few bookmarks exist.'.format(name=sel.student.user.name),
+            'Cannot force conversion of bookmarks for selector "{name}" because too few bookmarks exist.'.format(
+                name=sel.student.user.name
+            ),
             "error",
         )
         return redirect(redirect_url())
 
-    stored = store_selection(sel, converted=converted_status, no_submit_IP=no_submit_IP, reset=reset, force_unavailable=force_unavailable)
+    stored = store_selection(
+        sel,
+        converted=converted_status,
+        no_submit_IP=no_submit_IP,
+        reset=reset,
+        force_unavailable=force_unavailable,
+    )
 
     try:
         db.session.commit()
@@ -11285,13 +13484,21 @@ def custom_CATS_limits(record_id):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not update custom CATS values due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not update custom CATS values due to a database error. Please contact a system administrator.",
+                "error",
+            )
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for("convenor.faculty", id=record.pclass.id))
 
-    return render_template_context("convenor/dashboard/custom_CATS_limits.html", record=record, form=form, user=record.owner.user)
+    return render_template_context(
+        "convenor/dashboard/custom_CATS_limits.html",
+        record=record,
+        form=form,
+        user=record.owner.user,
+    )
 
 
 @convenor.route("/remove_CATS_limits/<int:record_id>", methods=["GET"])
@@ -11314,7 +13521,10 @@ def remove_CATS_limits(record_id):
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not reset custom CATS values due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not reset custom CATS values due to a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -11334,12 +13544,18 @@ def submission_period_documents(pid):
 
     # reject if this submission period is in the past
     if config.submission_period > record.submission_period:
-        flash("It is no longer possible to edit this submission period because it has been closed.", "info")
+        flash(
+            "It is no longer possible to edit this submission period because it has been closed.",
+            "info",
+        )
         return redirect(redirect_url())
 
     # reject if period is retired
     if record.retired:
-        flash("It is no longer possible to edit this submission period because it has been retired.", "info")
+        flash(
+            "It is no longer possible to edit this submission period because it has been retired.",
+            "info",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -11347,10 +13563,17 @@ def submission_period_documents(pid):
 
     state = config.submitter_lifecycle
     deletable = (current_user.has_role("root") or current_user.has_role("admin")) or (
-        not record.closed and (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
+        not record.closed
+        and (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
     )
     return render_template_context(
-        "convenor/documents/period_manager.html", record=record, url=url, text=text, state=state, config=config, deletable=deletable
+        "convenor/documents/period_manager.html",
+        record=record,
+        url=url,
+        text=text,
+        state=state,
+        config=config,
+        deletable=deletable,
     )
 
 
@@ -11362,13 +13585,19 @@ def delete_period_attachment(aid):
     asset: SubmittedAsset = attachment.attachment
 
     if asset is None:
-        flash("Could not delete attachment because of a database error. Please contact a system administrator.", "info")
+        flash(
+            "Could not delete attachment because of a database error. Please contact a system administrator.",
+            "info",
+        )
         return redirect(redirect_url())
 
     # check user is convenor the project class this attachment belongs to, or has admin/root privileges
     record: SubmissionPeriodRecord = attachment.parent
     if record is None:
-        flash("Can not delete this attachment because it is not attached to a submitter.", "info")
+        flash(
+            "Can not delete this attachment because it is not attached to a submitter.",
+            "info",
+        )
         return redirect(redirect_url())
 
     config: ProjectClassConfig = record.config
@@ -11400,18 +13629,31 @@ def delete_period_attachment(aid):
     text = request.args.get("text", None)
 
     title = "Delete submission period attachment"
-    action_url = url_for("convenor.perform_delete_period_attachment", aid=aid, url=url, text=text)
+    action_url = url_for(
+        "convenor.perform_delete_period_attachment", aid=aid, url=url, text=text
+    )
 
-    name = attachment.attachment.target_name if attachment.attachment.target_name is not None else attachment.attachment.filename
+    name = (
+        attachment.attachment.target_name
+        if attachment.attachment.target_name is not None
+        else attachment.attachment.filename
+    )
     message = (
         "<p>Please confirm that you wish to remove the attachment <strong>{name}</strong> for "
         "{period}.</p>"
-        "<p>This action cannot be undone.</p>".format(name=name, period=record.display_name)
+        "<p>This action cannot be undone.</p>".format(
+            name=name, period=record.display_name
+        )
     )
     submit_label = "Remove attachment"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -11423,13 +13665,19 @@ def perform_delete_period_attachment(aid):
     asset: SubmittedAsset = attachment.attachment
 
     if asset is None:
-        flash("Could not delete attachment because of a database error. Please contact a system administrator.", "info")
+        flash(
+            "Could not delete attachment because of a database error. Please contact a system administrator.",
+            "info",
+        )
         return redirect(redirect_url())
 
     # check user is convenor the project class this attachment belongs to, or has admin/root privileges
     record: SubmissionPeriodRecord = attachment.parent
     if record is None:
-        flash("Can not delete this attachment because it is not attached to a submitter.", "info")
+        flash(
+            "Can not delete this attachment because it is not attached to a submitter.",
+            "info",
+        )
         return redirect(redirect_url())
 
     config: ProjectClassConfig = record.config
@@ -11471,11 +13719,18 @@ def perform_delete_period_attachment(aid):
         db.session.commit()
 
     except SQLAlchemyError as e:
-        flash("Could not remove attachment from the submission period because of a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not remove attachment from the submission period because of a database error. Please contact a system administrator.",
+            "error",
+        )
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-    return redirect(url_for("convenor.submission_period_documents", pid=record.id, url=url, text=text))
+    return redirect(
+        url_for(
+            "convenor.submission_period_documents", pid=record.id, url=url, text=text
+        )
+    )
 
 
 @convenor.route("/upload_period_attachment/<int:pid>", methods=["GET", "POST"])
@@ -11502,7 +13757,11 @@ def upload_period_attachment(pid):
             # AssetUploadManager will populate most fields later
             with db.session.no_autoflush:
                 asset = SubmittedAsset(
-                    timestamp=datetime.now(), uploaded_id=current_user.id, expiry=None, target_name=form.target_name.data, license=form.license.data
+                    timestamp=datetime.now(),
+                    uploaded_id=current_user.id,
+                    expiry=None,
+                    target_name=form.target_name.data,
+                    license=form.license.data,
                 )
 
                 object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
@@ -11521,9 +13780,19 @@ def upload_period_attachment(pid):
                 db.session.add(asset)
                 db.session.flush()
             except SQLAlchemyError as e:
-                flash("Could not upload attachment due to a database issue. Please contact an administrator.", "error")
+                flash(
+                    "Could not upload attachment due to a database issue. Please contact an administrator.",
+                    "error",
+                )
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                return redirect(url_for("convenor.submission_period_documents", pid=pid, url=url, text=text))
+                return redirect(
+                    url_for(
+                        "convenor.submission_period_documents",
+                        pid=pid,
+                        url=url,
+                        text=text,
+                    )
+                )
 
             # generate attachment record
             attachment = PeriodAttachment(
@@ -11541,7 +13810,9 @@ def upload_period_attachment(pid):
 
             # project convenor has access
             # 'office', 'convenor', 'moderator', 'exam_board' and 'external_examiner' roles all have access
-            asset.grant_roles(["office", "convenor", "moderator", "exam_board", "external_examiner"])
+            asset.grant_roles(
+                ["office", "convenor", "moderator", "exam_board", "external_examiner"]
+            )
 
             # if available to students, any student can download
             if form.publish_to_students.data:
@@ -11554,18 +13825,36 @@ def upload_period_attachment(pid):
                 db.session.add(attachment)
                 db.session.commit()
             except SQLAlchemyError as e:
-                flash("Could not upload attachment due to a database issue. Please contact an administrator.", "error")
+                flash(
+                    "Could not upload attachment due to a database issue. Please contact an administrator.",
+                    "error",
+                )
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-            flash('Attachment "{file}" was successfully uploaded.'.format(file=attachment_file.filename), "info")
+            flash(
+                'Attachment "{file}" was successfully uploaded.'.format(
+                    file=attachment_file.filename
+                ),
+                "info",
+            )
 
-            return redirect(url_for("convenor.submission_period_documents", pid=pid, url=url, text=text))
+            return redirect(
+                url_for(
+                    "convenor.submission_period_documents", pid=pid, url=url, text=text
+                )
+            )
 
     else:
         if request.method == "GET":
             form.license.data = current_user.default_license
 
-    return render_template_context("convenor/documents/upload_period_attachment.html", record=record, form=form, url=url, text=text)
+    return render_template_context(
+        "convenor/documents/upload_period_attachment.html",
+        record=record,
+        form=form,
+        url=url,
+        text=text,
+    )
 
 
 @convenor.route("/edit_period_attachment/<int:aid>", methods=["GET", "POST"])
@@ -11581,7 +13870,10 @@ def edit_period_attachment(aid):
 
     asset = record.attachment
     if asset is None:
-        flash("Cannot edit this attachment due to a database error. Please contact a system administrator.", "info")
+        flash(
+            "Cannot edit this attachment due to a database error. Please contact a system administrator.",
+            "info",
+        )
         return redirect(redirect_url())
 
     # ensure logged-in user has edit privileges
@@ -11615,7 +13907,10 @@ def edit_period_attachment(aid):
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            flash("Could not commit edits due to a database issue. Please contact an administrator.", "error")
+            flash(
+                "Could not commit edits due to a database issue. Please contact an administrator.",
+                "error",
+            )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url)
@@ -11625,7 +13920,13 @@ def edit_period_attachment(aid):
             form.license.data = asset.license if asset is not None else None
 
     return render_template_context(
-        "convenor/documents/edit_period_attachment.html", attachment=record, record=period, asset=asset, form=form, url=url, text=text
+        "convenor/documents/edit_period_attachment.html",
+        attachment=record,
+        record=period,
+        asset=asset,
+        form=form,
+        url=url,
+        text=text,
     )
 
 
@@ -11648,7 +13949,9 @@ def update_period_attachments():
     period_id = data["period_id"]
 
     # attach_id is a SubmissionPeriodRecord
-    record: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+    record: SubmissionPeriodRecord = (
+        db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+    )
 
     if record is None:
         return jsonify({"status": "data_missing"})
@@ -11681,11 +13984,15 @@ def update_period_attachments():
 
 def _get_student_task_container(type, sid):
     if type == STUDENT_TASKS_SELECTOR:
-        obj: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sid).first()
+        obj: SelectingStudent = (
+            db.session.query(SelectingStudent).filter_by(id=sid).first()
+        )
         return obj
 
     if type == STUDENT_TASKS_SUBMITTER:
-        obj: SubmittingStudent = db.session.query(SubmittingStudent).filter_by(id=sid).first()
+        obj: SubmittingStudent = (
+            db.session.query(SubmittingStudent).filter_by(id=sid).first()
+        )
         return obj
 
     raise KeyError
@@ -11714,7 +14021,13 @@ def student_tasks(type, sid):
     if status_filter is None and session.get("convenor_student_tasks_status_filter"):
         status_filter = session["convenor_student_tasks_status_filter"]
 
-    if status_filter is not None and status_filter not in ["default", "overdue", "available", "dropped", "completed"]:
+    if status_filter is not None and status_filter not in [
+        "default",
+        "overdue",
+        "available",
+        "dropped",
+        "completed",
+    ]:
         status_filter = "default"
 
     if status_filter is not None:
@@ -11722,10 +14035,16 @@ def student_tasks(type, sid):
 
     blocking_filter = request.args.get("blocking_filter")
 
-    if blocking_filter is None and session.get("convenor_student_tasks_blocking_filter"):
+    if blocking_filter is None and session.get(
+        "convenor_student_tasks_blocking_filter"
+    ):
         blocking_filter = session["convenor_student_tasks_blocking_filter"]
 
-    if blocking_filter is not None and blocking_filter not in ["all", "blocking", "not-blocking"]:
+    if blocking_filter is not None and blocking_filter not in [
+        "all",
+        "blocking",
+        "not-blocking",
+    ]:
         blocking_filter = "all"
 
     if blocking_filter is not None:
@@ -11765,7 +14084,9 @@ def student_tasks_ajax(type, sid):
     blocking_filter = request.args.get("blocking_filter", "all")
 
     if status_filter == "default":
-        base_query = obj.tasks.filter(and_(~ConvenorTask.complete, ~ConvenorTask.dropped))
+        base_query = obj.tasks.filter(
+            and_(~ConvenorTask.complete, ~ConvenorTask.dropped)
+        )
     elif status_filter == "completed":
         base_query = obj.tasks.filter(~ConvenorTask.dropped)
     elif status_filter == "overdue":
@@ -11783,19 +14104,40 @@ def student_tasks_ajax(type, sid):
         base_query = base_query.filter(~ConvenorTask.blocking)
 
     # set up columns for server-side processing
-    task = {"search": ConvenorTask.description, "order": ConvenorTask.description, "search_collation": "utf8_general_ci"}
-    defer_date = {"search": func.date_format(ConvenorTask.defer_date, "%a %d %b %Y %H:%M:%S"), "order": ConvenorTask.defer_date}
-    due_date = {"search": func.date_format(ConvenorTask.due_date, "%a %d %b %Y %H:%M:%S"), "order": ConvenorTask.due_date}
+    task = {
+        "search": ConvenorTask.description,
+        "order": ConvenorTask.description,
+        "search_collation": "utf8_general_ci",
+    }
+    defer_date = {
+        "search": func.date_format(ConvenorTask.defer_date, "%a %d %b %Y %H:%M:%S"),
+        "order": ConvenorTask.defer_date,
+    }
+    due_date = {
+        "search": func.date_format(ConvenorTask.due_date, "%a %d %b %Y %H:%M:%S"),
+        "order": ConvenorTask.due_date,
+    }
     status = {
-        "order": literal_column("(NOT(complete OR dropped) * (100*(due_date > CURDATE()) + 50*(defer_date > CURDATE())) + 10*complete + 1*dropped)")
+        "order": literal_column(
+            "(NOT(complete OR dropped) * (100*(due_date > CURDATE()) + 50*(defer_date > CURDATE())) + 10*complete + 1*dropped)"
+        )
     }
 
-    columns = {"task": task, "defer_date": defer_date, "due_date": due_date, "status": status}
+    columns = {
+        "task": task,
+        "defer_date": defer_date,
+        "due_date": due_date,
+        "status": status,
+    }
 
-    return_url = url_for("convenor.student_tasks", type=type, sid=sid, url=url, text=text)
+    return_url = url_for(
+        "convenor.student_tasks", type=type, sid=sid, url=url, text=text
+    )
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(partial(ajax.convenor.student_task_data, type, sid, return_url))
+        return handler.build_payload(
+            partial(ajax.convenor.student_task_data, type, sid, return_url)
+        )
 
 
 @convenor.route("/add_student_task/<int:type>/<int:sid>", methods=["GET", "POST"])
@@ -11837,17 +14179,30 @@ def add_student_task(type, sid):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not create new task due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not create new task due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url)
 
-    return render_template_context("convenor/tasks/edit_task.html", form=form, url=url, type=type, obj=obj)
+    return render_template_context(
+        "convenor/tasks/edit_task.html", form=form, url=url, type=type, obj=obj
+    )
 
 
 @convenor.route("/edit_student_task/<int:tid>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def edit_student_task(tid):
-    task = db.session.query(with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask])).filter_by(id=tid).first()
+    task = (
+        db.session.query(
+            with_polymorphic(
+                ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask]
+            )
+        )
+        .filter_by(id=tid)
+        .first()
+    )
     if task is None:
         abort(404)
 
@@ -11861,7 +14216,9 @@ def edit_student_task(tid):
     form = EditConvenorStudentTask(obj=task)
     url = request.args.get("url", None)
     if url is None:
-        url = url_for("convenor.student_tasks", type=obj.polymorphic_identity(), sid=obj.id)
+        url = url_for(
+            "convenor.student_tasks", type=obj.polymorphic_identity(), sid=obj.id
+        )
 
     if form.validate_on_submit():
         task.description = form.description.data
@@ -11879,17 +14236,24 @@ def edit_student_task(tid):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes to task due to a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes to task due to a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url)
 
-    return render_template_context("convenor/tasks/edit_task.html", form=form, url=url, obj=obj, task=task)
+    return render_template_context(
+        "convenor/tasks/edit_task.html", form=form, url=url, obj=obj, task=task
+    )
 
 
 @convenor.route("/delete_task/<int:tid>")
 @roles_accepted("faculty", "admin", "root")
 def delete_task(tid):
-    task_types = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask])
+    task_types = with_polymorphic(
+        ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask]
+    )
 
     task = db.session.query(task_types).filter_by(id=tid).first()
     if task is None:
@@ -11920,13 +14284,19 @@ def delete_task(tid):
 
     if task_type == 1 or task_type == 2:
         title = "Delete student task"
-        panel_title = 'Delete task for student <i class="fas fa-user-circle"></i> {name}'.format(name=obj.student.user.name)
+        panel_title = (
+            'Delete task for student <i class="fas fa-user-circle"></i> {name}'.format(
+                name=obj.student.user.name
+            )
+        )
 
         message = (
             "<p>Are you sure that you wish to delete the following task for student "
             '<i class="fas fa-user-circle"></i> {name}?</p>'
             "<p><strong>{desc}</strong></p>"
-            "<p>This action cannot be undone.</p>".format(name=obj.student.user.name, desc=task.description)
+            "<p>This action cannot be undone.</p>".format(
+                name=obj.student.user.name, desc=task.description
+            )
         )
 
     elif task_type == 3:
@@ -11948,14 +14318,21 @@ def delete_task(tid):
     submit_label = "Delete task"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
 @convenor.route("/do_delete_task/<int:tid>")
 @roles_accepted("faculty", "admin", "root")
 def do_delete_task(tid):
-    task_types = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask])
+    task_types = with_polymorphic(
+        ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask]
+    )
 
     task = db.session.query(task_types).filter_by(id=tid).first()
     if task is None:
@@ -11986,7 +14363,10 @@ def do_delete_task(tid):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not delete task due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not delete task due to a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(url)
 
@@ -11994,7 +14374,9 @@ def do_delete_task(tid):
 @convenor.route("/mark_task_complete/<int:tid>")
 @roles_accepted("faculty", "admin", "root")
 def mark_task_complete(tid):
-    task_types = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask])
+    task_types = with_polymorphic(
+        ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask]
+    )
 
     task = db.session.query(task_types).filter_by(id=tid).first()
     if task is None:
@@ -12058,19 +14440,31 @@ def mark_task_complete(tid):
                     db.session.commit()
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                    flash("Could not generate repeat  task due to a database error. Please contact a system administrator.", "error")
+                    current_app.logger.exception(
+                        "SQLAlchemyError exception", exc_info=e
+                    )
+                    flash(
+                        "Could not generate repeat  task due to a database error. Please contact a system administrator.",
+                        "error",
+                    )
 
     elif action == "active":
         task.complete = False
     else:
-        flash('Unknown action parameter "{param}" passed to mark_task_complete(). Please inform an ' "administrator.".format(param=action), "error")
+        flash(
+            'Unknown action parameter "{param}" passed to mark_task_complete(). Please inform an '
+            "administrator.".format(param=action),
+            "error",
+        )
 
     try:
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        flash("Could not change completion status for this convenor task due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not change completion status for this convenor task due to a database error. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -12078,7 +14472,9 @@ def mark_task_complete(tid):
 @convenor.route("/mark_task_dropped/<int:tid>")
 @roles_accepted("faculty", "admin", "root")
 def mark_task_dropped(tid):
-    task_types = with_polymorphic(ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask])
+    task_types = with_polymorphic(
+        ConvenorTask, [ConvenorSelectorTask, ConvenorSubmitterTask, ConvenorGenericTask]
+    )
 
     task = db.session.query(task_types).filter_by(id=tid).first()
     if task is None:
@@ -12105,12 +14501,19 @@ def mark_task_dropped(tid):
     elif action == "undrop":
         task.dropped = False
     else:
-        flash('Unknown action parameter "{param}" passed to mark_task_dropped(). Please inform an ' "administrator.".format(param=action), "error")
+        flash(
+            'Unknown action parameter "{param}" passed to mark_task_dropped(). Please inform an '
+            "administrator.".format(param=action),
+            "error",
+        )
 
     try:
         db.session.commit()
     except SQLAlchemyError as e:
-        flash("Could not change dropped status for this convenor task due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not change dropped status for this convenor task due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
@@ -12135,7 +14538,10 @@ def inject_liveproject(pid, pclass_id, type):
     pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
     if type not in [INJECT_CURRENT_CYCLE, INJECT_PREVIOUS_CYCLE]:
-        flash('Could not handle request to attach LiveProject of unknown type "{type}". ' "Please contact a system administrator.".format(type=type))
+        flash(
+            'Could not handle request to attach LiveProject of unknown type "{type}". '
+            "Please contact a system administrator.".format(type=type)
+        )
         return redirect(redirect_url())
 
     config: ProjectClassConfig = pclass.most_recent_config
@@ -12169,7 +14575,10 @@ def inject_liveproject(pid, pclass_id, type):
         elif type == INJECT_PREVIOUS_CYCLE:
             inject_config = config.previous_config
         else:
-            flash("Internal error: unexpected type in convenor.inject_liveproject. Please contact a system administrator", "error")
+            flash(
+                "Internal error: unexpected type in convenor.inject_liveproject. Please contact a system administrator",
+                "error",
+            )
             return redirect(redirect_url())
     else:
         inject_config = config
@@ -12178,7 +14587,11 @@ def inject_liveproject(pid, pclass_id, type):
         flash(
             'Could not attach LiveProject for "{proj}" to project class "{pcl}" for '
             "{type} because the prior configuration record does not exist. Please contact a system "
-            "administrator".format(proj=project.name, pcl=config.name, type="selectors" if type == 1 else "submitters"),
+            "administrator".format(
+                proj=project.name,
+                pcl=config.name,
+                type="selectors" if type == 1 else "submitters",
+            ),
             "warning",
         )
         return redirect(redirect_url())
@@ -12205,8 +14618,9 @@ def inject_liveproject(pid, pclass_id, type):
         return redirect(redirect_url())
 
     tk_name = "Manually attach LiveProject"
-    tk_description = 'Insert project "{proj}" into project class "{pcl}" for academic year ' "{yra}-{yrb}".format(
-        proj=project.name, pcl=config.name, yra=yra, yrb=yrb
+    tk_description = (
+        'Insert project "{proj}" into project class "{pcl}" for academic year '
+        "{yra}-{yrb}".format(proj=project.name, pcl=config.name, yra=yra, yrb=yrb)
     )
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
@@ -12220,9 +14634,11 @@ def inject_liveproject(pid, pclass_id, type):
 
     number = get_count(inject_config.live_projects) + 1
 
-    seq = chain(init.si(task_id, tk_name), attach.si(number, pid, inject_config.id), final.si(task_id, tk_name, current_user.id)).on_error(
-        error.si(task_id, tk_name, current_user.id)
-    )
+    seq = chain(
+        init.si(task_id, tk_name),
+        attach.si(number, pid, inject_config.id),
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
     return redirect(redirect_url())

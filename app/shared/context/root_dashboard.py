@@ -31,7 +31,11 @@ def get_root_dashboard_data():
     session_collection = current_app.session_interface.store
     sessions = session_collection.count_documents({})
 
-    data = {"warning": (config_data["config_warning"] or rollover_data["rollover_ready"]), "current_year": current_year, "number_sessions": sessions}
+    data = {
+        "warning": (config_data["config_warning"] or rollover_data["rollover_ready"]),
+        "current_year": current_year,
+        "number_sessions": sessions,
+    }
 
     data.update(rollover_data)
     data.update(message_data)
@@ -58,6 +62,8 @@ def _get_config_capacity_data(configs=None):
         if capacity < 1.15 * config.number_selectors:
             config_warning = True
 
-        config_list.append({"config": config, "capacity": capacity, "is_bounded": capacity_bounded})
+        config_list.append(
+            {"config": config, "capacity": capacity, "is_bounded": capacity_bounded}
+        )
 
     return {"config_list": config_list, "config_warning": config_warning}

@@ -20,7 +20,11 @@ from .forms import EditCommentForm
 from ..database import db
 from ..models import ProjectDescription, DescriptionComment, EnrollmentRecord
 from ..shared.context.global_context import render_template_context
-from ..shared.utils import build_project_approval_queues, home_dashboard_url, redirect_url
+from ..shared.utils import (
+    build_project_approval_queues,
+    home_dashboard_url,
+    redirect_url,
+)
 
 
 @project_approver.route("/validate")
@@ -50,7 +54,10 @@ def validate_ajax():
     queued = queues["queued"]
 
     return ajax.project_approver.validate_data(
-        current_user, url=url_for("project_approver.validate", url=url, text=text), text="project approval list", records=queued
+        current_user,
+        url=url_for("project_approver.validate", url=url, text=text),
+        text="project approval list",
+        records=queued,
     )
 
 
@@ -127,7 +134,11 @@ def return_to_owner(id):
         if config is not None:
             if config.requests_issued and not config.live:
                 enrollment = owner.get_enrollment_record(pcl.id)
-                if enrollment is not None and enrollment.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
+                if (
+                        enrollment is not None
+                        and enrollment.supervisor_state
+                        == EnrollmentRecord.SUPERVISOR_ENROLLED
+                ):
                     record.confirmed = False
                     names.add(pcl.name)
 
@@ -160,7 +171,10 @@ def edit_comment(id):
     comment = DescriptionComment.query.get_or_404(id)
 
     if current_user.id != comment.owner_id:
-        flash("This comment belongs to another user. It is only possible to edit comments that you own.", "info")
+        flash(
+            "This comment belongs to another user. It is only possible to edit comments that you own.",
+            "info",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -187,9 +201,13 @@ def edit_comment(id):
     else:
         if request.method == "GET":
             form.comment.data = comment.comment
-            form.limit_visibility.data = comment.visibility == DescriptionComment.VISIBILITY_APPROVALS_TEAM
+            form.limit_visibility.data = (
+                    comment.visibility == DescriptionComment.VISIBILITY_APPROVALS_TEAM
+            )
 
-    return render_template_context("project_approver/edit_comment.html", comment=comment, form=form, url=url)
+    return render_template_context(
+        "project_approver/edit_comment.html", comment=comment, form=form, url=url
+    )
 
 
 @project_approver.route("/delete_comment/<int:id>")
@@ -199,7 +217,10 @@ def delete_comment(id):
     comment = DescriptionComment.query.get_or_404(id)
 
     if current_user.id != comment.owner_id:
-        flash("This comment belongs to another user. It is only possible to edit comments that you own.", "info")
+        flash(
+            "This comment belongs to another user. It is only possible to edit comments that you own.",
+            "info",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -213,11 +234,19 @@ def delete_comment(id):
     panel_title = "Delete comment"
 
     action_url = url_for("project_approver.perform_delete_comment", id=id, url=url)
-    message = "<p>Are you sure that you wish to delete this comment?</p>" "<p>This action cannot be undone.</p>"
+    message = (
+        "<p>Are you sure that you wish to delete this comment?</p>"
+        "<p>This action cannot be undone.</p>"
+    )
     submit_label = "Delete comment"
 
     return render_template_context(
-        "admin/danger_confirm.html", title=title, panel_title=panel_title, action_url=action_url, message=message, submit_label=submit_label
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
     )
 
 
@@ -228,7 +257,10 @@ def perform_delete_comment(id):
     comment = DescriptionComment.query.get_or_404(id)
 
     if current_user.id != comment.owner_id:
-        flash("This comment belongs to another user. It is only possible to edit comments that you own.", "info")
+        flash(
+            "This comment belongs to another user. It is only possible to edit comments that you own.",
+            "info",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -286,5 +318,8 @@ def rejected_ajax():
     queued = queues["rejected"]
 
     return ajax.project_approver.rejected_data(
-        queued, current_user.id, url=url_for("project_approver.rejected", url=url, text=text), text="rejected projects review"
+        queued,
+        current_user.id,
+        url=url_for("project_approver.rejected", url=url, text=text),
+        text="rejected projects review",
     )

@@ -49,7 +49,9 @@ def validate_data(url: Optional[str], text: Optional[str], records: List[Student
             "exam_number": r.exam_number,
             "registration_number": r.registration_number,
             "programme": r.programme.full_name,
-            "year": render_template(academic_year_templ, r=r, simple_label=simple_label),
+            "year": render_template(
+                academic_year_templ, r=r, simple_label=simple_label
+            ),
             "menu": render_template(actions_templ, s=r, url=url, text=text),
         }
         for r in records

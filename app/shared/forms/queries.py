@@ -57,14 +57,18 @@ def GetActiveDegreeTypes():
 
 def GetActiveDegreeProgrammes(allowed_tenants: Optional[List[Tenant]]):
     if len(allowed_tenants) == 0:
-        raise RuntimeError("GetActiveDegreeProgrammes requires at least one allowed tenant")
+        raise RuntimeError(
+            "GetActiveDegreeProgrammes requires at least one allowed tenant"
+        )
 
     def get_tenant_id(tenant):
         if isinstance(tenant, int):
             return tenant
         if isinstance(tenant, Tenant):
             return tenant.id
-        raise TypeError(f"Unexpected type '{type(tenant)}' for argument tenant in GetActiveDegreeProgrammes")
+        raise TypeError(
+            f"Unexpected type '{type(tenant)}' for argument tenant in GetActiveDegreeProgrammes"
+        )
 
     allowed_tenant_ids = [get_tenant_id(t) for t in allowed_tenants]
 
@@ -82,10 +86,7 @@ def GetActiveDegreeProgrammes(allowed_tenants: Optional[List[Tenant]]):
             DegreeProgramme.tenants.any(Tenant.id.in_(allowed_tenant_ids)),
         )
 
-    return query.order_by(
-        DegreeType.name.asc(),
-        DegreeProgramme.name.asc()
-    )
+    return query.order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
 
 
 def GetActiveSkillGroups():
@@ -93,7 +94,11 @@ def GetActiveSkillGroups():
 
 
 def GetActiveProjectTagGroups():
-    return db.session.query(ProjectTagGroup).filter_by(active=True).order_by(ProjectTagGroup.name.asc())
+    return (
+        db.session.query(ProjectTagGroup)
+        .filter_by(active=True)
+        .order_by(ProjectTagGroup.name.asc())
+    )
 
 
 def BuildDegreeProgrammeName(programme: DegreeProgramme):
@@ -101,7 +106,12 @@ def BuildDegreeProgrammeName(programme: DegreeProgramme):
 
 
 def GetActiveFaculty():
-    return db.session.query(FacultyData).join(User, User.id == FacultyData.id).filter(User.active).order_by(User.last_name, User.first_name)
+    return (
+        db.session.query(FacultyData)
+        .join(User, User.id == FacultyData.id)
+        .filter(User.active)
+        .order_by(User.last_name, User.first_name)
+    )
 
 
 def BuildActiveFacultyName(fac: FacultyData):
@@ -121,24 +131,40 @@ def GetPossibleSupervisors(pclass_id: int):
         db.session.query(FacultyData)
         .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id)
         .join(User, User.id == FacultyData.id)
-        .filter(User.active, EnrollmentRecord.pclass_id == pclass_id, EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+        .filter(
+            User.active,
+            EnrollmentRecord.pclass_id == pclass_id,
+            EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED,
+        )
         .order_by(User.last_name, User.first_name)
         .all()
     )
 
 
 def GetPossibleConvenors():
-    return db.session.query(FacultyData).join(User, User.id == FacultyData.id).filter(User.active).order_by(User.last_name, User.first_name)
+    return (
+        db.session.query(FacultyData)
+        .join(User, User.id == FacultyData.id)
+        .filter(User.active)
+        .order_by(User.last_name, User.first_name)
+    )
 
 
 def BuildPossibleOfficeContacts():
-    return db.session.query(User).filter(User.active, User.roles.any(name="office")).order_by(User.last_name, User.first_name)
+    return (
+        db.session.query(User)
+        .filter(User.active, User.roles.any(name="office"))
+        .order_by(User.last_name, User.first_name)
+    )
 
 
 def BuildPossibleApprovers():
     return (
         db.session.query(User)
-        .filter(User.active, or_(User.roles.any(name="project_approver"), User.roles.any(name="root")))
+        .filter(
+            User.active,
+            or_(User.roles.any(name="project_approver"), User.roles.any(name="root")),
+        )
         .order_by(User.last_name, User.first_name)
     )
 
@@ -160,15 +186,21 @@ def GetAllProjectClasses():
 
 
 def GetPublishedProjectClasses():
-    return ProjectClass.query.filter_by(active=True, publish=True).order_by(ProjectClass.name.asc())
+    return ProjectClass.query.filter_by(active=True, publish=True).order_by(
+        ProjectClass.name.asc()
+    )
 
 
 def GetConvenorProjectClasses():
-    return ProjectClass.query.filter(ProjectClass.active, ProjectClass.convenor_id == current_user.id)
+    return ProjectClass.query.filter(
+        ProjectClass.active, ProjectClass.convenor_id == current_user.id
+    )
 
 
 def GetSysadminUsers():
-    return User.query.filter(User.active, User.roles.any(Role.name == "root")).order_by(User.last_name, User.first_name)
+    return User.query.filter(User.active, User.roles.any(Role.name == "root")).order_by(
+        User.last_name, User.first_name
+    )
 
 
 def BuildSysadminUserName(user: User):
@@ -176,7 +208,9 @@ def BuildSysadminUserName(user: User):
 
 
 def CurrentUserResearchGroups():
-    return ResearchGroup.query.filter(ResearchGroup.active, ResearchGroup.faculty.any(id=current_user.id)).order_by(ResearchGroup.name.asc())
+    return ResearchGroup.query.filter(
+        ResearchGroup.active, ResearchGroup.faculty.any(id=current_user.id)
+    ).order_by(ResearchGroup.name.asc())
 
 
 def AllResearchGroups():
@@ -188,7 +222,11 @@ def CurrentUserProjectClasses():
     sq = EnrollmentRecord.query.filter_by(owner_id=current_user.id).subquery()
 
     # join to project class table
-    return db.session.query(ProjectClass).filter_by(active=True, uses_supervisor=True).join(sq, sq.c.pclass_id == ProjectClass.id)
+    return (
+        db.session.query(ProjectClass)
+        .filter_by(active=True, uses_supervisor=True)
+        .join(sq, sq.c.pclass_id == ProjectClass.id)
+    )
 
 
 def AllProjectClasses():
@@ -211,13 +249,20 @@ def GetSkillGroups():
 
 def AvailableProjectDescriptionClasses(project_id, desc_id):
     # query for pclass identifiers available from project_id
-    pclass_ids = db.session.query(project_pclasses.c.project_class_id).filter(project_pclasses.c.project_id == project_id).subquery()
+    pclass_ids = (
+        db.session.query(project_pclasses.c.project_class_id)
+        .filter(project_pclasses.c.project_id == project_id)
+        .subquery()
+    )
 
     # query for pclass identifiers used by descriptions associated with project_id, except (possibly) for desc_id
     # if it is not None
     used_ids = (
         db.session.query(description_pclasses.c.project_class_id)
-        .join(ProjectDescription, ProjectDescription.id == description_pclasses.c.description_id)
+        .join(
+            ProjectDescription,
+            ProjectDescription.id == description_pclasses.c.description_id,
+        )
         .filter(ProjectDescription.parent_id == project_id)
     )
 
@@ -229,13 +274,19 @@ def AvailableProjectDescriptionClasses(project_id, desc_id):
     # query for unused pclass identifiers
     unused_ids = (
         db.session.query(pclass_ids.c.project_class_id)
-        .join(used_ids, used_ids.c.project_class_id == pclass_ids.c.project_class_id, isouter=True)
+        .join(
+            used_ids,
+            used_ids.c.project_class_id == pclass_ids.c.project_class_id,
+            isouter=True,
+        )
         .filter(used_ids.c.project_class_id == None)
         .subquery()
     )
 
     # construct ProjectClass records for these ids
-    return db.session.query(ProjectClass).join(unused_ids, ProjectClass.id == unused_ids.c.project_class_id)
+    return db.session.query(ProjectClass).join(
+        unused_ids, ProjectClass.id == unused_ids.c.project_class_id
+    )
 
 
 def ProjectDescriptionClasses(project_id):
@@ -250,14 +301,19 @@ def ProjectDescriptionClasses(project_id):
     # query for pclass identifiers used by descriptions associated with project_id
     used_ids = (
         db.session.query(description_pclasses.c.project_class_id)
-        .join(ProjectDescription, ProjectDescription.id == description_pclasses.c.description_id)
+        .join(
+            ProjectDescription,
+            ProjectDescription.id == description_pclasses.c.description_id,
+        )
         .filter(ProjectDescription.parent_id == project_id)
         .distinct()
         .subquery()
     )
 
     # construct ProjectClass records for these ids
-    return db.session.query(ProjectClass).join(used_ids, ProjectClass.id == used_ids.c.project_class_id)
+    return db.session.query(ProjectClass).join(
+        used_ids, ProjectClass.id == used_ids.c.project_class_id
+    )
 
 
 def GetAutomatedMatchPClasses(year, base_id):
@@ -265,7 +321,11 @@ def GetAutomatedMatchPClasses(year, base_id):
         db.session.query(ProjectClass)
         .filter(ProjectClass.active == True, ProjectClass.do_matching == True)
         .join(ProjectClassConfig, ProjectClassConfig.pclass_id == ProjectClass.id)
-        .filter(ProjectClassConfig.year == year, ProjectClassConfig.live == True, ProjectClassConfig.selection_closed == True)
+        .filter(
+            ProjectClassConfig.year == year,
+            ProjectClassConfig.live == True,
+            ProjectClassConfig.selection_closed == True,
+        )
     )
 
     if base_id is None:
@@ -273,15 +333,25 @@ def GetAutomatedMatchPClasses(year, base_id):
 
     base = db.session.query(MatchingAttempt).filter_by(id=base_id).one()
     c_members = base.config_members.subquery()
-    p_members = db.session.query(ProjectClass).join(c_members, c_members.c.pclass_id == ProjectClass.id).subquery()
+    p_members = (
+        db.session.query(ProjectClass)
+        .join(c_members, c_members.c.pclass_id == ProjectClass.id)
+        .subquery()
+    )
 
-    pclasses = pclasses.join(p_members, p_members.c.id == ProjectClass.id, isouter=True).filter(p_members.c.id == None)
+    pclasses = pclasses.join(
+        p_members, p_members.c.id == ProjectClass.id, isouter=True
+    ).filter(p_members.c.id == None)
 
     return pclasses
 
 
 def GetMatchingAttempts(year, base_id):
-    attempts = db.session.query(MatchingAttempt).filter_by(year=year).order_by(MatchingAttempt.name.asc())
+    attempts = (
+        db.session.query(MatchingAttempt)
+        .filter_by(year=year)
+        .order_by(MatchingAttempt.name.asc())
+    )
 
     if base_id is None:
         return attempts
@@ -289,12 +359,19 @@ def GetMatchingAttempts(year, base_id):
     base = db.session.query(MatchingAttempt).filter_by(id=base_id).one()
     included = base.include_matches.subquery()
 
-    attempts = attempts.join(included, included.c.id == MatchingAttempt.id, isouter=True).filter(included.c.id == None)
+    attempts = attempts.join(
+        included, included.c.id == MatchingAttempt.id, isouter=True
+    ).filter(included.c.id == None)
 
     return attempts
 
 
-def GetComparatorMatches(year, self_id: int, pclasses: ProjectClassConfig | int | Iterable[int] | None, is_root: bool):
+def GetComparatorMatches(
+        year,
+        self_id: int,
+        pclasses: ProjectClassConfig | int | Iterable[int] | None,
+        is_root: bool,
+):
     if pclasses is None:
         _pclasses = None
     elif isinstance(pclasses, ProjectClass):
@@ -304,14 +381,20 @@ def GetComparatorMatches(year, self_id: int, pclasses: ProjectClassConfig | int 
     elif isinstance(pclasses, Iterable) and not isinstance(pclasses, str):
         _pclasses = pclasses
     else:
-        raise TypeError(f"Unexpected type '{type(pclasses)}' for argument pclasses in GetComparatorMatches")
+        raise TypeError(
+            f"Unexpected type '{type(pclasses)}' for argument pclasses in GetComparatorMatches"
+        )
 
     # comparison is only allowed to matching attempts from the same year
     if _pclasses is not None:
-        q = db.session.query(MatchingAttempt).filter(MatchingAttempt.year == year, MatchingAttempt.id != self_id)
+        q = db.session.query(MatchingAttempt).filter(
+            MatchingAttempt.year == year, MatchingAttempt.id != self_id
+        )
 
     # if possible project classes are specified
-    q = q.filter(MatchingAttempt.config_members.any(ProjectClassConfig.pclass_id.in_(_pclasses)))
+    q = q.filter(
+        MatchingAttempt.config_members.any(ProjectClassConfig.pclass_id.in_(_pclasses))
+    )
 
     if not is_root:
         q = q.filter(MatchingAttempt.published == True)
@@ -320,7 +403,9 @@ def GetComparatorMatches(year, self_id: int, pclasses: ProjectClassConfig | int 
 
 
 def GetComparatorSchedules(assessment_id, self_id, is_root):
-    q = db.session.query(ScheduleAttempt).filter(ScheduleAttempt.owner_id == assessment_id, ScheduleAttempt.id != self_id)
+    q = db.session.query(ScheduleAttempt).filter(
+        ScheduleAttempt.owner_id == assessment_id, ScheduleAttempt.id != self_id
+    )
 
     if not is_root:
         q = q.filter(ScheduleAttempt.published == True)
@@ -337,13 +422,15 @@ def MarkerQuery(live_project):
 
 def BuildMarkerLabel(fac):
     CATS_supv, CATS_mark, CATS_moderate, CATS_pres = fac.total_CATS_assignment()
-    return "{name} (CATS: S {supv} Ma {mark} Mo {moderate} P {pres} Total {tot})".format(
-        name=fac.user.name,
-        supv=CATS_supv,
-        mark=CATS_mark,
-        moderate=CATS_moderate,
-        pres=CATS_pres,
-        tot=CATS_supv + CATS_mark + CATS_moderate + CATS_pres,
+    return (
+        "{name} (CATS: S {supv} Ma {mark} Mo {moderate} P {pres} Total {tot})".format(
+            name=fac.user.name,
+            supv=CATS_supv,
+            mark=CATS_mark,
+            moderate=CATS_moderate,
+            pres=CATS_pres,
+            tot=CATS_supv + CATS_mark + CATS_moderate + CATS_pres,
+        )
     )
 
 
@@ -353,8 +440,14 @@ def GetUnattachedSubmissionPeriods(assessment_id):
     year = get_current_year()
     period_ids = (
         db.session.query(SubmissionPeriodRecord.id)
-        .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
-        .filter(ProjectClassConfig.year == year, SubmissionPeriodRecord.has_presentation == True)
+        .join(
+            ProjectClassConfig,
+            ProjectClassConfig.id == SubmissionPeriodRecord.config_id,
+        )
+        .filter(
+            ProjectClassConfig.year == year,
+            SubmissionPeriodRecord.has_presentation == True,
+        )
         .subquery()
     )
 
@@ -362,7 +455,10 @@ def GetUnattachedSubmissionPeriods(assessment_id):
     # assessment_id (if it is not None)
     used_ids = (
         db.session.query(assessment_to_periods.c.period_id)
-        .join(PresentationAssessment, PresentationAssessment.id == assessment_to_periods.c.assessment_id)
+        .join(
+            PresentationAssessment,
+            PresentationAssessment.id == assessment_to_periods.c.assessment_id,
+        )
         .filter(PresentationAssessment.year == year)
     )
 
@@ -380,7 +476,9 @@ def GetUnattachedSubmissionPeriods(assessment_id):
     )
 
     # construct SubmissionPeriodRecord records for these ids
-    return db.session.query(SubmissionPeriodRecord).join(unused_ids, SubmissionPeriodRecord.id == unused_ids.c.id)
+    return db.session.query(SubmissionPeriodRecord).join(
+        unused_ids, SubmissionPeriodRecord.id == unused_ids.c.id
+    )
 
 
 def BuildSubmissionPeriodName(period):
@@ -393,7 +491,10 @@ def GetAllBuildings():
 
 def GetAllRooms():
     return (
-        db.session.query(Room).filter_by(active=True).join(Building, Building.id == Room.building_id).order_by(Building.name.asc(), Room.name.asc())
+        db.session.query(Room)
+        .filter_by(active=True)
+        .join(Building, Building.id == Room.building_id)
+        .order_by(Building.name.asc(), Room.name.asc())
     )
 
 
@@ -402,7 +503,12 @@ def BuildRoomLabel(room):
 
 
 def GetPresentationFeedbackFaculty(record_id):
-    used_ids = db.session.query(PresentationFeedback.assessor_id).filter(PresentationFeedback.owner_id == record_id).distinct().subquery()
+    used_ids = (
+        db.session.query(PresentationFeedback.assessor_id)
+        .filter(PresentationFeedback.owner_id == record_id)
+        .distinct()
+        .subquery()
+    )
 
     return (
         db.session.query(FacultyData)
@@ -415,7 +521,12 @@ def GetPresentationFeedbackFaculty(record_id):
 
 
 def GetPresentationAssessorFaculty(record_id, slot_id):
-    used_ids = db.session.query(PresentationFeedback.assessor_id).filter(PresentationFeedback.owner_id == record_id).distinct().subquery()
+    used_ids = (
+        db.session.query(PresentationFeedback.assessor_id)
+        .filter(PresentationFeedback.owner_id == record_id)
+        .distinct()
+        .subquery()
+    )
 
     slot = db.session.query(ScheduleSlot).filter_by(id=slot_id).one()
     available_ids = slot.assessors.subquery()
@@ -432,16 +543,29 @@ def GetPresentationAssessorFaculty(record_id, slot_id):
 
 
 def GetFHEQLevels():
-    return db.session.query(FHEQ_Level).filter(FHEQ_Level.active).order_by(FHEQ_Level.numeric_level.asc())
+    return (
+        db.session.query(FHEQ_Level)
+        .filter(FHEQ_Level.active)
+        .order_by(FHEQ_Level.numeric_level.asc())
+    )
 
 
 def ScheduleSessionQuery(schedule_id):
-    sessions = db.session.query(ScheduleSlot.session_id).filter(ScheduleSlot.owner_id == schedule_id).distinct().subquery()
+    sessions = (
+        db.session.query(ScheduleSlot.session_id)
+        .filter(ScheduleSlot.owner_id == schedule_id)
+        .distinct()
+        .subquery()
+    )
 
     return (
         db.session.query(PresentationSession)
         .join(sessions, sessions.c.session_id == PresentationSession.id)
-        .order_by(PresentationSession.date.asc(), PresentationSession.name.asc(), PresentationSession.session_type.asc())
+        .order_by(
+            PresentationSession.date.asc(),
+            PresentationSession.name.asc(),
+            PresentationSession.session_type.asc(),
+        )
     )
 
 
@@ -455,7 +579,11 @@ def GetMaskableRoles(user_id):
     # after migration to Flask-Security-Too, user.roles is no longer a dynamic collection, meaning that it can't
     # be treated as a query. Instead we have to construct our own query to get the list of Role instances
     # associated with a given user
-    user_roles = db.session.query(roles_to_users.c.role_id).filter(roles_to_users.c.user_id == user.id).subquery()
+    user_roles = (
+        db.session.query(roles_to_users.c.role_id)
+        .filter(roles_to_users.c.user_id == user.id)
+        .subquery()
+    )
 
     return (
         db.session.query(Role)
@@ -465,26 +593,39 @@ def GetMaskableRoles(user_id):
 
 
 def GetDestinationProjects(user_id, project_id):
-    return db.session.query(Project).filter(Project.owner_id == user_id, Project.id != project_id).order_by(Project.name.asc())
+    return (
+        db.session.query(Project)
+        .filter(Project.owner_id == user_id, Project.id != project_id)
+        .order_by(Project.name.asc())
+    )
 
 
 def GetDestinationProjectsPClass(user_id, project_id, pclass_id):
     return (
         db.session.query(Project)
-        .filter(Project.owner_id == user_id, Project.id != project_id, Project.project_classes.any(id=pclass_id))
+        .filter(
+            Project.owner_id == user_id,
+            Project.id != project_id,
+            Project.project_classes.any(id=pclass_id),
+        )
         .order_by(Project.name.asc())
     )
 
 
 def GetActiveAssetLicenses():
-    return db.session.query(AssetLicense).filter_by(active=True).order_by(AssetLicense.name.asc(), AssetLicense.version.asc())
+    return (
+        db.session.query(AssetLicense)
+        .filter_by(active=True)
+        .order_by(AssetLicense.name.asc(), AssetLicense.version.asc())
+    )
 
 
 def GetAccommodatableMatchings():
     year = get_current_year()
 
     return db.session.query(MatchingAttempt).filter(
-        MatchingAttempt.year == year, or_(MatchingAttempt.selected == True, MatchingAttempt.published == True)
+        MatchingAttempt.year == year,
+        or_(MatchingAttempt.selected == True, MatchingAttempt.published == True),
     )
 
 
@@ -526,7 +667,9 @@ def GetActiveTags(allowed_tenants: List[Tenant]):
             return tenant
         if isinstance(tenant, Tenant):
             return tenant.id
-        raise TypeError(f"Unexpected type '{type(tenant)}' for argument tenant in GetActiveTags")
+        raise TypeError(
+            f"Unexpected type '{type(tenant)}' for argument tenant in GetActiveTags"
+        )
 
     allowed_tenant_ids = [get_tenant_id(t) for t in allowed_tenants]
 
@@ -536,7 +679,7 @@ def GetActiveTags(allowed_tenants: List[Tenant]):
         .filter(
             ProjectTagGroup.active == True,
             ProjectTagGroup.tenants.any(Tenant.id.in_(allowed_tenant_ids)),
-            ProjectTag.active == True
+            ProjectTag.active == True,
         )
     )
 

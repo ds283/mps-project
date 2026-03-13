@@ -8,7 +8,12 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, get_template_attribute, current_app, render_template
+from flask import (
+    render_template_string,
+    get_template_attribute,
+    current_app,
+    render_template,
+)
 from jinja2 import Template, Environment
 
 # language=jinja2
@@ -75,10 +80,13 @@ def tenants_data(tenants):
     colour_templ: Template = _build_colour_templ()
     menu_templ: Template = _build_menu_templ()
 
-    data = [{
-            'name': render_template(name_templ, t=t),
-            'colour': render_template(colour_templ, t=t, simple_label=simple_label),
-            'menu': render_template(menu_templ, t=t),
-        } for t in tenants]
+    data = [
+        {
+            "name": render_template(name_templ, t=t),
+            "colour": render_template(colour_templ, t=t, simple_label=simple_label),
+            "menu": render_template(menu_templ, t=t),
+        }
+        for t in tenants
+    ]
 
     return data

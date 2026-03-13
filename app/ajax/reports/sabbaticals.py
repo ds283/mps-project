@@ -88,7 +88,11 @@ _pclass = """
 def sabbaticals(enrolments: List[EnrollmentRecord]):
     simple_label = get_template_attribute("labels.html", "simple_label")
 
-    is_admin = current_user.has_role("admin") or current_user.has_role("root") or current_user.has_role("manage_users")
+    is_admin = (
+            current_user.has_role("admin")
+            or current_user.has_role("root")
+            or current_user.has_role("manage_users")
+    )
 
     data = [
         {

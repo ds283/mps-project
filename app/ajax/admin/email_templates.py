@@ -191,7 +191,12 @@ def email_templates_data(templates):
 
     def _process(t: EmailTemplate):
         return {
-            "type": render_template(type_templ, t=t, type_name=get_type_name(t.type), simple_label=simple_label),
+            "type": render_template(
+                type_templ,
+                t=t,
+                type_name=get_type_name(t.type),
+                simple_label=simple_label,
+            ),
             "subject": t.subject,
             "version": t.version,
             "scope": render_template(scope_templ, t=t),

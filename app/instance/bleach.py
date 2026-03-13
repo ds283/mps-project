@@ -10,39 +10,41 @@
 
 # Bleach configuration
 BLEACH_ALLOWED_TAGS = [
-    'a',
-    'abbr',
-    'acronym',
-    'b',
-    'br',
-    'blockquote',
-    'code',
-    'dd',
-    'dt',
-    'em',
-    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'i',
-    'img',
-    'li',
-    'ol',
-    'p',
-    'strong',
-    'tt',
-    'ul',
-    'div',
-    'span'
+    "a",
+    "abbr",
+    "acronym",
+    "b",
+    "br",
+    "blockquote",
+    "code",
+    "dd",
+    "dt",
+    "em",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "i",
+    "img",
+    "li",
+    "ol",
+    "p",
+    "strong",
+    "tt",
+    "ul",
+    "div",
+    "span",
 ]
 
 BLEACH_ALLOWED_ATTRIBUTES = {
-    '*': ['style'],
-    'a': ['href', 'alt', 'title'],
-    'abbr': ['title'],
-    'acronym': ['title'],
-    'div': ['class'],
-    'img': ['src', 'alt', 'title'],
+    "*": ["style"],
+    "a": ["href", "alt", "title"],
+    "abbr": ["title"],
+    "acronym": ["title"],
+    "div": ["class"],
+    "img": ["src", "alt", "title"],
 }
 
-BLEACH_ALLOWED_STYLES = [
-    'color',
-    'font-weight'
-]
+BLEACH_ALLOWED_STYLES = ["color", "font-weight"]

@@ -111,7 +111,9 @@ def _element(item_id):
         new_tenants = batch_tenants
 
     return {
-        "name": render_template_string(_name, item=item, new_tenants=new_tenants, simple_label=simple_label),
+        "name": render_template_string(
+            _name, item=item, new_tenants=new_tenants, simple_label=simple_label
+        ),
         "user": item.user_id,
         "email": item.email,
         "menu": render_template_string(_menu, item=item),

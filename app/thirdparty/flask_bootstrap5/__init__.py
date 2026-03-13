@@ -5,6 +5,7 @@ flask_bootstrap
 :copyright: (c) 2017 by Grey Li.
 :license: MIT, see LICENSE for more details.
 """
+
 from flask import current_app, Blueprint, url_for
 from markupsafe import Markup
 
@@ -26,9 +27,15 @@ VERSION_BOOTSTRAP = "5.2.3"
 VERSION_JQUERY = "3.7.1"
 VERSION_POPPER = "2.11.6"
 
-BOOTSTRAP_JS_SHA = "sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
-BOOTSTRAP_CSS_SHA = "sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
-POPPER_JS_SHA = "sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3"
+BOOTSTRAP_JS_SHA = (
+    "sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+)
+BOOTSTRAP_CSS_SHA = (
+    "sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
+)
+POPPER_JS_SHA = (
+    "sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3"
+)
 
 
 def get_table_titles(data, primary_key, primary_key_title):
@@ -57,7 +64,11 @@ class Bootstrap(object):
         app.extensions["bootstrap"] = self
 
         blueprint = Blueprint(
-            "bootstrap", __name__, template_folder="templates", static_folder="static", static_url_path="/bootstrap" + app.static_url_path
+            "bootstrap",
+            __name__,
+            template_folder="templates",
+            static_folder="static",
+            static_url_path="/bootstrap" + app.static_url_path,
         )
         app.register_blueprint(blueprint)
 
@@ -84,7 +95,13 @@ class Bootstrap(object):
         return Markup(css)
 
     @staticmethod
-    def load_js(version=VERSION_BOOTSTRAP, jquery_version=VERSION_JQUERY, popper_version=VERSION_POPPER, with_jquery=True, with_popper=True):
+    def load_js(
+        version=VERSION_BOOTSTRAP,
+        jquery_version=VERSION_JQUERY,
+        popper_version=VERSION_POPPER,
+        with_jquery=True,
+        with_popper=True,
+    ):
         """Load Bootstrap and related library's js resources with given version.
 
         .. versionadded:: 0.1.0

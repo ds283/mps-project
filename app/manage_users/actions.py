@@ -15,7 +15,13 @@ from datetime import datetime
 from flask import current_app
 from flask_security import user_registered
 from flask_security.confirmable import generate_confirmation_link
-from flask_security.utils import hash_password, do_flash, get_message, config_value, send_mail
+from flask_security.utils import (
+    hash_password,
+    do_flash,
+    get_message,
+    config_value,
+    send_mail,
+)
 
 from ..database import db
 from ..models import Role, User
@@ -56,10 +62,18 @@ def register_user(**kwargs):
         confirmation_link, token = generate_confirmation_link(user)
         do_flash(*get_message("CONFIRM_REGISTRATION", email=user.email))
 
-        user_registered.send(current_app._get_current_object(), user=user, confirm_token=token)
+        user_registered.send(
+            current_app._get_current_object(), user=user, confirm_token=token
+        )
 
         if config_value("SEND_REGISTER_EMAIL"):
-            send_mail(config_value("EMAIL_SUBJECT_REGISTER"), user.email, "welcome", user=user, confirmation_link=confirmation_link)
+            send_mail(
+                config_value("EMAIL_SUBJECT_REGISTER"),
+                user.email,
+                "welcome",
+                user=user,
+                confirmation_link=confirmation_link,
+            )
 
     else:
         user.confirmed_at = datetime.now()

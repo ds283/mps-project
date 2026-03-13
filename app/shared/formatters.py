@@ -75,24 +75,36 @@ def format_readable_time(seconds):
             days, seconds = divmod(seconds, _day)
 
             if days > 1:
-                return "{neg}{weeks} week{pl}, {days} days".format(weeks=weeks, pl=pl, days=days, neg="-" if negative else "")
+                return "{neg}{weeks} week{pl}, {days} days".format(
+                    weeks=weeks, pl=pl, days=days, neg="-" if negative else ""
+                )
 
-        return "{neg}{weeks} week{pl}".format(weeks=weeks, pl=pl, neg="-" if negative else "")
+        return "{neg}{weeks} week{pl}".format(
+            weeks=weeks, pl=pl, neg="-" if negative else ""
+        )
 
     if seconds > _day:
         days, seconds = divmod(seconds, _day)
         pl = "" if days == 1 else "s"
-        return "{neg}{days} day{pl}".format(days=days, pl=pl, neg="-" if negative else "")
+        return "{neg}{days} day{pl}".format(
+            days=days, pl=pl, neg="-" if negative else ""
+        )
 
     if seconds > _hour:
         hours, seconds = divmod(seconds, _hour)
         pl = "" if hours == 1 else "s"
-        return "{neg}{hours} hour{pl}".format(hours=hours, pl=pl, neg="-" if negative else "")
+        return "{neg}{hours} hour{pl}".format(
+            hours=hours, pl=pl, neg="-" if negative else ""
+        )
 
     if seconds > _minute:
         minutes, seconds = divmod(seconds, _minute)
         pl = "" if minutes == 1 else "s"
-        return "{neg}{minutes} minute{pl}".format(minutes=minutes, pl=pl, neg="-" if negative else "")
+        return "{neg}{minutes} minute{pl}".format(
+            minutes=minutes, pl=pl, neg="-" if negative else ""
+        )
 
     pl = "" if seconds == 1 else "s"
-    return "{neg}{seconds} second{pl}".format(seconds=seconds, pl=pl, neg="-" if negative else "")
+    return "{neg}{seconds} second{pl}".format(
+        seconds=seconds, pl=pl, neg="-" if negative else ""
+    )

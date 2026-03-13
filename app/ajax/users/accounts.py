@@ -77,11 +77,15 @@ def build_accounts_data(current_user: User, users: List[User]):
         {
             "name": render_template(name_templ, u=u, simple_label=simple_label),
             "user": u.username,
-            "email": '<a class="text-decoration-none" href="mailto:{m}">{m}</a>'.format(m=u.email),
+            "email": '<a class="text-decoration-none" href="mailto:{m}">{m}</a>'.format(
+                m=u.email
+            ),
             "active": render_template(active_templ, u=u),
             "details": render_template(status_templ, u=u),
             "role": render_template(roles_templ, user=u, simple_label=simple_label),
-            "menu": render_template(menu_templ, user=u, cuser=current_user, pane="accounts"),
+            "menu": render_template(
+                menu_templ, user=u, cuser=current_user, pane="accounts"
+            ),
         }
         for u in users
     ]

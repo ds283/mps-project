@@ -26,8 +26,14 @@ from sqlalchemy.sql import func
 
 import app.ajax as ajax
 from . import projecthub
-from .forms import AddFormatterArticleForm, EditFormattedArticleForm, MeetingSummaryForm, SupervisionNotesForm, build_event_team_form, \
-    ReassignEventOwnerFormFactory
+from .forms import (
+    AddFormatterArticleForm,
+    EditFormattedArticleForm,
+    MeetingSummaryForm,
+    SupervisionNotesForm,
+    build_event_team_form,
+    ReassignEventOwnerFormFactory,
+)
 from .utils import validate_project_hub, validate_set_attendance
 from ..database import db
 from ..models import (
@@ -41,24 +47,30 @@ from ..models import (
     ConvenorSubmitterArticle,
     FormattedArticle,
     ProjectSubmitterArticle,
-    User, SupervisionEvent, SubmissionRole,
+    User,
+    SupervisionEvent,
+    SubmissionRole,
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 from ..tools import ServerSideSQLHandler
 
-DoughnutDiagram = namedtuple(
-    "DoughnutDiagram",
-    [
-        "script",
-        "div"
-    ]
-)
+DoughnutDiagram = namedtuple("DoughnutDiagram", ["script", "div"])
 
 
 @projecthub.route("/hub/<int:subid>")
-@roles_accepted("admin", "root", "faculty", "supervisor", "student", "office", "moderator", "external_examiner", "exam_board")
+@roles_accepted(
+    "admin",
+    "root",
+    "faculty",
+    "supervisor",
+    "student",
+    "office",
+    "moderator",
+    "external_examiner",
+    "exam_board",
+)
 def hub(subid):
     # subid labels a SubmissionRecord
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(subid)
@@ -71,7 +83,9 @@ def hub(subid):
                 my_role = role
                 break
 
-    if not validate_project_hub(record, current_user, current_role=my_role, message=True):
+    if not validate_project_hub(
+            record, current_user, current_role=my_role, message=True
+    ):
         return redirect(redirect_url())
 
     submitter: SubmittingStudent = record.owner
@@ -137,7 +151,13 @@ def hub(subid):
     # generate burn-down doughnut chart if we can
     now = date.today()
     burn_diagram = None
-    if not record.retired and period.start_date and now >= period.start_date and period.hand_in_date and now <= period.hand_in_date:
+    if (
+            not record.retired
+            and period.start_date
+            and now >= period.start_date
+            and period.hand_in_date
+            and now <= period.hand_in_date
+    ):
         total_time: timedelta = period.hand_in_date - period.start_date
         total_time_days: int = total_time.days
 
@@ -158,8 +178,16 @@ def hub(subid):
         attendance_missing = attendance_data["missing"]
         attendance_percent = attendance_data["attendance"]
 
-        if attendance_percent is not None and not isnan(attendance_percent) and not isinf(attendance_percent):
-            attendance_diagram = doughnut_diagram(attendance_percent/100.0, burned_colour="palegreen", unburned_colour="tomato")
+        if (
+                attendance_percent is not None
+                and not isnan(attendance_percent)
+                and not isinf(attendance_percent)
+        ):
+            attendance_diagram = doughnut_diagram(
+                attendance_percent / 100.0,
+                burned_colour="palegreen",
+                unburned_colour="tomato",
+            )
         else:
             attendance_percent = None
 
@@ -183,11 +211,13 @@ def hub(subid):
         attendance_div=attendance_diagram.div if attendance_diagram else None,
         attendance_script=attendance_diagram.script if attendance_diagram else None,
         return_url=url_for("projecthub.hub", subid=subid, url=url, text=text),
-        return_text=f'project page for {suser.name}'
+        return_text=f"project page for {suser.name}",
     )
 
 
-def doughnut_diagram(burn_fraction: float, burned_colour='tomato', unburned_colour='palegreen') -> DoughnutDiagram:
+def doughnut_diagram(
+        burn_fraction: float, burned_colour="tomato", unburned_colour="palegreen"
+) -> DoughnutDiagram:
     angle = 2 * pi * min(burn_fraction, 0.995)
     start_angle = pi / 2.0
     end_angle = pi / 2.0 - angle if angle < pi / 2.0 else 5.0 * pi / 2.0 - angle
@@ -215,7 +245,7 @@ def doughnut_diagram(burn_fraction: float, burned_colour='tomato', unburned_colo
             line_color=None,
             start_angle=end_angle,
             end_angle=start_angle,
-            fill_color=unburned_colour
+            fill_color=unburned_colour,
         )
     plot.axis.visible = False
     plot.xgrid.visible = False
@@ -231,7 +261,9 @@ def doughnut_diagram(burn_fraction: float, burned_colour='tomato', unburned_colo
         y=0,
         x_units="data",
         y_units="data",
-        text="{p:.2g}%".format(p=burn_fraction * 100) if burn_fraction < 1.0 else "100%",
+        text="{p:.2g}%".format(p=burn_fraction * 100)
+        if burn_fraction < 1.0
+        else "100%",
         background_fill_alpha=0.0,
         text_align="center",
         text_baseline="middle",
@@ -265,9 +297,14 @@ def edit_submission_period_articles(pid):
         panel_title="Edit articles for submission period <strong>{name}</strong> in project "
         "class <strong>{pclass}</strong> "
         "({yra}&ndash;{yrb})".format(
-            name=record.display_name, pclass=record.config.name, yra=record.config.submit_year_a, yrb=record.config.submit_year_b
+            name=record.display_name,
+            pclass=record.config.name,
+            yra=record.config.submit_year_a,
+            yrb=record.config.submit_year_b,
         ),
-        ajax_endpoint=url_for("projecthub.edit_submission_period_articles_ajax", pid=pid),
+        ajax_endpoint=url_for(
+            "projecthub.edit_submission_period_articles_ajax", pid=pid
+        ),
         add_endpoint=url_for("projecthub.add_submission_period_article", pid=pid),
     )
 
@@ -285,13 +322,21 @@ def edit_submission_period_articles_ajax(pid):
 
     base_query = record.articles
 
-    title = {"search": ConvenorSubmitterArticle.title, "order": ConvenorSubmitterArticle.title, "search_collation": "utf8_general_ci"}
+    title = {
+        "search": ConvenorSubmitterArticle.title,
+        "order": ConvenorSubmitterArticle.title,
+        "search_collation": "utf8_general_ci",
+    }
     published = {
-        "search": func.date_format(ConvenorSubmitterArticle.publication_timestamp, "%a %d %b %Y %H:%M:%S"),
+        "search": func.date_format(
+            ConvenorSubmitterArticle.publication_timestamp, "%a %d %b %Y %H:%M:%S"
+        ),
         "order": ConvenorSubmitterArticle.publication_timestamp,
     }
     last_edit = {
-        "search": func.date_format(ConvenorSubmitterArticle.last_edit_timestamp, "%a %d %b %Y %H:%M:%S"),
+        "search": func.date_format(
+            ConvenorSubmitterArticle.last_edit_timestamp, "%a %d %b %Y %H:%M:%S"
+        ),
         "order": ConvenorSubmitterArticle.last_edit_timestamp,
     }
 
@@ -301,7 +346,12 @@ def edit_submission_period_articles_ajax(pid):
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(
-            partial(ajax.projecthub.article_list_data, return_url, "submission period articles", "projecthub.edit_submission_period_article")
+            partial(
+                ajax.projecthub.article_list_data,
+                return_url,
+                "submission period articles",
+                "projecthub.edit_submission_period_article",
+            )
         )
 
 
@@ -338,7 +388,10 @@ def add_submission_period_article(pid):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not add new article because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not add new article because of a database error. Please contact a system administrator",
+                "error",
+            )
 
         return redirect(url_for("projecthub.edit_submission_period_articles", pid=pid))
 
@@ -350,7 +403,10 @@ def add_submission_period_article(pid):
         panel_title="Add new article or news story to period <strong>{pname}</strong> "
         "in project class <strong>{pclass}</strong> "
         "({yra}&ndash;{yrb})".format(
-            pname=record.display_name, pclass=record.config.name, yra=record.config.submit_year_a, yrb=record.config.submit_year_b
+            pname=record.display_name,
+            pclass=record.config.name,
+            yra=record.config.submit_year_a,
+            yrb=record.config.submit_year_b,
         ),
         action_url=url_for("projecthub.add_submission_period_article", pid=pid),
     )
@@ -385,9 +441,14 @@ def edit_submission_period_article(aid):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save changes to this article because of a database error. Please contact a system administrator", "error")
+            flash(
+                "Could not save changes to this article because of a database error. Please contact a system administrator",
+                "error",
+            )
 
-        return redirect(url_for("projecthub.edit_submission_period_articles", pid=record.id))
+        return redirect(
+            url_for("projecthub.edit_submission_period_articles", pid=record.id)
+        )
 
     return render_template_context(
         "projecthub/articles/edit_article.html",
@@ -398,7 +459,10 @@ def edit_submission_period_article(aid):
         panel_title="Edit article in period <strong>{pname}</strong> "
         "in project class <strong>{pclass}</strong> "
         "({yra}&ndash;{yrb})".format(
-            pname=record.display_name, pclass=record.config.name, yra=record.config.submit_year_a, yrb=record.config.submit_year_b
+            pname=record.display_name,
+            pclass=record.config.name,
+            yra=record.config.submit_year_a,
+            yrb=record.config.submit_year_b,
         ),
         action_url=url_for("projecthub.edit_submission_period_article", aid=aid),
     )
@@ -412,11 +476,23 @@ def show_formatted_article(aid):
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    return render_template_context("projecthub/articles/show_article.html", article=article, text=text, url=url)
+    return render_template_context(
+        "projecthub/articles/show_article.html", article=article, text=text, url=url
+    )
 
 
 @projecthub.route("/article_widget_ajax/<int:subid>", methods=["POST"])
-@roles_accepted("admin", "root", "faculty", "supervisor", "student", "office", "moderator", "external_examiner", "exam_board")
+@roles_accepted(
+    "admin",
+    "root",
+    "faculty",
+    "supervisor",
+    "student",
+    "office",
+    "moderator",
+    "external_examiner",
+    "exam_board",
+)
 def article_widget_ajax(subid):
     # subid labels a SubmissionRecord
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(subid)
@@ -424,12 +500,20 @@ def article_widget_ajax(subid):
     if not validate_project_hub(record, current_user, message=True):
         return jsonify({})
 
-    articles = with_polymorphic(FormattedArticle, [ConvenorSubmitterArticle, ProjectSubmitterArticle])
+    articles = with_polymorphic(
+        FormattedArticle, [ConvenorSubmitterArticle, ProjectSubmitterArticle]
+    )
     base_query = record.article_list.join(User, User.id == articles.creator_id)
 
-    title = {"search": FormattedArticle.title, "order": FormattedArticle.title, "search_collation": "utf8_general_ci"}
+    title = {
+        "search": FormattedArticle.title,
+        "order": FormattedArticle.title,
+        "search_collation": "utf8_general_ci",
+    }
     published = {
-        "search": func.date_format(FormattedArticle.publication_timestamp, "%a %d %b %Y %H:%M:%S"),
+        "search": func.date_format(
+            FormattedArticle.publication_timestamp, "%a %d %b %Y %H:%M:%S"
+        ),
         "order": FormattedArticle.publication_timestamp,
     }
     author = {
@@ -444,7 +528,9 @@ def article_widget_ajax(subid):
     text = "project hub"
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(partial(ajax.projecthub.widgets.articles, url, text))
+        return handler.build_payload(
+            partial(ajax.projecthub.widgets.articles, url, text)
+        )
 
 
 @projecthub.route("/set_attendance/<int:event_id>/<int:attendance>")
@@ -456,7 +542,10 @@ def set_attendance(event_id, attendance):
         return redirect(redirect_url())
 
     if not SupervisionEvent.attendance_valid(attendance):
-        flash(f'Cannot set attendance for event "{event.name}" because the attendance setting is not valid.', "error")
+        flash(
+            f'Cannot set attendance for event "{event.name}" because the attendance setting is not valid.',
+            "error",
+        )
         return redirect(redirect_url())
 
     try:
@@ -465,7 +554,10 @@ def set_attendance(event_id, attendance):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash("Could not save changes to this event because of a database error. Please contact a system administrator", "error")
+        flash(
+            "Could not save changes to this event because of a database error. Please contact a system administrator",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -562,7 +654,10 @@ def edit_event_team(event_id):
             for role in new_team:
                 event.team.append(role)
             db.session.commit()
-            flash(f'Supervision team for event "{event.name}" has been updated.', "success")
+            flash(
+                f'Supervision team for event "{event.name}" has been updated.',
+                "success",
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -584,7 +679,9 @@ def edit_event_team(event_id):
         record=record,
         url=url,
         text=text,
-        action_url=url_for("projecthub.edit_event_team", event_id=event_id, url=url, text=text),
+        action_url=url_for(
+            "projecthub.edit_event_team", event_id=event_id, url=url, text=text
+        ),
     )
 
 
@@ -630,7 +727,9 @@ def edit_meeting_summary(event_id):
         record=record,
         url=url,
         text=text,
-        action_url=url_for("projecthub.edit_meeting_summary", event_id=event_id, url=url, text=text),
+        action_url=url_for(
+            "projecthub.edit_meeting_summary", event_id=event_id, url=url, text=text
+        ),
     )
 
 
@@ -676,7 +775,9 @@ def edit_supervision_notes(event_id):
         record=record,
         url=url,
         text=text,
-        action_url=url_for("projecthub.edit_supervision_notes", event_id=event_id, url=url, text=text),
+        action_url=url_for(
+            "projecthub.edit_supervision_notes", event_id=event_id, url=url, text=text
+        ),
     )
 
 
@@ -693,7 +794,10 @@ def reassign_event_owner(event_id):
     # Resolve the submission record and project class config
     record: SubmissionRecord = event.sub_record
     if record is None:
-        flash("Cannot reassign event owner because the associated submission record could not be found.", "error")
+        flash(
+            "Cannot reassign event owner because the associated submission record could not be found.",
+            "error",
+        )
         return redirect(redirect_url())
 
     sub: SubmittingStudent = record.owner
@@ -713,7 +817,9 @@ def reassign_event_owner(event_id):
 
     # Only the convenor/admin or the event owner may perform this action
     if not is_target_convenor and not is_event_owner:
-        flash("You do not have permission to reassign the owner of this event.", "error")
+        flash(
+            "You do not have permission to reassign the owner of this event.", "error"
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -723,7 +829,10 @@ def reassign_event_owner(event_id):
     # Check that the event actually has team members to reassign to
     num_supervisor_roles = len(record.supervisor_roles)
     if num_supervisor_roles < 2:
-        flash("Cannot reassign event owner because there are no other supervision team members to assign as the new owner.", "warning")
+        flash(
+            "Cannot reassign event owner because there are no other supervision team members to assign as the new owner.",
+            "warning",
+        )
         return redirect(url)
 
     ReassignForm = ReassignEventOwnerFormFactory(event)
@@ -755,13 +864,16 @@ def reassign_event_owner(event_id):
 
             db.session.commit()
             flash(
-                f'Event owner has been reassigned to <strong>{new_owner_role.user.name}</strong>.',
+                f"Event owner has been reassigned to <strong>{new_owner_role.user.name}</strong>.",
                 "success",
             )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not reassign event owner due to a database error. Please contact a system administrator.", "error")
+            flash(
+                "Could not reassign event owner due to a database error. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url)
 

@@ -31,13 +31,17 @@ def send_email():
         distribution_list = None
         length = 0
     else:
-        distribution_list = [db.session.query(User).filter_by(id=n).first() for n in to_list]
+        distribution_list = [
+            db.session.query(User).filter_by(id=n).first() for n in to_list
+        ]
         length = len(distribution_list)
 
     url = request.args.get("url", None)
     text = request.args.get("text", None)
 
-    SendEmailForm = SendEmailFormFactory(use_recipients=False if distribution_list is not None else True)
+    SendEmailForm = SendEmailFormFactory(
+        use_recipients=False if distribution_list is not None else True
+    )
     form = SendEmailForm(request.form)
 
     if form.is_submitted():
@@ -60,16 +64,32 @@ def send_email():
                 sent = False
 
                 if distribution_list is not None:
-                    send_mail = celery.tasks["app.tasks.services.send_distribution_list"]
+                    send_mail = celery.tasks[
+                        "app.tasks.services.send_distribution_list"
+                    ]
 
-                    task = send_mail.s(to_list, notify_addresses, form.subject.data, form.body.data, reply_to, current_user.id)
+                    task = send_mail.s(
+                        to_list,
+                        notify_addresses,
+                        form.subject.data,
+                        form.body.data,
+                        reply_to,
+                        current_user.id,
+                    )
                     task.apply_async()
                     sent = True
 
                 elif to_addresses is not None:
                     send_mail = celery.tasks["app.tasks.services.send_email_list"]
 
-                    task = send_mail.s(to_addresses, notify_addresses, form.subject.data, form.body.data, reply_to, current_user.id)
+                    task = send_mail.s(
+                        to_addresses,
+                        notify_addresses,
+                        form.subject.data,
+                        form.body.data,
+                        reply_to,
+                        current_user.id,
+                    )
                     task.apply_async()
                     sent = True
 
@@ -85,5 +105,11 @@ def send_email():
             length = 0
 
     return render_template_context(
-        "services/send_email.html", form=form, distribution_list=distribution_list, to_list=to_list, length=length, url=url, text=text
+        "services/send_email.html",
+        form=form,
+        distribution_list=distribution_list,
+        to_list=to_list,
+        length=length,
+        url=url,
+        text=text,
     )

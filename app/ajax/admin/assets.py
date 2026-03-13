@@ -185,8 +185,8 @@ _menu_temporary = """
 
 
 def _build_row(asset, asset_type: str, simple_label, truncate):
-    has_license = hasattr(asset, 'license')
-    has_download_data = hasattr(asset, 'mimetype')
+    has_license = hasattr(asset, "license")
+    has_download_data = hasattr(asset, "mimetype")
 
     license_obj = asset.license if has_license else None
     mimetype = asset.mimetype if has_download_data else None
@@ -195,30 +195,47 @@ def _build_row(asset, asset_type: str, simple_label, truncate):
     bucket_val = asset.bucket if has_download_data else None
     comment = asset.comment if has_download_data else None
 
-    encrypted = getattr(asset, 'encryption', False)
-    compressed = getattr(asset, 'compressed', False)
-    lost = getattr(asset, 'lost', False)
-    unattached = getattr(asset, 'unattached', False)
-    number_downloads = getattr(asset, 'number_downloads', None)
+    encrypted = getattr(asset, "encryption", False)
+    compressed = getattr(asset, "compressed", False)
+    lost = getattr(asset, "lost", False)
+    unattached = getattr(asset, "unattached", False)
+    number_downloads = getattr(asset, "number_downloads", None)
 
-    target_html = render_template_string(_target, target_name=target_name, asset_type=asset_type,  encrypted=encrypted, compressed=compressed, lost=lost, unattached=unattached, number_downloads=number_downloads, asset=asset, truncate=truncate)
-    license_html = render_template_string(_license, license=license_obj, simple_label=simple_label)
+    target_html = render_template_string(
+        _target,
+        target_name=target_name,
+        asset_type=asset_type,
+        encrypted=encrypted,
+        compressed=compressed,
+        lost=lost,
+        unattached=unattached,
+        number_downloads=number_downloads,
+        asset=asset,
+        truncate=truncate,
+    )
+    license_html = render_template_string(
+        _license, license=license_obj, simple_label=simple_label
+    )
     expiry_html = render_template_string(_expiry, expiry=asset.expiry)
     timestamp_html = render_template_string(_timestamp, timestamp=asset.timestamp)
-    bucket_html = render_template_string(
-        _bucket,
-        bucket=bucket_val,
-        ASSETS_BUCKET=buckets.ASSETS_BUCKET,
-        BACKUP_BUCKET=buckets.BACKUP_BUCKET,
-        INITDB_BUCKET=buckets.INITDB_BUCKET,
-        TELEMETRY_BUCKET=buckets.TELEMETRY_BUCKET,
-        FEEDBACK_BUCKET=buckets.FEEDBACK_BUCKET,
-        PROJECT_BUCKET=buckets.PROJECT_BUCKET,
-    ) if bucket_val is not None else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>'
+    bucket_html = (
+        render_template_string(
+            _bucket,
+            bucket=bucket_val,
+            ASSETS_BUCKET=buckets.ASSETS_BUCKET,
+            BACKUP_BUCKET=buckets.BACKUP_BUCKET,
+            INITDB_BUCKET=buckets.INITDB_BUCKET,
+            TELEMETRY_BUCKET=buckets.TELEMETRY_BUCKET,
+            FEEDBACK_BUCKET=buckets.FEEDBACK_BUCKET,
+            PROJECT_BUCKET=buckets.PROJECT_BUCKET,
+        )
+        if bucket_val is not None
+        else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>'
+    )
 
-    if asset_type == 'GeneratedAsset':
+    if asset_type == "GeneratedAsset":
         menu_html = render_template_string(_menu_generated, asset=asset)
-    elif asset_type == 'SubmittedAsset':
+    elif asset_type == "SubmittedAsset":
         menu_html = render_template_string(_menu_submitted, asset=asset)
     else:
         menu_html = render_template_string(_menu_temporary, asset=asset)
@@ -228,11 +245,17 @@ def _build_row(asset, asset_type: str, simple_label, truncate):
         "timestamp": timestamp_html,
         "license": license_html,
         "expiry": expiry_html,
-        "mimetype": mimetype if mimetype else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>',
+        "mimetype": mimetype
+        if mimetype
+        else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>',
         "target_name": target_html,
-        "filesize": human_size if human_size else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>',
+        "filesize": human_size
+        if human_size
+        else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>',
         "bucket": bucket_html,
-        "comment": comment if comment else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>',
+        "comment": comment
+        if comment
+        else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>',
         "menu": menu_html,
     }
 

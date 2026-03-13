@@ -11,10 +11,10 @@
 import os
 
 # needed for Celery tasks to build URLs outside a resource context
-SERVER_NAME = os.environ.get('SERVER_NAME') or None
+SERVER_NAME = os.environ.get("SERVER_NAME") or None
 
 # set maximum upload size to be 96Mb
 MAX_CONTENT_LENGTH = 96 * 1024 * 1024
 
 # Flask secret key (used to encrypt client-side cookies)
-SECRET_KEY = os.environ.get('FLASK_SECRET_KEY')
+SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")

@@ -133,9 +133,21 @@ def compare_schedule_data(pairs, source_id, target_id):
 
     data = [
         {
-            "source": {"display": render_template_string(_source, op=op, s=s, t=t, simple_label=simple_label), "sortvalue": op},
-            "target": {"display": render_template_string(_target, op=op, s=s, t=t, simple_label=simple_label), "sortvalue": op},
-            "menu": render_template_string(_menu, op=op, s=s, t=t, sid=source_id, tid=target_id),
+            "source": {
+                "display": render_template_string(
+                    _source, op=op, s=s, t=t, simple_label=simple_label
+                ),
+                "sortvalue": op,
+            },
+            "target": {
+                "display": render_template_string(
+                    _target, op=op, s=s, t=t, simple_label=simple_label
+                ),
+                "sortvalue": op,
+            },
+            "menu": render_template_string(
+                _menu, op=op, s=s, t=t, sid=source_id, tid=target_id
+            ),
         }
         for op, s, t in pairs
     ]

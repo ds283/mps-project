@@ -29,7 +29,11 @@ from ..shared.utils import get_current_year
 
 
 def add_liveproject(
-    number: Optional[int], project: Union[Project, int], config_id: int, desc: Optional[ProjectDescription] = None, autocommit: bool = False
+        number: Optional[int],
+        project: Union[Project, int],
+        config_id: int,
+        desc: Optional[ProjectDescription] = None,
+        autocommit: bool = False,
 ):
     # extract this project; input 'project' is allowed to be a Project instance, or else
     # the database id of an instance
@@ -44,19 +48,33 @@ def add_liveproject(
     if item is None:
         raise KeyError("Missing database record for Project id={id}".format(id=project))
 
-    config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
+    config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
+        id=config_id
+    ).first()
     if config is None:
-        raise KeyError("Missing database record for ProjectClassConfig id={id}".format(id=config_id))
+        raise KeyError(
+            "Missing database record for ProjectClassConfig id={id}".format(
+                id=config_id
+            )
+        )
 
     if desc is None:
         description: ProjectDescription = item.get_description(config.project_class)
         if description is None:
-            raise KeyError("Missing description for Project id={id}, ProjectClass id={pid}".format(id=item.id, pid=config.pclass_id))
+            raise KeyError(
+                "Missing description for Project id={id}, ProjectClass id={pid}".format(
+                    id=item.id, pid=config.pclass_id
+                )
+            )
     else:
         description = desc
 
     # check whether an existing LiveProject for this config_id already exists
-    existing_record = db.session.query(LiveProject).filter_by(config_id=config_id, parent_id=item.id).first()
+    existing_record = (
+        db.session.query(LiveProject)
+        .filter_by(config_id=config_id, parent_id=item.id)
+        .first()
+    )
     if existing_record:
         # nothing to do
         return
@@ -64,7 +82,11 @@ def add_liveproject(
     if number is None:
         # find largest current LiveProject number used in the database (recall numbers may not be contigious if projects have
         # been deleted during a cycle)
-        largest_current_number = db.session.query(func.max(LiveProject.number)).filter(LiveProject.config_id == config.id).scalar()
+        largest_current_number = (
+            db.session.query(func.max(LiveProject.number))
+            .filter(LiveProject.config_id == config.id)
+            .scalar()
+        )
         if largest_current_number is None:
             # failed to get a safe result; fall back to an estimate using the current count + 1
             number = config.live_projects.count() + 1
@@ -88,8 +110,12 @@ def add_liveproject(
         meeting_reqd=item.meeting_reqd,
         enforce_capacity=item.enforce_capacity,
         capacity=description.capacity,
-        assessors=item.get_assessor_list(config.project_class) if config.uses_marker else [],
-        supervisors=item.get_supervisor_list(config.project_class) if config.uses_supervisor else [],
+        assessors=item.get_assessor_list(config.project_class)
+        if config.uses_marker
+        else [],
+        supervisors=item.get_supervisor_list(config.project_class)
+        if config.uses_supervisor
+        else [],
         modules=[m for m in description.modules if m.active],
         description=description.description,
         reading=description.reading,
@@ -122,10 +148,17 @@ def add_selector(student, config_id, convert=True, autocommit=False):
         item = StudentData.query.filter_by(id=student).first()
 
         if item is None:
-            raise KeyError("Missing database record for StudentData id={id}".format(id=student))
+            raise KeyError(
+                "Missing database record for StudentData id={id}".format(id=student)
+            )
 
     selector = SelectingStudent(
-        config_id=config_id, student_id=item.id, retired=False, convert_to_submitter=convert, submission_time=None, submission_IP=None
+        config_id=config_id,
+        student_id=item.id,
+        retired=False,
+        convert_to_submitter=convert,
+        submission_time=None,
+        submission_IP=None,
     )
     db.session.add(selector)
     db.session.flush()
@@ -139,7 +172,13 @@ def add_selector(student, config_id, convert=True, autocommit=False):
     return generated_id
 
 
-def add_blank_submitter(student, selecting_config_id, submitting_config_id, autocommit=False, linked_selector_id=None):
+def add_blank_submitter(
+        student,
+        selecting_config_id,
+        submitting_config_id,
+        autocommit=False,
+        linked_selector_id=None,
+):
     # get StudentData instance
     if isinstance(student, StudentData):
         item = student
@@ -147,14 +186,26 @@ def add_blank_submitter(student, selecting_config_id, submitting_config_id, auto
         item = StudentData.query.filter_by(id=student).first()
 
         if item is None:
-            raise KeyError("Missing database record for StudentData id={id}".format(id=student))
+            raise KeyError(
+                "Missing database record for StudentData id={id}".format(id=student)
+            )
 
     config = ProjectClassConfig.query.filter_by(id=submitting_config_id).one()
     if config is None:
-        raise LookupError("Missing database record for ProjectClassConfig id={id}".format(id=submitting_config_id))
+        raise LookupError(
+            "Missing database record for ProjectClassConfig id={id}".format(
+                id=submitting_config_id
+            )
+        )
 
     # generate new SubmittingStudent instance
-    submitter = SubmittingStudent(config_id=submitting_config_id, student_id=item.id, selector_id=linked_selector_id, published=False, retired=False)
+    submitter = SubmittingStudent(
+        config_id=submitting_config_id,
+        student_id=item.id,
+        selector_id=linked_selector_id,
+        published=False,
+        retired=False,
+    )
 
     # can expect exceptions to be caught by the client code
     db.session.add(submitter)
@@ -212,13 +263,22 @@ def add_blank_submitter(student, selecting_config_id, submitting_config_id, auto
 
 
 def build_all_confirmations_query(config: ProjectClassConfig):
-    return db.session.query(ConfirmRequest).join(LiveProject, LiveProject.id == ConfirmRequest.project_id).filter(LiveProject.config_id == config.id)
+    return (
+        db.session.query(ConfirmRequest)
+        .join(LiveProject, LiveProject.id == ConfirmRequest.project_id)
+        .filter(LiveProject.config_id == config.id)
+    )
 
 
 def build_outstanding_confirmations_query(config: ProjectClassConfig):
     return (
         db.session.query(ConfirmRequest)
-        .filter(or_(ConfirmRequest.state == ConfirmRequest.REQUESTED, ConfirmRequest.state == ConfirmRequest.DECLINED))
+        .filter(
+            or_(
+                ConfirmRequest.state == ConfirmRequest.REQUESTED,
+                ConfirmRequest.state == ConfirmRequest.DECLINED,
+            )
+        )
         .join(LiveProject, LiveProject.id == ConfirmRequest.project_id)
         .filter(LiveProject.config_id == config.id)
     )
@@ -243,7 +303,11 @@ def build_declined_confirmations_query(config: ProjectClassConfig):
 
 
 def build_all_custom_query(config: ProjectClassConfig):
-    return db.session.query(CustomOffer).join(LiveProject, LiveProject.id == CustomOffer.liveproject_id).filter(LiveProject.config_id == config.id)
+    return (
+        db.session.query(CustomOffer)
+        .join(LiveProject, LiveProject.id == CustomOffer.liveproject_id)
+        .filter(LiveProject.config_id == config.id)
+    )
 
 
 def build_outstanding_custom_query(config: ProjectClassConfig):

@@ -54,15 +54,26 @@ def build_static_context_data(app):
         "website_revision": site_revision,
         "website_copyright_dates": site_copyright_dates,
         "branding_label": app.config.get("BRANDING_LABEL", "Not configured"),
-        "branding_login_landing_string": app.config.get("BRANDING_LOGIN_LANDING_STRING", "Not configured"),
-        "branding_public_landing_string": app.config.get("BRANDING_PUBLIC_LANDING_STRING", "Not configured"),
+        "branding_login_landing_string": app.config.get(
+            "BRANDING_LOGIN_LANDING_STRING", "Not configured"
+        ),
+        "branding_public_landing_string": app.config.get(
+            "BRANDING_PUBLIC_LANDING_STRING", "Not configured"
+        ),
         "email_is_live": app.config.get("EMAIL_IS_LIVE", False),
         "backup_is_live": app.config.get("BACKUP_IS_LIVE", False),
-        "video_explainer_panopto_server": app.config.get("VIDEO_EXPLAINER_PANOPTO_SERVER", None),
-        "video_explainer_panopto_session": app.config.get("VIDEO_EXPLAINER_PANOPTO_SESSION", None),
+        "video_explainer_panopto_server": app.config.get(
+            "VIDEO_EXPLAINER_PANOPTO_SERVER", None
+        ),
+        "video_explainer_panopto_session": app.config.get(
+            "VIDEO_EXPLAINER_PANOPTO_SESSION", None
+        ),
     }
 
-    if _static_ctx["video_explainer_panopto_server"] is not None and _static_ctx["video_explainer_panopto_session"] is not None:
+    if (
+            _static_ctx["video_explainer_panopto_server"] is not None
+            and _static_ctx["video_explainer_panopto_session"] is not None
+    ):
         _static_ctx["enable_video_explainer"] = True
     else:
         _static_ctx["enable_video_explainer"] = False
@@ -98,26 +109,34 @@ def _build_global_context():
     base_context_data = get_global_context_data()
 
     # assumes _static_ctx has been suitably initialized
-    return _static_ctx | {
-        "current_time": datetime.now(),
-        "real_user": _get_previous_login(),
-        "home_dashboard_url": home_dashboard_url(),
-        "is_faculty": is_faculty,
-        "is_office": is_office,
-        "is_student": is_student,
-        "is_reports": is_reports,
-        "is_convenor": is_faculty and current_user.faculty_data is not None and current_user.faculty_data.is_convenor,
-        "is_root": is_root,
-        "is_admin": is_admin,
-        "is_edit_tags": is_edit_tags,
-        "is_view_email": is_view_email,
-        "is_manage_users": is_manage_users,
-        "is_emailer": is_emailer,
-        "is_archive": is_archive,
-        "is_archive_reports": is_archive_reports,
-    } | base_context_data
+    return (
+            _static_ctx
+            | {
+                "current_time": datetime.now(),
+                "real_user": _get_previous_login(),
+                "home_dashboard_url": home_dashboard_url(),
+                "is_faculty": is_faculty,
+                "is_office": is_office,
+                "is_student": is_student,
+                "is_reports": is_reports,
+                "is_convenor": is_faculty
+                               and current_user.faculty_data is not None
+                               and current_user.faculty_data.is_convenor,
+                "is_root": is_root,
+                "is_admin": is_admin,
+                "is_edit_tags": is_edit_tags,
+                "is_view_email": is_view_email,
+                "is_manage_users": is_manage_users,
+                "is_emailer": is_emailer,
+                "is_archive": is_archive,
+                "is_archive_reports": is_archive_reports,
+            }
+            | base_context_data
+    )
 
 
-def render_template_context(template: str | Template | List[str | Template], **kwargs) -> str:
+def render_template_context(
+        template: str | Template | List[str | Template], **kwargs
+) -> str:
     context = _build_global_context()
     return render_template(template, **kwargs, **context)

@@ -11,11 +11,22 @@
 
 from flask import flash
 
-from ..models import SubmissionRecord, User, SupervisionEvent, SubmissionRole, LiveProject, SubmittingStudent, ProjectClassConfig, ProjectClass, \
-    StudentData
+from ..models import (
+    SubmissionRecord,
+    User,
+    SupervisionEvent,
+    SubmissionRole,
+    LiveProject,
+    SubmittingStudent,
+    ProjectClassConfig,
+    ProjectClass,
+    StudentData,
+)
 
 
-def validate_project_hub(record: SubmissionRecord, user: User, current_role=None, message=False):
+def validate_project_hub(
+        record: SubmissionRecord, user: User, current_role=None, message=False
+):
     """
     Validate whether a given user instance is entitled to view the
     ProjectHub for a given SubmissionRecord
@@ -34,7 +45,12 @@ def validate_project_hub(record: SubmissionRecord, user: User, current_role=None
         return True
 
     # office staff, moderators, exam board members and external examiners can always look
-    if user.has_role("office") or user.has_role("moderator") or user.has_role("exam_board") or user.has_role("external_examiner"):
+    if (
+            user.has_role("office")
+            or user.has_role("moderator")
+            or user.has_role("exam_board")
+            or user.has_role("external_examiner")
+    ):
         return True
 
     # supervisors, markers, moderators, exam board members, and external examiners can always look
@@ -44,13 +60,16 @@ def validate_project_hub(record: SubmissionRecord, user: User, current_role=None
         SubmissionRole.ROLE_MARKER,
         SubmissionRole.ROLE_EXAM_BOARD,
         SubmissionRole.ROLE_EXTERNAL_EXAMINER,
-        SubmissionRole.ROLE_MODERATOR
+        SubmissionRole.ROLE_MODERATOR,
     ]
 
     if current_role is not None:
         if current_role.user_id != user.id:
             if message:
-                flash(f'Authorization issue for project page: current role does not match current user. Please contact a system administrator.', 'error')
+                flash(
+                    f"Authorization issue for project page: current role does not match current user. Please contact a system administrator.",
+                    "error",
+                )
             return False
         if current_role.role in allowed_roles:
             return True
@@ -79,7 +98,9 @@ def validate_project_hub(record: SubmissionRecord, user: User, current_role=None
                 "info",
             )
         else:
-            flash(f'You are not currently authorized to view the project hub for student "{suser.name}"')
+            flash(
+                f'You are not currently authorized to view the project hub for student "{suser.name}"'
+            )
 
     return False
 
@@ -110,6 +131,8 @@ def validate_set_attendance(event: SupervisionEvent, user: User, message=False):
         owner: SubmittingStudent = record.owner
         sd: StudentData = owner.student
         suser: User = sd.user
-        flash(f'You are not currently authorized to set attendance for event "{event.name}" and student "{suser.name}"')
+        flash(
+            f'You are not currently authorized to set attendance for event "{event.name}" and student "{suser.name}"'
+        )
 
     return False

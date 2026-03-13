@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-    flaskext.session.sessions
-    ~~~~~~~~~~~~~~~~~~~~~~~~~
+flaskext.session.sessions
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    Server-side Sessions and SessionInterfaces.
+Server-side Sessions and SessionInterfaces.
 
-    :copyright: (c) 2014 by Shipeng Feng.
-    :license: BSD, see LICENSE for more details.
+:copyright: (c) 2014 by Shipeng Feng.
+:license: BSD, see LICENSE for more details.
 """
+
 import sys
 import time
 from datetime import datetime
@@ -147,7 +148,9 @@ class RedisSessionInterface(SessionInterface):
         if not session:
             if session.modified:
                 self.redis.delete(self.key_prefix + session.sid)
-                response.delete_cookie(app.config["SESSION_COOKIE_NAME"], domain=domain, path=path)
+                response.delete_cookie(
+                    app.config["SESSION_COOKIE_NAME"], domain=domain, path=path
+                )
             return
 
         # Modification case.  There are upsides and downsides to
@@ -164,13 +167,23 @@ class RedisSessionInterface(SessionInterface):
         secure = self.get_cookie_secure(app)
         expires = self.get_expiration_time(app, session)
         val = self.serializer.dumps(dict(session))
-        self.redis.setex(name=self.key_prefix + session.sid, value=val, time=total_seconds(app.permanent_session_lifetime))
+        self.redis.setex(
+            name=self.key_prefix + session.sid,
+            value=val,
+            time=total_seconds(app.permanent_session_lifetime),
+        )
         if self.use_signer:
             session_id = self._get_signer(app).sign(want_bytes(session.sid))
         else:
             session_id = session.sid
         response.set_cookie(
-            app.config["SESSION_COOKIE_NAME"], session_id, expires=expires, httponly=httponly, domain=domain, path=path, secure=secure
+            app.config["SESSION_COOKIE_NAME"],
+            session_id,
+            expires=expires,
+            httponly=httponly,
+            domain=domain,
+            path=path,
+            secure=secure,
         )
 
 
@@ -270,11 +283,15 @@ class MemcachedSessionInterface(SessionInterface):
     def save_session(self, app, session, response):
         domain = self.get_cookie_domain(app)
         path = self.get_cookie_path(app)
-        full_session_key = self._encode_key(self.key_prefix) + self._encode_key(session.sid)
+        full_session_key = self._encode_key(self.key_prefix) + self._encode_key(
+            session.sid
+        )
         if not session:
             if session.modified:
                 self.client.delete(full_session_key)
-                response.delete_cookie(app.config["SESSION_COOKIE_NAME"], domain=domain, path=path)
+                response.delete_cookie(
+                    app.config["SESSION_COOKIE_NAME"], domain=domain, path=path
+                )
             return
 
         httponly = self.get_cookie_httponly(app)
@@ -284,13 +301,23 @@ class MemcachedSessionInterface(SessionInterface):
             val = self.serializer.dumps(dict(session))
         else:
             val = self.serializer.dumps(dict(session))
-        self.client.set(full_session_key, val, self._get_memcache_timeout(total_seconds(app.permanent_session_lifetime)))
+        self.client.set(
+            full_session_key,
+            val,
+            self._get_memcache_timeout(total_seconds(app.permanent_session_lifetime)),
+        )
         if self.use_signer:
             session_id = self._get_signer(app).sign(want_bytes(session.sid))
         else:
             session_id = session.sid
         response.set_cookie(
-            app.config["SESSION_COOKIE_NAME"], session_id, expires=expires, httponly=httponly, domain=domain, path=path, secure=secure
+            app.config["SESSION_COOKIE_NAME"],
+            session_id,
+            expires=expires,
+            httponly=httponly,
+            domain=domain,
+            path=path,
+            secure=secure,
         )
 
 
@@ -310,7 +337,9 @@ class MongoDBSessionInterface(SessionInterface):
 
     session_class = MongoDBSession
 
-    def __init__(self, client, db, collection, key_prefix, use_signer=False, permanent=True):
+    def __init__(
+            self, client, db, collection, key_prefix, use_signer=False, permanent=True
+    ):
         if client is None:
             from pymongo import MongoClient
 
@@ -380,7 +409,9 @@ class MongoDBSessionInterface(SessionInterface):
         if not session:
             if session.modified:
                 self.store.remove({"id": store_id})
-                response.delete_cookie(app.config["SESSION_COOKIE_NAME"], domain=domain, path=path)
+                response.delete_cookie(
+                    app.config["SESSION_COOKIE_NAME"], domain=domain, path=path
+                )
             return
 
         httponly = self.get_cookie_httponly(app)
@@ -390,7 +421,9 @@ class MongoDBSessionInterface(SessionInterface):
         # serialize contents of session object and store as the 'val' field
         # in the Mongo backend database
         val = self.serializer.dumps(dict(session))
-        self.store.update_one({"id": store_id}, {"$set": {"val": val, "expiration": expires}}, True)
+        self.store.update_one(
+            {"id": store_id}, {"$set": {"val": val, "expiration": expires}}, True
+        )
 
         # if using signer, sign SID
         if self.use_signer:
@@ -400,7 +433,13 @@ class MongoDBSessionInterface(SessionInterface):
 
         # set cookie
         response.set_cookie(
-            app.config["SESSION_COOKIE_NAME"], session_id, expires=expires, httponly=httponly, domain=domain, path=path, secure=secure
+            app.config["SESSION_COOKIE_NAME"],
+            session_id,
+            expires=expires,
+            httponly=httponly,
+            domain=domain,
+            path=path,
+            secure=secure,
         )
 
 
@@ -464,8 +503,12 @@ class SqlAlchemySessionInterface(SessionInterface):
                 return self.session_class(sid=sid, permanent=self.permanent)
 
         store_id = self.key_prefix + sid
-        saved_session = self.sql_session_model.query.filter_by(session_id=store_id).first()
-        if saved_session and (not saved_session.expiry or saved_session.expiry <= datetime.utcnow()):
+        saved_session = self.sql_session_model.query.filter_by(
+            session_id=store_id
+        ).first()
+        if saved_session and (
+                not saved_session.expiry or saved_session.expiry <= datetime.utcnow()
+        ):
             # Delete expired session
             self.db.session.delete(saved_session)
             self.db.session.commit()
@@ -483,13 +526,17 @@ class SqlAlchemySessionInterface(SessionInterface):
         domain = self.get_cookie_domain(app)
         path = self.get_cookie_path(app)
         store_id = self.key_prefix + session.sid
-        saved_session = self.sql_session_model.query.filter_by(session_id=store_id).first()
+        saved_session = self.sql_session_model.query.filter_by(
+            session_id=store_id
+        ).first()
         if not session:
             if session.modified:
                 if saved_session:
                     self.db.session.delete(saved_session)
                     self.db.session.commit()
-                response.delete_cookie(app.config["SESSION_COOKIE_NAME"], domain=domain, path=path)
+                response.delete_cookie(
+                    app.config["SESSION_COOKIE_NAME"], domain=domain, path=path
+                )
             return
 
         httponly = self.get_cookie_httponly(app)
@@ -509,7 +556,13 @@ class SqlAlchemySessionInterface(SessionInterface):
         else:
             session_id = session.sid
         response.set_cookie(
-            app.config["SESSION_COOKIE_NAME"], session_id, expires=expires, httponly=httponly, domain=domain, path=path, secure=secure
+            app.config["SESSION_COOKIE_NAME"],
+            session_id,
+            expires=expires,
+            httponly=httponly,
+            domain=domain,
+            path=path,
+            secure=secure,
         )
 
 
@@ -539,7 +592,11 @@ class DynamoDBSessionInterface(SessionInterface):
         if session is None:
             import boto3
 
-            session = boto3.Session(aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, region_name=region)
+            session = boto3.Session(
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key,
+                region_name=region,
+            )
         self.client = session.client("dynamodb", endpoint_url=endpoint_url)
         self.key_prefix = key_prefix
         self.use_signer = use_signer
@@ -548,7 +605,9 @@ class DynamoDBSessionInterface(SessionInterface):
         if table_name not in self.client.list_tables().get("TableNames"):
             raise RuntimeError(
                 "The table {0!s} does not exist in DynamoDB for the requested region of {1!s}. Please "
-                'ensure that the table has a PrimaryKey of "SessionID"'.format(table_name, session.region_name)
+                'ensure that the table has a PrimaryKey of "SessionID"'.format(
+                    table_name, session.region_name
+                )
             )
 
         self.table_name = table_name
@@ -572,7 +631,9 @@ class DynamoDBSessionInterface(SessionInterface):
         if not PY2 and not isinstance(sid, text_type):
             sid = sid.decode("utf-8", "strict")
 
-        response = self.client.get_item(TableName=self.table_name, Key={"SessionId": {"S": self.key_prefix + sid}})
+        response = self.client.get_item(
+            TableName=self.table_name, Key={"SessionId": {"S": self.key_prefix + sid}}
+        )
 
         val = response.get("Item", {}).get("Session", {}).get("S")
         if val is not None:
@@ -588,20 +649,37 @@ class DynamoDBSessionInterface(SessionInterface):
         path = self.get_cookie_path(app)
         if not session:
             if session.modified:
-                self.client.delete_item(TableName=self.table_name, Key={"SessionId": {"S": self.key_prefix + session.sid}})
-                response.delete_cookie(app.config["SESSION_COOKIE_NAME"], domain=domain, path=path)
+                self.client.delete_item(
+                    TableName=self.table_name,
+                    Key={"SessionId": {"S": self.key_prefix + session.sid}},
+                )
+                response.delete_cookie(
+                    app.config["SESSION_COOKIE_NAME"], domain=domain, path=path
+                )
             return
 
         httponly = self.get_cookie_httponly(app)
         secure = self.get_cookie_secure(app)
         expires = self.get_expiration_time(app, session)
         val = self.serializer.dumps(dict(session))
-        self.client.put_item(TableName=self.table_name, Item={"SessionId": {"S": self.key_prefix + session.sid}, "Session": {"S": val}})
+        self.client.put_item(
+            TableName=self.table_name,
+            Item={
+                "SessionId": {"S": self.key_prefix + session.sid},
+                "Session": {"S": val},
+            },
+        )
 
         if self.use_signer:
             session_id = self._get_signer(app).sign(want_bytes(session.sid))
         else:
             session_id = session.sid
         response.set_cookie(
-            app.config["SESSION_COOKIE_NAME"], session_id, expires=expires, httponly=httponly, domain=domain, path=path, secure=secure
+            app.config["SESSION_COOKIE_NAME"],
+            session_id,
+            expires=expires,
+            httponly=httponly,
+            domain=domain,
+            path=path,
+            secure=secure,
         )

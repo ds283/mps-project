@@ -18,17 +18,26 @@ from ..shared.forms.mixins import SaveChangesMixin
 
 class TenantMixin:
     name = StringField(
-        "Tenant name", validators=[InputRequired(message="Tenant name is required"), Length(max=DEFAULT_STRING_LENGTH)]
+        "Tenant name",
+        validators=[
+            InputRequired(message="Tenant name is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
     )
 
     colour = StringField(
-        "Colour", validators=[Length(max=DEFAULT_STRING_LENGTH)], description="Assign a colour to help identify this tenant"
+        "Colour",
+        validators=[Length(max=DEFAULT_STRING_LENGTH)],
+        description="Assign a colour to help identify this tenant",
     )
 
-    force_ATAS_flag = BooleanField("Force ATAS-restricted flag to be set on all projects",
-                                   description="If set, projects without the ATAS-restricted flag will fail to validate and cannot be offered to students.")
+    force_ATAS_flag = BooleanField(
+        "Force ATAS-restricted flag to be set on all projects",
+        description="If set, projects without the ATAS-restricted flag will fail to validate and cannot be offered to students.",
+    )
 
     in_2026_ATAS_campaign = BooleanField("In 2026 ATAS campaign", default=False)
+
 
 class AddTenantForm(Form, TenantMixin):
     submit = SubmitField("Add new tenant")

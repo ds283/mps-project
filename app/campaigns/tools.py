@@ -43,8 +43,24 @@ def check_2026_ATAS(fd: FacultyData):
     def add_project(project: Project):
         projects.append(project)
 
-        setattr(InputForm, f"project_{project.id}_ATAS", BooleanField("This project is not suitable for ATAS-restricted students", default=False))
-        setattr(InputForm, f"project_{project.id}_tags", QuerySelectMultipleField("Assign labels for this project", query_factory=query_factory, get_label=get_label, validators=[InputRequired(message="Please apply at least one tag")]))
+        setattr(
+            InputForm,
+            f"project_{project.id}_ATAS",
+            BooleanField(
+                "This project is not suitable for ATAS-restricted students",
+                default=False,
+            ),
+        )
+        setattr(
+            InputForm,
+            f"project_{project.id}_tags",
+            QuerySelectMultipleField(
+                "Assign labels for this project",
+                query_factory=query_factory,
+                get_label=get_label,
+                validators=[InputRequired(message="Please apply at least one tag")],
+            ),
+        )
 
     for project in fd.projects.filter(
             Project.active == True,

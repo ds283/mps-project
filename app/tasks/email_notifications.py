@@ -18,7 +18,17 @@ from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import User, TaskRecord, EmailNotification, ConfirmRequest, LiveProject, Role, SelectingStudent, ProjectClassConfig, EmailTemplate
+from ..models import (
+    User,
+    TaskRecord,
+    EmailNotification,
+    ConfirmRequest,
+    LiveProject,
+    Role,
+    SelectingStudent,
+    ProjectClassConfig,
+    EmailTemplate,
+)
 from ..shared.utils import get_current_year
 from ..task_queue import progress_update, register_task
 
@@ -29,7 +39,8 @@ def _get_outstanding_faculty_confirmation_requests(user):
 
     crqs = user.unheld_email_notifications.filter(
         or_(
-            EmailNotification.event_type == EmailNotification.CONFIRMATION_REQUEST_CREATED,
+            EmailNotification.event_type
+            == EmailNotification.CONFIRMATION_REQUEST_CREATED,
             EmailNotification.event_type == EmailNotification.CONFIRMATION_TO_PENDING,
         )
     ).subquery()
@@ -42,10 +53,17 @@ def _get_outstanding_faculty_confirmation_requests(user):
     # Also filter out notifications associated with any student who has already submitted their choices.
     outstanding_crqs = (
         db.session.query(ConfirmRequest)
-        .filter(ConfirmRequest.state == ConfirmRequest.REQUESTED, ConfirmRequest.viewed == False)
+        .filter(
+            ConfirmRequest.state == ConfirmRequest.REQUESTED,
+            ConfirmRequest.viewed == False,
+        )
         .join(SelectingStudent, SelectingStudent.id == ConfirmRequest.owner_id)
         .join(ProjectClassConfig, ProjectClassConfig.id == SelectingStudent.config_id)
-        .filter(ProjectClassConfig.year == year, ProjectClassConfig.live == True, ProjectClassConfig.selection_closed == False)
+        .filter(
+            ProjectClassConfig.year == year,
+            ProjectClassConfig.live == True,
+            ProjectClassConfig.selection_closed == False,
+        )
         .filter(SelectingStudent.submission_time == None)
         .join(LiveProject, LiveProject.id == ConfirmRequest.project_id)
         .filter(LiveProject.owner_id == user.id)
@@ -72,11 +90,21 @@ def _get_outstanding_student_confirmation_requests(user):
 
     outstanding_crqs = (
         db.session.query(ConfirmRequest)
-        .filter(ConfirmRequest.state == ConfirmRequest.REQUESTED, ConfirmRequest.request_timestamp < cutoff_time)
+        .filter(
+            ConfirmRequest.state == ConfirmRequest.REQUESTED,
+            ConfirmRequest.request_timestamp < cutoff_time,
+        )
         .join(SelectingStudent, SelectingStudent.id == ConfirmRequest.owner_id)
         .join(ProjectClassConfig, ProjectClassConfig.id == SelectingStudent.config_id)
-        .filter(ProjectClassConfig.year == year, ProjectClassConfig.live == True, ProjectClassConfig.selection_closed == False)
-        .filter(SelectingStudent.student_id == user.id, SelectingStudent.submission_time == None)
+        .filter(
+            ProjectClassConfig.year == year,
+            ProjectClassConfig.live == True,
+            ProjectClassConfig.selection_closed == False,
+        )
+        .filter(
+            SelectingStudent.student_id == user.id,
+            SelectingStudent.submission_time == None,
+        )
         .order_by(ConfirmRequest.request_timestamp.asc())
         .all()
     )
@@ -114,14 +142,26 @@ def register_email_notification_tasks(celery):
         # we treat students and faculty slightly differently so we have different dispatchers for them
 
         # find all students
-        students = db.session.query(User).filter(User.active == True, User.roles.any(Role.name == "student")).all()
+        students = (
+            db.session.query(User)
+            .filter(User.active == True, User.roles.any(Role.name == "student"))
+            .all()
+        )
 
-        student_tasks = group(dispatch_student_notifications.si(r.id) for r in students if r is not None)
+        student_tasks = group(
+            dispatch_student_notifications.si(r.id) for r in students if r is not None
+        )
 
         # find all faculty
-        faculty = db.session.query(User).filter(User.active == True, User.roles.any(Role.name == "faculty")).all()
+        faculty = (
+            db.session.query(User)
+            .filter(User.active == True, User.roles.any(Role.name == "faculty"))
+            .all()
+        )
 
-        faculty_tasks = group(dispatch_faculty_notifications.si(r.id) for r in faculty if r is not None)
+        faculty_tasks = group(
+            dispatch_faculty_notifications.si(r.id) for r in faculty if r is not None
+        )
 
         task = group(student_tasks, faculty_tasks)
         raise self.replace(task)
@@ -135,7 +175,13 @@ def register_email_notification_tasks(celery):
         :param user_id:
         :return:
         """
-        progress_update(task_id, TaskRecord.RUNNING, 10, "Preparing to send email...", autocommit=True)
+        progress_update(
+            task_id,
+            TaskRecord.RUNNING,
+            10,
+            "Preparing to send email...",
+            autocommit=True,
+        )
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
@@ -144,7 +190,9 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         # don't use .has_role() here since that can be confused by role masking
@@ -152,20 +200,32 @@ def register_email_notification_tasks(celery):
         # we only issue notifications for faculty or students
         queue = None
         if any(r.name == "student" for r in user.roles):
-            queue = chain(dispatch_student_notifications.si(user_id), notify_finalize.si(task_id)).on_error(notify_fail.si(task_id))
+            queue = chain(
+                dispatch_student_notifications.si(user_id), notify_finalize.si(task_id)
+            ).on_error(notify_fail.si(task_id))
         elif any(r.name == "faculty" for r in user.roles):
-            queue = chain(dispatch_faculty_notifications.si(user_id), notify_finalize.si(task_id)).on_error(notify_fail.si(task_id))
+            queue = chain(
+                dispatch_faculty_notifications.si(user_id), notify_finalize.si(task_id)
+            ).on_error(notify_fail.si(task_id))
 
         if queue is not None:
             raise self.replace(queue)
 
     @celery.task()
     def notify_finalize(task_id):
-        progress_update(task_id, TaskRecord.SUCCESS, 100, "Finished sending email", autocommit=True)
+        progress_update(
+            task_id, TaskRecord.SUCCESS, 100, "Finished sending email", autocommit=True
+        )
 
     @celery.task()
     def notify_fail(task_id):
-        progress_update(task_id, TaskRecord.FAILURE, 100, "Error encountered when sending email", autocommit=True)
+        progress_update(
+            task_id,
+            TaskRecord.FAILURE,
+            100,
+            "Error encountered when sending email",
+            autocommit=True,
+        )
 
     @celery.task(bind=True, default_retry_delay=30)
     def dispatch_faculty_notifications(self, user_id):
@@ -182,7 +242,9 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         # create snapshot of notifications list; this is what we use *everywhere* to decide which notifications
@@ -193,14 +255,20 @@ def register_email_notification_tasks(celery):
         n_ids = [x[0] for x in raw_list]
 
         # strip out all notification ids for newly created events
-        c_ids = [x[0] for x in raw_list if x[1] == EmailNotification.CONFIRMATION_REQUEST_CREATED]
+        c_ids = [
+            x[0]
+            for x in raw_list
+            if x[1] == EmailNotification.CONFIRMATION_REQUEST_CREATED
+        ]
 
         # if we are not grouping notifications into summaries for this user,
         # generate a task to send each email in the queue
         task = None
         if not user.group_summaries:
             if len(n_ids) > 0:
-                task = group(dispatch_faculty_single_email.s(user_id, n_id) for n_id in n_ids)
+                task = group(
+                    dispatch_faculty_single_email.s(user_id, n_id) for n_id in n_ids
+                )
 
         # we always generate a possible summary, even if the 'group summaries' option is not used,
         # to advise of confirmation requests that are not being handled in a timely fashion.
@@ -223,9 +291,13 @@ def register_email_notification_tasks(celery):
             if len(summary_ids) > 0 or len(cr_ids) > 0:
                 has_summary = True
                 if task is None:
-                    task = dispatch_faculty_summary_email.s(None, user.id, summary_ids, cr_ids)
+                    task = dispatch_faculty_summary_email.s(
+                        None, user.id, summary_ids, cr_ids
+                    )
                 else:
-                    task = task | dispatch_faculty_summary_email.s(user.id, summary_ids, cr_ids)
+                    task = task | dispatch_faculty_summary_email.s(
+                        user.id, summary_ids, cr_ids
+                    )
 
         # if nothing to do, then return
         if task is None:
@@ -251,7 +323,9 @@ def register_email_notification_tasks(celery):
                 else:
                     task = dispatch_new_request_notification.s([], c_id_head)
             else:
-                task = task | chain(dispatch_new_request_notification.s(c_id) for c_id in c_ids)
+                task = task | chain(
+                    dispatch_new_request_notification.s(c_id) for c_id in c_ids
+                )
 
         task = task | group(reset_notifications.s(), reset_last_email_time.s(user_id))
         raise self.replace(task)
@@ -265,7 +339,9 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         # create snapshot of notifications list; this is what we use *everywhere* to decide which notifications
@@ -277,7 +353,9 @@ def register_email_notification_tasks(celery):
         task = None
         if not user.group_summaries:
             if len(n_ids) > 0:
-                task = group(dispatch_student_single_email.s(user_id, n_id) for n_id in n_ids)
+                task = group(
+                    dispatch_student_single_email.s(user_id, n_id) for n_id in n_ids
+                )
 
         # we always generate a possible summary, even if the 'group summaries' option is not used,
         # to advise of confirmation requests that are not being handled in a timely fashion.
@@ -300,9 +378,13 @@ def register_email_notification_tasks(celery):
             if len(summary_ids) > 0 or len(cr_ids) > 0:
                 has_summary = True
                 if task is None:
-                    task = dispatch_student_summary_email.s(None, user.id, summary_ids, cr_ids)
+                    task = dispatch_student_summary_email.s(
+                        None, user.id, summary_ids, cr_ids
+                    )
                 else:
-                    task = task | dispatch_student_summary_email.s(user.id, summary_ids, cr_ids)
+                    task = task | dispatch_student_summary_email.s(
+                        user.id, summary_ids, cr_ids
+                    )
 
         # if nothing to do, then return
         if task is None:
@@ -323,17 +405,24 @@ def register_email_notification_tasks(celery):
         if not isinstance(email_outcomes, list):
             print("!!!! email_outcomes = {x}".format(x=email_outcomes))
             print("!!!! type of email_outcomes = {x}".format(x=type(email_outcomes)))
-            raise RuntimeError("Could not interpret reported_ids argument in no_summary_adapter")
+            raise RuntimeError(
+                "Could not interpret reported_ids argument in no_summary_adapter"
+            )
 
         # behave as if we were returning from a summary email task with no outstanding confirm requests
         return email_outcomes, []
 
     @celery.task(bind=True, default_retry_delay=30)
     def reset_notifications(self, reported_ids):
-        if not (isinstance(reported_ids, tuple) or isinstance(reported_ids, list)) or len(reported_ids) != 2:
+        if (
+                not (isinstance(reported_ids, tuple) or isinstance(reported_ids, list))
+                or len(reported_ids) != 2
+        ):
             print("!!!! reported_ids = {x}".format(x=reported_ids))
             print("!!!! type of reported_ids = {x}".format(x=type(reported_ids)))
-            raise RuntimeError("Could not interpret reported_ids argument in reset_notifications")
+            raise RuntimeError(
+                "Could not interpret reported_ids argument in reset_notifications"
+            )
 
         # weed out duplicates; there shouldn't be any, but doesn't hurt
         n_ids_set = set(reported_ids[0])
@@ -348,16 +437,22 @@ def register_email_notification_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def delete_notification(self, n_id):
         if not isinstance(n_id, int):
-            raise RuntimeError("Could not interpret n_id argument in delete_notification")
+            raise RuntimeError(
+                "Could not interpret n_id argument in delete_notification"
+            )
 
         try:
-            notification = db.session.query(EmailNotification).filter_by(id=n_id).first()
+            notification = (
+                db.session.query(EmailNotification).filter_by(id=n_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if notification is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         try:
@@ -373,10 +468,15 @@ def register_email_notification_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def reset_last_email_time(self, reported_ids, user_id):
-        if not (isinstance(reported_ids, tuple) or isinstance(reported_ids, list)) or len(reported_ids) != 2:
+        if (
+                not (isinstance(reported_ids, tuple) or isinstance(reported_ids, list))
+                or len(reported_ids) != 2
+        ):
             print("!!!! reported_ids = {x}".format(x=reported_ids))
             print("!!!! type of reported_ids = {x}".format(x=type(reported_ids)))
-            raise RuntimeError("Could not interpret reported_ids argument in reset_notifications")
+            raise RuntimeError(
+                "Could not interpret reported_ids argument in reset_notifications"
+            )
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
@@ -385,7 +485,9 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         n_ids, cr_ids = reported_ids
@@ -394,7 +496,11 @@ def register_email_notification_tasks(celery):
         # this shouldn't happen; it should be weeded out in the dispatch_* functions, but we catch it here
         # just in case
         if len(n_ids) == 0 and len(cr_ids) == 0:
-            raise RuntimeError("reset_last_email_time called for {name} with no work done".format(name=user.name))
+            raise RuntimeError(
+                "reset_last_email_time called for {name} with no work done".format(
+                    name=user.name
+                )
+            )
 
         user.last_email = datetime.now()
         try:
@@ -410,13 +516,17 @@ def register_email_notification_tasks(celery):
     def dispatch_faculty_single_email(self, user_id, n_id):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-            notification = db.session.query(EmailNotification).filter_by(id=n_id).first()
+            notification = (
+                db.session.query(EmailNotification).filter_by(id=n_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None or notification is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         if notification.held:
@@ -428,11 +538,18 @@ def register_email_notification_tasks(celery):
             template_type=EmailTemplate.NOTIFICATIONS_FACULTY_SINGLE,
             to=[user.email],
             subject_kwargs={"subject": notification.msg_subject()},
-            body_kwargs={"user": user, "notification": notification, "outstanding": outstanding_crqs},
+            body_kwargs={
+                "user": user,
+                "notification": notification,
+                "outstanding": outstanding_crqs,
+            },
         )
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description="Send notification email to {r}".format(r=", ".join(msg.to)))
+        task_id = register_task(
+            msg.subject,
+            description="Send notification email to {r}".format(r=", ".join(msg.to)),
+        )
 
         # queue Celery task to send the email
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
@@ -454,29 +571,49 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         if not isinstance(n_ids, list):
-            raise RuntimeError("Can not interpret n_ids argument in dispatch_faculty_summary_email")
+            raise RuntimeError(
+                "Can not interpret n_ids argument in dispatch_faculty_summary_email"
+            )
         if not isinstance(cr_ids, list):
-            raise RuntimeError("Can not interpret cr_ids argument in dispatch_faculty_summary_email")
+            raise RuntimeError(
+                "Can not interpret cr_ids argument in dispatch_faculty_summary_email"
+            )
 
         try:
-            notifications = [db.session.query(EmailNotification).filter_by(id=n_id).first() for n_id in n_ids]
-            outstanding_crqs = [db.session.query(ConfirmRequest).filter_by(id=cr_id).first() for cr_id in cr_ids]
+            notifications = [
+                db.session.query(EmailNotification).filter_by(id=n_id).first()
+                for n_id in n_ids
+            ]
+            outstanding_crqs = [
+                db.session.query(ConfirmRequest).filter_by(id=cr_id).first()
+                for cr_id in cr_ids
+            ]
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if any(n is None for n in notifications) or any(cr is None for cr in outstanding_crqs):
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+        if any(n is None for n in notifications) or any(
+                cr is None for cr in outstanding_crqs
+        ):
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         # if there are no notifications and no outstanding requests, then there is nothing to do;
         # this should have been weeded out
         if len(n_ids) == 0 and len(outstanding_crqs) == 0:
-            raise RuntimeError("dispatch_faculty_summary_email called for {name} with no work done".format(name=user.name))
+            raise RuntimeError(
+                "dispatch_faculty_summary_email called for {name} with no work done".format(
+                    name=user.name
+                )
+            )
 
         branding_label = current_app.config.get("BRANDING_LABEL")
         if branding_label is not None:
@@ -488,11 +625,18 @@ def register_email_notification_tasks(celery):
             template_type=EmailTemplate.NOTIFICATIONS_FACULTY_ROLLUP,
             to=[user.email],
             subject_kwargs={"subject": subject},
-            body_kwargs={"user": user, "notifications": notifications, "outstanding": outstanding_crqs},
+            body_kwargs={
+                "user": user,
+                "notifications": notifications,
+                "outstanding": outstanding_crqs,
+            },
         )
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description="Send notification email to {r}".format(r=", ".join(msg.to)))
+        task_id = register_task(
+            msg.subject,
+            description="Send notification email to {r}".format(r=", ".join(msg.to)),
+        )
 
         # queue Celery task to send the email
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
@@ -507,17 +651,25 @@ def register_email_notification_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def dispatch_new_request_notification(self, previous_ids, n_id):
         try:
-            notification = db.session.query(EmailNotification).filter_by(id=n_id).first()
+            notification = (
+                db.session.query(EmailNotification).filter_by(id=n_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if notification is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         try:
-            req = db.session.query(ConfirmRequest).filter_by(id=notification.data_1).first()
+            req = (
+                db.session.query(ConfirmRequest)
+                .filter_by(id=notification.data_1)
+                .first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -539,7 +691,12 @@ def register_email_notification_tasks(celery):
             )
 
             # register a new task in the database
-            task_id = register_task(msg.subject, description='Send meeting setup email for "{proj}"'.format(proj=req.project.name))
+            task_id = register_task(
+                msg.subject,
+                description='Send meeting setup email for "{proj}"'.format(
+                    proj=req.project.name
+                ),
+            )
 
             # queue Celery task to send the email
             send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
@@ -554,13 +711,17 @@ def register_email_notification_tasks(celery):
     def dispatch_student_single_email(self, user_id, n_id):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-            notification = db.session.query(EmailNotification).filter_by(id=n_id).first()
+            notification = (
+                db.session.query(EmailNotification).filter_by(id=n_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None or notification is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         msg = EmailTemplate.apply_(
@@ -571,7 +732,10 @@ def register_email_notification_tasks(celery):
         )
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description="Send notification email to {r}".format(r=", ".join(msg.to)))
+        task_id = register_task(
+            msg.subject,
+            description="Send notification email to {r}".format(r=", ".join(msg.to)),
+        )
 
         # queue Celery task to send the email
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
@@ -591,29 +755,49 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         if not isinstance(n_ids, list):
-            raise RuntimeError("Can not interpret n_ids argument in dispatch_student_summary_email")
+            raise RuntimeError(
+                "Can not interpret n_ids argument in dispatch_student_summary_email"
+            )
         if not isinstance(cr_ids, list):
-            raise RuntimeError("Can not interpret cr_ids argument in dispatch_student_summary_email")
+            raise RuntimeError(
+                "Can not interpret cr_ids argument in dispatch_student_summary_email"
+            )
 
         try:
-            notifications = [db.session.query(EmailNotification).filter_by(id=n_id).first() for n_id in n_ids]
-            outstanding_crqs = [db.session.query(ConfirmRequest).filter_by(id=cr_id).first() for cr_id in cr_ids]
+            notifications = [
+                db.session.query(EmailNotification).filter_by(id=n_id).first()
+                for n_id in n_ids
+            ]
+            outstanding_crqs = [
+                db.session.query(ConfirmRequest).filter_by(id=cr_id).first()
+                for cr_id in cr_ids
+            ]
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if any(n is None for n in notifications) or any(cr is None for cr in outstanding_crqs):
-            self.update_state("FAILURE", meta={"msg": "Could not read database records"})
+        if any(n is None for n in notifications) or any(
+                cr is None for cr in outstanding_crqs
+        ):
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not read database records"}
+            )
             raise Ignore()
 
         # if there are no notifications and no outstanding requests, then there is nothing to do;
         # this should have been weeded out
         if len(n_ids) == 0 and len(outstanding_crqs) == 0:
-            raise RuntimeError("dispatch_student_summary_email called for {name} with no work done".format(name=user.name))
+            raise RuntimeError(
+                "dispatch_student_summary_email called for {name} with no work done".format(
+                    name=user.name
+                )
+            )
 
         branding_label = current_app.config.get("BRANDING_LABEL")
         if branding_label is not None:
@@ -625,11 +809,18 @@ def register_email_notification_tasks(celery):
             template_type=EmailTemplate.NOTIFICATIONS_STUDENT_ROLLUP,
             to=[user.email],
             subject_kwargs={"subject": subject},
-            body_kwargs={"user": user, "notifications": notifications, "outstanding": outstanding_crqs},
+            body_kwargs={
+                "user": user,
+                "notifications": notifications,
+                "outstanding": outstanding_crqs,
+            },
         )
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description="Send notification email to {r}".format(r=", ".join(msg.to)))
+        task_id = register_task(
+            msg.subject,
+            description="Send notification email to {r}".format(r=", ".join(msg.to)),
+        )
 
         # queue Celery task to send the email
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]

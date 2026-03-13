@@ -22,15 +22,29 @@ from ..meta import ObjectMeta
 
 class AmazonS3CloudStorageDriver:
     def __init__(self, uri: SplitResult, data: Dict):
-        if data is None or not isinstance(data, dict) or "access_key" not in data or "secret_key" not in data:
-            raise RuntimeError("cloud_object_store: access_key and secret_key credentials must be supplied")
+        if (
+            data is None
+            or not isinstance(data, dict)
+            or "access_key" not in data
+            or "secret_key" not in data
+        ):
+            raise RuntimeError(
+                "cloud_object_store: access_key and secret_key credentials must be supplied"
+            )
 
-        self._session = boto3.Session(aws_access_key_id=data["access_key"], aws_secret_access_key=data["secret_key"])
+        self._session = boto3.Session(
+            aws_access_key_id=data["access_key"],
+            aws_secret_access_key=data["secret_key"],
+        )
 
         # we need to use an S3 Client rather than an S3 Resource, because a Resource provides
         # no methods to retrieve specific byte ranges, only entire objects.
         # See: https://github.com/boto/boto3/issues/3339, https://github.com/boto/s3transfer/pull/260
-        self._storage: BaseClient = self._session.client("s3", endpoint_url=data.get("endpoint_url", None), region_name=data.get("region", None))
+        self._storage: BaseClient = self._session.client(
+            "s3",
+            endpoint_url=data.get("endpoint_url", None),
+            region_name=data.get("region", None),
+        )
 
         if "endpoint_url" in data:
             self._endpoint_url = data["endpoint_url"]
@@ -58,7 +72,9 @@ class AmazonS3CloudStorageDriver:
         # Meanwhile, get_object() is a lower level API call that retrieves the object directly. It may be
         # slower for large files, but there are more configuration options
         try:
-            self._storage.download_fileobj(Bucket=self._bucket_name, Key=str(key), Fileobj=outstream)
+            self._storage.download_fileobj(
+                Bucket=self._bucket_name, Key=str(key), Fileobj=outstream
+            )
         except ClientError as e:
             raise FileNotFoundError(str(e))
 
@@ -68,7 +84,9 @@ class AmazonS3CloudStorageDriver:
         # see get() for the difference between download_fileobj() and get_object()
         try:
             response = self._storage.get_object(
-                self._bucket_name, Key=str(key), Range="bytes {start}-{end}".format(start=start, end=start + length - 1)
+                self._bucket_name,
+                Key=str(key),
+                Range="bytes {start}-{end}".format(start=start, end=start + length - 1),
             )
         except ClientError as e:
             raise FileNotFoundError(str(e))
@@ -76,9 +94,16 @@ class AmazonS3CloudStorageDriver:
 
     def put(self, key: Path, data: bytes, mimetype: str = None) -> None:
         if mimetype is not None:
-            self._storage.upload_fileobj(Fileobj=BytesIO(data), Bucket=self._bucket_name, Key=str(key), ExtraArgs={"ContentDisposition": mimetype})
+            self._storage.upload_fileobj(
+                Fileobj=BytesIO(data),
+                Bucket=self._bucket_name,
+                Key=str(key),
+                ExtraArgs={"ContentDisposition": mimetype},
+            )
         else:
-            self._storage.upload_fileobj(Fileobj=BytesIO(data), Bucket=self._bucket_name, Key=str(key))
+            self._storage.upload_fileobj(
+                Fileobj=BytesIO(data), Bucket=self._bucket_name, Key=str(key)
+            )
 
     def delete(self, key: Path) -> None:
         try:
@@ -88,7 +113,9 @@ class AmazonS3CloudStorageDriver:
 
     def copy(self, src: Path, dst: Path) -> None:
         try:
-            self._storage.copy_object(Bucket=self._bucket_name, Key=str(dst), CopySource=str(src))
+            self._storage.copy_object(
+                Bucket=self._bucket_name, Key=str(dst), CopySource=str(src)
+            )
         except ClientError as e:
             raise FileNotFoundError(str(e))
 
@@ -108,11 +135,15 @@ class AmazonS3CloudStorageDriver:
             if continuation_token is not None:
                 extra_args["ContinuationToken"] = continuation_token
 
-            response = self._storage.list_objects_v2(Bucket=self._bucket_name, **extra_args)
+            response = self._storage.list_objects_v2(
+                Bucket=self._bucket_name, **extra_args
+            )
             try:
                 contents = response["Contents"]
             except KeyError:
-                print(f'** Warning: object store AmazonS3CloudStorageDriver: No contents found for bucket "{self._bucket_name}", prefix="{prefix_str}" | current data = {data}')
+                print(
+                    f'** Warning: object store AmazonS3CloudStorageDriver: No contents found for bucket "{self._bucket_name}", prefix="{prefix_str}" | current data = {data}'
+                )
                 return data
 
             data.update({str(obj["Key"]): self.head(obj["Key"]) for obj in contents})

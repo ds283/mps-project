@@ -25,7 +25,10 @@ def get_matching_data(configs=None):
         if not config.project_class.publish:
             continue
 
-        if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        if (
+                config.selector_lifecycle
+                >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+        ):
             matching_ready = True
 
     return {"matching_ready": matching_ready}

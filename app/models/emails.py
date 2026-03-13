@@ -7,17 +7,19 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-from typing import List, Optional, Dict, Any, Iterable, Callable
+from datetime import datetime
+from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from flask import current_app, render_template_string
 from flask_mailman import EmailMultiAlternatives
 from html2text import HTML2Text
 from sqlalchemy import or_
+from sqlalchemy.exc import SQLAlchemyError
 
-from .defaults import DEFAULT_STRING_LENGTH
-from .models import EditingMetadataMixin, ColouredLabelMixin, ProjectClass
-from .tenants import Tenant
 from ..database import db
+from .defaults import DEFAULT_STRING_LENGTH
+from .models import ColouredLabelMixin, EditingMetadataMixin, ProjectClass
+from .tenants import Tenant
 
 email_template_to_labels = db.Table(
     "email_templates_to_labels",
@@ -184,16 +186,29 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
 
     @staticmethod
     def apply_(
-            template_type: int,
-            to: List[str],
-            from_email: Optional[str] = None,
-            reply_to: Optional[List[str]] = None,
-            subject_kwargs: Optional[Dict[str, Any]] = None,
-            body_kwargs: Optional[Dict[str, Any]] = None,
-            body_attachments: Optional[Dict[str, Callable]] = None,
-            tenant=None,
-            pclass=None,
+        template_type: int,
+        to: List[str],
+        from_email: Optional[str] = None,
+        reply_to: Optional[List[str]] = None,
+        subject_kwargs: Optional[Dict[str, Any]] = None,
+        body_kwargs: Optional[Dict[str, Any]] = None,
+        body_attachments: Optional[Dict[str, Callable]] = None,
+        tenant=None,
+        pclass=None,
     ):
+        """
+        Apply a template to produce an email message.
+        :param template_type:
+        :param to:
+        :param from_email:
+        :param reply_to:
+        :param subject_kwargs:
+        :param body_kwargs:
+        :param body_attachments:
+        :param tenant:
+        :param pclass:
+        :return:
+        """
         tenant_id = None
         if isinstance(tenant, int):
             tenant_id = tenant
@@ -312,5 +327,14 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
 
         msg.body = plain_str
         msg.attach_alternative(html_str, "text/html")
+
+        # update last_used field for this template
+        try:
+            template.last_used = datetime.now()
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            pass
 
         return msg

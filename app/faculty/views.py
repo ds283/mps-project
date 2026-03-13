@@ -254,7 +254,7 @@ def affiliations():
 
     research_groups: List[ResearchGroup] = (
         ResearchGroup.query.filter(
-            ResearchGroup.active == True,
+            ResearchGroup.active.is_(True),
             ResearchGroup.tenants.any(Tenant.id.in_(user_tenant_ids)),
         )
         .order_by(ResearchGroup.name)
@@ -942,13 +942,13 @@ def description_modules(did, level_id=None):
     if not form.validate_on_submit() and request.method == "GET":
         if level_id is None:
             form.selector.data = (
-                FHEQ_Level.query.filter(FHEQ_Level.active == True)
+                FHEQ_Level.query.filter(FHEQ_Level.active.is_(True))
                 .order_by(FHEQ_Level.numeric_level.asc())
                 .first()
             )
         else:
             form.selector.data = FHEQ_Level.query.filter(
-                FHEQ_Level.active == True, FHEQ_Level.id == level_id
+                FHEQ_Level.active.is_(True), FHEQ_Level.id == level_id
             ).first()
 
     # get list of modules for the current level_id
@@ -1312,19 +1312,19 @@ def attach_skills(id, sel_id=None):
     if not form.validate_on_submit() and request.method == "GET":
         if sel_id is None:
             form.selector.data = (
-                SkillGroup.query.filter(SkillGroup.active == True)
+                SkillGroup.query.filter(SkillGroup.active.is_(True))
                 .order_by(SkillGroup.name.asc())
                 .first()
             )
         else:
             form.selector.data = SkillGroup.query.filter(
-                SkillGroup.active == True, SkillGroup.id == sel_id
+                SkillGroup.active.is_(True), SkillGroup.id == sel_id
             ).first()
 
     # get list of active skills matching selector
     if form.selector.data is not None:
         skills = TransferableSkill.query.filter(
-            TransferableSkill.active == True,
+            TransferableSkill.active.is_(True),
             TransferableSkill.group_id == form.selector.data.id,
         ).order_by(TransferableSkill.name.asc())
     else:
@@ -1494,10 +1494,10 @@ def attach_assessors(id):
     # second markers
     pclasses = proj.project_classes.filter(
         and_(
-            ProjectClass.active == True,
+            ProjectClass.active.is_(True),
             or_(
-                ProjectClass.uses_marker == True,
-                ProjectClass.uses_presentations == True,
+                ProjectClass.uses_marker.is_(True),
+                ProjectClass.uses_presentations.is_(True),
             ),
         )
     ).all()
@@ -1772,7 +1772,7 @@ def dashboard():
     if main_config.enable_2026_ATAS_campaign:
         # only consider jumping to landing page if this user belongs to a tenant participating in the campaign
         if (
-                get_count(current_user.tenants.filter(Tenant.in_2026_ATAS_campaign == True))
+                get_count(current_user.tenants.filter(Tenant.in_2026_ATAS_campaign.is_(True)))
                 > 0
         ):
             data = check_2026_ATAS(fd)
@@ -3109,8 +3109,8 @@ def show_enrollments():
         db.session.query(ProjectClass)
         .filter(
             and_(
-                ProjectClass.active == True,
-                ProjectClass.publish == True,
+                ProjectClass.active.is_(True),
+                ProjectClass.publish.is_(True),
                 ProjectClass.tenant_id.in_(user_tenant_ids),
             ),
         )

@@ -958,19 +958,19 @@ def attach_modules(id, level_id=None):
     if not form.validate_on_submit() and request.method == "GET":
         if level_id is None:
             form.selector.data = (
-                FHEQ_Level.query.filter(FHEQ_Level.active == True)
+                FHEQ_Level.query.filter(FHEQ_Level.active.is_(True))
                 .order_by(FHEQ_Level.numeric_level.asc())
                 .first()
             )
         else:
             form.selector.data = FHEQ_Level.query.filter(
-                FHEQ_Level.active == True, FHEQ_Level.id == level_id
+                FHEQ_Level.active.is_(True), FHEQ_Level.id == level_id
             ).first()
 
     # get list of modules for the current level_id
     if form.selector.data is not None:
         modules = Module.query.filter(
-            Module.active == True, Module.level_id == form.selector.data.id
+            Module.active.is_(True), Module.level_id == form.selector.data.id
         ).order_by(Module.semester.asc(), Module.name.asc())
     else:
         modules = []
@@ -9719,7 +9719,7 @@ def manage_assessors_ajax(id):
         assessors = (
             db.session.query(AssessorAttendanceData)
             .join(attached_q, attached_q.c.id == AssessorAttendanceData.id)
-            .filter(AssessorAttendanceData.confirmed == True)
+            .filter(AssessorAttendanceData.confirmed.is_(True))
             .all()
         )
 
@@ -9729,7 +9729,7 @@ def manage_assessors_ajax(id):
         assessors = (
             db.session.query(AssessorAttendanceData)
             .join(attached_q, attached_q.c.id == AssessorAttendanceData.id)
-            .filter(AssessorAttendanceData.confirmed == False)
+            .filter(AssessorAttendanceData.confirmed.is_(False))
             .all()
         )
 
@@ -9806,7 +9806,7 @@ def assessor_session_availability_ajax(id):
         assessors = (
             db.session.query(AssessorAttendanceData)
             .join(attached_q, attached_q.c.id == AssessorAttendanceData.id)
-            .filter(AssessorAttendanceData.confirmed == True)
+            .filter(AssessorAttendanceData.confirmed.is_(True))
             .all()
         )
 
@@ -9816,7 +9816,7 @@ def assessor_session_availability_ajax(id):
         assessors = (
             db.session.query(AssessorAttendanceData)
             .join(attached_q, attached_q.c.id == AssessorAttendanceData.id)
-            .filter(AssessorAttendanceData.confirmed == False)
+            .filter(AssessorAttendanceData.confirmed.is_(False))
             .all()
         )
 

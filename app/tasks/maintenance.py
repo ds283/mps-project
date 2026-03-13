@@ -154,14 +154,14 @@ def register_maintenance_tasks(celery):
         try:
             records = (
                 db.session.query(SubmittingStudent)
-                .filter(SubmittingStudent.retired == False)
+                .filter(SubmittingStudent.retired.is_(False))
                 .join(
                     ProjectClassConfig,
                     ProjectClassConfig.id == SubmittingStudent.config_id,
                 )
                 .filter(
-                    ProjectClassConfig.live == True,
-                    ProjectClassConfig.selection_closed == False,
+                    ProjectClassConfig.live.is_(True),
+                    ProjectClassConfig.selection_closed.is_(False),
                 )
             )
 

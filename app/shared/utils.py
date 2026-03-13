@@ -178,13 +178,13 @@ def build_project_approval_queues():
             ProjectDescription.confirmed,
             ProjectDescription.workflow_state
             != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED,
-            Project.active == True,
+            Project.active.is_(True),
             or_(
-                Project.generic == True,
+                Project.generic.is_(True),
                 and_(
-                    Project.generic == False,
+                    Project.generic.is_(False),
                     FacultyData.id != None,
-                    User.active == True,
+                    User.active.is_(True),
                 ),
             ),
         )
@@ -450,7 +450,7 @@ def build_assessor_query(proj, state_filter, pclass_filter, group_filter):
             db.session.query(FacultyData)
             .join(sq, sq.c.faculty_id == FacultyData.id)
             .join(User, User.id == FacultyData.id)
-            .filter(User.active == True, User.id != proj.owner_id)
+            .filter(User.active.is_(True), User.id != proj.owner_id)
         )
 
     elif state_filter == "not-attached":
@@ -463,7 +463,7 @@ def build_assessor_query(proj, state_filter, pclass_filter, group_filter):
             .join(attached_query, attached_query.c.id == FacultyData.id, isouter=True)
             .filter(
                 attached_query.c.id == None,
-                User.active == True,
+                User.active.is_(True),
                 User.id != proj.owner_id,
             )
         )
@@ -473,7 +473,7 @@ def build_assessor_query(proj, state_filter, pclass_filter, group_filter):
         query = (
             db.session.query(FacultyData)
             .join(User, User.id == FacultyData.id)
-            .filter(User.active == True, User.id != proj.owner_id)
+            .filter(User.active.is_(True), User.id != proj.owner_id)
         )
 
     # add filters for research group, if a filter is applied
@@ -634,9 +634,9 @@ def _build_candidates(
         db.session.query(StudentData)
         .join(User, StudentData.id == User.id)
         .filter(
-            User.active == True,
+            User.active.is_(True),
             User.tenants.any(Tenant.id == tenant_id),
-            StudentData.intermitting == False,
+            StudentData.intermitting.is_(False),
         )
         .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
@@ -704,10 +704,10 @@ def build_submitters_data(
         submitters = submitters.filter(StudentData.programme_id == prog_value)
 
     if state_filter == "published":
-        submitters = submitters.filter(SubmittingStudent.published == True)
+        submitters = submitters.filter(SubmittingStudent.published.is_(True))
         data = submitters.all()
     elif state_filter == "unpublished":
-        submitters = submitters.filter(SubmittingStudent.published == False)
+        submitters = submitters.filter(SubmittingStudent.published.is_(False))
         data = submitters.all()
     elif state_filter == "late-feedback":
         data = [x for x in submitters.all() if x.has_late_feedback]
@@ -722,7 +722,7 @@ def build_submitters_data(
     elif state_filter == "no-attachments":
         data = [x for x in submitters.all() if not x.has_attachments]
     elif state_filter == "twd":
-        submitters = submitters.filter(StudentData.intermitting == True)
+        submitters = submitters.filter(StudentData.intermitting.is_(True))
         data = submitters.all()
     else:
         data = submitters.all()

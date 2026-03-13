@@ -524,7 +524,7 @@ def pull_all_reports_from_canvas(pid):
         .filter(
             and_(
                 SubmissionRecord.report_id == None,
-                SubmissionRecord.canvas_submission_available == True,
+                SubmissionRecord.canvas_submission_available.is_(True),
                 SubmittingStudent.canvas_user_id != None,
             )
         )

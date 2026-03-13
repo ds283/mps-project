@@ -456,7 +456,7 @@ def register_rollover_tasks(celery):
             .join(User, User.id == StudentData.id)
             .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
             .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
-            .filter(User.active == True, DegreeType.level == config.student_level)
+            .filter(User.active.is_(True), DegreeType.level == config.student_level)
         )
 
         # if selection is open to all, we do not want to filter by programme type

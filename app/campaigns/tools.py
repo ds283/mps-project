@@ -63,7 +63,7 @@ def check_2026_ATAS(fd: FacultyData):
         )
 
     for project in fd.projects.filter(
-            Project.active == True,
+            Project.active.is_(True),
     ):
         if any([p.tenant.in_2026_ATAS_campaign for p in project.project_classes]):
             if project.ATAS_restricted is None:

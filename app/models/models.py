@@ -513,19 +513,19 @@ def ProjectConfigurationMixinFactory(
                 db.session.query(FacultyData)
                 .join(fac_ids, fac_ids.c.faculty_id == FacultyData.id)
                 .join(User, User.id == FacultyData.id)
-                .filter(User.active == True)
+                .filter(User.active.is_(True))
                 .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id)
                 .filter(EnrollmentRecord.pclass_id == pclass_id)
                 .join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id)
                 .filter(
                     or_(
                         and_(
-                            ProjectClass.uses_marker == True,
+                            ProjectClass.uses_marker.is_(True),
                             EnrollmentRecord.marker_state
                             == EnrollmentRecord.MARKER_ENROLLED,
                         ),
                         and_(
-                            ProjectClass.uses_presentations == True,
+                            ProjectClass.uses_presentations.is_(True),
                             EnrollmentRecord.presentations_state
                             == EnrollmentRecord.PRESENTATIONS_ENROLLED,
                         ),
@@ -553,7 +553,7 @@ def ProjectConfigurationMixinFactory(
             ).filter(
                 or_(
                     and_(
-                        pclasses.c.uses_marker == True,
+                        pclasses.c.uses_marker.is_(True),
                         or_(
                             EnrollmentRecord.marker_state
                             == EnrollmentRecord.MARKER_ENROLLED,
@@ -562,7 +562,7 @@ def ProjectConfigurationMixinFactory(
                         ),
                     ),
                     and_(
-                        pclasses.c.uses_presentations == True,
+                        pclasses.c.uses_presentations.is_(True),
                         or_(
                             EnrollmentRecord.presentations_state
                             == EnrollmentRecord.PRESENTATIONS_ENROLLED,
@@ -697,14 +697,14 @@ def ProjectConfigurationMixinFactory(
                 db.session.query(FacultyData)
                 .join(fac_ids, fac_ids.c.faculty_id == FacultyData.id)
                 .join(User, User.id == FacultyData.id)
-                .filter(User.active == True)
+                .filter(User.active.is_(True))
                 .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id)
                 .filter(EnrollmentRecord.pclass_id == pclass_id)
                 .join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id)
                 .filter(
                     or_(
                         and_(
-                            ProjectClass.uses_supervisor == True,
+                            ProjectClass.uses_supervisor.is_(True),
                             EnrollmentRecord.supervisor_state
                             == EnrollmentRecord.SUPERVISOR_ENROLLED,
                         )
@@ -731,7 +731,7 @@ def ProjectConfigurationMixinFactory(
                 pclasses, pclasses.c.id == EnrollmentRecord.pclass_id
             ).filter(
                 and_(
-                    pclasses.c.uses_supervisor == True,
+                    pclasses.c.uses_supervisor.is_(True),
                     or_(
                         EnrollmentRecord.supervisor_state
                         == EnrollmentRecord.MARKER_ENROLLED,
@@ -3122,7 +3122,7 @@ class User(db.Model, UserMixin):
     @property
     def unheld_email_notifications(self):
         return self.email_notifications.filter(
-            or_(EmailNotification.held == False, EmailNotification.held == None)
+            or_(EmailNotification.held.is_(False), EmailNotification.held == None)
         ).order_by(EmailNotification.timestamp)
 
     @property
@@ -3979,9 +3979,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
             )
 
         return db.session.query(Project).filter(
-            Project.active == True,
+            Project.active.is_(True),
             Project.project_classes.any(id=pclass_id),
-            Project.generic == True,
+            Project.generic.is_(True),
             Project.supervisors.any(id=self.id),
         )
 
@@ -4010,10 +4010,10 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         # TODO: possibly needs revisiting if we continue decoupling the concept of supervisors from project owners
         return db.session.query(Project).filter(
-            Project.active == True,
+            Project.active.is_(True),
             Project.project_classes.any(id=pclass_id),
             or_(
-                and_(Project.generic == True, Project.supervisors.any(id=self.id)),
+                and_(Project.generic.is_(True), Project.supervisors.any(id=self.id)),
                 Project.owner_id == self.id,
             ),
         )
@@ -4045,7 +4045,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             )
 
         return db.session.query(Project).filter(
-            Project.active == True,
+            Project.active.is_(True),
             Project.owner_id == self.id,
             Project.project_classes.any(id=pclass_id),
         )
@@ -4080,7 +4080,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         explicit_variants = (
             db.session.query(ProjectDescription)
             .select_from(Project)
-            .filter(Project.active == True, Project.owner_id == self.id)
+            .filter(Project.active.is_(True), Project.owner_id == self.id)
             .join(ProjectDescription, ProjectDescription.parent_id == Project.id)
             .filter(ProjectDescription.project_classes.any(id=pclass_id))
         ).all()
@@ -4094,7 +4094,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             db.session.query(ProjectDescription)
             .select_from(Project)
             .filter(
-                Project.active == True,
+                Project.active.is_(True),
                 Project.owner_id == self.id,
                 ~Project.id.in_(explicit_variant_project_ids),
                 Project.project_classes.any(id=pclass_id),
@@ -4423,7 +4423,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             db.session.query(SubmissionRecord)
             .filter(
                 and_(
-                    SubmissionRecord.retired == False,
+                    SubmissionRecord.retired.is_(False),
                     SubmissionRecord.roles.any(
                         and_(
                             SubmissionRole.role.in_(roles),
@@ -4538,7 +4538,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             db.session.query(ScheduleSlot)
             .join(query, query.c.slot_id == ScheduleSlot.id)
             .join(ScheduleAttempt, ScheduleAttempt.id == ScheduleSlot.owner_id)
-            .filter(ScheduleAttempt.deployed == True)
+            .filter(ScheduleAttempt.deployed.is_(True))
             .subquery()
         )
 
@@ -4555,7 +4555,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
                 SubmissionRecord,
                 SubmissionRecord.id == submitter_to_slots.c.submitter_id,
             )
-            .filter(SubmissionRecord.retired == False)
+            .filter(SubmissionRecord.retired.is_(False))
             .join(
                 SubmissionPeriodRecord,
                 SubmissionPeriodRecord.id == SubmissionRecord.period_id,
@@ -4702,7 +4702,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
             db.session.query(AssessorAttendanceData)
             .filter(
                 AssessorAttendanceData.faculty_id == self.id,
-                AssessorAttendanceData.confirmed == False,
+                AssessorAttendanceData.confirmed.is_(False),
             )
             .subquery()
         )
@@ -4712,9 +4712,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
             .join(query, query.c.assessment_id == PresentationAssessment.id)
             .filter(
                 PresentationAssessment.year == _get_current_year(),
-                PresentationAssessment.skip_availability == False,
-                PresentationAssessment.requested_availability == True,
-                PresentationAssessment.availability_closed == False,
+                PresentationAssessment.skip_availability.is_(False),
+                PresentationAssessment.requested_availability.is_(True),
+                PresentationAssessment.availability_closed.is_(False),
             )
             .order_by(PresentationAssessment.name.asc())
         )
@@ -4732,8 +4732,8 @@ class FacultyData(db.Model, EditingMetadataMixin):
             .join(query, query.c.assessment_id == PresentationAssessment.id)
             .filter(
                 PresentationAssessment.year == _get_current_year(),
-                PresentationAssessment.skip_availability == False,
-                PresentationAssessment.availability_closed == False,
+                PresentationAssessment.skip_availability.is_(False),
+                PresentationAssessment.availability_closed.is_(False),
             )
             .order_by(PresentationAssessment.name.asc())
         )
@@ -5382,8 +5382,8 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
             .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
             .filter(
                 PresentationAssessment.year == _get_current_year(),
-                PresentationAssessment.availability_closed == False,
-                SubmissionRecord.retired == False,
+                PresentationAssessment.availability_closed.is_(False),
+                SubmissionRecord.retired.is_(False),
                 SubmittingStudent.student_id == self.id,
             )
             .order_by(PresentationAssessment.name.asc())
@@ -8447,7 +8447,7 @@ class SubmissionPeriodRecord(db.Model):
             .join(SubmissionRecord, SubmissionRecord.id == SubmissionRole.submission_id)
             .filter(
                 SubmissionRecord.period_id == self.id,
-                SubmissionRecord.retired == False,
+                SubmissionRecord.retired.is_(False),
                 SubmissionRole.user_id == user_id,
                 SubmissionRole.role.in_(role_ids),
             )
@@ -8692,7 +8692,7 @@ class SubmissionPeriodRecord(db.Model):
             ).filter(
                 and_(
                     SubmissionRecord.report_id == None,
-                    SubmissionRecord.canvas_submission_available == True,
+                    SubmissionRecord.canvas_submission_available.is_(True),
                     SubmittingStudent.canvas_user_id != None,
                 )
             )
@@ -13308,7 +13308,7 @@ class SubmissionRole(
 
         query = self.past_owned_events(now)
         query = query.filter(
-            SupervisionEvent.monitor_attendance == True,
+            SupervisionEvent.monitor_attendance.is_(True),
             SupervisionEvent.attendance != None,
         )
         return get_count(query)
@@ -13321,7 +13321,7 @@ class SubmissionRole(
 
         query = self.past_owned_events(now)
         query = query.filter(
-            SupervisionEvent.monitor_attendance == True,
+            SupervisionEvent.monitor_attendance.is_(True),
             SupervisionEvent.attendance == None,
         )
         return get_count(query)
@@ -14516,7 +14516,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             db.session.query(ScheduleSlot)
             .join(query, query.c.slot_id == ScheduleSlot.id)
             .join(ScheduleAttempt, ScheduleAttempt.id == ScheduleSlot.owner_id)
-            .filter(ScheduleAttempt.deployed == True)
+            .filter(ScheduleAttempt.deployed.is_(True))
         )
 
         slots = get_count(slot_query)
@@ -14555,7 +14555,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             SubmissionAttachment.parent_id == self.id
         )
         if published_to_students:
-            query = query.filter(SubmissionAttachment.publish_to_students == True)
+            query = query.filter(SubmissionAttachment.publish_to_students.is_(True))
 
         query = (
             query.join(
@@ -14600,7 +14600,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             PeriodAttachment.parent_id == self.period.id
         )
         if published_to_students:
-            query = query.filter(PeriodAttachment.publish_to_students == True)
+            query = query.filter(PeriodAttachment.publish_to_students.is_(True))
 
         query = (
             query.join(
@@ -14714,11 +14714,11 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return db.session.query(articles).filter(
             or_(
                 and_(
-                    articles.ConvenorSubmitterArticle.published == True,
+                    articles.ConvenorSubmitterArticle.published.is_(True),
                     articles.ConvenorSubmitterArticle.period_id == self.period_id,
                 ),
                 and_(
-                    articles.ProjectSubmitterArticle.published == True,
+                    articles.ProjectSubmitterArticle.published.is_(True),
                     articles.ProjectSubmitterArticle.record_id == self.id,
                 ),
             )
@@ -14874,7 +14874,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         query = self.get_ordered_past_events(now=now)
         query = query.filter(
-            SupervisionEvent.monitor_attendance == True,
+            SupervisionEvent.monitor_attendance.is_(True),
             SupervisionEvent.attendance != None,
         )
         return get_count(query)
@@ -14885,7 +14885,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         query = self.get_ordered_past_events(now=now)
         query = query.filter(
-            SupervisionEvent.monitor_attendance == True,
+            SupervisionEvent.monitor_attendance.is_(True),
             SupervisionEvent.attendance == None,
         )
         return get_count(query)
@@ -17110,7 +17110,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         # check whether any MatchingRecords are associated with selectors who are not converting
         no_convert_query = self.records.join(
             SelectingStudent, MatchingRecord.selector_id == SelectingStudent.id
-        ).filter(SelectingStudent.convert_to_submitter == False)
+        ).filter(SelectingStudent.convert_to_submitter.is_(False))
 
         if get_count(no_convert_query) > 0:
             return True
@@ -18527,7 +18527,7 @@ class PresentationAssessment(
             .join(q, q.c.id == AssessorAttendanceData.id)
             .join(FacultyData, FacultyData.id == AssessorAttendanceData.faculty_id)
             .join(User, User.id == FacultyData.id)
-            .filter(User.active == True)
+            .filter(User.active.is_(True))
             .order_by(User.last_name.asc(), User.first_name.asc())
         )
 
@@ -19343,7 +19343,7 @@ class PresentationSession(
         return (
             db.session.query(Room)
             .join(query, query.c.room_id == Room.id)
-            .filter(Room.active == True)
+            .filter(Room.active.is_(True))
             .join(Building, Building.id == Room.building_id)
             .order_by(Building.name.asc(), Room.name.asc())
         )
@@ -20658,7 +20658,7 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
         )
 
         if needs_lecture_capture:
-            query = query.filter(Room.lecture_capture == True)
+            query = query.filter(Room.lecture_capture.is_(True))
 
         return (
             query.join(Building, Building.id == Room.building_id)

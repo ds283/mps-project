@@ -30,7 +30,7 @@
         {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
         <div class="text-danger small"><i class="fas fa-clock"></i> waiting {{ delta.days }} day{{ pl }}</div>
     {% endif %}
-    {% if req.state != req.CONFIRMED and req.viewed == false %}
+    {% if req.state != req.CONFIRMED and not req.viewed %}
         <span class="badge bg-danger">Not viewed</span>
     {% endif %}
 {% endmacro %}

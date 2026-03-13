@@ -648,7 +648,7 @@ def attached_ajax(id):
             ).filter(ProjectDescription.project_classes.any(id=pclass.id))
 
             if valid_filter == "pending":
-                base_query = base_query.filter(ProjectDescription.confirmed == False)
+                base_query = base_query.filter(ProjectDescription.confirmed.is_(False))
 
         if valid_filter == "valid":
             base_query = base_query.filter(
@@ -673,7 +673,7 @@ def attached_ajax(id):
     # restrict query to projects owned by active users, or generic projects
     base_query = base_query.join(
         User, User.id == Project.owner_id, isouter=True
-    ).filter(or_(Project.generic == True, User.active == True))
+    ).filter(or_(Project.generic.is_(True), User.active.is_(True)))
 
     # get FilterRecord for currently logged-in user
     filter_record: FilterRecord = get_convenor_filter_record(config)
@@ -1161,7 +1161,7 @@ def selectors(id):
     # build list of available programmes
     all_progs = (
         db.session.query(DegreeProgramme)
-        .filter(DegreeProgramme.active == True)
+        .filter(DegreeProgramme.active.is_(True))
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
         .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
         .all()
@@ -1416,9 +1416,9 @@ def _build_selector_data(
         selectors = selectors.filter(StudentData.programme_id == prog_value)
 
     if convert_filter == "convert":
-        selectors = selectors.filter(SelectingStudent.convert_to_submitter == True)
+        selectors = selectors.filter(SelectingStudent.convert_to_submitter.is_(True))
     elif convert_filter == "no-convert":
-        selectors = selectors.filter(SelectingStudent.convert_to_submitter == False)
+        selectors = selectors.filter(SelectingStudent.convert_to_submitter.is_(False))
 
     if state_filter == "submitted":
         data = [rec for rec in selectors.all() if rec.has_submitted]
@@ -1535,7 +1535,7 @@ def enrol_selectors(id):
     # build list of available programmes
     progs = (
         db.session.query(DegreeProgramme)
-        .filter(DegreeProgramme.active == True, DegreeProgramme.id.in_(programmes))
+        .filter(DegreeProgramme.active.is_(True), DegreeProgramme.id.in_(programmes))
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
         .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
         .all()
@@ -2027,7 +2027,7 @@ def selector_grid(id):
     # build list of available programmes
     all_progs = (
         db.session.query(DegreeProgramme)
-        .filter(DegreeProgramme.active == True)
+        .filter(DegreeProgramme.active.is_(True))
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
         .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
         .all()
@@ -2177,7 +2177,7 @@ def selector_grid_ajax(id):
         )
 
     if state_filter == "twd":
-        selectors = selectors.filter(StudentData.intermitting == True)
+        selectors = selectors.filter(StudentData.intermitting.is_(True))
 
     if cohort_flag:
         selectors = selectors.filter(StudentData.cohort == cohort_value)
@@ -2442,7 +2442,7 @@ def submitters(id):
     # build list of available programmes
     all_progs = (
         db.session.query(DegreeProgramme)
-        .filter(DegreeProgramme.active == True)
+        .filter(DegreeProgramme.active.is_(True))
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
         .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
         .all()
@@ -2654,7 +2654,7 @@ def enrol_submitters(id):
     # build list of available programmes
     all_progs = (
         db.session.query(DegreeProgramme)
-        .filter(DegreeProgramme.active == True)
+        .filter(DegreeProgramme.active.is_(True))
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
         .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
         .all()
@@ -4333,9 +4333,9 @@ def _liveprojects_ajax_handler(
     base_query, config: ProjectClassConfig, state_filter: str, type_filter: str
 ):
     if type_filter == "generic":
-        base_query = base_query.filter(LiveProject.generic == True)
+        base_query = base_query.filter(LiveProject.generic.is_(True))
     elif type_filter == "hidden":
-        base_query = base_query.filter(LiveProject.hidden == True)
+        base_query = base_query.filter(LiveProject.hidden.is_(True))
     elif type_filter == "alternatives":
         base_query = base_query.join(
             LiveProjectAlternative, LiveProjectAlternative.parent_id == LiveProject.id
@@ -4750,7 +4750,7 @@ def attach_liveproject_ajax(id):
         return jsonify({})
 
     # compute all active projects registered for this project class, that do not have a LiveProject equivalent
-    base_query = pclass.projects.filter(Project.active == True)
+    base_query = pclass.projects.filter(Project.active.is_(True))
 
     # get existing liveprojects, and remove any counterparts
     current_projects = [p.parent_id for p in config.live_projects]
@@ -4759,7 +4759,7 @@ def attach_liveproject_ajax(id):
     # restrict query to projects owned by active users, or generic projects
     base_query = base_query.join(
         User, User.id == Project.owner_id, isouter=True
-    ).filter(or_(Project.generic == True, User.active == True))
+    ).filter(or_(Project.generic.is_(True), User.active.is_(True)))
 
     # remove projects that don't have a description
     base_query = base_query.join(
@@ -4864,7 +4864,7 @@ def attach_liveproject_other_ajax(id):
     # find all projects, not already attached as LiveProjects, that are not attached to
     # this project class
     base_query = db.session.query(Project, ProjectDescription).filter(
-        Project.active == True,
+        Project.active.is_(True),
         ~Project.project_classes.any(ProjectClass.id == pclass.id),
         ProjectDescription.parent_id == Project.id,
     )
@@ -4881,7 +4881,7 @@ def attach_liveproject_other_ajax(id):
     # restrict query to projects owned by active users, or generic projects
     base_query = base_query.join(
         User, User.id == Project.owner_id, isouter=True
-    ).filter(or_(Project.generic == True, User.active == True))
+    ).filter(or_(Project.generic.is_(True), User.active.is_(True)))
 
     return project_list_SQL_handler(
         request,
@@ -5912,13 +5912,13 @@ def description_modules(did, pclass_id, level_id=None):
     if not form.validate_on_submit() and request.method == "GET":
         if level_id is None:
             form.selector.data = (
-                FHEQ_Level.query.filter(FHEQ_Level.active == True)
+                FHEQ_Level.query.filter(FHEQ_Level.active.is_(True))
                 .order_by(FHEQ_Level.numeric_level.asc())
                 .first()
             )
         else:
             form.selector.data = FHEQ_Level.query.filter(
-                FHEQ_Level.active == True, FHEQ_Level.id == level_id
+                FHEQ_Level.active.is_(True), FHEQ_Level.id == level_id
             ).first()
 
     # get list of modules for the current level_id
@@ -6351,19 +6351,19 @@ def attach_skills(id, pclass_id, sel_id=None):
     if not form.validate_on_submit() and request.method == "GET":
         if sel_id is None:
             form.selector.data = (
-                SkillGroup.query.filter(SkillGroup.active == True)
+                SkillGroup.query.filter(SkillGroup.active.is_(True))
                 .order_by(SkillGroup.name.asc())
                 .first()
             )
         else:
             form.selector.data = SkillGroup.query.filter(
-                SkillGroup.active == True, SkillGroup.id == sel_id
+                SkillGroup.active.is_(True), SkillGroup.id == sel_id
             ).first()
 
     # get list of active skills matching selector
     if form.selector.data is not None:
         skills = TransferableSkill.query.filter(
-            TransferableSkill.active == True,
+            TransferableSkill.active.is_(True),
             TransferableSkill.group_id == form.selector.data.id,
         ).order_by(TransferableSkill.name.asc())
     else:
@@ -6580,10 +6580,10 @@ def attach_assessors(id, pclass_id):
     # second markers
     pclasses: List[ProjectClass] = proj.project_classes.filter(
         and_(
-            ProjectClass.active == True,
+            ProjectClass.active.is_(True),
             or_(
-                ProjectClass.uses_marker == True,
-                ProjectClass.uses_presentations == True,
+                ProjectClass.uses_marker.is_(True),
+                ProjectClass.uses_presentations.is_(True),
             ),
         )
     ).all()
@@ -7140,9 +7140,9 @@ def unofferable_ajax():
 
     base_query = (
         db.session.query(Project)
-        .filter(Project.active == True)
+        .filter(Project.active.is_(True))
         .join(User, User.id == Project.owner_id, isouter=True)
-        .filter(or_(Project.generic == True, User.active == True))
+        .filter(or_(Project.generic.is_(True), User.active.is_(True)))
     )
 
     def row_filter(row: Project):

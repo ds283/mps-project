@@ -264,7 +264,7 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
 
         # find active template at highest level of override
         templ_query = db.session.query(EmailTemplate).filter(
-            EmailTemplate.type == template_type, EmailTemplate.active == True
+            EmailTemplate.type == template_type, EmailTemplate.active.is_(True)
         )
         if tenant_id is not None:
             templ_query = templ_query.filter(

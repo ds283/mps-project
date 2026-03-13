@@ -883,7 +883,7 @@ def demerge_project_tags(app):
                     default_group = (
                         db.session.query(ProjectTagGroup)
                         .filter(
-                            ProjectTagGroup.default == True,
+                            ProjectTagGroup.default.is_(True),
                             ProjectTagGroup.tenants.any(Tenant.id.in_(allowed_tenant_ids)),
                         )
                         .first()

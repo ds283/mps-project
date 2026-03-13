@@ -61,7 +61,7 @@ def validate():
     programmes = (
         db.session.query(DegreeProgramme)
         .join(prog_query, prog_query.c.programme_id == DegreeProgramme.id)
-        .filter(DegreeProgramme.active == True)
+        .filter(DegreeProgramme.active.is_(True))
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
         .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
         .all()
@@ -220,7 +220,7 @@ def correct():
     programmes = (
         db.session.query(DegreeProgramme)
         .join(prog_query, prog_query.c.programme_id == DegreeProgramme.id)
-        .filter(DegreeProgramme.active == True)
+        .filter(DegreeProgramme.active.is_(True))
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
         .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
         .all()

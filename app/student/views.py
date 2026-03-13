@@ -168,13 +168,13 @@ def dashboard():
         programme: DegreeProgramme = data.programme
         ptype: DegreeType = programme.degree_type
         pclasses = ProjectClass.query.filter(
-            ProjectClass.active == True,
-            ProjectClass.publish == True,
+            ProjectClass.active.is_(True),
+            ProjectClass.publish.is_(True),
             ProjectClass.student_level == ptype.level,
         )
     else:
         pclasses = ProjectClass.query.filter(
-            ProjectClass.active == True, ProjectClass.publish == True
+            ProjectClass.active.is_(True), ProjectClass.publish.is_(True)
         )
 
     # build list of system messages to consider displaying
@@ -248,7 +248,7 @@ def selector_browse_projects(id):
     skills = (
         db.session.query(TransferableSkill)
         .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id)
-        .filter(TransferableSkill.active == True, SkillGroup.active == True)
+        .filter(TransferableSkill.active.is_(True), SkillGroup.active.is_(True))
         .order_by(SkillGroup.name.asc(), TransferableSkill.name.asc())
         .all()
     )

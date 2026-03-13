@@ -118,7 +118,7 @@ def register_issue_confirm_tasks(celery):
             )
             .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id)
             .join(User, User.id == FacultyData.id)
-            .filter(User.active == True)
+            .filter(User.active.is_(True))
             .distinct()
         )
 

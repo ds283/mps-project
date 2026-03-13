@@ -58,7 +58,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     all_fac_query = (
         db.session.query(User)
         .filter(
-            User.active == True,
+            User.active.is_(True),
             User.tenants.any(Tenant.id == pclass.tenant_id),
         )
         .join(FacultyData, FacultyData.id == User.id)
@@ -71,7 +71,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
 
     attached_projects = (
         db.session.query(Project)
-        .filter(Project.active == True, Project.project_classes.any(id=pclass.id))
+        .filter(Project.active.is_(True), Project.project_classes.any(id=pclass.id))
         .join(User, User.id == Project.owner_id, isouter=True)
         .join(FacultyData, FacultyData.id == User.id, isouter=True)
         .join(
@@ -81,14 +81,14 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         )
         .filter(
             or_(
-                Project.generic == True,
+                Project.generic.is_(True),
                 and_(
-                    Project.generic == False,
+                    Project.generic.is_(False),
                     EnrollmentRecord.pclass_id == pclass.id,
                     EnrollmentRecord.supervisor_state
                     == EnrollmentRecord.SUPERVISOR_ENROLLED,
                     FacultyData.id != None,
-                    User.active == True,
+                    User.active.is_(True),
                 ),
             )
         )
@@ -305,7 +305,7 @@ def _compute_group_capacity_data(pclass_id, group_id):
     ps = (
         db.session.query(Project)
         .filter(
-            Project.active == True,
+            Project.active.is_(True),
             Project.project_classes.any(id=pclass_id),
             Project.group_id == group_id,
         )
@@ -318,14 +318,14 @@ def _compute_group_capacity_data(pclass_id, group_id):
         )
         .filter(
             or_(
-                Project.generic == True,
+                Project.generic.is_(True),
                 and_(
-                    Project.generic == False,
+                    Project.generic.is_(False),
                     EnrollmentRecord.pclass_id == pclass_id,
                     EnrollmentRecord.supervisor_state
                     == EnrollmentRecord.SUPERVISOR_ENROLLED,
                     FacultyData.id != None,
-                    User.active == True,
+                    User.active.is_(True),
                 ),
             )
         )
@@ -381,14 +381,14 @@ def _compute_group_capacity_data(pclass_id, group_id):
         .filter(EnrollmentRecord.pclass_id == pclass_id)
         .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id)
         .join(User, User.id == EnrollmentRecord.owner_id)
-        .filter(FacultyData.affiliations.any(id=group_id), User.active == True)
+        .filter(FacultyData.affiliations.any(id=group_id), User.active.is_(True))
     )
 
     # get total number of faculty belonging to this research group
     faculty_in_group = get_count(
         db.session.query(FacultyData.id)
         .join(User, User.id == FacultyData.id)
-        .filter(FacultyData.affiliations.any(id=group_id), User.active == True)
+        .filter(FacultyData.affiliations.any(id=group_id), User.active.is_(True))
     )
 
     return {
@@ -412,7 +412,7 @@ def _compute_group_approvals_data(pclass_id, group_id):
     ps = (
         db.session.query(Project)
         .filter(
-            Project.active == True,
+            Project.active.is_(True),
             Project.project_classes.any(id=pclass_id),
             Project.group_id == group_id,
         )
@@ -425,14 +425,14 @@ def _compute_group_approvals_data(pclass_id, group_id):
         )
         .filter(
             or_(
-                Project.generic == True,
+                Project.generic.is_(True),
                 and_(
-                    Project.generic == False,
+                    Project.generic.is_(False),
                     EnrollmentRecord.pclass_id == pclass_id,
                     EnrollmentRecord.supervisor_state
                     == EnrollmentRecord.SUPERVISOR_ENROLLED,
                     FacultyData.id != None,
-                    User.active == True,
+                    User.active.is_(True),
                 ),
             )
         )

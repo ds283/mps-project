@@ -17,8 +17,8 @@ def get_pclass_list() -> List[ProjectClass]:
     return (
         db.session.query(ProjectClass)
         .filter(
-            ProjectClass.active == True,
-            ProjectClass.publish == True,
+            ProjectClass.active.is_(True),
+            ProjectClass.publish.is_(True),
         )
         .order_by(ProjectClass.name.asc())
         .all()

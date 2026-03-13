@@ -91,7 +91,7 @@ def workload():
         groups = (
             db.session.query(ResearchGroup)
             .filter(
-                ResearchGroup.active == True,
+                ResearchGroup.active.is_(True),
                 ResearchGroup.tenants.any(Tenant.id.in_(allowed_tenants)),
             )
             .all()
@@ -252,7 +252,7 @@ def all_projects_ajax():
     base_query = (
         db.session.query(Project)
         .join(User, User.id == Project.owner_id, isouter=True)
-        .filter(or_(Project.generic == True, User.active == True))
+        .filter(or_(Project.generic.is_(True), User.active.is_(True)))
     )
 
     if flag:
@@ -268,9 +268,9 @@ def all_projects_ajax():
         base_query = base_query.filter(Project.project_classes.any(publish=False))
 
     if active_filter == "active":
-        base_query = base_query.filter(Project.active == True)
+        base_query = base_query.filter(Project.active.is_(True))
     elif active_filter == "inactive":
-        base_query = base_query.filter(Project.active == False)
+        base_query = base_query.filter(Project.active.is_(False))
 
     if valid_filter == "valid":
         base_query = base_query.filter(
@@ -302,8 +302,8 @@ def all_projects_ajax():
     elif valid_filter == "pending":
         base_query = base_query.filter(
             Project.descriptions.any(
-                ProjectDescription.requires_confirmation == True,
-                ProjectDescription.confirmed == False,
+                ProjectDescription.requires_confirmation.is_(True),
+                ProjectDescription.confirmed.is_(False),
             )
         )
 
@@ -524,14 +524,14 @@ def year_groups():
             .select_from(StudentData)
             .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
             .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
-            .filter(DegreeProgramme.active == True)
+            .filter(DegreeProgramme.active.is_(True))
             .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
             .all()
         )
         cohort_data = (
             db.session.query(StudentData.cohort)
             .join(User, User.id == StudentData.id)
-            .filter(User.active == True)
+            .filter(User.active.is_(True))
             .distinct()
             .all()
         )
@@ -543,7 +543,7 @@ def year_groups():
             .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
             .filter(
                 DegreeProgramme.tenants.any(Tenant.id.in_(allowed_tenants)),
-                DegreeProgramme.active == True,
+                DegreeProgramme.active.is_(True),
             )
             .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
             .all()
@@ -553,7 +553,7 @@ def year_groups():
             .join(User, User.id == StudentData.id)
             .filter(
                 User.tenants.any(Tenant.id.in_(allowed_tenants)),
-                User.active == True,
+                User.active.is_(True),
             )
             .distinct()
             .all()
@@ -564,7 +564,7 @@ def year_groups():
         .select_from(StudentData)
         .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id)
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
-        .filter(DegreeType.active == True)
+        .filter(DegreeType.active.is_(True))
         .order_by(DegreeType.name.asc())
         .all()
     )

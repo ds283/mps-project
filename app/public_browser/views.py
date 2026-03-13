@@ -59,16 +59,16 @@ def browse_ajax():
         db.session.query(Project)
         .filter(
             and_(
-                Project.ATAS_restricted == False,
-                Project.active == True,
+                Project.ATAS_restricted.is_(False),
+                Project.active.is_(True),
                 Project.project_classes.any(ProjectClass.id == pclass_id),
             )
         )
         .join(User, User.id == Project.owner_id, isouter=True)
         .filter(
             or_(
-                Project.generic == True,
-                User.active == True,
+                Project.generic.is_(True),
+                User.active.is_(True),
             )
         )
         .join(ResearchGroup, ResearchGroup.id == Project.group_id, isouter=True)

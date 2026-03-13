@@ -55,14 +55,14 @@ def _get_outstanding_faculty_confirmation_requests(user):
         db.session.query(ConfirmRequest)
         .filter(
             ConfirmRequest.state == ConfirmRequest.REQUESTED,
-            ConfirmRequest.viewed == False,
+            ConfirmRequest.viewed.is_(False),
         )
         .join(SelectingStudent, SelectingStudent.id == ConfirmRequest.owner_id)
         .join(ProjectClassConfig, ProjectClassConfig.id == SelectingStudent.config_id)
         .filter(
             ProjectClassConfig.year == year,
-            ProjectClassConfig.live == True,
-            ProjectClassConfig.selection_closed == False,
+            ProjectClassConfig.live.is_(True),
+            ProjectClassConfig.selection_closed.is_(False),
         )
         .filter(SelectingStudent.submission_time == None)
         .join(LiveProject, LiveProject.id == ConfirmRequest.project_id)
@@ -98,8 +98,8 @@ def _get_outstanding_student_confirmation_requests(user):
         .join(ProjectClassConfig, ProjectClassConfig.id == SelectingStudent.config_id)
         .filter(
             ProjectClassConfig.year == year,
-            ProjectClassConfig.live == True,
-            ProjectClassConfig.selection_closed == False,
+            ProjectClassConfig.live.is_(True),
+            ProjectClassConfig.selection_closed.is_(False),
         )
         .filter(
             SelectingStudent.student_id == user.id,
@@ -144,7 +144,7 @@ def register_email_notification_tasks(celery):
         # find all students
         students = (
             db.session.query(User)
-            .filter(User.active == True, User.roles.any(Role.name == "student"))
+            .filter(User.active.is_(True), User.roles.any(Role.name == "student"))
             .all()
         )
 
@@ -155,7 +155,7 @@ def register_email_notification_tasks(celery):
         # find all faculty
         faculty = (
             db.session.query(User)
-            .filter(User.active == True, User.roles.any(Role.name == "faculty"))
+            .filter(User.active.is_(True), User.roles.any(Role.name == "faculty"))
             .all()
         )
 

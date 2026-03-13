@@ -16,21 +16,20 @@ from urllib import parse
 import latex2markdown
 import redis
 from dozer import Dozer
-from flask import Flask, g, make_response
-from flask import current_app, request
+from flask import Flask, current_app, g, make_response, request
 from flask_assets import Environment
 from flask_babel import Babel
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_healthz import Healthz
 from flask_login.signals import user_logged_in
-from flask_mailman import Mail, EmailMultiAlternatives
+from flask_mailman import EmailMultiAlternatives, Mail
 from flask_migrate import Migrate
 from flask_security import (
-    current_user,
-    SQLAlchemyUserDatastore,
-    Security,
     LoginForm,
     MailUtil,
+    Security,
+    SQLAlchemyUserDatastore,
+    current_user,
 )
 from flask_sqlalchemy.record_queries import get_recorded_queries
 from pyinstrument import Profiler as PyInstrumentProfiler
@@ -41,16 +40,16 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .cache import cache
 from .database import db
-from .instance.version import site_revision, site_copyright_dates
+from .instance.version import site_copyright_dates, site_revision
 from .limiter import limiter
-from .models import User, MessageOfTheDay, Notification
+from .models import MessageOfTheDay, Notification, User
 from .shared.context.global_context import (
-    get_global_context_data,
     build_static_context_data,
+    get_global_context_data,
     render_template_context,
 )
 from .shared.utils import home_dashboard_url
-from .task_queue import make_celery, register_task, background_task
+from .task_queue import background_task, make_celery, register_task
 from .thirdparty.flask_bleach import Bleach
 from .thirdparty.flask_bootstrap5 import Bootstrap
 from .thirdparty.flask_markdown import Markdown
@@ -290,7 +289,7 @@ def create_app():
         messages = []
         for message in (
             db.session.query(MessageOfTheDay)
-            .filter(MessageOfTheDay.show_login == True)
+            .filter(MessageOfTheDay.show_login.is_(True))
             .order_by(MessageOfTheDay.issue_date.desc())
             .all()
         ):

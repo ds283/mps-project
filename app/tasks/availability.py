@@ -90,7 +90,7 @@ def register_availability_tasks(celery):
                 .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id)
                 .join(User, User.id == FacultyData.id)
                 .filter(
-                    User.active == True,
+                    User.active.is_(True),
                     EnrollmentRecord.pclass_id == period.config.pclass_id,
                     EnrollmentRecord.presentations_state
                     == EnrollmentRecord.PRESENTATIONS_ENROLLED,
@@ -558,10 +558,10 @@ def register_availability_tasks(celery):
                 and_(
                     PresentationAssessment.year == current_year,
                     or_(
-                        PresentationAssessment.requested_availability == True,
+                        PresentationAssessment.requested_availability.is_(True),
                         PresentationAssessment.skip_availability,
                     ),
-                    PresentationAssessment.availability_closed == False,
+                    PresentationAssessment.availability_closed.is_(False),
                 )
             )
             .all()
@@ -666,10 +666,10 @@ def register_availability_tasks(celery):
                 and_(
                     PresentationAssessment.year == current_year,
                     or_(
-                        PresentationAssessment.requested_availability == True,
+                        PresentationAssessment.requested_availability.is_(True),
                         PresentationAssessment.skip_availability,
                     ),
-                    PresentationAssessment.availability_closed == False,
+                    PresentationAssessment.availability_closed.is_(False),
                 )
             )
             .all()

@@ -59,7 +59,7 @@ def create_new_tags(form, allowed_tenants):
         default_group = (
             db.session.query(ProjectTagGroup)
             .filter(
-                ProjectTagGroup.default == True,
+                ProjectTagGroup.default.is_(True),
                 ProjectTagGroup.tenants.any(Tenant.id.in_(allowed_tenant_ids)),
             )
             .first()
@@ -112,7 +112,7 @@ def get_filter_list_for_groups_and_skills(pclass: ProjectClass):
     skills = (
         db.session.query(TransferableSkill)
         .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id)
-        .filter(TransferableSkill.active == True, SkillGroup.active == True)
+        .filter(TransferableSkill.active.is_(True), SkillGroup.active.is_(True))
         .order_by(SkillGroup.name.asc(), TransferableSkill.name.asc())
         .all()
     )

@@ -108,9 +108,9 @@ def reports():
         pclasses: List[ProjectClass] = (
             db.session.query(ProjectClass)
             .filter(
-                ProjectClass.active == True,
-                ProjectClass.publish == True,
-                ProjectClass.uses_submission == True,
+                ProjectClass.active.is_(True),
+                ProjectClass.publish.is_(True),
+                ProjectClass.uses_submission.is_(True),
             )
             .order_by(ProjectClass.name.asc())
             .all()
@@ -119,9 +119,9 @@ def reports():
         pclasses: List[ProjectClass] = (
             db.session.query(ProjectClass)
             .filter(
-                ProjectClass.active == True,
-                ProjectClass.publish == True,
-                ProjectClass.uses_submission == True,
+                ProjectClass.active.is_(True),
+                ProjectClass.publish.is_(True),
+                ProjectClass.uses_submission.is_(True),
                 ProjectClass.tenant_id.in_(allowed_tenant_ids),
             )
             .order_by(ProjectClass.name.asc())
@@ -135,7 +135,7 @@ def reports():
             .join(
                 SubmittingStudent, SubmittingStudent.config_id == ProjectClassConfig.id
             )
-            .filter(SubmittingStudent.retired == True)
+            .filter(SubmittingStudent.retired.is_(True))
             .distinct()
             .order_by(ProjectClassConfig.year.desc())
             .all()
@@ -148,7 +148,7 @@ def reports():
                 SubmittingStudent, SubmittingStudent.config_id == ProjectClassConfig.id
             )
             .filter(
-                SubmittingStudent.retired == True,
+                SubmittingStudent.retired.is_(True),
                 ProjectClass.tenant_id.in_(allowed_tenant_ids),
             )
             .distinct()
@@ -162,7 +162,7 @@ def reports():
     if current_user.has_role("root"):
         groups: List[ResearchGroup] = (
             db.session.query(ResearchGroup)
-            .filter(ResearchGroup.active == True)
+            .filter(ResearchGroup.active.is_(True))
             .order_by(ResearchGroup.name.asc())
             .all()
         )
@@ -176,7 +176,7 @@ def reports():
         groups: List[ResearchGroup] = (
             db.session.query(ResearchGroup)
             .filter(
-                ResearchGroup.active == True,
+                ResearchGroup.active.is_(True),
                 ResearchGroup.id.in_(group_ids),
             )
             .order_by(ResearchGroup.name.asc())
@@ -255,10 +255,10 @@ def reports_ajax():
             isouter=True,
         )
         .filter(
-            ProjectClass.uses_submission == True,
-            ProjectClass.active == True,
-            ProjectClass.publish == True,
-            SubmittingStudent.retired == True,
+            ProjectClass.uses_submission.is_(True),
+            ProjectClass.active.is_(True),
+            ProjectClass.publish.is_(True),
+            SubmittingStudent.retired.is_(True),
         )
     )
 

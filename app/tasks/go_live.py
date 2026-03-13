@@ -154,7 +154,7 @@ def register_golive_tasks(celery):
         # note that we exclude any projects where the supervisor is not normally enrolled
         attached_projects = (
             db.session.query(Project)
-            .filter(Project.active == True, Project.project_classes.any(id=pclass_id))
+            .filter(Project.active.is_(True), Project.project_classes.any(id=pclass_id))
             .join(User, User.id == Project.owner_id, isouter=True)
             .join(FacultyData, FacultyData.id == Project.owner_id, isouter=True)
             .join(
@@ -164,10 +164,10 @@ def register_golive_tasks(celery):
             )
             .filter(
                 or_(
-                    Project.generic == True,
+                    Project.generic.is_(True),
                     and_(
-                        Project.generic == False,
-                        User.active == True,
+                        Project.generic.is_(False),
+                        User.active.is_(True),
                         FacultyData.id != None,
                         EnrollmentRecord.pclass_id == pclass_id,
                         EnrollmentRecord.supervisor_state
@@ -362,7 +362,7 @@ def register_golive_tasks(celery):
             db.session.query(eq.c.owner_id, User, FacultyData)
             .join(User, User.id == eq.c.owner_id)
             .join(FacultyData, FacultyData.id == eq.c.owner_id)
-            .filter(User.active == True)
+            .filter(User.active.is_(True))
         )
 
         for id, user, data in fd:

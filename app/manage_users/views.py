@@ -488,7 +488,7 @@ def edit_users_students():
     programmes = (
         db.session.query(DegreeProgramme)
         .join(prog_query, prog_query.c.programme_id == DegreeProgramme.id)
-        .filter(DegreeProgramme.active == True)
+        .filter(DegreeProgramme.active.is_(True))
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
         .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
         .all()
@@ -497,7 +497,7 @@ def edit_users_students():
     cohort_data = (
         db.session.query(StudentData.cohort)
         .join(User, User.id == StudentData.id)
-        .filter(User.active == True)
+        .filter(User.active.is_(True))
         .distinct()
         .all()
     )
@@ -573,7 +573,7 @@ def edit_users_faculty():
     groups = (
         db.session.query(ResearchGroup)
         .join(groups_ids, groups_ids.c.group_id == ResearchGroup.id)
-        .filter(ResearchGroup.active == True)
+        .filter(ResearchGroup.active.is_(True))
         .order_by(ResearchGroup.name.asc())
         .all()
     )
@@ -583,7 +583,7 @@ def edit_users_faculty():
     pclasses = (
         db.session.query(ProjectClass)
         .join(pclass_ids, pclass_ids.c.pclass_id == ProjectClass.id)
-        .filter(ProjectClass.active == True)
+        .filter(ProjectClass.active.is_(True))
         .order_by(ProjectClass.name.asc())
         .all()
     )
@@ -752,14 +752,14 @@ def users_students_ajax():
 
     flag, filter_TWD = is_boolean(filter_TWD_pre)
     if flag and filter_TWD:
-        base_query = base_query.filter(StudentData.intermitting == True)
+        base_query = base_query.filter(StudentData.intermitting.is_(True))
 
     flag, filter_SEND = is_boolean(filter_SEND_pre)
     if flag and filter_SEND:
         base_query = base_query.filter(
             or_(
-                StudentData.dyspraxia_sticker == True,
-                StudentData.dyslexia_sticker == True,
+                StudentData.dyspraxia_sticker.is_(True),
+                StudentData.dyslexia_sticker.is_(True),
             )
         )
 
@@ -2455,7 +2455,7 @@ def edit_affiliations(id):
 
     research_groups: List[ResearchGroup] = (
         ResearchGroup.query.filter(
-            ResearchGroup.active == True,
+            ResearchGroup.active.is_(True),
             ResearchGroup.tenants.any(Tenant.id.in_(user_tenant_ids)),
         )
         .order_by(ResearchGroup.name)
@@ -2490,7 +2490,7 @@ def edit_enrollments(id):
     user_tenant_ids: List[int] = [t.id for t in user.tenants]
 
     project_classes: List[ProjectClass] = ProjectClass.query.filter(
-        ProjectClass.active == True,
+        ProjectClass.active.is_(True),
         ProjectClass.tenant_id.in_(user_tenant_ids),
     )
 

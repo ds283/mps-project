@@ -597,10 +597,10 @@ def _enumerate_liveprojects_primary(
             )
             .filter(
                 or_(
-                    LiveProject.generic == True,
+                    LiveProject.generic.is_(True),
                     and_(
-                        LiveProject.generic == False,
-                        User.active == True,
+                        LiveProject.generic.is_(False),
+                        User.active.is_(True),
                         FacultyData.id != None,
                         EnrollmentRecord.supervisor_state
                         == EnrollmentRecord.SUPERVISOR_ENROLLED,

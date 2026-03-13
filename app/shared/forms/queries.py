@@ -76,8 +76,8 @@ def GetActiveDegreeProgrammes(allowed_tenants: Optional[List[Tenant]]):
         db.session.query(DegreeProgramme)
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
         .filter(
-            DegreeProgramme.active == True,
-            DegreeType.active == True,
+            DegreeProgramme.active.is_(True),
+            DegreeType.active.is_(True),
         )
     )
 
@@ -319,12 +319,12 @@ def ProjectDescriptionClasses(project_id):
 def GetAutomatedMatchPClasses(year, base_id):
     pclasses = (
         db.session.query(ProjectClass)
-        .filter(ProjectClass.active == True, ProjectClass.do_matching == True)
+        .filter(ProjectClass.active.is_(True), ProjectClass.do_matching.is_(True))
         .join(ProjectClassConfig, ProjectClassConfig.pclass_id == ProjectClass.id)
         .filter(
             ProjectClassConfig.year == year,
-            ProjectClassConfig.live == True,
-            ProjectClassConfig.selection_closed == True,
+            ProjectClassConfig.live.is_(True),
+            ProjectClassConfig.selection_closed.is_(True),
         )
     )
 
@@ -397,7 +397,7 @@ def GetComparatorMatches(
     )
 
     if not is_root:
-        q = q.filter(MatchingAttempt.published == True)
+        q = q.filter(MatchingAttempt.published.is_(True))
 
     return q.order_by(MatchingAttempt.name.asc())
 
@@ -408,7 +408,7 @@ def GetComparatorSchedules(assessment_id, self_id, is_root):
     )
 
     if not is_root:
-        q = q.filter(ScheduleAttempt.published == True)
+        q = q.filter(ScheduleAttempt.published.is_(True))
 
     return q.order_by(ScheduleAttempt.name.asc())
 
@@ -446,7 +446,7 @@ def GetUnattachedSubmissionPeriods(assessment_id):
         )
         .filter(
             ProjectClassConfig.year == year,
-            SubmissionPeriodRecord.has_presentation == True,
+            SubmissionPeriodRecord.has_presentation.is_(True),
         )
         .subquery()
     )
@@ -625,7 +625,7 @@ def GetAccommodatableMatchings():
 
     return db.session.query(MatchingAttempt).filter(
         MatchingAttempt.year == year,
-        or_(MatchingAttempt.selected == True, MatchingAttempt.published == True),
+        or_(MatchingAttempt.selected.is_(True), MatchingAttempt.published.is_(True)),
     )
 
 
@@ -649,7 +649,7 @@ def GetCanvasEnabledConvenors(config: ProjectClassConfig):
             )
         )
         .join(User, User.id == FacultyData.id)
-        .filter(User.active == True)
+        .filter(User.active.is_(True))
         .order_by(User.last_name.asc(), User.first_name.asc())
     )
 
@@ -677,9 +677,9 @@ def GetActiveTags(allowed_tenants: List[Tenant]):
         db.session.query(ProjectTag)
         .join(ProjectTagGroup, ProjectTagGroup.id == ProjectTag.group_id)
         .filter(
-            ProjectTagGroup.active == True,
+            ProjectTagGroup.active.is_(True),
             ProjectTagGroup.tenants.any(Tenant.id.in_(allowed_tenant_ids)),
-            ProjectTag.active == True,
+            ProjectTag.active.is_(True),
         )
     )
 
@@ -709,11 +709,11 @@ def BuildTemplateTagName(tag: TemplateTag):
 
 
 def GetAllFeedbackTemplates():
-    return db.session.query(FeedbackAsset).filter(FeedbackAsset.is_template == True)
+    return db.session.query(FeedbackAsset).filter(FeedbackAsset.is_template.is_(True))
 
 
 def GetAllNonTemplateFeedbackAssets():
-    return db.session.query(FeedbackAsset).filter(FeedbackAsset.is_template == False)
+    return db.session.query(FeedbackAsset).filter(FeedbackAsset.is_template.is_(False))
 
 
 def GetAllTenants():

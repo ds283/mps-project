@@ -386,7 +386,7 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool = True)
     # then they are able to view
     owner_query = (
         db.session.query(SubmissionRecord.id)
-        .filter(SubmissionRecord.retired == False)
+        .filter(SubmissionRecord.retired.is_(False))
         .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
         .filter(SubmittingStudent.student_id == record.owner.student_id)
         .filter(

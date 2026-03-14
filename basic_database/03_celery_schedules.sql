@@ -1,6 +1,6 @@
 INSERT INTO celery_schedules (id, name, task, interval_id, crontab_id, arguments, keyword_arguments, queue, exchange,
                               routing_key, expires, enabled, last_run_at, total_run_count, date_changed, owner_id)
-VALUES (3, 'Prune email log at 104 weeks', 'app.tasks.prune_email.prune_email_log', 5, null, 'null',
+VALUES (3, 'Prune email log at 104 weeks', 'app.tasks.email.prune_email_log', 5, null, 'null',
         '{"interval": "weeks", "duration": 104}', 'default', null, null, null, 1, null, 0, null, 1);
 INSERT INTO celery_schedules (id, name, task, interval_id, crontab_id, arguments, keyword_arguments, queue, exchange,
                               routing_key, expires, enabled, last_run_at, total_run_count, date_changed, owner_id)

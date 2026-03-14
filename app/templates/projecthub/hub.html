@@ -6,6 +6,7 @@
 {% from "datatables.html" import import_datatables, bootstrap_spinner %}
 {% from "projecthub/resources.html" import resources_widget %}
 {% from "projecthub/articles.html" import articles_widget %}
+{% from "dashboard_widgets.html" import dashboard_tile %}
 
 {% macro current_supervision_event_header(unit) %}
     <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-4">
@@ -90,6 +91,164 @@
     </div>
 {% endmacro %}
 
+{% macro student_page_header() %}
+    <div class="fs-3 mb-3">{{ pclass.name }}</div>
+    <div class="row vertical-top">
+        <div class="col-8">
+            <div class="d-flex flex-column justify-content-start align-items-start">
+                <div class="text-secondary fs-2">
+                    {{ project.name }}
+                </div>
+                <div class="d-flex flex-row flex-wrap justify-content-between align-items-start">
+                    {% if period.hand_in_date %}
+                        <small class="text-muted">
+                            Hand-in date: <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
+                            ({{ period.time_to_hand_in }} from now)
+                        </small>
+                    {% endif %}
+                    {% if burndown_div is defined and burndown_div is not none and burndown_script is defined and burndown_script is not none %}
+                        {{ burndown_div|safe }}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="d-flex flex-column justify-content-start align-items-end gap-2">
+                <div class="small text-muted">
+                    <i class="fas fa-user-circle"></i>
+                    Convenor: <a class="text-decoration-none"
+                                 href="mailto:{{ config.convenor.user.email }}">{{ config.convenor.user.name }}</a>
+                </div>
+                <div class="small fw-bold text-secondary">SUPERVISION TEAM</div>
+                {% set supv_roles = record.supervisor_roles %}
+                {% if supv_roles|length > 0 %}
+                    <div class="d-flex flex-column justify-content-start align-content-start">
+                        {% for role in supv_roles %}
+                            <div>
+                                <i class="fas fa-user-circle"></i>
+                                <a class="text-decoration-none"
+                                   href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <span class="badge bg-danger text-white">No supervisors assigned</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    </div>
+{% endmacro %}
+
+{% macro faculty_page_header() %}
+    <div class="fs-3 mb-3">Project page for <i class="fas fa-user-circle"></i> {{ student.user.name }}</div>
+    <div class="row vertical-top">
+        <div class="col-8">
+            <div class="text-secondary fs-2">
+                {{ project.name }}
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="d-flex flex-column align-items-end">
+                {% set swatch_colour = pclass.make_CSS_style() %}
+                <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+                    {{ small_swatch(swatch_colour) }}
+                    <span class="small">{{ config.name }}</span>
+                </div>
+                {% if period.hand_in_date %}
+                    <div class="d-flex flex-row flex-wrap justify-content-right align-items start">
+                        <span class="small text-secondary">
+                            Hand-in <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
+                            ({{ period.time_to_hand_in }} from now)
+                        </span>
+                    </div>
+                {% endif %}
+                {% if burndown_div is defined and burndown_div is not none and burndown_script is defined and burndown_script is not none %}
+                    {{ burndown_div|safe }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro common_page_header() %}
+    <div class="d-flex flex-row flex-wrap justify-content-end align-items-baseline gap-2 mt-2 mb-2">
+        <a class="btn btn-sm btn-outline-primary"
+           href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=return_text) }}">
+            <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
+        </a>
+    </div>
+    <div class="row">
+        <div class="col-3">
+            {% call(blk) dashboard_tile("Attendance", title_icon="user-check", icon_state=attendance_missing==0 if attendance_missing is defined else none) %}
+                {% if blk == 'body' %}
+                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
+                        {% if attendance_recorded %}
+                            <div>
+                                <div class="small text-muted">Recorded</div>
+                                <div class="fw-bold fs-4 {% if attendance_missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_recorded }}</div>
+                            </div>
+                        {% endif %}
+                        {% if attendance_missing %}
+                            <div>
+                                <div class="small text-muted">Missing</div>
+                                <div class="fw-bold fs-4 {% if attendance_missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_missing }}</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 mt-2">
+                        {% if attendance_percent %}
+                            <div>
+                                <div class="small text-muted">Total</div>
+                                <div class="fw-bold fs-4 text-success">{{ attendance_percent|round(precision=0) }}%</div>
+                            </div>
+                        {% endif %}
+                        {% if attendance_div is defined and attendance_div is not none and attendance_script is defined and attendance_script is not none %}
+                            {{ attendance_div|safe }}
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% endcall %}
+        </div>
+        <div class="col-3"></div>
+        <div class="col-3"></div>
+        <div class="col-3"></div>
+    </div>
+{% endmacro %}
+
+{% macro show_supervision_events() %}
+    {% set current_events = record.get_ordered_current_events().all() %}
+    {% set past_events = record.get_ordered_past_events().all() %}
+    {% set needs_rule = false %}
+    {% if current_events|length > 0 %}
+        {% set needs_rule = true %}
+        {% set unit = current_events[0].unit %}
+        <div class="mt-3 mb-3 card border-primary">
+            <div class="card-body">
+                {{ current_supervision_event_header(unit) }}
+                <hr class="intro-divider">
+                <div class="mt-3 d-flex flex-column justify-content-start align-items-start gap-4">
+                    {% for event in current_events %}
+                        {{ format_supervision_event(event) }}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    {% if past_events|length > 0 %}
+        {% if needs_rule %}
+            <hr class="intro-divider">
+        {% endif %}
+        <div class="fs-4 text-dark mb-3">Past events</div>
+        {% for event in past_events %}
+            <div class="card card-body bg-light mt-2 mb-2 border-secondary">
+                {{ past_supervision_event_header(event) }}
+                {{ format_supervision_event(event, past_event=true) }}
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endmacro %}
+
 {% block scripts %}
     {{ super() }}
     {{ import_bokeh() }}
@@ -111,19 +270,29 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: '<f<tr>>',
                 stateSave: true, serverSide: true, processing: true, paging: false,
                 language: {{ bootstrap_spinner() }},
-                ajax: { url: $SCRIPT_ROOT + '/projecthub/article_widget_ajax/{{ record.id }}',
-                        type: 'POST',
-                        data: function (args) { return { "args": JSON.stringify(args) }; } },
+                ajax: {
+                    url: $SCRIPT_ROOT + '/projecthub/article_widget_ajax/{{ record.id }}',
+                    type: 'POST',
+                    data: function (args) {
+                        return {"args": JSON.stringify(args)};
+                    }
+                },
                 columns: [
-                    { data: 'title',
-                      orderable: true,
-                      searchable: true },
-                    { data: 'published',
-                      orderable: true,
-                      searchable: true },
-                    { data: 'author',
-                      orderable: true,
-                      searchable: true }
+                    {
+                        data: 'title',
+                        orderable: true,
+                        searchable: true
+                    },
+                    {
+                        data: 'published',
+                        orderable: true,
+                        searchable: true
+                    },
+                    {
+                        data: 'author',
+                        orderable: true,
+                        searchable: true
+                    }
                 ],
                 order: [[1, 'desc']]
             });
@@ -148,179 +317,43 @@
             {% endif %}
 
             {% if is_student %}
-                <div class="fs-3 mb-3">{{ pclass.name }}</div>
-                <div class="row vertical-top">
-                    <div class="col-8">
-                        <div class="d-flex flex-column justify-content-start align-items-start">
-                            <div class="text-secondary fs-2">
-                                {{ project.name }}
-                            </div>
-                            <div class="d-flex flex-row flex-wrap justify-content-between align-items-start">
-                                {% if period.hand_in_date %}
-                                    <small class="text-muted">
-                                        Hand-in date: <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
-                                        ({{ period.time_to_hand_in }} from now)
-                                    </small>
-                                {% endif %}
-                                {% if burndown_div is defined and burndown_div is not none and burndown_script is defined and burndown_script is not none %}
-                                    {{ burndown_div|safe }}
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="d-flex flex-column justify-content-start align-items-end gap-2">
-                            <div class="small text-muted">
-                                <i class="fas fa-user-circle"></i>
-                                Convenor: <a class="text-decoration-none" href="mailto:{{ config.convenor.user.email }}">{{ config.convenor.user.name }}</a>
-                            </div>
-                            <div class="small fw-bold text-secondary">SUPERVISION TEAM</div>
-                            {% set supv_roles = record.supervisor_roles %}
-                            {% if supv_roles|length > 0 %}
-                                <div class="d-flex flex-column justify-content-start align-content-start">
-                                    {% for role in supv_roles %}
-                                        <div>
-                                            <i class="fas fa-user-circle"></i>
-                                            <a class="text-decoration-none"
-                                               href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <span class="badge bg-danger text-white">No supervisors assigned</span>
-                            {% endif %}
-                            </div>
-                        </div>
-                    </div>
+                {{ student_page_header() }}
             {% else %}
-                <div class="fs-3 mb-3">Project page for <i class="fas fa-user-circle"></i> {{ student.user.name }}</div>
-                <div class="row vertical-top">
-                    <div class="col-8">
-                        <div class="text-secondary fs-2">
-                            {{ project.name }}
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="d-flex flex-column align-items-end">
-                            {% set swatch_colour = pclass.make_CSS_style() %}
-                            <div class="d-flex flex-row justify-content-start align-items-center gap-2">
-                                {{ small_swatch(swatch_colour) }}
-                                <span class="small">{{ config.name }}</span>
-                            </div>
-                            {% if period.hand_in_date %}
-                                <div class="d-flex flex-row flex-wrap justify-content-right align-items start">
-                                    <span class="small text-secondary">
-                                        Hand-in <strong>{{ period.hand_in_date.strftime("%a %d %b %Y") }}</strong>
-                                        ({{ period.time_to_hand_in }} from now)
-                                    </span>
-                                </div>
-                            {% endif %}
-                            {% if burndown_div is defined and burndown_div is not none and burndown_script is defined and burndown_script is not none %}
-                                {{ burndown_div|safe }}
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
+                {{ faculty_page_header() }}
             {% endif %}
 
             {# COMMON HEADER ELEMENTS #}
-            <div class="row">
-                <div class="col-12">
-                    <div class="mt-2 mb-2">
-                        <a class="btn btn-sm btn-outline-primary"
-                           href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=return_text) }}">
-                            <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
-                        </a>
-                    </div>
-                </div>
-            </div>
-            {% if attendance_recorded or attendance_missing or attendance_percent %}
-                <div class="row">
-                    <div class="col-12">
-                        <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 mt-2 mb-2">
-                            {% if attendance_recorded %}
-                                <div>
-                                    <div class="small text-muted">Recorded</div>
-                                    <div class="fw-bold fs-4 {% if attendance_missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_recorded }}</div>
-                                </div>
-                            {% endif %}
-                            {% if attendance_missing %}
-                                <div>
-                                    <div class="small text-muted">Missing</div>
-                                    <div class="fw-bold fs-4 {% if attendance_missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_missing }}</div>
-                                </div>
-                            {% endif %}
-                            {% if attendance_percent %}
-                                <div>
-                                    <div class="small text-muted">Attendance</div>
-                                    <div class="fw-bold fs-4 text-success">{{ attendance_percent|round(precision=0) }}%</div>
-                                </div>
-                            {% endif %}
-                            {% if attendance_div is defined and attendance_div is not none and attendance_script is defined and attendance_script is not none %}
-                                {{ attendance_div|safe }}
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            {% endif %}
+            {{ common_page_header() }}
             <hr class="intro-divider mb-5">
 
-            {% set current_events = record.get_ordered_current_events().all() %}
-            {% set past_events = record.get_ordered_past_events().all() %}
-            {% set needs_rule = false %}
-            {% if current_events|length > 0 %}
-                {% set needs_rule = true %}
-                {% set unit = current_events[0].unit %}
-                <div class="mt-3 mb-3 card border-primary">
-                    <div class="card-body">
-                        {{ current_supervision_event_header(unit) }}
-                        <hr class="intro-divider">
-                        <div class="mt-3 d-flex flex-column justify-content-start align-items-start gap-4">
-                            {% for event in current_events %}
-                                {{ format_supervision_event(event) }}
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            {% endif %}
-            {% if past_events|length > 0 %}
-                {% if needs_rule %}
-                    <hr class="intro-divider">
-                {% endif %}
-                <div class="fs-4 text-dark mb-3">Past events</div>
-                {% for event in past_events %}
-                    <div class="card card-body bg-light mt-2 mb-2 border-secondary">
-                        {{ past_supervision_event_header(event) }}
-                        {{ format_supervision_event(event, past_event=true) }}
-                    </div>
-                {% endfor %}
-            {% endif %}
+            {# SHOW SUPERVISION EVENTS #}
+            {{ show_supervision_events() }}
 
-    {# Populate dashboard widgets #}
-    {#        <div class="mt-3 card border-secondary">#}
-    {#            <div class="card-header bg-light">#}
-    {#                <span class="fw-semibold">Resources</span>#}
-    {#            </div>#}
-    {#            <div class="card-body bg-well">#}
-    {#                {{ resources_widget(submitter, student, config, pclass, project, record, period) }}#}
-    {#            </div>#}
-    {#        </div>#}
-    {#        <div class="mt-3 card border-secondary">#}
-    {#            <div class="card-header bg-light">#}
-    {#                <span class="fw-semibold">News and articles</span>#}
-    {#            </div>#}
-    {#            <div class="card-body bg-well">#}
-    {#                {{ articles_widget(submitter, student, config, pclass, project, record, period) }}#}
-    {#            </div>#}
-    {#        </div>#}
-    {#        <div class="mt-3 card border-secondary">#}
-    {#            <div class="card-header bg-light">#}
-    {#                <span class="fw-semibold">Notes and journal</span>#}
-    {#            </div>#}
-    {#            <div class="card-body bg-well">#}
-    {#                Content#}
-    {#                </div>#}
-    {#            </div>#}
+            {# Populate dashboard widgets #}
+            {#        <div class="mt-3 card border-secondary">#}
+            {#            <div class="card-header bg-light">#}
+            {#                <span class="fw-semibold">Resources</span>#}
+            {#            </div>#}
+            {#            <div class="card-body bg-well">#}
+            {#                {{ resources_widget(submitter, student, config, pclass, project, record, period) }}#}
+            {#            </div>#}
+            {#        </div>#}
+            {#        <div class="mt-3 card border-secondary">#}
+            {#            <div class="card-header bg-light">#}
+            {#                <span class="fw-semibold">News and articles</span>#}
+            {#            </div>#}
+            {#            <div class="card-body bg-well">#}
+            {#                {{ articles_widget(submitter, student, config, pclass, project, record, period) }}#}
+            {#            </div>#}
+            {#        </div>#}
+            {#        <div class="mt-3 card border-secondary">#}
+            {#            <div class="card-header bg-light">#}
+            {#                <span class="fw-semibold">Notes and journal</span>#}
+            {#            </div>#}
+            {#            <div class="card-body bg-well">#}
+            {#                Content#}
+            {#                </div>#}
+            {#            </div>#}
 
             {% if text and url %}
                 <div class="mt-3">

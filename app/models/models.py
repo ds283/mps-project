@@ -12,15 +12,15 @@ from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 from os import path
 from time import time
-from typing import List, Set, Union, Optional, Tuple, Dict, Any
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from urllib.parse import urljoin
 from uuid import uuid4
 
 import humanize
 from flask import current_app
-from flask_security import current_user, UserMixin, RoleMixin, AsaList
+from flask_security import AsaList, RoleMixin, UserMixin, current_user
 from numpy import nan
-from sqlalchemy import orm, or_, and_
+from sqlalchemy import and_, or_, orm
 from sqlalchemy.event import listens_for
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -33,15 +33,17 @@ from url_normalize import url_normalize
 
 import app.shared.cloud_object_store.bucket_types as buckets
 import app.shared.cloud_object_store.encryption_types as encryptions
-from .choices import short_academic_titles_dict
-from .config import get_AES_key
-from .defaults import DEFAULT_STRING_LENGTH, IP_LENGTH, PASSWORD_HASH_LENGTH
+
 from ..cache import cache
 from ..database import db
 from ..shared.colours import get_text_colour
-from ..shared.formatters import format_size, format_time, format_readable_time
+from ..shared.formatters import format_readable_time, format_size, format_time
 from ..shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE
 from ..shared.sqlalchemy import get_count
+from .choices import short_academic_titles_dict
+from .config import get_AES_key
+from .defaults import DEFAULT_STRING_LENGTH, IP_LENGTH, PASSWORD_HASH_LENGTH
+from .mixins import WeekdaysMixin
 
 
 class EditingMetadataMixin:
@@ -1542,7 +1544,7 @@ class SubmissionRoleTypesMixin:
         ROLE_RESPONSIBLE_SUPERVISOR: "responsible_supervisor",
     }
 
-    role_options = [
+    role_choices = [
         (ROLE_RESPONSIBLE_SUPERVISOR, "Responsible supervisor"),
         (ROLE_SUPERVISOR, "Supervisor"),
         (ROLE_MARKER, "Marker"),
@@ -9067,6 +9069,17 @@ class SupervisionEvent(
         backref=db.backref("supervision_events", lazy="dynamic"),
     )
 
+    ## PROMPTS AND REMINDERES
+
+    # mute notifications for this event?
+    mute = db.Column(db.Boolean(), default=False, nullable=True)
+
+    # has a prompt been sent for this event?
+    prompt_sent_timestamp = db.Column(db.DateTime(), default=None, nullable=True)
+
+    # when was the last reminder sent for this event?
+    last_reminder_timestamp = db.Column(db.DateTime(), default=None, nullable=True)
+
     ## EMAIL LOGS
 
     # emails associated with this event
@@ -12962,6 +12975,7 @@ class SubmissionRole(
     db.Model,
     SubmissionRoleTypesMixin,
     SubmissionFeedbackStatesMixin,
+    WeekdaysMixin,
     EditingMetadataMixin,
 ):
     """
@@ -13010,9 +13024,41 @@ class SubmissionRole(
 
         return value
 
+    # NOTIFICATION PREFERENCES
+
+    # mute all notifications for this role?
+    mute = db.Column(db.Boolean(), default=False, nullable=False)
+
+    # prompt for attendance entry after SupervisionEvents owned by this role has happened?
+    prompt_after_event = db.Column(db.Boolean(), default=True, nullable=False)
+
+    # prompt at a fixed time on the day of the event, or after a specified delay?
+    prompt_at_fixed_time = db.Column(db.Boolean(), default=False, nullable=False)
+
+    # either the specific time to send a prompt (if prompting at fixed time), or the delay (if prompting relative to the event)
+    prompt_at_time = db.Column(db.Time(), nullable=True)
+
+    # include events belonging to this role in reminder emails?
+    prompt_in_reminder = db.Column(db.Boolean(), default=True, nullable=False)
+
+    # EMAIL LOG
+
     # email log associated with this role
     email_log = db.relationship(
         "EmailLog", secondary=submission_role_emails, lazy="dynamic"
+    )
+
+    # SUPERVISION EVENTS (only used where the SubmissionRole is a supervisory one)
+
+    # current regular meeting time
+    regular_meeting_weekday = db.Column(db.Integer(), default=None, nullable=True)
+
+    # current regular meeting time
+    regular_meeting_time = db.Column(db.Time(), default=None, nullable=True)
+
+    # current regular meeting location
+    regular_meeting_location = db.Column(
+        db.String(DEFAULT_STRING_LENGTH), default=None, nullable=True
     )
 
     # MARKING WORKFLOW

@@ -13,68 +13,68 @@ from typing import List
 
 from flask_security.forms import Form
 from wtforms import (
-    SubmitField,
-    IntegerField,
-    StringField,
     BooleanField,
-    TextAreaField,
     DateTimeField,
+    IntegerField,
     SelectField,
+    StringField,
+    SubmitField,
+    TextAreaField,
 )
 from wtforms.validators import (
-    InputRequired,
-    Optional,
     Email,
+    InputRequired,
     Length,
-    ValidationError,
     NumberRange,
+    Optional,
+    ValidationError,
 )
 from wtforms_alchemy import QuerySelectField, QuerySelectMultipleField
 
 from ..faculty.forms import ProjectMixinFactory
 from ..models import (
-    DEFAULT_STRING_LENGTH,
-    LiveProject,
-    ProjectClassConfig,
-    ConvenorGenericTask,
     DEFAULT_ASSIGNED_MARKERS,
     DEFAULT_ASSIGNED_MODERATORS,
-    SubmissionRole,
-    SubmissionRecord,
-    FacultyData,
+    DEFAULT_STRING_LENGTH,
     AlternativesPriorityMixin,
+    ConvenorGenericTask,
+    FacultyData,
+    LiveProject,
     Project,
-    Tenant,
+    ProjectClassConfig,
     SubmissionPeriodRecord,
-    SupervisionEventTemplate,
     SubmissionPeriodUnit,
+    SubmissionRecord,
+    SubmissionRole,
+    SupervisionEventTemplate,
+    Tenant,
 )
 from ..shared.forms.mixins import (
     FeedbackMixin,
-    SaveChangesMixin,
     PeriodPresentationsMixin,
     PeriodSelectorMixinFactory,
+    SaveChangesMixin,
 )
 from ..shared.forms.queries import (
-    GetPresentationFeedbackFaculty,
-    GetPresentationAssessorFaculty,
-    BuildActiveFacultyName,
-    GetAccommodatableMatchings,
-    GetCanvasEnabledConvenors,
-    BuildCanvasLoginUserName,
-    GetActiveFaculty,
-    GetAllPossibleSupervisors,
-    BuildSupervisorName,
-    GetPossibleSupervisors,
     AllProjectClasses,
     AllResearchGroups,
+    BuildActiveFacultyName,
+    BuildCanvasLoginUserName,
+    BuildSupervisorName,
+    GetAccommodatableMatchings,
+    GetActiveFaculty,
+    GetAllPossibleSupervisors,
+    GetCanvasEnabledConvenors,
+    GetPossibleSupervisors,
+    GetPresentationAssessorFaculty,
+    GetPresentationFeedbackFaculty,
 )
 from ..shared.forms.wtf_validators import (
     NotOptionalIf,
     globally_unique_project,
     globally_unique_submission_unit,
-    unique_or_original_submission_unit,
     globally_unique_supervision_event_template,
+    unique_or_original_submission_unit,
     unique_or_original_supervision_event_template,
 )
 
@@ -592,7 +592,7 @@ class EditConvenorGenericTask(
 
 
 class EditSubmissionRoleForm(Form, SaveChangesMixin):
-    role = SelectField("Role type", choices=SubmissionRole.role_options, coerce=int)
+    role = SelectField("Role type", choices=SubmissionRole.role_choices, coerce=int)
 
     marking_distributed = BooleanField(
         "Marking distributed",
@@ -632,7 +632,7 @@ class EditSubmissionRoleForm(Form, SaveChangesMixin):
 
 
 class AddSubmitterRoleForm(Form):
-    role = SelectField("Role type", choices=SubmissionRole.role_options, coerce=int)
+    role = SelectField("Role type", choices=SubmissionRole.role_choices, coerce=int)
 
     user = QuerySelectField(
         "Assign which user?",
@@ -863,7 +863,7 @@ def EditSubmissionPeriodUnitFormFactory(period: SubmissionPeriodRecord):
 class SupervisionEventTemplateMixin:
     target_role = SelectField(
         "Target role",
-        choices=SupervisionEventTemplate.role_options,
+        choices=SupervisionEventTemplate.role_choices,
         coerce=int,
         description="When this event is distributed, it will be assigned to all staff with the specified submission role.",
     )

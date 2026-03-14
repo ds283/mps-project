@@ -13443,7 +13443,7 @@ def force_convert_bookmarks(sel_id):
                     {% if item.name.generic %}
                         (generic)
                     {% elif item.owner is not none %}
-                        supervised by <i class="fas fa-user-circle"></i> {{ item.owner.user.name }}
+                        owned by <i class="fas fa-user-circle"></i> {{ item.owner.user.name }}
                     {% endif %}
                     </li>
                 {% endfor %}

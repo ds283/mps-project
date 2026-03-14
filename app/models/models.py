@@ -8969,7 +8969,7 @@ class SupervisionEvent(
 
     # parent template
     template_id = db.Column(
-        db.Integer(), db.ForeignKey("supervision_event_templates.id"), nullable=False
+        db.Integer(), db.ForeignKey("supervision_event_templates.id")
     )
     template = db.relationship(
         "SupervisionEventTemplate",

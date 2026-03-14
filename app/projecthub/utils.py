@@ -22,6 +22,7 @@ from ..models import (
     SupervisionEvent,
     User,
 )
+from ..shared.utils import grouper
 
 
 class HubRoleMap:
@@ -40,6 +41,10 @@ class HubRoleMap:
         self.moderator = moderator
         self.convenor = convenor
         self.admin = admin
+
+        self._tiles = None
+        self._tile_list = None
+        self._ui_elements = None
 
     def __bool__(self):
         return (
@@ -89,8 +94,39 @@ class HubRoleMap:
             "admin",
         ]:
             setattr(self, role, value)
+            self._tiles = None
+            self._ui_elements = None
         else:
             raise ValueError(f"Invalid role: {role}")
+
+    def _compute_tiles(self):
+        self._tile_list = []
+
+        # most admin roles can see attendance
+        if self.supervisor or self.convenor or self.admin:
+            self._tile_list.append("attendance")
+
+            # supervisors, convenors, admin can see regular meetings tile
+        if self.supervisor or self.convenor or self.admin:
+            self._tile_list.append("regular_meetings")
+
+        self._tiles = grouper(self._tile_list, 4, incomplete="fill")
+
+    def get_tiles(self):
+        if self._tiles is None:
+            self._compute_tiles()
+
+        return self._tiles
+
+    def _compute_ui_elements(self):
+        # everyone gets a header and can see the event list
+        self._ui_elements = {"header", "events"}
+
+    def get_ui_elements(self):
+        if self._ui_elements is None:
+            self._compute_ui_elements()
+
+        return self._ui_elements
 
 
 def validate_project_hub(

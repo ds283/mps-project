@@ -8,6 +8,9 @@
 {% from "projecthub/articles.html" import articles_widget %}
 {% from "dashboard_widgets.html" import dashboard_tile %}
 
+{% set ui_elements = hub_role.get_ui_elements() %}
+{% set tiles = hub_role.get_tiles() %}
+
 {% macro current_supervision_event_header(unit) %}
     <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-4">
         <div class="fs-2 text-primary">{{ unit.name }}</div>
@@ -171,70 +174,81 @@
     </div>
 {% endmacro %}
 
-{% macro show_tiles() %}
-    <div class="d-flex flex-row flex-wrap justify-content-end align-items-baseline gap-2 mt-2 mb-2">
-        <a class="btn btn-sm btn-outline-primary"
-           href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=return_text) }}">
-            <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
-        </a>
-    </div>
-    <div class="row">
-        <div class="col-3">
-            {% call(blk) dashboard_tile("Attendance", title_icon="user-check", icon_state=attendance_missing==0 if attendance_missing is defined else none) %}
-                {% if blk == 'body' %}
-                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
-                        {% if attendance_recorded %}
-                            <div>
-                                <div class="small text-muted">Recorded</div>
-                                <div class="fw-bold fs-4 {% if attendance_missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_recorded }}</div>
-                            </div>
-                        {% endif %}
-                        {% if attendance_missing %}
-                            <div>
-                                <div class="small text-muted">Missing</div>
-                                <div class="fw-bold fs-4 {% if attendance_missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_missing }}</div>
-                            </div>
-                        {% endif %}
-                    </div>
-                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 mt-2">
-                        {% if attendance_percent %}
-                            <div>
-                                <div class="small text-muted">Total</div>
-                                <div class="fw-bold fs-4 text-success">{{ attendance_percent|round(precision=0) }}%</div>
-                            </div>
-                        {% endif %}
-                        {% if attendance_div is defined and attendance_div is not none and attendance_script is defined and attendance_script is not none %}
-                            {{ attendance_div|safe }}
-                        {% endif %}
+{% macro attendance_tile() %}
+    {% call(blk) dashboard_tile("Attendance", title_icon="user-check", icon_state=attendance_missing==0 if attendance_missing is defined else none) %}
+        {% if blk == 'body' %}
+            <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
+                {% if attendance_recorded %}
+                    <div>
+                        <div class="small text-muted">Recorded</div>
+                        <div class="fw-bold fs-4 {% if attendance_missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_recorded }}</div>
                     </div>
                 {% endif %}
-            {% endcall %}
-        </div>
-        <div class="col-3">
-            {% if hub_role.is_supervisor %}
-                {% call(blk) dashboard_tile("Session times", title_icon="calendar") %}
-                    {% set has_regular_meeting = my_role.has_regular_meeting %}
-                    {% if blk == 'body' %}
-                        {% if has_regular_meeting %}
-                            {% set regular_meeting_data = my_role.regular_meeting_as_string %}
-                            <span class="fs-5 text-primary">{{ regular_meeting_data["day"] }} {{ regular_meeting_data["time"] }}</span>
-                        {% else %}
-                            <span class="fs-5 text-muted">Not set</span>
-                        {% endif %}
-                    {% elif blk == 'footer' %}
-                        {% if has_regular_meeting %}
-                            <a href="" class="text-decoration-none link-primary small">Change future times</a>
-                        {% else %}
-                            <a href="" class="text-decoration-none link-primary small">Set day and time</a>
-                        {% endif %}
-                    {% endif %}
-                {% endcall %}
-            {% endif %}
-        </div>
-        <div class="col-3"></div>
-        <div class="col-3"></div>
-    </div>
+                {% if attendance_missing %}
+                    <div>
+                        <div class="small text-muted">Missing</div>
+                        <div class="fw-bold fs-4 {% if attendance_missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_missing }}</div>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 mt-2">
+                {% if attendance_percent %}
+                    <div>
+                        <div class="small text-muted">Total</div>
+                        <div class="fw-bold fs-4 text-success">{{ attendance_percent|round(precision=0) }}%</div>
+                    </div>
+                {% endif %}
+                {% if attendance_div is defined and attendance_div is not none and attendance_script is defined and attendance_script is not none %}
+                    {{ attendance_div|safe }}
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endcall %}
 {% endmacro %}
+
+{% macro regular_meetings_tile() %}
+    {% call(blk) dashboard_tile("Session times", title_icon="calendar") %}
+        {% set has_regular_meeting = my_role.has_regular_meeting %}
+        {% if blk == 'body' %}
+            {% if has_regular_meeting %}
+                {% set regular_meeting_data = my_role.regular_meeting_as_string %}
+                <span class="fs-5 text-primary">{{ regular_meeting_data["day"] }} {{ regular_meeting_data["time"] }}</span>
+            {% else %}
+                <span class="fs-5 text-muted">Not set</span>
+            {% endif %}
+        {% elif blk == 'footer' %}
+            {% if has_regular_meeting %}
+                <a href="" class="text-decoration-none link-primary small">Change future times</a>
+            {% else %}
+                <a href="" class="text-decoration-none link-primary small">Set regular day and time</a>
+            {% endif %}
+        {% endif %}
+    {% endcall %}
+{% endmacro %}
+
+{% macro draw_tile(label) %}
+    {% if label is not none %}
+        {% if label == 'attendance' %}
+            {{ attendance_tile() }}
+        {% elif label == 'regular_meetings' %}
+            {{ regular_meetings_tile() }}
+        {% else %}
+            <span class="text-danger">UNKNOWN TILE</span>
+        {% endif %}
+    {% endif %}
+{% endmacro %}
+
+{% macro show_tiles() %}
+    {% for tile_row in tiles %}
+        <div class="row">
+            <div class="col-3">{{ draw_tile(tile_row[0]) }}</div>
+            <div class="col-3">{{ draw_tile(tile_row[1]) }}</div>
+            <div class="col-3">{{ draw_tile(tile_row[2]) }}</div>
+            <div class="col-3">{{ draw_tile(tile_row[3]) }}</div>
+        </div>
+    {% endfor %}
+{% endmacro %}
+
 
 {% macro show_supervision_events() %}
     {% set current_events = record.get_ordered_current_events().all() %}
@@ -336,18 +350,29 @@
                 </div>
             {% endif %}
 
-            {% if hub_role.show_student_dashboard %}
-                {{ student_page_header() }}
-            {% else %}
-                {{ faculty_page_header() }}
+            {% if 'header' in ui_elements %}
+                {% if hub_role.show_student_dashboard %}
+                    {{ student_page_header() }}
+                {% else %}
+                    {{ faculty_page_header() }}
+                {% endif %}
+
+                <div class="d-flex flex-row flex-wrap justify-content-end align-items-baseline gap-2 mt-2 mb-2">
+                    <a class="btn btn-sm btn-outline-primary"
+                       href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=return_text) }}">
+                        <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
+                    </a>
+                </div>
+
+                {# SHOW DASHBOARD TILEs #}
+                {{ show_tiles() }}
+                <hr class="intro-divider mb-5">
             {% endif %}
 
-            {# SHOW DASHBOARD TILEs #}
-            {{ show_tiles() }}
-            <hr class="intro-divider mb-5">
-
             {# SHOW SUPERVISION EVENTS #}
-            {{ show_supervision_events() }}
+            {% if 'events' in ui_elements %}
+                {{ show_supervision_events() }}
+            {% endif %}
 
             {# Populate dashboard widgets #}
             {#        <div class="mt-3 card border-secondary">#}

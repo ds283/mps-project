@@ -10,36 +10,37 @@
 
 
 from collections.abc import Iterable
+from itertools import zip_longest
 from typing import List
 
-from flask import redirect, url_for, flash, request
+from flask import flash, redirect, request, url_for
 from flask_security import current_user
 from sqlalchemy import and_, or_
 from sqlalchemy.event import listens_for
 
-from .conversions import is_integer
-from .sqlalchemy import get_count
 from ..cache import cache
 from ..database import db
 from ..models import (
-    MainConfig,
-    ProjectClass,
-    ProjectClassConfig,
-    User,
-    FacultyData,
-    Project,
-    EnrollmentRecord,
-    ResearchGroup,
-    SelectingStudent,
-    SubmittingStudent,
-    FilterRecord,
-    StudentData,
-    ProjectDescription,
     DegreeProgramme,
     DegreeType,
+    EnrollmentRecord,
+    FacultyData,
+    FilterRecord,
+    MainConfig,
+    Project,
+    ProjectClass,
+    ProjectClassConfig,
+    ProjectDescription,
+    ResearchGroup,
+    SelectingStudent,
+    StudentData,
+    SubmittingStudent,
     Tenant,
+    User,
+    project_assessors,
 )
-from ..models import project_assessors
+from .conversions import is_integer
+from .sqlalchemy import get_count
 
 
 def get_main_config() -> MainConfig:
@@ -92,9 +93,9 @@ def get_approval_queue_data():
     data = {}
 
     if (
-            current_user.has_role("user_approver")
-            or current_user.has_role("root")
-            or current_user.has_role("manage_users")
+        current_user.has_role("user_approver")
+        or current_user.has_role("root")
+        or current_user.has_role("manage_users")
     ):
         user_data = _get_user_approvals_data()
         data.update(user_data)
@@ -256,8 +257,8 @@ def allow_approval_for_description(desc_id):
 
         # if the user is not in the approvals pool for this project class, there is nothing to do
         in_team = (
-                current_user.has_role("root")
-                or pcl.approvals_team.filter_by(id=current_user.id).first() is not None
+            current_user.has_role("root")
+            or pcl.approvals_team.filter_by(id=current_user.id).first() is not None
         )
         if not in_team:
             continue
@@ -272,8 +273,8 @@ def allow_approval_for_description(desc_id):
         # don't include projects if project owner is not enrolled normally as a supervisor
         record: EnrollmentRecord = owner.get_enrollment_record(pcl.id)
         if (
-                record is None
-                or record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
+            record is None
+            or record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
         ):
             continue
 
@@ -316,7 +317,7 @@ def _approvals_ProjectDescription_delete_handler(mapper, connection, target):
 
 @listens_for(ProjectDescription.project_classes, "append")
 def _approvals_ProjectDescription_project_classes_append_handler(
-        target, value, initiator
+    target, value, initiator
 ):
     with db.session.no_autoflush:
         _approvals_ProjectDescription_delete_cache(target)
@@ -324,7 +325,7 @@ def _approvals_ProjectDescription_project_classes_append_handler(
 
 @listens_for(ProjectDescription.project_classes, "remove")
 def _approvals_ProjectDescription_project_classes_remove_handler(
-        target, value, initiator
+    target, value, initiator
 ):
     with db.session.no_autoflush:
         _approvals_ProjectDescription_delete_cache(target)
@@ -380,7 +381,7 @@ def _approvals_ProjectClassConfig_delete_handler(mapper, connection, target):
 
 @listens_for(ProjectClassConfig.confirmation_required, "append")
 def _approvals_ProjectClassConfig_confirmation_required_append_handler(
-        target, value, initiator
+    target, value, initiator
 ):
     with db.session.no_autoflush:
         _approvals_delete_ProjectClass_cache(target.project_class)
@@ -388,7 +389,7 @@ def _approvals_ProjectClassConfig_confirmation_required_append_handler(
 
 @listens_for(ProjectClassConfig.confirmation_required, "remove")
 def _approvals_ProjectClassConfig_confirmation_required_remove_handler(
-        target, value, initiator
+    target, value, initiator
 ):
     with db.session.no_autoflush:
         _approvals_delete_ProjectClass_cache(target.project_class)
@@ -528,7 +529,7 @@ def detuple(x):
 
 
 def build_enrol_selector_candidates(
-        config: ProjectClassConfig, disable_programme_filter: bool = False
+    config: ProjectClassConfig, disable_programme_filter: bool = False
 ):
     """
     Build a query that returns possible candidates for manual enrolment as selectors
@@ -546,7 +547,7 @@ def build_enrol_selector_candidates(
 
 
 def build_enrol_submitter_candidates(
-        config: ProjectClassConfig, disable_programme_filter: bool = False
+    config: ProjectClassConfig, disable_programme_filter: bool = False
 ):
     """
     Build a query that returns possible candidate for manual enrolment as submitters
@@ -559,10 +560,10 @@ def build_enrol_submitter_candidates(
 
 
 def _build_generic_enroll_candidate(
-        config: ProjectClassConfig,
-        year_offset: int,
-        StudentRecordType,
-        disable_programme_filter: bool = False,
+    config: ProjectClassConfig,
+    year_offset: int,
+    StudentRecordType,
+    disable_programme_filter: bool = False,
 ):
     """
     Build a query that returns missing candidates for manual enrolment
@@ -624,11 +625,11 @@ def _build_generic_enroll_candidate(
 
 
 def _build_candidates(
-        tenant_id: int,
-        allowed_programmes,
-        student_level: int,
-        first_year: int,
-        last_year: int,
+    tenant_id: int,
+    allowed_programmes,
+    student_level: int,
+    first_year: int,
+    last_year: int,
 ):
     candidates = (
         db.session.query(StudentData)
@@ -680,7 +681,7 @@ def get_automatch_pclasses():
 
 
 def build_submitters_data(
-        config, cohort_filter, prog_filter, state_filter, year_filter
+    config, cohort_filter, prog_filter, state_filter, year_filter
 ) -> List[SubmittingStudent]:
     # build a list of live students submitting work for evaluation in this project class
     submitters: List[SubmittingStudent] = config.submitting_students.filter_by(
@@ -735,3 +736,22 @@ def build_submitters_data(
         ]
 
     return data
+
+
+# grouper borrowed from itertools recipes
+# https://docs.python.org/3/library/itertools.html#itertools-recipes
+def grouper(iterable, n, *, incomplete="fill", fillvalue=None):
+    "Collect data into non-overlapping fixed-length chunks or blocks."
+    # grouper('ABCDEFG', 3, fillvalue='x') → ABC DEF Gxx
+    # grouper('ABCDEFG', 3, incomplete='strict') → ABC DEF ValueError
+    # grouper('ABCDEFG', 3, incomplete='ignore') → ABC DEF
+    iterators = [iter(iterable)] * n
+    match incomplete:
+        case "fill":
+            return zip_longest(*iterators, fillvalue=fillvalue)
+        case "strict":
+            return zip(*iterators, strict=True)
+        case "ignore":
+            return zip(*iterators)
+        case _:
+            raise ValueError("Expected fill, strict, or ignore")

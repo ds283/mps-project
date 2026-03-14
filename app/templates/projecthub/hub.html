@@ -50,18 +50,25 @@
     </div>
 {% endmacro %}
 
-{% macro format_supervision_event(event, past_event=false, show_attendance=true) %}
+{% macro format_supervision_event(event, event_type='past', show_attendance=true) %}
     {% set unit = event.unit %}
     {% set template = event.template %}
     <div class="d-flex flex-column justify-content-start align-items-start gap-2">
-        <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline gap-2">
-            <div class="{% if past_event %}fs-5{% else %}fs-4 fw-semibold{% endif %} text-primary">
+        <div class="d-flex flex-row flex-wrap justify-content-between align-items-center w-100 gap-2">
+            <div class="{% if event_type == 'current' %}fs-5{% else %}fs-4 fw-semibold{% endif %} text-primary">
                 <i class="fas fa-users"></i> {{ event.name }}
             </div>
+            <div class="d-flex flex-row flex-wrap justify-content-end align-items-center gap-2">
+                {% if template is not none %}
+                    <span class="badge bg-secondary">Core supervision</span>
+                {% endif %}
+            </div>
         </div>
-        {% if event.time %}
-            <div class="text-primary fs-5">{{ event.time.strftime("%A %d %b %Y %H:%M:%S") }}</div>
-        {% endif %}
+        <div class="d-flex flex-row flex-wrap justify-content-start align-items-center w-100 gap-2">
+            {% if event.time %}
+                <div class="text-primary fs-5">{{ event.time.strftime("%A %d %b %Y %H:%M") }}</div>
+            {% endif %}
+        </div>
         {% if my_role is none or (my_role is not none and my_role.id != event.owner_id) %}
             <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-2 small text-secondary">
                 <div><i class="fas fa-user-circle"></i> {{ event.sub_record.owner.student.user.name }}</div>
@@ -72,8 +79,8 @@
             </div>
         {% endif %}
         <div class="d-flex flex-row flex-wrap w-100 justify-content-start align-items-baseline gap-3">
-            <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline gap-2">
-                {% if show_attendance and event.monitor_attendance and (hub_role.is_supervisor or hub_role.is_convenor) %}
+            {% if show_attendance and event_type in ['past', 'current'] and event.monitor_attendance and (hub_role.is_supervisor or hub_role.is_convenor) %}
+                <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline gap-2">
                     {% if event.attendance is none %}
                         <div class="text-danger"><i class="fas fa-exclamation-circle"></i> Attendance not recorded</div>
                         {{ attendance_dropdown(event) }}
@@ -82,8 +89,8 @@
                             Attendance: {{ event.attendance_str }}</div>
                         {{ attendance_dropdown(event) }}
                     {% endif %}
-                {% endif %}
-            </div>
+                </div>
+            {% endif %}
             <a class="btn btn-sm btn-outline-primary"
                href="{{ url_for('projecthub.event_details', event_id=event.id, url=return_url, text=return_text) }}">Show
                 details&hellip;</a>
@@ -268,11 +275,22 @@
                 <hr class="intro-divider">
                 <div class="mt-3 d-flex flex-column justify-content-start align-items-start gap-4">
                     {% for event in current_events %}
-                        {{ format_supervision_event(event) }}
+                        {{ format_supervision_event(event, event_type='current') }}
                     {% endfor %}
                 </div>
             </div>
         </div>
+    {% else %}
+        {% set next_event = record.get_ordered_future_events().first() %}
+        {% if next_event is not none %}
+            {% set needs_rule = true %}
+            {% set unit = next_event.unit %}
+            <div class="fs-4 text-dark mb-3">Upcoming events</div>
+            <div class="card card-body bg-light mt-2 mb-2 border-secondary">
+                {{ past_supervision_event_header(next_event) }}
+                {{ format_supervision_event(next_event, event_type='upcoming') }}
+            </div>
+        {% endif %}
     {% endif %}
     {% if past_events|length > 0 %}
         {% if needs_rule %}
@@ -282,7 +300,7 @@
         {% for event in past_events %}
             <div class="card card-body bg-light mt-2 mb-2 border-secondary">
                 {{ past_supervision_event_header(event) }}
-                {{ format_supervision_event(event, past_event=true) }}
+                {{ format_supervision_event(event, event_type='past') }}
             </div>
         {% endfor %}
     {% endif %}

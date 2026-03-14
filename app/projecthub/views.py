@@ -926,3 +926,32 @@ def set_regular_meeting_time(role_id):
         sd=sd,
         url=url,
     )
+
+
+@projecthub.route("/set_mute_event/<int:event_id>/<int:value>", methods=["GET", "POST"])
+@roles_accepted("root", "admin", "faculty", "office")
+def set_mute_event(event_id, value):
+    event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
+    role: SubmissionRole = event.owner
+
+    if role.owner_id != current_user.id:
+        flash("You are not authorized to mute this event.", "error")
+        return redirect(redirect_url())
+
+    value_: bool
+    if value == 1:
+        value_ = True
+    else:
+        value_ = False
+
+    try:
+        event.mute = value_
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash(
+            "Could not update mute event due to a database error. Please contact a system administrator.",
+        )
+
+    return redirect(redirect_url())

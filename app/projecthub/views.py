@@ -10,51 +10,52 @@
 
 import json
 from collections import namedtuple
-from datetime import date, timedelta, datetime
+from datetime import date, datetime, timedelta
 from functools import partial
+from math import pi
 
 from bokeh.embed import components
 from bokeh.models import Label
 from bokeh.plotting import figure
-from flask import redirect, flash, request, jsonify, current_app, url_for
-from flask_security import current_user, roles_accepted, login_required
-from math import pi
-from numpy import isnan, isinf
+from flask import current_app, flash, jsonify, redirect, request, url_for
+from flask_security import current_user, login_required, roles_accepted
+from numpy import isinf, isnan
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import with_polymorphic
 from sqlalchemy.sql import func
 
 import app.ajax as ajax
-from . import projecthub
-from .forms import (
-    AddFormatterArticleForm,
-    EditFormattedArticleForm,
-    MeetingSummaryForm,
-    SupervisionNotesForm,
-    build_event_team_form,
-    ReassignEventOwnerFormFactory,
-)
-from .utils import validate_project_hub, validate_set_attendance
+
 from ..database import db
 from ..models import (
-    SubmissionRecord,
-    SubmittingStudent,
-    StudentData,
-    ProjectClassConfig,
-    ProjectClass,
-    LiveProject,
-    SubmissionPeriodRecord,
     ConvenorSubmitterArticle,
     FormattedArticle,
+    LiveProject,
+    ProjectClass,
+    ProjectClassConfig,
     ProjectSubmitterArticle,
-    User,
-    SupervisionEvent,
+    StudentData,
+    SubmissionPeriodRecord,
+    SubmissionRecord,
     SubmissionRole,
+    SubmittingStudent,
+    SupervisionEvent,
+    User,
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 from ..tools import ServerSideSQLHandler
+from . import projecthub
+from .forms import (
+    AddFormatterArticleForm,
+    EditFormattedArticleForm,
+    MeetingSummaryForm,
+    ReassignEventOwnerFormFactory,
+    SupervisionNotesForm,
+    build_event_team_form,
+)
+from .utils import validate_project_hub, validate_set_attendance
 
 DoughnutDiagram = namedtuple("DoughnutDiagram", ["script", "div"])
 
@@ -83,9 +84,10 @@ def hub(subid):
                 my_role = role
                 break
 
-    if not validate_project_hub(
-            record, current_user, current_role=my_role, message=True
-    ):
+    hub_role = validate_project_hub(
+        record, current_user, current_role=my_role, message=True
+    )
+    if not hub_role:
         return redirect(redirect_url())
 
     submitter: SubmittingStudent = record.owner
@@ -203,6 +205,7 @@ def hub(subid):
         record=record,
         period=period,
         my_role=my_role,
+        hub_role=hub_role,
         burndown_div=burn_diagram.div if burn_diagram else None,
         burndown_script=burn_diagram.script if burn_diagram else None,
         attendance_recorded=attendance_recorded,
@@ -497,7 +500,8 @@ def article_widget_ajax(subid):
     # subid labels a SubmissionRecord
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(subid)
 
-    if not validate_project_hub(record, current_user, message=True):
+    hub_role = validate_project_hub(record, current_user, message=False)
+    if not hub_role:
         return jsonify({})
 
     articles = with_polymorphic(
@@ -568,7 +572,8 @@ def event_details(event_id):
     event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
     record: SubmissionRecord = event.sub_record
 
-    if not validate_project_hub(record, current_user, message=True):
+    hub_role = validate_project_hub(record, current_user, message=True)
+    if not hub_role:
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -627,7 +632,8 @@ def edit_event_team(event_id):
     event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
     record: SubmissionRecord = event.sub_record
 
-    if not validate_project_hub(record, current_user, message=True):
+    hub_role = validate_project_hub(record, current_user, message=True)
+    if not hub_role:
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -691,7 +697,8 @@ def edit_meeting_summary(event_id):
     event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
     record: SubmissionRecord = event.sub_record
 
-    if not validate_project_hub(record, current_user, message=True):
+    hub_role = validate_project_hub(record, current_user, message=True)
+    if not hub_role:
         return redirect(redirect_url())
 
     url = request.args.get("url", None)
@@ -739,7 +746,8 @@ def edit_supervision_notes(event_id):
     event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
     record: SubmissionRecord = event.sub_record
 
-    if not validate_project_hub(record, current_user, message=True):
+    hub_role = validate_project_hub(record, current_user, message=True)
+    if not hub_role:
         return redirect(redirect_url())
 
     url = request.args.get("url", None)

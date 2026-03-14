@@ -12,21 +12,77 @@
 from flask import flash
 
 from ..models import (
-    SubmissionRecord,
-    User,
-    SupervisionEvent,
-    SubmissionRole,
     LiveProject,
-    SubmittingStudent,
-    ProjectClassConfig,
     ProjectClass,
+    ProjectClassConfig,
     StudentData,
+    SubmissionRecord,
+    SubmissionRole,
+    SubmittingStudent,
+    SupervisionEvent,
+    User,
 )
 
 
+class HubRoleMap:
+    def __init__(
+        self,
+        student: bool = False,
+        supervisor: bool = False,
+        marker: bool = False,
+        moderator: bool = False,
+        convenor: bool = False,
+        admin: bool = False,
+    ):
+        self.student = student
+        self.supervisor = supervisor
+        self.marker = marker
+        self.moderator = moderator
+        self.convenor = convenor
+        self.admin = admin
+
+    def __bool__(self):
+        return (
+            self.student
+            or self.supervisor
+            or self.marker
+            or self.moderator
+            or self.convenor
+            or self.admin
+        )
+
+    @property
+    def is_student(self):
+        return self.student
+
+    @property
+    def is_supervisor(self):
+        return self.supervisor
+
+    @property
+    def is_marker(self):
+        return self.marker
+
+    @property
+    def is_moderator(self):
+        return self.moderator
+
+    @property
+    def is_convenor(self):
+        return self.convenor
+
+    @property
+    def is_admin(self):
+        return self.admin
+
+    @property
+    def show_student_dashboard(self):
+        return self.student
+
+
 def validate_project_hub(
-        record: SubmissionRecord, user: User, current_role=None, message=False
-):
+    record: SubmissionRecord, user: User, current_role=None, message=False
+) -> HubRoleMap:
     """
     Validate whether a given user instance is entitled to view the
     ProjectHub for a given SubmissionRecord
@@ -38,47 +94,58 @@ def validate_project_hub(
 
     # a student can always look at the project hub for their own projects (even if retired)
     if user.has_role("student") and user.id == record.owner.student_id:
-        return True
+        return HubRoleMap(student=True)
 
     # admin, and root users can always look
     if user.has_role("admin") or user.has_role("root"):
-        return True
+        return HubRoleMap(admin=True)
 
     # office staff, moderators, exam board members and external examiners can always look
-    if (
-            user.has_role("office")
-            or user.has_role("moderator")
-            or user.has_role("exam_board")
-            or user.has_role("external_examiner")
-    ):
-        return True
+    if user.has_role("office"):
+        return HubRoleMap(admin=True)
 
     # supervisors, markers, moderators, exam board members, and external examiners can always look
-    allowed_roles = [
+    supervisor_roles = [
         SubmissionRole.ROLE_SUPERVISOR,
         SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+    ]
+    marker_roles = [
         SubmissionRole.ROLE_MARKER,
-        SubmissionRole.ROLE_EXAM_BOARD,
-        SubmissionRole.ROLE_EXTERNAL_EXAMINER,
+    ]
+    moderator_roles = [
         SubmissionRole.ROLE_MODERATOR,
     ]
+    admin_roles = [
+        SubmissionRole.ROLE_EXAM_BOARD,
+        SubmissionRole.ROLE_EXTERNAL_EXAMINER,
+    ]
+
+    if current_role is None:
+        for role in record.roles:
+            role: SubmissionRole
+            if role.user_id == user.id:
+                current_role = role
 
     if current_role is not None:
         if current_role.user_id != user.id:
             if message:
                 flash(
-                    f"Authorization issue for project page: current role does not match current user. Please contact a system administrator.",
+                    "Authorization issue for project page: current role does not match current user. Please contact a system administrator.",
                     "error",
                 )
-            return False
-        if current_role.role in allowed_roles:
-            return True
-    else:
-        if user.has_role("faculty"):
-            for role in record.roles:
-                role: SubmissionRole
-                if role.user_id == user.id and role.role in allowed_roles:
-                    return True
+            return HubRoleMap()
+
+        if current_role.role in supervisor_roles:
+            return HubRoleMap(supervisor=True)
+
+        if current_role.role in marker_roles:
+            return HubRoleMap(marker=True)
+
+        if current_role.role in moderator_roles:
+            return HubRoleMap(moderator=True)
+
+        if current_role.role in admin_roles:
+            return HubRoleMap(admin=True)
 
     # project convenors can look
     owner: SubmittingStudent = record.owner
@@ -87,7 +154,7 @@ def validate_project_hub(
     project: LiveProject = record.project
 
     if pclass.is_convenor(user.id):
-        return True
+        return HubRoleMap(convenor=True)
 
     if message:
         sd: StudentData = owner.student
@@ -102,7 +169,7 @@ def validate_project_hub(
                 f'You are not currently authorized to view the project hub for student "{suser.name}"'
             )
 
-    return False
+    return HubRoleMap()
 
 
 def validate_set_attendance(event: SupervisionEvent, user: User, message=False):

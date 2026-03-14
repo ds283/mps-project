@@ -70,7 +70,7 @@
         {% endif %}
         <div class="d-flex flex-row flex-wrap w-100 justify-content-start align-items-baseline gap-3">
             <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline gap-2">
-                {% if show_attendance and is_faculty and event.monitor_attendance %}
+                {% if show_attendance and event.monitor_attendance and (hub_role.is_supervisor or hub_role.is_convenor) %}
                     {% if event.attendance is none %}
                         <div class="text-danger"><i class="fas fa-exclamation-circle"></i> Attendance not recorded</div>
                         {{ attendance_dropdown(event) }}
@@ -171,7 +171,7 @@
     </div>
 {% endmacro %}
 
-{% macro common_page_header() %}
+{% macro show_tiles() %}
     <div class="d-flex flex-row flex-wrap justify-content-end align-items-baseline gap-2 mt-2 mb-2">
         <a class="btn btn-sm btn-outline-primary"
            href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=return_text) }}">
@@ -210,7 +210,10 @@
                 {% endif %}
             {% endcall %}
         </div>
-        <div class="col-3"></div>
+        <div class="col-3">
+            {% if hub_role.is_supervisor %}
+            {% endif %}
+        </div>
         <div class="col-3"></div>
         <div class="col-3"></div>
     </div>
@@ -316,14 +319,14 @@
                 </div>
             {% endif %}
 
-            {% if is_student %}
+            {% if hub_role.show_student_dashboard %}
                 {{ student_page_header() }}
             {% else %}
                 {{ faculty_page_header() }}
             {% endif %}
 
-            {# COMMON HEADER ELEMENTS #}
-            {{ common_page_header() }}
+            {# SHOW DASHBOARD TILEs #}
+            {{ show_tiles() }}
             <hr class="intro-divider mb-5">
 
             {# SHOW SUPERVISION EVENTS #}

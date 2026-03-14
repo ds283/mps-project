@@ -9,11 +9,18 @@
 #
 from flask_security import Form
 from flask_security.forms import Form
-from wtforms import SubmitField, StringField, TextAreaField, BooleanField, DateTimeField
+from wtforms import (
+    BooleanField,
+    DateTimeField,
+    SelectField,
+    StringField,
+    SubmitField,
+    TextAreaField,
+)
 from wtforms.validators import InputRequired, Length, Optional
-from wtforms_alchemy import QuerySelectMultipleField, QuerySelectField
+from wtforms_alchemy import QuerySelectField, QuerySelectMultipleField
 
-from ..models import DEFAULT_STRING_LENGTH, SubmissionRole, SubmissionRecord
+from ..models import DEFAULT_STRING_LENGTH, SubmissionRecord, SubmissionRole
 from ..shared.forms.mixins import SaveChangesMixin
 
 
@@ -116,7 +123,7 @@ def ReassignEventOwnerFormFactory(event):
     The new owner must be one of the current team members (i.e. a SubmissionRole
     that is already in the event's team collection).
     """
-    from ..models import SupervisionEvent, SubmissionRole
+    from ..models import SubmissionRole, SupervisionEvent
 
     event_id = event.id
 
@@ -145,3 +152,23 @@ def ReassignEventOwnerFormFactory(event):
         submit = SubmitField("Reassign owner")
 
     return ReassignEventOwnerForm
+
+
+class SetRegularMeetingTimesForm(Form, SaveChangesMixin):
+    weekday = SelectField(
+        "Day of the week",
+        description="Specify the day of the week when you normally meet",
+        choices=SubmissionRole.weekdays_choices,
+        coerce=int,
+    )
+
+    start_time = DateTimeField(
+        "Meeting start time",
+        format="%H:%M",
+        description="Select the start time for your nregular meeting.",
+    )
+
+    location = StringField(
+        "Meeting location",
+        validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
+    )

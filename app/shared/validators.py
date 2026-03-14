@@ -7,23 +7,23 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-from typing import Optional, List
+from typing import List, Optional
 
 from flask import flash
 from flask_login import current_user
 from sqlalchemy import and_
 
-from .context.assessments import get_assessment_data
-from .utils import get_current_year
 from ..database import db
 from ..models import (
+    ProjectClass,
     ProjectClassConfig,
-    SubmittingStudent,
     SubmissionRecord,
     SubmissionRole,
-    ProjectClass,
+    SubmittingStudent,
 )
 from ..shared.utils import get_count
+from .context.assessments import get_assessment_data
+from .utils import get_current_year
 
 
 def validate_is_administrator(message=True):
@@ -309,7 +309,7 @@ def validate_submission_role(role: SubmissionRole, allow_roles=None):
                 return True
 
     flash(
-        "This operation is not permitted because your role associated with this submission does not confer "
+        "This operation is not permitted because your role does not give "
         "the necessary privileges. If you think this is an error, please contact a system "
         "administrator",
         "warning",

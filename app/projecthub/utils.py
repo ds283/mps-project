@@ -7,8 +7,12 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from collections import namedtuple
+from math import pi
 
-
+from bokeh.embed import components
+from bokeh.models import Label
+from bokeh.plotting import figure
 from flask import flash
 
 from ..models import (
@@ -23,6 +27,8 @@ from ..models import (
     User,
 )
 from ..shared.utils import grouper
+
+DoughnutDiagram = namedtuple("DoughnutDiagram", ["script", "div"])
 
 
 class HubRoleMap:
@@ -254,3 +260,63 @@ def validate_set_attendance(event: SupervisionEvent, user: User, message=False):
         )
 
     return False
+
+
+def doughnut_diagram(
+    burn_fraction: float, burned_colour="tomato", unburned_colour="palegreen"
+) -> DoughnutDiagram:
+    angle = 2 * pi * min(burn_fraction, 0.995)
+    start_angle = pi / 2.0
+    end_angle = pi / 2.0 - angle if angle < pi / 2.0 else 5.0 * pi / 2.0 - angle
+
+    plot = figure(width=80, height=80, toolbar_location=None)
+    plot.sizing_mode = "fixed"
+    plot.annular_wedge(
+        x=0,
+        y=0,
+        inner_radius=0.75,
+        outer_radius=1,
+        direction="clock",
+        line_color=None,
+        start_angle=start_angle,
+        end_angle=end_angle,
+        fill_color=burned_colour,
+    )
+    if burn_fraction < 1.0:
+        plot.annular_wedge(
+            x=0,
+            y=0,
+            inner_radius=0.75,
+            outer_radius=1,
+            direction="clock",
+            line_color=None,
+            start_angle=end_angle,
+            end_angle=start_angle,
+            fill_color=unburned_colour,
+        )
+    plot.axis.visible = False
+    plot.xgrid.visible = False
+    plot.ygrid.visible = False
+    plot.border_fill_color = None
+    plot.toolbar.logo = None
+    plot.background_fill_color = None
+    plot.outline_line_color = None
+    plot.toolbar.active_drag = None
+
+    annotation = Label(
+        x=0,
+        y=0,
+        x_units="data",
+        y_units="data",
+        text="{p:.2g}%".format(p=burn_fraction * 100)
+        if burn_fraction < 1.0
+        else "100%",
+        background_fill_alpha=0.0,
+        text_align="center",
+        text_baseline="middle",
+        text_font_style="bold",
+    )
+    plot.add_layout(annotation)
+
+    script, div = components(plot)
+    return DoughnutDiagram(script=script, div=div)

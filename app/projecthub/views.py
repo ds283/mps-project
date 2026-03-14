@@ -8,15 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-import json
-from collections import namedtuple
 from datetime import date, datetime, timedelta
 from functools import partial
-from math import pi
+from typing import List
 
-from bokeh.embed import components
-from bokeh.models import Label
-from bokeh.plotting import figure
 from flask import current_app, flash, jsonify, redirect, request, url_for
 from flask_security import current_user, login_required, roles_accepted
 from numpy import isinf, isnan
@@ -29,6 +24,7 @@ import app.ajax as ajax
 from ..database import db
 from ..models import (
     ConvenorSubmitterArticle,
+    FacultyData,
     FormattedArticle,
     LiveProject,
     ProjectClass,
@@ -36,6 +32,7 @@ from ..models import (
     ProjectSubmitterArticle,
     StudentData,
     SubmissionPeriodRecord,
+    SubmissionPeriodUnit,
     SubmissionRecord,
     SubmissionRole,
     SubmittingStudent,
@@ -44,7 +41,7 @@ from ..models import (
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
-from ..shared.validators import validate_is_convenor
+from ..shared.validators import validate_is_convenor, validate_submission_role
 from ..tools import ServerSideSQLHandler
 from . import projecthub
 from .forms import (
@@ -52,12 +49,11 @@ from .forms import (
     EditFormattedArticleForm,
     MeetingSummaryForm,
     ReassignEventOwnerFormFactory,
+    SetRegularMeetingTimesForm,
     SupervisionNotesForm,
     build_event_team_form,
 )
-from .utils import validate_project_hub, validate_set_attendance
-
-DoughnutDiagram = namedtuple("DoughnutDiagram", ["script", "div"])
+from .utils import doughnut_diagram, validate_project_hub, validate_set_attendance
 
 
 @projecthub.route("/hub/<int:subid>")
@@ -154,11 +150,11 @@ def hub(subid):
     now = date.today()
     burn_diagram = None
     if (
-            not record.retired
-            and period.start_date
-            and now >= period.start_date
-            and period.hand_in_date
-            and now <= period.hand_in_date
+        not record.retired
+        and period.start_date
+        and now >= period.start_date
+        and period.hand_in_date
+        and now <= period.hand_in_date
     ):
         total_time: timedelta = period.hand_in_date - period.start_date
         total_time_days: int = total_time.days
@@ -181,9 +177,9 @@ def hub(subid):
         attendance_percent = attendance_data["attendance"]
 
         if (
-                attendance_percent is not None
-                and not isnan(attendance_percent)
-                and not isinf(attendance_percent)
+            attendance_percent is not None
+            and not isnan(attendance_percent)
+            and not isinf(attendance_percent)
         ):
             attendance_diagram = doughnut_diagram(
                 attendance_percent / 100.0,
@@ -216,66 +212,6 @@ def hub(subid):
         return_url=url_for("projecthub.hub", subid=subid, url=url, text=text),
         return_text=f"project page for {suser.name}",
     )
-
-
-def doughnut_diagram(
-        burn_fraction: float, burned_colour="tomato", unburned_colour="palegreen"
-) -> DoughnutDiagram:
-    angle = 2 * pi * min(burn_fraction, 0.995)
-    start_angle = pi / 2.0
-    end_angle = pi / 2.0 - angle if angle < pi / 2.0 else 5.0 * pi / 2.0 - angle
-
-    plot = figure(width=80, height=80, toolbar_location=None)
-    plot.sizing_mode = "fixed"
-    plot.annular_wedge(
-        x=0,
-        y=0,
-        inner_radius=0.75,
-        outer_radius=1,
-        direction="clock",
-        line_color=None,
-        start_angle=start_angle,
-        end_angle=end_angle,
-        fill_color=burned_colour,
-    )
-    if burn_fraction < 1.0:
-        plot.annular_wedge(
-            x=0,
-            y=0,
-            inner_radius=0.75,
-            outer_radius=1,
-            direction="clock",
-            line_color=None,
-            start_angle=end_angle,
-            end_angle=start_angle,
-            fill_color=unburned_colour,
-        )
-    plot.axis.visible = False
-    plot.xgrid.visible = False
-    plot.ygrid.visible = False
-    plot.border_fill_color = None
-    plot.toolbar.logo = None
-    plot.background_fill_color = None
-    plot.outline_line_color = None
-    plot.toolbar.active_drag = None
-
-    annotation = Label(
-        x=0,
-        y=0,
-        x_units="data",
-        y_units="data",
-        text="{p:.2g}%".format(p=burn_fraction * 100)
-        if burn_fraction < 1.0
-        else "100%",
-        background_fill_alpha=0.0,
-        text_align="center",
-        text_baseline="middle",
-        text_font_style="bold",
-    )
-    plot.add_layout(annotation)
-
-    script, div = components(plot)
-    return DoughnutDiagram(script=script, div=div)
 
 
 @projecthub.route("/edit_submission_period_articles/<int:pid>")
@@ -894,4 +830,99 @@ def reassign_event_owner(event_id):
         url=url,
         is_target_convenor=is_target_convenor,
         is_event_owner=is_event_owner,
+    )
+
+
+@projecthub.route("/set_regular_meeting_time/<int:role_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def set_regular_meeting_time(role_id):
+    """
+    Change the regular meeting time for future events belonging to the specified role owner
+    """
+    role: SubmissionRole = SubmissionRole.query.get_or_404(role_id)
+    record: SubmissionRecord = role.submission
+    submitter: SubmittingStudent = record.owner
+    sd: StudentData = submitter.student
+    period: SubmissionPeriodRecord = record.period
+    config: ProjectClassConfig = period.config
+    pclass: ProjectClass = config.project_class
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    if record.retired:
+        flash(
+            "It is not possible to set a regular meeting time for submissions that have been retired.",
+            "info",
+        )
+        return redirect(redirect_url())
+
+    if role.user_id != current_user.id and not validate_is_convenor(
+        pclass, message=False
+    ):
+        flash(
+            "You are not authorized to set a regular meeting time for this submission role.",
+            "info",
+        )
+        return redirect(redirect_url())
+
+    form = SetRegularMeetingTimesForm(request.form)
+    if form.validate_on_submit():
+        try:
+            role.regular_meeting_weekday = form.weekday.data
+            role.regular_meeting_time = form.start_time.data
+            role.regular_meeting_location = form.location.data
+
+            # rest event time for future events
+            events: List[SupervisionEvent] = role.notpast_owned_events()
+            for event in events:
+                event: SupervisionEvent
+                unit: SubmissionPeriodUnit = event.unit
+
+                unit_start_date = event.unit.start_date
+                unit_weekday = unit_start_date.isoweekday()
+
+                # find first specified weekday on or after the start date
+                weekday_shift = (role.regular_meeting_weekday - unit_weekday) % 7
+                target_date = unit_start_date + timedelta(days=weekday_shift)
+                event.time = datetime.combine(
+                    target_date, role.regular_meeting_time.time()
+                )
+
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash(
+                "Could not update regular meeting time due to a database error. Please contact a system administrator.",
+            )
+
+        return redirect(url)
+
+    else:
+        if request.method == "GET":
+            user: User = role.user
+            fd: FacultyData = user.faculty_data
+
+            if fd is not None:
+                if form.weekday.data is None:
+                    form.weekday.data = role.regular_meeting_weekday
+
+                if form.start_time.data is None:
+                    form.start_time.data = role.regular_meeting_time
+
+                if form.location.data is None:
+                    if role.regular_meeting_location is not None:
+                        form.location.data = role.regular_meeting_location
+                    else:
+                        form.location.data = fd.office
+
+    return render_template_context(
+        "projecthub/event/set_regular_meeting_time.html",
+        form=form,
+        role=role,
+        submitter=submitter,
+        sd=sd,
+        url=url,
     )

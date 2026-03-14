@@ -1,0 +1,64 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import date_field %}
+{% from "select2.html" import import_select2 %}
+{% from "datepicker.html" import import_datepicker %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+    {{ import_datepicker() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#weekday').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+            });
+            $('#starttime').datetimepicker({
+                format: 'HH:mm',
+                allowInputToggle: true
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Set regular meeting time
+{% endblock %}
+
+{% block formtitle %}
+    Set regular meeting time
+{% endblock %}
+
+{% block form_content %}
+    {# ── Event header ── #}
+    <div class="d-flex flex-row justify-content-between align-items-baseline gap-3 mt-2 mb-4">
+        <div class="fs-4 fw-semibold text-secondary">
+            Change regular meeting time with <i class="fas fa-user-circle"></i> {{ sd.user.name }}
+        </div>
+    </div>
+
+    <form action="{{ url_for('projecthub.set_regular_meeting_time', role_id=role.id, url=url) }}" method="POST"
+          name="set_regular_meeting_form">
+        {{ form.hidden_tag() }}
+
+        <div class="mt-1">
+            {{ wtf.render_field(form.weekday) }}
+        </div>
+        <div class="mt-1">
+            {{ date_field(form.start_time, 'starttime') }}
+        </div>
+        <div class="mt-1">
+            {{ wtf.render_field(form.location) }}
+        </div>
+
+        <div class="mt-2">
+            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+        </div>
+    </form>
+{% endblock %}

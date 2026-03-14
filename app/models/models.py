@@ -13163,6 +13163,7 @@ class SubmissionRole(
         return {
             "day": self._weekdays_string.get(self.regular_meeting_weekday, "Unknown"),
             "time": self.regular_meeting_time.strftime("%H:%M"),
+            "location": self.regular_meeting_location,
         }
 
     @property
@@ -13299,7 +13300,9 @@ class SubmissionRole(
     def events_attending(self) -> List["SupervisionEvent"]:
         return self.events_team.all()
 
-    def past_owned_events(self, now: Optional[datetime] = None):
+    def past_owned_events(
+        self, now: Optional[datetime] = None
+    ) -> List[SupervisionEvent]:
         if now is None:
             now = datetime.now()
 
@@ -13323,7 +13326,35 @@ class SubmissionRole(
 
         return query
 
-    def future_owned_events(self, now: Optional[datetime] = None):
+    def notpast_owned_events(
+        self, now: Optional[datetime] = None
+    ) -> List[SupervisionEvent]:
+        if now is None:
+            now = datetime.now()
+
+        query = (
+            db.session.query(SupervisionEvent)
+            .join(
+                SubmissionPeriodUnit,
+                SubmissionPeriodUnit.id == SupervisionEvent.unit_id,
+            )
+            .filter(
+                SupervisionEvent.owner_id == self.id,
+                or_(
+                    and_(
+                        SupervisionEvent.time == None,
+                        SubmissionPeriodUnit.end_date >= now.date(),
+                    ),
+                    and_(SupervisionEvent.time != None, SupervisionEvent.time >= now),
+                ),
+            )
+        )
+
+        return query
+
+    def future_owned_events(
+        self, now: Optional[datetime] = None
+    ) -> List[SupervisionEvent]:
         if now is None:
             now = datetime.now()
 
@@ -13347,7 +13378,9 @@ class SubmissionRole(
 
         return query
 
-    def current_owned_events(self, now: Optional[datetime] = None):
+    def current_owned_events(
+        self, now: Optional[datetime] = None
+    ) -> List[SupervisionEvent]:
         if now is None:
             now = datetime.now()
 

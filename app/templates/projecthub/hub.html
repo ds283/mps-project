@@ -7,6 +7,7 @@
 {% from "projecthub/resources.html" import resources_widget %}
 {% from "projecthub/articles.html" import articles_widget %}
 {% from "dashboard_widgets.html" import dashboard_tile %}
+{% from "projecthub/shared.html" import attendance_dropdown, mute_event_button %}
 
 {% set ui_elements = hub_role.get_ui_elements() %}
 {% set tiles = hub_role.get_tiles() %}
@@ -35,21 +36,6 @@
     </div>
 {% endmacro %}
 
-{% macro attendance_dropdown(event) %}
-    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split"
-            data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
-        Set&hellip;
-    </button>
-    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end small">
-        {% for value, label in event.attendance_menu %}
-            <a class="dropdown-item d-flex gap-2 small"
-               href="{{ url_for('projecthub.set_attendance', event_id=event.id, attendance=value) }}">
-                {{ label }}
-            </a>
-        {% endfor %}
-    </div>
-{% endmacro %}
-
 {% macro format_supervision_event(event, event_type='past', show_attendance=true) %}
     {% set unit = event.unit %}
     {% set template = event.template %}
@@ -61,6 +47,9 @@
             <div class="d-flex flex-row flex-wrap justify-content-end align-items-center gap-2">
                 {% if template is not none %}
                     <span class="badge bg-secondary">Core supervision</span>
+                {% endif %}
+                {% if hub_role.is_supervisor or hub_role.is_marker or hub_role.is_moderator %}
+                    {{ mute_event_button(event) }}
                 {% endif %}
             </div>
         </div>
@@ -79,15 +68,19 @@
             </div>
         {% endif %}
         <div class="d-flex flex-row flex-wrap w-100 justify-content-start align-items-baseline gap-3">
-            {% if show_attendance and event_type in ['past', 'current'] and event.monitor_attendance and (hub_role.is_supervisor or hub_role.is_convenor) %}
+            {% if show_attendance and event_type in ['past', 'current'] and event.monitor_attendance %}
                 <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline gap-2">
                     {% if event.attendance is none %}
                         <div class="text-danger"><i class="fas fa-exclamation-circle"></i> Attendance not recorded</div>
-                        {{ attendance_dropdown(event) }}
+                        {% if hub_role.is_admin or hub_role.is_supervisor or hub_role.is_convenor %}
+                            {{ attendance_dropdown(event) }}
+                        {% endif %}
                     {% else %}
                         <div class="text-success"><i class="fas fa-user-check me-2"></i>
                             Attendance: {{ event.attendance_str }}</div>
-                        {{ attendance_dropdown(event) }}
+                        {% if hub_role.is_admin or hub_role.is_supervisor or hub_role.is_convenor %}
+                            {{ attendance_dropdown(event) }}
+                        {% endif %}
                     {% endif %}
                 </div>
             {% endif %}
@@ -306,6 +299,46 @@
     {% endif %}
 {% endmacro %}
 
+{% macro mute_role_dropdown() %}
+    <div class="btn-group" role="group">
+        {% if my_role.mute %}
+            <button class="btn btn-sm btn-danger"><i class="fas fa-bell-slash"></i>
+                Student notifications off
+            </button>
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split"
+                    data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
+                Change
+            </button>
+            <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                <a class="dropdown-item"
+                   href="{{ url_for('projecthub.set_mute_role', role_id=my_role.id, value=0) }}">
+                    <i class="fas fa-fw fa-bell"></i> Unmute student
+                </a>
+                <a class="dropdown-item" href="#">
+                    <i class="fas fa-fw fa-cogs"></i> Settings&hellip;
+                </a>
+            </div>
+        {% else %}
+            <button class="btn btn-sm btn-success"><i class="fas fa-bell"></i>
+                Student notifications on
+            </button>
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split"
+                    data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
+                Change
+            </button>
+            <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                <a class="dropdown-item"
+                   href="{{ url_for('projecthub.set_mute_role', role_id=my_role.id, value=1) }}">
+                    <i class="fas fa-fw fa-bell-slash"></i> Mute
+                </a>
+                <a class="dropdown-item" href="#">
+                    <i class="fas fa-fw fa-cogs"></i> Settings&hellip;
+                </a>
+            </div>
+        {% endif %}
+    </div>
+{% endmacro %}
+
 {% block scripts %}
     {{ super() }}
     {{ import_bokeh() }}
@@ -381,6 +414,9 @@
                 {% endif %}
 
                 <div class="d-flex flex-row flex-wrap justify-content-end align-items-baseline gap-2 mt-2 mb-2">
+                    {% if hub_role.is_supervisor or hub_role.is_marker or hub_role.is_moderator %}
+                        {{ mute_role_dropdown() }}
+                    {% endif %}
                     <a class="btn btn-sm btn-outline-primary"
                        href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=return_text) }}">
                         <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...

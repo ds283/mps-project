@@ -127,7 +127,7 @@
             </div>
             <div class="col-3">
                 <div class="d-flex flex-row justify-content-end">
-                    <div class="btn-group btn-table-block">
+                    <div class="btn-group">
                         {% if desc %}
                             {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
                                 {% if desc.confirmed %}
@@ -306,7 +306,7 @@
     {% set confirm_required = config.is_confirmation_required(faculty_data) %}
 
     {% set offered_variants = faculty_data.variants_offered(pclass) %}
-{#    {% set variants_missing_aims = faculty_data.variants_offered(pclass, filter_warnings='aims') %}#}
+    {#    {% set variants_missing_aims = faculty_data.variants_offered(pclass, filter_warnings='aims') %}#}
     {% set nproj = offered_variants|length %}
     {% if nproj == 1 %}
         {% set nproj_plural = '' %}
@@ -389,7 +389,8 @@
                             </div>
                         {% endif %}
                         <div class="mt-2">
-                            <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-sm btn-success text-nowrap">Confirm all projects</a>
+                            <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}"
+                               class="btn btn-sm btn-success text-nowrap">Confirm all projects</a>
                         </div>
                     {% endcall %}
                 </div>
@@ -406,7 +407,8 @@
                 {% call icon_block(ns.iconclass) %}
                     <div>
                         <span class="{{ ns.textclass }}"><strong>You have {{ nproj }} active project{{ nproj_plural }} attached to this project class.</strong></span>
-                        <a href="{{ url_for('faculty.edit_projects') }}" class="text-decoration-none ms-1">Go to project library...</a>
+                        <a href="{{ url_for('faculty.edit_projects') }}" class="text-decoration-none ms-1">Go to project
+                            library...</a>
                     </div>
                     {% if nproj > 0 and sel_state <= config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
                         <div class="mt-1">

@@ -1,5 +1,7 @@
 {% extends "base_app.html" %}
 
+{% from "projecthub/shared.html" import attendance_dropdown, mute_event_button %}
+
 {% block title %}
     Event details
 {% endblock %}
@@ -18,7 +20,7 @@
             {% endif %}
 
             {# ── Event header ── #}
-            <div class="d-flex flex-row justify-content-between align-items-baseline gap-3 mt-3 mb-2">
+            <div class="d-flex flex-row justify-content-between align-items-baseline gap-3 w-100 mt-3 mb-3">
                 <div class="fs-3 fw-semibold text-primary">
                     <i class="fas fa-users"></i> {{ event.name }}
                     for {{ event.sub_record.owner.student.user.name }}
@@ -32,14 +34,19 @@
             </div>
 
             {% set unit = event.unit %}
-            {% if unit %}
-                <div class="text-muted mb-3">
-                    {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
-                    {% if unit.start_date and unit.end_date %}&ndash;{% endif %}
-                    {% if unit.end_date %}{{ unit.end_date.strftime("%d %b %Y") }}{% endif %}
-                    {% if unit.name %}&nbsp;&middot;&nbsp;{{ unit.name }}{% endif %}
-                </div>
-            {% endif %}
+            <div class="d-flex flex-row justify-content-between align-items-center gap-3 w-100 mt-3 mb-3">
+                {% if unit %}
+                    <div class="text-muted">
+                        {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
+                        {% if unit.start_date and unit.end_date %}&ndash;{% endif %}
+                        {% if unit.end_date %}{{ unit.end_date.strftime("%d %b %Y") }}{% endif %}
+                        {% if unit.name %}&nbsp;&middot;&nbsp;{{ unit.name }}{% endif %}
+                    </div>
+                {% endif %}
+                {% if hub_role.is_supervisor or hub_role.is_marker or hub_role.is_moderator %}
+                    {{ mute_event_button(event) }}
+                {% endif %}
+            </div>
 
             <hr class="intro-divider">
 
@@ -58,21 +65,9 @@
                         {% endif %}
                     </div>
                     {# Dropdown to change attendance status #}
-                    <button type="button"
-                            class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split"
-                            data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
-                        Set&hellip;
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
-                        {% for value, label in event.attendance_menu %}
-                            <li>
-                                <a class="dropdown-item small {% if event.attendance == value %}active{% endif %}"
-                                   href="{{ url_for('projecthub.set_attendance', event_id=event.id, attendance=value) }}">
-                                    {{ label }}
-                                </a>
-                            </li>
-                        {% endfor %}
-                    </ul>
+                    {% if hub_role.is_admin or hub_role.is_supervisor or hub_role.is_convenor %}
+                        {{ attendance_dropdown(event) }}
+                    {% endif %}
                 </div>
             {% endif %}
 
@@ -85,7 +80,7 @@
                             <i class="fas fa-user-friends"></i> Supervision team attendees
                         </span>
                         <div class="d-flex flex-row gap-2">
-                            {% if is_target_convenor or is_event_owner %}
+                            {% if hub.is_convenor or is_event_owner %}
                                 <a class="btn btn-sm btn-warning"
                                    href="{{ url_for('projecthub.reassign_event_owner', event_id=event.id, url=request.url) }}">
                                     <i class="fas fa-user-edit"></i> Reassign owner

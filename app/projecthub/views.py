@@ -519,11 +519,6 @@ def event_details(event_id):
     # (i.e. there is at least one eligible non-owner team member)
     num_supervisor_roles = len(record.supervisor_roles)
 
-    # Determine whether the current user is a convenor (or admin/root) for this project class,
-    # so the template can conditionally show the "Reassign owner" button
-    config: ProjectClassConfig = record.period.config
-    is_target_convenor = validate_is_convenor(config.project_class, message=False)
-
     # Determine whether the current user is the event owner
     owner_role = event.owner
     is_event_owner = (
@@ -539,7 +534,7 @@ def event_details(event_id):
         url=url,
         text=text,
         num_supervisor_roles=num_supervisor_roles,
-        is_target_convenor=is_target_convenor,
+        hub_role=hub_role,
         is_event_owner=is_event_owner,
         edit_summary_url=url_for(
             "projecthub.edit_meeting_summary",
@@ -896,6 +891,7 @@ def set_regular_meeting_time(role_id):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             flash(
                 "Could not update regular meeting time due to a database error. Please contact a system administrator.",
+                "error",
             )
 
         return redirect(url)
@@ -928,13 +924,13 @@ def set_regular_meeting_time(role_id):
     )
 
 
-@projecthub.route("/set_mute_event/<int:event_id>/<int:value>", methods=["GET", "POST"])
+@projecthub.route("/set_mute_event/<int:event_id>/<int:value>")
 @roles_accepted("root", "admin", "faculty", "office")
 def set_mute_event(event_id, value):
     event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
     role: SubmissionRole = event.owner
 
-    if role.owner_id != current_user.id:
+    if role.user_id != current_user.id:
         flash("You are not authorized to mute this event.", "error")
         return redirect(redirect_url())
 
@@ -951,7 +947,37 @@ def set_mute_event(event_id, value):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
-            "Could not update mute event due to a database error. Please contact a system administrator.",
+            f'Could not set mute state for event "{event.name}" due to a database error. Please contact a system administrator.',
+            "error",
+        )
+
+    return redirect(redirect_url())
+
+
+@projecthub.route("/set_mute_role/<int:role_id>/<int:value>")
+@roles_accepted("root", "admin", "faculty", "office")
+def set_mute_role(role_id, value):
+    role: SubmissionRole = SubmissionRole.query.get_or_404(role_id)
+
+    if role.user_id != current_user.id:
+        flash("You are not authorized to mute this role.", "error")
+        return redirect(redirect_url())
+
+    value_: bool
+    if value == 1:
+        value_ = True
+    else:
+        value_ = False
+
+    try:
+        role.mute = value_
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash(
+            "Could not set mute state for this submission role due to a database error. Please contact a system administrator.",
+            "error",
         )
 
     return redirect(redirect_url())

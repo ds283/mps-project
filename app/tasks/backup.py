@@ -11,16 +11,16 @@
 import functools
 import subprocess
 import tarfile
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from io import BytesIO
 from math import floor
 from operator import itemgetter
 from os import path
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 from uuid import uuid4
 
-from celery import group, chain
+from celery import chain, group
 from celery.exceptions import Ignore
 from dateutil import parser
 from flask import current_app, render_template
@@ -30,18 +30,19 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .. import register_task
 from ..database import db
-from ..models import BackupRecord, BackupLabel
-from ..shared.security import validate_nonce
+from ..models import BackupLabel, BackupRecord
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.backup import (
-    get_backup_config,
     compute_current_backup_count,
     compute_current_backup_size,
+    get_backup_config,
     remove_backup,
 )
 from ..shared.cloud_object_store import ObjectStore
 from ..shared.formatters import format_size
 from ..shared.scratch import ScratchFileManager
+from ..shared.security import validate_nonce
+from ..shared.sqlalchemy import get_count
 
 
 def register_backup_tasks(celery):
@@ -128,13 +129,13 @@ def register_backup_tasks(celery):
                 archive_scratch_path: Path = archive_scratch.path
 
                 with tarfile.open(
-                        name=archive_scratch_path, mode="w:gz", format=tarfile.PAX_FORMAT
+                    name=archive_scratch_path, mode="w:gz", format=tarfile.PAX_FORMAT
                 ) as archive:
                     archive.add(name=SQL_scratch_path, arcname="database.sql")
                     archive.close()
 
                 if not path.exists(archive_scratch_path) or not path.isfile(
-                        archive_scratch_path
+                    archive_scratch_path
                 ):
                     self.update_state(
                         state="FAILURE",
@@ -260,7 +261,7 @@ def register_backup_tasks(celery):
                 pass
 
             elif max_daily_age is None or (
-                    max_daily_age is not None and age < max_daily_age
+                max_daily_age is not None and age < max_daily_age
             ):
                 # bin into groups based on age in days
                 if age.days in daily:
@@ -632,3 +633,23 @@ def register_backup_tasks(celery):
             )
         else:
             self.update_state(state="SUCCESS", meta={"msg": "Delete backup succeeded"})
+
+    @celery.task(bind=True)
+    def prune_backup_labels(self):
+        labels: List[BackupLabel] = db.session.query(BackupLabel).all()
+
+        try:
+            for label in labels:
+                label: BackupLabel
+
+                # if label is not used, prune it
+                if get_count(label.backups) == 0:
+                    print(f'@@ prune_backup_labels: removing unused tag "{label.name}"')
+                    db.session.delete(label)
+
+                db.session.commit()
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()

@@ -15959,6 +15959,8 @@ class BackupLabel(db.Model, ColouredLabelMixin, EditingMetadataMixin):
         label_text = text if text is not None else self.name
         return self._make_label(text=label_text)
 
+    # backups property points back to backups that use this label
+
 
 class TaskRecord(db.Model, TaskWorkflowStatesMixin):
     __tablename__ = "tasks"

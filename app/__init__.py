@@ -245,7 +245,7 @@ def create_app():
 
     tasks.register_send_log_email(celery, mail)
     tasks.register_utility_tasks(celery)
-    tasks.register_prune_email(celery)
+    tasks.register_email(celery)
     tasks.register_backup_tasks(celery)
     tasks.register_rollover_tasks(celery)
     tasks.register_issue_confirm_tasks(celery)

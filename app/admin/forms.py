@@ -14,158 +14,158 @@ from typing import List
 
 from flask_security.forms import Form
 from wtforms import (
-    StringField,
-    IntegerField,
-    SelectField,
     BooleanField,
-    SubmitField,
-    TextAreaField,
     DateTimeField,
     FloatField,
+    IntegerField,
     RadioField,
+    SelectField,
+    StringField,
+    SubmitField,
+    TextAreaField,
     ValidationError,
 )
 from wtforms.validators import (
-    InputRequired,
-    Optional,
-    Length,
     URL,
-    NumberRange,
-    Regexp,
     DataRequired,
+    InputRequired,
+    Length,
+    NumberRange,
+    Optional,
+    Regexp,
 )
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..documents.forms import LicenseMixin
 from ..manage_users.forms import ResearchGroupMixin
 from ..models import (
-    BackupConfiguration,
-    ScheduleAttempt,
-    extent_choices,
-    matching_history_choices,
-    solver_choices,
-    session_choices,
-    semester_choices,
-    auto_enrol_year_choices,
-    student_level_choices,
-    start_year_choices,
-    DegreeProgramme,
-    DegreeType,
-    ProjectClass,
-    PresentationAssessment,
     DEFAULT_ASSIGNED_MARKERS,
     DEFAULT_ASSIGNED_MODERATORS,
     DEFAULT_STRING_LENGTH,
-    ProjectClassConfig,
-    Tenant,
+    BackupConfiguration,
+    DegreeProgramme,
+    DegreeType,
     EmailTemplate,
+    PresentationAssessment,
+    ProjectClass,
+    ProjectClassConfig,
+    ScheduleAttempt,
+    Tenant,
+    auto_enrol_year_choices,
+    extent_choices,
+    matching_history_choices,
+    semester_choices,
+    session_choices,
+    solver_choices,
+    start_year_choices,
+    student_level_choices,
 )
-from ..shared.forms.mixins import SaveChangesMixin, PeriodPresentationsMixin
+from ..shared.forms.mixins import PeriodPresentationsMixin, SaveChangesMixin
 from ..shared.forms.queries import (
-    GetActiveDegreeTypes,
-    GetActiveDegreeProgrammes,
-    GetActiveSkillGroups,
-    BuildDegreeProgrammeName,
-    GetPossibleConvenors,
-    BuildSysadminUserName,
+    BuildActiveFacultyName,
+    BuildApproverName,
+    BuildBackupLabelName,
     BuildConvenorRealName,
-    GetAllProjectClasses,
-    GetConvenorProjectClasses,
-    GetSysadminUsers,
-    GetAutomatedMatchPClasses,
-    GetMatchingAttempts,
-    GetComparatorMatches,
-    GetUnattachedSubmissionPeriods,
-    BuildSubmissionPeriodName,
-    GetAllBuildings,
-    GetAllRooms,
-    BuildRoomLabel,
-    GetFHEQLevels,
-    ScheduleSessionQuery,
-    BuildScheduleSessionLabel,
-    GetComparatorSchedules,
-    BuildPossibleOfficeContacts,
+    BuildDegreeProgrammeName,
+    BuildEmailTemplateLabelName,
     BuildOfficeContactName,
     BuildPossibleApprovers,
-    BuildApproverName,
-    GetActiveProjectTagGroups,
-    GetActiveFaculty,
-    BuildActiveFacultyName,
-    GetActiveBackupLabels,
-    BuildBackupLabelName,
-    GetActiveTemplateTags,
+    BuildPossibleOfficeContacts,
+    BuildRoomLabel,
+    BuildScheduleSessionLabel,
+    BuildSubmissionPeriodName,
+    BuildSysadminUserName,
     BuildTemplateTagName,
+    BuildTenantName,
+    GetActiveBackupLabels,
+    GetActiveDegreeProgrammes,
+    GetActiveDegreeTypes,
+    GetActiveEmailTemplateLabels,
+    GetActiveFaculty,
+    GetActiveProjectTagGroups,
+    GetActiveSkillGroups,
+    GetActiveTemplateTags,
+    GetAllBuildings,
     GetAllFeedbackTemplates,
     GetAllNonTemplateFeedbackAssets,
+    GetAllProjectClasses,
+    GetAllRooms,
     GetAllTenants,
-    BuildTenantName,
-    GetActiveEmailTemplateLabels,
-    BuildEmailTemplateLabelName,
+    GetAutomatedMatchPClasses,
+    GetComparatorMatches,
+    GetComparatorSchedules,
+    GetConvenorProjectClasses,
+    GetFHEQLevels,
+    GetMatchingAttempts,
+    GetPossibleConvenors,
+    GetSysadminUsers,
+    GetUnattachedSubmissionPeriods,
+    ScheduleSessionQuery,
 )
 from ..shared.forms.widgets import BasicTagSelectField
 from ..shared.forms.wtf_validators import (
-    valid_json,
     NotOptionalIf,
-    globally_unique_group_name,
-    unique_or_original_group_name,
-    globally_unique_group_abbreviation,
-    unique_or_original_group_abbreviation,
-    globally_unique_degree_type,
-    unique_or_original_degree_type,
-    globally_unique_degree_abbreviation,
-    unique_or_original_degree_abbreviation,
-    globally_unique_degree_programme,
-    unique_or_original_degree_programme,
-    globally_unique_course_code,
-    unique_or_original_course_code,
-    globally_unique_programme_abbreviation,
-    unique_or_original_programme_abbreviation,
-    globally_unique_transferable_skill,
-    unique_or_original_transferable_skill,
-    globally_unique_skill_group,
-    unique_or_original_skill_group,
-    globally_unique_project_class,
-    unique_or_original_project_class,
-    globally_unique_project_class_abbrev,
-    unique_or_original_project_class_abbrev,
-    globally_unique_supervisor,
-    unique_or_original_supervisor,
-    globally_unique_matching_name,
-    globally_unique_supervisor_abbrev,
-    unique_or_original_supervisor_abbrev,
-    unique_or_original_matching_name,
     globally_unique_assessment_name,
-    unique_or_original_assessment_name,
     globally_unique_building_name,
-    unique_or_original_building_name,
-    globally_unique_room_name,
-    unique_or_original_room_name,
-    globally_unique_schedule_name,
-    unique_or_original_schedule_name,
-    globally_unique_schedule_tag,
-    unique_or_original_schedule_tag,
-    globally_unique_module_code,
-    unique_or_original_module_code,
-    globally_unique_FHEQ_level_name,
-    unique_or_original_FHEQ_level_name,
-    globally_unique_FHEQ_short_name,
-    unique_or_original_FHEQ_short_name,
-    globally_unique_FHEQ_numeric_level,
-    unique_or_original_FHEQ_numeric_level,
-    globally_unique_license_name,
-    unique_or_original_license_name,
-    globally_unique_license_abbreviation,
-    unique_or_original_license_abbreviation,
-    per_license_unique_version,
-    per_license_unique_or_original_version,
-    globally_unique_project_tag_group,
-    unique_or_original_project_tag_group,
-    globally_unique_project_tag,
-    unique_or_original_project_tag,
+    globally_unique_course_code,
+    globally_unique_degree_abbreviation,
+    globally_unique_degree_programme,
+    globally_unique_degree_type,
     globally_unique_feedback_asset_label,
-    unique_or_original_feedback_asset_label,
     globally_unique_feedback_recipe_label,
+    globally_unique_FHEQ_level_name,
+    globally_unique_FHEQ_numeric_level,
+    globally_unique_FHEQ_short_name,
+    globally_unique_group_abbreviation,
+    globally_unique_group_name,
+    globally_unique_license_abbreviation,
+    globally_unique_license_name,
+    globally_unique_matching_name,
+    globally_unique_module_code,
+    globally_unique_programme_abbreviation,
+    globally_unique_project_class,
+    globally_unique_project_class_abbrev,
+    globally_unique_project_tag,
+    globally_unique_project_tag_group,
+    globally_unique_room_name,
+    globally_unique_schedule_name,
+    globally_unique_schedule_tag,
+    globally_unique_skill_group,
+    globally_unique_supervisor,
+    globally_unique_supervisor_abbrev,
+    globally_unique_transferable_skill,
+    per_license_unique_or_original_version,
+    per_license_unique_version,
+    unique_or_original_assessment_name,
+    unique_or_original_building_name,
+    unique_or_original_course_code,
+    unique_or_original_degree_abbreviation,
+    unique_or_original_degree_programme,
+    unique_or_original_degree_type,
+    unique_or_original_feedback_asset_label,
     unique_or_original_feedback_recipe_label,
+    unique_or_original_FHEQ_level_name,
+    unique_or_original_FHEQ_numeric_level,
+    unique_or_original_FHEQ_short_name,
+    unique_or_original_group_abbreviation,
+    unique_or_original_group_name,
+    unique_or_original_license_abbreviation,
+    unique_or_original_license_name,
+    unique_or_original_matching_name,
+    unique_or_original_module_code,
+    unique_or_original_programme_abbreviation,
+    unique_or_original_project_class,
+    unique_or_original_project_class_abbrev,
+    unique_or_original_project_tag,
+    unique_or_original_project_tag_group,
+    unique_or_original_room_name,
+    unique_or_original_schedule_name,
+    unique_or_original_schedule_tag,
+    unique_or_original_skill_group,
+    unique_or_original_supervisor,
+    unique_or_original_supervisor_abbrev,
+    unique_or_original_transferable_skill,
+    valid_json,
 )
 
 
@@ -700,9 +700,9 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
         @staticmethod
         def validate_approvals_team(form, field):
             if (
-                    field.data is None
-                    or not isinstance(field.data, list)
-                    or len(field.data) == 0
+                field.data is None
+                or not isinstance(field.data, list)
+                or len(field.data) == 0
             ):
                 raise ValidationError(
                     "At least one member of the approvals pool should be selected to join the approvals team."
@@ -752,9 +752,9 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
 
             # otherwise, at least one programme should be specified
             if (
-                    field.data is None
-                    or not isinstance(field.data, list)
-                    or len(field.data) == 0
+                field.data is None
+                or not isinstance(field.data, list)
+                or len(field.data) == 0
             ):
                 raise ValidationError(
                     "At least one degree programme should be selected"
@@ -882,7 +882,7 @@ class PeriodDefinitionMixin:
     name = StringField(
         "Name",
         description="Optional. Enter an alternative text name for this submission "
-                    'period, such as "Autumn Term"',
+        'period, such as "Autumn Term"',
         validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
     )
 
@@ -1134,13 +1134,18 @@ class ScheduledTaskMixin:
     )
 
     tasks_available = [
-        ("app.tasks.prune_email.prune_email_log", "Prune email log"),
+        ("app.tasks.email.prune_email_log", "Prune email log"),
+        (
+            "app.tasks.email.prune_email_template_labels",
+            "Prune unused email template labels",
+        ),
         ("app.tasks.background_tasks.prune_background_tasks", "Prune background tasks"),
         ("app.tasks.backup.backup", "Perform local backup"),
         ("app.tasks.backup.thin", "Thin local backups"),
         ("app.tasks.backup.limit_size", "Enforce limit on size of backup folder"),
         ("app.tasks.backup.clean_up", "Clean up backup folder"),
         ("app.tasks.backup.drop_absent_backups", "Drop absent backups"),
+        ("app.tasks.backup.prune_backup_labels", "Prune unused backup labels"),
         (
             "app.tasks.popularity.update_popularity_data",
             "Update LiveProject popularity data",
@@ -1165,6 +1170,11 @@ class ScheduledTaskMixin:
         ),
         ("app.tasks.maintenance.asset_check_lost", "Test for lost assets"),
         ("app.tasks.maintenance.asset_check_unattached", "Test for unattached assets"),
+        ("app.tasks.maintenance.prune_project_tags", "Prune unused project tags"),
+        (
+            "app.tasks.maintenance.prune_feedback_template_tags",
+            "Prune unused feedback template tags",
+        ),
         ("app.tasks.system.process_pings", "Process pings from front end instances"),
         ("app.tasks.sessions.sift_sessions", "Perform MongoDB session maintenance"),
         (
@@ -1816,10 +1826,10 @@ def RenameMatchFormFactory(year):
 
 
 def CompareMatchFormFactory(
-        year: int,
-        self_id: int,
-        pclasses: ProjectClassConfig | int | List[int] | None,
-        is_root: bool,
+    year: int,
+    self_id: int,
+    pclasses: ProjectClassConfig | int | List[int] | None,
+    is_root: bool,
 ):
     class CompareMatchForm(Form):
         target = QuerySelectField(
@@ -1843,9 +1853,9 @@ class EditSupervisorRolesForm(Form):
     @staticmethod
     def validate_supervisors(form, field):
         if (
-                field.data is None
-                or not isinstance(field.data, list)
-                or len(field.data) == 0
+            field.data is None
+            or not isinstance(field.data, list)
+            or len(field.data) == 0
         ):
             raise ValidationError("At least one supervisor should be selected.")
 
@@ -1853,7 +1863,7 @@ class EditSupervisorRolesForm(Form):
 
 
 def PresentationAssessmentMixinFactory(
-        assessment: PresentationAssessment, query_factory
+    assessment: PresentationAssessment, query_factory
 ):
     class PresentationAssessmentMixin:
         name = StringField(
@@ -1866,9 +1876,9 @@ def PresentationAssessmentMixinFactory(
         )
 
         if assessment is None or (
-                assessment is not None
-                and not assessment.requested_availability
-                and not assessment.skip_availability
+            assessment is not None
+            and not assessment.requested_availability
+            and not assessment.skip_availability
         ):
             submission_periods = QuerySelectMultipleField(
                 "Select those submission periods for which project presentations will be given",

@@ -14,10 +14,11 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import EmailLog
+from ..models import EmailLog, EmailTemplateLabel
+from ..shared.sqlalchemy import get_count
 
 
-def register_prune_email(celery):
+def register_email(celery):
     @celery.task(bind=True)
     def prune_email_log(self, duration=52, interval="weeks"):
         self.update_state(state="STARTED")
@@ -69,3 +70,25 @@ def register_prune_email(celery):
             raise self.retry()
 
         self.update_state(state="FINISHED")
+
+    @celery.task(bind=True)
+    def prune_email_template_labels(self):
+        labels: List[EmailTemplateLabel] = db.session.query(EmailTemplateLabel).all()
+
+        try:
+            for label in labels:
+                label: EmailTemplateLabel
+
+                # if label is not used, prune it
+                if get_count(label.templates) == 0:
+                    print(
+                        f'@@ prune_email_template_labels: removing unused tag "{label.name}"'
+                    )
+                    db.session.delete(label)
+
+                db.session.commit()
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()

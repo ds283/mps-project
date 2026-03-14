@@ -27,7 +27,7 @@ from .matching import register_matching_tasks
 from .matching_emails import register_matching_email_tasks
 from .popularity import register_popularity_tasks
 from .process_report import register_process_report_tasks
-from .prune_email import register_prune_email
+from .email import register_email
 from .push_feedback import register_push_feedback_tasks
 from .rollover import register_rollover_tasks
 from .scheduling import register_scheduling_tasks

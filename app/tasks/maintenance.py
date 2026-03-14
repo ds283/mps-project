@@ -8,55 +8,57 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
-from typing import List, Iterable, Mapping, Union
+from typing import Iterable, List, Mapping, Union
 
-from celery import group
-from celery import states
+from celery import group, states
 from celery.exceptions import Ignore
 from flask import current_app, render_template
 from flask_mailman import EmailMessage
-from sqlalchemy import or_, and_
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 import app.shared.cloud_object_store.encryption_types as encryptions
+
 from .. import register_task
 from ..database import db
 from ..models import (
-    User,
-    Project,
-    LiveProject,
     AssessorAttendanceData,
-    SubmitterAttendanceData,
-    PresentationAssessment,
-    GeneratedAsset,
-    TemporaryAsset,
-    ScheduleEnumeration,
-    ProjectDescription,
-    MatchingEnumeration,
-    SubmittedAsset,
-    SubmissionRecord,
-    ProjectClass,
-    ProjectClassConfig,
-    StudentData,
+    BackupRecord,
     DegreeProgramme,
     DegreeType,
-    BackupRecord,
-    SubmittingStudent,
-    SelectingStudent,
-    PopularityRecord,
     DownloadCentreItem,
+    GeneratedAsset,
+    LiveProject,
+    MatchingEnumeration,
+    PopularityRecord,
+    PresentationAssessment,
+    Project,
+    ProjectClass,
+    ProjectClassConfig,
+    ProjectDescription,
+    ProjectTag,
+    ScheduleEnumeration,
+    SelectingStudent,
+    StudentData,
+    SubmissionRecord,
+    SubmittedAsset,
+    SubmitterAttendanceData,
+    SubmittingStudent,
+    TemplateTag,
+    TemporaryAsset,
+    User,
 )
-from ..shared.security import validate_nonce
 from ..shared.asset_tools import (
     AssetCloudAdapter,
     AssetCloudScratchContextManager,
     AssetUploadManager,
 )
 from ..shared.cloud_object_store import ObjectStore
-from ..shared.utils import get_current_year, get_count
+from ..shared.security import validate_nonce
+from ..shared.utils import get_count, get_current_year
 
 
 def register_maintenance_tasks(celery):
@@ -781,11 +783,11 @@ def register_maintenance_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def issue_asset_report(
-            self,
-            lost_assets,
-            template: str,
-            subject: str,
-            notify_email: Union[str, List[str]],
+        self,
+        lost_assets,
+        template: str,
+        subject: str,
+        notify_email: Union[str, List[str]],
     ):
         now = datetime.now()
         now_human = now.strftime("%a %d %b %Y %H:%M:%S")
@@ -904,9 +906,9 @@ def register_maintenance_tasks(celery):
                             storage=object_store,
                             audit_data=f'maintenance.assetrecord_maintenance #2 (record type="{asset_type}", record id #{rec_id})',
                             length=asset.filesize,
-                                mimetype=asset.mimetype
-                                if hasattr(asset, "mimetype")
-                                else None,
+                            mimetype=asset.mimetype
+                            if hasattr(asset, "mimetype")
+                            else None,
                             validate_nonce=validate_nonce,
                         ) as upload_mgr:
                             pass
@@ -1004,9 +1006,9 @@ def register_maintenance_tasks(celery):
 
         now = date.today()
         if (
-                record.locked
-                and record.unlock_date is not None
-                and now >= record.unlock_date
+            record.locked
+            and record.unlock_date is not None
+            and now >= record.unlock_date
         ):
             record.locked = False
             record.unlock_date = None
@@ -1016,3 +1018,48 @@ def register_maintenance_tasks(celery):
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
+
+    @celery.task(bind=True)
+    def prune_project_tags(self):
+        labels: List[ProjectTag] = db.session.query(ProjectTag).all()
+
+        try:
+            for label in labels:
+                label: ProjectTag
+
+                # if label is not used, prune it
+                if (
+                    get_count(label.projects) == 0
+                    and get_count(label.live_projects) == 0
+                ):
+                    print(f'@@ prune_project_tags: removing project tag "{label.name}"')
+                    db.session.delete(label)
+
+                db.session.commit()
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+    @celery.task(bind=True)
+    def prune_feedback_template_tags(self):
+        labels: List[TemplateTag] = db.session.query(TemplateTag).all()
+
+        try:
+            for label in labels:
+                label: TemplateTag
+
+                # if label is not used, prune it
+                if get_count(label.assets) == 0:
+                    print(
+                        f'@@ prune_feedback_template_tags: removing unused tag "{label.name}"'
+                    )
+                    db.session.delete(label)
+
+                db.session.commit()
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()

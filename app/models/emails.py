@@ -128,6 +128,8 @@ class EmailTemplateLabel(db.Model, ColouredLabelMixin, EditingMetadataMixin):
         label_text = text if text is not None else self.name
         return self._make_label(text=label_text)
 
+    # property 'templates' set by backref from EmailTemplate.labels
+
 
 class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
     __tablename__ = "email_templates"
@@ -142,7 +144,7 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
         "EmailTemplateLabel",
         secondary=email_template_to_labels,
         lazy="dynamic",
-        backref=db.backref("ttemplates", lazy="dynamic"),
+        backref=db.backref("templates", lazy="dynamic"),
     )
 
     # tenant, if specified

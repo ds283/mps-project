@@ -79,6 +79,19 @@ class HubRoleMap:
     def show_student_dashboard(self):
         return self.student
 
+    def set_role(self, role: str, value: bool):
+        if role in [
+            "student",
+            "supervisor",
+            "marker",
+            "moderator",
+            "convenor",
+            "admin",
+        ]:
+            setattr(self, role, value)
+        else:
+            raise ValueError(f"Invalid role: {role}")
+
 
 def validate_project_hub(
     record: SubmissionRecord, user: User, current_role=None, message=False
@@ -92,17 +105,11 @@ def validate_project_hub(
     :return:
     """
 
+    my_role = HubRoleMap()
+
     # a student can always look at the project hub for their own projects (even if retired)
     if user.has_role("student") and user.id == record.owner.student_id:
-        return HubRoleMap(student=True)
-
-    # admin, and root users can always look
-    if user.has_role("admin") or user.has_role("root"):
-        return HubRoleMap(admin=True)
-
-    # office staff, moderators, exam board members and external examiners can always look
-    if user.has_role("office"):
-        return HubRoleMap(admin=True)
+        my_role.set_role("student", True)
 
     # supervisors, markers, moderators, exam board members, and external examiners can always look
     supervisor_roles = [
@@ -136,16 +143,16 @@ def validate_project_hub(
             return HubRoleMap()
 
         if current_role.role in supervisor_roles:
-            return HubRoleMap(supervisor=True)
+            my_role.set_role("supervisor", True)
 
         if current_role.role in marker_roles:
-            return HubRoleMap(marker=True)
+            my_role.set_role("marker", True)
 
         if current_role.role in moderator_roles:
-            return HubRoleMap(moderator=True)
+            my_role.set_role("moderator", True)
 
         if current_role.role in admin_roles:
-            return HubRoleMap(admin=True)
+            my_role.set_role("admin", True)
 
     # project convenors can look
     owner: SubmittingStudent = record.owner
@@ -154,9 +161,17 @@ def validate_project_hub(
     project: LiveProject = record.project
 
     if pclass.is_convenor(user.id):
-        return HubRoleMap(convenor=True)
+        my_role.set_role("convenor", True)
 
-    if message:
+    # admin, and root users can always look
+    if user.has_role("admin") or user.has_role("root"):
+        my_role.set_role("admin", True)
+
+    # office staff, moderators, exam board members and external examiners can always look
+    if user.has_role("office"):
+        my_role.set_role("admin", True)
+
+    if not my_role and message:
         sd: StudentData = owner.student
         suser: User = sd.user
         if project is not None:
@@ -169,7 +184,7 @@ def validate_project_hub(
                 f'You are not currently authorized to view the project hub for student "{suser.name}"'
             )
 
-    return HubRoleMap()
+    return my_role
 
 
 def validate_set_attendance(event: SupervisionEvent, user: User, message=False):

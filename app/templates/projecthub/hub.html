@@ -212,6 +212,23 @@
         </div>
         <div class="col-3">
             {% if hub_role.is_supervisor %}
+                {% call(blk) dashboard_tile("Session times", title_icon="calendar") %}
+                    {% set has_regular_meeting = my_role.has_regular_meeting %}
+                    {% if blk == 'body' %}
+                        {% if has_regular_meeting %}
+                            {% set regular_meeting_data = my_role.regular_meeting_as_string %}
+                            <span class="fs-5 text-primary">{{ regular_meeting_data["day"] }} {{ regular_meeting_data["time"] }}</span>
+                        {% else %}
+                            <span class="fs-5 text-muted">Not set</span>
+                        {% endif %}
+                    {% elif blk == 'footer' %}
+                        {% if has_regular_meeting %}
+                            <a href="" class="text-decoration-none link-primary small">Change future times</a>
+                        {% else %}
+                            <a href="" class="text-decoration-none link-primary small">Set day and time</a>
+                        {% endif %}
+                    {% endif %}
+                {% endcall %}
             {% endif %}
         </div>
         <div class="col-3"></div>

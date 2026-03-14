@@ -484,7 +484,7 @@ def ProjectConfigurationMixinFactory(
                 :return:
                 """
                 if (
-                        not faculty in self.assessors
+                    not faculty in self.assessors
                 ):  # no need to check carefully, just remove
                     return
 
@@ -838,12 +838,12 @@ def ProjectConfigurationMixinFactory(
 
 
 def ProjectDescriptionMixinFactory(
-        team_mapping_table,
-        team_backref,
-        module_mapping_table,
-        module_backref,
-        module_mapped_column,
-        module_self_column,
+    team_mapping_table,
+    team_backref,
+    module_mapping_table,
+    module_backref,
+    module_mapped_column,
+    module_self_column,
 ):
     class ProjectDescriptionMixin:
         # text description of the project
@@ -3627,7 +3627,7 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
             method = self.str_operations[self.event_type].__get__(self, type(self))
         except KeyError as k:
             assert self.event_type in self.str_operations, (
-                    "invalid notification type: " + repr(k)
+                "invalid notification type: " + repr(k)
             )
         return method()
 
@@ -3636,7 +3636,7 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
             method = self.subject_operations[self.event_type].__get__(self, type(self))
         except KeyError as k:
             assert self.event_type in self.subject_operations, (
-                    "invalid notification type: " + repr(k)
+                "invalid notification type: " + repr(k)
             )
         return method()
 
@@ -3652,12 +3652,12 @@ def _get_object_id(obj):
 
 
 def add_notification(
-        user, event, object_1, object_2=None, autocommit=True, notification_id=None
+    user, event, object_1, object_2=None, autocommit=True, notification_id=None
 ):
     if (
-            isinstance(user, User)
-            or isinstance(user, FacultyData)
-            or isinstance(user, StudentData)
+        isinstance(user, User)
+        or isinstance(user, FacultyData)
+        or isinstance(user, StudentData)
     ):
         user_id = user.id
     else:
@@ -3799,9 +3799,9 @@ def add_notification(
 
 def delete_notification(user, event, object_1, object_2=None):
     if (
-            isinstance(user, User)
-            or isinstance(user, FacultyData)
-            or isinstance(user, StudentData)
+        isinstance(user, User)
+        or isinstance(user, FacultyData)
+        or isinstance(user, StudentData)
     ):
         user_id = user.id
     else:
@@ -4329,8 +4329,8 @@ class FacultyData(db.Model, EditingMetadataMixin):
         :return:
         """
         pcls = (
-                self.convenor_for.order_by(ProjectClass.name).all()
-                + self.coconvenor_for.order_by(ProjectClass.name).all()
+            self.convenor_for.order_by(ProjectClass.name).all()
+            + self.coconvenor_for.order_by(ProjectClass.name).all()
         )
         pcl_set = set(pcls)
         return pcl_set
@@ -4388,13 +4388,13 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return {"label": f"Assessor for: {num}", "type": "info"}
 
     def _apply_assignment_filters(
-            self,
-            roles,
-            config_id=None,
-            config=None,
-            pclass_id=None,
-            pclass=None,
-            period=None,
+        self,
+        roles,
+        config_id=None,
+        config=None,
+        pclass_id=None,
+        pclass=None,
+        period=None,
     ):
         # at most one of config_id, config, pclass_id, pclass should be defined
         items = sum(
@@ -4465,7 +4465,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return query
 
     def supervisor_assignments(
-            self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
+        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
     ):
         """
         Return a list of current SubmissionRecord instances for which we are supervisor
@@ -4484,7 +4484,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         )
 
     def marker_assignments(
-            self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
+        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
     ):
         """
         Return a list of current SubmissionRecord instances for which we are marker
@@ -4495,7 +4495,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         )
 
     def moderator_assignments(
-            self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
+        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
     ):
         """
         Return a list of current SubmissionRecord instances for which we are moderator
@@ -4506,7 +4506,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         )
 
     def presentation_assignments(
-            self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
+        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
     ):
         # at most one of config_id, config, pclass_id, pclass should be defined
         items = sum(
@@ -4692,10 +4692,10 @@ class FacultyData(db.Model, EditingMetadataMixin):
         ]
 
         return (
-                any(supervisor_late)
-                or any(marker_late)
-                or any(response_late)
-                or any(presentation_late)
+            any(supervisor_late)
+            or any(marker_late)
+            or any(response_late)
+            or any(presentation_late)
         )
 
     @property
@@ -4783,9 +4783,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
             if config is not None:
                 if (
-                        config.uses_supervisor
-                        and config.CATS_supervision is not None
-                        and config.CATS_supervision > 0
+                    config.uses_supervisor
+                    and config.CATS_supervision is not None
+                    and config.CATS_supervision > 0
                 ):
                     if max_CATS is None or config.CATS_supervision > max_CATS:
                         max_CATS = float(config.CATS_supervision)
@@ -4795,9 +4795,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
             if record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
                 if (
-                        record.pclass.active
-                        and record.pclass.publish
-                        and record.pclass.include_available
+                    record.pclass.active
+                    and record.pclass.publish
+                    and record.pclass.include_available
                 ):
                     if record.pclass_id in config_cache:
                         config: ProjectClassConfig = config_cache[record.pclass_id]
@@ -4822,8 +4822,8 @@ class FacultyData(db.Model, EditingMetadataMixin):
                                         supv_CATS = desc.CATS_supervision(config)
                                         if supv_CATS is not None:
                                             total += (
-                                                             float(supv_CATS) / max_CATS
-                                                     ) * float(desc.capacity)
+                                                float(supv_CATS) / max_CATS
+                                            ) * float(desc.capacity)
                                     else:
                                         total += float(desc.capacity)
                             else:
@@ -4971,11 +4971,11 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
             repeat_years = 0
 
         return (
-                current_year
-                - cohort
-                + 1
-                - (1 if self.has_foundation_year else 0)
-                - repeat_years
+            current_year
+            - cohort
+            + 1
+            - (1 if self.has_foundation_year else 0)
+            - repeat_years
         )
 
     def _get_provisional_year(self, cohort, repeat_years):
@@ -5055,7 +5055,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
             provisional_year = self._get_provisional_year(value, self.repeated_years)
 
             if provisional_year is not None and provisional_year < (
-                    0 if self.has_foundation_year else 1
+                0 if self.has_foundation_year else 1
             ):
                 diff = self.repeated_years - abs(provisional_year)
 
@@ -5127,7 +5127,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
             provisional_year = self._get_provisional_year(self.cohort, value)
 
             if provisional_year is not None and provisional_year < (
-                    0 if self.has_foundation_year else 1
+                0 if self.has_foundation_year else 1
             ):
                 raise ValueError
 
@@ -5222,9 +5222,9 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
             return None
 
         diff = (
-                self.academic_year
-                - self.programme.degree_type.duration
-                - (1 if self.programme.year_out else 0)
+            self.academic_year
+            - self.programme.degree_type.duration
+            - (1 if self.programme.year_out else 0)
         )
 
         if diff <= 0:
@@ -5249,7 +5249,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         return self.academic_year + diff
 
     def academic_year_label(
-            self, desired_year=None, show_details=False, current_year=None
+        self, desired_year=None, show_details=False, current_year=None
     ):
         if desired_year is not None:
             academic_year = self.compute_academic_year(
@@ -5307,8 +5307,8 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
     def has_timeline(self):
         # we allow published or unpublished records in the timeline
         return (
-                self.selecting.filter_by(retired=True).first() is not None
-                or self.submitting.filter_by(retired=True).first() is not None
+            self.selecting.filter_by(retired=True).first() is not None
+            or self.submitting.filter_by(retired=True).first() is not None
         )
 
     @property
@@ -5316,7 +5316,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         # this is intended to count "real" submissions, so we drop any records that
         # have not been published
         return (
-                self.submitting.filter_by(retired=True, published=True).first() is not None
+            self.submitting.filter_by(retired=True, published=True).first() is not None
         )
 
     def collect_student_records(self):
@@ -5413,7 +5413,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         provisional_year = self._get_provisional_year(self.cohort, self.repeated_years)
         if provisional_year != self.academic_year:
             if provisional_year is not None and provisional_year < (
-                    0 if self.has_foundation_year else 1
+                0 if self.has_foundation_year else 1
             ):
                 diff = self.repeated_years - abs(provisional_year)
 
@@ -5611,11 +5611,11 @@ class StudentBatchItem(db.Model):
             return None
 
         current_year = (
-                parent_year
-                - self.cohort
-                + 1
-                - (1 if self.has_foundation_year else 0)
-                - self.repeated_years
+            parent_year
+            - self.cohort
+            + 1
+            - (1 if self.has_foundation_year else 0)
+            - self.repeated_years
         )
 
         if self.programme is not None and self.programme.year_out:
@@ -5662,24 +5662,24 @@ class StudentBatchItem(db.Model):
             return w
 
         if (
-                self.first_name is not None
-                and self.existing_record.user.first_name != self.first_name
+            self.first_name is not None
+            and self.existing_record.user.first_name != self.first_name
         ):
             w.append(
                 f'Current first name "{self.existing_record.user.first_name}" (imported "{self.first_name}")'
             )
 
         if (
-                self.last_name is not None
-                and self.existing_record.user.last_name != self.last_name
+            self.last_name is not None
+            and self.existing_record.user.last_name != self.last_name
         ):
             w.append(
                 f'Current last name "{self.existing_record.user.last_name}" (imported "{self.last_name}")'
             )
 
         if (
-                self.user_id is not None
-                and self.existing_record.user.username != self.user_id
+            self.user_id is not None
+            and self.existing_record.user.username != self.user_id
         ):
             w.append(
                 f'Current user id "{self.existing_record.user.username}" (imported "{self.username}")'
@@ -5691,8 +5691,8 @@ class StudentBatchItem(db.Model):
             )
 
         if (
-                self.registration_number is not None
-                and self.existing_record.registration_number != self.registration_number
+            self.registration_number is not None
+            and self.existing_record.registration_number != self.registration_number
         ):
             w.append(
                 f'Current registration number "{self.existing_record.registration_number}"'
@@ -5702,22 +5702,22 @@ class StudentBatchItem(db.Model):
             w.append(f"Current cohort {self.existing_record.cohort}")
 
         if (
-                self.foundation_year is not None
-                and self.existing_record.foundation_year != self.foundation_year
+            self.foundation_year is not None
+            and self.existing_record.foundation_year != self.foundation_year
         ):
             w.append(
                 f"Current foundation year flag ({str(self.existing_record.foundation_year)})"
             )
 
         if (
-                self.repeated_years is not None
-                and self.existing_record.repeated_years != self.repeated_years
+            self.repeated_years is not None
+            and self.existing_record.repeated_years != self.repeated_years
         ):
             w.append(f"Current repeated years ({self.existing_record.repeated_years})")
 
         if (
-                self.programme_id is not None
-                and self.existing_record.programme_id != self.programme_id
+            self.programme_id is not None
+            and self.existing_record.programme_id != self.programme_id
         ):
             w.append(
                 f'Current degree programme "{self.existing_record.programme.full_name}"'
@@ -5857,24 +5857,24 @@ class FacultyBatchItem(db.Model):
             return w
 
         if (
-                self.first_name is not None
-                and self.existing_record.user.first_name != self.first_name
+            self.first_name is not None
+            and self.existing_record.user.first_name != self.first_name
         ):
             w.append(
                 f'Current first name "{self.existing_record.user.first_name}" (imported "{self.first_name}")'
             )
 
         if (
-                self.last_name is not None
-                and self.existing_record.user.last_name != self.last_name
+            self.last_name is not None
+            and self.existing_record.user.last_name != self.last_name
         ):
             w.append(
                 f'Current last name "{self.existing_record.user.last_name}" (imported "{self.last_name}")'
             )
 
         if (
-                self.user_id is not None
-                and self.existing_record.user.username != self.user_id
+            self.user_id is not None
+            and self.existing_record.user.username != self.user_id
         ):
             w.append(
                 f'Current user id "{self.existing_record.user.username}" (imported "{self.username}")'
@@ -5891,32 +5891,32 @@ class FacultyBatchItem(db.Model):
             )
 
         if (
-                self.CATS_supervision is not None
-                and self.existing_record.CATS_supervision != self.CATS_supervision
+            self.CATS_supervision is not None
+            and self.existing_record.CATS_supervision != self.CATS_supervision
         ):
             w.append(
                 f"Current supervision CATS {' = default' if self.existing_record.CATS_supervision is None else self.existing_record.CATS_supervision}"
             )
 
         if (
-                self.CATS_marking is not None
-                and self.existing_record.CATS_marking != self.CATS_marking
+            self.CATS_marking is not None
+            and self.existing_record.CATS_marking != self.CATS_marking
         ):
             w.append(
                 f"Current marking CATS {' = default' if self.existing_record.CATS_marking is None else self.existing_record.CATS_marking}"
             )
 
         if (
-                self.CATS_moderation is not None
-                and self.existing_record.CATS_moderation != self.CATS_moderation
+            self.CATS_moderation is not None
+            and self.existing_record.CATS_moderation != self.CATS_moderation
         ):
             w.append(
                 f"Current moderation CATS {' = default' if self.existing_record.CATS_moderation is None else self.existing_record.CATS_moderation}"
             )
 
         if (
-                self.CATS_presentation is not None
-                and self.existing_record.CATS_presentation != self.CATS_presentation
+            self.CATS_presentation is not None
+            and self.existing_record.CATS_presentation != self.CATS_presentation
         ):
             w.append(
                 f"Current presentation CATS {' = default' if self.existing_record.CATS_presentation is None else self.existing_record.CATS_presentation}"
@@ -6744,7 +6744,7 @@ class ProjectClass(
         modified: bool = False
 
         if (
-                self.periods is None or get_count(self.periods) == 0
+            self.periods is None or get_count(self.periods) == 0
         ) and minimum_expected > 0:
             if current_user is not None:
                 data = SubmissionPeriodDefinition(
@@ -6767,7 +6767,7 @@ class ProjectClass(
 
         expected = 1
         for item in self.periods.order_by(
-                SubmissionPeriodDefinition.period.asc()
+            SubmissionPeriodDefinition.period.asc()
         ).all():
             if item.period != expected:
                 item.period = expected
@@ -6918,7 +6918,7 @@ SubmissionPeriodDefinitionLike = Union[SubmissionPeriodDefinition, int]
 
 
 def _get_submission_period(
-        period: SubmissionPeriodDefinitionLike, pclass: ProjectClass
+    period: SubmissionPeriodDefinitionLike, pclass: ProjectClass
 ) -> Optional[SubmissionPeriodDefinition]:
     if period is None:
         return None
@@ -7255,8 +7255,8 @@ class ProjectClassConfig(
         # confirmation not required if faculty member is on sabbatical from this project type
         record = fac_data.get_enrollment_record(self.pclass_id)
         if (
-                record is not None
-                and record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
+            record is not None
+            and record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
         ):
             return 0
 
@@ -7292,8 +7292,8 @@ class ProjectClassConfig(
         # confirmation not required if faculty member is on sabbatical from this project type
         record = fac_data.get_enrollment_record(self.pclass_id)
         if (
-                record is not None
-                and record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
+            record is not None
+            and record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
         ):
             return False
 
@@ -7353,8 +7353,8 @@ class ProjectClassConfig(
         # confirmation required if there are outstanding project descriptions needing confirmation,
         # or if this user hasn't yet given confirmation for this ProjectClassConfig
         return (
-                self.has_confirmations_outstanding(fac_data.id)
-                or get_count(self.confirmation_required.filter_by(id=fac_data.id)) > 0
+            self.has_confirmations_outstanding(fac_data.id)
+            or get_count(self.confirmation_required.filter_by(id=fac_data.id)) > 0
         )
 
     def mark_confirmed(self, faculty, message=False):
@@ -7788,14 +7788,14 @@ class ProjectClassConfig(
             return False
 
         if (
-                selector_status
-                != SelectorLifecycleStatesMixin.SELECTOR_LIFECYCLE_READY_ROLLOVER
+            selector_status
+            != SelectorLifecycleStatesMixin.SELECTOR_LIFECYCLE_READY_ROLLOVER
         ):
             return False
 
         if (
-                submitter_status
-                != SubmitterLifecycleStatesMixin.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+            submitter_status
+            != SubmitterLifecycleStatesMixin.SUBMITTER_LIFECYCLE_READY_ROLLOVER
         ):
             return False
 
@@ -7902,7 +7902,7 @@ class ProjectClassConfig(
         return {"have_submitted": submitted, "missing": missing, "total": total}
 
     def most_popular_projects(
-            self, limit: int = 5, compare_interval: Optional[timedelta] = timedelta(days=3)
+        self, limit: int = 5, compare_interval: Optional[timedelta] = timedelta(days=3)
     ):
         popularity_subq = (
             db.session.query(
@@ -8099,9 +8099,9 @@ class ProjectClassConfig(
     @property
     def canvas_enabled(self):
         return (
-                self.main_config.enable_canvas_sync
-                and self.canvas_module_id is not None
-                and self.canvas_login is not None
+            self.main_config.enable_canvas_sync
+            and self.canvas_module_id is not None
+            and self.canvas_login is not None
         )
 
     @property
@@ -8456,7 +8456,7 @@ class SubmissionPeriodRecord(db.Model):
         )
 
     def _ordered_records_query(
-            self, user, roles: Union[Iterable[str], str], order_by: str
+        self, user, roles: Union[Iterable[str], str], order_by: str
     ):
         """
         Same as _unordered_records_query(), but now order by student name or exam number (as specified)
@@ -8752,7 +8752,7 @@ class SubmissionPeriodRecord(db.Model):
             return False
 
         return (
-                self.canvas_module_id is not None and self.canvas_assignment_id is not None
+            self.canvas_module_id is not None and self.canvas_assignment_id is not None
         )
 
     @property
@@ -9234,7 +9234,7 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
             self.presentations_state = EnrollmentRecord.PRESENTATIONS_ENROLLED
 
     def _generic_label(
-            self, label, state, reenroll, comment, enrolled, sabbatical, exempt
+        self, label, state, reenroll, comment, enrolled, sabbatical, exempt
     ):
         data = {"label": label}
 
@@ -9591,10 +9591,10 @@ def _Project_is_offerable(pid):
     # classes that uses research groups
     if project.generic or project.group is None:
         if (
-                get_count(
-                    project.project_classes.filter(ProjectClass.advertise_research_group)
-                )
-                > 0
+            get_count(
+                project.project_classes.filter(ProjectClass.advertise_research_group)
+            )
+            > 0
         ):
             errors["groups"] = (
                 "No affiliation or research group associated with project"
@@ -9614,9 +9614,9 @@ def _Project_is_offerable(pid):
         pclass: ProjectClass
         # A
         if (
-                pclass.uses_marker
-                and pclass.number_assessors is not None
-                and project.number_assessors(pclass) < pclass.number_assessors
+            pclass.uses_marker
+            and pclass.number_assessors is not None
+            and project.number_assessors(pclass) < pclass.number_assessors
         ):
             errors[("pclass-assessors", pclass.id)] = (
                 f"Too few assessors assigned for '{pclass.name}'"
@@ -10794,8 +10794,8 @@ class DescriptionComment(db.Model, ApprovalCommentVisibilityStatesMixin):
 
     def is_visible(self, user):
         if (
-                self.visibility == DescriptionComment.VISIBILITY_EVERYONE
-                or self.visibility == DescriptionComment.VISIBILITY_PUBLISHED_BY_APPROVALS
+            self.visibility == DescriptionComment.VISIBILITY_EVERYONE
+            or self.visibility == DescriptionComment.VISIBILITY_PUBLISHED_BY_APPROVALS
         ):
             return True
 
@@ -10960,7 +10960,7 @@ class LiveProject(
         # if project doesn't require sign off, it is always available
         # if project owner doesn't require confirmation, it is always available
         if self.meeting_reqd != self.MEETING_REQUIRED or (
-                self.owner is not None and self.owner.sign_off_students is False
+            self.owner is not None and self.owner.sign_off_students is False
         ):
             return True
 
@@ -10992,7 +10992,7 @@ class LiveProject(
         return self.confirmation_requests.filter_by(owner_id=sel.id).first()
 
     def make_confirm_request(
-            self, sel, state="requested", resolved_by=None, comment=None
+        self, sel, state="requested", resolved_by=None, comment=None
     ):
         if state not in ConfirmRequestStatesMixin._values:
             state = "requested"
@@ -11029,11 +11029,11 @@ class LiveProject(
         )
 
     def _get_popularity_attr(
-            self,
-            getter,
-            live=True,
-            live_interval: timedelta = timedelta(days=1),
-            compare_interval: Optional[timedelta] = None,
+        self,
+        getter,
+        live=True,
+        live_interval: timedelta = timedelta(days=1),
+        compare_interval: Optional[timedelta] = None,
     ):
         # compare_interval and live are incompatible
         if compare_interval is not None:
@@ -11078,10 +11078,10 @@ class LiveProject(
         return xs, ys
 
     def popularity_score(
-            self,
-            live=True,
-            live_interval: timedelta = timedelta(days=1),
-            compare_interval: Optional[timedelta] = None,
+        self,
+        live=True,
+        live_interval: timedelta = timedelta(days=1),
+        compare_interval: Optional[timedelta] = None,
     ):
         """
         Return popularity score
@@ -11096,10 +11096,10 @@ class LiveProject(
         )
 
     def popularity_rank(
-            self,
-            live=True,
-            live_interval: timedelta = timedelta(days=1),
-            compare_interval: Optional[timedelta] = None,
+        self,
+        live=True,
+        live_interval: timedelta = timedelta(days=1),
+        compare_interval: Optional[timedelta] = None,
     ):
         """
         Return popularity rank
@@ -11130,10 +11130,10 @@ class LiveProject(
         return self._get_popularity_history(lambda x: (x.score_rank, x.total_number))
 
     def lowest_popularity_rank(
-            self,
-            live=True,
-            live_interval: timedelta = timedelta(days=1),
-            compare_interval: Optional[timedelta] = None,
+        self,
+        live=True,
+        live_interval: timedelta = timedelta(days=1),
+        compare_interval: Optional[timedelta] = None,
     ):
         """
         Return least popularity rank
@@ -11148,10 +11148,10 @@ class LiveProject(
         )
 
     def views_rank(
-            self,
-            live=True,
-            live_interval: timedelta = timedelta(days=1),
-            compare_interval: Optional[timedelta] = None,
+        self,
+        live=True,
+        live_interval: timedelta = timedelta(days=1),
+        compare_interval: Optional[timedelta] = None,
     ):
         """
         Return views rank (there is no need for a views score -- the number of views is directly available)
@@ -11182,10 +11182,10 @@ class LiveProject(
         return self._get_popularity_history(lambda x: (x.views_rank, x.total_number))
 
     def bookmarks_rank(
-            self,
-            live=True,
-            live_interval: timedelta = timedelta(days=1),
-            compare_interval: Optional[timedelta] = None,
+        self,
+        live=True,
+        live_interval: timedelta = timedelta(days=1),
+        compare_interval: Optional[timedelta] = None,
     ):
         """
         Return bookmark rank (number of bookmarks can be read directly)
@@ -11218,10 +11218,10 @@ class LiveProject(
         )
 
     def selections_rank(
-            self,
-            live=True,
-            live_interval: timedelta = timedelta(days=1),
-            compare_interval: Optional[timedelta] = None,
+        self,
+        live=True,
+        live_interval: timedelta = timedelta(days=1),
+        compare_interval: Optional[timedelta] = None,
     ):
         """
         Return selection rank
@@ -11256,9 +11256,9 @@ class LiveProject(
     @property
     def show_popularity_data(self):
         return (
-                self.parent.show_popularity
-                or self.parent.show_bookmarks
-                or self.parent.show_selections
+            self.parent.show_popularity
+            or self.parent.show_bookmarks
+            or self.parent.show_selections
         )
 
     @property
@@ -11302,7 +11302,7 @@ class LiveProject(
         return self._is_confirmed_query.all()
 
     def _custom_offers_pending_query(
-            self, period: SubmissionPeriodDefinitionLike = None
+        self, period: SubmissionPeriodDefinitionLike = None
     ):
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.OFFERED)
@@ -11324,7 +11324,7 @@ class LiveProject(
         return get_count(self._custom_offers_pending_query(period))
 
     def _custom_offers_declined_query(
-            self, period: SubmissionPeriodDefinitionLike = None
+        self, period: SubmissionPeriodDefinitionLike = None
     ):
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.DECLINED)
@@ -11346,7 +11346,7 @@ class LiveProject(
         return get_count(self._custom_offers_declined_query(period))
 
     def _custom_offers_accepted_query(
-            self, period: SubmissionPeriodDefinitionLike = None
+        self, period: SubmissionPeriodDefinitionLike = None
     ):
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED)
@@ -12080,7 +12080,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         return get_count(query)
 
     def _custom_offers_pending_query(
-            self, period: SubmissionPeriodDefinitionLike = None
+        self, period: SubmissionPeriodDefinitionLike = None
     ):
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.OFFERED)
@@ -12102,7 +12102,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         return get_count(self._custom_offers_pending_query(period))
 
     def _custom_offers_declined_query(
-            self, period: SubmissionPeriodDefinitionLike = None
+        self, period: SubmissionPeriodDefinitionLike = None
     ):
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.DECLINED)
@@ -12124,7 +12124,7 @@ class SelectingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSelectorTask)
         return get_count(self._custom_offers_declined_query(period))
 
     def _custom_offers_accepted_query(
-            self, period: SubmissionPeriodDefinitionLike = None
+        self, period: SubmissionPeriodDefinitionLike = None
     ):
         _pd = _get_submission_period(period, self.config.project_class)
         query = self.custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED)
@@ -12781,9 +12781,9 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
     @property
     def has_late_feedback(self):
         return (
-                self.supervisor_feedback_late
-                or self.marker_feedback_late
-                or self.presentation_feedback_late
+            self.supervisor_feedback_late
+            or self.marker_feedback_late
+            or self.presentation_feedback_late
         )
 
     @property
@@ -13146,6 +13146,26 @@ class SubmissionRole(
         return self.submission.period.uses_presentation_feedback
 
     @property
+    def has_regular_meeting(self):
+        if self.role not in [
+            SubmissionRole.ROLE_SUPERVISOR,
+            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+        ]:
+            return False
+
+        return (
+            self.regular_meeting_weekday is not None
+            and self.regular_meeting_time is not None
+        )
+
+    @property
+    def regular_meeting_as_string(self):
+        return {
+            "day": self._weekdays_string.get(self.regular_meeting_weekday, "Unknown"),
+            "time": self.regular_meeting_time.strftime("%H:%M"),
+        }
+
+    @property
     def feedback_state(self):
         if self.role in [
             SubmissionRole.ROLE_SUPERVISOR,
@@ -13167,8 +13187,8 @@ class SubmissionRole(
         period: SubmissionPeriodRecord = self.submission.period
 
         if (
-                not period.collect_project_feedback
-                or not period.config.project_class.publish
+            not period.collect_project_feedback
+            or not period.config.project_class.publish
         ):
             return SubmissionRole.FEEDBACK_NOT_REQUIRED
 
@@ -13182,8 +13202,8 @@ class SubmissionRole(
         period: SubmissionPeriodRecord = self.submission.period
 
         if (
-                not period.collect_project_feedback
-                or not period.config.project_class.publish
+            not period.collect_project_feedback
+            or not period.config.project_class.publish
         ):
             return SubmissionRole.FEEDBACK_NOT_REQUIRED
 
@@ -13237,8 +13257,8 @@ class SubmissionRole(
         period: SubmissionPeriodRecord = sub.period
 
         if (
-                not period.collect_project_feedback
-                or not period.config.project_class.publish
+            not period.collect_project_feedback
+            or not period.config.project_class.publish
         ):
             return SubmissionRole.FEEDBACK_NOT_REQUIRED
 
@@ -13347,7 +13367,7 @@ class SubmissionRole(
         return query
 
     def number_owned_events_with_attendance(
-            self, now: Optional[datetime] = None
+        self, now: Optional[datetime] = None
     ) -> int:
         if now is None:
             now = datetime.now()
@@ -13360,7 +13380,7 @@ class SubmissionRole(
         return get_count(query)
 
     def number_owned_events_missing_attendance(
-            self, now: Optional[datetime] = None
+        self, now: Optional[datetime] = None
     ) -> int:
         if now is None:
             now = datetime.now()
@@ -13602,8 +13622,8 @@ def _SubmissionRecord_is_valid(sid):
                 pclass
             )
             if (
-                    enrolment is None
-                    or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
+                enrolment is None
+                or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
             ):
                 errors[("enrolment", 0)] = (
                     '"{name}" has been assigned a supervision role, but is not currently '
@@ -13622,8 +13642,8 @@ def _SubmissionRecord_is_valid(sid):
                 pclass
             )
             if (
-                    enrolment is None
-                    or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED
+                enrolment is None
+                or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED
             ):
                 errors[("enrolment", 1)] = (
                     '"{name}" has been assigned a marking role, but is not currently '
@@ -13642,8 +13662,8 @@ def _SubmissionRecord_is_valid(sid):
                 pclass
             )
             if (
-                    enrolment is None
-                    or enrolment.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED
+                enrolment is None
+                or enrolment.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED
             ):
                 errors[("enrolment", 2)] = (
                     '"{name}" has been assigned a moderation role, but is not currently '
@@ -14157,8 +14177,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 return False
 
             if (
-                    role.improvements_feedback is None
-                    or len(role.improvements_feedback) == 0
+                role.improvements_feedback is None
+                or len(role.improvements_feedback) == 0
             ):
                 return False
 
@@ -14260,8 +14280,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         period = self.period
 
         if (
-                not period.collect_project_feedback
-                or not period.config.project_class.publish
+            not period.collect_project_feedback
+            or not period.config.project_class.publish
         ):
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
@@ -14329,8 +14349,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     def presentation_feedback_state(self, faculty_id):
         if (
-                not self.period.has_presentation
-                or not self.period.collect_presentation_feedback
+            not self.period.has_presentation
+            or not self.period.collect_presentation_feedback
         ):
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
@@ -14369,8 +14389,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         period = self.period
 
         if (
-                not period.collect_project_feedback
-                or not period.config.project_class.publish
+            not period.collect_project_feedback
+            or not period.config.project_class.publish
         ):
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
@@ -14472,8 +14492,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     @property
     def can_assign_feedback(self):
         if (
-                not self.period.has_presentation
-                or not self.period.collect_presentation_feedback
+            not self.period.has_presentation
+            or not self.period.collect_presentation_feedback
         ):
             return False
 
@@ -14484,8 +14504,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         space = False
         for assessor in slot.assessors:
             if (
-                    get_count(self.presentation_feedback.filter_by(assessor_id=assessor.id))
-                    == 0
+                get_count(self.presentation_feedback.filter_by(assessor_id=assessor.id))
+                == 0
             ):
                 space = True
                 break
@@ -14775,7 +14795,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return self.article_list.first() is not None
 
     def get_event(
-            self, template: "SupervisionEventTemplate"
+        self, template: "SupervisionEventTemplate"
     ) -> Optional["SupervisionEvent"]:
         if not isinstance(template, SupervisionEventTemplate):
             raise RuntimeError(
@@ -14905,8 +14925,8 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         return {
             "attendance": 100.0
-                          * float(total_events_attended)
-                          / float(total_events_recorded_attendance)
+            * float(total_events_attended)
+            / float(total_events_recorded_attendance)
             if total_events_recorded_attendance > 0
             else nan,
             "total": len(past_events),
@@ -15022,19 +15042,19 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         # check access control status for uploaded report
         if self.report is not None:
             modified = (
-                    modified
-                    | self._check_access_control_users(self.report, allow_student=True)
-                    | self._check_access_control_groups(self.report)
+                modified
+                | self._check_access_control_users(self.report, allow_student=True)
+                | self._check_access_control_groups(self.report)
             )
 
         # check access control status for processed report
         if self.processed_report is not None:
             modified = (
-                    modified
-                    | self._check_access_control_users(
-                self.processed_report, allow_student=False
-            )
-                    | self._check_access_control_groups(self.processed_report)
+                modified
+                | self._check_access_control_users(
+                    self.processed_report, allow_student=False
+                )
+                | self._check_access_control_groups(self.processed_report)
             )
 
         # check access control status for any uploaded attachments; generally these should not be
@@ -15469,8 +15489,8 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
             self.liveproject.config.pclass_id
         )
         return (
-                record is not None
-                and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
+            record is not None
+            and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
         )
 
     def format_project(self, **kwargs):
@@ -15530,8 +15550,8 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
 
     def set_hint(self, hint):
         if (
-                hint < SelectionRecord.SELECTION_HINT_NEUTRAL
-                or hint > SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG
+            hint < SelectionRecord.SELECTION_HINT_NEUTRAL
+            or hint > SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG
         ):
             return
 
@@ -15543,8 +15563,8 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
             count = 0
             for item in self.owner.selections:
                 if (
-                        item.id != self.id
-                        and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE
+                    item.id != self.id
+                    and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE
                 ):
                     count += 1
 
@@ -15553,8 +15573,8 @@ class SelectionRecord(db.Model, SelectHintTypesMixin):
             if count >= target:
                 for item in self.owner.selections:
                     if (
-                            item.id != self.id
-                            and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE
+                        item.id != self.id
+                        and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE
                     ):
                         item.hint = SelectionRecord.SELECTION_HINT_NEUTRAL
                         count -= 1
@@ -16119,9 +16139,9 @@ def _MatchingAttempt_current_score(id):
     obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
     if (
-            obj.levelling_bias is None
-            or obj.mean_CATS_per_project is None
-            or obj.intra_group_tension is None
+        obj.levelling_bias is None
+        or obj.mean_CATS_per_project is None
+        or obj.intra_group_tension is None
     ):
         return None
 
@@ -16437,8 +16457,8 @@ class PuLPMixin(PuLPStatusMixin):
     def solution_usable(self):
         # we are happy to use a solution if it is OPTIMAL or FEASIBLE
         return (
-                self.outcome == PuLPMixin.OUTCOME_OPTIMAL
-                or self.outcome == PuLPMixin.OUTCOME_FEASIBLE
+            self.outcome == PuLPMixin.OUTCOME_OPTIMAL
+            or self.outcome == PuLPMixin.OUTCOME_FEASIBLE
         )
 
 
@@ -16845,7 +16865,7 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
         return _MatchingAttempt_number_project_assignments(self.id, project.id)
 
     def is_supervisor_overassigned(
-            self, faculty: FacultyData, include_matches=False, pclass_id=None
+        self, faculty: FacultyData, include_matches=False, pclass_id=None
     ):
         pclass: Optional[ProjectClass]
         if pclass_id is not None:
@@ -16885,9 +16905,9 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             rval = True
 
         if (
-                not self.ignore_per_faculty_limits
-                and faculty.CATS_supervision is not None
-                and faculty.CATS_supervision >= 0
+            not self.ignore_per_faculty_limits
+            and faculty.CATS_supervision is not None
+            and faculty.CATS_supervision >= 0
         ):
             if sup > faculty.CATS_supervision:
                 message = f"Assigned supervising workload of {sup} for {name}{pclass_label} exceeds global CATS limit {faculty.CATS_supervision} for this supervisor"
@@ -16900,8 +16920,8 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             enrolment_rec: EnrollmentRecord = faculty.get_enrollment_record(pclass)
             if enrolment_rec is not None:
                 if (
-                        not self.ignore_per_faculty_limits
-                        and enrolment_rec.CATS_supervision is not None
+                    not self.ignore_per_faculty_limits
+                    and enrolment_rec.CATS_supervision is not None
                 ):
                     if 0 <= enrolment_rec.CATS_supervision < sup:
                         message = f"Assigned supervising workload of {sup} for {name}{pclass_label} exceeds {pclass.abbreviation}-specific CATS limit {enrolment_rec.CATS_supervision} for this supervisor"
@@ -16911,9 +16931,9 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
                         limit = enrolment_rec.CATS_supervision
 
                 if (
-                        sup > 0
-                        and enrolment_rec.supervisor_state
-                        != EnrollmentRecord.SUPERVISOR_ENROLLED
+                    sup > 0
+                    and enrolment_rec.supervisor_state
+                    != EnrollmentRecord.SUPERVISOR_ENROLLED
                 ):
                     message = f"{name}{pclass_label} is not enrolled to supervise for {pclass.abbreviation}, but has been assigned a supervising workload {sup}"
                     rval = True
@@ -16973,9 +16993,9 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             rval = True
 
         if (
-                not self.ignore_per_faculty_limits
-                and faculty.CATS_marking is not None
-                and faculty.CATS_marking >= 0
+            not self.ignore_per_faculty_limits
+            and faculty.CATS_marking is not None
+            and faculty.CATS_marking >= 0
         ):
             if mark > faculty.CATS_marking:
                 message = f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds global CATS limit {faculty.CATS_marking} for this marker"
@@ -16988,8 +17008,8 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
             enrolment_rec: EnrollmentRecord = faculty.get_enrollment_record(pclass)
             if enrolment_rec is not None:
                 if (
-                        not self.ignore_per_faculty_limits
-                        and enrolment_rec.CATS_marking is not None
+                    not self.ignore_per_faculty_limits
+                    and enrolment_rec.CATS_marking is not None
                 ):
                     if 0 <= enrolment_rec.CATS_marking < mark:
                         message = f"Assigned marking workload of {mark} for {name}{pclass_label} exceeds {pclass.abbreviation}-specific CATS limit {enrolment_rec.CATS_marking} for this marker"
@@ -16999,8 +17019,8 @@ class MatchingAttempt(db.Model, PuLPMixin, EditingMetadataMixin):
                         limit = enrolment_rec.CATS_marking
 
                 if (
-                        mark > 0
-                        and enrolment_rec.marker_state != EnrollmentRecord.MARKER_ENROLLED
+                    mark > 0
+                    and enrolment_rec.marker_state != EnrollmentRecord.MARKER_ENROLLED
                 ):
                     message = f"{name}{pclass_label} is not enrolled to mark for {pclass.abbreviation}, but has been assigned a marking workload {mark}"
                     rval = True
@@ -17546,8 +17566,8 @@ def _MatchingRecord_is_valid(id):
         if u.faculty_data is not None:
             enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
             if (
-                    enrolment is None
-                    or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
+                enrolment is None
+                or enrolment.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED
             ):
                 errors[("enrolment", 0)] = (
                     '"{name}" has been assigned a supervision role, but is not currently enrolled for this project class'.format(
@@ -17564,8 +17584,8 @@ def _MatchingRecord_is_valid(id):
         if u.faculty_data is not None:
             enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
             if (
-                    enrolment is None
-                    or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED
+                enrolment is None
+                or enrolment.marker_state != EnrollmentRecord.MARKER_ENROLLED
             ):
                 errors[("enrolment", 1)] = (
                     '"{name}" has been assigned a marking role, but is not currently enrolled for this project class'.format(
@@ -17582,8 +17602,8 @@ def _MatchingRecord_is_valid(id):
         if u.faculty_data is not None:
             enrolment: EnrollmentRecord = u.faculty_data.get_enrollment_record(pclass)
             if (
-                    enrolment is None
-                    or enrolment.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED
+                enrolment is None
+                or enrolment.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED
             ):
                 errors[("enrolment", 2)] = (
                     '"{name}" has been assigned a moderation role, but is not currently enrolled for this project class'.format(
@@ -18183,14 +18203,14 @@ def _PresentationAssessment_is_valid(id):
     # CONSTRAINT 3 - if availability was requested, number of assessors should be nonzero
     lifecycle = obj.availability_lifecycle
     if (
-            lifecycle >= PresentationAssessment.AVAILABILITY_REQUESTED
-            and get_count(obj.assessors_query) == 0
+        lifecycle >= PresentationAssessment.AVAILABILITY_REQUESTED
+        and get_count(obj.assessors_query) == 0
     ):
         errors[("presentations", 0)] = "Number of attached assessors is zero or unset"
 
     # CONSTRAINT 4 - if availability was requested, number of talks should be nonzero
     if lifecycle >= PresentationAssessment.AVAILABILITY_REQUESTED and (
-            obj.number_talks is None or obj.number_talks == 0
+        obj.number_talks is None or obj.number_talks == 0
     ):
         errors[("presentations", 1)] = (
             "Number of attached presentations is zero or unset"
@@ -18198,7 +18218,7 @@ def _PresentationAssessment_is_valid(id):
 
     # CONSTRAINT 5 - if availability was requested, number of talks should be larger than number not attending
     if lifecycle >= PresentationAssessment.AVAILABILITY_REQUESTED and (
-            obj.number_not_attending > obj.number_talks
+        obj.number_not_attending > obj.number_talks
     ):
         errors[("presentations", 2)] = (
             "Number of non-attending students exceeds or equals total number"
@@ -18331,7 +18351,7 @@ class PresentationAssessment(
 
     def is_faculty_outstanding(self, faculty_id):
         return (
-                get_count(self.outstanding_assessors.filter_by(faculty_id=faculty_id)) > 0
+            get_count(self.outstanding_assessors.filter_by(faculty_id=faculty_id)) > 0
         )
 
     @property
@@ -18583,10 +18603,10 @@ class PresentationAssessment(
 
     def not_attending(self, record_id):
         return (
-                get_count(
-                    self.submitter_list.filter_by(submitter_id=record_id, attending=False)
-                )
-                > 0
+            get_count(
+                self.submitter_list.filter_by(submitter_id=record_id, attending=False)
+            )
+            > 0
         )
 
     def includes_faculty(self, faculty_id):
@@ -18910,9 +18930,9 @@ class AssessorAttendanceData(db.Model):
 
         for sess in self.assessment.sessions:
             if (
-                    sess not in self.available
-                    and sess not in self.unavailable
-                    and sess not in self.if_needed
+                sess not in self.available
+                and sess not in self.unavailable
+                and sess not in self.if_needed
             ):
                 self.available.append(sess)
                 changed = True
@@ -19457,14 +19477,14 @@ class PresentationSession(
 
     def submitter_available(self, submitter_id):
         return (
-                get_count(self.available_submitters.filter_by(submitter_id=submitter_id))
-                > 0
+            get_count(self.available_submitters.filter_by(submitter_id=submitter_id))
+            > 0
         )
 
     def submitter_unavailable(self, submitter_id):
         return (
-                get_count(self.unavailable_submitters.filter_by(submitter_id=submitter_id))
-                > 0
+            get_count(self.unavailable_submitters.filter_by(submitter_id=submitter_id))
+            > 0
         )
 
     def faculty_make_available(self, fac):
@@ -20206,8 +20226,8 @@ def _ScheduleSlot_is_valid(id):
         for assessor in obj.assessors:
             rec = assessor.get_enrollment_record(pclass.id)
             if rec is None or (
-                    rec is not None
-                    and rec.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED
+                rec is not None
+                and rec.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED
             ):
                 errors[("enrollment", assessor.id)] = (
                     'Assessor "{name}" is scheduled in this slot, but is not '
@@ -20260,8 +20280,8 @@ def _ScheduleSlot_is_valid(id):
 
         if (
             attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.ALL_IN_POOL
-                or attempt.all_assessors_in_pool
-                == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_POOL
+            or attempt.all_assessors_in_pool
+            == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_POOL
         ):
             found_match = False
             for assessor in talk.project.assessor_list:
@@ -20278,10 +20298,10 @@ def _ScheduleSlot_is_valid(id):
                 )
 
         elif (
-                attempt.all_assessors_in_pool
-                == AssessorPoolChoicesMixin.ALL_IN_RESEARCH_GROUP
-                or attempt.all_assessors_in_pool
-                == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_RESEARCH_GROUP
+            attempt.all_assessors_in_pool
+            == AssessorPoolChoicesMixin.ALL_IN_RESEARCH_GROUP
+            or attempt.all_assessors_in_pool
+            == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_RESEARCH_GROUP
         ):
             found_match = False
             if project.group is not None:
@@ -20339,8 +20359,8 @@ def _ScheduleSlot_is_valid(id):
                 talk_j = talks_list[j]
 
                 if talk_i.project_id == talk_j.project_id and (
-                        talk_i.project is not None
-                        and talk_i.project.dont_clash_presentations
+                    talk_i.project is not None
+                    and talk_i.project.dont_clash_presentations
                 ):
                     errors[("clash", (talk_i.id, talk_j.id))] = (
                         'Submitters "{name_a}" and "{name_b}" share a project '
@@ -20574,8 +20594,8 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
             return ScheduleSlot.FEEDBACK_NOT_REQUIRED
 
         if (
-                not period.collect_presentation_feedback
-                or not period.config.project_class.publish
+            not period.collect_presentation_feedback
+            or not period.config.project_class.publish
         ):
             return ScheduleSlot.FEEDBACK_NOT_REQUIRED
 
@@ -20593,11 +20613,11 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
         # we use ENTERED rather than WAITING if possible
         s = min(state)
         if s == ScheduleSlot.FEEDBACK_WAITING and any(
-                [
-                    s == ScheduleSlot.FEEDBACK_ENTERED
-                    or s == ScheduleSlot.FEEDBACK_SUBMITTED
-                    for s in state
-                ]
+            [
+                s == ScheduleSlot.FEEDBACK_ENTERED
+                or s == ScheduleSlot.FEEDBACK_SUBMITTED
+                for s in state
+            ]
         ):
             return ScheduleSlot.FEEDBACK_ENTERED
 
@@ -21176,10 +21196,10 @@ class DownloadCentreItem(db.Model):
 
     @classmethod
     def _build(
-            cls,
-            asset: GeneratedAsset,
-            user: Union[int, User],
-            description: Optional[str] = None,
+        cls,
+        asset: GeneratedAsset,
+        user: Union[int, User],
+        description: Optional[str] = None,
     ):
         if asset is None:
             raise RuntimeError(f"asset must not be None in DownloadCentreItem._build")

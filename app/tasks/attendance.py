@@ -102,7 +102,7 @@ def register_attendance_tasks(celery):
 
         try:
             event: SupervisionEvent = (
-                db.session.query(SupervisionEvent).get(event_id).first()
+                db.session.query(SupervisionEvent).filter_by(id=event_id).first()
             )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -255,10 +255,11 @@ def register_attendance_tasks(celery):
             to=[owner_user.email],
             subject_kwargs={"name": student_user.name},
             body_kwargs={
+                "event": event,
                 "user": owner_user,
                 "sd": sd,
                 "pclass": config.project_class,
-                "projecthub_url": url_for("projecthub.hub", sub_id=record.id),
+                "projecthub_url": url_for("projecthub.hub", subid=record.id),
             },
         )
 
@@ -305,7 +306,7 @@ def register_attendance_tasks(celery):
 
         try:
             event: SupervisionEvent = (
-                db.session.query(SupervisionEvent).get(event_id).first()
+                db.session.query(SupervisionEvent).filter_by(id=event_id).first()
             )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

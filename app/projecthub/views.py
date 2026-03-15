@@ -50,6 +50,7 @@ from .forms import (
     MeetingSummaryForm,
     ReassignEventOwnerFormFactory,
     SetRegularMeetingTimesForm,
+    SetSubmissionRoleNotificationPreferencesForm,
     SupervisionNotesForm,
     build_event_team_form,
 )
@@ -848,7 +849,7 @@ def set_regular_meeting_time(role_id):
 
     if record.retired:
         flash(
-            "It is not possible to set a regular meeting time for submissions that have been retired.",
+            "It is not possible to set a regular meeting time for submissions roles that have been retired.",
             "info",
         )
         return redirect(redirect_url())
@@ -981,3 +982,67 @@ def set_mute_role(role_id, value):
         )
 
     return redirect(redirect_url())
+
+
+@projecthub.route("/notify_settings/<int:role_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def notify_settings(role_id):
+    """
+    Change the regular meeting time for future events belonging to the specified role owner
+    """
+    role: SubmissionRole = SubmissionRole.query.get_or_404(role_id)
+    record: SubmissionRecord = role.submission
+    submitter: SubmittingStudent = record.owner
+    sd: StudentData = submitter.student
+    period: SubmissionPeriodRecord = record.period
+    config: ProjectClassConfig = period.config
+    pclass: ProjectClass = config.project_class
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    if record.retired:
+        flash(
+            "It is not possible to set a change notification settings submission roles that have been retired.",
+            "info",
+        )
+        return redirect(redirect_url())
+
+    if role.user_id != current_user.id and not validate_is_convenor(
+        pclass, message=False
+    ):
+        flash(
+            "You are not authorized to change notification settings for this submission role.",
+            "info",
+        )
+        return redirect(redirect_url())
+
+    form = SetSubmissionRoleNotificationPreferencesForm(obj=role)
+    if form.validate_on_submit():
+        try:
+            role.prompt_after_event = form.prompt_after_event.data
+            role.prompt_at_fixed_time = form.prompt_at_fixed_time.data
+            role.prompt_at_time = form.prompt_at_time.data
+            role.prompt_delay = form.prompt_delay.data
+            role.prompt_in_reminder = form.prompt_in_reminder.data
+
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash(
+                "Could not update notification settings due to a database error. Please contact a system administrator.",
+                "error",
+            )
+
+        return redirect(url)
+
+    return render_template_context(
+        "projecthub/notify_settings.html",
+        form=form,
+        role=role,
+        submitter=submitter,
+        sd=sd,
+        url=url,
+    )

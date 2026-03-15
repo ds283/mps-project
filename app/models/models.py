@@ -13035,8 +13035,18 @@ class SubmissionRole(
     # prompt at a fixed time on the day of the event, or after a specified delay?
     prompt_at_fixed_time = db.Column(db.Boolean(), default=False, nullable=False)
 
-    # either the specific time to send a prompt (if prompting at fixed time), or the delay (if prompting relative to the event)
+    # absolute time to send a prompt (if prompting at fixed time)
     prompt_at_time = db.Column(db.Time(), nullable=True)
+
+    # delay before sending a prompt (if prompting with a delay)
+    _prompt_delay_choices = [
+        (1, "1 hour after start time"),
+        (2, "2 hours after start time"),
+        (3, "3 hours after start time"),
+        (4, "4 hours after start time"),
+        (5, "5 hours after start time"),
+    ]
+    prompt_delay = db.Column(db.Integer(), nullable=True)
 
     # include events belonging to this role in reminder emails?
     prompt_in_reminder = db.Column(db.Boolean(), default=True, nullable=False)

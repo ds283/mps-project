@@ -85,7 +85,9 @@
                             <div>
                                 It is safe to close selections.
                                 {% if total == 0 %}
-                                    <a class="btn btn-sm btn-outline-danger" href="{{ url_for('convenor.reverse_golive', config_id=config.id) }}" style="margin-left: 10px;">
+                                    <a class="btn btn-sm btn-outline-danger"
+                                       href="{{ url_for('convenor.reverse_golive', config_id=config.id) }}"
+                                       style="margin-left: 10px;">
                                         Reverse Go Live to add more selectors
                                     </a>
                                 {% endif %}
@@ -170,7 +172,7 @@
                 <div class="col">
                     {% call(blk) dashboard_tile("Submitted", title_icon="circle", icon_state=submitted_ok) %}
                         {% if blk == 'body' %}
-                            <span class="fw-bold fs-1 {% if submitted_ok %}text-primary{% else %}text-warning{% endif %}">{{ submitted }}</span>
+                            <span class="fw-bold fs-1 {% if submitted_ok %}text-primary{% else %}text-danger{% endif %}">{{ submitted }}</span>
                             <span class="fs-4 text-muted">/{{ total }}</span>
                         {% elif blk == 'footer' %}
                             <div class="small mb-0">
@@ -184,7 +186,7 @@
                 <div class="col">
                     {% call(blk) dashboard_tile("Confirmations", title_icon="circle", icon_state=confirmations_ok) %}
                         {% if blk == 'body' %}
-                            <span class="fw-bold fs-1 {% if confirmations_ok %}text-primary{% else %}text-warning{% endif %}">{{ outstanding_confirm }}</span>
+                            <span class="fw-bold fs-1 {% if confirmations_ok %}text-primary{% else %}text-danger{% endif %}">{{ outstanding_confirm }}</span>
                             <span class="text-muted"><span class="fs-4">/{{ confirm_total }}</span> <span
                                     class="text-uppercase">outstanding</span></span>
                             <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">
@@ -211,7 +213,7 @@
                 <div class="col">
                     {% call(blk) dashboard_tile("Bookmarks", title_icon="circle", icon_state=bookmarks_ok) %}
                         {% if blk == 'body' %}
-                            <span class="fw-bold fs-1 {% if bookmarks_ok %}text-primary{% else %}text-warning{% endif %}">{{ bookmarks }}</span>
+                            <span class="fw-bold fs-1 {% if bookmarks_ok %}text-primary{% else %}text-danger{% endif %}">{{ bookmarks }}</span>
                             <span class="fs-4 text-muted">/{{ total }}</span>
                         {% elif blk == 'footer' %}
                             <div class="small mb-0">
@@ -225,7 +227,7 @@
                 <div class="col">
                     {% call(blk) dashboard_tile("No bookmarks", title_icon="circle", icon_state=missing_ok) %}
                         {% if blk == 'body' %}
-                            <span class="fw-bold fs-1 {% if missing_ok %}text-primary{% else %}text-warning{% endif %}">{{ missing }}</span>
+                            <span class="fw-bold fs-1 {% if missing_ok %}text-primary{% else %}text-danger{% endif %}">{{ missing }}</span>
                             <span class="fs-4 text-muted">/{{ total }}</span>
                         {% elif blk == 'footer' %}
                             <div class="small mb-0">
@@ -239,7 +241,7 @@
                 <div class="col">
                     {% call(blk) dashboard_tile("Custom offers", title_icon="circle", icon_state=custom_ok) %}
                         {% if blk == 'body' %}
-                            <span class="fw-bold fs-1 {% if custom_ok > 0 %}text-primary{% else %}text-warning{% endif %}">{{ outstanding_custom }}</span>
+                            <span class="fw-bold fs-1 {% if custom_ok > 0 %}text-primary{% else %}text-danger{% endif %}">{{ outstanding_custom }}</span>
                             <span class="text-muted"><span class="fs-4">/{{ custom_total }}</span> <span
                                     class="text-uppercase">outstanding</span></span>
                             <div class="mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">

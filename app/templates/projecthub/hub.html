@@ -222,14 +222,62 @@
         {% elif blk == 'footer' %}
             {% if has_regular_meeting %}
                 <a href="{{ url_for('projecthub.set_regular_meeting_time', role_id=my_role.id, url=return_url) }}"
-                   class="text-decoration-none link-primary small">Change future times</a>
+                   class="text-decoration-none link-primary small mb-0">Change future times&hellip;</a>
             {% else %}
                 <a href="{{ url_for('projecthub.set_regular_meeting_time', role_id=my_role.id, url=return_url) }}"
-                   class="text-decoration-none link-primary small">Set regular day and time</a>
+                   class="text-decoration-none link-primary small mb-0">Set regular day and time&hellip;</a>
             {% endif %}
         {% endif %}
     {% endcall %}
 {% endmacro %}
+
+{% macro notifications_tile() %}
+    {% set icon = "bell-slash" if my_role.mute else "bell" %}
+    {% call(blk) dashboard_tile("Notifications", title_icon=icon, icon_state=not my_role.mute) %}
+        {% if blk == 'body' %}
+            {% if my_role.mute %}
+                <div class="fs-5 text-danger">Notifications off</div>
+            {% else %}
+                <div class="fs-5 text-success">Notifications on</div>
+                {% if my_role.prompt_after_event %}
+                    {% if my_role.prompt_at_fixed_time %}
+                        <div class="mt-2 small text-muted"><i class="fas fa-check-circle"></i> Prompt
+                            at {{ my_role.prompt_at_time.strftime("%H:%M") }}</div>
+                    {% else %}
+                        <div class="mt-2 small text-muted"><i class="fas fa-check-circle"></i> Prompt at
+                            +{{ my_role.prompt_delay }} hours
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="mt-2 small text-muted"><i class="fas fa-times-circle"></i> No prompt for attendance
+                    </div>
+                {% endif %}
+                {% if my_role.prompt_in_reminder %}
+                    <div class="mt-1 small text-muted"><i class="fas fa-check-circle"></i> In reminder</div>
+                {% else %}
+                    <div class="mt-1 small text-muted"><i class="fas fa-times-circle"></i> Not in reminder</div>
+                {% endif %}
+            {% endif %}
+        {% elif blk == 'footer' %}
+            <div class="small mb-0 d-flex flex-column justify-content-start align-items-start gap-1">
+                {% if my_role.mute %}
+                    <a class="text-decoration-none link-primary"
+                       href="{{ url_for('projecthub.set_mute_role', role_id=my_role.id, value=0) }}">Unmute
+                        notifications</a>
+                {% else %}
+                    <a class="text-decoration-none link-danger"
+                       href="{{ url_for('projecthub.set_mute_role', role_id=my_role.id, value=1) }}">Mute
+                        notifications</a>
+                {% endif %}
+                <a class="text-decoration-none link-primary"
+                   href="{{ url_for('projecthub.notify_settings', role_id=my_role.id, url=return_url) }}">
+                    Change settings&hellip;
+                </a>
+            </div>
+        {% endif %}
+    {% endcall %}
+{% endmacro %}
+
 
 {% macro draw_tile(label) %}
     {% if label is not none %}
@@ -237,6 +285,8 @@
             {{ attendance_tile() }}
         {% elif label == 'regular_meetings' %}
             {{ regular_meetings_tile() }}
+        {% elif label == 'notifications' %}
+            {{ notifications_tile() }}
         {% else %}
             <span class="text-danger">UNKNOWN TILE</span>
         {% endif %}
@@ -253,7 +303,6 @@
         </div>
     {% endfor %}
 {% endmacro %}
-
 
 {% macro show_supervision_events() %}
     {% set current_events = record.get_ordered_current_events().all() %}
@@ -297,46 +346,6 @@
             </div>
         {% endfor %}
     {% endif %}
-{% endmacro %}
-
-{% macro mute_role_dropdown() %}
-    <div class="btn-group" role="group">
-        {% if my_role.mute %}
-            <button class="btn btn-sm btn-danger"><i class="fas fa-bell-slash"></i>
-                Student notifications off
-            </button>
-            <button class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split"
-                    data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
-                Change
-            </button>
-            <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
-                <a class="dropdown-item"
-                   href="{{ url_for('projecthub.set_mute_role', role_id=my_role.id, value=0) }}">
-                    <i class="fas fa-fw fa-bell"></i> Unmute student
-                </a>
-                <a class="dropdown-item" href="#">
-                    <i class="fas fa-fw fa-cogs"></i> Settings&hellip;
-                </a>
-            </div>
-        {% else %}
-            <button class="btn btn-sm btn-success"><i class="fas fa-bell"></i>
-                Student notifications on
-            </button>
-            <button class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split"
-                    data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
-                Change
-            </button>
-            <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
-                <a class="dropdown-item"
-                   href="{{ url_for('projecthub.set_mute_role', role_id=my_role.id, value=1) }}">
-                    <i class="fas fa-fw fa-bell-slash"></i> Mute
-                </a>
-                <a class="dropdown-item" href="#">
-                    <i class="fas fa-fw fa-cogs"></i> Settings&hellip;
-                </a>
-            </div>
-        {% endif %}
-    </div>
 {% endmacro %}
 
 {% block scripts %}
@@ -414,9 +423,6 @@
                 {% endif %}
 
                 <div class="d-flex flex-row flex-wrap justify-content-end align-items-baseline gap-2 mt-2 mb-2">
-                    {% if hub_role.is_supervisor or hub_role.is_marker or hub_role.is_moderator %}
-                        {{ mute_role_dropdown() }}
-                    {% endif %}
                     <a class="btn btn-sm btn-outline-primary"
                        href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=return_text) }}">
                         <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...

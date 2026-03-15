@@ -165,10 +165,39 @@ class SetRegularMeetingTimesForm(Form, SaveChangesMixin):
     start_time = DateTimeField(
         "Meeting start time",
         format="%H:%M",
-        description="Select the start time for your nregular meeting.",
+        description="Select the start time for your regular meeting.",
     )
 
     location = StringField(
         "Meeting location",
         validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
+    )
+
+
+class SetSubmissionRoleNotificationPreferencesForm(Form, SaveChangesMixin):
+    prompt_after_event = BooleanField(
+        "Send email prompt to record attendance after each supervision event",
+        default=False,
+    )
+
+    prompt_at_fixed_time = BooleanField(
+        "Send email prompt at specified time",
+        description="If set, an email will be sent on the day of the event at the time specified below. If not set, an email will be sent ",
+    )
+
+    prompt_at_time = DateTimeField(
+        "Time to send email prompt",
+        format="%H:%M",
+    )
+
+    prompt_delay = SelectField(
+        "Delay before sending email prompt",
+        choices=SubmissionRole._prompt_delay_choices,
+        coerce=int,
+    )
+
+    prompt_in_reminder = BooleanField(
+        "Include this student in reminder emails",
+        description="Select to include this student in periodic reminder email (if attendance data is still to be recorded)",
+        default=True,
     )

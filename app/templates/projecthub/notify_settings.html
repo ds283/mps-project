@@ -1,0 +1,93 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import date_field %}
+{% from "select2.html" import import_select2 %}
+{% from "datepicker.html" import import_datepicker %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+    {{ import_datepicker() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#prompt_delay').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+            });
+            $('#prompt_at_time').datetimepicker({
+                format: 'HH:mm',
+                allowInputToggle: true
+            });
+
+            function updateTimeFields() {
+                var promptAfterEvent = $('#prompt_after_event').prop('checked');
+                var promptAtFixedTime = $('#prompt_at_fixed_time').prop('checked');
+
+                if (promptAfterEvent) {
+                    $('#prompt-enabled-section').show();
+                    if (promptAtFixedTime) {
+                        $('#fixed-time-section').show();
+                        $('#delay-time-section').hide();
+                    } else {
+                        $('#fixed-time-section').hide();
+                        $('#delay-time-section').show();
+                    }
+                } else {
+                    $('#prompt-enabled-section').hide();
+                }
+            }
+
+            // Run on page load
+            updateTimeFields();
+
+            // Run when the user changes the value of the promptAfterEvent or promptAtFixedTime fields
+            $('#prompt_after_event').on('change', function () {
+                updateTimeFields();
+            });
+            $('#prompt_at_fixed_time').on('change', function () {
+                updateTimeFields();
+            });
+        });
+    </script>
+{% endblock %}
+
+
+{% block title %}
+    Change notification preferences
+{% endblock %}
+
+{% block formtitle %}
+    Change notification preferences for <i class="fas fa-user-circle"></i> {{ sd.user.name }}
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('projecthub.notify_settings', role_id=role.id, url=url) }}" method="POST"
+          name="change_notify_settings_form">
+        {{ form.hidden_tag() }}
+
+        <div class="card card-body bg-well">
+            {{ wtf.render_field(form.prompt_after_event) }}
+            <div id="prompt-enabled-section">
+                {{ wtf.render_field(form.prompt_at_fixed_time) }}
+                <div id="fixed-time-section">
+                    {{ date_field(form.prompt_at_time, 'prompt_at_time') }}
+                </div>
+                <div id="delay-time-section">
+                    {{ wtf.render_field(form.prompt_delay) }}
+                </div>
+            </div>
+        </div>
+        <div class="card card-body bg-well mt-2">
+            {{ wtf.render_field(form.prompt_in_reminder) }}
+        </div>
+
+        <div class="mt-2">
+            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+        </div>
+    </form>
+{% endblock %}

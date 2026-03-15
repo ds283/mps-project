@@ -112,9 +112,13 @@ class HubRoleMap:
         if self.supervisor or self.convenor or self.admin:
             self._tile_list.append("attendance")
 
-            # supervisors, convenors, admin can see regular meetings tile
+        # supervisors, convenors, admin can see regular meetings tile
         if self.supervisor or self.convenor or self.admin:
             self._tile_list.append("regular_meetings")
+
+        # supervisors, markers, and moderators can see a notifications tile
+        if self.supervisor or self.marker or self.moderator:
+            self._tile_list.append("notifications")
 
         self._tiles = grouper(self._tile_list, 4, incomplete="fill")
 

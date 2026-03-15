@@ -17,7 +17,8 @@
                 {% if submitted == total %}
                     <div class="alert alert-success">
                         {% call icon_block("check-circle") %}
-                            <div><strong>All students submitted validated choices before selection closed.</strong></div>
+                            <div><strong>All students submitted validated choices before selection closed.</strong>
+                            </div>
                         {% endcall %}
                     </div>
                 {% else %}
@@ -84,7 +85,7 @@
                 <div class="col">
                     {% call(blk) dashboard_tile("Submitted", title_icon="circle", icon_state=submitted_ok) %}
                         {% if blk == 'body' %}
-                            <span class="fw-bold fs-1 {% if submitted_ok %}text-primary{% else %}text-warning{% endif %}">{{ submitted }}</span>
+                            <span class="fw-bold fs-1 {% if submitted_ok %}text-primary{% else %}text-danger{% endif %}">{{ submitted }}</span>
                             <span class="fs-4 text-muted">/{{ total }}</span>
                         {% elif blk == 'footer' %}
                             <div class="small mb-0 d-flex flex-column gap-1 justify-content-start align-content-start">
@@ -103,7 +104,7 @@
                 <div class="col">
                     {% call(blk) dashboard_tile("Missing", title_icon="circle", icon_state=missing_ok) %}
                         {% if blk == 'body' %}
-                            <span class="fw-bold fs-1 {% if missing_ok %}text-primary{% else %}text-warning{% endif %}">{{ missing }}</span>
+                            <span class="fw-bold fs-1 {% if missing_ok %}text-primary{% else %}text-danger{% endif %}">{{ missing }}</span>
                             <span class="fs-4 text-muted">/{{ total }}</span>
                         {% elif blk == 'footer' %}
                             <div class="small mb-0">
@@ -117,7 +118,7 @@
                 <div class="col">
                     {% call(blk) dashboard_tile("Custom offers", title_icon="circle", icon_state=custom_ok) %}
                         {% if blk == 'body' %}
-                            <span class="fw-bold fs-1 {% if custom_ok > 0 %}text-primary{% else %}text-warning{% endif %}">{{ outstanding_custom }}</span>
+                            <span class="fw-bold fs-1 {% if custom_ok > 0 %}text-primary{% else %}text-danger{% endif %}">{{ outstanding_custom }}</span>
                             <span class="text-muted"><span class="fs-4">/{{ custom_total }}</span> <span
                                     class="text-uppercase">outstanding</span></span>
                             <div class="text-secondary mt-4 d-flex flex-column gap-1 justify-content-start align-content-start small">

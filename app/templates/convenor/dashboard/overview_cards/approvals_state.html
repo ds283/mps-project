@@ -13,7 +13,7 @@
         <div class="col-3">
             {% call(blk) dashboard_tile("Approved", title_icon="check-circle", icon_state=approved_ok) %}
                 {% if blk == 'body' %}
-                    <span class="fw-bold fs-1 {% if approved_ok %}text-success{% else %}text-primary{% endif %}">{{ approved }}</span>
+                    <span class="fw-bold fs-1 {% if approved_ok %}text-success{% else %}text-danger{% endif %}">{{ approved }}</span>
                 {% endif %}
             {% endcall %}
         </div>
@@ -27,14 +27,14 @@
         <div class="col-3">
             {% call(blk) dashboard_tile("Pending", title_icon="circle", icon_state=pending_ok) %}
                 {% if blk == 'body' %}
-                    <span class="fw-bold fs-1 {% if pending_ok %}text-success{% else %}text-primary{% endif %}">{{ pending }}</span>
+                    <span class="fw-bold fs-1 {% if pending_ok %}text-success{% else %}text-danger{% endif %}">{{ pending }}</span>
                 {% endif %}
             {% endcall %}
         </div>
         <div class="col-3">
             {% call(blk) dashboard_tile("Waiting", title_icon="circle", icon_state=queued_ok) %}
                 {% if blk == 'body' %}
-                    <span class="fw-bold fs-1 {% if queued_ok %}text-success{% else %}text-primary{% endif %}">{{ queued }}</span>
+                    <span class="fw-bold fs-1 {% if queued_ok %}text-success{% else %}text-danger{% endif %}">{{ queued }}</span>
                 {% endif %}
             {% endcall %}
         </div>

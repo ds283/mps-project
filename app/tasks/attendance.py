@@ -157,9 +157,7 @@ def register_attendance_tasks(celery):
         if event.attendance is not None:
             self.update_state(
                 state=states.IGNORED,
-                meta={
-                    "msg": f"Event #{event_id} already has attendance recorded"
-                },
+                meta={"msg": f"Event #{event_id} already has attendance recorded"},
             )
 
         if event.mute:
@@ -259,6 +257,33 @@ def register_attendance_tasks(celery):
         owner_user: User = owner.user
         sd: StudentData = sub.student
         student_user: User = sd.user
+
+        project_hub_url = url_for("projecthub.hub", subid=record.id)
+        attendance_OK_api_url = url_for(
+            "api.set_event_attendance",
+            event_id=event_id,
+            owner_id=owner.id,
+            record_id=record.id,
+            submitter_id=sub.id,
+            value=SupervisionEvent.ATTENDANCE_ON_TIME,
+        )
+        attendance_notified_api_url = url_for(
+            "api.set_event_attendance",
+            event_id=event_id,
+            owner_id=owner.id,
+            record_id=record.id,
+            submitter_id=sub.id,
+            value=SupervisionEvent.ATTENDANCE_NO_SHOW_NOTIFIED,
+        )
+        attendance_not_notified_api_url = url_for(
+            "api.set_event_attendance",
+            event_id=event_id,
+            owner_id=owner.id,
+            record_id=record.id,
+            submitter_id=sub.id,
+            value=SupervisionEvent.ATTENDANCE_NO_SHOW_UNNOTIFIED,
+        )
+
         msg = EmailTemplate.apply_(
             template_type=EmailTemplate.ATTENDANCE_PROMPT,
             to=[owner_user.email],
@@ -268,7 +293,10 @@ def register_attendance_tasks(celery):
                 "user": owner_user,
                 "sd": sd,
                 "pclass": config.project_class,
-                "projecthub_url": url_for("projecthub.hub", subid=record.id),
+                "projecthub_url": project_hub_url,
+                "attendance_OK_api_url": attendance_OK_api_url,
+                "attendance_notified_api_url": attendance_notified_api_url,
+                "attendance_not_notified_api_url": attendance_not_notified_api_url,
             },
         )
 

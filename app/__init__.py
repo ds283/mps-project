@@ -495,6 +495,10 @@ def create_app():
 
     app.register_blueprint(archive_blueprint, url_prefix="/archive")
 
+    from .api import api as api_blueprint
+
+    app.register_blueprint(api_blueprint, url_prefix="/api")
+
     if app.config.get("ENABLE_PUBLIC_BROWSER", False):
         from .public_browser import public_browser as public_browser_blueprint
 

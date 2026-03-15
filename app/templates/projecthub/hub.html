@@ -41,9 +41,10 @@
     {% set template = event.template %}
     <div class="d-flex flex-column justify-content-start align-items-start gap-2">
         <div class="d-flex flex-row flex-wrap justify-content-between align-items-center w-100 gap-2">
-            <div class="{% if event_type == 'current' %}fs-5{% else %}fs-4 fw-semibold{% endif %} text-primary">
+            <a class="{% if event_type == 'current' %}fs-5{% else %}fs-4 fw-semibold{% endif %} link-primary text-decoration-none"
+               href="{{ url_for('projecthub.event_details', event_id=event.id, url=return_url, text=return_text) }}">
                 <i class="fas fa-users"></i> {{ event.name }}
-            </div>
+            </a>
             <div class="d-flex flex-row flex-wrap justify-content-end align-items-center gap-2">
                 {% if template is not none %}
                     <span class="badge bg-secondary">Core supervision</span>
@@ -53,24 +54,6 @@
                 {% endif %}
             </div>
         </div>
-        <div class="d-flex flex-column flex-wrap justify-content-start align-items-start gap-1">
-            {% if event.time %}
-                <div class="text-secondary fs-5"><i
-                        class="fas fa-calendar"></i> {{ event.time.strftime("%A %d %b %Y %H:%M") }}</div>
-                {% if event.location %}
-                    <div class="text-muted"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</div>
-                {% endif %}
-            {% endif %}
-        </div>
-        {% if my_role is none or (my_role is not none and my_role.id != event.owner_id) %}
-            <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-2 small text-secondary">
-                <div><i class="fas fa-user-circle"></i> {{ event.sub_record.owner.student.user.name }}</div>
-                <div><i class="fas fa-user-circle"></i> {{ event.owner.user.name }}</div>
-                {% for attendee in event.team %}
-                    <div><i class="fas fa-user-circle"></i> {{ attendee.user.name }}</div>
-                {% endfor %}
-            </div>
-        {% endif %}
         <div class="d-flex flex-row flex-wrap w-100 justify-content-start align-items-baseline gap-2">
             {% if show_attendance and event_type in ['past', 'current'] and event.monitor_attendance %}
                 <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline gap-2">
@@ -99,7 +82,34 @@
                href="{{ url_for('projecthub.event_details', event_id=event.id, url=return_url, text=return_text) }}">Show
                 details&hellip;</a>
         </div>
+        <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-3 mt-2">
+            {% if event.time %}
+                {% if hub_role.is_admin or hub_role.is_supervisor or hub_role.is_convenor %}
+                    <a class="link-secondary text-decoration-none fs-5"
+                       href="{{ url_for('projecthub.change_event_time', event_id=event.id, url=return_url, text=return_text) }}">
+                        <i class="fas fa-calendar"></i> {{ event.time.strftime("%A %d %b %Y %H:%M") }}
+                    </a>
+                {% else %}
+                    <div class="text-secondary fs-5">
+                        <i class="fas fa-calendar"></i> {{ event.time.strftime("%A %d %b %Y %H:%M") }}
+                    </div>
+                {% endif %}
+                {% if event.location %}
+                    <div class="text-muted"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</div>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% if my_role is none or (my_role is not none and my_role.id != event.owner_id) %}
+            <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-2 small text-secondary mt-2">
+                <div><i class="fas fa-user-circle"></i> {{ event.sub_record.owner.student.user.name }}</div>
+                <div><i class="fas fa-user-circle"></i> {{ event.owner.user.name }}</div>
+                {% for attendee in event.team %}
+                    <div><i class="fas fa-user-circle"></i> {{ attendee.user.name }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
         {% if event.meeting_summary and event.meeting_summary|length > 0 %}
+            <div class="mt-2 mb-1 text-uppercase fw-semibold text-muted">Summary</div>
             <div class="text-muted small">{{ event.meeting_summary|truncate(400)|safe }}</div>
         {% endif %}
     </div>

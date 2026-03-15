@@ -26,21 +26,23 @@
                     for {{ event.sub_record.owner.student.user.name }}
                 </div>
                 {% if event.time %}
-                    <div class="d-flex flex-column justify-content-start align-items-end gap-1">
-                        <div class="text-secondary">
-                            <i class="fas fa-calendar"></i>
-                            {{ event.time.strftime("%A %d %b %Y %H:%M") }}
+                    <div class="d-flex flex-column justify-content-start align-items-end gap-2">
+                        <div class="d-flex flex-row flex-wrap justify-content-end align-items-baseline gap-3">
+                            <div class="text-secondary">
+                                <i class="fas fa-calendar"></i>
+                                {{ event.time.strftime("%A %d %b %Y %H:%M") }}
+                            </div>
+                            {% if event.location %}
+                                <div class="text-muted"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</div>
+                            {% endif %}
                         </div>
-                        {% if event.location %}
-                            <div class="text-muted"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</div>
-                        {% endif %}
                         {% if hub_role.is_supervisor or hub_role.is_admin or hub_role.is_convenor %}
                             <a class="btn btn-sm btn-outline-secondary" href="{{ change_time_url }}">Change
                                 time&hellip;</a>
                         {% endif %}
                     </div>
                 {% else %}
-                    <div class="d-flex flex-column justify-content-start align-items-end gap-1">
+                    <div class="d-flex flex-column justify-content-start align-items-end gap-2">
                         {% if hub_role.is_supervisor or hub_role.is_admin or hub_role.is_convenor %}
                             <a class="btn btn-sm btn-outline-primary" href="{{ change_time_url }}">Set
                                 time&hellip;</a>

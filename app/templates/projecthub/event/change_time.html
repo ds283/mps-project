@@ -46,8 +46,14 @@
                     for {{ sd.user.name }}
                 </div>
                 {% if event.time %}
-                    <div class="text-muted">
-                        {{ event.time.strftime("%A %d %b %Y %H:%M") }}
+                    <div class="d-flex flex-row flex-wrap justify-content-end align-items-baseline gap-3">
+                        <div class="text-secondary">
+                            <i class="fas fa-calendar"></i>
+                            {{ event.time.strftime("%A %d %b %Y %H:%M") }}
+                        </div>
+                        {% if event.location %}
+                            <div class="text-muted"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</div>
+                        {% endif %}
                     </div>
                 {% endif %}
             </div>

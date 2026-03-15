@@ -829,7 +829,7 @@ def register_availability_tasks(celery):
                     "msg": "Availability collection has been skipped for this PresentationAssessment"
                 },
             )
-            raise self.replace(
+            return self.replace(
                 notify.si(
                     0,
                     user_id,
@@ -845,7 +845,7 @@ def register_availability_tasks(celery):
                     "msg": "Availability collection has been closed for this PresentationAssessment"
                 },
             )
-            raise self.replace(
+            return self.replace(
                 notify.si(
                     0,
                     user_id,
@@ -865,7 +865,7 @@ def register_availability_tasks(celery):
             notify.s(user_id, "{n} email notification{pl} issued", "info"),
         )
 
-        raise self.replace(tasks)
+        return self.replace(tasks)
 
     @celery.task(bind=True, default_retry_delay=30)
     def send_reminder_email(self, assessor_id):

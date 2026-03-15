@@ -290,7 +290,7 @@ def register_backup_tasks(celery):
         # but we don't usually want it running on the production version
         # thin_tasks = chord(group(*total_list), issue_thinning_result.s(str(now), 'D.Seery@sussex.ac.uk'))
         thin_tasks = group(*total_list)
-        raise self.replace(thin_tasks)
+        return self.replace(thin_tasks)
 
     @celery.task(bind=True, default_retry_delay=30)
     def thin_bin(self, period: int, unit: str, input_bin: List[Tuple[int, str]]):
@@ -416,7 +416,7 @@ def register_backup_tasks(celery):
             raise Ignore()
 
         seq = chain(drop_absent_backups.si(), do_thinning.si())
-        raise self.replace(seq)
+        return self.replace(seq)
 
     @celery.task(bind=True, default_retry_delay=30)
     def drop_absent_backups(self):
@@ -568,7 +568,7 @@ def register_backup_tasks(celery):
             raise Ignore()
 
         seq = chain(drop_absent_backups.si(), apply_size_limit.si())
-        raise self.replace(seq)
+        return self.replace(seq)
 
     @celery.task(bind=True, serializer="pickle")
     def prune_backup_cutoff(self, id, limit):

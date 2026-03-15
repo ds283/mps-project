@@ -1,0 +1,352 @@
+#
+# Created by David Seery on 15/03/2026.
+# Copyright (c) 2026 University of Sussex. All rights reserved.
+#
+# This file is part of the MPS-Project platform developed in
+# the School of Mathematics & Physical Sciences, University of Sussex.
+#
+# Contributors: David Seery <D.Seery@sussex.ac.uk>
+#
+from datetime import date, datetime, time, timedelta
+from typing import List
+
+import holidays
+from celery import chain, group, states
+from celery.exceptions import Ignore
+from flask import current_app, url_for
+from numpy import is_busday
+from sqlalchemy.exc import SQLAlchemyError
+
+from ..database import db
+from ..models import (
+    EmailLog,
+    EmailTemplate,
+    ProjectClassConfig,
+    StudentData,
+    SubmissionPeriodRecord,
+    SubmissionPeriodUnit,
+    SubmissionRecord,
+    SubmissionRole,
+    SubmittingStudent,
+    SupervisionEvent,
+    User,
+)
+from ..shared.utils import get_current_year
+from ..task_queue import register_task
+
+
+def register_attendance_tasks(celery):
+    @celery.task(bind=True, default_retry_delay=30)
+    def check_for_attendance_prompts(self):
+        self.update_state(
+            state=states.STARTED, meta={"msg": "Checking for attendance prompts"}
+        )
+
+        try:
+            year = get_current_year()
+
+            # search for all SupervisionEvents belonging to non-retired submitters,
+            # for which a prompt has not already been sent, and for which notifications
+            # are not muted
+            events: List[SupervisionEvent] = (
+                db.session.query(SupervisionEvent)
+                .join(SubmissionRole, SubmissionRole.id == SupervisionEvent.owner_id)
+                .join(
+                    SubmissionRecord,
+                    SubmissionRecord.id == SupervisionEvent.sub_record_id,
+                )
+                .join(
+                    SubmissionPeriodRecord,
+                    SubmissionPeriodRecord.id == SubmissionRecord.period_id,
+                )
+                .join(
+                    SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id
+                )
+                .join(
+                    ProjectClassConfig,
+                    ProjectClassConfig.id == SubmittingStudent.config_id,
+                )
+                .filter(
+                    ProjectClassConfig.year == year,
+                    SubmittingStudent.retired.is_(False),
+                    SubmissionPeriodRecord.feedback_open.is_(False),
+                    SubmissionPeriodRecord.closed.is_(False),
+                    SupervisionEvent.mute.is_(False),
+                    SupervisionEvent.prompt_sent.is_(None),
+                    SubmissionRole.mute.is_(False),
+                    SubmissionRole.prompt_after_event.is_(True),
+                )
+                .all()
+            )
+
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        # replace ourselves with a group of tasks to check each of these events individually
+        self.update_state(
+            state=states.STARTED,
+            meta={"msg": "Generating tasks to test for email prompts"},
+        )
+        tasks = group(
+            check_event_for_attendance_prompt.si(event.id) for event in events
+        )
+        return self.replace(tasks)
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def check_event_for_attendance_prompt(self, event_id: int):
+        self.update_state(
+            state=states.STARTED,
+            meta={"msg": f"Testing event #{event_id} for an attendance email prompt"},
+        )
+
+        try:
+            event: SupervisionEvent = (
+                db.session.query(SupervisionEvent).get(event_id).first()
+            )
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if event is None:
+            self.update_state(
+                state=states.FAILURE, meta={"msg": f"Could not load event #{event_id}"}
+            )
+            raise Ignore()
+
+        year = get_current_year()
+        record: SubmissionRecord = event.sub_record
+        period: SubmissionPeriodRecord = record.period
+        sub: SubmittingStudent = record.owner
+        config: ProjectClassConfig = sub.config
+        unit: SubmissionPeriodUnit = event.unit
+
+        if config.year != year:
+            self.update_state(
+                state=states.IGNORED,
+                meta={"msg": f"Event #{event_id} is for a different year"},
+            )
+            raise Ignore()
+
+        if sub.retired:
+            self.update_state(
+                state=states.IGNORED,
+                meta={"msg": f"Event #{event_id} is for a retired student"},
+            )
+            raise Ignore()
+
+        if period.feedback_open:
+            self.update_state(
+                state=states.IGNORED,
+                meta={
+                    "msg": f"Event #{event_id} belongs to a submission period that has been opened for reedback"
+                },
+            )
+            raise Ignore()
+
+        if period.closed:
+            self.update_state(
+                state=states.IGNORED,
+                meta={
+                    "msg": f"Event #{event_id} belongs to a submission period that has been closed"
+                },
+            )
+            raise Ignore()
+
+        if event.mute:
+            self.update_state(
+                state=states.IGNORED, meta={"msg": f"Event #{event_id} is muted"}
+            )
+            raise Ignore()
+
+        # is this event in the past?
+        # to decide that, we need to know when the owner has asked for prompts to be delivered
+        owner: SubmissionRole = event.owner
+        if owner.mute:
+            self.update_state(
+                state=states.IGNORED,
+                meta={"msg": f"SubmissionRole #{owner.id} is muted"},
+            )
+            raise Ignore()
+
+        if not owner.prompt_after_event:
+            self.update_state(
+                state=states.IGNORED,
+                meta={
+                    "msg": f"SubmissionRole #{owner.id} has not requested an email prompt"
+                },
+            )
+            raise Ignore()
+
+        if owner.prompt_sent is not None:
+            self.update_state(
+                state=states.IGNORED,
+                meta={"msg": f"SubmissionRole #{owner.id} has already been notified"},
+            )
+            raise Ignore()
+
+        target_time: datetime
+        event_time: datetime = event.get_start_time()
+
+        if owner.prompt_at_fixed_time:
+            # event_time is guaranteed to be on a weekday
+            fixed_time: time = owner.prompt_at_fixed_time
+            target_time = event_time.replace(
+                hour=fixed_time.hour, minute=fixed_time.minute
+            )
+        else:
+            shift: timedelta = timedelta(hours=owner.prompt_delay)
+            target_time = event_time + shift
+
+        # if the event has not yet taken place, then no need to send a prompt yet
+        now = datetime.now()
+        if target_time > now:
+            self.update_state(
+                state=states.IGNORED,
+                meta={"msg": f"Event #{event_id} is not yet in the past"},
+            )
+            raise Ignore()
+
+        # test whether today is a working day (a "business day" or "bday"), and if not then bail out;
+        # we don't want to bother people with emails at the weekend or on statutory holidays
+        today = now.date()
+        holiday_calendar = holidays.UK()
+
+        # the test is in two parts: first we check for a holiday, then for a conventional working day
+        # (in future perhaps allow individual users to choose their own working-day pattern).
+        # Annoyingly, numpy.is_busday() won't accept objects generated by the holidays module
+        # as a holiday calendar (it wants an array-like of datetime)
+
+        # is today a UK holiday?
+        if today in holiday_calendar:
+            self.update_state(
+                state=states.IGNORED,
+                meta={"msg": f"Today ({today}) is a UK holiday, so not sending emails"},
+            )
+            raise Ignore()
+
+        # is today a working day?
+        if not is_busday(today):
+            self.update_state(
+                state=states.IGNORED,
+                meta={
+                    "msg": f"Today ({today}) is not a working day, so not sending emails"
+                },
+            )
+            raise Ignore()
+
+        # if the event took place more than a few days ago, then probably the owner previously
+        # had notifications muted, and has now unmuted them.
+        # They won't want to be deluged with prompts for past events.
+        # So should send only if the target time passed recently.
+        delta: timedelta = now - target_time
+        if delta.days > 5:
+            self.update_state(
+                state=states.IGNORED,
+                meta={"msg": f"Event #{event_id} is too old to send a prompt"},
+            )
+
+        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
+        owner_user: User = owner.user
+        sd: StudentData = sub.student
+        student_user: User = sd.user
+        msg = EmailTemplate.apply_(
+            template_type=EmailTemplate.ATTENDANCE_PROMPT,
+            to=[owner_user.email],
+            subject_kwargs={"name": student_user.name},
+            body_kwargs={
+                "user": owner_user,
+                "sd": sd,
+                "pclass": config.project_class,
+                "projecthub_url": url_for("projecthub.hub", sub_id=record.id),
+            },
+        )
+
+        task_id = register_task(
+            msg.subject,
+            description=f"{config.name}: Send attendance prompt to {owner_user.name} for {student_user.name}/{unit.name}",
+        )
+        send_tasks = chain(
+            send_log_email.s(task_id, msg),
+            mark_attendance_prompt_sent.s(event_id),
+        )
+
+        return self.replace(send_tasks)
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def mark_attendance_prompt_sent(self, result_data, event_id):
+        if "outcome" not in result_data:
+            print(
+                f"!! mark_attendance_prompt_sent: no outcome in result_data (result_data={result_data})"
+            )
+            self.update_state(
+                state=states.FAILURE, meta={"msg": "No outcome in result_data"}
+            )
+            return {"error": 1}
+
+        outcome = result_data["outcome"]
+        if outcome in ["unknown", "failure"]:
+            print(
+                f"!! mark_attendance_prompt_sent: outcome was unknown or failure (result_data={result_data})"
+            )
+            self.update_state(
+                state=states.FAILURE, meta={"msg": "Outcome was unknown or failure"}
+            )
+            return {"error": 1}
+
+        if outcome in ["no-store"]:
+            print(
+                f"!! mark_attendance_prompt_sent: outcome was marked no-store (result_data={result_data})"
+            )
+            self.update_state(
+                state=states.SUCCESS, meta={"msg": "Outcome was marked no-store"}
+            )
+            return {"attendance_prompt": 1}
+
+        try:
+            event: SupervisionEvent = (
+                db.session.query(SupervisionEvent).get(event_id).first()
+            )
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        now = datetime.now()
+        event.prompt_sent = now
+
+        if "key" not in result_data:
+            print(
+                f"!! mark_attendance_prompt_sent: no key in result_data (result_data={result_data})"
+            )
+            self.update_state(
+                state=states.FAILURE, meta={"msg": "No key in result_data"}
+            )
+
+        else:
+            key = result_data["key"]
+            email_log: EmailLog = (
+                db.session.query(EmailLog).filter(EmailLog.id == key).first()
+            )
+
+            if email_log is None:
+                print(
+                    f"!! mark_attendance_prompt_sent: could not find email log with key {key}"
+                )
+                self.update_state(
+                    state=states.FAILURE,
+                    meta={"msg": f"Could not find email log with key {key}"},
+                )
+
+            else:
+                owner: SubmissionRole = event.owner
+
+                event.email_log.append(email_log)
+                owner.email_log.append(email_log)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        return {"attendance_prompt": 1}

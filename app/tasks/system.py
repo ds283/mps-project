@@ -19,12 +19,12 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import (
-    User,
-    TaskRecord,
-    Notification,
     MatchingAttempt,
+    Notification,
     ScheduleAttempt,
     StudentBatch,
+    TaskRecord,
+    User,
 )
 from ..shared.internal_redis import get_redis
 
@@ -67,7 +67,7 @@ def register_system_tasks(celery):
             reset_tasks_fail.si(user_id)
         )
 
-        raise self.replace(task)
+        return self.replace(task)
 
     @celery.task(bind=True, default_retry_delay=30)
     def reset_background_tasks(self):
@@ -300,7 +300,7 @@ def register_system_tasks(celery):
         tasks = group(
             handle_ping.si(v[0], v[1], v[2]).set(queue="priority") for v in task_list
         ) | finalize_pings.si().set(queue="priority")
-        self.replace(tasks)
+        return self.replace(tasks)
 
     @celery.task(bind=True, default_retry_delay=3, queue="priority")
     def finalize_pings(self):

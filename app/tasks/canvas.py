@@ -125,7 +125,7 @@ def register_canvas_tasks(celery):
         )
 
         c_tasks = group(*tasks)
-        raise self.replace(c_tasks)
+        return self.replace(c_tasks)
 
     @celery.task(bind=True, default_retry_delay=30)
     def canvas_user_checkin_module(self, pid, API_root: str):

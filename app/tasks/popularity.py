@@ -434,7 +434,7 @@ def register_popularity_tasks(celery):
             raise self.retry()
 
         tasks = group(update_project_popularity_data.si(i.id) for i in pclass_ids)
-        raise self.replace(tasks)
+        return self.replace(tasks)
 
     @celery.task(bind=True, default_retry_delay=30)
     def thin_bin(self, period: int, unit: str, input_bin: List[Tuple[int, str]]):
@@ -571,7 +571,7 @@ def register_popularity_tasks(celery):
         total_list = daily_list + weekly_list
 
         thin_tasks = group(*total_list)
-        raise self.replace(thin_tasks)
+        return self.replace(thin_tasks)
 
     @celery.task(bind=True, default_retry_delay=30)
     def thin_project_popularity_data(self, pid):
@@ -609,7 +609,7 @@ def register_popularity_tasks(celery):
             tasks = group(
                 thin_popularity_data.si(proj.id) for proj in config.live_projects
             )
-            raise self.replace(tasks)
+            return self.replace(tasks)
 
         self.update_state(state=states.SUCCESS)
 
@@ -627,4 +627,4 @@ def register_popularity_tasks(celery):
             raise self.retry()
 
         tasks = group(thin_project_popularity_data.si(i.id) for i in pclass_ids)
-        raise self.replace(tasks)
+        return self.replace(tasks)

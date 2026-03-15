@@ -233,7 +233,7 @@ def register_issue_confirm_tasks(celery):
             notify.s(convenor_id, "{n} confirmation request{pl} issued", "info"),
         )
 
-        raise self.replace(task)
+        return self.replace(task)
 
     @celery.task(bind=True, default_retry_delay=30)
     def issue_finalize(self, task_id, config_id, convenor_id):
@@ -402,7 +402,7 @@ def register_issue_confirm_tasks(celery):
             notify.s(convenor_id, "{n} reminder email{pl} issued", "info"),
         )
 
-        raise self.replace(tasks)
+        return self.replace(tasks)
 
     @celery.task(bind=True, default_retry_delay=30)
     def send_reminder_email(self, faculty_id, config_id):

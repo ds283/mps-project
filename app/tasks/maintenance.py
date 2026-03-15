@@ -602,7 +602,7 @@ def register_maintenance_tasks(celery):
             + [asset_test_expiry.s(r.id, SubmittedAsset) for r in submitted_records]
         )
 
-        raise self.replace(group(*tasks))
+        return self.replace(group(*tasks))
 
     @celery.task(bind=True, default_retry_delay=30)
     def asset_check_lost(self, notify_email):
@@ -622,7 +622,7 @@ def register_maintenance_tasks(celery):
             + [asset_test_lost.s(r.id, SubmittedAsset) for r in submitted_records]
         )
 
-        raise self.replace(
+        return self.replace(
             group(*tasks)
             | issue_asset_report.s(
                 "email/maintenance/lost_assets.txt",
@@ -639,7 +639,7 @@ def register_maintenance_tasks(celery):
             asset_test_attached.si(r.id, SubmittedAsset) for r in submitted_records
         ]
 
-        raise self.replace(
+        return self.replace(
             group(*tasks)
             | issue_asset_report.s(
                 "email/maintenance/unattached_assets.txt",

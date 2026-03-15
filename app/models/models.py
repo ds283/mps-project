@@ -9,9 +9,9 @@
 #
 import json
 from collections.abc import Iterable
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from os import path
-from time import time
+from time import time as current_seconds_since_epoch
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from urllib.parse import urljoin
 from uuid import uuid4
@@ -9101,6 +9101,26 @@ class SupervisionEvent(
     def attendance_str(self):
         return self._attendance_string.get(self.attendance, "Unknown")
 
+    def get_start_time(self) -> datetime:
+        if self.time is not None:
+            return self.time
+
+        # if no start time specified, assume it happens on the closest weekday on or after the end
+        # of the submission unit, at 12pm
+        unit_start_date = self.unit.start_date
+        unit_start_weekday = unit_start_date.isoweekday()
+
+        if unit_start_weekday > 5:
+            shift: timedelta = timedelta(days=8 - unit_start_weekday)
+            start_date = unit_start_date + shift
+        else:
+            start_date = unit_start_date
+
+        start_time: datetime = datetime.combine(
+            start_date, time(hour=12, minute=0, second=0, microsecond=0)
+        )
+        return start_time
+
 
 class EnrollmentRecord(db.Model, EditingMetadataMixin):
     """
@@ -16064,7 +16084,7 @@ class Notification(db.Model, NotificationTypesMixin):
     uuid = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), index=True)
 
     # timestamp
-    timestamp = db.Column(db.Integer(), index=True, default=time)
+    timestamp = db.Column(db.Integer(), index=True, default=current_seconds_since_epoch)
 
     # should this notification be removed on the next page request?
     remove_on_pageload = db.Column(db.Boolean())

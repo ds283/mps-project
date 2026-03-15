@@ -12,30 +12,30 @@ from datetime import datetime
 from functools import partial
 from typing import Optional
 
-from celery import group, chain
+from celery import chain, group
 from celery.exceptions import Ignore
 from flask import current_app
 from flask_mailman import EmailMessage
 from sqlalchemy.exc import SQLAlchemyError
 
-from .shared.utils import report_info, report_error, attach_asset_to_email_msg
 from ..database import db
 from ..models import (
+    EmailLog,
+    EmailTemplate,
+    FeedbackReport,
+    GeneratedAsset,
+    ProjectClass,
+    ProjectClassConfig,
+    StudentData,
     SubmissionPeriodRecord,
     SubmissionRecord,
-    ProjectClassConfig,
-    ProjectClass,
     SubmissionRole,
-    User,
     SubmittingStudent,
-    StudentData,
-    EmailLog,
-    GeneratedAsset,
-    FeedbackReport,
-    EmailTemplate,
+    User,
 )
 from ..shared.asset_tools import AssetCloudAdapter
 from ..task_queue import register_task
+from .shared.utils import attach_asset_to_email_msg, report_error, report_info
 
 
 def register_push_feedback_tasks(celery):
@@ -127,7 +127,7 @@ def register_push_feedback_tasks(celery):
             submitter_tasks + supervisor_tasks + marker_tasks
         ) | notify_feedback_push.s(period_id, user_id)
 
-        raise self.replace(tasks)
+        return self.replace(tasks)
 
     # default max attachment size to 50 Mb
     MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024

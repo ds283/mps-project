@@ -19,7 +19,7 @@ from typing import List
 
 import pulp
 import pulp.apis as pulp_apis
-from celery import group, chain
+from celery import chain, group
 from celery.exceptions import Ignore
 from flask import current_app, render_template_string
 from pandas import DataFrame
@@ -28,32 +28,32 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import (
-    MatchingAttempt,
-    TaskRecord,
-    LiveProject,
-    SelectingStudent,
-    User,
-    EnrollmentRecord,
-    MatchingRecord,
-    SelectionRecord,
-    ProjectClass,
-    GeneratedAsset,
-    MatchingEnumeration,
-    TemporaryAsset,
-    FacultyData,
-    ProjectClassConfig,
-    SubmissionRecord,
-    SubmissionPeriodRecord,
-    MatchingRole,
-    SubmissionPeriodDefinition,
-    SubmittingStudent,
-    SubmissionRole,
     CustomOffer,
-    Project,
-    LiveProjectAlternative,
-    StudentData,
     DegreeProgramme,
     DownloadCentreItem,
+    EnrollmentRecord,
+    FacultyData,
+    GeneratedAsset,
+    LiveProject,
+    LiveProjectAlternative,
+    MatchingAttempt,
+    MatchingEnumeration,
+    MatchingRecord,
+    MatchingRole,
+    Project,
+    ProjectClass,
+    ProjectClassConfig,
+    SelectingStudent,
+    SelectionRecord,
+    StudentData,
+    SubmissionPeriodDefinition,
+    SubmissionPeriodRecord,
+    SubmissionRecord,
+    SubmissionRole,
+    SubmittingStudent,
+    TaskRecord,
+    TemporaryAsset,
+    User,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.excel import _normalize_excel_sheet_name

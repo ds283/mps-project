@@ -249,9 +249,9 @@ def register_send_log_email(celery, mail: Mail):
                 log_email.s(task_id, msg),
                 email_success.s(task_id),
             ).on_error(email_failure.si(task_id))
-            raise self.replace(seq)
+            return self.replace(seq)
 
         seq = chain(
             send_email_to_console.s(task_id, msg), email_success.s(task_id)
         ).on_error(email_failure.si(task_id))
-        raise self.replace(seq)
+        return self.replace(seq)

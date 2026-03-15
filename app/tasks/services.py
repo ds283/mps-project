@@ -37,7 +37,7 @@ def register_services_tasks(celery):
             email_failure.si(subject, user_id)
         )
 
-        raise self.replace(work)
+        return self.replace(work)
 
     @celery.task(bind=True, default_retry_delay=30)
     def send_user_record(self, user_id, subject, body, reply_to):
@@ -130,7 +130,7 @@ def register_services_tasks(celery):
             email_failure.si(subject, user_id)
         )
 
-        raise self.replace(work)
+        return self.replace(work)
 
     @celery.task(bind=True, default_retry_delay=30)
     def send_email_addr(self, pair, subject, body, reply_to):

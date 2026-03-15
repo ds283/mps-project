@@ -107,7 +107,7 @@ def register_golive_tasks(celery):
                     meta={"msg": "Could not load convenor User record from database"},
                 )
 
-            raise self.replace(golive_fail.si(task_id, convenor_id))
+            return self.replace(golive_fail.si(task_id, convenor_id))
 
         if not config.project_class.publish:
             return None
@@ -128,7 +128,7 @@ def register_golive_tasks(celery):
             self.update_state(
                 "FAILURE", meta={"msg": "Confirmation requests have not been issued"}
             )
-            raise self.replace(golive_fail.si(task_id, convenor_id))
+            return self.replace(golive_fail.si(task_id, convenor_id))
 
         if (
                 config.selector_lifecycle
@@ -146,7 +146,7 @@ def register_golive_tasks(celery):
                 "FAILURE",
                 meta={"msg": "Some Go Live confirmations are still outstanding"},
             )
-            raise self.replace(golive_fail.si(task_id, convenor_id))
+            return self.replace(golive_fail.si(task_id, convenor_id))
 
         pclass_id = config.pclass_id
 
@@ -293,7 +293,7 @@ def register_golive_tasks(celery):
             front_chain, golive_finalize.si(task_id, config_id, convenor_id, deadline)
         ).on_error(golive_fail.si(task_id, convenor_id))
 
-        raise self.replace(seq)
+        return self.replace(seq)
 
     @celery.task()
     def golive_initialize(task_id):
@@ -384,7 +384,7 @@ def register_golive_tasks(celery):
             ),
         )
 
-        raise self.replace(task)
+        return self.replace(task)
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
     def golive_notify_selectors(self, task_id, config_id, convenor_id, deadline):
@@ -439,7 +439,7 @@ def register_golive_tasks(celery):
             ),
         )
 
-        raise self.replace(task)
+        return self.replace(task)
 
     @celery.task(bind=True, default_retry_delay=30)
     def set_notified(self, config_id, user_id):

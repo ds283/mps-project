@@ -8,12 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, get_template_attribute, current_app, url_for, render_template
-
-from jinja2 import Template, Environment
+from flask import current_app, get_template_attribute, jsonify, render_template, url_for
+from jinja2 import Environment, Template
 
 from ...models.emails import EmailTemplate
-
 
 # Human-readable names for each template type
 _TYPE_NAMES = {
@@ -59,6 +57,7 @@ _TYPE_NAMES = {
     EmailTemplate.SERVICES_SEND_EMAIL: "Services: Send email",
     EmailTemplate.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED: "Student notifications: Choices received",
     EmailTemplate.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED_PROXY: "Student notifications: Choices received (proxy)",
+    EmailTemplate.ATTENDANCE_PROMPT: "Attendance: Prompt",
     EmailTemplate.SYSTEM_GARBAGE_COLLECTION: "System: Garbage collection",
 }
 

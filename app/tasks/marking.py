@@ -10,40 +10,39 @@
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
 import jinja2
 import markdown
-from celery import group, chain
+from celery import chain, group
 from celery.exceptions import Ignore
 from dateutil import parser
 from flask import current_app
 from flask_mailman import EmailMultiAlternatives
 from pathvalidate import sanitize_filename
 from sqlalchemy.exc import SQLAlchemyError
-from weasyprint import HTML, CSS
+from weasyprint import CSS, HTML
 from weasyprint.text.fonts import FontConfiguration
 
-from .shared.utils import report_error, report_info, attach_asset_to_email_msg
 from ..database import db
 from ..models import (
+    AssetLicense,
+    FeedbackAsset,
+    FeedbackRecipe,
+    FeedbackReport,
+    GeneratedAsset,
+    LiveProject,
+    PeriodAttachment,
+    ProjectClass,
+    ProjectClassConfig,
+    StudentData,
+    SubmissionAttachment,
     SubmissionPeriodRecord,
     SubmissionRecord,
-    User,
-    SubmittedAsset,
-    ProjectClassConfig,
-    ProjectClass,
-    SubmittingStudent,
-    StudentData,
-    PeriodAttachment,
-    SubmissionAttachment,
-    GeneratedAsset,
     SubmissionRole,
-    FeedbackRecipe,
-    FeedbackAsset,
-    AssetLicense,
-    LiveProject,
-    FeedbackReport,
+    SubmittedAsset,
+    SubmittingStudent,
+    User,
 )
 from ..shared.asset_tools import (
     AssetCloudAdapter,
@@ -53,6 +52,7 @@ from ..shared.asset_tools import (
 from ..shared.scratch import ScratchFileManager, ScratchGroupManager
 from ..shared.security import validate_nonce
 from ..task_queue import register_task
+from .shared.utils import attach_asset_to_email_msg, report_error, report_info
 
 AssetDictionary = Dict[str, AssetCloudScratchContextManager]
 
@@ -105,7 +105,7 @@ def register_marking_tasks(celery):
             for s in record.submissions
         ) | notify_dispatch.s(convenor_id)
 
-        raise self.replace(email_group)
+        return self.replace(email_group)
 
     @celery.task(bind=True, default_retry_delay=5)
     def notify_dispatch(self, result_data, convenor_id):
@@ -588,7 +588,7 @@ def register_marking_tasks(celery):
             conflate_marks.s(record.id, convenor_id) for record in period.submissions
         ) | notify_period_conflation.s(period.id, convenor_id)
 
-        raise self.replace(tasks)
+        return self.replace(tasks)
 
     def sanity_check_grade(
             role: SubmissionRole, person: User, student: User, convenor: Optional[User]
@@ -897,7 +897,7 @@ def register_marking_tasks(celery):
             for record in period.submissions
         ) | finalize_feedback_reports.s(recipe_id, period_id, convenor_id)
 
-        raise self.replace(tasks)
+        return self.replace(tasks)
 
     def markdown_filter(input):
         return markdown.markdown(input)

@@ -164,7 +164,7 @@ def register_email_notification_tasks(celery):
         )
 
         task = group(student_tasks, faculty_tasks)
-        raise self.replace(task)
+        return self.replace(task)
 
     @celery.task(bind=True, default_retry_delay=30)
     def notify_user(self, task_id, user_id):
@@ -209,7 +209,7 @@ def register_email_notification_tasks(celery):
             ).on_error(notify_fail.si(task_id))
 
         if queue is not None:
-            raise self.replace(queue)
+            return self.replace(queue)
 
     @celery.task()
     def notify_finalize(task_id):
@@ -328,7 +328,7 @@ def register_email_notification_tasks(celery):
                 )
 
         task = task | group(reset_notifications.s(), reset_last_email_time.s(user_id))
-        raise self.replace(task)
+        return self.replace(task)
 
     @celery.task(bind=True, default_retry_delay=30)
     def dispatch_student_notifications(self, user_id):
@@ -394,7 +394,7 @@ def register_email_notification_tasks(celery):
             task = task | no_summary_adapter.s()
 
         task = task | group(reset_notifications.s(), reset_last_email_time.s(user_id))
-        raise self.replace(task)
+        return self.replace(task)
 
     @celery.task(bind=True, defaut_retry_delay=1)
     def no_summary_adapter(self, email_outcomes):
@@ -432,7 +432,7 @@ def register_email_notification_tasks(celery):
         # each delete_notification task will return its own n_id, so we will reproduce
         # the same singleton/list of n_ids that we were provided with
         task = group(delete_notification.si(n_id) for n_id in n_ids)
-        raise self.replace(task)
+        return self.replace(task)
 
     @celery.task(bind=True, default_retry_delay=30)
     def delete_notification(self, n_id):

@@ -73,7 +73,7 @@ def register_matching_email_tasks(celery):
             publish_to_selectors_finalize.si(match_id, task_id),
         )
 
-        raise self.replace(task)
+        return self.replace(task)
 
     @celery.task(bind=True)
     def publish_to_selectors_finalize(self, match_id, task_id):
@@ -241,7 +241,7 @@ def register_matching_email_tasks(celery):
             publish_to_supervisors_finalize.si(match_id, task_id),
         )
 
-        raise self.replace(task)
+        return self.replace(task)
 
     @celery.task(bind=True)
     def publish_to_supervisors_finalize(self, match_id, task_id):

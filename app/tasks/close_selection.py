@@ -95,7 +95,7 @@ def register_close_selection_tasks(celery):
                 seq | close_finalize.si(task_id, config_id, convenor_id, notify_convenor)
         ).on_error(close_fail.si(task_id, convenor_id))
 
-        raise self.replace(seq)
+        return self.replace(seq)
 
     @celery.task()
     def close_initialize(task_id):

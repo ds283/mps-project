@@ -2234,7 +2234,7 @@ def register_scheduling_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        raise self.replace(task)
+        return self.replace(task)
 
     @celery.task(bind=True)
     def publish_to_submitter_finalize(self, task_id):
@@ -2362,7 +2362,7 @@ def register_scheduling_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        raise self.replace(task)
+        return self.replace(task)
 
     @celery.task(bind=True)
     def publish_to_assessors_finalize(self, task_id):

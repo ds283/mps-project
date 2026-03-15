@@ -46,6 +46,7 @@ from ..tools import ServerSideSQLHandler
 from . import projecthub
 from .forms import (
     AddFormatterArticleForm,
+    ChangeSupervisionEventDate,
     EditFormattedArticleForm,
     MeetingSummaryForm,
     ReassignEventOwnerFormFactory,
@@ -528,6 +529,10 @@ def event_details(event_id):
         and owner_role.user_id == current_user.id
     )
 
+    return_url = url_for(
+        "projecthub.event_details", event_id=event_id, url=url, text=text
+    )
+
     return render_template_context(
         "projecthub/event/event_details.html",
         event=event,
@@ -540,19 +545,25 @@ def event_details(event_id):
         edit_summary_url=url_for(
             "projecthub.edit_meeting_summary",
             event_id=event_id,
-            url=request.url,
-            text="meeting summary",
+            url=return_url,
+            text="event_details",
         ),
         edit_notes_url=url_for(
             "projecthub.edit_supervision_notes",
             event_id=event_id,
-            url=request.url,
-            text="meeting summary",
+            url=return_url,
+            text="event details",
         ),
         edit_team_url=url_for(
             "projecthub.edit_event_team",
             event_id=event_id,
-            url=request.url,
+            url=return_url,
+            text="event details",
+        ),
+        change_time_url=url_for(
+            "projecthub.change_event_time",
+            event_id=event_id,
+            url=return_url,
             text="event details",
         ),
     )
@@ -876,7 +887,7 @@ def set_regular_meeting_time(role_id):
                 event: SupervisionEvent
                 unit: SubmissionPeriodUnit = event.unit
 
-                unit_start_date = event.unit.start_date
+                unit_start_date = unit.start_date
                 unit_weekday = unit_start_date.isoweekday()
 
                 # find first specified weekday on or after the start date
@@ -988,7 +999,7 @@ def set_mute_role(role_id, value):
 @roles_accepted("faculty", "admin", "root")
 def notify_settings(role_id):
     """
-    Change the regular meeting time for future events belonging to the specified role owner
+    Adjust notification settings associated with a particular SubmissionRole
     """
     role: SubmissionRole = SubmissionRole.query.get_or_404(role_id)
     record: SubmissionRecord = role.submission
@@ -1004,7 +1015,7 @@ def notify_settings(role_id):
 
     if record.retired:
         flash(
-            "It is not possible to set a change notification settings submission roles that have been retired.",
+            "It is not possible to set a change notification settings for submission roles that have been retired.",
             "info",
         )
         return redirect(redirect_url())
@@ -1045,4 +1056,74 @@ def notify_settings(role_id):
         submitter=submitter,
         sd=sd,
         url=url,
+    )
+
+
+@projecthub.route("/change_event_time/<int:event_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def change_event_time(event_id):
+    """
+    Change the meeting time for a specific event
+    """
+    event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
+    unit: SubmissionPeriodUnit = event.unit
+    owner: SubmissionRole = event.owner
+    record: SubmissionRecord = owner.submission
+    submitter: SubmittingStudent = record.owner
+    sd: StudentData = submitter.student
+    period: SubmissionPeriodRecord = record.period
+    config: ProjectClassConfig = period.config
+    pclass: ProjectClass = config.project_class
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+    if url is None:
+        url = redirect_url()
+
+    if record.retired:
+        flash(
+            "It is not possible to set a change time and location for submissions that have been retired.",
+            "info",
+        )
+        return redirect(redirect_url())
+
+    if owner.user_id != current_user.id and not validate_is_convenor(
+        pclass, message=False
+    ):
+        flash(
+            "You are not authorized to change time and location for submissions that have been retired.",
+            "info",
+        )
+        return redirect(redirect_url())
+
+    form = ChangeSupervisionEventDate(obj=event)
+    form.event = event
+    if form.validate_on_submit():
+        try:
+            event.time = form.time.data
+            event.location = form.location.data
+
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash(
+                "Could not update time and location due to a database error. Please contact a system administrator.",
+                "error",
+            )
+
+        return redirect(url)
+
+    return render_template_context(
+        "projecthub/event/change_time.html",
+        form=form,
+        event=event,
+        owner=owner,
+        unit=unit,
+        submitter=submitter,
+        sd=sd,
+        url=url,
+        action_url=url_for(
+            "projecthub.change_event_time", event_id=event_id, url=url, text=text
+        ),
     )

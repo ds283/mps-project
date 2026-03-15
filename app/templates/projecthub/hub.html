@@ -53,9 +53,13 @@
                 {% endif %}
             </div>
         </div>
-        <div class="d-flex flex-row flex-wrap justify-content-start align-items-center w-100 gap-2">
+        <div class="d-flex flex-column flex-wrap justify-content-start align-items-start gap-1">
             {% if event.time %}
-                <div class="text-primary fs-5">{{ event.time.strftime("%A %d %b %Y %H:%M") }}</div>
+                <div class="text-secondary fs-5"><i
+                        class="fas fa-calendar"></i> {{ event.time.strftime("%A %d %b %Y %H:%M") }}</div>
+                {% if event.location %}
+                    <div class="text-muted"><i class="fas fa-map-marker-alt"></i> {{ event.location }}</div>
+                {% endif %}
             {% endif %}
         </div>
         {% if my_role is none or (my_role is not none and my_role.id != event.owner_id) %}
@@ -67,16 +71,18 @@
                 {% endfor %}
             </div>
         {% endif %}
-        <div class="d-flex flex-row flex-wrap w-100 justify-content-start align-items-baseline gap-3">
+        <div class="d-flex flex-row flex-wrap w-100 justify-content-start align-items-baseline gap-2">
             {% if show_attendance and event_type in ['past', 'current'] and event.monitor_attendance %}
                 <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline gap-2">
                     {% if event.attendance is none %}
-                        <div class="text-danger"><i class="fas fa-exclamation-circle"></i> Attendance not recorded</div>
+                        <div class="text-danger fw-semibold"><i class="fas fa-exclamation-circle"></i> Attendance not
+                            recorded
+                        </div>
                         {% if hub_role.is_admin or hub_role.is_supervisor or hub_role.is_convenor %}
                             {{ attendance_dropdown(event) }}
                         {% endif %}
                     {% else %}
-                        <div class="text-success"><i class="fas fa-user-check me-2"></i>
+                        <div class="text-success fw-semibold"><i class="fas fa-user-check me-2"></i>
                             Attendance: {{ event.attendance_str }}</div>
                         {% if hub_role.is_admin or hub_role.is_supervisor or hub_role.is_convenor %}
                             {{ attendance_dropdown(event) }}
@@ -84,7 +90,12 @@
                     {% endif %}
                 </div>
             {% endif %}
-            <a class="btn btn-sm btn-outline-primary"
+            {% if hub_role.is_admin or hub_rule.is_supervisor or hub_role.is_convenor %}
+                <a class="btn btn-sm btn-outline-secondary"
+                   href="{{ url_for('projecthub.change_event_time', event_id=event.id, url=return_url, text=return_text) }}">Change
+                    time&hellip;</a>
+            {% endif %}
+            <a class="btn btn-sm btn-primary"
                href="{{ url_for('projecthub.event_details', event_id=event.id, url=return_url, text=return_text) }}">Show
                 details&hellip;</a>
         </div>

@@ -7,6 +7,8 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from datetime import date, datetime
+
 from flask_security import Form
 from flask_security.forms import Form
 from wtforms import (
@@ -17,10 +19,16 @@ from wtforms import (
     SubmitField,
     TextAreaField,
 )
-from wtforms.validators import InputRequired, Length, Optional
+from wtforms.validators import InputRequired, Length, Optional, ValidationError
 from wtforms_alchemy import QuerySelectField, QuerySelectMultipleField
 
-from ..models import DEFAULT_STRING_LENGTH, SubmissionRecord, SubmissionRole
+from ..models import (
+    DEFAULT_STRING_LENGTH,
+    SubmissionPeriodUnit,
+    SubmissionRecord,
+    SubmissionRole,
+    SupervisionEvent,
+)
 from ..shared.forms.mixins import SaveChangesMixin
 
 
@@ -200,4 +208,35 @@ class SetSubmissionRoleNotificationPreferencesForm(Form, SaveChangesMixin):
         "Include this student in reminder emails",
         description="Select to include this student in periodic reminder email (if attendance data is still to be recorded)",
         default=True,
+    )
+
+
+class ChangeSupervisionEventDate(Form, SaveChangesMixin):
+    time = DateTimeField(
+        "New time of event",
+        format="%d/%m/%Y %H:%M",
+        description="Enter the new time and date for this event.",
+    )
+
+    @staticmethod
+    def validate_time(form, field):
+        event: SupervisionEvent = form.event
+        unit: SubmissionPeriodUnit = event.unit
+
+        entered_time: datetime = field.data
+        entered_date: date = entered_time.date()
+
+        if entered_date < unit.start_date:
+            raise ValidationError(
+                f'The scheduled start time must be on or after the start date {unit.start_date.strftime("%d/%m/%Y")} of the unit "{unit.name}"'
+            )
+
+        if entered_date > unit.end_date:
+            raise ValidationError(
+                f'The scheduled end time must be on or before the end date {unit.end_date.strftime("%d/%m/%Y")} of the unit "{unit.name}"'
+            )
+
+    location = StringField(
+        "Meeting location",
+        validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
     )

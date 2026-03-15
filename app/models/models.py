@@ -8978,6 +8978,8 @@ class SupervisionEvent(
         backref=db.backref("events", lazy="dynamic"),
     )
 
+    ## EVENT PROPERTIES
+
     # name of this event
     name = db.Column(
         db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False
@@ -8985,6 +8987,11 @@ class SupervisionEvent(
 
     # time of event
     time = db.Column(db.DateTime(), nullable=True)
+
+    # location of event
+    location = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
+    )
 
     ## ATTENDEES AND TEAM
 

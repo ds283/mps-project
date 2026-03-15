@@ -72,7 +72,7 @@ def register_attendance_tasks(celery):
                     SubmissionPeriodRecord.feedback_open.is_(False),
                     SubmissionPeriodRecord.closed.is_(False),
                     SupervisionEvent.mute.is_(False),
-                    SupervisionEvent.prompt_sent.is_(None),
+                    SupervisionEvent.prompt_sent_timestamp.is_(None),
                     SubmissionRole.mute.is_(False),
                     SubmissionRole.prompt_after_event.is_(True),
                 )
@@ -178,7 +178,7 @@ def register_attendance_tasks(celery):
             )
             raise Ignore()
 
-        if owner.prompt_sent is not None:
+        if event.prompt_sent_timestamp is not None:
             self.update_state(
                 state=states.IGNORED,
                 meta={"msg": f"SubmissionRole #{owner.id} has already been notified"},
@@ -312,7 +312,7 @@ def register_attendance_tasks(celery):
             raise self.retry()
 
         now = datetime.now()
-        event.prompt_sent = now
+        event.prompt_sent_timestamp = now
 
         if "key" not in result_data:
             print(

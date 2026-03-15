@@ -11,6 +11,7 @@ from datetime import datetime, time, timedelta
 from typing import List
 
 import holidays
+import humanize
 from celery import chain, group, states
 from celery.exceptions import Ignore
 from flask import current_app, url_for
@@ -246,8 +247,8 @@ def register_attendance_tasks(celery):
         # had notifications muted, and has now unmuted them.
         # They won't want to be deluged with prompts for past events.
         # So should send only if the target time passed recently.
-        delta: timedelta = now - target_time
-        if delta.days > 5:
+        delta_time: timedelta = now - target_time
+        if delta_time.days > 5:
             self.update_state(
                 state=states.IGNORED,
                 meta={"msg": f"Event #{event_id} is too old to send a prompt"},
@@ -284,6 +285,14 @@ def register_attendance_tasks(celery):
             value=SupervisionEvent.ATTENDANCE_NO_SHOW_UNNOTIFIED,
         )
 
+        human_start_time: str
+        if delta_time.days == 0:
+            human_start_time = f"today at {target_time.strftime('%H:%M')}"
+        elif delta_time.days == -1:
+            human_start_time = f"yesterday at {target_time.strftime('%H:%M')}"
+        else:
+            human_start_time = f"on {target_time.strftime('%A %d %B')} at {target_time.strftime('%H:%M')}"
+
         msg = EmailTemplate.apply_(
             template_type=EmailTemplate.ATTENDANCE_PROMPT,
             to=[owner_user.email],
@@ -293,6 +302,7 @@ def register_attendance_tasks(celery):
                 "user": owner_user,
                 "sd": sd,
                 "pclass": config.project_class,
+                "human_start_time": human_start_time,
                 "projecthub_url": project_hub_url,
                 "attendance_OK_api_url": attendance_OK_api_url,
                 "attendance_notified_api_url": attendance_notified_api_url,

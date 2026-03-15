@@ -8,21 +8,22 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from wtforms import TimeField
 from wtforms_alchemy import GroupedQuerySelectMultipleField, QuerySelectMultipleField
 
 
 class GroupedTagSelectField(GroupedQuerySelectMultipleField):
     def __init__(
-            self,
-            label=None,
-            validators=None,
-            query_factory=None,
-            get_pk=None,
-            get_label=None,
-            get_group=None,
-            blank_text="",
-            default=None,
-            **kwargs,
+        self,
+        label=None,
+        validators=None,
+        query_factory=None,
+        get_pk=None,
+        get_label=None,
+        get_group=None,
+        blank_text="",
+        default=None,
+        **kwargs,
     ):
         super().__init__(
             label=label,
@@ -93,15 +94,15 @@ class GroupedTagSelectField(GroupedQuerySelectMultipleField):
 
 class BasicTagSelectField(QuerySelectMultipleField):
     def __init__(
-            self,
-            label=None,
-            validators=None,
-            query_factory=None,
-            get_pk=None,
-            get_label=None,
-            blank_text="",
-            default=None,
-            **kwargs,
+        self,
+        label=None,
+        validators=None,
+        query_factory=None,
+        get_pk=None,
+        get_label=None,
+        blank_text="",
+        default=None,
+        **kwargs,
     ):
         super().__init__(
             label=label,
@@ -161,3 +162,18 @@ class BasicTagSelectField(QuerySelectMultipleField):
 
         for pk, obj in self._get_object_list():
             yield (pk, self.get_label(obj), obj in matched, {})
+
+
+class NullableTimeField(TimeField):
+    def __init__(self, label=None, validators=None, format="%H:%M", **kwargs):
+        super().__init__(label, validators, format, **kwargs)
+
+    # basic TimeField fails validation if the input is blank, even if it is specified as optional
+    # the reason is that a blank field returns a list with an empty string [''] in valuelist,
+    # which isn't noticed as being blank
+    def process_formdata(self, valuelist):
+        valuelist = [x for x in valuelist if len(x) > 0]
+        if len(valuelist) == 0:
+            valuelist = None
+
+        return super().process_formdata(valuelist)

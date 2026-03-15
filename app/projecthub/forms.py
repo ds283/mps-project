@@ -18,6 +18,7 @@ from wtforms import (
     StringField,
     SubmitField,
     TextAreaField,
+    TimeField,
 )
 from wtforms.validators import InputRequired, Length, Optional, ValidationError
 from wtforms_alchemy import QuerySelectField, QuerySelectMultipleField
@@ -30,6 +31,8 @@ from ..models import (
     SupervisionEvent,
 )
 from ..shared.forms.mixins import SaveChangesMixin
+from ..shared.forms.widgets import NullableTimeField
+from ..shared.forms.wtf_validators import NotOptionalIf, OptionalIf
 
 
 class FormattedArticleForm(Form):
@@ -170,7 +173,7 @@ class SetRegularMeetingTimesForm(Form, SaveChangesMixin):
         coerce=int,
     )
 
-    start_time = DateTimeField(
+    start_time = TimeField(
         "Meeting start time",
         format="%H:%M",
         description="Select the start time for your regular meeting.",
@@ -193,9 +196,10 @@ class SetSubmissionRoleNotificationPreferencesForm(Form, SaveChangesMixin):
         description="If set, an email will be sent on the day of the event at the time specified below. If not set, an email will be sent ",
     )
 
-    prompt_at_time = DateTimeField(
+    prompt_at_time = NullableTimeField(
         "Time to send email prompt",
         format="%H:%M",
+        validators=[NotOptionalIf(prompt_at_fixed_time)],
     )
 
     prompt_delay = SelectField(

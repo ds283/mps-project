@@ -9,12 +9,12 @@
 #
 
 from flask import (
-    render_template_string,
+    current_app,
     get_template_attribute,
     render_template,
-    current_app,
+    render_template_string,
 )
-from jinja2 import Template, Environment
+from jinja2 import Environment, Template
 
 # language=jinja2
 _menu = """
@@ -36,12 +36,20 @@ _menu = """
 
         {% if programme.active %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_degree_programme', id=programme.id) }}">
-                <i class="fas fa-wrench fa-fw"></i> Make inactive
+
+< i
+
+
+class ="fas fa-times-circle fa-fw" > < / i > Make inactive
             </a>
         {% else %}
             {% if programme.available %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_degree_programme', id=programme.id) }}">
-                    <i class="fas fa-wrench fa-fw"></i> Make active
+
+< i
+
+
+class ="fas fa-check-circle fa-fw" > < / i > Make active
                 </a>
             {% else %}
                 <a class="dropdown-item d-flex gap-2 disabled">

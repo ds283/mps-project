@@ -8,8 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, get_template_attribute, render_template, current_app
-from jinja2 import Template, Environment
+from flask import current_app, get_template_attribute, jsonify, render_template
+from jinja2 import Environment, Template
 
 # language=jinja2
 _programmes = """
@@ -42,12 +42,20 @@ _menu = """
 
         {% if pcl.active %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_pclass', id=pcl.id) }}">
-                <i class="fas fa-wrench fa-fw"></i> Make inactive
+
+< i
+
+
+class ="fas fa-times-circle fa-fw" > < / i > Make inactive
             </a>
         {% else %}
             {% if pcl.available %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_pclass', id=pcl.id) }}">
-                    <i class="fas fa-wrench fa-fw"></i> Make active
+
+< i
+
+
+class ="fas fa-check-circle fa-fw" > < / i > Make active
                 </a>
             {% else %}
                 <a class="dropdown-item d-flex gap-2 disabled">

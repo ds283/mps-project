@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify
-
+from flask import jsonify, render_template_string
 
 # language=jinja2
 _scheduled_menu_template = """
@@ -26,11 +25,19 @@ _scheduled_menu_template = """
             </a>
             {% if task.enabled %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_scheduled_task', id=task.id) }}">
-                    <i class="fas fa-wrench fa-fw"></i> Make inactive
+
+< i
+
+
+class ="fas fa-times-circle fa-fw" > < / i > Make inactive
                 </a>
             {% else %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_scheduled_task', id=task.id) }}">
-                    <i class="fas fa-wrench fa-fw"></i> Make active
+
+< i
+
+
+class ="fas fa-check-circle fa-fw" > < / i > Make active
                 </a>
             {% endif %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.launch_scheduled_task', id=task.id) }}">

@@ -8,8 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import get_template_attribute, current_app, render_template
-from jinja2 import Template, Environment
+from flask import current_app, get_template_attribute, render_template
+from jinja2 import Environment, Template
 
 # language=jinja2
 _menu = """
@@ -24,11 +24,19 @@ _menu = """
 
         {% if group.active %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_group', id=group.id) }}">
-                <i class="fas fa-wrench fa-fw"></i> Make inactive
+
+< i
+
+
+class ="fas fa-times-circle fa-fw" > < / i > Make inactive
             </a>
         {% else %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_group', id=group.id) }}">
-                <i class="fas fa-wrench fa-fw"></i> Make active
+
+< i
+
+
+class ="fas fa-check-circle fa-fw" > < / i > Make active
             </a>
         {% endif %}
     </div>

@@ -11,18 +11,18 @@
 from typing import Optional
 
 from flask import current_app, get_template_attribute, render_template
-from jinja2 import Template, Environment
+from jinja2 import Environment, Template
 from sqlalchemy import Row
 
 from ...database import db
 from ...models import (
     EnrollmentRecord,
-    ProjectDescription,
-    User,
     ProjectClassConfig,
+    ProjectDescLikeList,
+    ProjectDescription,
     ProjectLike,
     ProjectLikeList,
-    ProjectDescLikeList,
+    User,
 )
 
 # language=jinja2
@@ -295,11 +295,19 @@ _faculty_menu = """
 
         {% if project.active %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.deactivate_project', id=project.id) }}">
-                <i class="fas fa-wrench fa-fw"></i> Make inactive
+
+< i
+
+
+class ="fas fa-times-circle fa-fw" > < / i > Make inactive
             </a>
         {% else %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.activate_project', id=project.id) }}">
-                <i class="fas fa-wrench fa-fw"></i> Make active
+
+< i
+
+
+class ="fas fa-check-circle fa-fw" > < / i > Make active
             </a>
         {% endif %}
         {% if project.is_deletable %}
@@ -375,11 +383,19 @@ _convenor_menu = """
 
         {% if project.active %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deactivate_project', id=project.id, pclass_id=pclass_id) }}">
-                <i class="fas fa-wrench fa-fw"></i> Make inactive
+
+< i
+
+
+class ="fas fa-times-circle fa-fw" > < / i > Make inactive
             </a>
         {% else %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.activate_project', id=project.id, pclass_id=pclass_id) }}">
-                <i class="fas fa-wrench fa-fw"></i> Make active
+
+< i
+
+
+class ="fas fa-check-circle fa-fw" > < / i > Make active
             </a>
         {% endif %}
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.duplicate_project', id=project.id, pclass_id=pclass_id) }}">
@@ -424,11 +440,19 @@ _unofferable_menu = """
 
         {% if project.active %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deactivate_project', id=project.id, pclass_id=0) }}">
-                <i class="fas fa-wrench fa-fw"></i> Make inactive
+
+< i
+
+
+class ="fas fa-times-circle fa-fw" > < / i > Make inactive
             </a>
         {% else %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.activate_project', id=project.id, pclass_id=0) }}">
-                <i class="fas fa-wrench fa-fw"></i> Make active
+
+< i
+
+
+class ="fas fa-check-circle fa-fw" > < / i > Make active
             </a>
         {% endif %}
     </div>

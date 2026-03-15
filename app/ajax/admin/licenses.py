@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, get_template_attribute
+from flask import get_template_attribute, jsonify, render_template_string
 
 # language=jinja2
 _name = """
@@ -81,11 +81,19 @@ _menu = """
 
         {% if l.active %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_license', lid=l.id) }}">
-                <i class="fas fa-wrench fa-fw"></i> Make inactive
+
+< i
+
+
+class ="fas fa-times-circle fa-fw" > < / i > Make inactive
             </a>
         {% else %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_license', lid=l.id) }}">
-                <i class="fas fa-wrench fa-fw"></i> Make active
+
+< i
+
+
+class ="fas fa-check-circle fa-fw" > < / i > Make active
             </a>
         {% endif %}
     </div>

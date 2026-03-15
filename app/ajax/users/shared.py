@@ -9,7 +9,7 @@
 #
 
 from flask import current_app
-from jinja2 import Template, Environment
+from jinja2 import Environment, Template
 
 # language=jinja2
 _name = """
@@ -114,11 +114,19 @@ _menu = """
         {% set disabled = (user.username == cuser.username or user_is_admin or user_is_root) %}
         {% if user.is_active %}
             <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if user.username != cuser.username or user.has_role('admin') or user.has_role('sysadmin') %}href="{{ url_for('manage_users.deactivate_user', id=user.id) }}"{% endif %}>
-                <i class="fas fa-wrench fa-fw"></i> Make inactive
+
+< i
+
+
+class ="fas fa-times-circle fa-fw" > < / i > Make inactive
             </a>
         {% else %}
             <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" href="{{ url_for('manage_users.activate_user', id=user.id) }}">
-                <i class="fas fa-wrench fa-fw"></i> Make active
+
+< i
+
+
+class ="fas fa-check-circle fa-fw" > < / i > Make active
             </a>
         {% endif %}
 

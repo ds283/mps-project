@@ -130,16 +130,28 @@ _email_template_menu = """
         {% if t.active %}
             {% if t.tenant_id is none and t.pclass_id is none %}
                 <a class="dropdown-item d-flex gap-2 disabled" title="The global fallback template must always be active">
-                    <i class="fas fa-times-circle fa-fw"></i> Deactivate
+
+< i
+
+
+class ="fas fa-times-circle fa-fw" > < / i > Make inactive
                 </a>
             {% else %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_email_template', id=t.id) }}">
-                    <i class="fas fa-times-circle fa-fw"></i> Deactivate
+
+< i
+
+
+class ="fas fa-times-circle fa-fw" > < / i > Make inactive
                 </a>
             {% endif %}
         {% else %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_email_template', id=t.id) }}">
-                <i class="fas fa-check-circle fa-fw"></i> Activate
+
+< i
+
+
+class ="fas fa-check-circle fa-fw" > < / i > Make active
             </a>
         {% endif %}
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.duplicate_email_template', id=t.id) }}">

@@ -7,15 +7,19 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-from flask import current_app, jsonify
+
+from flask import current_app, jsonify, url_for
 from sqlalchemy.exc import SQLAlchemyError
 
+from .. import render_template_context
 from ..database import db
 from ..models import (
+    StudentData,
     SubmissionRecord,
     SubmissionRole,
     SubmittingStudent,
     SupervisionEvent,
+    User,
 )
 from . import api
 
@@ -25,24 +29,55 @@ from . import api
 )
 def set_event_attendance(event_id, owner_id, record_id, submitter_id, value):
     event: SupervisionEvent = SupervisionEvent.query.get_or_404(event_id)
+    record: SubmissionRecord = event.sub_record
+    owner: SubmissionRole = event.owner
+    submitter: SubmittingStudent = record.owner
+    sd: StudentData = submitter.student
+    suser: User = sd.user
+
+    homepage_url = url_for("home.homepage")
+    project_page_url = url_for("projecthub.hub", subid=record.id)
+    event_page_url = url_for(
+        "projecthub.event_details",
+        event_id=event_id,
+        url=project_page_url,
+        text=f"project page for {suser.name}",
+    )
 
     # check that the other supplied values are valid
     # TODO: would prefer to secure this endpoint with an API key and possibly a
     #  security token, but for now we will accept
-    record: SubmissionRecord = event.sub_record
     if record.id != record_id:
-        return jsonify({})
+        return render_template_context(
+            "api/attendance/error.html",
+            homepage_url=homepage_url,
+            project_page_url=project_page_url,
+            event_page_url=event_page_url,
+        )
 
-    owner: SubmissionRole = event.owner
     if owner.id != owner_id:
-        return jsonify({})
+        return render_template_context(
+            "api/attendance/error.html",
+            homepage_url=homepage_url,
+            project_page_url=project_page_url,
+            event_page_url=event_page_url,
+        )
 
-    submitter: SubmittingStudent = record.owner
     if submitter.id != submitter_id:
-        return jsonify({})
+        return render_template_context(
+            "api/attendance/error.html",
+            homepage_url=homepage_url,
+            project_page_url=project_page_url,
+            event_page_url=event_page_url,
+        )
 
     if not SupervisionEvent.attendance_valid(value):
-        return jsonify({"state": "failure", "msg": "invalid attendance value"})
+        return render_template_context(
+            "api/attendance/error.html",
+            homepage_url=homepage_url,
+            project_page_url=project_page_url,
+            event_page_url=event_page_url,
+        )
 
     try:
         event.attendance = value
@@ -52,4 +87,9 @@ def set_event_attendance(event_id, owner_id, record_id, submitter_id, value):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         return jsonify({"state": "failure", "msg": "database error was detected"})
 
-    return jsonify({"state": "success"})
+    return render_template_context(
+        "api/attendance/thankyou.html",
+        homepage_url=homepage_url,
+        project_page_url=project_page_url,
+        event_page_url=event_page_url,
+    )

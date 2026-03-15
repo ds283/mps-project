@@ -1,0 +1,28 @@
+{% extends "base_app.html" %}
+
+{% block title %}
+    Could not set attendance for this event
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="text-center fs-2 text-danger"><i class="fas fa-exclamation-circle"></i></div>
+            <div class="text-center fs-3 text-danger fw-semibold">We weren't able to set attendance data for this
+                student.
+            </div>
+            <div class="mt-5 text-center text-secondary fs-5">
+                You can set attendance manually from the
+                <a class="link-primary text-decoration=none" href="{{ event_page_url }}">event page</a>
+                for this meeting.
+            </div>
+            <div class="mt-5 d-flex flex-row justify-content-center gap-3 align-items-center text-muted">
+                <span>Go to <a class="link-primary text-decoration-none" href="{{ homepage_url }}">homepage</a></span>
+                <span>|</span>
+                <span>Go to <a class="link-primary text-decoration-none" href="{{ project_page_url }}">project page</a></span>
+            </div>
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

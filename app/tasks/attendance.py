@@ -7,7 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
-from datetime import date, datetime, time, timedelta
+from datetime import datetime, time, timedelta
 from typing import List
 
 import holidays
@@ -67,14 +67,15 @@ def register_attendance_tasks(celery):
                     ProjectClassConfig.id == SubmittingStudent.config_id,
                 )
                 .filter(
-                    ProjectClassConfig.year == year,
-                    SubmittingStudent.retired.is_(False),
-                    SubmissionPeriodRecord.feedback_open.is_(False),
-                    SubmissionPeriodRecord.closed.is_(False),
+                    SupervisionEvent.attendance.is_(None),
                     SupervisionEvent.mute.is_(False),
                     SupervisionEvent.prompt_sent_timestamp.is_(None),
+                    SubmissionPeriodRecord.feedback_open.is_(False),
+                    SubmissionPeriodRecord.closed.is_(False),
                     SubmissionRole.mute.is_(False),
                     SubmissionRole.prompt_after_event.is_(True),
+                    SubmittingStudent.retired.is_(False),
+                    ProjectClassConfig.year == year,
                 )
                 .all()
             )
@@ -152,6 +153,14 @@ def register_attendance_tasks(celery):
                 },
             )
             raise Ignore()
+
+        if event.attendance is not None:
+            self.update_state(
+                state=states.IGNORED,
+                meta={
+                    "msg": f"Event #{event_id} already has attendance recorded"
+                },
+            )
 
         if event.mute:
             self.update_state(

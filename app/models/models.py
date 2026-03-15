@@ -9121,6 +9121,14 @@ class SupervisionEvent(
         )
         return start_time
 
+    def is_in_past(self, now: datetime = None) -> bool:
+        if now is None:
+            now = datetime.now()
+
+        start_time = self.get_start_time()
+
+        return start_time < now
+
 
 class EnrollmentRecord(db.Model, EditingMetadataMixin):
     """

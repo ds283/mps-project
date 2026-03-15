@@ -195,6 +195,7 @@ def hub(subid):
         "projecthub/hub.html",
         text=text,
         url=url,
+        now=datetime.now(),
         submitter=submitter,
         student=student,
         config=config,

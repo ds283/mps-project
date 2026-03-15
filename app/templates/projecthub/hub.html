@@ -73,7 +73,7 @@
                     {% endif %}
                 </div>
             {% endif %}
-            {% if hub_role.is_admin or hub_rule.is_supervisor or hub_role.is_convenor %}
+            {% if (now is defined and now is not none and not event.is_in_past(now)) and (hub_role.is_admin or hub_rule.is_supervisor or hub_role.is_convenor) %}
                 <a class="btn btn-sm btn-outline-secondary"
                    href="{{ url_for('projecthub.change_event_time', event_id=event.id, url=return_url, text=return_text) }}">Change
                     time&hellip;</a>

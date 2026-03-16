@@ -127,12 +127,12 @@ def register_attendance_tasks(celery):
 
         # REMOVE LATER
         # restrict emails to just user #1
-        if owner.user_id != 1:
-            self.update_state(
-                state=states.IGNORED,
-                meta={"msg": f"SubmissionRole #{owner.id} is currently being ignored"},
-            )
-            raise Ignore()
+        # if owner.user_id != 1:
+        #     self.update_state(
+        #         state=states.IGNORED,
+        #         meta={"msg": f"SubmissionRole #{owner.id} is currently being ignored"},
+        #     )
+        #     raise Ignore()
 
         if config.year != year:
             self.update_state(
@@ -236,22 +236,22 @@ def register_attendance_tasks(celery):
         # as a holiday calendar (it wants an array-like of datetime)
 
         # is today a UK holiday?
-        # if today in holiday_calendar:
-        #     self.update_state(
-        #         state=states.IGNORED,
-        #         meta={"msg": f"Today ({today}) is a UK holiday, so not sending emails"},
-        #     )
-        #     raise Ignore()
+        if today in holiday_calendar:
+            self.update_state(
+                state=states.IGNORED,
+                meta={"msg": f"Today ({today}) is a UK holiday, so not sending emails"},
+            )
+            raise Ignore()
 
         # is today a working day?
-        # if not is_busday(today):
-        #     self.update_state(
-        #         state=states.IGNORED,
-        #         meta={
-        #             "msg": f"Today ({today}) is not a working day, so not sending emails"
-        #         },
-        #     )
-        #     raise Ignore()
+        if not is_busday(today):
+            self.update_state(
+                state=states.IGNORED,
+                meta={
+                    "msg": f"Today ({today}) is not a working day, so not sending emails"
+                },
+            )
+            raise Ignore()
 
         # if the event took place more than a few days ago, then probably the owner previously
         # had notifications muted, and has now unmuted them.

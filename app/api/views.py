@@ -161,7 +161,7 @@ def mute_event(event_id, owner_id, record_id):
 
 
 @api.route("/mute_role/<int:role_id>/<int:record_id>")
-def mute_event(role_id, record_id):
+def mute_role(role_id, record_id):
     role: SubmissionRole = SubmissionRole.query.get_or_404(role_id)
     record: SubmissionRecord = role.submission
     submitter: SubmittingStudent = record.owner

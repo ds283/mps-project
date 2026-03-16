@@ -18,3 +18,5 @@ CELERY_ACCEPT_CONTENT = ["json", "pickle"]
 CELERY_CREATE_MISSING_QUEUES = True
 CELERY_DEFAULT_QUEUE = "default"
 CELERY_ROUTES = {"app.task.ping.ping": {"queue": "priority"}}
+
+CELERY_UNLOCK_MAX_RETRIES = 100

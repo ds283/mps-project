@@ -9079,7 +9079,7 @@ class SupervisionEvent(
     ## PROMPTS AND REMINDERES
 
     # mute notifications for this event?
-    mute = db.Column(db.Boolean(), default=False, nullable=True)
+    mute = db.Column(db.Boolean(), default=False, nullable=False)
 
     # has a prompt been sent for this event?
     prompt_sent_timestamp = db.Column(db.DateTime(), default=None, nullable=True)

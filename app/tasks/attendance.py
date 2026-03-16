@@ -93,6 +93,7 @@ def register_attendance_tasks(celery):
         tasks = group(
             check_event_for_attendance_prompt.si(event.id) for event in events
         )
+        print(f"Generated {len(events)} tasks")
         return self.replace(tasks)
 
     @celery.task(bind=True, default_retry_delay=30)

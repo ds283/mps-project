@@ -24,28 +24,16 @@ _menu = """
         {% if group.active %}
             {% if not group.default %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_project_tag_group', gid=group.id) }}">
-
-< i
-
-
-class ="fas fa-times-circle fa-fw" > < / i > Make inactive
+                    <i class="fas fa-times-circle fa-fw"></i> Make inactive
                 </a>
             {% else %}
                 <a class="dropdown-item d-flex gap-w disabled">
-
-< i
-
-
-class ="fas fa-times-circle fa-fw" > < / i > Make inactive
+                    <i class="fas fa-times-circle fa-fw"></i> Make inactive
                 </a>
             {% endif %}
         {% else %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_project_tag_group', gid=group.id) }}">
-
-< i
-
-
-class ="fas fa-check-circle fa-fw" > < / i > Make active
+                <i class="fas fa-check-circle fa-fw"></i> Make active
             </a>
         {% endif %}
     </div>

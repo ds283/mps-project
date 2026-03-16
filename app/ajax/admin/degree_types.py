@@ -23,19 +23,11 @@ _types_menu = """
 
         {% if type.active %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_degree_type', id=type.id) }}">
-
-< i
-
-
-class ="fas fa-times-circle fa-fw" > < / i > Make inactive
+                <i class="fas fa-times-circle fa-fw"></i> Make inactive
             </a>
         {% else %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_degree_type', id=type.id) }}">
-
-< i
-
-
-class ="fas fa-check-circle fa-fw" > < / i > Make active
+                <i class="fas fa-check-circle fa-fw"></i> Make active
             </a>
         {% endif %}
     </div>

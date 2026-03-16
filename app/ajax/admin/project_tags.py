@@ -24,19 +24,11 @@ _menu = """
         {% if tag.group is not none and tag.group.active %}
             {% if tag.active %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_project_tag', tid=tag.id) }}">
-
-< i
-
-
-class ="fas fa-times-circle fa-fw" > < / i > Make inactive
+                    <i class="fas fa-times-circle fa-fw"></i> Make inactive
                 </a>
             {% else %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_project_tag', tid=tag.id) }}">
-
-< i
-
-
-class ="fas fa-check-circle fa-fw" > < / i > Make active
+                    <i class="fas fa-check-circle fa-fw"></i> Make active
                 </a>
             {% endif %}
         {% else %}

@@ -22,19 +22,11 @@ _menu = """
         </a>
         {% if group.active %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_skill_group', id=group.id) }}">
-
-< i
-
-
-class ="fas fa-times-circle fa-fw" > < / i > Make inactive
+                <i class="fas fa-times-circle fa-fw"></i> Make inactive
             </a>
         {% else %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_skill_group', id=group.id) }}">
-
-< i
-
-
-class ="fas fa-check-circle fa-fw" > < / i > Make active
+                <i class="fas fa-check-circle fa-fw"></i> Make active
             </a>
         {% endif %}
     </div>

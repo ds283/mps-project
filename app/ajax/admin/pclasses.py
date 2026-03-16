@@ -42,20 +42,12 @@ _menu = """
 
         {% if pcl.active %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_pclass', id=pcl.id) }}">
-
-< i
-
-
-class ="fas fa-times-circle fa-fw" > < / i > Make inactive
+                <i class="fas fa-times-circle fa-fw"></i> Make inactive
             </a>
         {% else %}
             {% if pcl.available %}
                 <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_pclass', id=pcl.id) }}">
-
-< i
-
-
-class ="fas fa-check-circle fa-fw" > < / i > Make active
+                    <i class="fas fa-check-circle fa-fw"></i> Make active
                 </a>
             {% else %}
                 <a class="dropdown-item d-flex gap-2 disabled">

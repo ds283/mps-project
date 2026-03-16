@@ -895,7 +895,7 @@ def set_regular_meeting_time(role_id):
                 weekday_shift = (role.regular_meeting_weekday - unit_weekday) % 7
                 target_date = unit_start_date + timedelta(days=weekday_shift)
                 event.time = datetime.combine(
-                    target_date, role.regular_meeting_time.time()
+                    target_date, role.regular_meeting_time
                 )
 
             db.session.commit()

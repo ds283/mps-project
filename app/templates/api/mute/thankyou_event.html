@@ -1,7 +1,7 @@
 {% extends "base_app.html" %}
 
 {% block title %}
-    Attendance for this event has been recorded
+    Notifications for this event have been muted
 {% endblock %}
 
 {% block bodyblock %}
@@ -9,13 +9,10 @@
         <div class="col-1"></div>
         <div class="col-10">
             <div class="text-center fs-2 text-success"><i class="fas fa-check-circle"></i></div>
-            <div class="text-center fs-3 text-success fw-semibold">Thank you for recording attendance data for this
-                session.
+            <div class="text-center fs-3 text-success fw-semibold">Notifications for this event have now been muted.
             </div>
-            <div class="text-center fs-5 text-secondary">This helps us monitor student engagement.</div>
             <div class="mt-5 text-center text-secondary fs-5">
-                Please consider adding a summary of the meeting, or some private supervision
-                notes, using the
+                You can re-enable notifications from the
                 <a class="link-primary text-decoration-none" href="{{ event_page_url }}">event page</a>
                 for this meeting.
             </div>

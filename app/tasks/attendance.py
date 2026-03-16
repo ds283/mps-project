@@ -294,6 +294,17 @@ def register_attendance_tasks(celery):
             submitter_id=sub.id,
             value=SupervisionEvent.ATTENDANCE_NO_SHOW_UNNOTIFIED,
         )
+        mute_event_api_url = url_for(
+            "api.mute_event",
+            event_id=event_id,
+            owner_id=owner.id,
+            record_id=record.id,
+        )
+        mute_role_api_url = url_for(
+            "api.mute_role",
+            event_id=event_id,
+            owner_id=owner.id,
+        )
 
         human_start_time: str
         if delta_time.days == 0:
@@ -317,6 +328,8 @@ def register_attendance_tasks(celery):
                 "attendance_OK_api_url": attendance_OK_api_url,
                 "attendance_notified_api_url": attendance_notified_api_url,
                 "attendance_not_notified_api_url": attendance_not_notified_api_url,
+                "mute_event_api_url": mute_event_api_url,
+                "mute_role_api_url": mute_role_api_url,
             },
         )
 

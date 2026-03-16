@@ -166,7 +166,6 @@ def mute_role(role_id, record_id):
     record: SubmissionRecord = role.submission
     submitter: SubmittingStudent = record.owner
     sd: StudentData = submitter.student
-    suser: User = sd.user
 
     homepage_url = url_for("home.homepage")
     project_page_url = url_for("projecthub.hub", subid=record.id)

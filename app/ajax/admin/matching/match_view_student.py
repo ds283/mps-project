@@ -68,7 +68,7 @@ _details = """
 _project = """
 <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
     {% if recs|length == 1 %}
-{{ project_tag(recs[0], false, 1, url_for('admin.match_student_view', id=recs[0].matching_id) }}
+{{ project_tag(recs[0], false, 1, url_for('admin.match_student_view', id=recs[0].matching_id)) }}
     {% elif recs|length > 1 %}
         {% for r in recs %}
             {{ project_tag(r, true, 1, url_for('admin.match_student_view', id=r.matching_id)) }}

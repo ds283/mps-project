@@ -208,7 +208,7 @@ def register_attendance_tasks(celery):
 
         if owner.prompt_at_fixed_time:
             # event_time is guaranteed to be on a weekday
-            fixed_time: time = owner.prompt_at_fixed_time
+            fixed_time: time = owner.prompt_at_time
             target_time = event_time.replace(
                 hour=fixed_time.hour, minute=fixed_time.minute
             )

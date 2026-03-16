@@ -11,15 +11,20 @@
 from importlib import import_module
 
 import flask_monitoringdashboard as dashboard
-import gunicorn.app.base
 from flask_security import current_user
-from sqlalchemy import text, inspect
+from sqlalchemy import inspect, text
+from waitress import serve
 
-import gunicorn_config
 from app import create_app
 from app.database import db
-from initdb import initial_populate_database, populate_CATS_limits, import_supervisor_data, import_examiner_data, import_attendance_data, \
-    populate_email_templates
+from initdb import (
+    import_attendance_data,
+    import_examiner_data,
+    import_supervisor_data,
+    initial_populate_database,
+    populate_CATS_limits,
+    populate_email_templates,
+)
 
 
 def has_table(inspector, table_name):
@@ -78,7 +83,7 @@ with app.app_context():
         db.session.commit()
         import_supervisor_data(app, initdb_module)
 
-    if getattr(initdb_module, "INITDB_EXAMINER_IMPORT", None)  is not None:
+    if getattr(initdb_module, "INITDB_EXAMINER_IMPORT", None) is not None:
         db.session.commit()
         import_examiner_data(app, initdb_module)
 
@@ -89,20 +94,5 @@ with app.app_context():
         import_attendance_data(app, initdb_module)
 
 
-class StandaloneApplication(gunicorn.app.base.BaseApplication):
-    def __init__(self, app, options=None):
-        self.options = options or {}
-        self.application = app
-        super().__init__()
-
-    def load_config(self):
-        config = {key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None}
-        for key, value in config.items():
-            self.cfg.set(key.lower(), value)
-
-    def load(self):
-        return self.application
-
-
 if __name__ == "__main__":
-    StandaloneApplication(app, gunicorn_config.__dict__).run()
+    serve(app, port=5000)

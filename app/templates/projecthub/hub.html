@@ -39,9 +39,9 @@
 {% macro format_supervision_event(event, event_type='past', show_attendance=true) %}
     {% set unit = event.unit %}
     {% set template = event.template %}
-    <div class="d-flex flex-column justify-content-start align-items-start gap-2">
+    <div class="d-flex flex-column justify-content-start align-items-start w-100 gap-2">
         <div class="d-flex flex-row flex-wrap justify-content-between align-items-center w-100 gap-2">
-            <a class="{% if event_type == 'current' %}fs-5{% else %}fs-4 fw-semibold{% endif %} link-primary text-decoration-none"
+            <a class="fs-4 fw-semibold link-primary text-decoration-none"
                href="{{ url_for('projecthub.event_details', event_id=event.id, url=return_url, text=return_text) }}">
                 <i class="fas fa-users"></i> {{ event.name }}
             </a>
@@ -332,15 +332,13 @@
     {% if current_events|length > 0 %}
         {% set needs_rule = true %}
         {% set unit = current_events[0].unit %}
-        <div class="mt-3 mb-3 card border-primary">
-            <div class="card-body">
-                {{ current_supervision_event_header(unit) }}
-                <hr class="intro-divider">
-                <div class="mt-3 d-flex flex-column justify-content-start align-items-start gap-4">
-                    {% for event in current_events %}
-                        {{ format_supervision_event(event, event_type='current') }}
-                    {% endfor %}
-                </div>
+        <div class="mt-3 mb-3 card card-body border-primary">
+            {{ current_supervision_event_header(unit) }}
+            <hr class="intro-divider">
+            <div class="mt-3 d-flex flex-column justify-content-start align-items-start gap-4 w-100">
+                {% for event in current_events %}
+                    {{ format_supervision_event(event, event_type='current') }}
+                {% endfor %}
             </div>
         </div>
     {% else %}

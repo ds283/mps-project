@@ -897,6 +897,7 @@ def set_regular_meeting_time(role_id):
                 event.time = datetime.combine(
                     target_date, role.regular_meeting_time
                 )
+                event.location = role.regular_meeting_location
 
             db.session.commit()
         except SQLAlchemyError as e:

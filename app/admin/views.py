@@ -14,8 +14,9 @@ from datetime import date, datetime, timedelta
 from functools import partial
 from io import BytesIO
 from itertools import chain as itertools_chain
+from math import pi
 from pathlib import Path
-from typing import List, Dict, Tuple, Iterable, Union
+from typing import Dict, Iterable, List, Tuple, Union
 from urllib.parse import urlsplit
 
 from bokeh.embed import components
@@ -23,184 +24,110 @@ from bokeh.models import Label
 from bokeh.plotting import figure
 from celery import chain, group
 from flask import (
+    abort,
     current_app,
-    redirect,
-    url_for,
     flash,
-    request,
     jsonify,
+    redirect,
+    request,
+    send_file,
     session,
     stream_with_context,
-    abort,
-    send_file,
+    url_for,
 )
 from flask_security import (
-    login_required,
-    roles_required,
-    roles_accepted,
     current_user,
+    login_required,
     login_user,
+    roles_accepted,
+    roles_required,
 )
-from math import pi
 from numpy import histogram
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.sql import cast
-from sqlalchemy.sql import func
+from sqlalchemy.sql import cast, func
 from sqlalchemy.types import String
 from werkzeug.datastructures import Headers
 from werkzeug.wrappers import Response
 
 import app.ajax as ajax
 import app.shared.cloud_object_store.bucket_types as buckets
-from . import admin
-from .actions import estimate_CATS_load, availability_CSV_generator, pair_slots
-from .forms import (
-    GlobalConfigForm,
-    AddResearchGroupForm,
-    EditResearchGroupForm,
-    AddDegreeTypeForm,
-    EditDegreeTypeForm,
-    AddDegreeProgrammeForm,
-    EditDegreeProgrammeForm,
-    AddModuleForm,
-    EditModuleForm,
-    AddTransferableSkillForm,
-    EditTransferableSkillForm,
-    AddSkillGroupForm,
-    EditSkillGroupForm,
-    EditProjectTextForm,
-    AddPeriodDefinitionFormFactory,
-    EditPeriodDefinitionFormFactory,
-    AddSupervisorForm,
-    EditSupervisorForm,
-    EmailLogForm,
-    AddMessageFormFactory,
-    EditMessageFormFactory,
-    ScheduleTypeForm,
-    AddIntervalScheduledTask,
-    AddCrontabScheduledTask,
-    EditIntervalScheduledTask,
-    EditCrontabScheduledTask,
-    EditBackupOptionsForm,
-    BackupManageForm,
-    NewMatchFormFactory,
-    RenameMatchFormFactory,
-    CompareMatchFormFactory,
-    UploadMatchForm,
-    AddPresentationAssessmentFormFactory,
-    EditPresentationAssessmentFormFactory,
-    AddSessionForm,
-    EditSessionForm,
-    AddBuildingForm,
-    EditBuildingForm,
-    AddRoomForm,
-    EditRoomForm,
-    AvailabilityFormFactory,
-    NewScheduleFormFactory,
-    RenameScheduleFormFactory,
-    UploadScheduleForm,
-    AssignmentLimitForm,
-    ImposeConstraintsScheduleFormFactory,
-    LevelSelectorForm,
-    AddFHEQLevelForm,
-    EditFHEQLevelForm,
-    PublicScheduleFormFactory,
-    CompareScheduleFormFactory,
-    AddAssetLicenseForm,
-    EditAssetLicenseForm,
-    AddProjectTagGroupForm,
-    EditProjectTagGroupForm,
-    AddProjectTagForm,
-    EditProjectTagForm,
-    EditSupervisorRolesForm,
-    SelectMatchingYearFormFactory,
-    EditBackupForm,
-    ManualBackupForm,
-    UploadFeedbackAssetForm,
-    EditFeedbackAssetForm,
-    AddFeedbackRecipeForm,
-    EditFeedbackRecipeForm,
-    AddProjectClassFormFactory,
-    EditProjectClassFormFactory,
-    AddEmailTemplateForm,
-    EditEmailTemplateForm,
-)
+
 from ..cache import cache
 from ..database import db
 from ..limiter import limiter
 from ..models import (
-    MainConfig,
-    User,
-    FacultyData,
-    ResearchGroup,
-    DegreeType,
-    DegreeProgramme,
-    SkillGroup,
-    TransferableSkill,
-    ProjectClass,
-    ProjectClassConfig,
-    Supervisor,
-    EmailLog,
-    MessageOfTheDay,
-    DatabaseSchedulerEntry,
-    IntervalSchedule,
-    CrontabSchedule,
-    BackupRecord,
-    TaskRecord,
-    Notification,
-    EnrollmentRecord,
-    MatchingAttempt,
-    MatchingRecord,
-    LiveProject,
-    SubmissionPeriodRecord,
-    SubmissionPeriodDefinition,
-    PresentationAssessment,
-    PresentationSession,
-    Room,
-    Building,
-    ScheduleAttempt,
-    ScheduleSlot,
-    SubmissionRecord,
-    Module,
-    FHEQ_Level,
     AssessorAttendanceData,
-    GeneratedAsset,
-    TemporaryAsset,
-    SubmittedAsset,
     AssetLicense,
-    SubmittedAssetDownloadRecord,
-    GeneratedAssetDownloadRecord,
-    SelectingStudent,
-    EmailNotification,
-    ProjectTagGroup,
-    ProjectTag,
-    SubmitterAttendanceData,
-    MatchingRole,
-    SubmissionAttachment,
-    PeriodAttachment,
     BackupLabel,
-    FeedbackAsset,
-    TemplateTag,
-    FeedbackRecipe,
+    BackupRecord,
+    Building,
+    CrontabSchedule,
+    DatabaseSchedulerEntry,
+    DegreeProgramme,
+    DegreeType,
     DownloadCentreItem,
-    Tenant,
+    EmailLog,
+    EmailNotification,
     EmailTemplate,
     EmailTemplateLabel,
+    EnrollmentRecord,
+    FacultyData,
+    FeedbackAsset,
+    FeedbackRecipe,
+    FHEQ_Level,
+    GeneratedAsset,
+    GeneratedAssetDownloadRecord,
+    IntervalSchedule,
+    LiveProject,
+    MainConfig,
+    MatchingAttempt,
+    MatchingRecord,
+    MatchingRole,
+    MessageOfTheDay,
+    Module,
+    Notification,
+    PeriodAttachment,
+    PresentationAssessment,
+    PresentationSession,
+    ProjectClass,
+    ProjectClassConfig,
+    ProjectTag,
+    ProjectTagGroup,
+    ResearchGroup,
+    Room,
+    ScheduleAttempt,
+    ScheduleSlot,
+    SelectingStudent,
+    SkillGroup,
+    SubmissionAttachment,
+    SubmissionPeriodDefinition,
+    SubmissionPeriodRecord,
+    SubmissionRecord,
+    SubmittedAsset,
+    SubmittedAssetDownloadRecord,
+    SubmitterAttendanceData,
+    Supervisor,
+    TaskRecord,
+    TemplateTag,
+    TemporaryAsset,
+    Tenant,
+    TransferableSkill,
+    User,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
-    get_backup_config,
-    set_backup_config,
     compute_current_backup_count,
     compute_current_backup_size,
-    remove_backup,
     create_new_backup_labels,
+    get_backup_config,
+    remove_backup,
+    set_backup_config,
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.context.matching import (
-    get_ready_to_match_data,
     get_matching_dashboard_data,
+    get_ready_to_match_data,
 )
 from ..shared.context.rollover import get_rollover_data
 from ..shared.conversions import is_integer
@@ -210,22 +137,95 @@ from ..shared.internal_redis import get_redis
 from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import (
-    get_current_year,
-    home_dashboard,
     get_automatch_pclasses,
-    redirect_url,
+    get_current_year,
     get_main_config,
+    home_dashboard,
     home_dashboard_url,
+    redirect_url,
 )
 from ..shared.validators import (
+    validate_assessment,
     validate_is_admin_or_convenor,
     validate_match_inspector,
-    validate_using_assessment,
-    validate_assessment,
     validate_schedule_inspector,
+    validate_using_assessment,
 )
-from ..task_queue import register_task, progress_update
-from ..tools import ServerSideSQLHandler, ServerSideInMemoryHandler
+from ..task_queue import progress_update, register_task
+from ..tools import ServerSideInMemoryHandler, ServerSideSQLHandler
+from . import admin
+from .actions import availability_CSV_generator, estimate_CATS_load, pair_slots
+from .forms import (
+    AddAssetLicenseForm,
+    AddBuildingForm,
+    AddCrontabScheduledTask,
+    AddDegreeProgrammeForm,
+    AddDegreeTypeForm,
+    AddEmailTemplateForm,
+    AddFeedbackRecipeForm,
+    AddFHEQLevelForm,
+    AddIntervalScheduledTask,
+    AddMessageFormFactory,
+    AddModuleForm,
+    AddPeriodDefinitionFormFactory,
+    AddPresentationAssessmentFormFactory,
+    AddProjectClassFormFactory,
+    AddProjectTagForm,
+    AddProjectTagGroupForm,
+    AddResearchGroupForm,
+    AddRoomForm,
+    AddSessionForm,
+    AddSkillGroupForm,
+    AddSupervisorForm,
+    AddTransferableSkillForm,
+    AssignmentLimitForm,
+    AvailabilityFormFactory,
+    BackupManageForm,
+    CompareMatchFormFactory,
+    CompareScheduleFormFactory,
+    EditAssetLicenseForm,
+    EditBackupForm,
+    EditBackupOptionsForm,
+    EditBuildingForm,
+    EditCrontabScheduledTask,
+    EditDegreeProgrammeForm,
+    EditDegreeTypeForm,
+    EditEmailTemplateForm,
+    EditFeedbackAssetForm,
+    EditFeedbackRecipeForm,
+    EditFHEQLevelForm,
+    EditIntervalScheduledTask,
+    EditMessageFormFactory,
+    EditModuleForm,
+    EditPeriodDefinitionFormFactory,
+    EditPresentationAssessmentFormFactory,
+    EditProjectClassFormFactory,
+    EditProjectTagForm,
+    EditProjectTagGroupForm,
+    EditProjectTextForm,
+    EditResearchGroupForm,
+    EditRoomForm,
+    EditSessionForm,
+    EditSkillGroupForm,
+    EditSupervisorForm,
+    EditSupervisorRolesForm,
+    EditTransferableSkillForm,
+    EmailLogForm,
+    GlobalConfigForm,
+    ImposeConstraintsScheduleFormFactory,
+    LevelSelectorForm,
+    ManualBackupForm,
+    NewMatchFormFactory,
+    NewScheduleFormFactory,
+    PublicScheduleFormFactory,
+    RenameMatchFormFactory,
+    RenameScheduleFormFactory,
+    ScheduleTypeForm,
+    SelectMatchingYearFormFactory,
+    UploadFeedbackAssetForm,
+    UploadMatchForm,
+    UploadScheduleForm,
+)
 
 
 @admin.route("/global_config", methods=["GET", "POST"])
@@ -4992,9 +4992,9 @@ def terminate_background_task(id):
     record = TaskRecord.query.get_or_404(id)
 
     if (
-            record.status == TaskRecord.SUCCESS
-            or record.status == TaskRecord.FAILURE
-            or record.status == TaskRecord.TERMINATED
+        record.status == TaskRecord.SUCCESS
+        or record.status == TaskRecord.FAILURE
+        or record.status == TaskRecord.TERMINATED
     ):
         flash(
             'Could not terminate background task "{name}" because it has finished.'.format(
@@ -5151,9 +5151,9 @@ def manage_matching():
     if flag and requested_year is not None and requested_year in allowed_years:
         selected_year = requested_year
     elif (
-            hasattr(form, "selector")
-            and form.selector.data is not None
-            and form.selector.data in allowed_years
+        hasattr(form, "selector")
+        and form.selector.data is not None
+        and form.selector.data in allowed_years
     ):
         selected_year = form.selector.data
     else:
@@ -5308,8 +5308,8 @@ def create_match():
         #   T/F     True    T/F based on form
         #   absent  False   False
         include_only_submitted = (
-                                     include_control.data if include_control is not None else False
-                                 ) and (base_match.include_only_submitted if base_match is not None else True)
+            include_control.data if include_control is not None else False
+        ) and (base_match.include_only_submitted if base_match is not None else True)
 
         base_bias_control = getattr(form, "base_bias", None)
         force_base_control = getattr(form, "force_base", None)
@@ -6346,12 +6346,12 @@ def do_match_compare_ajax(id1, id2):
 
 
 def _build_match_changes(
-        attempt1: MatchingAttempt,
-        attempt2: MatchingAttempt,
-        diff_filter: str,
-        filter_pclasses: bool,
-        pclass_id_value: int,
-        include_only_common_records: bool = False,
+    attempt1: MatchingAttempt,
+    attempt2: MatchingAttempt,
+    diff_filter: str,
+    filter_pclasses: bool,
+    pclass_id_value: int,
+    include_only_common_records: bool = False,
 ):
     # perform a symmetric comparison between the MatchingRecord instances
     # first, we need to build a dictionary of the MatchingRecord instances in each MatchingAttempt, so that we can
@@ -6423,7 +6423,7 @@ def _build_match_changes(
         RoleDictType = Dict[int, MatchingRole]
 
         def get_role_dict(
-                rec: MatchingRecord, roles: Union[int, List[int]]
+            rec: MatchingRecord, roles: Union[int, List[int]]
         ) -> RoleDictType:
             if not isinstance(roles, list):
                 roles = [roles]
@@ -6451,7 +6451,7 @@ def _build_match_changes(
             return get_role_dict(rec, MatchingRole.ROLE_MODERATOR)
 
         def find_record_changes(
-                rec1: MatchingRecord, rec2: MatchingRecord, diff_filter: str
+            rec1: MatchingRecord, rec2: MatchingRecord, diff_filter: str
         ) -> List[str]:
             # is the project assignment different?
             changes = []
@@ -6516,7 +6516,7 @@ def replace_matching_record(src_id, dest_id):
     dest: MatchingRecord = MatchingRecord.query.get_or_404(dest_id)
 
     if not validate_match_inspector(
-            source.matching_attempt
+        source.matching_attempt
     ) or not validate_match_inspector(dest.matching_attempt):
         return redirect(redirect_url())
 
@@ -6587,7 +6587,7 @@ def insert_matching_record(src_id, attempt_id):
     dest_attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(attempt_id)
 
     if not validate_match_inspector(
-            source_record.matching_attempt
+        source_record.matching_attempt
     ) or not validate_match_inspector(dest_attempt):
         return redirect(redirect_url())
 
@@ -7138,10 +7138,10 @@ def match_student_view_ajax(id):
         return all(f(records) for f in filter_list)
 
     with ServerSideInMemoryHandler(
-            request,
-            base_query,
-            columns,
-            row_filter=row_filter if len(filter_list) > 0 else None,
+        request,
+        base_query,
+        columns,
+        row_filter=row_filter if len(filter_list) > 0 else None,
     ) as handler:
 
         def row_formatter(selectors: List[SelectingStudent]):
@@ -7273,10 +7273,10 @@ def match_faculty_view_ajax(id):
         return all(f(records) for f in filter_list)
 
     with ServerSideInMemoryHandler(
-            request,
-            base_query,
-            columns,
-            row_filter=row_filter if len(filter_list) > 0 else None,
+        request,
+        base_query,
+        columns,
+        row_filter=row_filter if len(filter_list) > 0 else None,
     ) as handler:
 
         def row_formatter(records: List[FacultyData]):
@@ -7388,9 +7388,9 @@ def reassign_match_project(id, pid):
                     )
 
                     if (
-                            enroll_record is not None
-                            and enroll_record.supervisor_state
-                            == EnrollmentRecord.SUPERVISOR_ENROLLED
+                        enroll_record is not None
+                        and enroll_record.supervisor_state
+                        == EnrollmentRecord.SUPERVISOR_ENROLLED
                     ):
                         adjust = True
 
@@ -7522,8 +7522,7 @@ def reassign_supervisor_roles(rec_id):
 
     if record.matching_attempt.selected:
         flash(
-            'Match "{name}" cannot be edited because an administrative user has marked it as '
-            '"selected" for use during rollover of the academic year.'.format(
+            'Match "{name}" cannot be edited because an administrative user has marked it as "selected" for use during rollover of the academic year.'.format(
                 name=record.matching_attempt.name
             ),
             "info",
@@ -7589,10 +7588,10 @@ def reassign_supervisor_roles(rec_id):
                 x.user.faculty_data
                 for x in record.roles
                 if x.role
-                   in [
-                       MatchingRole.ROLE_SUPERVISOR,
-                       MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR,
-                   ]
+                in [
+                    MatchingRole.ROLE_SUPERVISOR,
+                    MatchingRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                ]
             ]
             assign_form.supervisors.data = supv_roles
 
@@ -7977,7 +7976,7 @@ def deselect_match(id):
 
 
 def _validate_match_populate_submitters(
-        record: MatchingAttempt, config: ProjectClassConfig
+    record: MatchingAttempt, config: ProjectClassConfig
 ):
     year = get_current_year()
     if record.year != year:
@@ -8435,9 +8434,9 @@ def initialize_assessment(id):
         return redirect(redirect_url())
 
     if (
-            not assessment.is_valid
-            and assessment.availability_lifecycle
-            < PresentationAssessment.AVAILABILITY_REQUESTED
+        not assessment.is_valid
+        and assessment.availability_lifecycle
+        < PresentationAssessment.AVAILABILITY_REQUESTED
     ):
         flash(
             "Cannot request availability for an invalid assessment. Correct any validation errors before attempting to proceed.",
@@ -8492,9 +8491,9 @@ def initialize_assessment(id):
                 form.availability_deadline.data = date.today() + timedelta(weeks=2)
 
     if (
-            PresentationAssessment.AVAILABILITY_NOT_REQUESTED
-            < assessment.availability_lifecycle
-            < PresentationAssessment.AVAILABILITY_SKIPPED
+        PresentationAssessment.AVAILABILITY_NOT_REQUESTED
+        < assessment.availability_lifecycle
+        < PresentationAssessment.AVAILABILITY_SKIPPED
     ):
         if hasattr(form, "issue_requests"):
             form.issue_requests.label.text = "Save changes"
@@ -8505,11 +8504,11 @@ def initialize_assessment(id):
 
 
 def _do_initialize_assessment(
-        title: str,
-        description: str,
-        assessment_id: int,
-        deadline: datetime,
-        skip_availability: bool,
+    title: str,
+    description: str,
+    assessment_id: int,
+    deadline: datetime,
+    skip_availability: bool,
 ):
     uuid = register_task(title, owner=current_user, description=description)
     celery = current_app.extensions["celery"]
@@ -10338,10 +10337,10 @@ def adjust_assessment_schedule(id):
                 new_name = "{name} #{suffix}".format(name=schedule.name, suffix=suffix)
 
                 if (
-                        ScheduleAttempt.query.filter_by(
-                            name=new_name, owner_id=schedule.owner_id
-                        ).first()
-                        is None
+                    ScheduleAttempt.query.filter_by(
+                        name=new_name, owner_id=schedule.owner_id
+                    ).first()
+                    is None
                 ):
                     break
 
@@ -11020,7 +11019,7 @@ def do_schedule_compare(id1, id2):
         url = redirect_url()
 
     if not validate_schedule_inspector(record1) or not validate_schedule_inspector(
-            record2
+        record2
     ):
         return redirect(url)
 
@@ -11110,7 +11109,7 @@ def do_schedule_compare_ajax(id1, id2):
     record2: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id2)
 
     if not validate_schedule_inspector(record1) or not validate_schedule_inspector(
-            record2
+        record2
     ):
         return jsonify({})
 
@@ -11904,7 +11903,7 @@ def schedule_assign_assessors_ajax(id):
         assessor: AssessorAttendanceData
         # candidate assessors should be available in this slot
         if slot.session.faculty_available(
-                assessor.faculty_id
+            assessor.faculty_id
         ) or slot.session.faculty_ifneeded(assessor.faculty_id):
             is_candidate = True
 
@@ -11912,9 +11911,9 @@ def schedule_assign_assessors_ajax(id):
                 # assessors should also be enrolled for the project class corresponding to this slot
                 enrolment = assessor.faculty.get_enrollment_record(pclass.id)
                 available = (
-                        enrolment is not None
-                        and enrolment.presentations_state
-                        == EnrollmentRecord.PRESENTATIONS_ENROLLED
+                    enrolment is not None
+                    and enrolment.presentations_state
+                    == EnrollmentRecord.PRESENTATIONS_ENROLLED
                 )
 
                 if not available:
@@ -12395,7 +12394,7 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
     target_schedule = ScheduleAttempt.query.get_or_404(target_sched)
 
     if not validate_schedule_inspector(
-            source_schedule
+        source_schedule
     ) or not validate_schedule_inspector(target_schedule):
         return redirect(redirect_url())
 
@@ -13066,8 +13065,8 @@ def upload_schedule(schedule_id):
 
             if extension in (".sol", ".lp", ".mps"):
                 if (
-                        form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED
-                        or form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD
+                    form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED
+                    or form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD
                 ) and extension not in (".lp",):
                     flash(
                         "Solution files for the CBC optimizer must be in .LP format",
@@ -13168,8 +13167,8 @@ def upload_match(match_id):
 
             if extension in (".sol", ".lp", ".mps"):
                 if (
-                        form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED
-                        or form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD
+                    form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED
+                    or form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD
                 ) and extension not in (".lp",):
                     flash(
                         "Solution files for the CBC optimizer must be in .LP format",
@@ -13346,12 +13345,12 @@ def move_selector(sid):
 
         # reject if this student is already a selector for this project class
         if (
-                get_count(
-                    config.selecting_students.filter(
-                        SelectingStudent.student_id == sel.student_id
-                    )
+            get_count(
+                config.selecting_students.filter(
+                    SelectingStudent.student_id == sel.student_id
                 )
-                > 0
+            )
+            > 0
         ):
             continue
 
@@ -13410,12 +13409,12 @@ def do_move_selector(sid, dest_id):
 
     # reject is this student is already selecting for destination
     if (
-            get_count(
-                dest_config.selecting_students.filter(
-                    SelectingStudent.student_id == sel.student_id
-                )
+        get_count(
+            dest_config.selecting_students.filter(
+                SelectingStudent.student_id == sel.student_id
             )
-            > 0
+        )
+        > 0
     ):
         flash(
             'Cannot move selector <i class="fas fa-user-circle"></i> {name} to project class "{pcl}" '

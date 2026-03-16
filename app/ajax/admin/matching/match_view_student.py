@@ -10,11 +10,11 @@
 
 from typing import List
 
-from flask import get_template_attribute, current_app, render_template
-from jinja2 import Template, Environment
+from flask import current_app, get_template_attribute, render_template
+from jinja2 import Environment, Template
 
 from ....database import db
-from ....models import SelectingStudent, StudentData, EmailLog, User
+from ....models import EmailLog, SelectingStudent, StudentData, User
 
 # language=jinja2
 _student = """
@@ -68,7 +68,7 @@ _details = """
 _project = """
 <div class="d-flex flex-column gap-1 justify-content-start align-items-start">
     {% if recs|length == 1 %}
-        {{ project_tag(recs[0], false) }}
+{{ project_tag(recs[0], false, 1, url_for('admin.match_student_view', id=recs[0].matching_id) }}
     {% elif recs|length > 1 %}
         {% for r in recs %}
             {{ project_tag(r, true, 1, url_for('admin.match_student_view', id=r.matching_id)) }}

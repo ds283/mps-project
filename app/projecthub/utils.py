@@ -9,6 +9,7 @@
 #
 from collections import namedtuple
 from math import pi
+from typing import List
 
 from bokeh.embed import components
 from bokeh.models import Label
@@ -34,6 +35,8 @@ DoughnutDiagram = namedtuple("DoughnutDiagram", ["script", "div"])
 class HubRoleMap:
     def __init__(
         self,
+        record: SubmissionRecord,
+        role: SubmissionRole,
         student: bool = False,
         supervisor: bool = False,
         marker: bool = False,
@@ -41,16 +44,15 @@ class HubRoleMap:
         convenor: bool = False,
         admin: bool = False,
     ):
-        self.student = student
-        self.supervisor = supervisor
-        self.marker = marker
-        self.moderator = moderator
-        self.convenor = convenor
-        self.admin = admin
+        self.record: SubmissionRecord = record
+        self.role: SubmissionRole = role
 
-        self._tiles = None
-        self._tile_list = None
-        self._ui_elements = None
+        self.student: bool = student
+        self.supervisor: bool = supervisor
+        self.marker: bool = marker
+        self.moderator: bool = moderator
+        self.convenor: bool = convenor
+        self.admin: bool = admin
 
     def __bool__(self):
         return (
@@ -63,31 +65,31 @@ class HubRoleMap:
         )
 
     @property
-    def is_student(self):
+    def is_student(self) -> bool:
         return self.student
 
     @property
-    def is_supervisor(self):
+    def is_supervisor(self) -> bool:
         return self.supervisor
 
     @property
-    def is_marker(self):
+    def is_marker(self) -> bool:
         return self.marker
 
     @property
-    def is_moderator(self):
+    def is_moderator(self) -> bool:
         return self.moderator
 
     @property
-    def is_convenor(self):
+    def is_convenor(self) -> bool:
         return self.convenor
 
     @property
-    def is_admin(self):
+    def is_admin(self) -> bool:
         return self.admin
 
     @property
-    def show_student_dashboard(self):
+    def show_student_dashboard(self) -> bool:
         return self.student
 
     def set_role(self, role: str, value: bool):
@@ -105,38 +107,30 @@ class HubRoleMap:
         else:
             raise ValueError(f"Invalid role: {role}")
 
-    def _compute_tiles(self):
-        self._tile_list = []
+    def get_tiles(self) -> List[str]:
+        tile_list = []
 
         # most admin roles can see attendance
         if self.supervisor or self.convenor or self.admin:
-            self._tile_list.append("attendance")
+            tile_list.append("attendance")
 
-        # supervisors, convenors, admin can see regular meetings tile
-        if self.supervisor or self.convenor or self.admin:
-            self._tile_list.append("regular_meetings")
+        # supervisors can see the regular meetings tile if they are the event owner
+        if self.supervisor and self.role is not None:
+            tile_list.append("regular_meetings")
 
         # supervisors, markers, and moderators can see a notifications tile
-        if self.supervisor or self.marker or self.moderator:
-            self._tile_list.append("notifications")
+        if (self.supervisor or self.marker or self.moderator) and self.role is not None:
+            tile_list.append("notifications")
 
-        self._tiles = grouper(self._tile_list, 4, incomplete="fill")
+        tiles = grouper(tile_list, 4, incomplete="fill")
 
-    def get_tiles(self):
-        if self._tiles is None:
-            self._compute_tiles()
+        return tiles
 
-        return self._tiles
-
-    def _compute_ui_elements(self):
+    def get_ui_elements(self) -> List[str]:
         # everyone gets a header and can see the event list
-        self._ui_elements = {"header", "events"}
+        ui_elements = {"header", "events"}
 
-    def get_ui_elements(self):
-        if self._ui_elements is None:
-            self._compute_ui_elements()
-
-        return self._ui_elements
+        return ui_elements
 
 
 def validate_project_hub(
@@ -150,12 +144,6 @@ def validate_project_hub(
     :param user:
     :return:
     """
-
-    my_role = HubRoleMap()
-
-    # a student can always look at the project hub for their own projects (even if retired)
-    if user.has_role("student") and user.id == record.owner.student_id:
-        my_role.set_role("student", True)
 
     # supervisors, markers, moderators, exam board members, and external examiners can always look
     supervisor_roles = [
@@ -179,6 +167,12 @@ def validate_project_hub(
             if role.user_id == user.id:
                 current_role = role
 
+    hub_role = HubRoleMap(record, current_role)
+
+    # a student can always look at the project hub for their own projects (even if retired)
+    if user.has_role("student") and user.id == record.owner.student_id:
+        hub_role.set_role("student", True)
+
     if current_role is not None:
         if current_role.user_id != user.id:
             if message:
@@ -189,16 +183,16 @@ def validate_project_hub(
             return HubRoleMap()
 
         if current_role.role in supervisor_roles:
-            my_role.set_role("supervisor", True)
+            hub_role.set_role("supervisor", True)
 
         if current_role.role in marker_roles:
-            my_role.set_role("marker", True)
+            hub_role.set_role("marker", True)
 
         if current_role.role in moderator_roles:
-            my_role.set_role("moderator", True)
+            hub_role.set_role("moderator", True)
 
         if current_role.role in admin_roles:
-            my_role.set_role("admin", True)
+            hub_role.set_role("admin", True)
 
     # project convenors can look
     owner: SubmittingStudent = record.owner
@@ -207,17 +201,17 @@ def validate_project_hub(
     project: LiveProject = record.project
 
     if pclass.is_convenor(user.id):
-        my_role.set_role("convenor", True)
+        hub_role.set_role("convenor", True)
 
     # admin, and root users can always look
     if user.has_role("admin") or user.has_role("root"):
-        my_role.set_role("admin", True)
+        hub_role.set_role("admin", True)
 
     # office staff, moderators, exam board members and external examiners can always look
     if user.has_role("office"):
-        my_role.set_role("admin", True)
+        hub_role.set_role("admin", True)
 
-    if not my_role and message:
+    if not hub_role and message:
         sd: StudentData = owner.student
         suser: User = sd.user
         if project is not None:
@@ -230,7 +224,7 @@ def validate_project_hub(
                 f'You are not currently authorized to view the project hub for student "{suser.name}"'
             )
 
-    return my_role
+    return hub_role
 
 
 def validate_set_attendance(event: SupervisionEvent, user: User, message=False):

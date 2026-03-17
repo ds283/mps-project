@@ -193,6 +193,8 @@ def hub(subid):
 
     return render_template_context(
         "projecthub/hub.html",
+        tiles=hub_role.get_tiles(),
+        ui_elements=hub_role.get_ui_elements(),
         text=text,
         url=url,
         now=datetime.now(),
@@ -943,7 +945,7 @@ def set_mute_event(event_id, value):
     role: SubmissionRole = event.owner
 
     if role.user_id != current_user.id:
-        flash("You are not authorized to mute this event.", "error")
+        flash("Only event owners can mute notifications.", "error")
         return redirect(redirect_url())
 
     value_: bool

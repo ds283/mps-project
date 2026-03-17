@@ -10,6 +10,20 @@
 #
 
 from celery import Celery
+from celery.signals import worker_init
+
+
+@worker_init.connect
+def limit_chord_unlock_tasks(sender, **kwargs):
+    """
+    Set max_retries for chord.unlock tasks to avoid infinitely looping
+    tasks. (see celery/celery#1700 or celery/celery#2725)
+    """
+    task = sender.app.tasks["celery.chord_unlock"]
+    if task.max_retries is None:
+        retries = getattr(sender.app.conf, "CHORD_UNLOCK_MAX_RETRIES", 100)
+        print(f"@@ Setting max_retries for celery.chord_unlock to {retries}")
+        task.max_retries = retries
 
 
 def make_celery(app):

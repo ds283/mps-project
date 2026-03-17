@@ -310,8 +310,8 @@ def register_attendance_tasks(celery):
         )
         mute_role_api_url = url_for(
             "api.mute_role",
-            event_id=event_id,
-            owner_id=owner.id,
+            role_id=owner.id,
+            record_id=record.id,
         )
 
         human_start_time: str

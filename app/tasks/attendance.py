@@ -278,6 +278,14 @@ def register_attendance_tasks(celery):
             submitter_id=sub.id,
             value=SupervisionEvent.ATTENDANCE_ON_TIME,
         )
+        attendance_late_api_url = url_for(
+            "api.set_event_attendance",
+            event_id=event_id,
+            owner_id=owner.id,
+            record_id=record.id,
+            submitter_id=sub.id,
+            value=SupervisionEvent.ATTENDANCE_LATE,
+        )
         attendance_notified_api_url = url_for(
             "api.set_event_attendance",
             event_id=event_id,
@@ -326,6 +334,7 @@ def register_attendance_tasks(celery):
                 "human_start_time": human_start_time,
                 "projecthub_url": project_hub_url,
                 "attendance_OK_api_url": attendance_OK_api_url,
+                "attendance_late_api_url": attendance_late_api_url,
                 "attendance_notified_api_url": attendance_notified_api_url,
                 "attendance_not_notified_api_url": attendance_not_notified_api_url,
                 "mute_event_api_url": mute_event_api_url,

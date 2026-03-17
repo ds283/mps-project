@@ -9036,25 +9036,6 @@ class SupervisionEvent(
     monitor_attendance = db.Column(db.Boolean(), default=True)
 
     # attendance record
-    attendance_values = [
-        (
-            SupervisionEventAttendanceMixin.ATTENDANCE_ON_TIME,
-            "The meeting started on time",
-        ),
-        (SupervisionEventAttendanceMixin.ATTENDANCE_LATE, "The meeting started late"),
-        (
-            SupervisionEventAttendanceMixin.ATTENDANCE_NO_SHOW_NOTIFIED,
-            "The student did not attend, but I was notified in advance",
-        ),
-        (
-            SupervisionEventAttendanceMixin.ATTENDANCE_NO_SHOW_UNNOTIFIED,
-            "The student did not attend, and I was not notified in advance",
-        ),
-        (
-            SupervisionEventAttendanceMixin.ATTENDANCE_RESCHEDULED,
-            "The meeting is being rescheduled",
-        ),
-    ]
     attendance = db.Column(db.Integer(), default=None, nullable=True)
 
     ## RECORD-KEEPING AND STUDENT PROGRESS

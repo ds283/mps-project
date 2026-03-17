@@ -193,7 +193,8 @@ class SetSubmissionRoleNotificationPreferencesForm(Form, SaveChangesMixin):
 
     prompt_at_fixed_time = BooleanField(
         "Send email prompt at specified time",
-        description="If set, an email will be sent on the day of the event at the time specified below. If not set, an email will be sent ",
+        description="If set, an email will be sent on the day of the event at the time specified below. If not set, an email will be sent on the last day of the supervision unit.",
+        default=False,
     )
 
     prompt_at_time = NullableTimeField(

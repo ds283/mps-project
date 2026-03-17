@@ -49,15 +49,9 @@
 
             function updateReminderFields() {
                 var reminderEmails = $('#reminder_emails').prop('checked');
-                var promptInReminder = $('#prompt_in_reminder').prop('checked');
 
                 if (reminderEmails) {
                     $('#reminder-enabled-section').show();
-                    if (promptInReminder) {
-                        $('#reminder-frequency-section').show();
-                    } else {
-                        $('#reminder-frequency-section').hide();
-                    }
                 } else {
                     $('#reminder-enabled-section').hide();
                 }
@@ -74,7 +68,7 @@
             $('#prompt_at_fixed_time').on('change', function () {
                 updateTimeFields();
             });
-            $('#prompt_in_reminder').on('change', function () {
+            $('#reminder_emails').on('change', function () {
                 updateReminderFields();
             });
         });
@@ -102,10 +96,10 @@
             {{ wtf.render_field(form.prompt_after_event) }}
             <div id="prompt-enabled-section">
                 {{ wtf.render_field(form.prompt_at_fixed_time) }}
-                <div id="fixed-time-section">
+                <div class="mt-2" id="fixed-time-section">
                     {{ date_field(form.prompt_at_time, 'prompt_at_time') }}
                 </div>
-                <div id="delay-time-section">
+                <div class="mt-2" id="delay-time-section">
                     {{ wtf.render_field(form.prompt_delay) }}
                 </div>
             </div>
@@ -116,11 +110,9 @@
                     <strong>Send a summary reminder </strong>
                 </div>
                 {{ wtf.render_field(form.reminder_emails) }}
-                <div id="reminder-enabled-section">
-                    <div id="reminder-frequency-section">
-                        {{ wtf.render_field(form.reminder_frequency) }}
-                    </div>
+                <div class="mt-2" id="reminder-enabled-section">
                     {{ wtf.render_field(form.prompt_in_reminder) }}
+                    {{ wtf.render_field(form.reminder_frequency) }}
                 </div>
             </div>
         {% endif %}

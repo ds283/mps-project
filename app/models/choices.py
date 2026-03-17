@@ -81,13 +81,13 @@ semester_choices = [
 
 # frequency of email summaries
 email_freq_choices = [
-    (1, "1 day"),
-    (2, "2 days"),
-    (3, "3 days"),
-    (4, "4 days"),
-    (5, "5 days"),
-    (6, "6 days"),
-    (7, "7 days"),
+    (1, "Every day"),
+    (2, "Every two days"),
+    (3, "Every three days"),
+    (4, "Every four days"),
+    (5, "Every five days"),
+    (6, "Every six days"),
+    (7, "Every seven days"),
 ]
 
 # auto-enroll selectors

@@ -8,100 +8,101 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime, date
-from typing import List, Dict
+from datetime import date, datetime
+from typing import Dict, List
 
-from flask import redirect, url_for, flash, request, session, jsonify, current_app
-from flask_security import roles_required, roles_accepted, current_user
+from flask import current_app, flash, jsonify, redirect, request, session, url_for
+from flask_security import current_user, roles_accepted, roles_required
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.local import LocalProxy
 
 import app.ajax as ajax
-from . import faculty
-from .forms import (
-    AddProjectFormFactory,
-    EditProjectFormFactory,
-    SkillSelectorForm,
-    AddDescriptionFormFactory,
-    EditDescriptionSettingsFormFactory,
-    MoveDescriptionFormFactory,
-    FacultyPreviewFormFactory,
-    SubmissionRoleFeedbackForm,
-    PresentationFeedbackForm,
-    SubmissionRoleResponseForm,
-    FacultySettingsFormFactory,
-    AvailabilityFormFactory,
-    EditDescriptionContentForm,
-)
+
 from ..admin.forms import LevelSelectorForm
 from ..campaigns import check_2026_ATAS
 from ..database import db
 from ..models import (
     DegreeProgramme,
-    FacultyData,
-    ResearchGroup,
-    TransferableSkill,
-    ProjectClassConfig,
-    LiveProject,
-    SelectingStudent,
-    Project,
-    MessageOfTheDay,
-    EnrollmentRecord,
-    SkillGroup,
-    ProjectClass,
-    ProjectDescription,
-    SubmissionRecord,
-    PresentationAssessment,
-    PresentationSession,
-    ScheduleSlot,
-    User,
-    PresentationFeedback,
-    Module,
-    FHEQ_Level,
     DescriptionComment,
-    WorkflowMixin,
-    ProjectDescriptionWorkflowHistory,
-    StudentData,
-    SubmittingStudent,
-    SubmissionPeriodRecord,
-    SubmissionRole,
-    Tenant,
+    EnrollmentRecord,
+    FacultyData,
+    FHEQ_Level,
+    LiveProject,
     MainConfig,
+    MessageOfTheDay,
+    Module,
+    PresentationAssessment,
+    PresentationFeedback,
+    PresentationSession,
+    Project,
+    ProjectClass,
+    ProjectClassConfig,
+    ProjectDescription,
+    ProjectDescriptionWorkflowHistory,
+    ResearchGroup,
+    ScheduleSlot,
+    SelectingStudent,
+    SkillGroup,
+    StudentData,
+    SubmissionPeriodRecord,
+    SubmissionRecord,
+    SubmissionRole,
+    SubmittingStudent,
+    Tenant,
+    TransferableSkill,
+    User,
+    WorkflowMixin,
 )
 from ..shared.actions import (
-    render_project,
-    do_confirm,
     do_cancel_confirm,
+    do_confirm,
     do_deconfirm_to_pending,
+    render_project,
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.context.root_dashboard import get_root_dashboard_data
 from ..shared.conversions import is_integer
 from ..shared.projects import create_new_tags, project_list_SQL_handler
 from ..shared.utils import (
-    home_dashboard,
-    filter_assessors,
-    get_current_year,
-    get_count,
-    get_approval_queue_data,
     allow_approval_for_description,
-    redirect_url,
+    filter_assessors,
+    get_approval_queue_data,
+    get_count,
+    get_current_year,
     get_main_config,
+    home_dashboard,
+    redirect_url,
 )
 from ..shared.validators import (
+    validate_assessment,
+    validate_edit_description,
     validate_edit_project,
-    validate_project_open,
+    validate_is_convenor,
     validate_is_project_owner,
+    validate_presentation_assessor,
+    validate_project_open,
+    validate_submission_role,
     validate_submission_supervisor,
     validate_submission_viewable,
-    validate_assessment,
     validate_using_assessment,
-    validate_presentation_assessor,
-    validate_is_convenor,
-    validate_edit_description,
     validate_view_project,
-    validate_submission_role,
+)
+from . import faculty
+from .forms import (
+    AddDescriptionFormFactory,
+    AddProjectFormFactory,
+    AvailabilityFormFactory,
+    EditDescriptionContentForm,
+    EditDescriptionSettingsFormFactory,
+    EditProjectFormFactory,
+    FacultyPreviewFormFactory,
+    FacultySettingsFormFactory,
+    MoveDescriptionFormFactory,
+    PresentationFeedbackForm,
+    SkillSelectorForm,
+    SubmissionRoleFeedbackForm,
+    SubmissionRoleResponseForm,
 )
 
 _security = LocalProxy(lambda: current_app.extensions["security"])
@@ -3155,17 +3156,17 @@ def settings():
     Edit settings for a faculty member
     :return:
     """
-    user = User.query.get_or_404(current_user.id)
-    data = FacultyData.query.get_or_404(current_user.id)
+    user: User = User.query.get_or_404(current_user.id)
+    fd: FacultyData = FacultyData.query.get_or_404(current_user.id)
 
     main_config = get_main_config()
 
     FacultySettingsForm = FacultySettingsFormFactory(
         user,
         current_user,
-        enable_canvas=main_config.enable_canvas_sync and data.is_convenor,
+        enable_canvas=main_config.enable_canvas_sync and fd.is_convenor,
     )
-    form = FacultySettingsForm(obj=data)
+    form = FacultySettingsForm(obj=fd)
     form.user = user
 
     if form.validate_on_submit():
@@ -3190,22 +3191,25 @@ def settings():
 
         # store Canvas API token if present on form and Canvas integration is enabled
         if main_config.enable_canvas_sync and hasattr(form, "canvas_API_token"):
-            data.canvas_API_token = form.canvas_API_token.data
+            fd.canvas_API_token = form.canvas_API_token.data
         else:
             # automatically delete for safety
-            data.canvas_API_token = None
+            fd.canvas_API_token = None
 
-        data.academic_title = form.academic_title.data
-        data.use_academic_title = form.use_academic_title.data
-        data.sign_off_students = form.sign_off_students.data
-        data.project_capacity = form.project_capacity.data
-        data.enforce_capacity = form.enforce_capacity.data
-        data.show_popularity = form.show_popularity.data
-        data.dont_clash_presentations = form.dont_clash_presentations.data
-        data.office = form.office.data
+        fd.academic_title = form.academic_title.data
+        fd.use_academic_title = form.use_academic_title.data
+        fd.sign_off_students = form.sign_off_students.data
+        fd.project_capacity = form.project_capacity.data
+        fd.enforce_capacity = form.enforce_capacity.data
+        fd.show_popularity = form.show_popularity.data
+        fd.dont_clash_presentations = form.dont_clash_presentations.data
+        fd.office = form.office.data
 
-        data.last_edit_id = current_user.id
-        data.last_edit_timestamp = datetime.now()
+        fd.reminder_emails = form.reminder_emails.data
+        fd.reminder_frequency = form.reminder_frequency.data
+
+        fd.last_edit_id = current_user.id
+        fd.last_edit_timestamp = datetime.now()
 
         flash("All changes saved", "success")
         db.session.commit()
@@ -3223,11 +3227,14 @@ def settings():
             form.group_summaries.data = user.group_summaries
             form.summary_frequency.data = user.summary_frequency
 
+            form.reminder_emails.data = fd.reminder_emails
+            form.reminder_frequency.data = fd.reminder_frequency
+
             if hasattr(form, "mask_roles"):
                 form.mask_roles.data = user.mask_roles
 
     return render_template_context(
-        "faculty/settings.html", settings_form=form, data=data
+        "faculty/settings.html", settings_form=form, data=fd
     )
 
 

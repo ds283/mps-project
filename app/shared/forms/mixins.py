@@ -74,7 +74,11 @@ class DefaultLicenseMixin:
 
 
 class EmailSettingsMixin:
-    group_summaries = BooleanField("Group notifications into summaries")
+    group_summaries = BooleanField(
+        "Group some notifications into summaries",
+        default=True,
+        description="Notifications that are grouped include student requests for meeting sign-offs, and notifications about re-enrolment after sabbaticals or buyouts",
+    )
 
     summary_frequency = SelectField(
         "Frequency of summaries", choices=email_freq_choices, coerce=int
@@ -160,9 +164,9 @@ def FacultyDataMixinFactory(admin=False, enable_canvas=False):
         )
 
         reminder_frequency = SelectField(
-            "Frequency of email reminders to record attendance at supervision events",
+            "Frequency of reminders",
             choices=FacultyData._reminder_frequency_choices,
-            description="You All reminders are combined into a single email, so please be aware that this setting applies to all students and all project types",
+            description="Reminders are combined into a single email, so please be aware that this setting applies to all students and all project types",
             coerce=int,
         )
 

@@ -13089,6 +13089,8 @@ class SubmissionRole(
         if not value and self.prompt_delay is None:
             self.prompt_delay = 1
 
+        return value
+
     # EMAIL LOG
 
     # email log associated with this role

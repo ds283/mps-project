@@ -50,7 +50,7 @@
             }
 
             function updateGroupNotificationFields() {
-                var groupNotifications = $('#group_notifications').prop('checked');
+                var groupNotifications = $('#group_summaries').prop('checked');
 
                 if (groupNotifications) {
                     $('#group-notifications-section').show();
@@ -67,10 +67,10 @@
             $('#reminder_emails').on('change', function () {
                 updateReminderFields();
             });
-            $('#group_notifications').on('change', function () {
+            $('#group_summaries').on('change', function () {
                 updateGroupNotificationFields();
             });
-            
+
         });
     </script>
 {% endblock %}
@@ -124,12 +124,12 @@
         <div class="card mt-3 mb-3 card-body bg-well">
             <div class="form-group-heading">Email notifications</div>
             {{ wtf.render_field(settings_form.group_summaries) }}
-            <div id="group-notifications-section">
+            <div class="mt-2" id="group-notifications-section">
                 {{ wtf.render_field(settings_form.summary_frequency) }}
             </div>
             <hr role="divider">
-            {{ wtf.render_field(settings_form.email_reminders) }}
-            <div id="attendance-reminders-section">
+            {{ wtf.render_field(settings_form.reminder_emails) }}
+            <div class="mt-2" id="attendance-reminders-section">
                 {{ wtf.render_field(settings_form.reminder_frequency) }}
             </div>
         </div>
@@ -138,9 +138,9 @@
             <div class="form-group-heading">Default settings for new projects</div>
             <div class="alert alert-info mt-2 mb-3">
                 {% call icon_block("info-circle") %}
-                    The settings in this section are defaults that are used to populate
-                    newly created projects.
-                    Changes made here do not immediately affect active projects.
+                    <div><strong>The settings in this section are defaults that are used to populate
+                        newly created projects.</strong></div>
+                    <div class="mt-1">Changes made here do not immediately affect active projects.</div>
                 {% endcall %}
             </div>
             <div class="row vertical-top">

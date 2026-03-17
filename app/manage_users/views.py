@@ -9,69 +9,52 @@
 #
 
 
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 from functools import partial
 from pathlib import Path
 from typing import List
 
 from celery import chain, group
-from flask import redirect, url_for, flash, request, current_app, session
-from flask_security import current_user, roles_required, roles_accepted
+from flask import current_app, flash, redirect, request, session, url_for
+from flask_security import current_user, roles_accepted, roles_required
 from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
-from flask_security.utils import config_value, get_message, do_flash, send_mail
-from sqlalchemy import or_, literal
+from flask_security.utils import config_value, do_flash, get_message, send_mail
+from sqlalchemy import literal, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import cast
 from sqlalchemy.types import String
 from werkzeug.local import LocalProxy
 
 import app.ajax as ajax
-from . import manage_users
-from .actions import register_user
-from .forms import (
-    UserTypeSelectForm,
-    ConfirmRegisterOfficeForm,
-    ConfirmRegisterFacultyForm,
-    EditOfficeForm,
-    EditFacultyForm,
-    UploadBatchCreateStudentsForm,
-    UploadBatchCreateFacultyForm,
-    EditStudentBatchItemFormFactory,
-    EditFacultyBatchItemFormFactory,
-    EnrollmentRecordForm,
-    AddRoleForm,
-    EditRoleForm,
-    EditStudentFormFactory,
-    ConfirmRegisterStudentFormFactory,
-)
+
 from ..database import db
 from ..limiter import limiter
 from ..models import (
-    User,
-    FacultyData,
-    StudentData,
-    FacultyBatch,
-    FacultyBatchItem,
-    StudentBatch,
-    StudentBatchItem,
-    EnrollmentRecord,
+    AssetLicense,
+    BackupRecord,
     DegreeProgramme,
     DegreeType,
+    EnrollmentRecord,
+    FacultyBatch,
+    FacultyBatchItem,
+    FacultyData,
     ProjectClass,
     ResearchGroup,
     Role,
-    Tenant,
-    TemporaryAsset,
+    StudentBatch,
+    StudentBatchItem,
+    StudentData,
     TaskRecord,
-    BackupRecord,
-    AssetLicense,
+    TemporaryAsset,
+    Tenant,
+    User,
     WorkflowMixin,
     faculty_affiliations,
 )
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
-from ..shared.conversions import is_integer, is_boolean
+from ..shared.conversions import is_boolean, is_integer
 from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import func
 from ..shared.utils import (
@@ -81,8 +64,26 @@ from ..shared.utils import (
     redirect_url,
 )
 from ..shared.validators import validate_is_convenor
-from ..task_queue import register_task, progress_update
-from ..tools import ServerSideSQLHandler, ServerSideInMemoryHandler
+from ..task_queue import progress_update, register_task
+from ..tools import ServerSideInMemoryHandler, ServerSideSQLHandler
+from . import manage_users
+from .actions import register_user
+from .forms import (
+    AddRoleForm,
+    ConfirmRegisterFacultyForm,
+    ConfirmRegisterOfficeForm,
+    ConfirmRegisterStudentFormFactory,
+    EditFacultyBatchItemFormFactory,
+    EditFacultyForm,
+    EditOfficeForm,
+    EditRoleForm,
+    EditStudentBatchItemFormFactory,
+    EditStudentFormFactory,
+    EnrollmentRecordForm,
+    UploadBatchCreateFacultyForm,
+    UploadBatchCreateStudentsForm,
+    UserTypeSelectForm,
+)
 
 _security = LocalProxy(lambda: current_app.extensions["security"])
 _datastore = LocalProxy(lambda: _security.datastore)
@@ -1638,7 +1639,7 @@ def view_student_batch_data_ajax(batch_id):
         return True
 
     with ServerSideInMemoryHandler(
-            request, base_query, columns, row_filter=partial(_filter, filter)
+        request, base_query, columns, row_filter=partial(_filter, filter)
     ) as handler:
         return handler.build_payload(ajax.users.build_view_batch_data)
 
@@ -1695,7 +1696,7 @@ def view_faculty_batch_data_ajax(batch_id):
         return True
 
     with ServerSideInMemoryHandler(
-            request, base_query, columns, row_filter=partial(_filter, filter)
+        request, base_query, columns, row_filter=partial(_filter, filter)
     ) as handler:
         return handler.build_payload(ajax.users.build_view_faculty_batch_data)
 
@@ -1738,7 +1739,7 @@ def edit_student_batch_item(item_id):
 
             if record.registration_number is not None:
                 condition_list |= (
-                        StudentData.registration_number == record.registration_number
+                    StudentData.registration_number == record.registration_number
                 )
 
             existing_record = (
@@ -1861,13 +1862,6 @@ def mark_faculty_batch_item_dont_convert(item_id):
 
     return redirect(
         url_for("manage_users.view_faculty_batch_data", batch_id=record.parent_id)
-    )
-
-    return render_template_context(
-        "manage_users/users_dashboard/edit_student_batch_item.html",
-        form=form,
-        record=record,
-        title="Edit batch item",
     )
 
 
@@ -2262,12 +2256,12 @@ def edit_office(id):
 @manage_users.route("/edit_faculty/<int:id>", methods=["GET", "POST"])
 @roles_accepted("manage_users", "root")
 def edit_faculty(id):
-    user = User.query.get_or_404(id)
-    form = EditFacultyForm(obj=user)
+    user: User = User.query.get_or_404(id)
 
+    form = EditFacultyForm(obj=user)
     form.user = user
 
-    data = FacultyData.query.get_or_404(id)
+    fd: FacultyData = FacultyData.query.get_or_404(id)
 
     pane = request.args.get("pane", default=None)
 
@@ -2284,24 +2278,24 @@ def edit_faculty(id):
         user.last_name = form.last_name.data
         user.tenants = form.tenants.data
 
-        data.academic_title = form.academic_title.data
-        data.use_academic_title = form.use_academic_title.data
-        data.sign_off_students = form.sign_off_students.data
-        data.project_capacity = (
+        fd.academic_title = form.academic_title.data
+        fd.use_academic_title = form.use_academic_title.data
+        fd.sign_off_students = form.sign_off_students.data
+        fd.project_capacity = (
             form.project_capacity.data if form.enforce_capacity.data else None
         )
-        data.enforce_capacity = form.enforce_capacity.data
-        data.show_popularity = form.show_popularity.data
-        data.dont_clash_presentations = form.dont_clash_presentations.data
-        data.office = form.office.data
+        fd.enforce_capacity = form.enforce_capacity.data
+        fd.show_popularity = form.show_popularity.data
+        fd.dont_clash_presentations = form.dont_clash_presentations.data
+        fd.office = form.office.data
 
-        data.CATS_supervision = form.CATS_supervision.data
-        data.CATS_marking = form.CATS_marking.data
-        data.CATS_moderation = form.CATS_moderation.data
-        data.CATS_presentation = form.CATS_presentation.data
+        fd.CATS_supervision = form.CATS_supervision.data
+        fd.CATS_marking = form.CATS_marking.data
+        fd.CATS_moderation = form.CATS_moderation.data
+        fd.CATS_presentation = form.CATS_presentation.data
 
-        data.last_edit_id = current_user.id
-        data.last_edit_timestamp = datetime.now()
+        fd.last_edit_id = current_user.id
+        fd.last_edit_timestamp = datetime.now()
 
         _datastore.commit()
 
@@ -2321,19 +2315,19 @@ def edit_faculty(id):
         # populate default values if this is the first time we are rendering the form,
         # distinguished by the method being 'GET' rather than 'POST'
         if request.method == "GET":
-            form.academic_title.data = data.academic_title
-            form.use_academic_title.data = data.use_academic_title
-            form.sign_off_students.data = data.sign_off_students
-            form.project_capacity.data = data.project_capacity
-            form.enforce_capacity.data = data.enforce_capacity
-            form.show_popularity.data = data.show_popularity
-            form.dont_clash_presentations.data = data.dont_clash_presentations
-            form.office.data = data.office
+            form.academic_title.data = fd.academic_title
+            form.use_academic_title.data = fd.use_academic_title
+            form.sign_off_students.data = fd.sign_off_students
+            form.project_capacity.data = fd.project_capacity
+            form.enforce_capacity.data = fd.enforce_capacity
+            form.show_popularity.data = fd.show_popularity
+            form.dont_clash_presentations.data = fd.dont_clash_presentations
+            form.office.data = fd.office
 
-            form.CATS_supervision.data = data.CATS_supervision
-            form.CATS_marking.data = data.CATS_marking
-            form.CATS_moderation.data = data.CATS_moderation
-            form.CATS_presentation.data = data.CATS_presentation
+            form.CATS_supervision.data = fd.CATS_supervision
+            form.CATS_marking.data = fd.CATS_marking
+            form.CATS_moderation.data = fd.CATS_moderation
+            form.CATS_presentation.data = fd.CATS_presentation
 
             if form.project_capacity.data is None and form.enforce_capacity.data:
                 form.project_capacity.data = current_app.config[

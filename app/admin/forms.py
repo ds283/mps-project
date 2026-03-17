@@ -2616,8 +2616,8 @@ class EmailTemplateMixin:
 
     # html_body is rendered by TinyMCE; the TextAreaField is used as the backing field
     html_body = TextAreaField(
-        "Body (HTML)",
-        description="Enter the HTML body of the email. Use the rich-text editor to format the content.",
+        "Email text in HTML formatted as a Jinja2 template",
+        description="Provide a Jinja2 template for the body of the email in HTML format.",
         validators=[InputRequired(message="Please provide an email body")],
         render_kw={"rows": 15},
     )
@@ -2628,6 +2628,13 @@ class EmailTemplateMixin:
         get_label=BuildEmailTemplateLabelName,
         description="Optionally add labels to organize your email templates.",
         blank_text="Add labels...",
+    )
+
+    comment = TextAreaField(
+        label="Comment",
+        description="Optionally provide a comment to explain the purpose of this email template.",
+        validators=[Optional()],
+        render_kw={"rows": 5},
     )
 
 

@@ -13929,6 +13929,7 @@ def edit_email_template(id):
         template.subject = form.subject.data
         template.html_body = form.html_body.data
         template.labels = label_list
+        template.comment = form.comment.data
 
         template.last_edit_id = current_user.id
         template.last_edit_timestamp = datetime.now()

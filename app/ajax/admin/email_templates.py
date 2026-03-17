@@ -13,63 +13,10 @@ from jinja2 import Environment, Template
 
 from ...models.emails import EmailTemplate
 
-# Human-readable names for each template type
-_TYPE_NAMES = {
-    EmailTemplate.BACKUP_REPORT_THINNING: "Backup: Report thinning",
-    EmailTemplate.CLOSE_SELECTION_CONVENOR: "Close selection: Convenor",
-    EmailTemplate.GO_LIVE_CONVENOR: "Go live: Convenor",
-    EmailTemplate.GO_LIVE_FACULTY: "Go live: Faculty",
-    EmailTemplate.GO_LIVE_SELECTOR: "Go live: Selector",
-    EmailTemplate.MAINTENANCE_LOST_ASSETS: "Maintenance: Lost assets",
-    EmailTemplate.MAINTENANCE_UNATTACHED_ASSETS: "Maintenance: Unattached assets",
-    EmailTemplate.MARKING_MARKER: "Marking: Marker",
-    EmailTemplate.MARKING_SUPERVISOR: "Marking: Supervisor",
-    EmailTemplate.MATCHING_DRAFT_NOTIFY_FACULTY: "Matching: Draft notify faculty",
-    EmailTemplate.MATCHING_DRAFT_NOTIFY_STUDENTS: "Matching: Draft notify students",
-    EmailTemplate.MATCHING_DRAFT_UNNEEDED_FACULTY: "Matching: Draft unneeded faculty",
-    EmailTemplate.MATCHING_FINAL_NOTIFY_FACULTY: "Matching: Final notify faculty",
-    EmailTemplate.MATCHING_FINAL_NOTIFY_STUDENTS: "Matching: Final notify students",
-    EmailTemplate.MATCHING_FINAL_UNNEEDED_FACULTY: "Matching: Final unneeded faculty",
-    EmailTemplate.MATCHING_GENERATED: "Matching: Generated",
-    EmailTemplate.MATCHING_NOTIFY_EXCEL_REPORT: "Matching: Notify Excel report",
-    EmailTemplate.NOTIFICATIONS_REQUEST_MEETING: "Notifications: Request meeting",
-    EmailTemplate.NOTIFICATIONS_FACULTY_ROLLUP: "Notifications: Faculty rollup",
-    EmailTemplate.NOTIFICATIONS_FACULTY_SINGLE: "Notifications: Faculty single",
-    EmailTemplate.NOTIFICATIONS_STUDENT_ROLLUP: "Notifications: Student rollup",
-    EmailTemplate.NOTIFICATIONS_STUDENT_SINGLE: "Notifications: Student single",
-    EmailTemplate.PROJECT_CONFIRMATION_REMINDER: "Project confirmation: Reminder",
-    EmailTemplate.PROJECT_CONFIRMATION_REQUESTED: "Project confirmation: Requested",
-    EmailTemplate.PROJECT_CONFIRMATION_NEW_COMMENT: "Project confirmation: New comment",
-    EmailTemplate.PROJECT_CONFIRMATION_REVISE_REQUEST: "Project confirmation: Revise request",
-    EmailTemplate.PUSH_FEEDBACK_PUSH_TO_MARKER: "Push feedback: To marker",
-    EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT: "Push feedback: To student",
-    EmailTemplate.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR: "Push feedback: To supervisor",
-    EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER: "Scheduling: Availability reminder",
-    EmailTemplate.SCHEDULING_AVAILABILITY_REQUEST: "Scheduling: Availability request",
-    EmailTemplate.SCHEDULING_DRAFT_NOTIFY_FACULTY: "Scheduling: Draft notify faculty",
-    EmailTemplate.SCHEDULING_DRAFT_NOTIFY_STUDENTS: "Scheduling: Draft notify students",
-    EmailTemplate.SCHEDULING_DRAFT_UNNEEDED_FACULTY: "Scheduling: Draft unneeded faculty",
-    EmailTemplate.SCHEDULING_FINAL_NOTIFY_FACULTY: "Scheduling: Final notify faculty",
-    EmailTemplate.SCHEDULING_FINAL_NOTIFY_STUDENTS: "Scheduling: Final notify students",
-    EmailTemplate.SCHEDULING_FINAL_UNNEEDED_FACULTY: "Scheduling: Final unneeded faculty",
-    EmailTemplate.SCHEDULING_GENERATED: "Scheduling: Generated",
-    EmailTemplate.SERVICES_CC_EMAIL: "Services: CC email",
-    EmailTemplate.SERVICES_SEND_EMAIL: "Services: Send email",
-    EmailTemplate.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED: "Student notifications: Choices received",
-    EmailTemplate.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED_PROXY: "Student notifications: Choices received (proxy)",
-    EmailTemplate.ATTENDANCE_PROMPT: "Attendance: Prompt",
-    EmailTemplate.SYSTEM_GARBAGE_COLLECTION: "System: Garbage collection",
-}
-
-
-def get_type_name(type_id):
-    return _TYPE_NAMES.get(type_id, f"Unknown type ({type_id})")
-
-
 # language=jinja2
 _email_template_type = """
 <div class="d-flex flex-column justify-content-start align-items-start gap-2">
-    <div class="text-secondary text-uppercase">{{ type_name }}</div>
+    <div class="text-secondary text-uppercase">{{ t.type_name }}</div>
     <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2">
         {% for label in t.labels %}
             {{ simple_label(label.make_label()) }}
@@ -162,7 +109,7 @@ _email_template_comment = """
 
 # language=jinja2
 _email_template_version = """
-<span class="badge bg-primary">#{{ t.version }}</span>
+<span class="badge bg-primary"><i class="fas fa-hashtag"></i> {{ t.version }}</span>
 """
 
 # language=jinja2
@@ -247,7 +194,6 @@ def email_templates_data(templates):
             "type": render_template(
                 type_templ,
                 t=t,
-                type_name=get_type_name(t.type),
                 simple_label=simple_label,
             ),
             "subject": render_template(subject_templ, t=t),

@@ -112,6 +112,55 @@ class EmailTemplateTypesMixin:
     SYSTEM_GARBAGE_COLLECTION = 43
 
 
+# Human-readable names for each template type
+_TYPE_NAMES = {
+    EmailTemplateTypesMixin.BACKUP_REPORT_THINNING: "Backup: Report thinning",
+    EmailTemplateTypesMixin.CLOSE_SELECTION_CONVENOR: "Close selection: Convenor",
+    EmailTemplateTypesMixin.GO_LIVE_CONVENOR: "Go live: Convenor",
+    EmailTemplateTypesMixin.GO_LIVE_FACULTY: "Go live: Faculty",
+    EmailTemplateTypesMixin.GO_LIVE_SELECTOR: "Go live: Selector",
+    EmailTemplateTypesMixin.MAINTENANCE_LOST_ASSETS: "Maintenance: Lost assets",
+    EmailTemplateTypesMixin.MAINTENANCE_UNATTACHED_ASSETS: "Maintenance: Unattached assets",
+    EmailTemplateTypesMixin.MARKING_MARKER: "Marking: Marker",
+    EmailTemplateTypesMixin.MARKING_SUPERVISOR: "Marking: Supervisor",
+    EmailTemplateTypesMixin.MATCHING_DRAFT_NOTIFY_FACULTY: "Matching: Draft notify faculty",
+    EmailTemplateTypesMixin.MATCHING_DRAFT_NOTIFY_STUDENTS: "Matching: Draft notify students",
+    EmailTemplateTypesMixin.MATCHING_DRAFT_UNNEEDED_FACULTY: "Matching: Draft unneeded faculty",
+    EmailTemplateTypesMixin.MATCHING_FINAL_NOTIFY_FACULTY: "Matching: Final notify faculty",
+    EmailTemplateTypesMixin.MATCHING_FINAL_NOTIFY_STUDENTS: "Matching: Final notify students",
+    EmailTemplateTypesMixin.MATCHING_FINAL_UNNEEDED_FACULTY: "Matching: Final unneeded faculty",
+    EmailTemplateTypesMixin.MATCHING_GENERATED: "Matching: Generated",
+    EmailTemplateTypesMixin.MATCHING_NOTIFY_EXCEL_REPORT: "Matching: Notify Excel report",
+    EmailTemplateTypesMixin.NOTIFICATIONS_REQUEST_MEETING: "Notifications: Request meeting",
+    EmailTemplateTypesMixin.NOTIFICATIONS_FACULTY_ROLLUP: "Notifications: Faculty rollup",
+    EmailTemplateTypesMixin.NOTIFICATIONS_FACULTY_SINGLE: "Notifications: Faculty single",
+    EmailTemplateTypesMixin.NOTIFICATIONS_STUDENT_ROLLUP: "Notifications: Student rollup",
+    EmailTemplateTypesMixin.NOTIFICATIONS_STUDENT_SINGLE: "Notifications: Student single",
+    EmailTemplateTypesMixin.PROJECT_CONFIRMATION_REMINDER: "Project confirmation: Reminder",
+    EmailTemplateTypesMixin.PROJECT_CONFIRMATION_REQUESTED: "Project confirmation: Requested",
+    EmailTemplateTypesMixin.PROJECT_CONFIRMATION_NEW_COMMENT: "Project confirmation: New comment",
+    EmailTemplateTypesMixin.PROJECT_CONFIRMATION_REVISE_REQUEST: "Project confirmation: Revise request",
+    EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_MARKER: "Push feedback: To marker",
+    EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_STUDENT: "Push feedback: To student",
+    EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR: "Push feedback: To supervisor",
+    EmailTemplateTypesMixin.SCHEDULING_AVAILABILITY_REMINDER: "Scheduling: Availability reminder",
+    EmailTemplateTypesMixin.SCHEDULING_AVAILABILITY_REQUEST: "Scheduling: Availability request",
+    EmailTemplateTypesMixin.SCHEDULING_DRAFT_NOTIFY_FACULTY: "Scheduling: Draft notify faculty",
+    EmailTemplateTypesMixin.SCHEDULING_DRAFT_NOTIFY_STUDENTS: "Scheduling: Draft notify students",
+    EmailTemplateTypesMixin.SCHEDULING_DRAFT_UNNEEDED_FACULTY: "Scheduling: Draft unneeded faculty",
+    EmailTemplateTypesMixin.SCHEDULING_FINAL_NOTIFY_FACULTY: "Scheduling: Final notify faculty",
+    EmailTemplateTypesMixin.SCHEDULING_FINAL_NOTIFY_STUDENTS: "Scheduling: Final notify students",
+    EmailTemplateTypesMixin.SCHEDULING_FINAL_UNNEEDED_FACULTY: "Scheduling: Final unneeded faculty",
+    EmailTemplateTypesMixin.SCHEDULING_GENERATED: "Scheduling: Generated",
+    EmailTemplateTypesMixin.SERVICES_CC_EMAIL: "Services: CC email",
+    EmailTemplateTypesMixin.SERVICES_SEND_EMAIL: "Services: Send email",
+    EmailTemplateTypesMixin.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED: "Student notifications: Choices received",
+    EmailTemplateTypesMixin.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED_PROXY: "Student notifications: Choices received (proxy)",
+    EmailTemplateTypesMixin.ATTENDANCE_PROMPT: "Attendance: Prompt",
+    EmailTemplateTypesMixin.SYSTEM_GARBAGE_COLLECTION: "System: Garbage collection",
+}
+
+
 class EmailTemplateLabel(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     """
     Represents a label applied to a backup
@@ -188,6 +237,10 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
 
     # last used
     last_used = db.Column(db.DateTime(), nullable=True)
+
+    @property
+    def type_name(self):
+        return _TYPE_NAMES.get(self.type, f"Unknown type ({self.type})")
 
     @staticmethod
     def apply_(

@@ -18,17 +18,17 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import (
-    User,
-    TaskRecord,
     BackupRecord,
-    ProjectClassConfig,
-    FacultyData,
-    EnrollmentRecord,
-    ProjectDescription,
     DescriptionComment,
-    Role,
-    ProjectClass,
     EmailTemplate,
+    EnrollmentRecord,
+    FacultyData,
+    ProjectClass,
+    ProjectClassConfig,
+    ProjectDescription,
+    Role,
+    TaskRecord,
+    User,
 )
 from ..shared.sqlalchemy import get_count
 from ..task_queue import progress_update, register_task
@@ -671,7 +671,7 @@ def register_issue_confirm_tasks(celery):
     @celery.task(bind=True)
     def notify_comment(self, comment_id):
         try:
-            comment = (
+            comment: DescriptionComment = (
                 db.session.query(DescriptionComment).filter_by(id=comment_id).first()
             )
             project_approver = (
@@ -693,7 +693,10 @@ def register_issue_confirm_tasks(celery):
 
         recipients = set()
 
-        for c in comment.parent.comments.filter_by(year=comment.year):
+        owner: User = comment.owner
+        parent: ProjectDescription = comment.parent
+
+        for c in parent.comments.filter_by(year=comment.year):
             if c.owner_id != comment.owner_id:
                 if c.visibility != DescriptionComment.VISIBILITY_PUBLISHED_BY_APPROVALS:
                     recipients.add(c.owner.email)
@@ -713,10 +716,10 @@ def register_issue_confirm_tasks(celery):
         tags = [w[1:] for w in words if w[0] == "@"]
 
         for tag in tags:
-            if tag == "team" and comment.owner.has_role("project_approver"):
+            if tag == "team" and owner.has_role("project_approver"):
                 recipients = recipients.union(approvals_team)
             else:
-                user = db.session.query(User).filter_by(username=tag).first()
+                user: User = db.session.query(User).filter_by(username=tag).first()
                 if user is not None:
                     recipients.add(user.email)
 

@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime, date
+from datetime import date, datetime
 
 from celery import chain, group
 from celery.exceptions import Ignore
@@ -19,17 +19,17 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import (
-    User,
-    TaskRecord,
     BackupRecord,
-    ProjectClassConfig,
-    Project,
-    FacultyData,
-    EnrollmentRecord,
-    LiveProject,
-    SelectingStudent,
-    MatchingAttempt,
     EmailTemplate,
+    EnrollmentRecord,
+    FacultyData,
+    LiveProject,
+    MatchingAttempt,
+    Project,
+    ProjectClassConfig,
+    SelectingStudent,
+    TaskRecord,
+    User,
 )
 from ..shared.convenor import add_liveproject
 from ..task_queue import progress_update, register_task
@@ -514,6 +514,7 @@ def register_golive_tasks(celery):
                 "projects": projects,
                 "expect_requests": (expect_requests and projects_use_signoff),
             },
+            pclass=config.project_class,
         )
 
         # register a new task in the database
@@ -566,6 +567,7 @@ def register_golive_tasks(celery):
                 "config": config,
                 "deadline": deadline,
             },
+            pclass=config.project_class,
         )
 
         # register a new task in the database
@@ -657,6 +659,7 @@ def register_golive_tasks(celery):
                     "config": config,
                     "deadline": deadline,
                 },
+                pclass=config.project_class,
             )
 
             # register a new task in the database

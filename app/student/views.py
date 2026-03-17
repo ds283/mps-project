@@ -9,69 +9,70 @@
 #
 
 
-from datetime import datetime, date
+from datetime import date, datetime
 from functools import partial
 from typing import Optional
 
 import parse
-from flask import redirect, url_for, flash, request, jsonify, current_app, session
-from flask_security import current_user, roles_required, roles_accepted
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from flask import current_app, flash, jsonify, redirect, request, session, url_for
+from flask_security import current_user, roles_accepted, roles_required
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm.exc import StaleDataError
-from sqlalchemy.sql import func, or_, and_
+from sqlalchemy.sql import and_, func, or_
 
 import app.ajax as ajax
+
+from ..database import db
+from ..models import (
+    Bookmark,
+    CustomOffer,
+    DegreeProgramme,
+    DegreeType,
+    EmailNotification,
+    EmailTemplate,
+    LiveProject,
+    MessageOfTheDay,
+    PresentationAssessment,
+    PresentationSession,
+    Project,
+    ProjectClass,
+    ProjectClassConfig,
+    ResearchGroup,
+    SelectingStudent,
+    SkillGroup,
+    StudentData,
+    SubmissionRecord,
+    SubmittingStudent,
+    TransferableSkill,
+    User,
+    add_notification,
+)
+from ..shared.context.global_context import render_template_context
+from ..shared.utils import (
+    get_count,
+    get_current_year,
+    home_dashboard,
+    home_dashboard_url,
+    redirect_url,
+)
+from ..shared.validators import (
+    validate_assessment,
+    validate_is_convenor,
+    validate_submission_viewable,
+    validate_using_assessment,
+)
+from ..task_queue import register_task
+from ..tools import ServerSideSQLHandler
 from . import student
 from .actions import store_selection
 from .forms import StudentFeedbackForm, StudentSettingsForm
 from .utils import (
-    verify_submitter,
-    verify_selector,
-    verify_view_project,
     verify_open,
+    verify_selector,
     verify_submission_record,
+    verify_submitter,
+    verify_view_project,
 )
-from ..database import db
-from ..models import (
-    ProjectClass,
-    ProjectClassConfig,
-    SelectingStudent,
-    LiveProject,
-    Bookmark,
-    MessageOfTheDay,
-    ResearchGroup,
-    SkillGroup,
-    SubmissionRecord,
-    TransferableSkill,
-    User,
-    EmailNotification,
-    add_notification,
-    CustomOffer,
-    Project,
-    SubmittingStudent,
-    StudentData,
-    DegreeProgramme,
-    DegreeType,
-    PresentationAssessment,
-    PresentationSession,
-    EmailTemplate,
-)
-from ..shared.context.global_context import render_template_context
-from ..shared.utils import (
-    home_dashboard,
-    home_dashboard_url,
-    get_count,
-    redirect_url,
-    get_current_year,
-)
-from ..shared.validators import (
-    validate_is_convenor,
-    validate_submission_viewable,
-    validate_using_assessment,
-    validate_assessment,
-)
-from ..task_queue import register_task
-from ..tools import ServerSideSQLHandler
 
 
 @student.route("/dashboard")
@@ -180,13 +181,13 @@ def dashboard():
     # build list of system messages to consider displaying
     messages = []
     for message in (
-            db.session.query(MessageOfTheDay)
-                    .filter(
-                MessageOfTheDay.show_students,
-                ~MessageOfTheDay.dismissed_by.any(id=current_user.id),
-            )
-                    .order_by(MessageOfTheDay.issue_date.desc())
-                    .all()
+        db.session.query(MessageOfTheDay)
+        .filter(
+            MessageOfTheDay.show_students,
+            ~MessageOfTheDay.dismissed_by.any(id=current_user.id),
+        )
+        .order_by(MessageOfTheDay.issue_date.desc())
+        .all()
     ):
         # if no project classes specified, always show
         include = message.project_classes.first() is None
@@ -357,10 +358,10 @@ def submitter_projects_ajax(id):
 
 
 def _project_list_endpoint(
-        config: ProjectClassConfig,
-        sel: Optional[SelectingStudent],
-        row_formatter,
-        state=None,
+    config: ProjectClassConfig,
+    sel: Optional[SelectingStudent],
+    row_formatter,
+    state=None,
 ):
     # check that project is viewable for this ProjectClassConfig instance
     if state is None:
@@ -999,6 +1000,7 @@ def submit(sid):
                 "config": sel.config,
                 "sel": sel,
             },
+            pclass=sel.config.project_class,
         )
 
         # register a new task in the database

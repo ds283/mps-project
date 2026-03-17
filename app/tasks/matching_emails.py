@@ -9,23 +9,26 @@
 #
 
 from datetime import datetime
+from distutils.util import strtobool
 from typing import List
 
-from celery import group, chain
-from distutils.util import strtobool
+from celery import chain, group
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
+from ..admin.views import email_log
 from ..database import db
 from ..models import (
-    MatchingAttempt,
-    TaskRecord,
-    MatchingRecord,
-    FacultyData,
-    User,
-    ProjectClassConfig,
-    ProjectClass,
     EmailTemplate,
+    FacultyData,
+    MatchingAttempt,
+    MatchingRecord,
+    ProjectClass,
+    ProjectClassConfig,
+    SelectingStudent,
+    TaskRecord,
+    Tenant,
+    User,
 )
 from ..task_queue import progress_update, register_task
 
@@ -170,6 +173,7 @@ def register_matching_email_tasks(celery):
                     "matches": matches,
                     "number": len(matches),
                 },
+                pclass=pclass,
             )
         else:
             msg = EmailTemplate.apply_(
@@ -188,6 +192,7 @@ def register_matching_email_tasks(celery):
                     "matches": matches,
                     "number": len(matches),
                 },
+                pclass=pclass,
             )
 
         # register a new task in the database
@@ -316,15 +321,31 @@ def register_matching_email_tasks(celery):
         user: User = fac.user
         matches: List[MatchingRecord] = record.get_supervisor_records(fac.id).all()
 
-        binned_matches = {}
+        matched_ids_by_pclass = {}
+        pclasses = set()
+        tenants = set()
         convenors = set()
         for match in matches:
-            pclass_id = match.selector.config.pclass_id
-            if pclass_id not in binned_matches:
-                binned_matches[pclass_id] = []
+            sel: SelectingStudent = match.selector
+            config: ProjectClassConfig = sel.config
+            pclass: ProjectClass = config.project_class
 
-            binned_matches[pclass_id].append(match)
-            convenors.add(match.selector.config.project_class.convenor)
+            pclass_id = pclass.id
+            match_list = matched_ids_by_pclass.setdefault(pclass_id, [])
+            match_list.append(match)
+
+            pclasses.add(pclass)
+            convenors.add(config.convenor)
+            tenants.add(pclass.tenant)
+
+        email_pclass = None
+        email_tenant = None
+        if len(pclasses) == 1:
+            email_pclass: ProjectClass = pclasses.pop()
+            email_tenant: Tenant = email_pclass.tenant
+
+        elif len(tenants) == 1:
+            email_tenant: Tenant = tenants.pop()
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         if is_draft:
@@ -340,9 +361,11 @@ def register_matching_email_tasks(celery):
                         "user": user,
                         "fac": fac,
                         "attempt": record,
-                        "matches": binned_matches,
+                        "matches": matched_ids_by_pclass,
                         "convenors": convenors,
                     },
+                    pclass=email_pclass,
+                    tenant=email_tenant,
                 )
             else:
                 msg = EmailTemplate.apply_(
@@ -353,6 +376,8 @@ def register_matching_email_tasks(celery):
                         "yrb": record.submit_year_b,
                     },
                     body_kwargs={"user": user, "fac": fac, "attempt": record},
+                    pclass=email_pclass,
+                    tenant=email_tenant,
                 )
         else:
             if len(matches) > 0:
@@ -367,9 +392,11 @@ def register_matching_email_tasks(celery):
                         "user": user,
                         "fac": fac,
                         "attempt": record,
-                        "matches": binned_matches,
+                        "matches": matched_ids_by_pclass,
                         "convenors": convenors,
                     },
+                    pclass=email_pclass,
+                    tenant=email_tenant,
                 )
             else:
                 msg = EmailTemplate.apply_(
@@ -380,6 +407,8 @@ def register_matching_email_tasks(celery):
                         "yrb": record.submit_year_b,
                     },
                     body_kwargs={"user": user, "fac": fac, "attempt": record},
+                    pclass=email_pclass,
+                    tenant=email_tenant,
                 )
 
         # register a new task in the database

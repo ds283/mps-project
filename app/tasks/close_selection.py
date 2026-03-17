@@ -16,13 +16,13 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import (
-    TaskRecord,
-    ProjectClassConfig,
-    User,
     BackupRecord,
+    EmailTemplate,
+    ProjectClassConfig,
     SelectingStudent,
     SelectionRecord,
-    EmailTemplate,
+    TaskRecord,
+    User,
 )
 from ..task_queue import progress_update, register_task
 
@@ -169,6 +169,7 @@ def register_close_selection_tasks(celery):
                     "config": config,
                     "data": data,
                 },
+                pclass=config.project_class,
             )
 
             # register a new task in the database

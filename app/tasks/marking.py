@@ -60,7 +60,7 @@ AssetDictionary = Dict[str, AssetCloudScratchContextManager]
 def register_marking_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def send_marking_emails(
-            self, record_id, cc_convenor, max_attachment, test_email, deadline, convenor_id
+        self, record_id, cc_convenor, max_attachment, test_email, deadline, convenor_id
     ):
         try:
             record: SubmissionPeriodRecord = (
@@ -230,6 +230,7 @@ def register_marking_tasks(celery):
                 "deadline": deadline,
             },
             body_attachments={"attached_documents": attach},
+            pclass=pclass,
         )
 
         if test_email is None and cc_convenor:
@@ -307,6 +308,7 @@ def register_marking_tasks(celery):
             body_attachments={
                 "attached_documents": attach,
             },
+            pclass=pclass,
         )
 
         if test_email is None and cc_convenor:
@@ -316,7 +318,7 @@ def register_marking_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def dispatch_emails(
-            self, record_id, cc_convenor, max_attachment, test_email, deadline
+        self, record_id, cc_convenor, max_attachment, test_email, deadline
     ):
         try:
             record: SubmissionRecord = (
@@ -443,11 +445,11 @@ def register_marking_tasks(celery):
         return None
 
     def _attach_documents(
-            msg: EmailMultiAlternatives,
-            record: SubmissionRecord,
-            report_filename: Path,
-            max_attached_size: int,
-            role=None,
+        msg: EmailMultiAlternatives,
+        record: SubmissionRecord,
+        report_filename: Path,
+        max_attached_size: int,
+        role=None,
     ):
         # track cumulative size of added assets, packed on a 'first-come, first-served' system
         current_size = 0
@@ -489,7 +491,7 @@ def register_marking_tasks(celery):
                 attachment: PeriodAttachment
 
                 if (role in ["marker"] and attachment.include_marker_emails) or (
-                        role in ["supervisor"] and attachment.include_supervisor_emails
+                    role in ["supervisor"] and attachment.include_supervisor_emails
                 ):
                     asset: SubmittedAsset = attachment.attachment
                     object_store = buckets[asset.bucket]
@@ -514,7 +516,7 @@ def register_marking_tasks(celery):
                 attachment: SubmissionAttachment
 
                 if (role in ["marker"] and attachment.include_marker_emails) or (
-                        role in ["supervisor"] and attachment.include_supervisor_emails
+                    role in ["supervisor"] and attachment.include_supervisor_emails
                 ):
                     asset: SubmittedAsset = attachment.attachment
                     object_store = buckets[asset.bucket]
@@ -591,7 +593,7 @@ def register_marking_tasks(celery):
         return self.replace(tasks)
 
     def sanity_check_grade(
-            role: SubmissionRole, person: User, student: User, convenor: Optional[User]
+        role: SubmissionRole, person: User, student: User, convenor: Optional[User]
     ):
         fail = False
 
@@ -845,7 +847,7 @@ def register_marking_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def generate_feedback_reports(
-            self, recipe_id: int, period_id: int, convenor_id: Optional[int]
+        self, recipe_id: int, period_id: int, convenor_id: Optional[int]
     ):
         try:
             recipe: FeedbackRecipe = (
@@ -904,7 +906,7 @@ def register_marking_tasks(celery):
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
     def generate_feedback_report(
-            self, record_id: int, recipe_id: int, convenor_id: Optional[int]
+        self, record_id: int, recipe_id: int, convenor_id: Optional[int]
     ):
         try:
             record: SubmissionRecord = (
@@ -1162,7 +1164,7 @@ def register_marking_tasks(celery):
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=5)
     def finalize_feedback_reports(
-            self, result_data, recipe_id: int, period_id: int, convenor_id: Optional[int]
+        self, result_data, recipe_id: int, period_id: int, convenor_id: Optional[int]
     ):
         try:
             recipe: FeedbackRecipe = (
@@ -1232,8 +1234,8 @@ def register_marking_tasks(celery):
         msg = f"{period.display_name}: Used feedback report recipe '{recipe.label}' to generate {reports_generated} feedback report{generated_plural}."
         if reports_ignored > 0:
             msg += (
-                    " "
-                    + f"{reports_ignored} submitter{ignored_plural} {ignored_were} ignored."
+                " "
+                + f"{reports_ignored} submitter{ignored_plural} {ignored_were} ignored."
             )
         report_info(
             msg,

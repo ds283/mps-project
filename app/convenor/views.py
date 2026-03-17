@@ -7880,6 +7880,7 @@ def submit_student_selection(sel_id):
                 "config": sel.config,
                 "sel": sel,
             },
+            pclass=sel.config.project_class,
         )
 
         # register a new task in the database

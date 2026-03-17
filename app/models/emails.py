@@ -226,12 +226,6 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
                 f'Invalid tenant type "{type(tenant)}" (value="{tenant}") in EmailTemplate.apply_()'
             )
 
-        if from_email is None:
-            from_email = current_app.config["MAIL_DEFAULT_SENDER"]
-
-        if reply_to is None:
-            reply_to = [current_app.config["MAIL_REPLY_TO"]]
-
         pclass_id = None
         if isinstance(pclass, int):
             pclass_obj = db.session.query(ProjectClass).filter_by(id=pclass).first()
@@ -297,6 +291,12 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
             raise RuntimeError(
                 f"No active template found for EmailTemplate type {template_type}"
             )
+
+        if from_email is None:
+            from_email = current_app.config["MAIL_DEFAULT_SENDER"]
+
+        if reply_to is None:
+            reply_to = [current_app.config["MAIL_REPLY_TO"]]
 
         # format subject string
         subject_str: str = (

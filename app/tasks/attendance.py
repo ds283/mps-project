@@ -340,6 +340,7 @@ def register_attendance_tasks(celery):
                 "mute_event_api_url": mute_event_api_url,
                 "mute_role_api_url": mute_role_api_url,
             },
+            pclass=config.project_class,
         )
 
         task_id = register_task(

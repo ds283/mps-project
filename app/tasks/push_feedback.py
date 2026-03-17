@@ -212,6 +212,7 @@ def register_push_feedback_tasks(celery):
                 "record": record,
             },
             body_attachments={"attached_docs": partial(_attach_reports, record)},
+            pclass=pclass,
         )
 
         if test_email is None and cc_convenor:
@@ -234,16 +235,16 @@ def register_push_feedback_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def push_role_feedback(
-            self,
-            person_id,
-            period_id,
-            user_id,
-            target_roles,
-            template_name,
-            email_subject,
-            cc_convenor,
-            test_email,
-            outcome_label,
+        self,
+        person_id,
+        period_id,
+        user_id,
+        target_roles,
+        template_name,
+        email_subject,
+        cc_convenor,
+        test_email,
+        outcome_label,
     ):
         try:
             period: SubmissionPeriodRecord = (
@@ -278,9 +279,9 @@ def register_push_feedback_tasks(celery):
             for role in record.roles:
                 role: SubmissionRole
                 if (
-                        not role.feedback_sent
-                        and role.user_id == person_id
-                        and role.role in target_roles
+                    not role.feedback_sent
+                    and role.user_id == person_id
+                    and role.role in target_roles
                 ):
                     submitters.append(record)
 
@@ -321,6 +322,7 @@ def register_push_feedback_tasks(celery):
                 f"submitter_{submitter.id}": partial(_attach_reports, submitter)
                 for submitter in submitters
             },
+            pclass=pclass,
         )
 
         if test_email is None and cc_convenor:
@@ -428,14 +430,14 @@ def register_push_feedback_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=5)
     def mark_role_feedback_sent(
-            self,
-            result_data,
-            person_id,
-            period_id,
-            user_id,
-            target_roles,
-            test_email,
-            outcome_label,
+        self,
+        result_data,
+        person_id,
+        period_id,
+        user_id,
+        target_roles,
+        test_email,
+        outcome_label,
     ):
         if "outcome" not in result_data:
             print(
@@ -522,9 +524,9 @@ def register_push_feedback_tasks(celery):
             for role in record.roles:
                 role: SubmissionRole
                 if (
-                        not role.feedback_sent
-                        and role.user_id == person_id
-                        and role.role in target_roles
+                    not role.feedback_sent
+                    and role.user_id == person_id
+                    and role.role in target_roles
                 ):
                     role.feedback_sent = True
                     role.feedback_push_id = user_id

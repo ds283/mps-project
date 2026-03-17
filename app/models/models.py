@@ -13081,6 +13081,14 @@ class SubmissionRole(
     # include events belonging to this role in reminder emails?
     prompt_in_reminder = db.Column(db.Boolean(), default=True, nullable=False)
 
+    @validates("prompt_at_fixed_time")
+    def _validate_prompt_at_fixed_time(self, key, value):
+        if value and self.prompt_at_time is None:
+            self.prompt_at_time = time(hour=16, minute=0)
+
+        if not value and self.prompt_delay is None:
+            self.prompt_delay = 1
+
     # EMAIL LOG
 
     # email log associated with this role

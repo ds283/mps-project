@@ -270,8 +270,8 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
                 )
             )
         templ_query = templ_query.order_by(
-            EmailTemplate.tenant_id,
-            EmailTemplate.pclass_id,
+            EmailTemplate.pclass_id.desc(),
+            EmailTemplate.tenant_id.desc(),
             EmailTemplate.version.desc(),
         )
 

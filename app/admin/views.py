@@ -13869,12 +13869,18 @@ def email_templates_ajax():
     }
     version = {"order": EmailTemplate.version}
     status = {"order": EmailTemplate.active}
+    comment = {
+        "search": EmailTemplate.comment,
+        "order": EmailTemplate.comment,
+        "search_collation": "utf8_general_ci",
+    }
 
     columns = {
         "type": type_col,
         "subject": subject,
         "version": version,
         "status": status,
+        "comment": comment,
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:

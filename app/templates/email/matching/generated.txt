@@ -1,8 +1,0 @@
-For attention of: {{ user.name }}
-
-This is an automated email from the MPS
-project management web app at https://mpsprojects.sussex.ac.uk.
-
-The files needed for offline matching of '{{ name }}' are now ready
-and are attached to this email. Alternatively, you can download
-them from the matching inspector.

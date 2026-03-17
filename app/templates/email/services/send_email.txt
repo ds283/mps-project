@@ -1,1 +1,0 @@
-{{ body|wordwrap(79) }}

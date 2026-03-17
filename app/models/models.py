@@ -14911,17 +14911,12 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             )
             .filter(
                 SubmissionRole.submission_id == self.id,
-                or_(
-                    and_(
-                        SupervisionEvent.time == None,
-                        SubmissionPeriodUnit.end_date < now.date(),
-                    ),
-                    and_(SupervisionEvent.time != None, SupervisionEvent.time < now),
-                ),
+                SubmissionPeriodUnit.end_date < now.date(),
             )
             .order_by(
                 SubmissionPeriodUnit.end_date.desc(),
                 SupervisionEvent.time.desc(),
+                SupervisionEvent.name,
             )
         )
 
@@ -14940,17 +14935,12 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             )
             .filter(
                 SubmissionRole.submission_id == self.id,
-                or_(
-                    and_(
-                        SupervisionEvent.time == None,
-                        SubmissionPeriodUnit.start_date > now.date(),
-                    ),
-                    and_(SupervisionEvent.time != None, SupervisionEvent.time > now),
-                ),
+                SubmissionPeriodUnit.start_date > now.date(),
             )
             .order_by(
                 SubmissionPeriodUnit.start_date,
                 SupervisionEvent.time,
+                SupervisionEvent.name,
             )
         )
 
@@ -14975,6 +14965,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             .order_by(
                 SubmissionPeriodUnit.start_date,
                 SupervisionEvent.time,
+                SupervisionEvent.name,
             )
         )
 

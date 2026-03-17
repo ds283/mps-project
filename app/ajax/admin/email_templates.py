@@ -68,10 +68,34 @@ def get_type_name(type_id):
 
 # language=jinja2
 _email_template_type = """
-<div>{{ type_name }}</div>
-{% for label in t.labels %}
-    {{ simple_label(label.make_label()) }}
-{% endfor %}
+<div class="d-flex flex-column justify-content-start align-items-start gap-2">
+    <div>{{ type_name }}</div>
+    <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2">
+        {% for label in t.labels %}
+            {{ simple_label(label.make_label()) }}
+        {% endfor %}
+    </div>
+    <hr>
+    <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
+        {% if t.pclass_id is not none %}
+            <div class="small">
+                <i class="fas fa-project-diagram fa-fw text-info"></i>
+                <strong>Project class:</strong> {{ t.pclass.name }}
+            </div>
+        {% endif %}
+        {% if t.tenant_id is not none %}
+            <div class="small">
+                <i class="fas fa-building fa-fw text-warning"></i>
+                <strong>Tenant:</strong> {{ t.tenant.name }}
+            </div>
+        {% endif %}
+        {% if t.tenant_id is none and t.pclass_id is none %}
+            <div class="small text-muted">
+                <i class="fas fa-globe fa-fw"></i> Global fallback
+            </div>
+        {% endif %}
+    </div>
+</div>
 """
 
 # language=jinja2
@@ -97,24 +121,8 @@ _email_template_status = """
 """
 
 # language=jinja2
-_email_template_scope = """
-{% if t.pclass_id is not none %}
-    <div class="small">
-        <i class="fas fa-project-diagram fa-fw text-info"></i>
-        <strong>Project class:</strong> {{ t.pclass.name }}
-    </div>
-{% endif %}
-{% if t.tenant_id is not none %}
-    <div class="small">
-        <i class="fas fa-building fa-fw text-warning"></i>
-        <strong>Tenant:</strong> {{ t.tenant.name }}
-    </div>
-{% endif %}
-{% if t.tenant_id is none and t.pclass_id is none %}
-    <div class="small text-muted">
-        <i class="fas fa-globe fa-fw"></i> Global fallback
-    </div>
-{% endif %}
+_email_template_subject = """
+<div class="text-secondary fw-semibold">{{ t.subject }}</div>
 """
 
 # language=jinja2
@@ -169,9 +177,9 @@ def _build_status_templ() -> Template:
     return env.from_string(_email_template_status)
 
 
-def _build_scope_templ() -> Template:
+def _build_subject_templ() -> Template:
     env: Environment = current_app.jinja_env
-    return env.from_string(_email_template_scope)
+    return env.from_string(_email_template_subject)
 
 
 def _build_menu_templ() -> Template:
@@ -185,7 +193,7 @@ def email_templates_data(templates):
     # precompile Jinja2 template strings once for the whole batch
     type_templ: Template = _build_type_templ()
     status_templ: Template = _build_status_templ()
-    scope_templ: Template = _build_scope_templ()
+    subject_templ: Template = _build_subject_templ()
     menu_templ: Template = _build_menu_templ()
 
     def _process(t: EmailTemplate):
@@ -196,9 +204,8 @@ def email_templates_data(templates):
                 type_name=get_type_name(t.type),
                 simple_label=simple_label,
             ),
-            "subject": t.subject,
+            "subject": render_template(subject_templ, t=t),
             "version": t.version,
-            "scope": render_template(scope_templ, t=t),
             "status": render_template(status_templ, t=t),
             "menu": render_template(menu_templ, t=t),
         }

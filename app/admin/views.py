@@ -13868,14 +13868,12 @@ def email_templates_ajax():
         "search_collation": "utf8_general_ci",
     }
     version = {"order": EmailTemplate.version}
-    scope = {"order": [EmailTemplate.tenant_id, EmailTemplate.pclass_id]}
     status = {"order": EmailTemplate.active}
 
     columns = {
         "type": type_col,
         "subject": subject,
         "version": version,
-        "scope": scope,
         "status": status,
     }
 

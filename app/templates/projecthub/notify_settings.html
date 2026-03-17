@@ -19,6 +19,11 @@
                 selectionCssClass: 'select2--small',
                 dropdownCssClass: 'select2--small',
             });
+            $('#reminder_frequency').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+            })
             $('#prompt_at_time').datetimepicker({
                 format: 'HH:mm',
                 allowInputToggle: true
@@ -42,8 +47,25 @@
                 }
             }
 
+            function updateReminderFields() {
+                var reminderEmails = $('#reminder_emails').prop('checked');
+                var promptInReminder = $('#prompt_in_reminder').prop('checked');
+
+                if (reminderEmails) {
+                    $('#reminder-enabled-section').show();
+                    if (promptInReminder) {
+                        $('#reminder-frequency-section').show();
+                    } else {
+                        $('#reminder-frequency-section').hide();
+                    }
+                } else {
+                    $('#reminder-enabled-section').hide();
+                }
+            }
+
             // Run on page load
             updateTimeFields();
+            updateReminderFields();
 
             // Run when the user changes the value of the promptAfterEvent or promptAtFixedTime fields
             $('#prompt_after_event').on('change', function () {
@@ -51,6 +73,9 @@
             });
             $('#prompt_at_fixed_time').on('change', function () {
                 updateTimeFields();
+            });
+            $('#prompt_in_reminder').on('change', function () {
+                updateReminderFields();
             });
         });
     </script>
@@ -71,6 +96,9 @@
         {{ form.hidden_tag() }}
 
         <div class="card card-body bg-well">
+            <div>
+                <strong>Send a prompt to record attendance after each meeting</strong>
+            </div>
             {{ wtf.render_field(form.prompt_after_event) }}
             <div id="prompt-enabled-section">
                 {{ wtf.render_field(form.prompt_at_fixed_time) }}
@@ -82,9 +110,20 @@
                 </div>
             </div>
         </div>
-        <div class="card card-body bg-well mt-2">
-            {{ wtf.render_field(form.prompt_in_reminder) }}
-        </div>
+        {% if fd %}
+            <div class="card card-body bg-well mt-2">
+                <div>
+                    <strong>Send a summary reminder </strong>
+                </div>
+                {{ wtf.render_field(form.reminder_emails) }}
+                <div id="reminder-enabled-section">
+                    <div id="reminder-frequency-section">
+                        {{ wtf.render_field(form.reminder_frequency) }}
+                    </div>
+                    {{ wtf.render_field(form.prompt_in_reminder) }}
+                </div>
+            </div>
+        {% endif %}
 
         <div class="mt-2">
             {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}

@@ -3943,6 +3943,20 @@ class FacultyData(db.Model, EditingMetadataMixin):
     # presentation assessment CATS capacity
     CATS_presentation = db.Column(db.Integer())
 
+    # ATTENDANCE MONITORING
+
+    # send reminder emails?
+    reminder_emails = db.Column(db.Integer(), default=True, nullable=False)
+
+    # how frequently to send reminder emails
+    _reminder_frequency_choices = [
+        (1, "Every week"),
+        (2, "Every two weeks"),
+        (3, "Every three weeks"),
+        (4, "Every four weeks"),
+    ]
+    reminder_frequency = db.Column(db.Integer(), default=2, nullable=False)
+
     # CANVAS INTEGRATION
 
     # used only for convenors
@@ -13062,7 +13076,7 @@ class SubmissionRole(
         (4, "4 hours after start time"),
         (5, "5 hours after start time"),
     ]
-    prompt_delay = db.Column(db.Integer(), nullable=True)
+    prompt_delay = db.Column(db.Integer(), default=1, nullable=True)
 
     # include events belonging to this role in reminder emails?
     prompt_in_reminder = db.Column(db.Boolean(), default=True, nullable=False)

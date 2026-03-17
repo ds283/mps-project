@@ -20,11 +20,57 @@
                 placeholder: 'Select one or more roles...'
             });
             $('#default_license').select2({
-                theme: 'bootstrap-5'
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
             });
             $('#academic_title').select2({
-                theme: 'bootstrap-5'
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
             });
+            $('#summary_frequency').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+            });
+            $('#reminder_frequency').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+            })
+
+            function updateReminderFields() {
+                var reminderEmails = $('#reminder_emails').prop('checked');
+
+                if (reminderEmails) {
+                    $('#attendance-reminders-section').show();
+                } else {
+                    $('#attendance-reminders-section').hide();
+                }
+            }
+
+            function updateGroupNotificationFields() {
+                var groupNotifications = $('#group_notifications').prop('checked');
+
+                if (groupNotifications) {
+                    $('#group-notifications-section').show();
+                } else {
+                    $('#group-notifications-section').hide();
+                }
+            }
+
+            // Update on page load
+            updateReminderFields();
+            updateGroupNotificationFields();
+
+            // Update on change
+            $('#reminder_emails').on('change', function () {
+                updateReminderFields();
+            });
+            $('#group_notifications').on('change', function () {
+                updateGroupNotificationFields();
+            });
+            
         });
     </script>
 {% endblock %}
@@ -40,88 +86,95 @@
 {% block form_content %}
     <form action="{{ url_for('faculty.settings') }}" method="POST" name="settings_form">
 
-    {{ settings_form.hidden_tag() }}
+        {{ settings_form.hidden_tag() }}
 
-{#        {{ wtf.form_errors(settings_form) }}#}
+        {#        {{ wtf.form_errors(settings_form) }}#}
 
-    <div class="card mt-3 mb-3 card-body bg-well">
-        <div class="row">
-            <div class="col-6">
-                {{ wtf.render_field(settings_form.username) }}
-            </div>
-            <div class="col-6">
-                {{ wtf.render_field(settings_form.office) }}
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-6">
-                {{ wtf.render_field(settings_form.first_name) }}
-            </div>
-            <div class="col-6">
-                {{ wtf.render_field(settings_form.last_name) }}
-            </div>
-        </div>
-
-        <hr class="intro-divider">
-        {{ wtf.render_field(settings_form.default_license) }}
-        {% if settings_form.mask_roles %}
-            {{ wtf.render_field(settings_form.mask_roles) }}
-        {% endif %}
-    </div>
-
-    <div class="card mt-3 mb-3 card-body bg-well">
-        <div class="form-group-heading">Titles</div>
-        {{ wtf.render_field(settings_form.academic_title) }}
-        {{ wtf.render_field(settings_form.use_academic_title) }}
-    </div>
-
-    <div class="card mt-3 mb-3 card-body bg-well">
-        <div class="form-group-heading">Email notifications</div>
-        {{ wtf.render_field(settings_form.group_summaries) }}
-        {{ wtf.render_field(settings_form.summary_frequency) }}
-    </div>
-
-    <div class="card mt-3 mb-3 card-body bg-well">
-        <div class="form-group-heading">Default settings for new projects</div>
-        <div class="alert alert-info mt-2 mb-3">
-            {% call icon_block("info-circle") %}
-                The settings in this section are defaults that are used to populate
-                newly created projects.
-                Changes made here do not immediately affect active projects.
-            {% endcall %}
-        </div>
-        <div class="row vertical-top">
-            <div class="col-6">
-                {{ wtf.render_field(settings_form.sign_off_students) }}
-            </div>
-            <div class="col-6">
-                {{ wtf.render_field(settings_form.enforce_capacity) }}
-            </div>
-        </div>
-        <div class="row vertical-top">
-            <div class="col-6">
-                {{ wtf.render_field(settings_form.show_popularity) }}
-            </div>
-            <div class="col-6">
-                {{ wtf.render_field(settings_form.dont_clash_presentations) }}
-            </div>
-        </div>
-        <div class="mt-2 row vertical-top">
-            <div class="col-6">
-                {{ wtf.render_field(settings_form.project_capacity) }}
-            </div>
-            <div class="col-6"></div>
-        </div>
-    </div>
-
-    {% if settings_form.canvas_API_token is defined %}
         <div class="card mt-3 mb-3 card-body bg-well">
-            <div class="form-group-heading">Canvas integration</div>
-            {{ wtf.render_field(settings_form.canvas_API_token) }}
-        </div>
-    {% endif %}
+            <div class="row">
+                <div class="col-6">
+                    {{ wtf.render_field(settings_form.username) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(settings_form.office) }}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-6">
+                    {{ wtf.render_field(settings_form.first_name) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(settings_form.last_name) }}
+                </div>
+            </div>
 
-    {{ wtf.render_field(settings_form.submit, button_map={'submit': 'primary'}) }}
+            <hr class="intro-divider">
+            {{ wtf.render_field(settings_form.default_license) }}
+            {% if settings_form.mask_roles %}
+                {{ wtf.render_field(settings_form.mask_roles) }}
+            {% endif %}
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            <div class="form-group-heading">Titles</div>
+            {{ wtf.render_field(settings_form.academic_title) }}
+            {{ wtf.render_field(settings_form.use_academic_title) }}
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            <div class="form-group-heading">Email notifications</div>
+            {{ wtf.render_field(settings_form.group_summaries) }}
+            <div id="group-notifications-section">
+                {{ wtf.render_field(settings_form.summary_frequency) }}
+            </div>
+            <hr role="divider">
+            {{ wtf.render_field(settings_form.email_reminders) }}
+            <div id="attendance-reminders-section">
+                {{ wtf.render_field(settings_form.reminder_frequency) }}
+            </div>
+        </div>
+
+        <div class="card mt-3 mb-3 card-body bg-well">
+            <div class="form-group-heading">Default settings for new projects</div>
+            <div class="alert alert-info mt-2 mb-3">
+                {% call icon_block("info-circle") %}
+                    The settings in this section are defaults that are used to populate
+                    newly created projects.
+                    Changes made here do not immediately affect active projects.
+                {% endcall %}
+            </div>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(settings_form.sign_off_students) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(settings_form.enforce_capacity) }}
+                </div>
+            </div>
+            <div class="row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(settings_form.show_popularity) }}
+                </div>
+                <div class="col-6">
+                    {{ wtf.render_field(settings_form.dont_clash_presentations) }}
+                </div>
+            </div>
+            <div class="mt-2 row vertical-top">
+                <div class="col-6">
+                    {{ wtf.render_field(settings_form.project_capacity) }}
+                </div>
+                <div class="col-6"></div>
+            </div>
+        </div>
+
+        {% if settings_form.canvas_API_token is defined %}
+            <div class="card mt-3 mb-3 card-body bg-well">
+                <div class="form-group-heading">Canvas integration</div>
+                {{ wtf.render_field(settings_form.canvas_API_token) }}
+            </div>
+        {% endif %}
+
+        {{ wtf.render_field(settings_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

@@ -894,9 +894,7 @@ def set_regular_meeting_time(role_id):
                 # find first specified weekday on or after the start date
                 weekday_shift = (role.regular_meeting_weekday - unit_weekday) % 7
                 target_date = unit_start_date + timedelta(days=weekday_shift)
-                event.time = datetime.combine(
-                    target_date, role.regular_meeting_time
-                )
+                event.time = datetime.combine(target_date, role.regular_meeting_time)
                 event.location = role.regular_meeting_location
 
             db.session.commit()
@@ -1004,6 +1002,8 @@ def notify_settings(role_id):
     Adjust notification settings associated with a particular SubmissionRole
     """
     role: SubmissionRole = SubmissionRole.query.get_or_404(role_id)
+    fuser: User = role.user
+    fd: FacultyData = fuser.faculty_data
     record: SubmissionRecord = role.submission
     submitter: SubmittingStudent = record.owner
     sd: StudentData = submitter.student
@@ -1040,6 +1040,10 @@ def notify_settings(role_id):
             role.prompt_delay = form.prompt_delay.data
             role.prompt_in_reminder = form.prompt_in_reminder.data
 
+            if fd is not None:
+                fd.reminder_emails = form.reminder_emails.data
+                fd.reminder_frequency = form.reminder_frequency.data
+
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1050,6 +1054,10 @@ def notify_settings(role_id):
             )
 
         return redirect(url)
+    else:
+        if request.method == "GET":
+            form.reminder_emails.data = fd.reminder_emails if fd is not None else False
+            form.reminder_frequency.data = fd.reminder_frequency if fd is None else 2
 
     return render_template_context(
         "projecthub/notify_settings.html",
@@ -1057,6 +1065,7 @@ def notify_settings(role_id):
         role=role,
         submitter=submitter,
         sd=sd,
+        fd=fd,
         url=url,
     )
 

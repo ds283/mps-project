@@ -9,7 +9,6 @@
 #
 from datetime import date, datetime
 
-from flask_security import Form
 from flask_security.forms import Form
 from wtforms import (
     BooleanField,
@@ -25,6 +24,7 @@ from wtforms_alchemy import QuerySelectField, QuerySelectMultipleField
 
 from ..models import (
     DEFAULT_STRING_LENGTH,
+    FacultyData,
     SubmissionPeriodUnit,
     SubmissionRecord,
     SubmissionRole,
@@ -32,7 +32,7 @@ from ..models import (
 )
 from ..shared.forms.mixins import SaveChangesMixin
 from ..shared.forms.widgets import NullableTimeField
-from ..shared.forms.wtf_validators import NotOptionalIf, OptionalIf
+from ..shared.forms.wtf_validators import NotOptionalIf
 
 
 class FormattedArticleForm(Form):
@@ -205,6 +205,18 @@ class SetSubmissionRoleNotificationPreferencesForm(Form, SaveChangesMixin):
     prompt_delay = SelectField(
         "Delay before sending email prompt",
         choices=SubmissionRole._prompt_delay_choices,
+        coerce=int,
+    )
+
+    reminder_emails = BooleanField(
+        "Send regular email reminders to record attendance at supervision meetings",
+        description="All reminders are combined into a single email, so please be aware that this setting applies to all students and all project types. Below, you can select whether reminders for this student are included in these emails.",
+        default=True,
+    )
+
+    reminder_frequency = SelectField(
+        "Frequency of reminder emails",
+        choices=FacultyData._reminder_frequency_choices,
         coerce=int,
     )
 

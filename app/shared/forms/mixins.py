@@ -12,29 +12,29 @@
 from functools import partial
 
 from wtforms import (
-    SubmitField,
-    StringField,
-    SelectField,
     BooleanField,
     IntegerField,
+    SelectField,
+    StringField,
+    SubmitField,
     TextAreaField,
 )
-from wtforms.validators import InputRequired, Optional, Length
+from wtforms.validators import InputRequired, Length, Optional
 from wtforms_alchemy import QuerySelectField
 
 from ...models import (
+    DEFAULT_STRING_LENGTH,
+    FacultyData,
+    ProjectClassConfig,
     academic_titles,
     email_freq_choices,
-    DEFAULT_STRING_LENGTH,
-    ProjectClassConfig,
 )
-from .wtf_validators import valid_username, unique_or_original_username, NotOptionalIf
-
 from .queries import (
+    BuildSubmissionRecordLabel,
     GetActiveAssetLicenses,
     GetSubmissionRecords,
-    BuildSubmissionRecordLabel,
 )
+from .wtf_validators import NotOptionalIf, unique_or_original_username, valid_username
 
 
 class SaveChangesMixin:
@@ -152,6 +152,18 @@ def FacultyDataMixinFactory(admin=False, enable_canvas=False):
                     message="Please enter your office details to help students find you"
                 )
             ],
+        )
+
+        reminder_emails = BooleanField(
+            "Send regular email reminders to record attendance at supervision meetings",
+            default=True,
+        )
+
+        reminder_frequency = SelectField(
+            "Frequency of email reminders to record attendance at supervision events",
+            choices=FacultyData._reminder_frequency_choices,
+            description="You All reminders are combined into a single email, so please be aware that this setting applies to all students and all project types",
+            coerce=int,
         )
 
         if admin:

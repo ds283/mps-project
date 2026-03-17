@@ -251,16 +251,6 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
                 f'Invalid project class type "{type(pclass)}" (value="{pclass}") in EmailTemplate.apply_()'
             )
 
-        if not isinstance(to, Iterable):
-            raise RuntimeError(
-                f'Invalid recipient list type "{type(to)}" (value="{to}") in EmailTemplate.apply_()'
-            )
-
-        if not isinstance(reply_to, Iterable):
-            raise RuntimeError(
-                f'Invalid reply_to list type "{type(reply_to)}" (value="{reply_to}") in EmailTemplate.apply_()'
-            )
-
         # find active template at highest level of override
         templ_query = db.session.query(EmailTemplate).filter(
             EmailTemplate.type == template_type, EmailTemplate.active.is_(True)
@@ -297,6 +287,16 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
 
         if reply_to is None:
             reply_to = [current_app.config["MAIL_REPLY_TO"]]
+
+        if not isinstance(to, Iterable):
+            raise RuntimeError(
+                f'Invalid recipient list type "{type(to)}" (value="{to}") in EmailTemplate.apply_()'
+            )
+
+        if not isinstance(reply_to, Iterable):
+            raise RuntimeError(
+                f'Invalid reply_to list type "{type(reply_to)}" (value="{reply_to}") in EmailTemplate.apply_()'
+            )
 
         # format subject string
         subject_str: str = (

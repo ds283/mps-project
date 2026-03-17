@@ -375,7 +375,13 @@ def register_matching_email_tasks(celery):
                         "yra": record.submit_year_a,
                         "yrb": record.submit_year_b,
                     },
-                    body_kwargs={"user": user, "fac": fac, "attempt": record},
+                    body_kwargs={
+                        "user": user,
+                        "fac": fac,
+                        "attempt": record,
+                        "yra": record.submit_year_a,
+                        "yrb": record.submit_year_b,
+                    },
                     pclass=email_pclass,
                     tenant=email_tenant,
                 )
@@ -394,6 +400,8 @@ def register_matching_email_tasks(celery):
                         "attempt": record,
                         "matches": matched_ids_by_pclass,
                         "convenors": convenors,
+                        "yra": record.submit_year_a,
+                        "yrb": record.submit_year_b,
                     },
                     pclass=email_pclass,
                     tenant=email_tenant,
@@ -406,7 +414,13 @@ def register_matching_email_tasks(celery):
                         "yra": record.submit_year_a,
                         "yrb": record.submit_year_b,
                     },
-                    body_kwargs={"user": user, "fac": fac, "attempt": record},
+                    body_kwargs={
+                        "user": user,
+                        "fac": fac,
+                        "attempt": record,
+                        "yra": record.submit_year_a,
+                        "yrb": record.submit_year_b,
+                    },
                     pclass=email_pclass,
                     tenant=email_tenant,
                 )

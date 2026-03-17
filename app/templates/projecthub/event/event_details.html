@@ -98,7 +98,7 @@
                             <i class="fas fa-user-friends"></i> Supervision team attendees
                         </span>
                         <div class="d-flex flex-row gap-2">
-                            {% if hub.is_convenor or is_event_owner %}
+                            {% if hub_role.is_convenor or is_event_owner %}
                                 <a class="btn btn-sm btn-warning"
                                    href="{{ url_for('projecthub.reassign_event_owner', event_id=event.id, url=request.url) }}">
                                     <i class="fas fa-user-edit"></i> Reassign owner

@@ -112,10 +112,9 @@ def register_attendance_tasks(celery):
             raise self.retry()
 
         if event is None:
-            self.update_state(
-                state=states.FAILURE, meta={"msg": f"Could not load event #{event_id}"}
-            )
-            raise Ignore()
+            msg = {"msg": f"Could not load event #{event_id}"}
+            self.update_state(state=states.FAILURE, meta=msg)
+            return msg
 
         year = get_current_year()
         record: SubmissionRecord = event.sub_record
@@ -129,79 +128,87 @@ def register_attendance_tasks(celery):
         # restrict emails to just user #1
         # if owner.user_id != 1:
         #     self.update_state(
-        #         state=states.IGNORED,
+        #         state=states.SUCCESS,
         #         meta={"msg": f"SubmissionRole #{owner.id} is currently being ignored"},
         #     )
         #     raise Ignore()
 
         if config.year != year:
+            msg = {"msg": f"Event #{event_id} is for a different year"}
             self.update_state(
-                state=states.IGNORED,
-                meta={"msg": f"Event #{event_id} is for a different year"},
+                state=states.SUCCESS,
+                meta=msg,
             )
-            raise Ignore()
+            return msg
 
         if sub.retired:
+            msg = {"msg": f"Event #{event_id} is for a retired student"}
             self.update_state(
-                state=states.IGNORED,
-                meta={"msg": f"Event #{event_id} is for a retired student"},
+                state=states.SUCCESS,
+                meta=msg,
             )
-            raise Ignore()
+            return msg
 
         if period.feedback_open:
+            msg = {
+                "msg": f"Event #{event_id} belongs to a submission period that has been opened for reedback"
+            }
             self.update_state(
-                state=states.IGNORED,
-                meta={
-                    "msg": f"Event #{event_id} belongs to a submission period that has been opened for reedback"
-                },
+                state=states.SUCCESS,
+                meta=msg,
             )
-            raise Ignore()
+            return msg
 
         if period.closed:
+            msg = {
+                "msg": f"Event #{event_id} belongs to a submission period that has been closed"
+            }
             self.update_state(
-                state=states.IGNORED,
-                meta={
-                    "msg": f"Event #{event_id} belongs to a submission period that has been closed"
-                },
+                state=states.SUCCESS,
+                meta=msg,
             )
-            raise Ignore()
+            return msg
 
         if event.attendance is not None:
+            msg = {"msg": f"Event #{event_id} already has attendance recorded"}
             self.update_state(
-                state=states.IGNORED,
-                meta={"msg": f"Event #{event_id} already has attendance recorded"},
+                state=states.SUCCESS,
+                meta=msg,
             )
+            return msg
 
         if event.mute:
-            self.update_state(
-                state=states.IGNORED, meta={"msg": f"Event #{event_id} is muted"}
-            )
-            raise Ignore()
+            msg = {"msg": f"Event #{event_id} is muted"}
+            self.update_state(state=states.SUCCESS, meta=msg)
+            return msg
 
         # is this event in the past?
         # to decide that, we need to know when the owner has asked for prompts to be delivered
         if owner.mute:
+            msg = {"msg": f"SubmissionRole #{owner.id} is muted"}
             self.update_state(
-                state=states.IGNORED,
-                meta={"msg": f"SubmissionRole #{owner.id} is muted"},
+                state=states.SUCCESS,
+                meta=msg,
             )
-            raise Ignore()
+            return msg
 
         if not owner.prompt_after_event:
+            msg = {
+                "msg": f"SubmissionRole #{owner.id} has not requested an email prompt"
+            }
             self.update_state(
-                state=states.IGNORED,
-                meta={
-                    "msg": f"SubmissionRole #{owner.id} has not requested an email prompt"
-                },
+                state=states.SUCCESS,
+                meta=msg,
             )
-            raise Ignore()
+            return msg
 
         if event.prompt_sent_timestamp is not None:
+            msg = {"msg": f"SubmissionRole #{owner.id} has already been notified"}
             self.update_state(
-                state=states.IGNORED,
-                meta={"msg": f"SubmissionRole #{owner.id} has already been notified"},
+                state=states.SUCCESS,
+                meta=msg,
             )
-            raise Ignore()
+            return msg
 
         target_time: datetime
         event_time: datetime = event.get_start_time()
@@ -219,11 +226,12 @@ def register_attendance_tasks(celery):
         # if the event has not yet taken place, then no need to send a prompt yet
         now = datetime.now()
         if target_time > now:
+            msg = {"msg": f"Event #{event_id} is not yet in the past"}
             self.update_state(
-                state=states.IGNORED,
-                meta={"msg": f"Event #{event_id} is not yet in the past"},
+                state=states.SUCCESS,
+                meta=msg,
             )
-            raise Ignore()
+            return msg
 
         # test whether today is a working day (a "business day" or "bday"), and if not then bail out;
         # we don't want to bother people with emails at the weekend or on statutory holidays
@@ -237,21 +245,23 @@ def register_attendance_tasks(celery):
 
         # is today a UK holiday?
         if today in holiday_calendar:
+            msg = {"msg": f"Today ({today}) is a UK holiday, so not sending emails"}
             self.update_state(
-                state=states.IGNORED,
-                meta={"msg": f"Today ({today}) is a UK holiday, so not sending emails"},
+                state=states.SUCCESS,
+                meta=msg,
             )
-            raise Ignore()
+            return msg
 
         # is today a working day?
         if not is_busday(today):
+            msg = {
+                "msg": f"Today ({today}) is not a working day, so not sending emails"
+            }
             self.update_state(
-                state=states.IGNORED,
-                meta={
-                    "msg": f"Today ({today}) is not a working day, so not sending emails"
-                },
+                state=states.SUCCESS,
+                meta=msg,
             )
-            raise Ignore()
+            return msg
 
         # if the event took place more than a few days ago, then probably the owner previously
         # had notifications muted, and has now unmuted them.
@@ -259,10 +269,12 @@ def register_attendance_tasks(celery):
         # So should send only if the target time passed recently.
         delta_time: timedelta = now - target_time
         if delta_time.days > 5:
+            msg = {"msg": f"Event #{event_id} is too old to send a prompt"}
             self.update_state(
-                state=states.IGNORED,
-                meta={"msg": f"Event #{event_id} is too old to send a prompt"},
+                state=states.SUCCESS,
+                meta=msg,
             )
+            return msg
 
         send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         owner_user: User = owner.user
@@ -360,29 +372,26 @@ def register_attendance_tasks(celery):
             print(
                 f"!! mark_attendance_prompt_sent: no outcome in result_data (result_data={result_data})"
             )
-            self.update_state(
-                state=states.FAILURE, meta={"msg": "No outcome in result_data"}
-            )
-            return {"error": 1}
+            msg = {"msg": "No outcome in result_data"}
+            self.update_state(state=states.FAILURE, meta=msg)
+            return msg
 
         outcome = result_data["outcome"]
         if outcome in ["unknown", "failure"]:
             print(
                 f"!! mark_attendance_prompt_sent: outcome was unknown or failure (result_data={result_data})"
             )
-            self.update_state(
-                state=states.FAILURE, meta={"msg": "Outcome was unknown or failure"}
-            )
-            return {"error": 1}
+            msg = {"msg": "Outcome was unknown or failure"}
+            self.update_state(state=states.FAILURE, meta=msg)
+            return msg
 
         if outcome in ["no-store"]:
             print(
                 f"!! mark_attendance_prompt_sent: outcome was marked no-store (result_data={result_data})"
             )
-            self.update_state(
-                state=states.SUCCESS, meta={"msg": "Outcome was marked no-store"}
-            )
-            return {"attendance_prompt": 1}
+            msg = {"msg": "Outcome was marked no-store"}
+            self.update_state(state=states.SUCCESS, meta=msg)
+            return msg
 
         try:
             event: SupervisionEvent = (
@@ -399,30 +408,30 @@ def register_attendance_tasks(celery):
             print(
                 f"!! mark_attendance_prompt_sent: no key in result_data (result_data={result_data})"
             )
+            msg = {"msg": "No key in result_data"}
+            self.update_state(state=states.FAILURE, meta=msg)
+            return msg
+
+        key = result_data["key"]
+        email_log: EmailLog = (
+            db.session.query(EmailLog).filter(EmailLog.id == key).first()
+        )
+
+        if email_log is None:
+            print(
+                f"!! mark_attendance_prompt_sent: could not find email log with key {key}"
+            )
+            msg = {"msg": f"Could not find email log with key {key}"}
             self.update_state(
-                state=states.FAILURE, meta={"msg": "No key in result_data"}
+                state=states.FAILURE,
+                meta=msg,
             )
+            return msg
 
-        else:
-            key = result_data["key"]
-            email_log: EmailLog = (
-                db.session.query(EmailLog).filter(EmailLog.id == key).first()
-            )
+        owner: SubmissionRole = event.owner
 
-            if email_log is None:
-                print(
-                    f"!! mark_attendance_prompt_sent: could not find email log with key {key}"
-                )
-                self.update_state(
-                    state=states.FAILURE,
-                    meta={"msg": f"Could not find email log with key {key}"},
-                )
-
-            else:
-                owner: SubmissionRole = event.owner
-
-                event.email_log.append(email_log)
-                owner.email_log.append(email_log)
+        event.email_log.append(email_log)
+        owner.email_log.append(email_log)
 
         try:
             db.session.commit()
@@ -430,4 +439,9 @@ def register_attendance_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        return {"attendance_prompt": 1}
+        msg = {"msg": f"Marked attendance prompt sent for event #{event_id}"}
+        self.update_state(
+            state=states.SUCCESS,
+            meta=msg,
+        )
+        return msg

@@ -13175,6 +13175,49 @@ class SubmissionRole(
     # timestamp when feedback was sent
     feedback_push_timestamp = db.Column(db.DateTime())
 
+    # FACTORY FUNCTION
+    @classmethod
+    def build_(cls, **kwargs):
+        obj = cls(**kwargs)
+
+        defaults = {
+            "mute": False,
+            "prompt_after_event": True,
+            "prompt_at_fixed_time": False,
+            "prompt_at_time": None,
+            "prompt_delay": 1,
+            "prompt_in_reminder": True,
+            "email_log": [],
+            "regular_meeting_weekday": None,
+            "regular_meeting_time": None,
+            "regular_meeting_location": None,
+            "marking_distributed": False,
+            "external_marking_url": None,
+            "grade": None,
+            "weight": 1.0,
+            "justification": None,
+            "signed_off": None,
+            "positive_feedback": None,
+            "improvements_feedback": None,
+            "submitted_feedback": False,
+            "feedback_timestamp": None,
+            "acknowledge_student": False,
+            "response": None,
+            "submitted_response": False,
+            "response_timestamp": None,
+            "feedback_sent": False,
+            "feedback_push_id": None,
+            "feedback_push_cls": None,
+            "last_edit_id": None,
+            "last_edit_timestamp": None,
+        }
+
+        for attr in defaults:
+            if attr not in kwargs:
+                setattr(obj, attr, defaults[attr])
+
+        return obj
+
     @property
     def role_as_str(self) -> str:
         return self._role_string.get(self.role, "Unknown")

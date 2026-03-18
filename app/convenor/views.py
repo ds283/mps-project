@@ -3382,30 +3382,13 @@ def add_role(record_id):
         if role in [SubmissionRole.ROLE_MARKER]:
             weight = 1.0 / float(period.number_markers)
 
-        role = SubmissionRole(
+        role = SubmissionRole.build_(
             role=role,
             user=form.user.data.user,
             submission_id=record.id,
-            marking_distributed=False,
-            external_marking_url=None,
-            grade=None,
             weight=weight,
-            justification=None,
-            signed_off=None,
-            positive_feedback=None,
-            improvements_feedback=None,
-            submitted_feedback=False,
-            feedback_timestamp=None,
-            acknowledge_student=False,
-            submitted_response=False,
-            response_timestamp=None,
-            feedback_sent=False,
-            feedback_push_id=None,
-            feedback_push_timestamp=None,
             creator_id=current_user.id,
             creation_timestamp=datetime.now(),
-            last_edit_id=None,
-            last_edit_timestamp=None,
         )
 
         try:
@@ -12074,30 +12057,13 @@ def assign_revert(id):
             if role.role in [SubmissionRole.ROLE_MARKER]:
                 weight = 1.0 / float(period.number_markers)
 
-            new_role = SubmissionRole(
+            new_role = SubmissionRole.build_(
                 submission_id=rec.id,
                 user_id=role.user_id,
                 role=role.role,
                 marking_distributed=False,
                 external_marking_url=None,
-                grade=None,
                 weight=weight,
-                justification=None,
-                signed_off=None,
-                positive_feedback=None,
-                improvements_feedback=None,
-                submitted_feedback=False,
-                feedback_timestamp=None,
-                acknowledge_student=False,
-                submitted_response=False,
-                response_timestamp=None,
-                feedback_sent=False,
-                feedback_push_id=None,
-                feedback_push_timestamp=None,
-                creator_id=current_user.id,
-                creation_timestamp=now,
-                last_edit_id=None,
-                last_edit_timestamp=None,
             )
 
             db.session.add(new_role)
@@ -12169,30 +12135,13 @@ def assign_from_selection(id, sel_id):
             new_owner = lp.owner
             if new_owner is not None:
                 weight = 1.0
-                role = SubmissionRole(
+                role = SubmissionRole.build_(
                     submission_id=rec.id,
                     user_id=new_owner.id,
                     role=SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-                    marking_distributed=False,
-                    external_marking_url=None,
-                    grade=None,
                     weight=weight,
-                    justification=None,
-                    signed_off=None,
-                    positive_feedback=None,
-                    improvements_feedback=None,
-                    submitted_feedback=False,
-                    feedback_timestamp=None,
-                    acknowledge_student=False,
-                    submitted_response=False,
-                    response_timestamp=None,
-                    feedback_sent=False,
-                    feedback_push_id=None,
-                    feedback_push_timestamp=None,
                     creator_id=current_user.id,
                     creation_timestamp=datetime.now(),
-                    last_edit_id=None,
-                    last_edit_timestamp=None,
                 )
                 db.session.add(role)
 
@@ -12271,30 +12220,12 @@ def assign_liveproject(id, pid):
             new_owner = lp.owner
             if new_owner is not None:
                 weight = 1.0
-                role = SubmissionRole(
+                role = SubmissionRole.build_(
                     submission_id=rec.id,
                     user_id=new_owner.id,
                     role=SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-                    marking_distributed=False,
-                    external_marking_url=None,
-                    grade=None,
                     weight=weight,
-                    justification=None,
-                    signed_off=None,
-                    positive_feedback=None,
-                    improvements_feedback=None,
-                    submitted_feedback=False,
-                    feedback_timestamp=None,
-                    acknowledge_student=False,
-                    submitted_response=False,
-                    response_timestamp=None,
-                    feedback_sent=False,
-                    feedback_push_id=None,
-                    feedback_push_timestamp=None,
-                    creator_id=current_user.id,
                     creation_timestamp=datetime.now(),
-                    last_edit_id=None,
-                    last_edit_timestamp=None,
                 )
                 db.session.add(role)
 

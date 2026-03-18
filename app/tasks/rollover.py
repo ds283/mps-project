@@ -17,36 +17,36 @@ from celery.exceptions import Ignore
 from celery.result import GroupResult
 from dateutil.relativedelta import relativedelta
 from flask import current_app
-from sqlalchemy import or_, and_
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import (
-    User,
-    TaskRecord,
-    ProjectClassConfig,
-    SelectingStudent,
-    SubmittingStudent,
-    StudentData,
-    EnrollmentRecord,
-    MatchingAttempt,
-    SubmissionRecord,
-    SubmissionPeriodRecord,
-    add_notification,
-    EmailNotification,
-    ProjectClass,
-    Project,
-    ProjectDescription,
     ConfirmRequest,
     ConvenorGenericTask,
-    MatchingRecord,
     DegreeProgramme,
     DegreeType,
-    SubmissionPeriodDefinition,
+    EmailNotification,
+    EnrollmentRecord,
+    MatchingAttempt,
+    MatchingRecord,
     MatchingRole,
+    Project,
+    ProjectClass,
+    ProjectClassConfig,
+    ProjectDescription,
+    SelectingStudent,
+    StudentData,
+    SubmissionPeriodDefinition,
+    SubmissionPeriodRecord,
+    SubmissionRecord,
     SubmissionRole,
+    SubmittingStudent,
+    TaskRecord,
+    User,
+    add_notification,
 )
-from ..shared.convenor import add_selector, add_blank_submitter
+from ..shared.convenor import add_blank_submitter, add_selector
 from ..shared.sqlalchemy import get_count
 from ..shared.tasks import post_task_update_msg
 from ..shared.utils import get_current_year
@@ -1038,30 +1038,13 @@ def register_rollover_tasks(celery):
                             if role.role in [SubmissionRole.ROLE_MARKER]:
                                 weight = 1.0 / float(new_period.number_markers)
 
-                            new_role = SubmissionRole(
+                            new_role = SubmissionRole.build_(
                                 submission_id=new_rec.id,
                                 user_id=role.user_id,
                                 role=role.role,
-                                marking_distributed=False,
-                                external_marking_url=None,
-                                grade=None,
                                 weight=weight,
-                                justification=None,
-                                signed_off=None,
-                                positive_feedback=None,
-                                improvements_feedback=None,
-                                submitted_feedback=False,
-                                feedback_timestamp=None,
-                                acknowledge_student=False,
-                                submitted_response=False,
-                                response_timestamp=None,
-                                feedback_sent=False,
-                                feedback_push_id=None,
-                                feedback_push_timestamp=None,
                                 creator_id=None,
                                 creation_timestamp=now,
-                                last_edit_id=None,
-                                last_edit_timestamp=None,
                             )
 
                             db.session.add(new_role)
@@ -1233,26 +1216,11 @@ def register_rollover_tasks(celery):
                                     if role.role in [SubmissionRole.ROLE_MARKER]:
                                         weight = 1.0 / float(new_period.number_markers)
 
-                                    new_role = SubmissionRole(
+                                    new_role = SubmissionRole.build_(
                                         submission_id=new_rec.id,
                                         user_id=role.user_id,
                                         role=role.role,
-                                        marking_distributed=False,
-                                        external_marking_url=None,
-                                        grade=None,
                                         weight=weight,
-                                        justification=None,
-                                        signed_off=None,
-                                        positive_feedback=None,
-                                        improvements_feedback=None,
-                                        submitted_feedback=False,
-                                        feedback_timestamp=None,
-                                        acknowledge_student=False,
-                                        submitted_response=False,
-                                        response_timestamp=None,
-                                        feedback_sent=False,
-                                        feedback_push_id=None,
-                                        feedback_push_timestamp=None,
                                         creator_id=None,
                                         creation_timestamp=now,
                                         last_edit_id=None,

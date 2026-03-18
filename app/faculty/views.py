@@ -468,7 +468,7 @@ def add_project():
 
     # set up form
     AddProjectForm = AddProjectFormFactory(
-        current_user.tenants,
+        current_user.tenants.all(),
         convenor_editing=False,
         uses_tags=uses_tags,
         uses_research_groups=uses_research_groups,
@@ -574,7 +574,7 @@ def edit_project(id):
 
     allowed_tenants = [pcl.tenant_id for pcl in project.project_classes]
     if len(allowed_tenants) == 0:
-        allowed_tenants = current_user.tenants
+        allowed_tenants = current_user.tenants.all()
     EditProjectForm = EditProjectFormFactory(
         allowed_tenants,
         convenor_editing=False,

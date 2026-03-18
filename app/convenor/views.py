@@ -5245,7 +5245,7 @@ def add_project(pclass_id):
 
     # set up form
     AddProjectForm = AddProjectFormFactory(
-        current_user.tenants,
+        current_user.tenants.all(),
         convenor_editing=True,
         uses_tags=True,
         uses_research_groups=True,

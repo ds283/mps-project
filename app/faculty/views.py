@@ -573,6 +573,8 @@ def edit_project(id):
         text = "project library"
 
     allowed_tenants = [pcl.tenant_id for pcl in project.project_classes]
+    if len(allowed_tenants) == 0:
+        allowed_tenants = current_user.tenants
     EditProjectForm = EditProjectFormFactory(
         allowed_tenants,
         convenor_editing=False,
@@ -1773,7 +1775,9 @@ def dashboard():
     if main_config.enable_2026_ATAS_campaign:
         # only consider jumping to landing page if this user belongs to a tenant participating in the campaign
         if (
-                get_count(current_user.tenants.filter(Tenant.in_2026_ATAS_campaign.is_(True)))
+                get_count(
+                    current_user.tenants.filter(Tenant.in_2026_ATAS_campaign.is_(True))
+                )
                 > 0
         ):
             data = check_2026_ATAS(fd)
@@ -3233,9 +3237,7 @@ def settings():
             if hasattr(form, "mask_roles"):
                 form.mask_roles.data = user.mask_roles
 
-    return render_template_context(
-        "faculty/settings.html", settings_form=form, data=fd
-    )
+    return render_template_context("faculty/settings.html", settings_form=form, data=fd)
 
 
 @faculty.route("/past_feedback/<int:student_id>")

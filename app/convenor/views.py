@@ -5396,7 +5396,7 @@ def edit_project(id, pclass_id):
     project: Project = Project.query.get_or_404(id)
 
     EditProjectForm = EditProjectFormFactory(
-        pclass.tenant,
+        pclass.tenant if pclass is not None else current_user.tenants.all(),
         convenor_editing=True,
         uses_tags=True,
         uses_research_groups=True,

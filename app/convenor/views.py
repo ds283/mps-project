@@ -5369,6 +5369,7 @@ def add_project(pclass_id):
 @convenor.route("/edit_project/<int:id>/<int:pclass_id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def edit_project(id, pclass_id):
+    pclass: ProjectClass = None
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():

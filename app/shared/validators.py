@@ -28,7 +28,7 @@ from .utils import get_current_year
 
 def validate_is_administrator(message=True):
     """
-    Ensure that user in an administrator
+    Ensure that user is an administrator
     :return:
     """
 
@@ -41,7 +41,7 @@ def validate_is_administrator(message=True):
 
 
 def validate_is_convenor(
-        pclass: ProjectClass, message: bool = True, allow_roles: Optional[List[str]] = None
+    pclass: ProjectClass, message: bool = True, allow_roles: Optional[List[str]] = None
 ):
     """
     Validate that the logged-in user is privileged to view a convenor dashboard or use other convenor functions
@@ -129,9 +129,9 @@ def validate_view_project(project, *roles):
 
     # if current user has an exam-board related role, allow view
     if (
-            current_user.has_role("exam_board")
-            or current_user.has_role("external_examiner")
-            or current_user.has_role("moderator")
+        current_user.has_role("exam_board")
+        or current_user.has_role("external_examiner")
+        or current_user.has_role("moderator")
     ):
         return True
 
@@ -207,8 +207,8 @@ def validate_project_open(config):
     :return:
     """
     if (
-            config.selector_lifecycle
-            < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
+        config.selector_lifecycle
+        < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
     ):
         flash(
             "{name} is not open for student selections.".format(name=config.name),
@@ -360,16 +360,16 @@ def validate_submission_viewable(record: SubmissionRecord, message: bool = True)
     # if a project has been specified and the current user is the owner of the project, then they are able
     # to view the submission
     if (
-            record.project is not None
-            and not record.project.generic
-            and record.project.owner_id is not None
+        record.project is not None
+        and not record.project.generic
+        and record.project.owner_id is not None
     ):
         if current_user.id == record.project.owner_id:
             return True
 
     # project convenors, root/admin users, and users with exam board privileges can always view
     if current_user.allow_roles(
-            ["convenor", "admin", "root", "exam_board", "external_examiner"]
+        ["convenor", "admin", "root", "exam_board", "external_examiner"]
     ):
         return True
 

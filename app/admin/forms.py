@@ -450,6 +450,12 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
             validators=[Length(max=DEFAULT_STRING_LENGTH)],
         )
 
+        enforce_ATAS = BooleanField(
+            "Enforce ATAS restrictions",
+            description="If set, students with an ATAS-restricted flag will not be offered, or matched to, project that are marked ATAS-restricted",
+            default=False,
+        )
+
         do_matching = BooleanField(
             "Use automated global matching of faculty to projects", default=True
         )

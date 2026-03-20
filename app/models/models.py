@@ -6370,8 +6370,11 @@ class ProjectClass(
 
         return value
 
+    # enforce ATAS flags?
+    enforce_ATAS = db.Column(db.Boolean(), default=False)
+
     # is this an optional project type? e.g., JRA, research placement
-    is_optional = db.Column(db.Boolean, default=False)
+    is_optional = db.Column(db.Boolean(), default=False)
 
     # in which academic year/FHEQ level does this project class begin?
     start_year = db.Column(db.Integer(), default=3)
@@ -6382,7 +6385,7 @@ class ProjectClass(
     # does this project type use selection? i.e., do selectors actually have to submit a ranked list of preferences?
     uses_selection = db.Column(db.Integer(), default=True)
 
-    # selection runs in previous academic cycle?
+    # selection runs in the previous academic cycle?
     # This is the default for FYPs and MPPs, but not usually for MSc projects
     select_in_previous_cycle = db.Column(db.Boolean(), default=True)
 
@@ -6478,6 +6481,8 @@ class ProjectClass(
 
     # include in 'availability' calculations -- how many students a given supervisor is 'available' for
     include_available = db.Column(db.Boolean())
+
+    # require that an ATAS
 
     # POPULARITY DISPLAY
 
@@ -9689,13 +9694,15 @@ def _Project_is_offerable(pid):
         for pclass in project.project_classes:
             if project.number_supervisors(pclass) == 0:
                 errors[("supervisors", pclass.id)] = (
-                    f"There are no supervisors in the generic pool for '{pclass.name}'"
+                    f'There are no supervisors in the generic pool for "{pclass.name}"'
                 )
 
     # CONSTRAINT 6. The ATAS restricted flag has to be set
-    if any([p.tenant.force_ATAS_flag for p in project.project_classes]):
+    if any([p.enforce_ATAS for p in project.project_classes]):
         if project.ATAS_restricted is None:
-            errors["ATAS"] = "The ATAS-restricted option has not been set"
+            errors["ATAS"] = (
+                f'The ATAS-restricted option has not been set, but "{pclass.name}" enforces ATAS restrictions'
+            )
 
     if len(errors) > 0:
         return False, errors, warnings

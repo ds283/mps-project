@@ -12,7 +12,7 @@ from wtforms import BooleanField, SubmitField
 from wtforms.validators import InputRequired
 from wtforms_alchemy import QuerySelectMultipleField
 
-from app.models import FacultyData, ProjectClass, ProjectTagGroup, Project, ProjectTag
+from app.models import FacultyData, Project, ProjectClass, ProjectTag, ProjectTagGroup
 from app.shared.sqlalchemy import get_count
 
 from ..database import db
@@ -63,9 +63,14 @@ def check_2026_ATAS(fd: FacultyData):
         )
 
     for project in fd.projects.filter(
-            Project.active.is_(True),
+        Project.active.is_(True),
     ):
-        if any([p.tenant.in_2026_ATAS_campaign for p in project.project_classes]):
+        if any(
+            [
+                (p.enforce_ATAS and p.tenant.in_2026_ATAS_campaign)
+                for p in project.project_classes
+            ]
+        ):
             if project.ATAS_restricted is None:
                 add_project(project)
                 continue

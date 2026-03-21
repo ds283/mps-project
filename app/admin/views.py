@@ -13989,10 +13989,21 @@ def deactivate_email_template(id):
     """
     template: EmailTemplate = EmailTemplate.query.get_or_404(id)
 
-    # Enforce: the global fallback must always remain active
-    if template.tenant_id is None and template.pclass_id is None:
+    # Ensure at least one fallback instance of this template would active  with tenant_id=None and pclass_id=None
+    fallback_count = (
+        db.session.query(EmailTemplate)
+        .filter(
+            EmailTemplate.type == template.type,
+            EmailTemplate.active.is_(True),
+            EmailTemplate.tenant_id.is_(None),
+            EmailTemplate.pclass_id.is_(None),
+        )
+        .count()
+    )
+
+    if fallback_count <= 1:
         flash(
-            "The global fallback template for this type must always remain active and cannot be deactivated.",
+            "Cannot deactivate this template because no global fallback would be active for this template type.",
             "error",
         )
         return redirect(redirect_url())
@@ -14056,7 +14067,10 @@ def duplicate_email_template(id):
     try:
         db.session.add(new_template)
         db.session.commit()
-        flash(f"Email template duplicated as version {new_version}.", "success")
+        flash(
+            f"Email template duplicated successfully: new version is #{new_version}.",
+            "success",
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -14084,6 +14098,7 @@ def delete_email_template(id):
         db.session.query(EmailTemplate)
         .filter(
             EmailTemplate.type == template.type,
+            EmailTemplate.active.is_(True),
             EmailTemplate.tenant_id.is_(None),
             EmailTemplate.pclass_id.is_(None),
         )
@@ -14092,7 +14107,7 @@ def delete_email_template(id):
 
     if fallback_count <= 1:
         flash(
-            "Cannot delete this template because no global fallback would exist for this template type.",
+            "Cannot delete this template because no active global fallback would exist for this template type.",
             "error",
         )
         return redirect(redirect_url())
@@ -14137,6 +14152,7 @@ def perform_delete_email_template(id):
         db.session.query(EmailTemplate)
         .filter(
             EmailTemplate.type == template.type,
+            EmailTemplate.active.is_(True),
             EmailTemplate.tenant_id.is_(None),
             EmailTemplate.pclass_id.is_(None),
         )
@@ -14145,7 +14161,7 @@ def perform_delete_email_template(id):
 
     if fallback_count <= 1:
         flash(
-            "Cannot delete this template because no global fallback would exist for this template type.",
+            "Cannot delete this template because no active global fallback would exist for this template type.",
             "error",
         )
         return redirect(url)

@@ -14079,15 +14079,7 @@ def delete_email_template(id):
     """
     template: EmailTemplate = EmailTemplate.query.get_or_404(id)
 
-    # Cannot delete the global fallback (tenant_id=None, pclass_id=None)
-    if template.tenant_id is None and template.pclass_id is None:
-        flash(
-            "The global fallback template cannot be deleted. At least one global fallback must exist for each template type.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    # Ensure at least one instance of this type remains with tenant_id=None and pclass_id=None
+    # Ensure at least one fallback instance of this template would remain with tenant_id=None and pclass_id=None
     fallback_count = (
         db.session.query(EmailTemplate)
         .filter(
@@ -14098,9 +14090,9 @@ def delete_email_template(id):
         .count()
     )
 
-    if fallback_count == 0:
+    if fallback_count <= 1:
         flash(
-            "Cannot delete this template because no global fallback exists for this template type.",
+            "Cannot delete this template because no global fallback would exist for this template type.",
             "error",
         )
         return redirect(redirect_url())
@@ -14140,11 +14132,6 @@ def perform_delete_email_template(id):
 
     url = request.args.get("url", url_for("admin.email_templates"))
 
-    # Cannot delete the global fallback
-    if template.tenant_id is None and template.pclass_id is None:
-        flash("The global fallback template cannot be deleted.", "error")
-        return redirect(url)
-
     # Ensure at least one global fallback remains for this type
     fallback_count = (
         db.session.query(EmailTemplate)
@@ -14156,9 +14143,9 @@ def perform_delete_email_template(id):
         .count()
     )
 
-    if fallback_count == 0:
+    if fallback_count <= 1:
         flash(
-            "Cannot delete this template because no global fallback exists for this template type.",
+            "Cannot delete this template because no global fallback would exist for this template type.",
             "error",
         )
         return redirect(url)
@@ -14166,7 +14153,6 @@ def perform_delete_email_template(id):
     try:
         db.session.delete(template)
         db.session.commit()
-        flash("Email template deleted successfully.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

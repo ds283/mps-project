@@ -8,9 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from ..database import db
 from .defaults import DEFAULT_STRING_LENGTH
 from .models import ColouredLabelMixin
-from ..database import db
 
 
 class Tenant(db.Model, ColouredLabelMixin):
@@ -25,9 +25,6 @@ class Tenant(db.Model, ColouredLabelMixin):
 
     # name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH))
-
-    # require ATAS flag to be set
-    force_ATAS_flag = db.Column(db.Boolean, default=False)
 
     # in 2026 ATAS campaign
     in_2026_ATAS_campaign = db.Column(db.Boolean, default=False)

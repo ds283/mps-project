@@ -80,37 +80,40 @@ _options = """
     {% if p.colour and p.colour is not none %}
       {{ simple_label(p.make_label(p.colour)) }}
     {% else %}
-      <span class="badge bg-secondary">No colour</span>'
+      <span class="badge bg-secondary small">No colour</span>'
+    {% endif %}
+    {% if p.enforce_ATAS %}
+        <span class="badge bg-danger small">ATAS</span>
     {% endif %}
     {% if p.is_optional %}
-        <span class="badge bg-secondary">Optional</span>
+        <span class="badge bg-secondary small">Optional</span>
     {% endif %}
     {% if not p.uses_selection %}
-        <span class="badge bg-danger">No selections</span>
+        <span class="badge bg-danger small">No select</span>
     {% endif %}
     {% if not p.uses_submission %}
-        <span class="badge bg-danger">No submissions</span>
+        <span class="badge bg-danger small">No submit</span>
     {% endif %}
     {% if p.do_matching %}
-        <span class="badge bg-secondary">Auto-match</span>
+        <span class="badge bg-secondary small">Auto-match</span>
     {% endif %}
     {% if p.require_confirm %}
-        <span class="badge bg-secondary">Confirm</span>
+        <span class="badge bg-secondary small">Confirm</span>
     {% endif %}
     {% if p.supervisor_carryover %}
-        <span class="badge bg-secondary">Carryover</span>
+        <span class="badge bg-secondary small">Carryover</span>
     {% endif %}
     {% if p.include_available %}
-        <span class="badge bg-secondary">Availability</span>
+        <span class="badge bg-secondary small">Availability</span>
     {% endif %}
     {% if p.reenroll_supervisors_early %}
-        <span class="badge bg-secondary">Re-enroll early</span>
+        <span class="badge bg-secondary small">Re-enroll early</span>
     {% endif %}
     {% if p.advertise_research_group %}
-        <span class="badge bg-secondary">Affiliations</span>
+        <span class="badge bg-secondary small">Affiliations</span>
     {% endif %}
     {% if p.use_project_tags %}
-        <span class="badge bg-secondary">Tags</span>
+        <span class="badge bg-secondary small">Tags</span>
     {% endif %}
 </div>
 """

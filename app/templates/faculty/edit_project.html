@@ -52,15 +52,15 @@
     <form action="{{ submit_url }}" method="POST" name="project_form">
         {{ project_form.hidden_tag() }}
 
-{#        {{ wtf.form_errors(project_form) }}#}
+        {#        {{ wtf.form_errors(project_form) }}#}
 
         {{ wtf.render_field(project_form.name) }}
 
-        <div class="alert alert-danger">
-            {% if project_form.ATAS_restricted %}
+        {% if project_form.ATAS_restricted %}
+            <div class="alert alert-danger">
                 {{ wtf.render_field(project_form.ATAS_restricted) }}
-            {% endif %}
-        </div>
+            </div>
+        {% endif %}
         {% if project_form.generic %}
             {{ wtf.render_field(project_form.generic) }}
         {% endif %}

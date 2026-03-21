@@ -2292,6 +2292,7 @@ def add_pclass():
                 tenant=form.tenant.data,
                 abbreviation=form.abbreviation.data,
                 colour=form.colour.data,
+                enforce_ATAS=form.enforce_ATAS.data,
                 do_matching=form.do_matching.data,
                 number_assessors=form.number_assessors.data,
                 student_level=form.student_level.data,
@@ -2486,6 +2487,7 @@ def edit_pclass(id):
         pclass.name = form.name.data
         pclass.abbreviation = form.abbreviation.data
         pclass.tenant = form.tenant.data
+        pclass.enforce_ATAS = form.enforce_ATAS.data
         pclass.student_level = form.student_level.data
         pclass.start_year = form.start_year.data
         pclass.colour = form.colour.data

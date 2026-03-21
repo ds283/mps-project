@@ -9,12 +9,12 @@
 #
 
 from flask import (
-    render_template_string,
-    get_template_attribute,
     current_app,
+    get_template_attribute,
     render_template,
+    render_template_string,
 )
-from jinja2 import Template, Environment
+from jinja2 import Environment, Template
 
 # language=jinja2
 _menu = """
@@ -42,11 +42,8 @@ _colour = """
 # language=jinja2
 _name = """
 <div>{{ t.name }}</div>
-{% if t.force_ATAS_flag or t.in_2026_ATAS_campaign %}
+{% if t.in_2026_ATAS_campaign %}
     <div class="mt-2 d-flex flex-row flex-wrap justify-content-start align-items-start gap-2 small">
-        {% if t.force_ATAS_flag %}
-            <span class="badge bg-info">Force ATAS</span>
-        {% endif %}
         {% if t.in_2026_ATAS_campaign %}
             <span class="badge bg-info">2026 ATAS campaign</span>
         {% endif %}

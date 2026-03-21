@@ -5396,7 +5396,7 @@ def edit_project(id, pclass_id):
     project: Project = Project.query.get_or_404(id)
 
     EditProjectForm = EditProjectFormFactory(
-        pclass.tenant,
+        pclass.tenant if pclass is not None else current_user.tenants.all(),
         convenor_editing=True,
         uses_tags=True,
         uses_research_groups=True,
@@ -7121,12 +7121,26 @@ def unofferable_ajax():
     if not validate_is_administrator():
         return jsonify({})
 
+    allowed_tenants = [t.id for t in current_user.tenants]
+
     base_query = (
         db.session.query(Project)
-        .filter(Project.active.is_(True))
         .join(User, User.id == Project.owner_id, isouter=True)
-        .filter(or_(Project.generic.is_(True), User.active.is_(True)))
+        .filter(
+            Project.active.is_(True),
+            or_(
+                Project.generic.is_(True),
+                and_(
+                    Project.generic.is_(False),
+                    User.active.is_(True),
+                ),
+            ),
+        )
     )
+    if not current_user.has_role("root"):
+        base_query = base_query.filter(
+            Project.project_classes.any(ProjectClass.tenant.in_(allowed_tenants)),
+        )
 
     def row_filter(row: Project):
         # don't show offerable projects

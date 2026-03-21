@@ -8,18 +8,18 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app, redirect, flash, request, jsonify, url_for
+from flask import current_app, flash, jsonify, redirect, request, url_for
 from flask_security import roles_required
 from sqlalchemy.exc import SQLAlchemyError
 
-from . import tenants
-from .forms import AddTenantForm, EditTenantForm
 from .. import ajax
 from ..database import db
 from ..models import Tenant
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
 from ..tools import ServerSideSQLHandler
+from . import tenants
+from .forms import AddTenantForm, EditTenantForm
 
 
 @tenants.route("/edit_tenants")
@@ -50,7 +50,6 @@ def add_tenant():
         tenant = Tenant(
             name=form.name.data,
             colour=form.colour.data,
-            force_ATAS_flag=form.force_ATAS_flag.data,
             in_2026_ATAS_campaign=form.in_2026_ATAS_campaign.data,
         )
 
@@ -83,7 +82,6 @@ def edit_tenant(id):
     if form.validate_on_submit():
         tenant.name = form.name.data
         tenant.colour = form.colour.data
-        tenant.force_ATAS_flag = form.force_ATAS_flag.data
         tenant.in_2026_ATAS_campaign = form.in_2026_ATAS_campaign.data
 
         try:

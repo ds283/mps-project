@@ -88,209 +88,212 @@
         <form action="{{ url_for('admin.add_pclass') }}" method="POST" name="pclass_form">
     {% endif %}
 
-        {{ pclass_form.hidden_tag() }}
+{{ pclass_form.hidden_tag() }}
 
 {#        {{ wtf.form_errors(pclass_form) }}#}
 
-        <div class="card mt-3 mb-3 card-body bg-well">
-            <p class="form-group-heading">General settings</p>
-            {{ wtf.render_field(pclass_form.name) }}
-            {{ wtf.render_field(pclass_form.tenant) }}
+<div class="card mt-3 mb-3 card-body bg-well">
+    <p class="form-group-heading">General settings</p>
+    {{ wtf.render_field(pclass_form.name) }}
+    {{ wtf.render_field(pclass_form.tenant) }}
 
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.abbreviation) }}
-                </div>
-                <div class="col-6">
-                    {{ colour_field(pclass_form.colour, 'colour-group') }}
-                </div>
-            </div>
-            <div class="mt-2">
-                {{ wtf.render_field(pclass_form.is_optional) }}
-            </div>
-            <div class="mt-2">
-                {{ wtf.render_field(pclass_form.uses_selection) }}
-            </div>
-            <div class="mt-2">
-                {{ wtf.render_field(pclass_form.uses_submission) }}
-            </div>
-            <div class="mt-2">
-                {{ wtf.render_field(pclass_form.number_assessors) }}
-            </div>
+    <div class="row vertical-top">
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.abbreviation) }}
         </div>
-
-        <div class="card mt-3 mb-3 card-body bg-well">
-            <p class="form-group-heading">Project administration and convening team</p>
-            {{ wtf.render_field(pclass_form.convenor) }}
-            <div class="mt-2">
-                {{ wtf.render_field(pclass_form.approvals_team) }}
-            </div>
-            <div class="mt-2">
-                {{ wtf.render_field(pclass_form.coconvenors) }}
-            </div>
-            <div class="mt-2>">
-                {{ wtf.render_field(pclass_form.office_contacts) }}
-            </div>
+        <div class="col-6">
+            {{ colour_field(pclass_form.colour, 'colour-group') }}
         </div>
+    </div>
+    <div class="alert alert-danger mt-2">
+        {{ wtf.render_field(pclass_form.enforce_ATAS) }}
+    </div>
+    <div class="mt-2">
+        {{ wtf.render_field(pclass_form.is_optional) }}
+    </div>
+    <div class="mt-2">
+        {{ wtf.render_field(pclass_form.uses_selection) }}
+    </div>
+    <div class="mt-2">
+        {{ wtf.render_field(pclass_form.uses_submission) }}
+    </div>
+    <div class="mt-2">
+        {{ wtf.render_field(pclass_form.number_assessors) }}
+    </div>
+</div>
 
-        <div class="card mt-3 mb-3 card-body bg-well">
-            <p class="form-group-heading">Selector enrolment</p>
-            {{ wtf.render_field(pclass_form.auto_enrol_enable) }}
-            <div class="mt-2">
-                {{ wtf.render_field(pclass_form.select_in_previous_cycle) }}
-            </div>
-            <div class="mt-2">
-                {{ wtf.render_field(pclass_form.selection_open_to_all) }}
-            </div>
-            <div class="mt-2">
-                {{ wtf.render_field(pclass_form.auto_enroll_years) }}
-            </div>
-            <div class="mt-3">
-                {{ wtf.render_field(pclass_form.programmes) }}
-            </div>
+<div class="card mt-3 mb-3 card-body bg-well">
+    <p class="form-group-heading">Project administration and convening team</p>
+    {{ wtf.render_field(pclass_form.convenor) }}
+    <div class="mt-2">
+        {{ wtf.render_field(pclass_form.approvals_team) }}
+    </div>
+    <div class="mt-2">
+        {{ wtf.render_field(pclass_form.coconvenors) }}
+    </div>
+    <div class="mt-2>">
+        {{ wtf.render_field(pclass_form.office_contacts) }}
+    </div>
+</div>
+
+<div class="card mt-3 mb-3 card-body bg-well">
+    <p class="form-group-heading">Selector enrolment</p>
+    {{ wtf.render_field(pclass_form.auto_enrol_enable) }}
+    <div class="mt-2">
+        {{ wtf.render_field(pclass_form.select_in_previous_cycle) }}
+    </div>
+    <div class="mt-2">
+        {{ wtf.render_field(pclass_form.selection_open_to_all) }}
+    </div>
+    <div class="mt-2">
+        {{ wtf.render_field(pclass_form.auto_enroll_years) }}
+    </div>
+    <div class="mt-3">
+        {{ wtf.render_field(pclass_form.programmes) }}
+    </div>
+</div>
+
+<div class="card mt-3 mb-3 card-body bg-well">
+    <p class="form-group-heading">Configuration</p>
+    {{ wtf.render_field(pclass_form.student_level) }}
+    <div class="row vertical-top mt-2">
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.start_year) }}
         </div>
-
-        <div class="card mt-3 mb-3 card-body bg-well">
-            <p class="form-group-heading">Configuration</p>
-            {{ wtf.render_field(pclass_form.student_level) }}
-            <div class="row vertical-top mt-2">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.start_year) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.extent) }}
-                </div>
-            </div>
-            <div class="mt-2">
-                {{ wtf.render_field(pclass_form.advertise_research_group) }}
-            </div>
-            <div class="mt-2">
-                {{ wtf.render_field(pclass_form.use_project_tags) }}
-                {{ wtf.render_field(pclass_form.force_tag_groups) }}
-            </div>
-            <div class="mt-2">
-                {{ wtf.render_field(pclass_form.include_available) }}
-            </div>
-            <p class="form-group-heading mt-2">Faculty dashboards</p>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.display_marker) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.display_presentations) }}
-                </div>
-            </div>
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.extent) }}
         </div>
-
-        <div class="card mt-3 mb-3 card-body bg-well">
-            <p class="form-group-heading">Project lifecycle</p>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.require_confirm) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.do_matching) }}
-                </div>
-            </div>
-            <p class="form-group-heading mt-2">Rollover</p>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.reenroll_supervisors_early) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.supervisor_carryover) }}
-                </div>
-            </div>
-            <p class="form-group-heading mt-2">Student selections</p>
-            <div class="row vertical-top">
-                <div class="col-12">
-                    {{ wtf.render_field(pclass_form.allow_switching) }}
-                </div>
-            </div>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.initial_choices) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.switch_choices) }}
-                </div>
-            </div>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.faculty_maximum) }}
-                </div>
-                <div class="col-6">
-                </div>
-            </div>
+    </div>
+    <div class="mt-2">
+        {{ wtf.render_field(pclass_form.advertise_research_group) }}
+    </div>
+    <div class="mt-2">
+        {{ wtf.render_field(pclass_form.use_project_tags) }}
+        {{ wtf.render_field(pclass_form.force_tag_groups) }}
+    </div>
+    <div class="mt-2">
+        {{ wtf.render_field(pclass_form.include_available) }}
+    </div>
+    <p class="form-group-heading mt-2">Faculty dashboards</p>
+    <div class="row vertical-top">
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.display_marker) }}
         </div>
-
-        <div class="card mt-3 mb-3 card-body bg-well">
-            <p class="form-group-heading mt-2">Supervision and assessment</p>
-            <div class="alert alert-info mb-4">
-                {% call icon_block("info-circle") %}
-                    <div>
-                        The settings in this section are used as defaults, but do not affect the
-                        configuration of any active projects.
-                    </div>
-                    <div>
-                        To modify these settings for active projects, please use the configuration
-                        options available on the convenor dashboard.
-                    </div>
-                {% endcall %}
-            </div>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.uses_supervisor) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.uses_marker) }}
-                </div>
-            </div>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.uses_moderator) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.uses_presentations) }}
-                </div>
-            </div>
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.display_presentations) }}
         </div>
+    </div>
+</div>
 
-        <div class="card mt-3 mb-3 card-body bg-well">
-            <p class="form-group-heading mt-2">Popularity data</p>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.keep_hourly_popularity) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.keep_daily_popularity) }}
-                </div>
-            </div>
+<div class="card mt-3 mb-3 card-body bg-well">
+    <p class="form-group-heading">Project lifecycle</p>
+    <div class="row vertical-top">
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.require_confirm) }}
         </div>
-
-        <div class="card mt-3 mb-3 card-body bg-well">
-            <p class="form-group-heading mt-2">Workload model support</p>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.CATS_supervision) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.CATS_marking) }}
-                </div>
-            </div>
-            <div class="row vertical-top">
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.CATS_moderation) }}
-                </div>
-                <div class="col-6">
-                    {{ wtf.render_field(pclass_form.CATS_presentation) }}
-                </div>
-            </div>
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.do_matching) }}
         </div>
+    </div>
+    <p class="form-group-heading mt-2">Rollover</p>
+    <div class="row vertical-top">
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.reenroll_supervisors_early) }}
+        </div>
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.supervisor_carryover) }}
+        </div>
+    </div>
+    <p class="form-group-heading mt-2">Student selections</p>
+    <div class="row vertical-top">
+        <div class="col-12">
+            {{ wtf.render_field(pclass_form.allow_switching) }}
+        </div>
+    </div>
+    <div class="row vertical-top">
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.initial_choices) }}
+        </div>
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.switch_choices) }}
+        </div>
+    </div>
+    <div class="row vertical-top">
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.faculty_maximum) }}
+        </div>
+        <div class="col-6">
+        </div>
+    </div>
+</div>
 
-        {{ wtf.render_field(pclass_form.submit, button_map={'submit': 'primary'}) }}
+<div class="card mt-3 mb-3 card-body bg-well">
+    <p class="form-group-heading mt-2">Supervision and assessment</p>
+    <div class="alert alert-info mb-4">
+        {% call icon_block("info-circle") %}
+            <div>
+                The settings in this section are used as defaults, but do not affect the
+                configuration of any active projects.
+            </div>
+            <div>
+                To modify these settings for active projects, please use the configuration
+                options available on the convenor dashboard.
+            </div>
+        {% endcall %}
+    </div>
+    <div class="row vertical-top">
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.uses_supervisor) }}
+        </div>
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.uses_marker) }}
+        </div>
+    </div>
+    <div class="row vertical-top">
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.uses_moderator) }}
+        </div>
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.uses_presentations) }}
+        </div>
+    </div>
+</div>
 
-    </form>
+<div class="card mt-3 mb-3 card-body bg-well">
+    <p class="form-group-heading mt-2">Popularity data</p>
+    <div class="row vertical-top">
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.keep_hourly_popularity) }}
+        </div>
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.keep_daily_popularity) }}
+        </div>
+    </div>
+</div>
+
+<div class="card mt-3 mb-3 card-body bg-well">
+    <p class="form-group-heading mt-2">Workload model support</p>
+    <div class="row vertical-top">
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.CATS_supervision) }}
+        </div>
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.CATS_marking) }}
+        </div>
+    </div>
+    <div class="row vertical-top">
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.CATS_moderation) }}
+        </div>
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.CATS_presentation) }}
+        </div>
+    </div>
+</div>
+
+{{ wtf.render_field(pclass_form.submit, button_map={'submit': 'primary'}) }}
+
+</form>
 {% endblock %}
 
 {% block footer %}

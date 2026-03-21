@@ -71,79 +71,358 @@
                         <div class="mt-1">
                             <a class="link-primary text-decoration-none"
                                href="{{ url_for('convenor.show_confirmations', id=pclass.id) }}">View outstanding
-                                confirmation requests...</a>
+                                confirmation requests&hellip;</a>
                         </div>
                     {% endcall %}
                 </div>
             {% endif %}
             <div class="card mt-3 mb-3 card-body border-primary bg-well">
-                <div class="d-flex flex-row justify-content-start align-items-start mb-4">
-                    <div class="dashboard-project-title align-self-start me-2">{{ pclass.name }} {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</div>
-                    <a class="mt-1 btn btn-sm btn-outline-secondary align-self-start mt-2" href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Configure this cycle...</a>
+                <div class="d-flex flex-row flex-wrap justify-content-start align-items-start mb-4">
+                    <div class="dashboard-project-title align-self-start me-2">{{ pclass.name }}
+                        {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</div>
                 </div>
-                <ul class="list-group border-0 mb-3">
-                    <li class="list-group-item list-group-item-primary">
-                        {% set messages = config.messages %}
-                        {% call icon_block("cogs") %}
-                            <div><strong>Details</strong></div>
-                            {% if messages|length > 0 %}
-                                <div class="mt-1">{{ messages|join(', ') }}</div>
-                            {% endif %}
-                        {% endcall %}
-                    </li>
-                    <li class="list-group-item list-group-item-light">
-                        {% call icon_block("coins") %}
-                            <div><strong>CATS allocations</strong></div>
-                            <div class="d-flex flex-row justify-content-start align-items-center gap-2 mt-2">
-                                {% if config.uses_supervisor %}
-                                    <div class="list-group">
-                                        <div class="list-group-item">
-                                            <span class="me-2">Supervision <span class="text-primary">{{ config.CATS_supervision }} CATS</span> {%- if config.CATS_supervision != pclass.CATS_supervision -%}<i class="fas fa-exclamation-triangle ms-1 text-danger"></i>{%- endif -%}</span>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                                {% if config.uses_marker %}
-                                    <div class="list-group">
-                                        <div class="list-group-item">
-                                            <span class="me-2">Marking <span class="text-primary">{{ config.CATS_marking }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle ms-1 text-danger"></i>{%- endif -%}</span>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                                {% if config.uses_moderator %}
-                                    <div class="list-group">
-                                        <div class="list-group-item">
-                                            <span class="me-2">Moderation <span class="text-primary">{{ config.CATS_moderation }} CATS</span> {%- if config.CATS_moderation != pclass.CATS_moderation -%}<i class="fas fa-exclamation-triangle ms-1 text-danger"></i>{%- endif -%}</span>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                                {% if config.uses_presentations %}
-                                    <div class="list-group">
-                                        <div class="list-group-item">
-                                            <span class="me-2">Presentation <span class="text-primary">{{ config.CATS_presentation }} CATS</span> {%- if config.CATS_marking != pclass.CATS_marking -%}<i class="fas fa-exclamation-triangle ms-1 text-danger"></i>{%- endif -%}</span>
-                                        </div>
-                                    </div>
-                                {% endif %}
+                <div class="card mt-2 mb-2 card-body border-secondary">
+                    {% call icon_block("cogs", icon_classes="pt-2 text-primary") %}
+                        <div class="d-flex flex-row flex-wrap justify-content-between align-items-start w-100">
+                            <div class="text-primary fw-semibold fs-5">Configuration</div>
+                            <div class="d-flex flex-row flex-wrap justify-content-end align-items-start gap-2">
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Configure&hellip;
+                                </a>
                             </div>
-                        {% endcall %}
-                    </li>
-                </ul>
-                <ul class="list-group border-0">
+                        </div>
+                        <div class="row mt-2 g-2">
+                            <div class="col-md-6">
+                                <div class="card border-0">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-subtitle text-primary mb-2">Per-cycle settings</h6>
+                                        <ul class=" list-unstyled mb-0 small">
+                                            {% if config.uses_supervisor %}
+                                                <li><i class="fas fa-check-circle text-success"></i> Uses supervisors
+                                                </li>
+                                            {% endif %}
+                                            {% if config.uses_marker %}
+                                                <li><i class="fas fa-check-circle text-success"></i> Uses markers</li>
+                                            {% endif %}
+                                            {% if config.uses_moderator %}
+                                                <li><i class="fas fa-check-circle text-success"></i> Uses moderators
+                                                </li>
+                                            {% endif %}
+                                            {% if config.uses_presentations %}
+                                                <li><i class="fas fa-check-circle text-success"></i> Uses presentations
+                                                </li>
+                                            {% endif %}
+                                            {% if config.display_marker %}
+                                                <li><i class="fas fa-check-circle text-success"></i> Show marker
+                                                    assignments on faculty dashboards
+                                                </li>
+                                            {% endif %}
+                                            {% if config.display_presentations %}
+                                                <li><i class="fas fa-check-circle text-success"></i> Show presentation
+                                                    assessor assignments on faculty dashboards
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-0">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-subtitle text-primary mb-2">Project selection</h6>
+                                        <ul class="list-unstyled mb-0 small">
+                                            <li><strong>Initial choices:</strong> {{ config.initial_choices }}</li>
+                                            <li><strong>Switch choices:</strong> {{ config.switch_choices }}</li>
+                                            <li><strong>Max per supervisor:</strong> {{ config.faculty_maximum }}</li>
+                                            <li>
+                                                <strong>Availability:</strong> {{ 'Open to all' if config.selection_open_to_all else 'By invitation' }}
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-0">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-subtitle text-primary mb-2">Academic settings</h6>
+                                        <ul class="list-unstyled mb-0 small">
+                                            <li><strong>Start year:</strong>
+                                                Y{{ config.start_year }} {{ pclass._level_text(config.student_level) }}
+                                            </li>
+                                            <li><strong>Extent:</strong> {{ config.extent }}
+                                                year{{ 's' if config.extent != 1 else '' }}</li>
+                                            {% if config.full_CATS %}
+                                                <li>
+                                                    <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+                                                        <div><strong>Max CATS:</strong> {{ config.full_CATS }}</div>
+                                                        <div class="small text-muted">
+                                                            This is used to define when a supervisor is regarded as
+                                                            <strong>full</strong>
+                                                            when accommodating another matching.
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-0">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-subtitle text-primary mb-2">Workflows</h6>
+                                        <ul class=" list-unstyled mb-0 small">
+                                            {% if config.require_confirm %}
+                                                <li><i class="fas fa-check-circle text-success"></i> Requires project
+                                                    confirmation
+                                                </li>
+                                            {% endif %}
+                                            {% if config.do_matching %}
+                                                <li><i class="fas fa-check-circle text-success"></i> Use automated
+                                                    matching
+                                                </li>
+                                            {% endif %}
+                                            {% if config.skip_matching %}
+                                                <li><i class="fas fa-times-circle text-warning"></i> Skip matching this
+                                                    cycle
+                                                </li>
+                                            {% endif %}
+                                            {% if config.requests_skipped %}
+                                                <li><i class="fas fa-times-circle text-warning"></i> Skip confirmation
+                                                    requests this cycle
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            {% if config.main_config.enable_canvas_sync %}
+                                <div class="col-md-6">
+                                    <div class="card border-0">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-subtitle text-primary mb-2">Canvas integration</h6>
+                                            <ul class="list-unstyled mb-0 small">
+                                                {% if config.canvas_enabled %}
+                                                    <li><i class="fas fa-check-circle text-success"></i> Canvas
+                                                        integration enabled
+                                                    </li>
+                                                {% else %}
+                                                    {% if not config.canvas_module_id %}
+                                                        <li><i class="fas fa-exclamation-triangle text-warning"></i>
+                                                            Canvas module ID not set
+                                                        </li>
+                                                    {% endif %}
+                                                    {% if not config.canvas_login %}
+                                                        <li><i class="fas fa-exclamation-triangle text-warning"></i>
+                                                            Canvas login not set
+                                                        </li>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            <div class="col-md-6">
+                                <div class="card border-0">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-subtitle text-primary mb-2">CATS allocations</h6>
+                                        <ul class="list-unstyled mb-0 small">
+                                            {% if config.uses_supervisor %}
+                                                <li>
+                                                    <strong>Supervision:</strong> <span
+                                                        class="text-primary">{{ config.CATS_supervision }} CATS</span>
+                                                    {%- if config.CATS_supervision != pclass.CATS_supervision -%}
+                                                        <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
+                                                    {%- endif -%}
+                                                </li>
+                                            {% endif %}
+                                            {% if config.uses_marker %}
+                                                <li>
+                                                    <strong>Marking:</strong> <span
+                                                        class="text-primary">{{ config.CATS_marking }} CATS</span>
+                                                    {%- if config.CATS_marking != pclass.CATS_marking -%}
+                                                        <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
+                                                    {%- endif -%}
+                                                </li>
+                                            {% endif %}
+                                            {% if config.uses_moderator %}
+                                                <li>
+                                                    <strong>Moderation:</strong> <span
+                                                        class="text-primary">{{ config.CATS_moderation }} CATS</span>
+                                                    {%- if config.CATS_moderation != pclass.CATS_moderation -%}
+                                                        <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
+                                                    {%- endif -%}
+                                                </li>
+                                            {% endif %}
+                                            {% if config.uses_presentations %}
+                                                <li>
+                                                    <strong>Presentation:</strong> <span
+                                                        class="text-primary">{{ config.CATS_presentation }} CATS</span>
+                                                    {%- if config.CATS_presentation != pclass.CATS_presentation -%}
+                                                        <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
+                                                    {%- endif -%}
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endcall %}
+                </div>
+                <div class="card mt-2 mb-2 card-body border-secondary">
+                    {% call icon_block("history", icon_classes="pt-2 text-primary") %}
+                        <div class="text-primary fw-semibold fs-5">Lifecycle events</div>
+                        <div class="row mt-2 g-2">
+                            <div class="col-md-6">
+                                <div class="card border-0">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-subtitle text-primary mb-2">Project confirmation requests</h6>
+                                        <ul class="list-unstyled mb-0 small">
+                                            {% if config.requests_issued %}
+                                                <li><i class="fas fa-check-circle text-success"></i> <strong>Requests
+                                                    issued</strong></li>
+                                                {% if config.requests_issued_by %}
+                                                    <li class="ms-3 text-muted">
+                                                        <i class="fas fa-user me-1"></i>{{ config.requests_issued_by.name }}
+                                                        {% if config.requests_timestamp %}at
+                                                            {{ config.requests_timestamp.strftime("%d/%m/%Y %H:%M") }}
+                                                        {% endif %}
+                                                    </li>
+                                                {% endif %}
+                                            {% elif config.requests_skipped %}
+                                                <li><i class="fas fa-forward text-warning"></i> <strong>Requests
+                                                    skipped</strong></li>
+                                                {% if config.requests_skipped_by %}
+                                                    <li class="ms-3 text-muted">
+                                                        <i class="fas fa-user me-1"></i> {{ config.requests_skipped_by.name }}
+                                                        {% if config.requests_skipped_timestamp %}as
+                                                            {{ config.requests_skipped_timestamp.strftime("%d/%m/%Y %H:%M") }}
+                                                        {% endif %}
+                                                    </li>
+                                                {% endif %}
+                                            {% else %}
+                                                <li><i class="fas fa-circle text-secondary"></i> Not yet issued</li>
+                                            {% endif %}
+                                            {% if config.requests_issued and not config.requests_skipped %}
+                                                {% set outstanding_count = config.confirmation_required.count() %}
+                                                {% if outstanding_count > 0 %}
+                                                    <li class="mt-1"><strong>Outstanding confirmations:</strong> <span
+                                                            class="badge bg-warning text-dark">{{ outstanding_count }}</span>
+                                                    </li>
+                                                {% else %}
+                                                    <li class="mt-1"><i class="fas fa-check-circle text-success"></i>
+                                                        All confirmations received
+                                                    </li>
+                                                {% endif %}
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-0">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-subtitle text-primary mb-2">Go live to selectors</h6>
+                                        <ul class="list-unstyled mb-0 small">
+                                            {% if config.live %}
+                                                <li><i class="fas fa-check-circle text-success"></i>
+                                                    <strong>Live</strong></li>
+                                                {% if config.golive_by %}
+                                                    <li class="ms-3 text-muted">
+                                                        <i class="fas fa-user me-1"></i> {{ config.golive_by.name }}
+                                                        {% if config.golive_timestamp %}at
+                                                            {{ config.golive_timestamp.strftime("%d/%m/%Y %H:%M") }}
+                                                        {% endif %}
+                                                    </li>
+                                                {% endif %}
+                                                {% if config.live_deadline %}
+                                                    <li class="mt-1">
+                                                        <strong>Deadline:</strong> {{ config.live_deadline.strftime("%d/%m/%Y") }}
+                                                    </li>
+                                                {% endif %}
+                                            {% else %}
+                                                <li><i class="fas fa-circle text-secondary"></i> Not yet live</li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-0">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-subtitle text-primary mb-2">Selections</h6>
+                                        <ul class="list-unstyled mb-0 small">
+                                            {% if config.selection_closed %}
+                                                <li><i class="fas fa-check-circle text-success"></i> <strong>Selections
+                                                    closed</strong></li>
+                                                {% if config.closed_by %}
+                                                    <li class="ms-3 text-muted">
+                                                        <i class="fas fa-user me-1"></i> {{ config.closed_by.name }}
+                                                        {% if config.closed_timestamp %}at
+                                                            {{ config.closed_timestamp.strftime("%d/%m/%Y %H:%M") }}
+                                                        {% endif %}
+                                                    </li>
+                                                {% endif %}
+                                            {% elif config.live %}
+                                                <li><i class="fas fa-clock text-info"></i> Selections open</li>
+                                            {% else %}
+                                                <li><i class="fas fa-circle text-secondary"></i> Not yet opened</li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-0">
+                                    <div class="card-body p-2">
+                                        <h6 class="card-subtitle text-primary mb-2">Selector matching</h6>
+                                        <ul class="list-unstyled mb-0 small">
+                                            {% if config.skip_matching %}
+                                                <li><i class="fas fa-forward text-warning"></i> Skip matching this cycle
+                                                </li>
+                                            {% endif %}
+                                            {% if config.accommodate_matching %}
+                                                <li><i class="fas fa-check-circle text-success"></i> Accommodating
+                                                    existing matching
+                                                </li>
+                                                <li class="ms-3 text-muted">
+                                                    Match: {{ config.accommodate_matching.name }}</li>
+                                            {% endif %}
+                                            {% if not config.skip_matching and not config.accommodate_matching %}
+                                                <li><i class="fas fa-circle text-secondary"></i> No special matching
+                                                    configuration
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endcall %}
+                </div>
+                <div class="card mt-2 mb-2 card-body border-secondary">
                     {% for p in config.periods %}
                         <li class="list-group-item list-group-item-light">
-                            <div class="d-flex flex-row justify-content-start align-items-start mb-2">
-                                <div class="dashboard-period-title align-self-start me-2">{{ p.display_name|safe }}</div>
-                                <div class="align-self-center">
-                                    {{ submission_period_configure_button(p, config, small=true, margin=false, disable=(p.is_feedback_open or p.closed)) }}
-                                </div>
-                                {% if p.submission_period <= config.submission_period %}
-                                    {% set validation_messages = p.validate %}
-                                    {% if validation_messages is not none and validation_messages|length > 0 %}
-                                        <div class="col ms-4 align-self-center">
-                                            <div class="large-warning-triangle"><i class="fas fa-exclamation-triangle text-danger"></i></div>
-                                            <a class="text-decoration-none" href="#submitter_card_{{ loop.index }}">Validation errors....</a>
-                                        </div>
+                            <div class="d-flex flex-row flex-wrap justify-content-between align-items-start mb-2 w-100">
+                                <div class="dashboard-period-title">{{ p.display_name|safe }}</div>
+                                <div class="d-flex flex-row flex-wrap justify-content-end align-items-center gap-2">
+                                    {% if p.submission_period <= config.submission_period %}
+                                        {% set validation_messages = p.validate %}
+                                        {% if validation_messages is not none and validation_messages|length > 0 %}
+                                            <div>
+                                                <div class="large-warning-triangle"><i
+                                                        class="fas fa-exclamation-triangle text-danger"></i></div>
+                                                <a class="text-decoration-none" href="#submitter_card_{{ loop.index }}">Validation
+                                                    errors&hellip;</a>
+                                            </div>
+                                        {% endif %}
                                     {% endif %}
-                                {% endif %}
+                                    <div>
+                                        {{ submission_period_configure_button(p, config, small=true, margin=false, disable=(p.is_feedback_open or p.closed)) }}
+                                    </div>
+                                </div>
                             </div>
                             <div class="mb-2">
                                 {{ period_status(p, return_url=url_for('convenor.status', id=pclass.id), return_text='convenor dashboard') }}
@@ -156,7 +435,7 @@
                             {% endcall %}
                         </li>
                     {% endfor %}
-                </ul>
+                </div>
             </div>
 
             {# offer rollover of academic year if available #}
@@ -173,13 +452,15 @@
                         <div class="card-body">
                             <div class="alert alert-info">
                                 {% call icon_block("question-circle") %}
-                                    <div><strong>An administrator has published one or more proposals for selector/project matches.</strong></div>
+                                    <div><strong>An administrator has published one or more proposals for
+                                        selector/project matches.</strong></div>
                                 {% endcall %}
                             </div>
                             {% if config.select_in_previous_cycle %}
                                 <div class="alert alert-info">
                                     {% call icon_block("info-circle") %}
-                                        <div><strong>Selections for this project type take place in the cycle prior to submissions.</strong></div>
+                                        <div><strong>Selections for this project type take place in the cycle prior to
+                                            submissions.</strong></div>
                                         <div class="mt-1">
                                             A project matching will be used to generate
                                             submitter records during rollover of the academic year.
@@ -193,7 +474,8 @@
                             {% else %}
                                 <div class="alert alert-info">
                                     {% call icon_block("info-circle") %}
-                                        <div><strong>Selections for this project type take place in the same cycle as submissions.</strong></div>
+                                        <div><strong>Selections for this project type take place in the same cycle as
+                                            submissions.</strong></div>
                                         <div class="mt-1">
                                             Once a matching has been selected, it may be used immediately
                                             to generate submitter records for the current academic year.
@@ -202,7 +484,9 @@
                                 </div>
                             {% endif %}
                             <div class="d-flex flex-row justify-content-start align-items-start gap-2 mt-2">
-                                <a class="text-decoration-none" href="{{ url_for('convenor.audit_matches', pclass_id=config.pclass_id) }}">View or edit proposed matches...</a>
+                                <a class="text-decoration-none"
+                                   href="{{ url_for('convenor.audit_matches', pclass_id=config.pclass_id) }}">View or
+                                    edit proposed matches...</a>
                             </div>
                         </div>
                     </div>
@@ -210,15 +494,20 @@
 
                 {% if config.has_auditable_schedules %}
                     <div class="card mt-3 mb-3 border-danger">
-                        <div class="card-header bg-danger text-white">Proposed assessment schedules are available to view</div>
+                        <div class="card-header bg-danger text-white">Proposed assessment schedules are available to
+                            view
+                        </div>
                         <div class="card-body">
                             <div class="alert alert-info">
                                 {% call icon_block("question-circle") %}
-                                    <div><strong>An administrator has published one or more proposed schedules for presentation assessments.</strong></div>
+                                    <div><strong>An administrator has published one or more proposed schedules for
+                                        presentation assessments.</strong></div>
                                 {% endcall %}
                             </div>
                             <div class="d-flex flex-row justify-content-start align-items-start gap-2 mt-2">
-                                <a class="text-decoration-none" href="{{ url_for('convenor.audit_schedules', pclass_id=config.pclass_id) }}">View or edit proposed schedules...</a>
+                                <a class="text-decoration-none"
+                                   href="{{ url_for('convenor.audit_schedules', pclass_id=config.pclass_id) }}">View or
+                                    edit proposed schedules...</a>
                             </div>
                         </div>
                     </div>
@@ -228,112 +517,127 @@
             {% if top_to_dos is defined and top_do_dos is not none and top_to_dos|length > 0 %}
                 <div class="card border-secondary mt-3 mb-3">
                     {% set pl = 's' %}{% if num_to_dos == 1 %}{% set pl = '' %}{% endif %}
-                    <div class="card-header bg-warning">Upcoming tasks (<strong>{{ num_to_dos }}</strong> task{{ pl }} available)</div>
+                    <div class="card-header bg-warning">Upcoming tasks (<strong>{{ num_to_dos }}</strong> task{{ pl }}
+                        available)
+                    </div>
                     <div class="card-body small">
                         <table class="table table-sm table-striped">
                             <thead>
-                                <tr>
-                                    <th width="38%">Task</th>
-                                    <th width="15%">Student</th>
-                                    <th width="14%">Defer date</th>
-                                    <th width="14%">Due date</th>
-                                    <th width="10%">Status</th>
-                                    <th width="7%"></th>
-                                </tr>
+                            <tr>
+                                <th width="38%">Task</th>
+                                <th width="15%">Student</th>
+                                <th width="14%">Defer date</th>
+                                <th width="14%">Due date</th>
+                                <th width="10%">Status</th>
+                                <th width="7%"></th>
+                            </tr>
                             </thead>
                             <tbody class="table-group-divider">
-                                {% for tk in top_to_dos %}
-                                    {% set tk_type = tk.__mapper_args__['polymorphic_identity'] %}
-                                    {% set obj = tk.parent %}
-                                    {% if  tk_type == 1 or tk_type == 2%}
-                                        {% set tk_config = obj.config %}
-                                    {% else %}
-                                        {% set tk_config = obj %}
-                                    {% endif %}
-                                    {% set tk_pclass = tk_config.project_class %}
-                                    {% set tk_status_class = none %}
-                                    {% if tk.dropped %}
-                                        {% set tk_status_class = 'table-light' %}
-                                    {% elif tk.complete %}
-                                        {% set tk_status_class = 'table-success' %}
-                                    {% elif tk.is_overdue %}
-                                        {% set tk_status_class = 'table-danger' %}
-                                    {% elif tk.is_available %}
-                                        {% set tk_status_class = 'table-light' %}
-                                    {% endif %}
-                                    <tr {% if tk_status_class is not none %}class="{{ tk_status_class }}"{% endif %}>
-                                        <td>
-                                            {% if tk_type == 1 or tk_type == 2 %}
-                                                <a class="text-decoration-none link-primary" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
-                                            {% elif tk_type == 3 %}
-                                                <a class="text-decoration-none link-primary" href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
-                                            {% else %}
-                                                {{ tk.description|truncate(40) }}
-                                            {% endif %}
-                                            {% if tk.notes and tk.notes|length > 0 %}
-                                                <span class="ms-1 text-muted" tabindex="0" data-bs-toggle="popover" title="Task notes" data-bs-container="body" data-bs-trigger="focus" data-bs-content="{{ tk.notes|truncate(600) }}">Notes <i class="ms-1 fas fa-chevron-right"></i></span>
-                                            {% endif %}
-                                            {% if tk.blocking %}
-                                                <span class="badge bg-warning text-dark ms-1"><i class="fas fa-hand-paper"></i> Blocking</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if tk_type == 1 or tk_type == 2 %}
-                                                <i class="fas fa-user-circle"></i>
-                                                <a class="text-decoration-none link-dark" href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.status', id=pclass.id), text='convenor dashboard') }}">
-                                                    {{ obj.student.user.name }}
+                            {% for tk in top_to_dos %}
+                                {% set tk_type = tk.__mapper_args__['polymorphic_identity'] %}
+                                {% set obj = tk.parent %}
+                                {% if  tk_type == 1 or tk_type == 2 %}
+                                    {% set tk_config = obj.config %}
+                                {% else %}
+                                    {% set tk_config = obj %}
+                                {% endif %}
+                                {% set tk_pclass = tk_config.project_class %}
+                                {% set tk_status_class = none %}
+                                {% if tk.dropped %}
+                                    {% set tk_status_class = 'table-light' %}
+                                {% elif tk.complete %}
+                                    {% set tk_status_class = 'table-success' %}
+                                {% elif tk.is_overdue %}
+                                    {% set tk_status_class = 'table-danger' %}
+                                {% elif tk.is_available %}
+                                    {% set tk_status_class = 'table-light' %}
+                                {% endif %}
+                                <tr {% if tk_status_class is not none %}class="{{ tk_status_class }}"{% endif %}>
+                                    <td>
+                                        {% if tk_type == 1 or tk_type == 2 %}
+                                            <a class="text-decoration-none link-primary"
+                                               href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
+                                        {% elif tk_type == 3 %}
+                                            <a class="text-decoration-none link-primary"
+                                               href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">{{ tk.description|truncate(40) }}</a>
+                                        {% else %}
+                                            {{ tk.description|truncate(40) }}
+                                        {% endif %}
+                                        {% if tk.notes and tk.notes|length > 0 %}
+                                            <span class="ms-1 text-muted" tabindex="0" data-bs-toggle="popover"
+                                                  title="Task notes" data-bs-container="body" data-bs-trigger="focus"
+                                                  data-bs-content="{{ tk.notes|truncate(600) }}">Notes <i
+                                                    class="ms-1 fas fa-chevron-right"></i></span>
+                                        {% endif %}
+                                        {% if tk.blocking %}
+                                            <span class="badge bg-warning text-dark ms-1"><i
+                                                    class="fas fa-hand-paper"></i> Blocking</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if tk_type == 1 or tk_type == 2 %}
+                                            <i class="fas fa-user-circle"></i>
+                                            <a class="text-decoration-none link-dark"
+                                               href="{{ url_for('convenor.student_tasks', type=obj.polymorphic_identity(), sid=obj.id, url=url_for('convenor.status', id=pclass.id), text='convenor dashboard') }}">
+                                                {{ obj.student.user.name }}
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if tk.defer_date is not none %}
+                                            {{ tk.defer_date.strftime("%a %d %b %Y %H:%M") }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if tk.due_date is not none %}
+                                            {{ tk.due_date.strftime("%a %d %b %Y %H:%M") }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if tk.dropped %}
+                                            <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Dropped</span>
+                                        {% elif tk.complete %}
+                                            <span class="badge bg-success"><i class="fas fa-check"></i> Complete</span>
+                                        {% elif tk.is_overdue %}
+                                            <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Overdue</span>
+                                        {% elif tk.is_available %}
+                                            <span class="badge bg-info"><i
+                                                    class="fas fa-thumbs-up"></i> Available</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary"><i class="fas fa-ban"></i> Not yet available</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="dropdown">
+                                            <button class="btn btn-outline-secondary btn-xs full-width-button dropdown-toggle"
+                                                    type="button" data-bs-toggle="dropdown">
+                                                Actions
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end small">
+                                                {% if tk_type == 1 or tk_type == 2 %}
+                                                    <a class="dropdown-item d-flex gap-2 small"
+                                                       href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
+                                                        <i class="fas fa-pencil-alt fa-fw"></i> Edit...
+                                                    </a>
+                                                {% elif tk_type == 3 %}
+                                                    <a class="dropdown-item d-flex gap-2 small"
+                                                       href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
+                                                        <i class="fas fa-pencil-alt fa-fw"></i> Edit...
+                                                    </a>
+                                                {% endif %}
+                                                <a class="dropdown-item d-flex gap-2 small"
+                                                   href="{{ url_for('convenor.mark_task_complete', tid=tk.id, action='complete') }}">
+                                                    <i class="fas fa-check fa-fw"></i> Complete
                                                 </a>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if tk.defer_date is not none %}
-                                                {{ tk.defer_date.strftime("%a %d %b %Y %H:%M") }}
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if tk.due_date is not none %}
-                                                {{ tk.due_date.strftime("%a %d %b %Y %H:%M") }}
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if tk.dropped %}
-                                                <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Dropped</span>
-                                            {% elif tk.complete %}
-                                                <span class="badge bg-success"><i class="fas fa-check"></i> Complete</span>
-                                            {% elif tk.is_overdue %}
-                                                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Overdue</span>
-                                            {% elif tk.is_available %}
-                                                <span class="badge bg-info"><i class="fas fa-thumbs-up"></i> Available</span>
-                                            {% else %}
-                                                <span class="badge bg-secondary"><i class="fas fa-ban"></i> Not yet available</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            <div class="dropdown">
-                                                <button class="btn btn-outline-secondary btn-xs full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                                    Actions
-                                                </button>
-                                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end small">
-                                                    {% if tk_type == 1 or tk_type == 2 %}
-                                                        <a class="dropdown-item d-flex gap-2 small" href="{{ url_for('convenor.edit_student_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
-                                                            <i class="fas fa-pencil-alt fa-fw"></i> Edit...
-                                                        </a>
-                                                    {% elif tk_type == 3 %}
-                                                        <a class="dropdown-item d-flex gap-2 small" href="{{ url_for('convenor.edit_generic_task', tid=tk.id, url=url_for('convenor.status', id=pclass.id)) }}">
-                                                            <i class="fas fa-pencil-alt fa-fw"></i> Edit...
-                                                        </a>
-                                                    {% endif %}
-                                                    <a class="dropdown-item d-flex gap-2 small" href="{{ url_for('convenor.mark_task_complete', tid=tk.id, action='complete') }}">
-                                                        <i class="fas fa-check fa-fw"></i> Complete
-                                                    </a>
-                                                    <a class="dropdown-item d-flex gap-2 small" href="{{ url_for('convenor.mark_task_dropped', tid=tk.id, action='drop') }}">
-                                                        <i class="fas fa-ban fa-fw"></i> Drop
-                                                    </a>
-                                                </div>
+                                                <a class="dropdown-item d-flex gap-2 small"
+                                                   href="{{ url_for('convenor.mark_task_dropped', tid=tk.id, action='drop') }}">
+                                                    <i class="fas fa-ban fa-fw"></i> Drop
+                                                </a>
                                             </div>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -353,7 +657,7 @@
                     {{ golive(config, golive_form, approval_data) }}
                 {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                     {{ selection_open(config, change_form, convenor_data, current_time) }}
-                {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
+                {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
                     {{ selection_closed(config, rollover_in_progress, convenor_data) }}
                 {% else %}
                     <div class="card border-danger mt-3 mb-3">

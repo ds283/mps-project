@@ -8,4 +8,4 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from .email_templates import template_data
+from .email_templates import template_data_pclass_override

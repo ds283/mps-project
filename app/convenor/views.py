@@ -14709,7 +14709,7 @@ def email_templates_ajax(pclass_id):
 
     with ServerSideInMemoryHandler(request, fake_query, columns) as handler:
         return handler.build_payload(
-            partial(ajax.email_templates.template_data, pclass)
+            partial(ajax.email_templates.template_data_pclass_override, pclass)
         )
 
 

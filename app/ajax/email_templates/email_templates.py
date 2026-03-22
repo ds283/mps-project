@@ -40,7 +40,7 @@ _email_template_status = """
                 <span class="badge bg-secondary"><i class="fas fa-times-circle me-1"></i>Inactive</span>
             {% endif %}
             <span class="badge bg-info ms-1" data-bs-toggle="tooltip" title="Override for project class: {{ pclass.name }}">
-                <i class="fas fa-project-diagram me-1"></i>PClass override
+                <i class="fas fa-project-diagram me-1"></i>Project class override
             </span>
         </div>
         <div class="small d-flex flex-column justify-content-start align-items-start gap-1">
@@ -72,7 +72,10 @@ _email_template_status = """
         </div>
     </div>
 {% else %}
-    <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle me-1"></i>No override exists</span>
+    <div class="d-flex flex-row justify-content-start align-items-center gap-1 text-info">
+        <i class="fas fa-info-circle"></i>
+        <span class="fst-italic">Using a default template</span>
+    </div>
 {% endif %}
 """
 
@@ -81,7 +84,10 @@ _email_template_subject = """
 {% if template is not none %}
     <div class="text-secondary fw-semibold">{{ template.subject }}</div>
 {% else %}
-    <span class="text-muted fst-italic">Using fallback template</span>
+    <div class="d-flex flex-row justify-content-start align-items-center gap-1 text-info">
+        <i class="fas fa-info-circle"></i>
+        <span class="fst-italic">Using a default template</span>
+    </div>
 {% endif %}
 """
 

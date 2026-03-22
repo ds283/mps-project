@@ -3,6 +3,9 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data %}
 {% from "select2.html" import import_select2 %}
+{% from "swatch.html" import small_swatch %}
+{% from "labels.html" import simple_label %}
+{% from "icon_block.html" import icon_block %}
 
 {% block scripts %}
     {{ super() }}
@@ -31,7 +34,8 @@
 
 {% block formtitle %}
     {% if email_template %}
-        Edit email template &ndash; <strong>{{ email_template.subject }}</strong>
+        Edit email template &ndash;
+        <strong>{{ email_template.type_name if email_template.type_name is defined else email_template.subject }}</strong>
         <span class="badge bg-light text-dark"><i class="fas fa-hashtag"></i> {{ email_template.version }}</span>
     {% else %}
         {{ title }}
@@ -40,7 +44,7 @@
 
 {% block form_content %}
     {% if email_template %}
-        <form action="action_url" method="POST" name="email_template_form">
+        <form action="{{ action_url }}" method="POST" name="email_template_form">
     {% endif %}
 
 {{ form.hidden_tag() }}
@@ -48,34 +52,45 @@
 {% if email_template %}
     <div class="d-flex flex-column justify-content-start align-items-start gap-3">
         <div class="d-flex flex-row justify-content-start align-items-center gap-2">
-            <span class="ms-1 text-secondary text-uppercase fs-5">{{ email_template.type_name if email_template.type_name is defined else email_template.type }}</span>
-            <span class="badge bg-primary"><i class="fas fa-hashtag"></i> {{ email_template.version }}</span>
+            <span class="ms-1 text-primary  text-uppercase fs-3">{{ email_template.type_name if email_template.type_name is defined else email_template.type }}</span>
+            <span class="fs-5 mb-1"><span class="badge bg-primary"><i
+                    class="fas fa-hashtag"></i> {{ email_template.version }}</span></span>
         </div>
-        <div class="d-flex flex-row justify-content-start align-items-center gap-2">
-            {% if email_template.tenant_id is none and email_template.pclass_id is none %}
+        {% if email_template.tenant_id is none and email_template.pclass_id is none %}
+            <div class="d-flex flex-column justify-content-start align-items-center gap-1">
                 <div>
-                            <span class="badge bg-primary">
-                                <i class="fas fa-globe me-1"></i>Global fallback
-                            </span>
-                    <small class="text-muted ms-2">This template is the global fallback and must remain
-                        active.</small>
+                    <i class="fas fa-info-circle me-1 text-info"></i>
+                    <span class="text-info">Global fallback</span>
                 </div>
-            {% elif email_template.pclass_id is not none %}
-                <div>
-                            <span class="badge bg-info">
-                                <i class="fas fa-project-diagram me-1"></i>Project class override
-                            </span>
-                    <span class="ms-2">{{ email_template.pclass.name }}</span>
-                </div>
-            {% elif email_template.tenant_id is not none %}
-                <div>
-                            <span class="badge bg-warning text-dark">
-                                <i class="fas fa-building me-1"></i>Tenant override
-                            </span>
-                    <span class="ms-2">{{ email_template.tenant.name }}</span>
-                </div>
-            {% endif %}
-        </div>
+                <small class="text-muted ms-2">This template is the global fallback and must remain active.</small>
+            </div>
+        {% elif email_template.pclass_id is not none %}
+            <div class="alert alert-info mt-2 mb-2 w-100">
+                {% call icon_block("project-diagram") %}
+                    <div>
+                        <strong>
+                            This template is an override
+                        </strong>
+                        for project class
+                        <div class="d-flex flex-row justify-content-start align-items-center gap-1">
+                            {% set style = email_template.pclass.make_CSS_style() %}
+                            {{ small_swatch(style) }}
+                            <span class="fw-semibold">{{ email_template.pclass.name }}</span>
+                        </div>
+                    </div>
+                {% endcall %}
+            </div>
+        {% elif email_template.tenant_id is not none %}
+            <div class="alert alert-info mt-2 mb-2 w-100">
+                {% call icon_block("building") %}
+                    <div>
+                        <strong>This template is an override</strong>
+                        for tenant
+                        {{ simple_label(email_template.tenant.make_label(email_template.tenant.name)) }}
+                    </div>
+                {% endcall %}
+            </div>
+        {% endif %}
         {% if email_template.last_used %}
             <div class="text-muted small">
                 <i class="fas fa-clock me-1"></i>Last

@@ -59,7 +59,7 @@ _email_template_status = """
             </span>
         {% elif t.pclass_id is not none %}
             <span class="badge bg-info ms-1" data-bs-toggle="tooltip" title="Override for project class: {{ t.pclass.name }}">
-                <i class="fas fa-project-diagram me-1"></i>PClass override
+                <i class="fas fa-project-diagram me-1"></i>Project class override
             </span>
         {% elif t.tenant_id is not none %}
             <span class="badge bg-warning text-dark ms-1" data-bs-toggle="tooltip" title="Override for tenant: {{ t.tenant.name }}">

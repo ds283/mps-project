@@ -153,6 +153,7 @@ from ..shared.validators import (
 )
 from ..task_queue import progress_update, register_task
 from ..tools import ServerSideInMemoryHandler, ServerSideSQLHandler
+from ..tools.ServerSideProcessing import FakeQuery
 from . import admin
 from .actions import availability_CSV_generator, estimate_CATS_load, pair_slots
 from .forms import (
@@ -13503,21 +13504,7 @@ def assets_ajax():
 
     combined = generated + temporary + submitted
 
-    # Wrap the combined list in a trivial SQLAlchemy-compatible object.
-    # ServerSideInMemoryHandler accepts any iterable for its query argument when
-    # a row_filter is not needed; we pass a fake query-like object that simply
-    # returns the combined list from .all().
-    class _FakeQuery:
-        def __init__(self, rows):
-            self._rows = rows
-
-        def all(self):
-            return self._rows
-
-        def count(self):
-            return len(self._rows)
-
-    fake_query = _FakeQuery(combined)
+    fake_query = FakeQuery(combined)
 
     # Column definitions for in-memory search and sort.
     # Each row is a (asset, asset_type_str) tuple, so accessors receive that tuple.
@@ -13851,7 +13838,15 @@ def email_templates():
     List all EmailTemplate instances
     :return:
     """
-    return render_template_context("admin/email_templates/list.html")
+    AJAX_endpoint = url_for("admin.email_templates_ajax")
+
+    return render_template_context(
+        "admin/email_templates/list.html",
+        AJAX_endpoint=AJAX_endpoint,
+        title="All email templates",
+        card_title="All email templates",
+        inspector_type="global",
+    )
 
 
 @admin.route("/email_templates_ajax", methods=["POST"])
@@ -13925,6 +13920,10 @@ def edit_email_template(id):
     template: EmailTemplate = EmailTemplate.query.get_or_404(id)
     form: EditEmailTemplateForm = EditEmailTemplateForm(obj=template)
 
+    url = request.args.get("url", None)
+    if url is None:
+        url = url_for("admin.email_templates")
+
     if form.validate_on_submit():
         label_list = create_new_email_template_labels(form)
 
@@ -13946,13 +13945,16 @@ def edit_email_template(id):
                 "error",
             )
 
-        return redirect(url_for("admin.email_templates"))
+        return redirect(url)
+
+    action_url = url_for("admin.edit_email_template", id=id, url=url)
 
     return render_template_context(
         "admin/email_templates/edit.html",
         form=form,
         email_template=template,
         title="Edit email template",
+        action_url=action_url,
     )
 
 

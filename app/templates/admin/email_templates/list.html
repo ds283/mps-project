@@ -18,7 +18,7 @@
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 serverSide: true,
                 ajax: {
-                    'url': $SCRIPT_ROOT + '/admin/email_templates_ajax',
+                    'url': $SCRIPT_ROOT + "{{ AJAX_endpoint }}",
                     'type': 'POST',
                     'data': function (args) {
                         return {"args": JSON.stringify(args)};
@@ -66,26 +66,64 @@
 {% endblock %}
 
 {% block title %}
-    Email templates
+    {{ title }}
 {% endblock %}
 
 {% block bodyblock %}
+    {% if url and text %}
+        <div class="top-return-link">
+            <a class="text-decoration-none" href="{{ url }}">
+                <i class="fas fa-backward"></i> Return to {{ text }}
+            </a>
+        </div>
+    {% endif %}
+
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white">
-            <i class="fas fa-envelope me-2"></i>Email templates
+            <i class="fas fa-envelope me-2"></i>{{ card_title|safe }}
         </div>
         <div class="card-body">
             <div class="mt-2 mb-5 alert alert-info">
-                {% call icon_block("check-circle") %}
-                    <div><strong>Templates are used to create all emails sent by the platform.</strong></div>
-                    <div class="mt-1">
-                        The <em>global fallback</em> templates must always remain active.
-                    </div>
-                    <div class="mt-1">
-                        Additional templates can be created to override the default
-                        for specific tenants or purposes.
-                    </div>
-                {% endcall %}
+                {% if inspector_type == "global" %}
+                    {% call icon_block("check-circle") %}
+                        <div><strong>Templates are used to create all emails sent by the platform.</strong></div>
+                        <div class="mt-1">
+                            The <em>global fallback</em> templates must always remain active.
+                        </div>
+                        <div class="mt-1">
+                            Additional templates can be created to override the default
+                            for specific tenants or purposes.
+                        </div>
+                        <div class="mt-1">
+                            You can provide more than one active template. By default, the most
+                            recent active version will be used.
+                        </div>
+                    {% endcall %}
+                {% elif inspector_type == "tenant" %}
+                    {% call icon_block("check-circle") %}
+                        <div><strong>Templates are used to create all emails sent by the platform.</strong></div>
+                        <div class="mt-1">
+                            You can override any of the default templates by providing a specialized
+                            implementation for this tenant.
+                        </div>
+                        <div class="mt-1">
+                            You can provide more than one active template. By default, the most
+                            recent active version will be used.
+                        </div>
+                    {% endcall %}
+                {% elif inspector_type == "pclass" %}
+                    {% call icon_block("check-circle") %}
+                        <div><strong>Templates are used to create all emails sent by the platform.</strong></div>
+                        <div class="mt-1">
+                            You can override any of the default templates by providing a specialized
+                            implementation for this project class.
+                        </div>
+                        <div class="mt-1">
+                            You can provide more than one active template. By default, the most
+                            recent active version will be used.
+                        </div>
+                    {% endcall %}
+                {% endif %}
             </div>
             <table id="email-templates" class="table table-striped table-bordered">
                 <thead>
@@ -101,4 +139,12 @@
             </table>
         </div>
     </div>
+
+    {% if url and text %}
+        <div>
+            <a class="text-decoration-none" href="{{ url }}">
+                <i class="fas fa-backward"></i> Return to {{ text }}
+            </a>
+        </div>
+    {% endif %}
 {% endblock %}

@@ -40,8 +40,7 @@
 
 {% block form_content %}
     {% if email_template %}
-        <form action="{{ url_for('admin.edit_email_template', id=email_template.id) }}" method="POST"
-              name="email_template_form">
+        <form action="action_url" method="POST" name="email_template_form">
     {% endif %}
 
 {{ form.hidden_tag() }}

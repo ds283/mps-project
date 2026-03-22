@@ -87,6 +87,9 @@
                             <div class="text-primary fw-semibold fs-5">Configuration</div>
                             <div class="d-flex flex-row flex-wrap justify-content-end align-items-start gap-2">
                                 <a class="btn btn-sm btn-outline-secondary"
+                                   href="{{ url_for('convenor.email_templates', pclass_id=config.pclass_id, url=return_url, text=return_text) }}">Edit
+                                    email templates&hellip;</a>
+                                <a class="btn btn-sm btn-outline-secondary"
                                    href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Configure&hellip;
                                 </a>
                             </div>

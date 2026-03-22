@@ -1,273 +1,398 @@
 # Technical Context
 
-## Technology Stack
+## Core Technologies
 
-### Core Framework
+### Backend Framework
 
-- **Python 3.x** - Primary programming language
-- **Flask** - Web framework
-- **SQLAlchemy** - ORM and database toolkit
-- **Alembic** - Database migration tool
+- **Flask 2.x**: Python web framework
+    - Blueprint-based modular architecture
+    - Jinja2 templating engine
+    - Werkzeug WSGI utilities
+    - Development server and CLI tools
 
-### Frontend
+### Database Systems
 
-- **Jinja2** - Template engine
-- **Bootstrap** - CSS framework (via templates)
-- **JavaScript/jQuery** - Client-side interactivity
-- **AJAX** - Async operations
+1. **MySQL 8.x** (Primary relational database)
+    - User accounts and authentication
+    - Project and supervision data
+    - Assessment and grading records
+    - Tenant configuration
+    - Audit trails
 
-### Database & Storage
+2. **MongoDB** (Document storage)
+    - File metadata
+    - Complex document structures
+    - Flexible schema for varied data
 
-- **MySQL** - Primary relational database
-- **Redis** - Cache and message broker
-- **MongoDB** - Selective data storage
-- **Object Storage** - File system or S3-compatible for documents
+3. **Redis** (Cache and message broker)
+    - Session storage
+    - Cache backend
+    - Celery message broker
+    - Rate limiting
 
-### Background Processing
+### Object Storage
 
-- **Celery** - Distributed task queue
-- **Celery Beat** - Periodic task scheduler
-- **Flower** - Celery monitoring tool
+- **MinIO** (S3-compatible object storage)
+    - Project documents
+    - Submitted work
+    - Generated reports
+    - Backup files
+    - Assets and media
 
-### Deployment & Infrastructure
+### Task Queue
 
-- **Docker** - Containerization
-- **Gunicorn** - WSGI HTTP server
-- **Nginx** - Reverse proxy and static file serving
-- **Kubernetes** - Container orchestration (legacy deployments)
+- **Celery 5.x**: Distributed task queue
+    - Email sending
+    - PDF generation
+    - Report creation
+    - Scheduled jobs
+    - Batch processing
+
+- **Celery Beat**: Task scheduler
+    - Periodic maintenance
+    - Scheduled notifications
+    - Automated cleanup
+    - Report generation
+
+- **Flower**: Task monitoring UI
+    - Task status monitoring
+    - Worker management
+    - Task statistics
+
+## Frontend Technologies
+
+### UI Framework
+
+- **Bootstrap 4/5**: Responsive CSS framework
+    - Grid system
+    - Components (modals, alerts, cards)
+    - Forms and inputs
+    - Utilities
+
+### JavaScript Libraries
+
+- **jQuery 3.x**: DOM manipulation and AJAX
+- **DataTables**: Interactive tables with server-side processing
+- **Chart.js**: Data visualization (if used)
+- **Select2**: Enhanced select boxes
+- **Bootstrap-datepicker**: Date selection
+- **Moment.js**: Date/time manipulation
+
+### AJAX & API
+
+- **RESTful endpoints**: JSON-based API
+- **Server-side DataTables**: Paginated table data
+- **AJAX forms**: Asynchronous form submission
+- **JSON responses**: Standardized response format
+
+## Python Ecosystem
+
+### Core Dependencies
+
+**Web Framework:**
+
+- `Flask` - Web framework
+- `Flask-SQLAlchemy` - ORM integration
+- `Flask-Login` - User session management
+- `Flask-WTF` - Form handling
+- `Flask-Migrate` - Database migrations
+- `Flask-Mail` - Email integration
+- `Flask-Caching` - Caching support
+- `Flask-Limiter` - Rate limiting
+
+**Database:**
+
+- `SQLAlchemy` - ORM
+- `PyMySQL` - MySQL driver
+- `pymongo` - MongoDB driver
+- `redis` - Redis client
+
+**Task Queue:**
+
+- `celery` - Task queue
+- `flower` - Monitoring
+
+**File Handling:**
+
+- `PyMuPDF` (fitz) - PDF manipulation
+- `python-docx` - Word document handling
+- `openpyxl` - Excel files
+- `boto3` - S3/MinIO client
+
+**Utilities:**
+
+- `python-dateutil` - Date parsing
+- `pytz` - Timezone handling
+- `bleach` - HTML sanitization
+- `validators` - Input validation
+- `click` - CLI commands
 
 ### Development Tools
 
-- **PyCharm Professional** - IDE in use
-- **Git** - Version control
-- **pip** - Package management
+- `alembic` - Database migrations (via Flask-Migrate)
+- `pytest` - Testing framework (if configured)
+- `black` - Code formatting (if used)
+- `flake8` - Linting (if used)
 
-## Development Setup
+## Deployment Architecture
 
-### Environment Structure
+### Containerization
 
+- **Docker**: Application containerization
+    - Multi-stage builds
+    - Service orchestration with docker-compose
+    - Volume mounts for persistence
+    - Network isolation
+
+### Container Services
+
+```yaml
+services:
+   - web: Flask application (gunicorn)
+   - nginx: Reverse proxy and static files
+   - mysql: Primary database
+   - mongodb: Document database
+   - redis: Cache and broker
+   - celery: Task workers
+   - beat: Task scheduler
+   - flower: Task monitoring
+   - minio: Object storage
 ```
-/Users/ds283/Documents/Code/MPS-Project/
-├── app/                    # Main application code
-├── migrations/             # Alembic database migrations
-├── Deployments/            # Deployment configurations
-│   ├── local/             # Local development
-│   ├── SussexVM/          # VM deployment
-│   └── suex-enginfprojects-prod/  # Production
-├── basic_database/        # Initial database setup
-├── mysql/                 # MySQL data directory
-├── redis/                 # Redis data directory
-├── mongodb/               # MongoDB data directory
-├── objectstore-data/      # File storage
-└── logs/                  # Application logs
-```
 
-### Key Configuration Files
+### WSGI Server
 
-- `pyproject.toml` - Python project metadata
-- `requirements.txt` - Python dependencies
-- `Dockerfile` - Container build instructions
-- `docker-compose.yml` - Multi-container setup (if present)
-- `gunicorn_config.py` - WSGI server configuration
-- `nginx.conf` - Web server configuration
+- **Gunicorn**: Production WSGI server
+    - Worker processes
+    - Async workers (gevent/eventlet)
+    - Graceful reloads
+    - Access logging
 
-### Entry Points
+### Reverse Proxy
 
-- `mpsproject.py` - Main application entry
-- `serve.py` - Development server
-- `celery_node.py` - Celery worker
-- `initdb.py` - Database initialization
-- `migrate.py` - Database migration runner
+- **Nginx**: HTTP server and reverse proxy
+    - SSL/TLS termination
+    - Static file serving
+    - Request routing
+    - Load balancing
+    - Caching headers
+    - Compression (gzip)
 
-### Startup Scripts
+## Configuration Management
 
-- `boot.sh` - Application bootstrap
-- `launch_celery.sh` - Start Celery workers
-- `launch_beat.sh` - Start Celery Beat scheduler
-- `launch_flower.sh` - Start Flower monitoring
-- `restart.sh` - Application restart
+### Environment-Based Config
 
-## Technical Constraints
+- `local.py` - Local development
+- `config.py` - Base configuration
+- Environment variables for secrets
+- Tenant-specific overrides
 
-### Database
+### Configuration Categories
 
-- MySQL-specific features may be in use
-- Multi-tenant data isolation required
-- Migration compatibility across environments
-- Character encoding (Latin1 fix script present)
+1. **Database**: Connection strings, pool sizes
+2. **Security**: Secret keys, CSRF tokens
+3. **Email**: SMTP settings
+4. **Storage**: MinIO/S3 credentials
+5. **Celery**: Broker URL, result backend
+6. **Features**: Feature flags, limits
 
-### Performance
+## Development Environment
 
-- Celery for long-running operations
-- Redis caching for frequently accessed data
-- Rate limiting on API endpoints
-- Object storage for large files
+### Local Setup
 
-### Security
+1. **Python virtual environment** (venv)
+2. **Docker Compose** for services
+3. **Local database** initialization scripts
+4. **Development server** (Flask built-in)
 
-- Role-based access control
-- Multi-tenant data isolation
-- Secure file upload/download
-- Session management via Redis
-- CSRF protection
+### Database Initialization
 
-### Scalability
+- `initdb.py` - Database setup script
+- `basic_database/` - SQL seed data
+- Migration scripts via Alembic
 
-- Horizontal scaling via multiple Celery workers
-- Database connection pooling
-- Stateless application design
-- Load balancing via Nginx
-
-## Dependencies
-
-### Major Python Packages (from requirements.txt)
-
-Key dependencies include:
-
-- Flask and extensions (Flask-SQLAlchemy, Flask-WTF, Flask-Login, etc.)
-- Celery for task queue
-- PyMySQL for MySQL connectivity
-- Redis-py for caching
-- Boto3 for S3 (if using cloud storage)
-- PyMuPDF for PDF handling
-- Email libraries for notifications
-- Authentication/security packages
-
-### External Services
-
-- **SMTP Server** - Email delivery
-- **MySQL Server** - Database
-- **Redis Server** - Cache/broker
-- **Object Storage** - File storage (local or S3)
-
-## Tool Usage Patterns
-
-### Database Management
+### Running Locally
 
 ```bash
-# Initialize database
-python initdb.py
-
-# Run migrations
-python migrate.py upgrade head
-
-# Create new migration
-flask db migrate -m "description"
-```
-
-### Running the Application
-
-```bash
-# Development
-python serve.py
-
-# Production via Gunicorn
-gunicorn -c gunicorn_config.py mpsproject:app
-```
-
-### Background Workers
-
-```bash
-# Start Celery worker
-./launch_celery.sh
-
-# Start Beat scheduler
-./launch_beat.sh
-
-# Monitor with Flower
-./launch_flower.sh
-```
-
-### Docker Operations
-
-```bash
-# Build image
-./build.sh
-
-# Run containers
+# Start services
 docker-compose up -d
 
-# View logs
-docker-compose logs -f
+# Run migrations
+flask db upgrade
+
+# Start development server
+python serve.py
+
+# Start Celery worker
+celery -A celery_node worker
+
+# Start Celery beat
+celery -A celery_node beat
 ```
 
-## Environment Configuration
+## Testing Strategy
 
-### Configuration Patterns
+### Test Types
 
-- Environment-specific config files in `Deployments/`
-- Separate configs for local, VM, and production
-- Configuration loaded based on environment variable
-- Secrets managed via environment variables or config files
+1. **Unit tests**: Individual functions/methods
+2. **Integration tests**: Component interactions
+3. **End-to-end tests**: Full workflows
+4. **API tests**: Endpoint responses
 
-### Database Configuration
+### Testing Tools
 
-- Connection strings per environment
-- Connection pooling settings
-- Migration tracking
+- `pytest` - Test runner
+- `pytest-flask` - Flask test utilities
+- `factory-boy` - Test data generation (if used)
+- `faker` - Fake data (if used)
 
-### Celery Configuration
+## Version Control
 
-- Broker URL (Redis)
-- Result backend
-- Task routing
-- Scheduled task definitions
+### Git Workflow
 
-### Storage Configuration
+- **Repository**: GitHub
+- **Branching**: Feature branches
+- **Commits**: Descriptive messages
+- **Tags**: Release versioning
 
-- Object storage backend selection
-- Bucket/directory configuration
-- Access credentials
+### Current State
 
-## Testing Infrastructure
+- Latest commit: `bbc1c995856965bd9f108f22198e3eaaf25d68a1`
+- Repository: `https://github.com/ds283/mps-project.git`
 
-- Test files present (e.g., `test_pdf.py`)
-- Testing patterns to be documented as encountered
-- Database fixtures in `basic_database/`
+## Build & Deployment
 
-## Deployment Environments
+### Build Process
 
-### Local Development
+1. **Docker image build**: Multi-stage Dockerfile
+2. **Dependency installation**: pip from requirements.txt
+3. **Static asset collection**: Flask static files
+4. **Database migrations**: Alembic upgrade
 
-- Configuration in `Deployments/local/`
-- Local MySQL, Redis, MongoDB
-- File-based object storage
-- Development server
+### Deployment Targets
 
-### Sussex VM
+- **Local**: Development environment
+- **SussexVM**: VM-based deployment
+- **Production**: Kubernetes/VM (legacy configurations exist)
 
-- Configuration in `Deployments/SussexVM/`
-- VM-hosted services
-- Nginx reverse proxy
-- Production-like setup
+### Deployment Scripts
 
-### Production (suex-enginfprojects-prod)
+- `boot.sh` - Container startup
+- `build.sh` - Image build
+- `restart.sh` - Service restart
+- `migrate.py` - Database migration helper
 
-- Kubernetes deployment (legacy)
-- Manual manifests
-- High availability configuration
-- Monitoring and logging
+## Monitoring & Logging
 
-## Development Workflow
+### Application Logging
 
-1. **Code Changes**
-    - Edit Python/template files
-    - Flask auto-reload in development
-    - Manual restart for production
+- Python `logging` module
+- File-based logs in `logs/`
+- Nginx access/error logs
+- Celery task logs
 
-2. **Database Changes**
-    - Create Alembic migration
-    - Review generated migration
-    - Test migration up/down
-    - Apply to environments
+### Log Rotation
 
-3. **Dependency Updates**
-    - Update requirements.txt
-    - Rebuild Docker image
-    - Test in staging environment
+- Logrotate configuration
+- Automatic cleanup
+- Archive old logs
 
-4. **Deployment**
-    - Build Docker image
-    - Push to registry
-    - Update deployment configuration
-    - Rolling update in production
+## Security Considerations
+
+### Secrets Management
+
+- Environment variables for credentials
+- No secrets in version control
+- Separate configs per environment
+
+### Database Security
+
+- Connection over TLS (production)
+- User permissions per service
+- Regular backups
+- SQL injection prevention (SQLAlchemy)
+
+### Application Security
+
+- CSRF protection on forms
+- XSS prevention (template escaping)
+- SQL injection prevention (ORM)
+- Rate limiting on endpoints
+- Secure session cookies
+- HTTPS enforcement
+
+## Performance Optimization
+
+### Caching Layers
+
+1. **Redis cache**: Frequently accessed data
+2. **Template caching**: Rendered templates
+3. **Query caching**: Database results
+4. **Static file caching**: Browser cache headers
+
+### Database Optimization
+
+- Indexed columns for common queries
+- Eager loading for relationships
+- Connection pooling
+- Query result pagination
+
+### Background Processing
+
+- Celery for long-running tasks
+- Async email sending
+- Batch operations
+- Scheduled maintenance
+
+## IDE & Development Tools
+
+### Primary IDE
+
+- **PyCharm Professional**: Python IDE
+    - Integrated debugger
+    - Database tools
+    - Docker integration
+    - Git integration
+    - Code navigation
+
+### Shell Environment
+
+- **Zsh**: Default shell
+- **Home directory**: `/Users/ds283`
+- **Operating system**: macOS Tahoe
+
+## Known Constraints & Limitations
+
+### Technical Debt
+
+- Some legacy code patterns
+- Incomplete test coverage
+- Documentation gaps
+- Mixed Python versions support
+
+### Performance Considerations
+
+- Large dataset queries need optimization
+- File uploads limited by server config
+- Email sending rate limits
+- Celery worker capacity
+
+### Browser Support
+
+- Modern browsers (Chrome, Firefox, Safari, Edge)
+- Bootstrap 4/5 compatibility requirements
+- JavaScript required for full functionality
+
+## Upgrade Path
+
+### Python Version
+
+- Current: Python 3.x (specific version from requirements)
+- Target: Stay on supported versions
+- Migration: Test thoroughly before upgrade
+
+### Framework Updates
+
+- Flask: Monitor for security updates
+- SQLAlchemy: Major version migrations need planning
+- Celery: Background compatibility considerations
+- Bootstrap: UI refresh required for major versions

@@ -2,247 +2,301 @@
 
 ## Architecture Overview
 
+### Multi-Tenant Flask Application
+
+The MPS Project is a sophisticated Flask-based web application designed for managing academic projects, supervisions,
+and assessments. The system supports multiple tenants with isolated data.
+
+**Core Architecture:**
+
+- **Blueprint-based modular design**: Each major feature area is a Flask blueprint
+- **Multi-database architecture**: MySQL for relational data, MongoDB for documents, Redis for caching
+- **Async task processing**: Celery for background jobs with Redis broker
+- **Object storage**: MinIO/S3-compatible storage for files
+
 ### Application Structure
 
 ```
-Flask Web Application (app/)
-├── Blueprints (role-based modules)
-│   ├── convenor/ - Project convenor functionality
-│   ├── faculty/ - Faculty member views
-│   ├── student/ - Student interfaces
-│   ├── admin/ - System administration
-│   ├── project_approver/ - Project approval workflows
-│   ├── user_approver/ - User approval workflows
-│   ├── office/ - Administrative office
-│   └── [other role modules]
-├── AJAX endpoints (ajax/)
-│   └── Separated by module for async operations
-├── Models (models/)
-│   └── SQLAlchemy ORM definitions
-├── Tasks (tasks/)
-│   └── Celery background jobs
-├── Services (services/)
-│   └── Business logic and utilities
-└── Templates (templates/)
-    └── Jinja2 HTML templates
+app/
+├── __init__.py          # Application factory
+├── models/              # SQLAlchemy models
+├── admin/               # Admin blueprint
+├── convenor/            # Convenor (coordinator) blueprint
+├── faculty/             # Faculty member blueprint
+├── student/             # Student blueprint
+├── ajax/                # AJAX endpoints (per blueprint)
+├── templates/           # Jinja2 templates (per blueprint)
+├── static/              # Static assets
+├── tasks/               # Celery tasks
+├── services/            # Business logic services
+└── tools/               # Utility functions
 ```
 
-### Multi-Tenant Architecture
+## Key Design Patterns
 
-**Tenant Isolation**:
+### 1. Blueprint Organization
 
-- Each academic program is a separate tenant
-- Data isolation at database level
-- Users can belong to multiple tenants
-- Configuration per tenant
+Each functional area is organized as a Flask blueprint with consistent structure:
 
-**Tenant Context**:
+```
+blueprint_name/
+├── __init__.py          # Blueprint registration
+├── views.py             # Route handlers
+├── forms.py             # WTForms form definitions
+```
 
-- Tenant selection/switching mechanism
-- Scoped queries to current tenant
-- Tenant-specific permissions
-- Cross-tenant operations when appropriate (admin functions)
+Corresponding AJAX endpoints:
 
-## Key Technical Decisions
+```
+ajax/blueprint_name/
+├── __init__.py
+├── feature.py           # AJAX endpoints for specific features
+```
 
-### Framework Choice: Flask
+### 2. AJAX Pattern for Interactive Features
 
-- Lightweight and flexible
-- Blueprint pattern for modular organization
-- Extensive ecosystem
-- Good performance for educational institution scale
+**Standard AJAX Implementation:**
 
-### ORM: SQLAlchemy
+1. **Server-Side DataTables Processing**
 
-- Robust relationship management
-- Migration support via Alembic
-- Complex query capabilities
-- Database independence (using MySQL in production)
+- Uses `ServerSideProcessing.py` utility class
+- Handles pagination, sorting, filtering
+- Returns JSON with data and metadata
 
-### Background Processing: Celery
+   ```python
+   # Pattern in ajax endpoints
+   from ..tools.ServerSideProcessing import ServerSideHandler
+   
+   @blueprint.route('/ajax/list')
+   def ajax_list():
+       handler = ServerSideHandler(request, query, columns)
+       return handler.build_response()
+   ```
 
-- Async task execution
-- Scheduled jobs via Beat
-- Multiple workers for scalability
-- Redis as message broker
+2. **CRUD Operations**
 
-### Object Storage
+- Create/Update/Delete via AJAX POST
+- Return JSON with success/error status
+- Flash messages for user feedback
+- Database transaction management
 
-- File system or S3-compatible storage
-- Separate buckets for different content types:
-    - Project documents
-    - Student submissions
-    - Feedback files
-    - Assets and resources
-    - Backups
+   ```python
+   @blueprint.route('/ajax/edit/<int:id>', methods=['POST'])
+   def ajax_edit(id):
+       try:
+           # Perform operation
+           db.session.commit()
+           return jsonify({'success': True})
+       except Exception as e:
+           db.session.rollback()
+           return jsonify({'success': False, 'message': str(e)})
+   ```
 
-### Caching: Redis
+3. **Client-Side Integration**
 
-- Session storage
-- Rate limiting
-- Cache invalidation patterns
+- DataTables for list views
+- AJAX forms with JSON responses
+- Bootstrap modals for edit dialogs
+- Flash message display
 
-## Design Patterns in Use
+### 3. Database Access Pattern
 
-### Blueprint Pattern
+**SQLAlchemy ORM with Explicit Transaction Management:**
 
-Each role/feature area is a Flask Blueprint with:
+```python
+# Standard pattern
+try:
+    # Create/modify objects
+    db.session.add(object)
+    db.session.commit()
+except Exception:
+    db.session.rollback()
+    raise
+```
 
-- Routes/views
-- Forms (Flask-WTF)
-- Templates
-- Role-specific logic
+**Key Principles:**
 
-### Repository Pattern (Implicit)
+- Use relationship loading strategies (eager, lazy, subquery)
+- Avoid N+1 query problems with `joinedload()`
+- Use database-level cascades for deletions
+- Maintain referential integrity through foreign keys
 
-- Models encapsulate data access
-- Service layer for business logic
-- Separation of concerns
+### 4. Email Template System Pattern
 
-### Factory Pattern
+**Three-Layer Architecture:**
 
-Application factory in `app/__init__.py`:
+1. **Model Layer** (`app/models/emails.py`)
 
-- Creates Flask app instance
-- Registers blueprints
-- Initializes extensions
-- Configures based on environment
+- `EmailTemplate` model stores template metadata and content
+- Jinja2 template syntax in content field
+- Links to notification types/categories
 
-### Task Queue Pattern
+2. **Service Layer** (email sending services)
 
-- Long-running operations queued to Celery
-- Email sending via background tasks
+- Template resolution by type/category
+- Context data preparation
+- Template rendering with Jinja2
+- Queue email jobs to Celery
+
+3. **Admin Interface**
+
+- Template CRUD via AJAX endpoints
+- Syntax-highlighted editor
+- Preview functionality
+- Template variable documentation
+
+### 5. Task Queue Pattern
+
+**Celery-based Async Processing:**
+
+```python
+# Task definition
+@celery.task(bind=True)
+def long_running_task(self, arg1, arg2):
+    # Update progress
+    self.update_state(state='PROGRESS', meta={'current': 1, 'total': 10})
+    # Perform work
+    return result
+
+
+# Task invocation
+task = long_running_task.apply_async(args=[arg1, arg2])
+```
+
+**Common Use Cases:**
+
+- Email sending
+- PDF generation
 - Report generation
-- Scheduled maintenance
+- Batch processing
+- Scheduled maintenance tasks
 
-### Decorator-Based Security
+### 6. Multi-Tenancy Pattern
 
-- Login required decorators
-- Role-based access control
-- Permission checking decorators
+**Tenant Isolation:**
+
+- Each tenant has separate data partition
+- Tenant context stored in session/request
+- Database queries filtered by tenant
+- File storage organized by tenant
+
+**Implementation:**
+
+```python
+# Automatic tenant filtering in queries
+@property
+def tenant_query(self):
+  return self.query.filter_by(tenant_id=current_tenant.id)
+```
 
 ## Component Relationships
 
 ### Request Flow
 
-```
-User Request
-    ↓
-Nginx (reverse proxy)
-    ↓
-Gunicorn (WSGI server)
-    ↓
-Flask Application
-    ↓
-├─→ Authentication/Authorization
-├─→ Blueprint Router
-├─→ View Handler
-├─→ Service Layer
-├─→ Model/Database
-└─→ Template Rendering
-    ↓
-Response to User
-```
+1. **HTTP Request** → Flask routing
+2. **Authentication** → User session validation
+3. **Authorization** → Role-based access control
+4. **View Handler** → Business logic
+5. **Service Layer** → Complex operations
+6. **Model Layer** → Database operations
+7. **Template Rendering** → Response generation
 
-### Background Job Flow
+### Data Flow
 
-```
-Application
-    ↓
-Queue Task (Celery)
-    ↓
-Redis (broker)
-    ↓
-Celery Worker
-    ↓
-Execute Task
-    ↓
-├─→ Database updates
-├─→ File operations
-├─→ Email sending
-└─→ Result storage
-```
-
-### Data Layer
-
-```
-Application
-    ↓
-SQLAlchemy ORM
-    ↓
-MySQL Database
-    ├─→ Core application data
-    ├─→ User accounts
-    ├─→ Projects and assignments
-    ├─→ Submissions and grades
-    └─→ Configuration
-
-Object Storage
-    ├─→ Documents
-    ├─→ Submissions
-    └─→ Assets
-
-MongoDB (selective)
-    └─→ Specific data stores
-```
+1. **User Input** → Form validation (WTForms)
+2. **Business Logic** → Service functions
+3. **Database** → SQLAlchemy ORM
+4. **Cache** → Redis for frequently accessed data
+5. **File Storage** → MinIO/S3 for documents
+6. **Background Tasks** → Celery for async work
 
 ## Critical Implementation Paths
 
-### Project Creation Flow
+### Project Lifecycle
 
-1. Faculty creates project proposal
-2. Validation of required fields
-3. Approval workflow (if required)
-4. Publication to catalog
-5. Becomes available for student selection
+1. Project creation by faculty
+2. Approval workflow (multi-stage)
+3. Student selection process
+4. Assignment to students
+5. Supervision period management
+6. Assessment and grading
+7. Archive and reporting
 
-### Student Assignment Flow
+### Supervision Events
 
-1. Students rank project preferences
-2. Convenor runs allocation (algorithm or manual)
-3. Assignments created in database
-4. Notifications sent to students and supervisors
-5. Project relationships activated
+1. Event scheduling
+2. Student/supervisor notifications
+3. Attendance tracking
+4. Feedback collection
+5. Progress monitoring
 
-### Submission Flow
+### Assessment Workflow
 
-1. Student uploads document
-2. File validation and virus scanning
-3. Storage in object store
-4. Database record creation
-5. Supervisor notification
-6. Marking workflow activation
+1. Marking schema definition
+2. Assessor assignment
+3. Mark submission
+4. Moderation process
+5. Final grade calculation
+6. External examiner review
 
-### Notification Pattern
+## Performance Patterns
 
-1. Event occurs (assignment, deadline, submission)
-2. Task queued to Celery
-3. Email template rendering
-4. SMTP sending
-5. Logging and audit trail
+### Caching Strategy
 
-### Multi-Tenant Data Access
+- **Flask-Caching** for view caching
+- **Redis** for session storage
+- **Memoization** for expensive computations
+- **Database query result caching**
 
-1. User authenticates
-2. Tenant context established (from session or URL)
-3. All queries scoped to tenant
-4. Cross-tenant operations require explicit permission
-5. Audit logging of tenant switches
+### Query Optimization
 
-## State Management
+- **Eager loading** for relationships
+- **Index usage** for common queries
+- **Query result pagination**
+- **Subquery optimization**
 
-### Project States
+### Async Processing
 
-- Draft → Approved → Published → Active → Complete → Archived
+- **Celery tasks** for long operations
+- **Progress tracking** for user feedback
+- **Result backend** for task results
+- **Retry logic** for failures
 
-### Assignment States
+## Security Patterns
 
-- Waiting → Confirmed → In Progress → Submitted → Marked → Complete
+### Authentication & Authorization
 
-### User States
+- **Flask-Login** for session management
+- **Role-based access control** (RBAC)
+- **Tenant isolation** in queries
+- **CSRF protection** on forms
 
-- Pending → Active → Suspended → Archived
+### Data Validation
 
-### Academic Year Cycles
+- **WTForms** validation
+- **SQLAlchemy** constraints
+- **Custom validators** for business rules
+- **Sanitization** of user input
 
-- Setup → Project Selection → Assignment → Supervision → Assessment → Archive
+### Secure Communications
+
+- **HTTPS** enforcement
+- **Secure cookie** settings
+- **CORS** configuration
+- **Rate limiting** on endpoints
+
+## Error Handling Patterns
+
+### Graceful Degradation
+
+- Try/except blocks with rollback
+- User-friendly error messages
+- Logging of technical details
+- Fallback behaviors
+
+### Monitoring & Logging
+
+- Application logging to files
+- Error tracking (potential integration)
+- Performance metrics
+- Audit trails for critical operations

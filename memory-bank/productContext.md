@@ -1,116 +1,277 @@
 # Product Context
 
-## Why This Project Exists
+## What is MPS Project?
 
-Academic institutions need to manage complex project-based assessments (dissertations, final year projects, major
-projects) involving hundreds of students and faculty members. Manual management becomes unworkable at scale, leading to:
+The MPS (Multi-Project System) Project is a comprehensive web application designed to manage academic research projects,
+supervisions, and assessments in a university setting. It serves as a central platform for coordinating the entire
+lifecycle of student projects, from initial project proposals through to final assessment and archiving.
 
-- Lost proposals and assignments
-- Missed deadlines and milestones
-- Unclear supervision responsibilities
-- Administrative bottlenecks
-- Poor visibility of project status
+## Problem It Solves
 
-## Problems It Solves
+### Academic Project Management Complexity
 
-### For Students
+Universities face significant challenges in managing student projects:
 
-- **Discovery**: Browse available projects across faculty and research areas
-- **Selection**: Express preferences and receive fair allocations
-- **Tracking**: Monitor own progress against milestones
-- **Submission**: Upload work securely with version control
-- **Communication**: Connect with supervisors and understand expectations
+1. **Project Coordination**
+    - Faculty members propose hundreds of projects annually
+    - Projects need approval workflows across multiple levels
+    - Difficult to track which projects are available, in use, or archived
+    - Hard to ensure fair distribution of supervision workload
 
-### For Faculty
+2. **Student Selection Process**
+    - Students need to browse, compare, and select projects
+    - Matching students to projects requires complex algorithms
+    - Selection process must be fair and transparent
+    - Preferences and constraints must be balanced
 
-- **Project Management**: Propose and maintain project offerings
-- **Workload**: Track supervision and marking commitments
-- **Assessment**: Access student work and provide feedback
-- **Scheduling**: Manage meeting schedules and availability
+3. **Supervision Management**
+    - Tracking supervisor-student meetings is manual and error-prone
+    - No centralized record of supervision activities
+    - Difficult to monitor student progress
+    - Event scheduling across multiple students and supervisors is complex
 
-### For Convenors
+4. **Assessment Workflows**
+    - Multiple assessors with different roles (first marker, second marker, external)
+    - Complex marking schemes with weighted components
+    - Moderation processes require coordination
+    - Grade calculations must be accurate and auditable
+    - External examiner review needs to be tracked
 
-- **Oversight**: Monitor entire cohort progress
-- **Allocation**: Run matching algorithms or manual assignment
-- **Compliance**: Ensure academic regulations are met
-- **Reporting**: Generate statistics and reports for committees
+5. **Administrative Overhead**
+    - Generating reports for different stakeholders is time-consuming
+    - Email communications are scattered and inconsistent
+    - Document management lacks organization
+    - Audit trails are incomplete or missing
 
-### For Administrators
+6. **Multi-Program Complexity**
+    - Different academic programs have different requirements
+    - Each program may run on different timelines
+    - Policies and procedures vary by program
+    - Need to maintain data isolation while sharing resources
 
-- **Configuration**: Set up programs, roles, and workflows
-- **Multi-tenancy**: Manage multiple academic programs independently
-- **Security**: Control access and permissions
-- **Maintenance**: Monitor system health and performance
+## How It Works
 
-## How It Should Work
+### Core Workflows
 
-### Core User Flows
+#### 1. Project Lifecycle
 
-**Project Lifecycle**:
+```
+Faculty Proposal → Approval Workflow → Publication → Student Selection → 
+Assignment → Supervision → Assessment → Archive
+```
 
-1. Faculty propose projects → Approval workflow → Published catalog
-2. Students browse and rank preferences → Allocation algorithm/manual → Assignments
-3. Students work with supervisors → Progress tracking → Milestone submissions
-4. Assessment and marking → Final grading → Archive
+**Faculty Perspective:**
 
-**Temporal Organization**:
+- Faculty members create project proposals with descriptions, requirements, and tags
+- Projects go through approval workflow (office, approvers, system)
+- Approved projects become available for student selection
+- Faculty supervise assigned students
+- Faculty participate in assessment process
 
-- Projects organized by academic year/cycle
-- Configurable milestones and deadlines
-- Multiple submission points throughout lifecycle
-- Period-based access controls (e.g., project selection windows)
+**Student Perspective:**
 
-**Document Management**:
+- Students browse available projects via Project Hub
+- Students rank their project preferences
+- System matches students to projects
+- Students confirm or decline assignments
+- Students participate in supervision meetings
+- Students submit work for assessment
 
-- Project descriptions and briefs
-- Student submissions at various stages
-- Supervisor feedback documents
-- Assessment forms and rubrics
-- Supporting materials and resources
+**Administrator Perspective:**
 
-**Communication**:
+- Administrators (convenors) manage approval workflows
+- Configure selection periods and algorithms
+- Monitor supervision activities
+- Coordinate assessment processes
+- Generate reports and analytics
 
-- Automated email notifications
-- System announcements
-- Status updates
-- Deadline reminders
+#### 2. Supervision Events
+
+The system tracks all supervision interactions:
+
+- Scheduled meetings between students and supervisors
+- Attendance recording
+- Progress notes
+- Milestone tracking
+- Intervention alerts for at-risk students
+
+#### 3. Assessment Process
+
+Multi-stage assessment with various roles:
+
+- Marking schemas define grading criteria and weights
+- Multiple assessors (supervisors, second markers, third markers, externals)
+- Mark submission with component breakdowns
+- Moderation workflows
+- Final grade calculation with audit trail
+- External examiner review and comments
+
+#### 4. Communication
+
+Automated and manual communication:
+
+- Email templates for common scenarios
+- Event-triggered notifications
+- Scheduled reminders
+- Bulk communications to cohorts
+- Customizable message content
 
 ## User Experience Goals
 
-### Clarity
+### For Students
 
-- Clear status indicators at all times
-- Obvious next actions for each role
-- Transparent workflows and processes
+- **Easy project discovery**: Browse and search projects with rich filtering
+- **Clear selection process**: Understand how selection works and track status
+- **Supervision visibility**: See upcoming meetings and track progress
+- **Document management**: Upload and organize project documents
+- **Transparent assessment**: Understand grading criteria and timeline
 
-### Efficiency
+### For Faculty
 
-- Minimal clicks to common actions
-- Bulk operations where appropriate
-- Smart defaults based on context
+- **Efficient project creation**: Quick entry of project details with reuse of past projects
+- **Manageable supervision**: Track all supervisees in one place
+- **Fair workload**: System helps balance supervision load
+- **Streamlined assessment**: Clear marking workflows with component tracking
+- **Communication tools**: Easy to send updates to students
 
-### Reliability
+### For Administrators
 
-- Consistent data across views
-- No lost submissions or documents
+- **Centralized control**: Manage all aspects from one dashboard
+- **Process automation**: Reduce manual coordination work
+- **Real-time monitoring**: See status of all projects and students
+- **Flexible configuration**: Adapt system to program requirements
+- **Comprehensive reporting**: Generate needed reports quickly
+
+### For External Examiners
+
+- **Remote access**: Review assignments and marks online
+- **Clear context**: See full project and assessment history
+- **Structured feedback**: Provide comments in organized format
+- **Audit trail**: All reviews are recorded and timestamped
+
+## Key Features
+
+### Multi-Tenant Architecture
+
+- Support for multiple academic programs
+- Data isolation between tenants
+- Shared infrastructure with program-specific customization
+- Cross-tenant resource sharing where appropriate
+
+### Approval Workflows
+
+- Configurable multi-stage approval process
+- Role-based approval routing
+- Approval history and audit trails
+- Email notifications at each stage
+- Bulk approval operations
+
+### Intelligent Matching
+
+- Algorithm-based student-project matching
+- Considers student preferences
+- Respects project capacities and constraints
+- Handles edge cases (e.g., declining students, over/under subscription)
+- Generates fair outcomes
+
+### Document Management
+
+- Organized file storage by project and student
+- Access control based on roles
+- Version tracking for important documents
+- Integration with object storage (MinIO/S3)
+- Backup and archival support
+
+### Rich Reporting
+
+- Project status reports
+- Supervision activity reports
+- Assessment summary reports
+- Student progress reports
+- Faculty workload reports
+- Exportable to various formats (PDF, Excel)
+
+### Flexible Email System
+
+- Template-based emails with Jinja2 syntax
+- Context-aware variable substitution
+- Preview before sending
+- Scheduled and event-triggered emails
+- Bulk email support
+- Email tracking and history
+
+### Comprehensive Audit Trails
+
+- Track all significant actions
+- User attribution for changes
+- Timestamp all operations
+- Support compliance requirements
+- Enable debugging and troubleshooting
+
+## Technical Differentiation
+
+### Why This System?
+
+Unlike generic project management tools, MPS Project is:
+
+1. **Purpose-built for academia**: Understands academic workflows, roles, and requirements
+2. **Handles complexity**: Multi-stage approvals, complex matching, detailed assessment
+3. **Multi-tenant**: Supports multiple programs with isolation and customization
+4. **Integrated**: All aspects of project management in one system
+5. **Scalable**: Handles hundreds of projects and thousands of students
+6. **Flexible**: Configurable to different academic program needs
+
+### Competitive Advantages
+
+- **Deep domain knowledge**: Built specifically for academic project management
+- **Proven in production**: Active use in real academic settings
+- **Comprehensive feature set**: Covers entire project lifecycle
+- **Modern architecture**: Microservices-ready, scalable design
+- **Open source potential**: Can be customized and extended
+
+## Success Criteria
+
+### User Satisfaction
+
+- Students find projects they're interested in
+- Faculty spend less time on administrative tasks
+- Administrators have visibility and control
+- Assessment process is fair and transparent
+
+### Operational Efficiency
+
+- Reduced manual coordination work
+- Fewer errors in assignments and grading
+- Faster turnaround on approvals and communications
+- Better resource utilization
+
+### Data Quality
+
+- Complete records of all activities
 - Accurate audit trails
+- Reliable reporting data
+- Consistent data across system
 
-### Accessibility
+### System Reliability
 
-- Role-appropriate information display
-- Responsive design for various devices
-- Configurable notification preferences
+- High availability during critical periods (selection, deadlines)
+- Data integrity maintained
+- Secure handling of sensitive information
+- Performant under load
 
-### Flexibility
+## Future Vision
 
-- Adaptable to different program structures
-- Customizable workflows per tenant
-- Extensible for institutional needs
+### Short-term Enhancements
 
-## Key Product Principles
+- Improved mobile experience
+- Enhanced analytics and dashboards
+- Better integration with external systems
+- Expanded notification options
 
-1. **Academic Integrity First**: Ensure fair processes and auditability
-2. **Faculty Time is Precious**: Minimize administrative burden
-3. **Student Clarity**: Always show status and next steps
-4. **Data Security**: Protect sensitive academic work
-5. **Institutional Compliance**: Support quality assurance requirements
+### Long-term Evolution
+
+- Machine learning for better matching
+- Real-time collaboration features
+- Advanced analytics and predictions
+- API for third-party integrations
+- Broader applicability beyond original use case

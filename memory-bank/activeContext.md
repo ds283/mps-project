@@ -1,88 +1,134 @@
 # Active Context
 
-## Current Work Focus
+## Current Work Focus (Updated: 2026-03-22)
 
-Initial memory bank setup - establishing baseline documentation for the MPS Project system.
+### Email Template Management System
 
-## Recent Changes
+Recent work has focused on the email template management system, which is a critical component for managing automated
+communications in the MPS project management system.
 
-- Created memory bank structure with core documentation files
-- Documented project purpose, architecture, and technical foundation
+**Recent Implementation:**
 
-## Next Steps
+- Email template CRUD operations with admin interface
+- Template editing with Jinja2 syntax highlighting
+- AJAX endpoints for template management
+- Integration with existing notification system
 
-1. Monitor for specific development tasks or issues
-2. Update memory bank as changes occur
-3. Maintain documentation accuracy as system evolves
+**Key Files Modified:**
 
-## Active Decisions and Considerations
+- `app/models/emails.py` - Email template data models
+- `app/ajax/email_templates/email_templates.py` - AJAX endpoints for template operations
+- `app/templates/admin/email_templates/edit.html` - Template editor interface
+- `app/templates/admin/email_templates/list.html` - Template listing interface
 
-### Documentation Maintenance
+### Current Status
 
-- Memory bank should be updated after significant changes
-- Core files should remain focused and concise
-- Additional context files can be created for complex features
+The email template system is functional but may need additional testing and refinement. The system allows administrators
+to:
 
-### Project Observations
+- Create and edit email templates using Jinja2 syntax
+- Preview templates before sending
+- Manage template metadata (subject, sender info)
+- Categorize templates by purpose
 
-- Large, mature codebase with multiple subsystems
-- Production system actively in use
-- Multi-tenant architecture requires careful change management
-- Background job processing via Celery for async operations
+## Active Technical Patterns
 
-## Important Patterns and Preferences
+### Email Template Architecture
+
+1. **Model Layer**: `EmailTemplate` model in `app/models/emails.py`
+    - Stores template content, metadata, and configuration
+    - Links to notification system
+
+2. **View Layer**: AJAX endpoints handle template operations
+    - Server-side processing for template lists
+    - Individual template CRUD operations
+
+3. **Template Rendering**: Jinja2 syntax used for dynamic content
+    - Context variables injected at send time
+    - Preview capabilities for testing
+
+### AJAX Pattern Usage
+
+The email template system follows the established AJAX pattern:
+
+- Server-side DataTables processing via `ServerSideProcessing.py`
+- JSON responses for create/update/delete operations
+- Error handling with flash messages
+- Transaction rollback on failures
+
+## Important Project Preferences
 
 ### Code Organization
 
-- Blueprint-based Flask application structure
-- Separate modules for each role (convenor, faculty, student, admin, etc.)
-- AJAX endpoints separated from main views
-- Shared utilities and services in dedicated directories
+- Admin functionality in `app/admin/` blueprint
+- AJAX endpoints in `app/ajax/` organized by feature area
+- Templates follow blueprint structure in `app/templates/`
+- Models consolidated in `app/models/` by logical grouping
 
-### Data Layer
+### Database Patterns
 
-- SQLAlchemy ORM models
-- Multi-tenant data isolation
-- Object storage for files
-- MongoDB for certain data stores
+- SQLAlchemy ORM for all database operations
+- Explicit transaction management with rollback
+- Cascading deletes configured at model level
+- Audit trails via timestamp fields
 
-### Background Processing
+### UI/UX Patterns
 
-- Celery workers for async tasks
-- Scheduled tasks via Beat
-- Email notifications
-- Report generation
+- Bootstrap-based responsive design
+- DataTables for list views with server-side processing
+- Flash messages for user feedback
+- Modal dialogs for edit operations
+- WYSIWYG or syntax-highlighted editors for content
 
-## Learnings and Project Insights
+## Next Steps
 
-### Architecture Strengths
+### Email Template System
 
-- Clear separation of concerns
-- Role-based access control
-- Scalable multi-tenant design
-- Comprehensive test infrastructure
+1. **Testing**: Verify template rendering with various context data
+2. **Validation**: Ensure Jinja2 syntax validation on save
+3. **Documentation**: Document available template variables per template type
+4. **Integration**: Test integration with existing notification workflows
 
-### Technical Debt Areas
+### General Project Health
 
-- Legacy code sections may exist
-- Database migrations to manage carefully
-- Docker/deployment complexity
+1. **Code Review**: Review recent changes for consistency
+2. **Testing**: Run test suite to verify no regressions
+3. **Documentation**: Update API documentation if endpoints changed
+4. **Deployment**: Prepare migration scripts if schema changed
 
-### Development Workflow
+## Recent Learnings
 
-- Database migrations via Alembic
-- Docker-based deployment
-- Multiple environment configurations (local, SussexVM, production)
-- Nginx reverse proxy configuration
+### Email Template System Design
 
-## Context for Future Work
+- Jinja2 integration requires careful context management
+- Template preview needs same context as actual sending
+- Version control of templates may be needed for audit purposes
+- Template categories help organize large numbers of templates
 
-When working on this system:
+### Project Architecture Insights
 
-1. **Always consider multi-tenancy** - changes must work across tenants
-2. **Background jobs** - some operations should be async
-3. **Audit trails** - changes to key data should be logged
-4. **Email notifications** - user communication is important
-5. **Role permissions** - verify access controls
-6. **Database migrations** - schema changes require migrations
-7. **Testing** - maintain test coverage for critical paths
+- AJAX pattern provides good separation of concerns
+- Server-side DataTables processing handles large datasets efficiently
+- Blueprint organization keeps code modular and maintainable
+- Flash message pattern provides consistent user feedback
+
+## Known Issues & Considerations
+
+### Technical Debt
+
+- Some older views may not follow current AJAX patterns
+- Test coverage may be incomplete for newer features
+- Documentation may lag behind implementation
+
+### Performance Considerations
+
+- Email template rendering should be cached where possible
+- Large template lists need pagination (handled by DataTables)
+- Database queries should use eager loading for relationships
+
+### Security Considerations
+
+- Template content should be sanitized to prevent XSS
+- Jinja2 sandbox mode may be needed for user-editable templates
+- Access control must restrict template editing to admins
+- Email sending should have rate limiting

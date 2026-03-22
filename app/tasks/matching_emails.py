@@ -16,7 +16,6 @@ from celery import chain, group
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
-from ..admin.views import email_log
 from ..database import db
 from ..models import (
     EmailTemplate,

@@ -119,7 +119,7 @@ _email_template_menu = """
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_email_template', id=t.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_global_email_template', id=t.id) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit template&hellip;
         </a>
         {% if t.active %}
@@ -128,16 +128,16 @@ _email_template_menu = """
                     <i class="fas fa-times-circle fa-fw"></i> Make inactive
                 </a>
             {% else %}
-                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_email_template', id=t.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_global_email_template', id=t.id) }}">
                     <i class="fas fa-times-circle fa-fw"></i> Make inactive
                 </a>
             {% endif %}
         {% else %}
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_email_template', id=t.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_global_email_template', id=t.id) }}">
                 <i class="fas fa-check-circle fa-fw"></i> Make active
             </a>
         {% endif %}
-        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.duplicate_email_template', id=t.id) }}">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.duplicate_global_email_template', id=t.id) }}">
             <i class="fas fa-copy fa-fw"></i> Duplicate
         </a>
         {% if t.tenant_id is none and t.pclass_id is none %}
@@ -145,7 +145,7 @@ _email_template_menu = """
                 <i class="fas fa-trash fa-fw"></i> Delete
             </a>
         {% else %}
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.delete_email_template', id=t.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.delete_global_email_template', id=t.id) }}">
                 <i class="fas fa-trash fa-fw"></i> Delete
             </a>
         {% endif %}

@@ -13831,14 +13831,14 @@ def edit_feedback_recipe(recipe_id):
 # ======================================================================================================================
 
 
-@admin.route("/email_templates")
+@admin.route("/global_email_templates")
 @roles_required("root")
-def email_templates():
+def global_email_templates():
     """
     List all EmailTemplate instances
     :return:
     """
-    AJAX_endpoint = url_for("admin.email_templates_ajax")
+    AJAX_endpoint = url_for("admin.global_email_templates_ajax")
 
     return render_template_context(
         "admin/email_templates/list.html",
@@ -13849,9 +13849,9 @@ def email_templates():
     )
 
 
-@admin.route("/email_templates_ajax", methods=["POST"])
+@admin.route("/global_email_templates_ajax", methods=["POST"])
 @roles_required("root")
-def email_templates_ajax():
+def global_email_templates_ajax():
     """
     AJAX data point for email templates list
     :return:
@@ -13909,9 +13909,9 @@ def create_new_email_template_labels(form):
     return matched
 
 
-@admin.route("/edit_email_template/<int:id>", methods=["GET", "POST"])
+@admin.route("/edit_global_email_template/<int:id>", methods=["GET", "POST"])
 @roles_required("root")
-def edit_email_template(id):
+def edit_global_email_template(id):
     """
     Edit an existing EmailTemplate instance
     :param id:
@@ -13922,7 +13922,7 @@ def edit_email_template(id):
 
     url = request.args.get("url", None)
     if url is None:
-        url = url_for("admin.email_templates")
+        url = url_for("admin.global_email_templates")
 
     if form.validate_on_submit():
         label_list = create_new_email_template_labels(form)
@@ -13947,7 +13947,7 @@ def edit_email_template(id):
 
         return redirect(url)
 
-    action_url = url_for("admin.edit_email_template", id=id, url=url)
+    action_url = url_for("admin.edit_global_email_template", id=id, url=url)
 
     return render_template_context(
         "admin/email_templates/edit.html",
@@ -13958,9 +13958,9 @@ def edit_email_template(id):
     )
 
 
-@admin.route("/activate_email_template/<int:id>")
+@admin.route("/activate_global_email_template/<int:id>")
 @roles_required("root")
-def activate_email_template(id):
+def activate_global_email_template(id):
     """
     Activate an EmailTemplate instance
     :param id:
@@ -13984,7 +13984,7 @@ def activate_email_template(id):
 
 @admin.route("/deactivate_email_template/<int:id>")
 @roles_required("root")
-def deactivate_email_template(id):
+def deactivate_global_email_template(id):
     """
     Deactivate an EmailTemplate instance.
     The global fallback (tenant_id=None, pclass_id=None) cannot be deactivated.
@@ -14027,9 +14027,9 @@ def deactivate_email_template(id):
     return redirect(redirect_url())
 
 
-@admin.route("/duplicate_email_template/<int:id>")
+@admin.route("/duplicate_global_email_template/<int:id>")
 @roles_required("root")
-def duplicate_email_template(id):
+def duplicate_global_email_template(id):
     """
     Duplicate an existing EmailTemplate, creating a new version.
     :param id:
@@ -14086,9 +14086,9 @@ def duplicate_email_template(id):
     return redirect(redirect_url())
 
 
-@admin.route("/delete_email_template/<int:id>")
+@admin.route("/delete_global_email_template/<int:id>")
 @roles_required("root")
-def delete_email_template(id):
+def delete_global_email_template(id):
     """
     Delete an EmailTemplate instance.
     Cannot delete if it is the only instance of its type, or if it is the global fallback.
@@ -14120,7 +14120,7 @@ def delete_email_template(id):
     panel_title = f"Delete email template: <strong>{template.subject}</strong>"
 
     action_url = url_for(
-        "admin.perform_delete_email_template", id=id, url=redirect_url()
+        "admin.perform_delete_global_email_template", id=id, url=redirect_url()
     )
     message = (
         f"<p>Please confirm that you wish to delete the email template "
@@ -14139,9 +14139,9 @@ def delete_email_template(id):
     )
 
 
-@admin.route("/perform_delete_email_template/<int:id>")
+@admin.route("/perform_delete_global_email_template/<int:id>")
 @roles_required("root")
-def perform_delete_email_template(id):
+def perform_delete_global_email_template(id):
     """
     Perform deletion of an EmailTemplate instance.
     :param id:
@@ -14149,7 +14149,7 @@ def perform_delete_email_template(id):
     """
     template: EmailTemplate = EmailTemplate.query.get_or_404(id)
 
-    url = request.args.get("url", url_for("admin.email_templates"))
+    url = request.args.get("url", url_for("admin.global_email_templates"))
 
     # Ensure at least one global fallback remains for this type
     fallback_count = (

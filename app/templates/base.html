@@ -1,6 +1,6 @@
 {%- extends "bootstrap/base.html" -%}
 {%- from "macros.html" import flashed_messages -%}
-{%- from "megamenu.html" import megamenu_columns  %}
+{%- from "megamenu.html" import megamenu_columns %}
 
 {%- block scripts -%}
     {{ super() }}
@@ -11,24 +11,24 @@
     {# based on https://stackoverflow.com/questions/32746598/bootstrap-dropdown-list-position-up-bottom-based-on-document-height #}
     <script>
         function determineDropDirection() {
-          $(".dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end").each( function(){
-            $(this).css({
-              visibility: "hidden",
-              display: "block"
+            $(".dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end").each(function () {
+                $(this).css({
+                    visibility: "hidden",
+                    display: "block"
+                });
+
+                // Invisibly expand the dropdown menu so its true height can be calculated
+                $(this).parent().removeClass("dropup");
+
+                // Necessary to remove class each time so we don't unwantedly use dropup's offset top
+                // 40 offset is for bottom navbar, which hides a menu
+                if ($(this).offset().top + $(this).outerHeight() > $(window).innerHeight() + $(window).scrollTop() - 40) {
+                    $(this).parent().addClass("dropup");
+                }
+
+                // Return dropdown menu to fully hidden state
+                $(this).removeAttr("style");
             });
-
-            // Invisibly expand the dropdown menu so its true height can be calculated
-            $(this).parent().removeClass("dropup");
-
-            // Necessary to remove class each time so we don't unwantedly use dropup's offset top
-            // 40 offset is for bottom navbar, which hides a menu
-            if ($(this).offset().top + $(this).outerHeight() > $(window).innerHeight() + $(window).scrollTop() - 40){
-              $(this).parent().addClass("dropup");
-            }
-
-            // Return dropdown menu to fully hidden state
-            $(this).removeAttr("style");
-          });
         }
 
         determineDropDirection();
@@ -38,196 +38,198 @@
 
     {# initialize any tooltips and popovers on the page #}
     <script>
-        $(document).ready(function() {
+        $(document).ready(function () {
             $('[data-bs-toggle="tooltip"]').tooltip();
             $('[data-bs-toggle="popover"]').popover({html: true, trigger: 'focus'});
         });
     </script>
 
     {% if current_user.is_authenticated %}
-    <script>
-        $(function() {
-            let since = 0;
-            let task_area = $('#tasks-area');
-            let message_area = $('#messages-area');
+        <script>
+            $(function () {
+                let since = 0;
+                let task_area = $('#tasks-area');
+                let message_area = $('#messages-area');
 
-            $('#close-tasks-area').click(function() {
-                task_area.collapse('hide');
-                localStorage.setItem('mps-project-close-task-preference', 'true')
-            });
+                $('#close-tasks-area').click(function () {
+                    task_area.collapse('hide');
+                    localStorage.setItem('mps-project-close-task-preference', 'true')
+                });
 
-            function handle_progress_bar(notification) {
-                let created = 0;
-                let payload = notification.payload;
+                function handle_progress_bar(notification) {
+                    let created = 0;
+                    let payload = notification.payload;
 
-                // check whether a progress block for this task already exists
-                let progress_block = task_area.find('[data-uuid=' + notification.uuid + ']');
+                    // check whether a progress block for this task already exists
+                    let progress_block = task_area.find('[data-uuid=' + notification.uuid + ']');
 
-                // if not, insert one
-                if (progress_block.length === 0) {
+                    // if not, insert one
+                    if (progress_block.length === 0) {
 
-                    let progress = 0;
+                        let progress = 0;
+                        if (payload.progress) {
+                            progress = payload.progress;
+                        }
+
+                        task_area.append('<div class="task-progress-block" data-uuid="' + notification.uuid + '">' +
+                            '<hr class="intro-divider">' +
+                            '<p><strong>' + payload.task + '</strong></p>' +
+                            '<div class="progress">' +
+                            '<div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="' + progress + '" aria-valuemin="0" aria-valuemax="100" style="min-width: 2em;">' +
+                            '</div>' +
+                            '</div>' +
+                            '<div class="task-status-message"><em>' + payload.message + '</em></div>' +
+                            '</div>');
+
+                        progress_block = task_area.find('[data-uuid=' + notification.uuid + ']');
+                        created += 1;
+                    }
+
+                    // update message
+                    let status_div = progress_block.find(".task-status-message");
+                    let em_node = status_div.get(0).firstChild;
+                    em_node.textContent = payload.message;
+
+                    // update progress bar
+                    let progress_bar = progress_block.find(".progress-bar");
                     if (payload.progress) {
-                        progress = payload.progress;
+                        let progress = payload.progress;
+                        let percent = progress.toString() + '%';
+
+                        progress_bar.attr('aria-valuenow', progress).css('width', percent);
+                        progress_bar.text(percent);
+                    } else {
+                        progress_bar.attr('aria-valuenow', '100').css('width', '100%');
+                        progress_bar.text('');
                     }
 
-                    task_area.append('<div class="task-progress-block" data-uuid="' + notification.uuid + '">' +
-                        '<hr class="intro-divider">' +
-                        '<p><strong>' + payload.task + '</strong></p>' +
-                        '<div class="progress">' +
-                        '<div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="' + progress + '" aria-valuemin="0" aria-valuemax="100" style="min-width: 2em;">' +
-                        '</div>' +
-                        '</div>' +
-                        '<div class="task-status-message"><em>' + payload.message + '</em></div>' +
-                        '</div>');
-
-                    progress_block = task_area.find('[data-uuid=' + notification.uuid + ']');
-                    created += 1;
-                }
-
-                // update message
-                let status_div = progress_block.find(".task-status-message");
-                let em_node = status_div.get(0).firstChild;
-                em_node.textContent = payload.message;
-
-                // update progress bar
-                let progress_bar = progress_block.find(".progress-bar");
-                if (payload.progress) {
-                    let progress = payload.progress;
-                    let percent = progress.toString() + '%';
-
-                    progress_bar.attr('aria-valuenow', progress).css('width', percent);
-                    progress_bar.text(percent);
-                } else {
-                    progress_bar.attr('aria-valuenow', '100').css('width', '100%');
-                    progress_bar.text('');
-                }
-
-                if (payload.state === 2) {
-                    progress_bar.removeClass('progress-bar-striped');
-                    progress_bar.removeClass('progress-bar-active');
-                    progress_bar.addClass('bg-success');
-                }
-
-                if (payload.state === 3) {
-                    progress_bar.removeClass('progress-bar-striped');
-                    progress_bar.removeClass('progress-bar-active');
-                    progress_bar.addClass('bg-danger');
-                }
-
-                return created;
-            }
-
-            function handle_message(notification) {
-                let created = 0;
-                let payload = notification.payload;
-
-                // check whether a message block already exists for this message
-                let message_block = message_area.find('[data-uuid=' + notification.uuid + ']');
-
-                // if not, insert message
-                if (message_block.length === 0) {
-                    let alert_class = '';
-                    if(payload.type.length > 0) {
-                        alert_class = payload.type
+                    if (payload.state === 2) {
+                        progress_bar.removeClass('progress-bar-striped');
+                        progress_bar.removeClass('progress-bar-active');
+                        progress_bar.addClass('bg-success');
                     }
 
-                    message_area.append('<div class="alert ' + alert_class + ' alert-dismissible" data-uuid="' + notification.uuid + '" role="alert">' +
+                    if (payload.state === 3) {
+                        progress_bar.removeClass('progress-bar-striped');
+                        progress_bar.removeClass('progress-bar-active');
+                        progress_bar.addClass('bg-danger');
+                    }
+
+                    return created;
+                }
+
+                function handle_message(notification) {
+                    let created = 0;
+                    let payload = notification.payload;
+
+                    // check whether a message block already exists for this message
+                    let message_block = message_area.find('[data-uuid=' + notification.uuid + ']');
+
+                    // if not, insert message
+                    if (message_block.length === 0) {
+                        let alert_class = '';
+                        if (payload.type.length > 0) {
+                            alert_class = payload.type
+                        }
+
+                        message_area.append('<div class="alert ' + alert_class + ' alert-dismissible" data-uuid="' + notification.uuid + '" role="alert">' +
                             '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
                             payload.message +
                             '</div>');
 
-                    created += 1;
+                        created += 1;
+                    }
+
+                    return created;
                 }
 
-                return created;
-            }
+                function show_hide(notification) {
+                    let payload = notification.payload;
+                    $('#' + payload.html_id).collapse(payload.action);
+                }
 
-            function show_hide(notification) {
-                let payload = notification.payload;
-                $('#'+payload.html_id).collapse(payload.action);
-            }
+                function replace_text(notification) {
+                    let payload = notification.payload;
+                    $('#' + payload.html_id).text(payload.text);
+                }
 
-            function replace_text(notification) {
-                let payload = notification.payload;
-                $('#'+payload.html_id).text(payload.text);
-            }
+                function get_notifications(first_pass) {
+                    $.ajax('{{ url_for('admin.notifications_ajax') }}?since=' + since).done(
+                        function (notifications) {
 
-            function get_notifications(first_pass) {
-                $.ajax('{{ url_for('admin.notifications_ajax') }}?since=' + since).done(
-                    function(notifications) {
+                            let created_tasks = 0;
+                            let created_messages = 0;
 
-                        let created_tasks = 0;
-                        let created_messages = 0;
+                            // notifications arrive in ascending order of timestamp
+                            for (let i = 0; i < notifications.length; i++) {
 
-                        // notifications arrive in ascending order of timestamp
-                        for (let i = 0; i < notifications.length; i++) {
+                                switch (notifications[i].type) {
+                                    case 1:     // TASK_PROGRESS
+                                        created_tasks += handle_progress_bar(notifications[i]);
+                                        break;
 
-                            switch (notifications[i].type) {
-                                case 1:     // TASK_PROGRESS
-                                    created_tasks += handle_progress_bar(notifications[i]);
-                                    break;
+                                    case 2:     // USER_MESSAGE
+                                        created_messages += handle_message(notifications[i]);
+                                        break;
 
-                                case 2:     // USER_MESSAGE
-                                    created_messages += handle_message(notifications[i]);
-                                    break;
+                                    case 100:   // SHOW_HIDE_REQUEST
+                                        show_hide(notifications[i]);
+                                        break;
 
-                                case 100:   // SHOW_HIDE_REQUEST
-                                    show_hide(notifications[i]);
-                                    break;
+                                    case 101:   // REPLACE_TEXT_REQUEST
+                                        replace_text(notifications[i]);
+                                        break;
 
-                                case 101:   // REPLACE_TEXT_REQUEST
-                                    replace_text(notifications[i]);
-                                    break;
+                                    case 102:   // RELOAD_PAGE_REQUEST
+                                        location.reload();
+                                        break;
+                                }
 
-                                case 102:   // RELOAD_PAGE_REQUEST
-                                    location.reload();
-                                    break;
+                                // set 'last seen' timestamp to be the timestamp of this message
+                                since = notifications[i].timestamp
                             }
 
-                            // set 'last seen' timestamp to be the timestamp of this message
-                            since = notifications[i].timestamp
+                            // determine whether the user has previously explicitly closed the task area
+                            let closure_preference_item = localStorage.getItem('mps-project-close-task-preference');
+                            let closure_preference = (closure_preference_item === 'true');
+
+                            // determine whether task area and message area are expanded
+                            let tasks_expanded = task_area.attr("aria-expanded");
+                            let messages_expanded = message_area.attr("aria-expanded");
+
+                            // if first pass, show or hide task area based on whether (or not) tasks are visible
+                            // and the user's previous explicit actions
+                            if (first_pass && !closure_preference && created_tasks > 0) {
+                                task_area.addClass('show');
+                                task_area.attr('aria-expanded', 'true');
+                            }
+
+                            // if we've created a new task bar and the task area is closed, then open it
+                            if (!first_pass && tasks_expanded === 'false' && created_tasks > 0) {
+                                task_area.collapse('show');
+                                localStorage.setItem('mps-project-close-task-preference', 'false');
+                            }
+
+                            // same for messages area, except we always show messages
+                            if (first_pass && created_messages > 0) {
+                                message_area.addClass('show');
+                                message_area.attr('aria-expanded', 'true');
+                            }
+
+                            // if we've created a new task bar and the task area is closed, then open it
+                            if (!first_pass && messages_expanded === 'false' && created_messages > 0) {
+                                message_area.collapse('show');
+                            }
                         }
+                    );
+                }
 
-                        // determine whether the user has previously explicitly closed the task area
-                        let closure_preference_item = localStorage.getItem('mps-project-close-task-preference');
-                        let closure_preference = (closure_preference_item === 'true');
-
-                        // determine whether task area and message area are expanded
-                        let tasks_expanded = task_area.attr("aria-expanded");
-                        let messages_expanded = message_area.attr("aria-expanded");
-
-                        // if first pass, show or hide task area based on whether (or not) tasks are visible
-                        // and the user's previous explicit actions
-                        if (first_pass && !closure_preference && created_tasks > 0) {
-                            task_area.addClass('show');
-                            task_area.attr('aria-expanded', 'true');
-                        }
-
-                        // if we've created a new task bar and the task area is closed, then open it
-                        if (!first_pass && tasks_expanded === 'false' && created_tasks > 0) {
-                            task_area.collapse('show');
-                            localStorage.setItem('mps-project-close-task-preference', 'false');
-                        }
-
-                        // same for messages area, except we always show messages
-                        if (first_pass && created_messages > 0) {
-                            message_area.addClass('show');
-                            message_area.attr('aria-expanded', 'true');
-                        }
-
-                        // if we've created a new task bar and the task area is closed, then open it
-                        if (!first_pass && messages_expanded === 'false' && created_messages > 0) {
-                            message_area.collapse('show');
-                        }
-                    }
-                );
-            }
-
-            setInterval(function() { get_notifications(false) }, 5000);
-            get_notifications(true);
-        });
-    </script>
+                setInterval(function () {
+                    get_notifications(false)
+                }, 5000);
+                get_notifications(true);
+            });
+        </script>
     {% endif %}
 
     {# Handle legal requirement to inform users we are using cookies #}
@@ -276,7 +278,8 @@
                             <div class="col-4">
                                 <ul>
                                     <li>
-                                        <a class="text-decoration-none" href="{{ url_for('convenor.show_unofferable', id=0) }}">
+                                        <a class="text-decoration-none"
+                                           href="{{ url_for('convenor.show_unofferable', id=0) }}">
                                             Show unofferable projects
                                         </a>
                                     </li>
@@ -340,7 +343,7 @@
                                 </a>
                             </div>
                         </li>
-                    {# add student version of 'my projects' if user is a student #}
+                        {# add student version of 'my projects' if user is a student #}
                     {% elif is_student %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">
@@ -348,7 +351,8 @@
                             </a>
                             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                                 {% if current_user.student_data.has_timeline %}
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.timeline', student_id=current_user.id) }}">
+                                    <a class="dropdown-item d-flex gap-2"
+                                       href="{{ url_for('student.timeline', student_id=current_user.id) }}">
                                         <i class="fas fa-history fa-fw"></i> Show history...
                                     </a>
                                 {% else %}
@@ -419,7 +423,8 @@
                                     {% set needs_divider = true %}
                                 {% endif %}
                                 {% if is_manage_users or is_root %}
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.edit_users') }}">
+                                    <a class="dropdown-item d-flex gap-2"
+                                       href="{{ url_for('manage_users.edit_users') }}">
                                         <i class="fas fa-users fa-fw"></i> Manage users...
                                     </a>
                                     {% set needs_divider = true %}
@@ -439,10 +444,12 @@
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_skills') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Transferable skills...
                                     </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_supervisors') }}">
+                                    <a class="dropdown-item d-flex gap-2"
+                                       href="{{ url_for('admin.edit_supervisors') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Supervisory team...
                                     </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_project_tags') }}">
+                                    <a class="dropdown-item d-flex gap-2"
+                                       href="{{ url_for('admin.edit_project_tags') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Project tags...
                                     </a>
                                     {% set needs_divider = true %}
@@ -454,12 +461,14 @@
                                     {% endif %}
                                     <div class="dropdown-header">Scheduling</div>
                                     {% if matching_ready %}
-                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.manage_matching') }}">
+                                        <a class="dropdown-item d-flex gap-2"
+                                           href="{{ url_for('admin.manage_matching') }}">
                                             <i class="fas fa-calendar fa-fw"></i> Manage matching...
                                         </a>
                                     {% endif %}
                                     {% if has_assessments %}
-                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.manage_assessments') }}">
+                                        <a class="dropdown-item d-flex gap-2"
+                                           href="{{ url_for('admin.manage_assessments') }}">
                                             <i class="fas fa-calendar fa-fw"></i> Manage assessments...
                                         </a>
                                     {% endif %}
@@ -496,24 +505,28 @@
                                 {% endif %}
                                 {% if is_root %}
                                     <div role="separator" class="dropdown-divider"></div>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.background_tasks') }}">
+                                    <a class="dropdown-item d-flex gap-2"
+                                       href="{{ url_for('admin.background_tasks') }}">
                                         <i class="fas fa-wrench fa-fw"></i> Background tasks...
                                     </a>
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.scheduled_tasks') }}">
                                         <i class="fas fa-wrench fa-fw"></i> Scheduled tasks...
                                     </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.backups_overview') }}">
+                                    <a class="dropdown-item d-flex gap-2"
+                                       href="{{ url_for('admin.backups_overview') }}">
                                         <i class="fas fa-wrench fa-fw"></i> Manage backups...
                                     </a>
                                     <div role="separator" class="dropdown-divider"></div>
                                     <div class="dropdown-header">Database configuration</div>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_project_classes') }}">
+                                    <a class="dropdown-item d-flex gap-2"
+                                       href="{{ url_for('admin.edit_project_classes') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Project classes...
                                     </a>
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_groups') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Affiliations...
                                     </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_degree_programmes') }}">
+                                    <a class="dropdown-item d-flex gap-2"
+                                       href="{{ url_for('admin.edit_degree_programmes') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Degree programmes...
                                     </a>
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_rooms') }}">
@@ -522,10 +535,12 @@
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_licenses') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Asset licenses...
                                     </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('manage_users.edit_roles') }}">
+                                    <a class="dropdown-item d-flex gap-2"
+                                       href="{{ url_for('manage_users.edit_roles') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Role editor...
                                     </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.email_templates') }}">
+                                    <a class="dropdown-item d-flex gap-2"
+                                       href="{{ url_for('admin.global_email_templates') }}">
                                         <i class="fas fa-cogs fa-fw"></i> Global email templates...
                                     </a>
                                 {% endif %}
@@ -554,7 +569,8 @@
                                 {% if current_user.faculty_data.has_editable_availability_requests %}
                                     <div role="separator" class="dropdown-divider"></div>
                                     <div class="dropdown-header">Assessment events</div>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.change_availability') }}">
+                                    <a class="dropdown-item d-flex gap-2"
+                                       href="{{ url_for('faculty.change_availability') }}">
                                         <i class="fas fa-calendar fa-fw"></i> Change availability...
                                     </a>
                                 {% endif %}
@@ -564,7 +580,8 @@
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.settings') }}">
                                         <i class="fas fa-sliders-h fa-fw"></i> Settings...
                                     </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.show_enrollments') }}">
+                                    <a class="dropdown-item d-flex gap-2"
+                                       href="{{ url_for('faculty.show_enrollments') }}">
                                         <i class="fas fa-user-cog fa-fw"></i> Enrolments...
                                     </a>
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.affiliations') }}">
@@ -657,7 +674,8 @@
         <br/>
         {% block bodyblock %}{% endblock %}
     </div>
-    <nav class="navbar navbar-expand {% if real_user %}navbar-dark bg-dark{% else %}navbar-light bg-light{% endif %} fixed-bottom" role="navigation">
+    <nav class="navbar navbar-expand {% if real_user %}navbar-dark bg-dark{% else %}navbar-light bg-light{% endif %} fixed-bottom"
+         role="navigation">
         <div class="container-fluid">
             <div class="d-flex justify-content-between w-100">
                 <span class="copyright navbar-text text-muted small">Revision {{ website_revision }} | Copyright (c) {{ website_copyright_dates }} MPS, University of Sussex</span>

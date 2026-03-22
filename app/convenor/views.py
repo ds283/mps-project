@@ -14613,7 +14613,7 @@ def email_templates(pclass_id):
         url = redirect_url()
 
     AJAX_endpoint = url_for(
-        "convenor.email_templates_ajax", pclass_id=pclass_id, url=url, text=text
+        "convenor.global_email_templates_ajax", pclass_id=pclass_id, url=url, text=text
     )
 
     return render_template_context(
@@ -15099,7 +15099,9 @@ def view_default_template(pclass_id, template_type):
     if url is None:
         url = url_for("convenor.email_templates", pclass_id=pclass_id)
 
-    type_name = _TYPE_NAMES.get(template_type, f"Unknown email template type ({template_type})")
+    type_name = _TYPE_NAMES.get(
+        template_type, f"Unknown email template type ({template_type})"
+    )
 
     return render_template_context(
         "convenor/email_templates/view_default.html",

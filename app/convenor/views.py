@@ -13258,6 +13258,78 @@ def delete_unit_event_template(template_id):
     return redirect(url_for("convenor.inspect_unit_event_templates", unit_id=unit.id))
 
 
+@convenor.route("/inspect_template_events/<int:template_id>")
+@roles_accepted("faculty", "admin", "root")
+def inspect_template_events(template_id):
+    # template_id is a SupervisionEventTemplate
+    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(
+        template_id
+    )
+    unit: SubmissionPeriodUnit = template.unit
+    period: SubmissionPeriodRecord = unit.owner
+    config: ProjectClassConfig = period.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    return render_template_context(
+        "convenor/supervision_events/inspect_template_events.html",
+        event_template=template,
+        unit=unit,
+        period=period,
+        config=config,
+        url=url,
+        text=text,
+    )
+
+
+@convenor.route("/inspect_template_events_ajax/<int:template_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def inspect_template_events_ajax(template_id):
+    """
+    AJAX endpoint for inspect_template_events view
+    """
+    # template_id is a SupervisionEventTemplate
+    template: SupervisionEventTemplate = SupervisionEventTemplate.query.get_or_404(
+        template_id
+    )
+    unit: SubmissionPeriodUnit = template.unit
+    period: SubmissionPeriodRecord = unit.owner
+    config: ProjectClassConfig = period.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return jsonify({})
+
+    base_query = template.events
+
+    name = {
+        "search": SupervisionEvent.name,
+        "order": SupervisionEvent.name,
+        "search_collation": "utf8_general_ci",
+    }
+    datetime_col = {"order": SupervisionEvent.time}
+
+    columns = {"name": name, "datetime": datetime_col}
+
+    url = request.args.get("url", None)
+    text = request.args.get("text", None)
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(
+            partial(
+                ajax.convenor.supervision_events_data,
+                template=template,
+                url=url,
+                text=text,
+            )
+        )
+
+
 @convenor.route("/generate_feedback_reports/<int:id>")
 @roles_accepted("faculty", "admin", "root")
 def generate_feedback_reports(id):

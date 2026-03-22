@@ -549,7 +549,7 @@ def view_default_template(tenant_id, template_type):
     )
 
     return render_template_context(
-        "convenor/email_templates/view_default.html",
+        "admin/email_templates/view_default.html",
         tenant=tenant,
         email_template=default_template,
         type_name=type_name,

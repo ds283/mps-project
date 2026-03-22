@@ -15104,7 +15104,7 @@ def view_default_template(pclass_id, template_type):
     )
 
     return render_template_context(
-        "convenor/email_templates/view_default.html",
+        "admin/email_templates/view_default.html",
         pclass=pclass,
         email_template=default_template,
         type_name=type_name,

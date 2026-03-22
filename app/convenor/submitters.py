@@ -9,191 +9,62 @@
 #
 
 
-from datetime import date, datetime, timedelta
-from functools import partial
-from typing import List, Optional, Tuple
-from uuid import uuid4
+from datetime import datetime, timedelta
 
-import parse
-from celery import chain
-from celery.result import AsyncResult
-from dateutil import parser
-from dateutil.relativedelta import relativedelta
 from flask import (
-    abort,
     current_app,
     flash,
     jsonify,
     redirect,
-    render_template_string,
     request,
     session,
     url_for,
 )
 from flask_security import current_user, roles_accepted
-from ordered_set import OrderedSet
-from sqlalchemy import and_, or_
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy.orm import class_mapper, with_polymorphic
-from sqlalchemy.orm.exc import StaleDataError
-from sqlalchemy.sql import func, literal_column
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.sql import func
 
 import app.ajax as ajax
+from app.convenor import convenor
 
-from ..admin.forms import EditEmailTemplateForm, LevelSelectorForm
-from ..admin.views import create_new_email_template_labels
 from ..database import db
-from ..documents.forms import EditPeriodAttachmentForm, UploadPeriodAttachmentForm
-from ..faculty.forms import (
-    AddDescriptionFormFactory,
-    AddProjectFormFactory,
-    EditDescriptionContentForm,
-    EditDescriptionSettingsFormFactory,
-    EditProjectFormFactory,
-    MoveDescriptionFormFactory,
-    PresentationFeedbackForm,
-    SkillSelectorForm,
-    SubmissionRoleFeedbackForm,
-    SubmissionRoleResponseForm,
-)
 from ..models import (
-    BackupRecord,
-    Bookmark,
-    ConfirmRequest,
-    ConvenorGenericTask,
-    ConvenorSelectorTask,
-    ConvenorSubmitterTask,
-    ConvenorTask,
-    CustomOffer,
     DegreeProgramme,
     DegreeType,
-    EmailTemplate,
-    EnrollmentRecord,
-    FacultyData,
-    FeedbackRecipe,
     FeedbackReport,
-    FHEQ_Level,
-    FilterRecord,
     GeneratedAsset,
-    LiveProject,
-    LiveProjectAlternative,
-    MatchingRecord,
-    MatchingRole,
-    Module,
-    PeriodAttachment,
-    PopularityRecord,
-    PresentationFeedback,
-    Project,
-    ProjectAlternative,
     ProjectClass,
     ProjectClassConfig,
-    ProjectDescription,
-    ResearchGroup,
-    SelectingStudent,
-    SelectionRecord,
-    SkillGroup,
     StudentData,
     SubmissionPeriodRecord,
-    SubmissionPeriodUnit,
     SubmissionRecord,
     SubmissionRole,
-    SubmittedAsset,
     SubmittingStudent,
-    SupervisionEvent,
-    SupervisionEventTemplate,
-    Tenant,
-    TransferableSkill,
     User,
-    WorkflowMixin,
 )
-from ..projecthub.forms import ReassignEventOwnerFormFactory
-from ..shared.actions import do_cancel_confirm, do_confirm, do_deconfirm_to_pending
-from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.convenor_dashboard import (
-    build_convenor_tasks_query,
-    get_capacity_data,
-    get_convenor_approval_data,
     get_convenor_dashboard_data,
-    get_convenor_todo_data,
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.convenor import (
     add_blank_submitter,
-    add_liveproject,
-    add_selector,
-    build_outstanding_confirmations_query,
 )
 from ..shared.conversions import is_integer
-from ..shared.forms.forms import SelectSubmissionRecordFormFactory
-from ..shared.projects import (
-    create_new_tags,
-    get_filter_list_for_groups_and_skills,
-    project_list_in_memory_handler,
-    project_list_SQL_handler,
-)
-from ..shared.quickfixes import (
-    QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE,
-    QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_UNAVAILABLE,
-)
-from ..shared.security import validate_nonce
-from ..shared.sqlalchemy import clone_model, get_count
 from ..shared.utils import (
-    build_enrol_selector_candidates,
     build_enrol_submitter_candidates,
     build_submitters_data,
-    filter_assessors,
-    get_convenor_filter_record,
     get_current_year,
-    home_dashboard,
-    home_dashboard_url,
     redirect_url,
 )
 from ..shared.validators import (
-    validate_assign_feedback,
-    validate_edit_description,
-    validate_edit_project,
-    validate_is_admin_or_convenor,
     validate_is_administrator,
     validate_is_convenor,
-    validate_project_class,
-    validate_project_open,
-    validate_view_project,
 )
-from ..student.actions import store_selection
-from ..task_queue import register_task
-from ..tools import ServerSideInMemoryHandler, ServerSideSQLHandler
-from ..tools.ServerSideProcessing import FakeQuery
-from app.convenor import convenor
+from ..tools import ServerSideSQLHandler
 from .forms import (
-    AddConvenorGenericTask,
-    AddConvenorStudentTask,
-    AddSubmissionPeriodUnitFormFactory,
     AddSubmitterRoleForm,
-    AddSupervisionEventTemplateFormFactory,
-    AssignPresentationFeedbackFormFactory,
-    ChangeDeadlineFormFactory,
-    CreateCustomOfferFormFactory,
-    CustomCATSLimitForm,
-    DuplicateProjectFormFactory,
-    EditConvenorGenericTask,
-    EditConvenorStudentTask,
-    EditCustomOfferFormFactory,
-    EditLiveProjectAlternativeForm,
-    EditLiveProjectSupervisorsFactory,
-    EditPeriodRecordFormFactory,
-    EditProjectAlternativeForm,
-    EditProjectConfigFormFactory,
-    EditProjectSupervisorsFactory,
     EditRolesFormFactory,
-    EditSubmissionPeriodRecordPresentationsForm,
-    EditSubmissionPeriodUnitFormFactory,
     EditSubmissionRoleForm,
-    EditSupervisionEventTemplateFormFactory,
-    GoLiveFormFactory,
-    IssueFacultyConfirmRequestFormFactory,
-    ManualAssignFormFactory,
-    OpenFeedbackFormFactory,
-    TestOpenFeedbackForm,
 )
 
 

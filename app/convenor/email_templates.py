@@ -29,7 +29,7 @@ import app.ajax as ajax
 from app.convenor import convenor
 
 from ..admin.forms import EditEmailTemplateForm
-from ..admin.views_utilities import create_new_email_template_labels
+from ..admin.utilities import create_new_email_template_labels
 from ..database import db
 from ..models import (
     EmailTemplate,

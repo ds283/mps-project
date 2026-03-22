@@ -13,10 +13,10 @@ from flask import Blueprint
 admin = Blueprint("admin", __name__)
 
 from . import (
-    views_assessments,
-    views_matching,
-    views_reference_data,
-    views_scheduling,
-    views_system,
-    views_utilities,
+    assessments,
+    matching,
+    reference_data,
+    scheduling,
+    system,
+    utilities,
 )

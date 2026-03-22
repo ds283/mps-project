@@ -24,7 +24,10 @@ _menu = """
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('tenants.edit_tenant', id=t.id) }}">
-            <i class="fas fa-pencil-alt fa-fw"></i> Edit...
+            <i class="fas fa-pencil-alt fa-fw"></i> Edit&hellip;
+        </a>
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('tenants.email_templates', tenant_id=t.id, url=url, text=text) }}">
+            <i class="fas fa-envelope fa-fw"></i> Email templates&hellip;
         </a>
     </div>
 </div>
@@ -67,7 +70,7 @@ def _build_menu_templ() -> Template:
     return env.from_string(_menu)
 
 
-def tenants_data(tenants):
+def tenants_data(url, text, tenants):
     """
     Build the JSON payload for the tenants DataTable.
     """
@@ -81,7 +84,7 @@ def tenants_data(tenants):
         {
             "name": render_template(name_templ, t=t),
             "colour": render_template(colour_templ, t=t, simple_label=simple_label),
-            "menu": render_template(menu_templ, t=t),
+            "menu": render_template(menu_templ, t=t, url=url, text=text),
         }
         for t in tenants
     ]

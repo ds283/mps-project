@@ -161,29 +161,29 @@ _email_tenant_template_menu = """
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         {% if template is not none %}
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_tenant_email_template', tenant_id=tenant.id, template_id=template.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('tenants.edit_email_template', tenant_id=tenant.id, template_id=template.id) }}">
                 <i class="fas fa-pencil-alt fa-fw"></i> Edit template&hellip;
             </a>
             {% if template.active %}
-                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.deactivate_tenant_email_template', tenant_id=tenant.id, template_id=template.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('tenants.deactivate_email_template', tenant_id=tenant.id, template_id=template.id) }}">
                     <i class="fas fa-times-circle fa-fw"></i> Make inactive
                 </a>
             {% else %}
-                <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.activate_tenant_email_template', tenant_id=tenant.id, template_id=template.id) }}">
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('tenants.activate_email_template', tenant_id=tenant.id, template_id=template.id) }}">
                     <i class="fas fa-check-circle fa-fw"></i> Make active
                 </a>
             {% endif %}
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.duplicate_tenant_email_template', tenant_id=tenant.id, template_id=template.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('tenants.duplicate_email_template', tenant_id=tenant.id, template_id=template.id) }}">
                 <i class="fas fa-copy fa-fw"></i> Duplicate
             </a>
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.delete_tenant_email_template', tenant_id=tenant.id, template_id=template.id) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('tenants.delete_email_template', tenant_id=tenant.id, template_id=template.id) }}">
                 <i class="fas fa-trash fa-fw"></i> Delete
             </a>
         {% else %}
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.view_tenant_default_template', tenant_id=tenant.id, template_type=template_type) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('tenants.view_default_template', tenant_id=tenant.id, template_type=template_type) }}">
                 <i class="fas fa-envelope fa-fw"></i> View default&hellip;
             </a>
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.create_tenant_email_template', tenant_id=tenant.id, template_type=template_type) }}">
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('tenants.create_email_template', tenant_id=tenant.id, template_type=template_type) }}">
                 <i class="fas fa-plus fa-fw"></i> Create override
             </a>
         {% endif %}

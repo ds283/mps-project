@@ -14613,7 +14613,7 @@ def email_templates(pclass_id):
         url = redirect_url()
 
     AJAX_endpoint = url_for(
-        "convenor.global_email_templates_ajax", pclass_id=pclass_id, url=url, text=text
+        "convenor.email_templates_ajax", pclass_id=pclass_id, url=url, text=text
     )
 
     return render_template_context(
@@ -14772,7 +14772,7 @@ def create_email_template(pclass_id, template_type):
         type=template_type,
         subject=fallback_template.subject,
         html_body=fallback_template.html_body,
-        comment=f"Created from fallback template (version {fallback_template.version})",
+        comment=f"Created from default template (version {fallback_template.version})",
         version=1,
         creator_id=current_user.id,
         creation_timestamp=now,

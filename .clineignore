@@ -1,0 +1,30 @@
+# Dependencies
+/venv/
+
+# Injected mounts for Docker
+/logs/
+/mongodb/
+/mysql/
+/mysql_dashboard/
+/nginx/
+/objectstore-data/
+/redis/
+
+# Testing artifacts
+
+# Other tools
+/.scannerwork/
+/.vscode/
+
+# Environment variables
+.env
+.env.*
+
+# Large data files
+*.csv
+*.xlsx
+*.sqlite
+
+# Generated/minified code
+*.min.js
+*.map

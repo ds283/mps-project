@@ -57,12 +57,10 @@
                     class="fas fa-hashtag"></i> {{ email_template.version }}</span></span>
         </div>
         {% if email_template.tenant_id is none and email_template.pclass_id is none %}
-            <div class="d-flex flex-column justify-content-start align-items-center gap-1">
-                <div>
-                    <i class="fas fa-info-circle me-1 text-info"></i>
-                    <span class="text-info">Global fallback</span>
-                </div>
-                <small class="text-muted ms-2">This template is the global fallback and must remain active.</small>
+            <div class="alert alert-danger mt-2 mb-2 w-100">
+                {% call icon_block("info-circle") %}
+                    <strong>This template is a global fallback.</strong>
+                {% endcall %}
             </div>
         {% elif email_template.pclass_id is not none %}
             <div class="alert alert-info mt-2 mb-2 w-100">

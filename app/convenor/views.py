@@ -15042,3 +15042,70 @@ def delete_email_template(pclass_id, template_id):
         )
 
     return redirect(url_for("convenor.email_templates", pclass_id=pclass_id))
+
+
+@convenor.route("/view_default_template/<int:pclass_id>/<int:template_type>")
+@roles_accepted("faculty", "admin", "root")
+def view_default_template(pclass_id, template_type):
+    """
+    View the current default (tenant-level or global fallback) template for a given
+    project class and template type. Read-only; no editing is permitted.
+    """
+    from ..models.emails import _TYPE_NAMES, PCLASS_SPECIALIZABLE_TEMPLATES
+
+    # get details for project class
+    pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    # verify template type is specializable at the project-class level
+    if template_type not in PCLASS_SPECIALIZABLE_TEMPLATES:
+        flash(
+            f"Template type {template_type} cannot be specialized for project classes.",
+            "error",
+        )
+        return redirect(redirect_url())
+
+    # find the active default template (tenant-level preferred over global fallback)
+    # excluding any pclass-level override
+    default_template = (
+        db.session.query(EmailTemplate)
+        .filter(
+            EmailTemplate.type == template_type,
+            EmailTemplate.pclass_id.is_(None),
+            or_(
+                EmailTemplate.tenant_id.is_(None),
+                EmailTemplate.tenant_id == pclass.tenant_id,
+            ),
+            EmailTemplate.active.is_(True),
+        )
+        .order_by(
+            EmailTemplate.tenant_id.desc(),
+            EmailTemplate.version.desc(),
+        )
+        .first()
+    )
+
+    if default_template is None:
+        flash(
+            f"Could not find a default template for this template type. Please contact a system administrator.",
+            "error",
+        )
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = url_for("convenor.email_templates", pclass_id=pclass_id)
+
+    type_name = _TYPE_NAMES.get(template_type, f"Unknown email template type ({template_type})")
+
+    return render_template_context(
+        "convenor/email_templates/view_default.html",
+        pclass=pclass,
+        email_template=default_template,
+        type_name=type_name,
+        url=url,
+        title="View default email template",
+    )

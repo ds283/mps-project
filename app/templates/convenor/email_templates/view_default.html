@@ -1,0 +1,103 @@
+{% extends "base_form.html" %}
+
+{% from "macros.html" import edit_data %}
+{% from "swatch.html" import small_swatch %}
+{% from "labels.html" import simple_label %}
+{% from "icon_block.html" import icon_block %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    View default email template &ndash;
+    <strong>{{ type_name }}</strong>
+    <span class="badge bg-light text-dark"><i class="fas fa-hashtag"></i> {{ email_template.version }}</span>
+{% endblock %}
+
+{% block form_content %}
+    <div class="d-flex flex-column justify-content-start align-items-start gap-3">
+        <div class="d-flex flex-row justify-content-start align-items-center gap-2">
+            <span class="ms-1 text-primary text-uppercase fs-3">{{ type_name }}</span>
+            <span class="fs-5 mb-1"><span class="badge bg-primary"><i
+                    class="fas fa-hashtag"></i> {{ email_template.version }}</span></span>
+        </div>
+
+        {# Show whether this is a tenant-level default or the global fallback #}
+        {% if email_template.tenant_id is none and email_template.pclass_id is none %}
+            <div class="alert alert-danger mt-2 mb-2 w-100">
+                {% call icon_block("info-circle") %}
+                    <strong>This template is a global fallback.</strong>
+                    <div class="mt-1">
+                        It applies to all project classes without an explicit override.
+                    </div>
+                {% endcall %}
+            </div>
+        {% elif email_template.tenant_id is not none %}
+            <div class="alert alert-info mt-2 mb-2 w-100">
+                {% call icon_block("building") %}
+                    <div>
+                        <strong>This template is a tenant-level default</strong>
+                        for tenant
+                        {{ simple_label(email_template.tenant.make_label(email_template.tenant.name)) }}
+                    </div>
+                    <div class="mt-1 small text-muted">
+                        It applies to all project classes in this tenant that do not have their own override.
+                    </div>
+                {% endcall %}
+            </div>
+        {% endif %}
+
+        {% if email_template.last_used %}
+            <div class="text-muted small">
+                <i class="fas fa-clock me-1"></i>Last used: {{ email_template.last_used.strftime('%a %d %b %Y %H:%M') }}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="card mt-3 mb-3 card-body bg-well">
+        {% if email_template.comment %}
+            <div>
+                <label class="form-label fw-semibold">Comment</label>
+                <p class="text-secondary fst-italic">{{ email_template.comment }}</p>
+            </div>
+        {% endif %}
+        {% if email_template.labels.count() > 0 %}
+            <div class="mt-2">
+                <label class="form-label fw-semibold">Labels</label>
+                <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2 mt-1">
+                    {% for label in email_template.labels %}
+                        {{ simple_label(label.make_label()) }}
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="card mt-3 mb-3">
+        <div class="card-body bg-well">
+            <div>
+                <label class="form-label fw-semibold">Subject</label>
+                <p class="form-control-plaintext border rounded px-3 py-2 bg-white">{{ email_template.subject }}</p>
+            </div>
+            <div class="mt-2">
+                <label class="form-label fw-semibold">Body</label>
+                <div class="border rounded px-3 py-2 bg-white"
+                     style="min-height: 8rem; white-space: pre-wrap;">{{ email_template.html_body }}</div>
+            </div>
+        </div>
+    </div>
+
+    {% if url %}
+        <div class="mt-3 mb-3">
+            <a class="text-decoration-none" href="{{ url }}">
+                <i class="fas fa-backward"></i> Return to previous view
+            </a>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(email_template) }}
+    {{ super() }}
+{% endblock %}

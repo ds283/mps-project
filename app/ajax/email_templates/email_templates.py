@@ -134,6 +134,9 @@ _email_template_menu = """
                 <i class="fas fa-trash fa-fw"></i> Delete
             </a>
         {% else %}
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.view_default_template', pclass_id=pclass.id, template_type=template_type) }}">
+                <i class="fas fa-envelope fa-fw"></i> View default&hellip;
+            </a>
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.create_email_template', pclass_id=pclass.id, template_type=template_type) }}">
                 <i class="fas fa-plus fa-fw"></i> Create override
             </a>

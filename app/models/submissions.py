@@ -2373,7 +2373,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         Return a list of possible issues with the current SubmissionRecord
         :return:
         """
-        from .assets import AssetLicense
+        from .content import AssetLicense
 
         messages = []
 

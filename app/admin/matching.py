@@ -69,6 +69,7 @@ from ..task_queue import progress_update, register_task
 from ..tools import ServerSideInMemoryHandler
 from . import admin
 from .actions import estimate_CATS_load
+from .system import _compute_allowed_matching_years
 from .forms import (
     CompareMatchFormFactory,
     EditSupervisorRolesForm,

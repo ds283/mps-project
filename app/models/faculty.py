@@ -571,7 +571,6 @@ class FacultyData(db.Model, EditingMetadataMixin):
     def assessor_label(self):
         """
         Generate a label for the number of projects to which we are attached as a second marker
-        :param pclass:
         :return:
         """
         num = self.number_assessor
@@ -592,7 +591,11 @@ class FacultyData(db.Model, EditingMetadataMixin):
     ):
         from .live_projects import LiveProject, SubmittingStudent
         from .project_class import ProjectClassConfig
-        from .submissions import SubmissionPeriodRecord, SubmissionRole
+        from .submissions import (
+            SubmissionPeriodRecord,
+            SubmissionRecord,
+            SubmissionRole,
+        )
 
         # at most one of config_id, config, pclass_id, pclass should be defined
         items = sum(

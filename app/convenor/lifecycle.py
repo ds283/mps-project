@@ -70,6 +70,7 @@ from .forms import (
     GoLiveFormFactory,
     IssueFacultyConfirmRequestFormFactory,
 )
+from .selectors import _build_selector_data
 
 
 @convenor.route("/issue_confirm_requests/<int:id>", methods=["GET", "POST"])

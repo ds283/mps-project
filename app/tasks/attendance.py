@@ -382,6 +382,17 @@ def register_attendance_tasks(celery):
             msg.subject,
             description=f"{config.name}: Send attendance prompt to {owner_user.name} for {student_user.name}/{unit.name}",
         )
+
+        # Set prompt_sent_timestamp before dispatching the email so that a crash or
+        # failure in the send task cannot cause a duplicate prompt to be sent.
+        # It is preferable to occasionally miss a reminder than to spam multiple copies.
+        event.prompt_sent_timestamp = datetime.now()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
         send_tasks = chain(
             send_log_email.s(task_id, msg),
             mark_attendance_prompt_sent.s(event_id),
@@ -423,9 +434,6 @@ def register_attendance_tasks(celery):
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
-
-        now = datetime.now()
-        event.prompt_sent_timestamp = now
 
         if "key" not in result_data:
             print(

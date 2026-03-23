@@ -145,7 +145,49 @@ except Exception:
 - Preview functionality
 - Template variable documentation
 
-### 5. Task Queue Pattern
+### 5. Campaign Management Pattern
+
+**Tenant-Based Campaign Tracking:**
+
+```python
+# Tenant model with campaign flags
+class Tenant(db.Model):
+    in_2026_ATAS_campaign = db.Column(db.Boolean, default=False)
+
+
+# Campaign logic with dynamic form generation
+def check_campaign(user_data):
+    projects = []
+
+    # Define dynamic form
+    class InputForm(Form):
+        submit = SubmitField("Continue")
+
+    # Add fields dynamically based on user's projects
+    for project in eligible_projects:
+        setattr(InputForm, f"project_{project.id}_field", FieldType(...))
+        projects.append(project)
+
+    return {'projects': projects, 'form': InputForm}
+```
+
+**Key Characteristics:**
+
+- Campaign features tied to tenant configuration
+- Dynamic form generation for variable data sets
+- Year-specific campaign tracking for flexibility
+- Reusable blueprint structure for future campaigns
+- Faculty-facing workflows with validation
+
+**Common Use Cases:**
+
+- ATAS compliance campaigns
+- Project tagging initiatives
+- Data collection from faculty
+- Periodic update requirements
+- Institution-specific workflows
+
+### 6. Task Queue Pattern
 
 **Celery-based Async Processing:**
 
@@ -171,7 +213,7 @@ task = long_running_task.apply_async(args=[arg1, arg2])
 - Batch processing
 - Scheduled maintenance tasks
 
-### 6. Multi-Tenancy Pattern
+### 7. Multi-Tenancy Pattern
 
 **Tenant Isolation:**
 
@@ -186,7 +228,7 @@ task = long_running_task.apply_async(args=[arg1, arg2])
 # Automatic tenant filtering in queries
 @property
 def tenant_query(self):
-  return self.query.filter_by(tenant_id=current_tenant.id)
+    return self.query.filter_by(tenant_id=current_tenant.id)
 ```
 
 ## Component Relationships

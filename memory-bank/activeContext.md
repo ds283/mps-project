@@ -1,35 +1,35 @@
 # Active Context
 
-## Current Work Focus (Updated: 2026-03-22)
+## Current Work Focus (Updated: 2026-03-23)
 
-### Email Template Management System
+### ATAS Campaign System for 2026
 
-Recent work has focused on the email template management system, which is a critical component for managing automated
-communications in the MPS project management system.
+Recent work has focused on implementing an ATAS (Academic Technology Approval Scheme) campaign system for the 2026
+academic year. This system helps manage project availability for students who are subject to ATAS restrictions.
 
 **Recent Implementation:**
 
-- Email template CRUD operations with admin interface
-- Template editing with Jinja2 syntax highlighting
-- AJAX endpoints for template management
-- Integration with existing notification system
+- Added ATAS campaign tracking to Tenant model
+- Created campaign-specific workflows for faculty to update projects
+- Implemented project tag assignment enforcement
+- Dynamic form generation for project ATAS status and labeling
 
-**Key Files Modified:**
+**Key Files Modified/Created:**
 
-- `app/models/emails.py` - Email template data models
-- `app/ajax/email_templates/email_templates.py` - AJAX endpoints for template operations
-- `app/templates/admin/email_templates/edit.html` - Template editor interface
-- `app/templates/admin/email_templates/list.html` - Template listing interface
+- `app/models/tenants.py` - Added `in_2026_ATAS_campaign` field to Tenant model
+- `app/campaigns/tools.py` - Campaign logic for checking and processing ATAS projects
+- `app/campaigns/views.py` - View handler for ATAS 2026 campaign workflow
+- Related template files for campaign UI
 
 ### Current Status
 
-The email template system is functional but may need additional testing and refinement. The system allows administrators
-to:
+The ATAS campaign system is operational and allows:
 
-- Create and edit email templates using Jinja2 syntax
-- Preview templates before sending
-- Manage template metadata (subject, sender info)
-- Categorize templates by purpose
+- Tracking which tenants are participating in the 2026 ATAS campaign
+- Faculty members to update ATAS restrictions on their projects
+- Enforcement of project tag requirements for ATAS-enabled project classes
+- Dynamic form generation based on each faculty member's active projects
+- Bulk processing of project updates with validation
 
 ## Active Technical Patterns
 
@@ -82,21 +82,28 @@ The email template system follows the established AJAX pattern:
 
 ## Next Steps
 
-### Email Template System
+### ATAS Campaign System
 
-1. **Testing**: Verify template rendering with various context data
-2. **Validation**: Ensure Jinja2 syntax validation on save
-3. **Documentation**: Document available template variables per template type
-4. **Integration**: Test integration with existing notification workflows
+1. **Testing**: Verify campaign workflow with various faculty project configurations
+2. **Validation**: Ensure all ATAS-enabled projects are properly tagged
+3. **Documentation**: Document ATAS campaign process for administrators
+4. **Monitoring**: Track campaign participation and completion rates
 
 ### General Project Health
 
-1. **Code Review**: Review recent changes for consistency
-2. **Testing**: Run test suite to verify no regressions
-3. **Documentation**: Update API documentation if endpoints changed
-4. **Deployment**: Prepare migration scripts if schema changed
+1. **Code Review**: Review ATAS campaign implementation for consistency
+2. **Testing**: Run test suite to verify no regressions from new campaign feature
+3. **Documentation**: Update administrator documentation with ATAS campaign instructions
+4. **Deployment**: Prepare migration scripts for tenant model changes
 
 ## Recent Learnings
+
+### ATAS Campaign System Design
+
+- Campaign-specific features can be tied to tenant configuration
+- Dynamic form generation allows flexible handling of variable project lists
+- Faculty-facing workflows need clear guidance and validation
+- Project tag enforcement can be integrated with campaign workflows
 
 ### Email Template System Design
 
@@ -111,6 +118,7 @@ The email template system follows the established AJAX pattern:
 - Server-side DataTables processing handles large datasets efficiently
 - Blueprint organization keeps code modular and maintainable
 - Flash message pattern provides consistent user feedback
+- Campaign-based features benefit from dedicated blueprint organization
 
 ## Known Issues & Considerations
 

@@ -8,22 +8,32 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from ..shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE
+from .assessment import _PresentationAssessment_is_valid
 from .associations import (
     live_project_programmes,
     live_project_skills,
     live_project_supervision,
+    live_project_tags,
     live_project_to_modules,
     live_supervisors,
     sel_group_filter_table,
     sel_skill_filter_table,
 )
 from .defaults import IP_LENGTH
+from .matching import (
+    MatchingRecord,
+    _delete_MatchingRecord_cache,
+    _MatchingRecord_is_valid,
+)
 from .model_mixins import (
     ConfirmRequestStatesMixin,
 )
 from .project_class import *
+from .project_class import _get_submission_period
 from .projects import *
 from .students import StudentData
+from .submissions import Bookmark, CustomOffer, SelectionRecord, SubmissionRecord
 
 # Import wildcard symbols needed from already-extracted modules
 from .utilities import *
@@ -759,11 +769,9 @@ class LiveProject(
 @listens_for(LiveProject.assessors, "append")
 def _LiveProject_assessors_append_handler(target, value, initiator):
     with db.session.no_autoflush:
-        from .models import (
-            MatchingRecord,
+        from .scheduling import (
+            ScheduleAttempt,
             ScheduleSlot,
-            _MatchingRecord_is_valid,
-            _PresentationAssessment_is_valid,
             _ScheduleAttempt_is_valid,
             _ScheduleSlot_is_valid,
         )
@@ -789,11 +797,9 @@ def _LiveProject_assessors_append_handler(target, value, initiator):
 @listens_for(LiveProject.assessors, "remove")
 def _LiveProject_assessors_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
-        from .models import (
-            MatchingRecord,
+        from .scheduling import (
+            ScheduleAttempt,
             ScheduleSlot,
-            _MatchingRecord_is_valid,
-            _PresentationAssessment_is_valid,
             _ScheduleAttempt_is_valid,
             _ScheduleSlot_is_valid,
         )
@@ -1744,8 +1750,6 @@ def _SelectingStudent_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_SelectingStudent_is_valid, target.id)
 
-        from .models import _delete_MatchingRecord_cache
-
         for record in target.matching_records:
             _delete_MatchingRecord_cache(record.id, record.matching_id)
 
@@ -1768,7 +1772,6 @@ def _SelectingStudent_delete_handler(mapper, connection, target):
 
 @cache.memoize()
 def _SubmittingStudent_is_valid(sid):
-    from .models import SubmissionRecord
 
     obj: SubmittingStudent = db.session.query(SubmittingStudent).filter_by(id=sid).one()
 
@@ -1918,7 +1921,6 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
         )
 
     def get_assignment(self, period=None):
-        from .models import SubmissionRecord
         from .project_class import SubmissionPeriodRecord
 
         if period is None:
@@ -1951,7 +1953,6 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
 
     @property
     def ordered_assignments(self):
-        from .models import SubmissionRecord
         from .project_class import SubmissionPeriodRecord
 
         return self.records.join(
@@ -1961,7 +1962,6 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
 
     @property
     def supervisor_feedback_late(self):
-        from .models import SubmissionRecord
 
         supervisor_states = [
             r.supervisor_feedback_state == SubmissionRecord.FEEDBACK_LATE
@@ -1976,7 +1976,6 @@ class SubmittingStudent(db.Model, ConvenorTasksMixinFactory(ConvenorSubmitterTas
 
     @property
     def marker_feedback_late(self):
-        from .models import SubmissionRecord
 
         states = [
             r.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE

@@ -370,6 +370,8 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
 
     @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_REQUEST_CREATED)
     def _request_created(self):
+        from .live_projects import ConfirmRequest
+
         req = db.session.query(ConfirmRequest).filter_by(id=self.data_1).first()
         if req is None:
             return "<missing database row>"
@@ -386,6 +388,8 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
 
     @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_REQUEST_CANCELLED)
     def _request_cancelled(self):
+        from .live_projects import LiveProject
+
         user = db.session.query(User).filter_by(id=self.data_1).first()
         proj = db.session.query(LiveProject).filter_by(id=self.data_2).first()
         if user is None or proj is None:
@@ -400,6 +404,8 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
 
     @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_REQUEST_DELETED)
     def _request_deleted(self):
+        from .live_projects import LiveProject
+
         proj = db.session.query(LiveProject).filter_by(id=self.data_1).first()
         if proj is None:
             return "<missing database row>"
@@ -416,6 +422,8 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
 
     @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_GRANT_DELETED)
     def _grant_deleted(self):
+        from .live_projects import LiveProject
+
         proj = db.session.query(LiveProject).filter_by(id=self.data_1).first()
         if proj is None:
             return "<missing database row>"
@@ -432,6 +440,8 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
 
     @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_DECLINE_DELETED)
     def _decline_deleted(self):
+        from .live_projects import LiveProject
+
         proj = db.session.query(LiveProject).filter_by(id=self.data_1).first()
         if proj is None:
             return "<missing database row>"
@@ -449,6 +459,8 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
 
     @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_GRANTED)
     def _request_granted(self):
+        from .live_projects import ConfirmRequest
+
         req = db.session.query(ConfirmRequest).filter_by(id=self.data_1).first()
         if req is None:
             return "<missing database row>"
@@ -466,6 +478,8 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
 
     @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_DECLINED)
     def _request_declined(self):
+        from .live_projects import ConfirmRequest
+
         req = db.session.query(ConfirmRequest).filter_by(id=self.data_1).first()
         if req is None:
             return "<missing database row>"
@@ -482,6 +496,8 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
 
     @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_TO_PENDING)
     def _request_to_pending(self):
+        from .live_projects import ConfirmRequest
+
         req = db.session.query(ConfirmRequest).filter_by(id=self.data_1).first()
         if req is None:
             return "<missing database row>"
@@ -498,6 +514,7 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
 
     @assign(str_operations, EmailNotificationsMixin.FACULTY_REENROLL_SUPERVISOR)
     def _request_reenroll_supervisor(self):
+        from .faculty import EnrollmentRecord
         record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
         if record is None:
             return "<missing database row>"
@@ -514,6 +531,7 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
 
     @assign(str_operations, EmailNotificationsMixin.FACULTY_REENROLL_MARKER)
     def _request_reenroll_marker(self):
+        from .faculty import EnrollmentRecord
         record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
         if record is None:
             return "<missing database row>"
@@ -527,6 +545,7 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
 
     @assign(str_operations, EmailNotificationsMixin.FACULTY_REENROLL_MODERATOR)
     def _request_reenroll_moderator(self):
+        from .faculty import EnrollmentRecord
         record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
         if record is None:
             return "<missing database row>"
@@ -540,6 +559,7 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
 
     @assign(str_operations, EmailNotificationsMixin.FACULTY_REENROLL_PRESENTATIONS)
     def _request_reenroll_presentations(self):
+        from .faculty import EnrollmentRecord
         record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
         if record is None:
             return "<missing database row>"
@@ -1268,6 +1288,8 @@ class FilterRecord(db.Model):
 
 @cache.memoize()
 def _MatchingAttempt_current_score(id):
+    from .matching import MatchingAttempt
+
     obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
     if (
@@ -1290,15 +1312,17 @@ def _MatchingAttempt_current_score(id):
 
 @cache.memoize()
 def _MatchingAttempt_get_faculty_sup_CATS(id, fac_id, pclass_id):
+    from .matching import MatchingAttempt
+
     # obtain MatchingAttempt
     obj: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
     CATS = 0
 
     for item in obj.get_supervisor_records(fac_id).all():
-        item: MatchingRecord
-        proj: LiveProject = item.project
-        selector: SelectingStudent = item.selector
+        item: "MatchingRecord"
+        proj: "LiveProject" = item.project
+        selector: "SelectingStudent" = item.selector
 
         if pclass_id is None or selector.config.pclass_id == pclass_id:
             c = proj.CATS_supervision
@@ -1310,15 +1334,17 @@ def _MatchingAttempt_get_faculty_sup_CATS(id, fac_id, pclass_id):
 
 @cache.memoize()
 def _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id):
+    from .matching import MatchingAttempt
+
     # obtain MatchingAttempt
     obj: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
     CATS = 0
 
     for item in obj.get_marker_records(fac_id).all():
-        item: MatchingRecord
-        proj: LiveProject = item.project
-        selector: SelectingStudent = item.selector
+        item: "MatchingRecord"
+        proj: "LiveProject" = item.project
+        selector: "SelectingStudent" = item.selector
 
         if pclass_id is None or selector.config.pclass_id == pclass_id:
             c = proj.CATS_marking
@@ -1330,15 +1356,17 @@ def _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id):
 
 @cache.memoize()
 def _MatchingAttempt_get_faculty_mod_CATS(id, fac_id, pclass_id):
+    from .matching import MatchingAttempt
+
     # obtain MatchingAttempt
     obj: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
     CATS = 0
 
     for item in obj.get_moderator_records(fac_id).all():
-        item: MatchingRecord
-        proj: LiveProject = item.project
-        selector: SelectingStudent = item.selector
+        item: "MatchingRecord"
+        proj: "LiveProject" = item.project
+        selector: "SelectingStudent" = item.selector
 
         if pclass_id is None or selector.config.pclass_id == pclass_id:
             c = proj.CATS_moderation
@@ -1359,6 +1387,8 @@ def _MatchingAttempt_get_faculty_CATS(id, fac_id, pclass_id):
 
 @cache.memoize()
 def _MatchingAttempt_prefer_programme_status(id):
+    from .matching import MatchingAttempt
+
     obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
     if obj.ignore_programme_prefs:
@@ -1383,6 +1413,8 @@ def _MatchingAttempt_prefer_programme_status(id):
 
 @cache.memoize()
 def _MatchingAttempt_hint_status(id):
+    from .matching import MatchingAttempt
+
     obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
     if not obj.use_hints:
@@ -1402,6 +1434,8 @@ def _MatchingAttempt_hint_status(id):
 
 @cache.memoize()
 def _MatchingAttempt_number_project_assignments(id, project_id):
+    from .matching import MatchingAttempt
+
     obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
     return get_count(obj.records.filter_by(project_id=project_id))
@@ -1409,6 +1443,8 @@ def _MatchingAttempt_number_project_assignments(id, project_id):
 
 @cache.memoize()
 def _MatchingAttempt_is_valid(id):
+    from .matching import MatchingAttempt
+
     obj: MatchingAttempt = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
     # there are several steps:
@@ -1476,8 +1512,8 @@ def _MatchingAttempt_is_valid(id):
 
         # 4. FOR EACH INCLUDED PROJECT CLASS, FACULTY ASSIGNMENTS SHOULD RESPECT ANY CUSTOM CATS LIMITS
         for config in obj.config_members:
-            config: ProjectClassConfig
-            rec: EnrollmentRecord = fac.get_enrollment_record(config.pclass_id)
+            config: "ProjectClassConfig"
+            rec: "EnrollmentRecord" = fac.get_enrollment_record(config.pclass_id)
 
             if rec is not None:
                 sup, mark, mod = obj.get_faculty_CATS(fac, pclass_id=config.pclass_id)

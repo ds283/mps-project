@@ -8,24 +8,22 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from sqlalchemy import or_
-from sqlalchemy.event import listens_for
-from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import validates
-from sqlalchemy.sql import func
 
-from ..cache import cache
 from ..database import db
 from ..shared.sqlalchemy import get_count
-from .defaults import DEFAULT_STRING_LENGTH
-from .model_mixins import ColouredLabelMixin, EditingMetadataMixin, StudentLevelsMixin, _get_current_year
 from .associations import (
-    faculty_affiliations,
     programmes_to_modules,
-    tenant_to_groups,
-    tenant_to_project_tag_groups,
     tenant_to_degree_programmes,
+    tenant_to_groups,
+)
+from .defaults import DEFAULT_STRING_LENGTH
+from .model_mixins import (
+    ColouredLabelMixin,
+    EditingMetadataMixin,
+    StudentLevelsMixin,
+    _get_current_year,
 )
 
 

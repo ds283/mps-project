@@ -29,7 +29,10 @@ from .associations import (
 )
 from .config import get_AES_key
 from .defaults import DEFAULT_STRING_LENGTH
+from .assessment import PresentationAssessment, _PresentationAssessment_is_valid
+from .matching import MatchingAttempt, MatchingRecord, _MatchingRecord_is_valid
 from .model_mixins import ColouredLabelMixin, EditingMetadataMixin, _get_current_year
+from .projects import _Project_is_offerable, _Project_num_assessors, _Project_num_supervisors
 
 
 class FacultyData(db.Model, EditingMetadataMixin):
@@ -1059,19 +1062,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
 
 def _FacultyData_delete_cache(faculty_id):
-    from .models import (
-        LiveProject,
-        MatchingAttempt,
-        MatchingRecord,
-        PresentationAssessment,
-        ScheduleAttempt,
-        ScheduleSlot,
-        _MatchingAttempt_is_valid,
-        _MatchingRecord_is_valid,
-        _PresentationAssessment_is_valid,
-        _ScheduleAttempt_is_valid,
-        _ScheduleSlot_is_valid,
-    )
+    from .live_projects import LiveProject
+    from .scheduling import ScheduleAttempt, ScheduleSlot, _ScheduleAttempt_is_valid, _ScheduleSlot_is_valid
+    from .utilities import _MatchingAttempt_is_valid
 
     year = _get_current_year()
 
@@ -1553,22 +1546,9 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
 
 def _delete_EnrollmentRecord_cache(faculty_id):
-    from .models import (
-        LiveProject,
-        MatchingAttempt,
-        MatchingRecord,
-        PresentationAssessment,
-        ScheduleAttempt,
-        ScheduleSlot,
-        _MatchingAttempt_is_valid,
-        _MatchingRecord_is_valid,
-        _PresentationAssessment_is_valid,
-        _Project_is_offerable,
-        _Project_num_assessors,
-        _Project_num_supervisors,
-        _ScheduleAttempt_is_valid,
-        _ScheduleSlot_is_valid,
-    )
+    from .live_projects import LiveProject
+    from .scheduling import ScheduleAttempt, ScheduleSlot, _ScheduleAttempt_is_valid, _ScheduleSlot_is_valid
+    from .utilities import _MatchingAttempt_is_valid
 
     cache.delete_memoized(_Project_is_offerable)
     cache.delete_memoized(_Project_num_assessors)

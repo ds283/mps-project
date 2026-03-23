@@ -29,12 +29,6 @@ from .associations import (
 )
 from .defaults import DEFAULT_STRING_LENGTH
 from .faculty import EnrollmentRecord, FacultyData
-from .live_projects import (
-    LiveProject,
-    SubmittingStudent,
-    _SelectingStudent_is_valid,
-    _SubmittingStudent_is_valid,
-)
 from .mixins import WeekdaysMixin
 from .model_mixins import (
     CustomOfferStatesMixin,
@@ -692,6 +686,7 @@ def _SubmissionRole_update_handler(mapper, connection, target):
             .first()
         )
         if record is not None:
+            from .live_projects import _SubmittingStudent_is_valid
             cache.delete_memoized(_SubmittingStudent_is_valid, record.owner_id)
 
 
@@ -709,6 +704,7 @@ def _SubmissionRole_insert_handler(mapper, connection, target):
             .first()
         )
         if record is not None:
+            from .live_projects import _SubmittingStudent_is_valid
             cache.delete_memoized(_SubmittingStudent_is_valid, record.owner_id)
 
 
@@ -726,6 +722,7 @@ def _SubmissionRole_delete_handler(mapper, connection, target):
             .first()
         )
         if record is not None:
+            from .live_projects import _SubmittingStudent_is_valid
             cache.delete_memoized(_SubmittingStudent_is_valid, record.owner_id)
 
 
@@ -735,8 +732,8 @@ def _SubmissionRecord_is_valid(sid):
     period: SubmissionPeriodRecord = obj.period
     config: ProjectClassConfig = period.config
     pclass: ProjectClass = config.project_class
-    sub: SubmittingStudent = obj.owner
-    project: LiveProject = obj.project
+    sub: "SubmittingStudent" = obj.owner
+    project: "LiveProject" = obj.project
 
     errors = {}
     warnings = {}
@@ -2538,6 +2535,7 @@ def _SubmissionRecord_update_handler(mapper, connection, target):
         target.owner._validated = False
 
     with db.session.no_autoflush:
+        from .live_projects import _SubmittingStudent_is_valid
         cache.delete_memoized(_SubmissionRecord_is_valid, target.id)
         cache.delete_memoized(_SubmittingStudent_is_valid, target.owner_id)
 
@@ -2550,6 +2548,7 @@ def _SubmissionRecord_insert_handler(mapper, connection, target):
         target.owner._validated = False
 
     with db.session.no_autoflush:
+        from .live_projects import _SubmittingStudent_is_valid
         cache.delete_memoized(_SubmissionRecord_is_valid, target.id)
         cache.delete_memoized(_SubmittingStudent_is_valid, target.owner_id)
 
@@ -2562,6 +2561,7 @@ def _SubmissionRecord_delete_handler(mapper, connection, target):
         target.owner._validated = False
 
     with db.session.no_autoflush:
+        from .live_projects import _SubmittingStudent_is_valid
         cache.delete_memoized(_SubmissionRecord_is_valid, target.id)
         cache.delete_memoized(_SubmittingStudent_is_valid, target.owner_id)
 
@@ -2713,18 +2713,21 @@ class Bookmark(db.Model):
 @listens_for(Bookmark, "before_insert")
 def _Bookmark_insert_handler(mapping, connection, target):
     with db.session.no_autoflush:
+        from .live_projects import _SelectingStudent_is_valid
         cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 
 @listens_for(Bookmark, "before_update")
 def _Bookmark_update_handler(mapping, connection, target):
     with db.session.no_autoflush:
+        from .live_projects import _SelectingStudent_is_valid
         cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 
 @listens_for(Bookmark, "before_delete")
 def _Bookmark_delete_handler(mapping, connection, target):
     with db.session.no_autoflush:
+        from .live_projects import _SelectingStudent_is_valid
         cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 
@@ -2894,6 +2897,7 @@ def _SelectionRecord_update_handler(mapper, connection, target):
         cache.delete_memoized(_MatchingAttempt_current_score)
         cache.delete_memoized(_MatchingAttempt_hint_status)
 
+        from .live_projects import _SelectingStudent_is_valid
         cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 
@@ -2903,6 +2907,7 @@ def _SelectionRecord_insert_handler(mapper, connection, target):
         cache.delete_memoized(_MatchingAttempt_current_score)
         cache.delete_memoized(_MatchingAttempt_hint_status)
 
+        from .live_projects import _SelectingStudent_is_valid
         cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 
@@ -2912,6 +2917,7 @@ def _SelectionRecord_delete_handler(mapper, connection, target):
         cache.delete_memoized(_MatchingAttempt_current_score)
         cache.delete_memoized(_MatchingAttempt_hint_status)
 
+        from .live_projects import _SelectingStudent_is_valid
         cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 

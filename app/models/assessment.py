@@ -772,7 +772,7 @@ def _AssessorAttendanceData_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -795,7 +795,7 @@ def _AssessorAttendanceData_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -818,7 +818,7 @@ def _AssessorAttendanceData_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -841,7 +841,7 @@ def _AssessorAttendanceData_available_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -864,7 +864,7 @@ def _AssessorAttendanceData_available_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -887,7 +887,7 @@ def _AssessorAttendanceData_unavailable_append_handler(target, value, initiator)
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -910,7 +910,7 @@ def _AssessorAttendanceData_unavailable_remove_handler(target, value, initiator)
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -933,7 +933,7 @@ def _AssessorAttendanceData_ifneeded_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -956,7 +956,7 @@ def _AssessorAttendanceData_ifneeded_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -1061,7 +1061,7 @@ def _SubmitterAttendanceData_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -1084,7 +1084,7 @@ def _SubmitterAttendanceData_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -1107,7 +1107,7 @@ def _SubmitterAttendanceData_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -1130,7 +1130,7 @@ def _SubmitterAttendanceData_available_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -1153,7 +1153,7 @@ def _SubmitterAttendanceData_available_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -1176,7 +1176,7 @@ def _SubmitterAttendanceData_unavailable_append_handler(target, value, initiator
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
@@ -1199,7 +1199,7 @@ def _SubmitterAttendanceData_unavailable_remove_handler(target, value, initiator
     with db.session.no_autoflush:
         cache.delete_memoized(_PresentationAssessment_is_valid, target.assessment_id)
 
-        from .models import (
+        from .scheduling import (
             ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,

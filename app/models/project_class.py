@@ -388,7 +388,7 @@ class ProjectClass(
 
         # remove this project class from any projects that have been attached with it
         for proj in self.projects:
-            proj: Project
+            proj: "Project"
             proj.remove_project_class(self)
 
     def enable(self):

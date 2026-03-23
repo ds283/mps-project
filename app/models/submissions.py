@@ -9,7 +9,10 @@
 #
 
 from datetime import date, datetime, time
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Union
+
+if TYPE_CHECKING:
+    from .live_projects import LiveProject, SubmittingStudent
 
 from flask_security import current_user
 from numpy import nan

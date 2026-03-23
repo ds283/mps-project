@@ -12,9 +12,8 @@
 from datetime import datetime
 from typing import List, Optional
 
-from celery import group
+from celery import chord, group
 from celery.exceptions import Ignore
-from celery.result import GroupResult
 from dateutil.relativedelta import relativedelta
 from flask import current_app
 from sqlalchemy import and_, or_
@@ -280,8 +279,8 @@ def register_rollover_tasks(celery):
 
         # if selector lifecycle is not ready to rollover, bail out
         if (
-                config.selector_lifecycle
-                < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER
+            config.selector_lifecycle
+            < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER
         ):
             post_task_update_msg(
                 self,
@@ -307,8 +306,8 @@ def register_rollover_tasks(celery):
 
         # if submitter lifecycle is not ready to rollover, bail out
         if (
-                config.submitter_lifecycle
-                < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+            config.submitter_lifecycle
+            < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
         ):
             post_task_update_msg(
                 self,
@@ -333,31 +332,12 @@ def register_rollover_tasks(celery):
             raise Ignore()
 
         ## BUILD AND EXECUTE THE TASK CHAIN
-
-        # This used to be done by constructing a long chain of chords, and replacing this task by the chain.
-        # However, after the Data Science MSc was introduced into the database, we apparently got
-        # stung by this Celery issue:
-        #   https://github.com/celery/celery/issues/5000
-        #   https://github.com/celery/celery/discussions/7029
-
-        # Apparently there is not yet a fix (seemingly as of 10 Oct 2023, even though the last activity on the
-        # issue was from 2021) and it appears to be acknowledged as a design issue in Celery. The bottom line
-        # is that the worker process consumes all resources and is killed by the OOM watchdog. The precise
-        # issue we're seeing is:
-        #   Traceback (most recent call last):
-        #   File "/mpsproject/venv/lib/python3.11/site-packages/billiard/pool.py", line 1264, in mark_as_worker_lost
-        #     raise WorkerLostError(
-        #       billiard.exceptions.WorkerLostError: Worker exited prematurely: signal 9 (SIGKILL) Job: 40.
-
-        # The only solution appears to be refactoring so that we do not use chains of chords. See comment
-        # by pySilver Nov 9 2020:
-        #   @fcollman kind of, yes. As much as I'd love it to work you'd expect, there are limitations that
-        #   I guess are very hard to overcome. Complex workflow should keep state somehow, so I'm not surprised
-        #   it uses a lot of memory. Changing workflow to something that is stateless (or not at least not
-        #   holding state in runtime) is the answer I guess.
-
-        # We have to use the not-recommended option disable_sync_subtasks=False in order that we can
-        # replicate the chord logic within this task
+        # The pipeline is split into a series of phase coordinator tasks, each of which
+        # uses self.replace(chord(group, next_phase.si(...))) to hand off to the next step.
+        # This avoids both blocking .get() calls and the chord-chain OOM issue
+        # (https://github.com/celery/celery/issues/5000): each coordinator exits
+        # immediately after dispatching, so Celery never needs to hold more than one
+        # chord's worth of state at a time.
 
         # GENERATE NEW PROJECTCLASSCONFIG RECORD
 
@@ -372,6 +352,11 @@ def register_rollover_tasks(celery):
         new_config_id = insert_new_pclass_config(self, config, convenor_id)
 
         # CONVERT SELECTORS FROM PREVIOUS CYCLE INTO SUBMITTERS IN THE CURRENT CYCLE
+        # (only when select_in_previous_cycle is set; otherwise skip straight to attach phase)
+
+        next_phase = _rollover_attach_phase.si(
+            task_id, new_config_id, current_id, convenor_id
+        )
 
         if config.select_in_previous_cycle:
             post_task_update_msg(
@@ -400,38 +385,25 @@ def register_rollover_tasks(celery):
                     )
                     raise Ignore()
 
-            # build task group to convert SelectingStudent instances from the current config into
-            # SubmittingStudent instances for next year's config
-            convert_selectors = group(
-                convert_selector.si(
-                    new_config_id,
-                    current_id,
-                    s.id,
-                    match.id if match is not None else None,
-                    use_markers,
+            selector_list = list(config.selecting_students)
+            if selector_list:
+                convert_group = group(
+                    convert_selector.si(
+                        new_config_id,
+                        current_id,
+                        s.id,
+                        match.id if match is not None else None,
+                        use_markers,
+                    )
+                    for s in selector_list
                 )
-                for s in config.selecting_students
-            )
+                return self.replace(chord(convert_group, next_phase))
 
-            convert_task: GroupResult = convert_selectors.apply_async()
-            convert_task.get(disable_sync_subtasks=False)
+        return self.replace(next_phase)
 
-            if not convert_task.successful():
-                post_task_update_msg(
-                    self,
-                    task_id,
-                    "FAILURE",
-                    TaskRecord.FAILURE,
-                    100,
-                    "Could not convert selectors into submitter records",
-                )
-                convert_task.forget()
-                return
-
-            convert_task.forget()
-
+    @celery.task(bind=True)
+    def _rollover_attach_phase(self, task_id, new_config_id, current_id, convenor_id):
         # AUTO-CREATE NEW SELECTOR AND SUBMITTER INSTANCES
-
         post_task_update_msg(
             self,
             task_id,
@@ -441,16 +413,18 @@ def register_rollover_tasks(celery):
             "Attaching new student records...",
         )
 
-        # build task group to perform attachment of new records;
-        # these will attach all new SelectingStudent instances, and mop up any eligible
-        # SubmittingStudent instances that weren't automatically created by conversion of
-        # SelectingStudent instances
+        try:
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
+                id=current_id
+            ).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
-        # build list of candidate students who may be attachable as selectors or submitters.
-        # We need to bear in mind that some SubmittingStudent instances will have been generated already
-        # from conversion of SelectingStudent instances
+        year = get_current_year()
 
-        # First restrict the query to students enrolled on a degree programme at the appropriate level
+        # build list of candidate students who may be attachable as selectors or submitters;
+        # some SubmittingStudent instances may already have been generated by the convert phase
         students = (
             db.session.query(StudentData)
             .join(User, User.id == StudentData.id)
@@ -459,14 +433,10 @@ def register_rollover_tasks(celery):
             .filter(User.active.is_(True), DegreeType.level == config.student_level)
         )
 
-        # if selection is open to all, we do not want to filter by programme type
-        # otherwise, if selection is limited to degree programmes of the type specified by the project class, the student should
-        # be enrolled on a suitable programme
         if not config.selection_open_to_all:
             valid_config_ids = [p.id for p in config.programmes]
             students = students.filter(StudentData.programme_id.in_(valid_config_ids))
 
-        # we should only consider students who are in the appropriate academic year
         first_year = config.start_year
         last_year = config.start_year + config.extent
         if config.select_in_previous_cycle:
@@ -479,30 +449,23 @@ def register_rollover_tasks(celery):
             )
         )
 
-        attach_group = group(
-            attach_selectors_submitters.si(new_config_id, current_id, s.id, year)
-            for s in students
+        student_list = students.all()
+        next_phase = _rollover_retire_phase.si(
+            task_id, new_config_id, current_id, convenor_id
         )
 
-        attach_task: GroupResult = attach_group.apply_async()
-        attach_task.get(disable_sync_subtasks=False)
-
-        if not attach_task.successful():
-            post_task_update_msg(
-                self,
-                task_id,
-                "FAILURE",
-                TaskRecord.FAILURE,
-                100,
-                "Could not attach new student records",
+        if student_list:
+            attach_group = group(
+                attach_selectors_submitters.si(new_config_id, current_id, s.id, year)
+                for s in student_list
             )
-            attach_task.forget()
-            raise Ignore()
+            return self.replace(chord(attach_group, next_phase))
 
-        attach_task.forget()
+        return self.replace(next_phase)
 
+    @celery.task(bind=True)
+    def _rollover_retire_phase(self, task_id, new_config_id, current_id, convenor_id):
         # RETIRE OLD SELECTOR AND SUBMITTER RECORDS
-
         post_task_update_msg(
             self,
             task_id,
@@ -512,33 +475,29 @@ def register_rollover_tasks(celery):
             "Retiring current student records...",
         )
 
-        # build group of tasks to perform retirements
-        retire_selectors = [retire_selector.si(s.id) for s in config.selecting_students]
-        retire_submitters = [
+        try:
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
+                id=current_id
+            ).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        retire_list = [retire_selector.si(s.id) for s in config.selecting_students] + [
             retire_submitter.si(s.id) for s in config.submitting_students
         ]
+        next_phase = _rollover_reenrol_phase.si(
+            task_id, new_config_id, current_id, convenor_id
+        )
 
-        retire_group = group(retire_selectors + retire_submitters)
+        if retire_list:
+            return self.replace(chord(group(retire_list), next_phase))
 
-        retire_task: GroupResult = retire_group.apply_async()
-        retire_task.get(disable_sync_subtasks=False)
+        return self.replace(next_phase)
 
-        if not retire_task.successful():
-            post_task_update_msg(
-                self,
-                task_id,
-                "FAILURE",
-                TaskRecord.FAILURE,
-                100,
-                "Could not retire selector and submitter records from the previous cycle",
-            )
-            retire_task.forget()
-            raise Ignore()
-
-        retire_task.forget()
-
+    @celery.task(bind=True)
+    def _rollover_reenrol_phase(self, task_id, new_config_id, current_id, convenor_id):
         # PERFORM FACULTY RE-ENROLLMENT WHERE NEEDED
-
         post_task_update_msg(
             self,
             task_id,
@@ -548,39 +507,45 @@ def register_rollover_tasks(celery):
             "Checking for faculty re-enrolments...",
         )
 
-        # build group of tasks to check for faculty re-enrolment after buyout or sabbatical
-        reenrol_query = db.session.query(EnrollmentRecord.id).filter(
-            EnrollmentRecord.pclass_id == config.pclass_id,
-            or_(
-                EnrollmentRecord.supervisor_state
-                != EnrollmentRecord.SUPERVISOR_ENROLLED,
-                EnrollmentRecord.marker_state != EnrollmentRecord.MARKER_ENROLLED,
-            ),
-        )
+        try:
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
+                id=current_id
+            ).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
-        reenrol_group = group(
-            reenroll_faculty.si(rec.id, year) for rec in reenrol_query.all()
-        )
+        year = get_current_year()
 
-        reenrol_task: GroupResult = reenrol_group.apply_async()
-        reenrol_task.get(disable_sync_subtasks=False)
-
-        if not reenrol_task.successful():
-            post_task_update_msg(
-                self,
-                task_id,
-                "FAILURE",
-                TaskRecord.FAILURE,
-                100,
-                "Could not perform faculty re-enrolment",
+        reenrol_list = (
+            db.session.query(EnrollmentRecord.id)
+            .filter(
+                EnrollmentRecord.pclass_id == config.pclass_id,
+                or_(
+                    EnrollmentRecord.supervisor_state
+                    != EnrollmentRecord.SUPERVISOR_ENROLLED,
+                    EnrollmentRecord.marker_state != EnrollmentRecord.MARKER_ENROLLED,
+                ),
             )
-            reenrol_task.forget()
-            raise Ignore()
+            .all()
+        )
+        next_phase = _rollover_maintenance_phase.si(
+            task_id, new_config_id, current_id, convenor_id
+        )
 
-        reenrol_task.forget()
+        if reenrol_list:
+            reenrol_group = group(
+                reenroll_faculty.si(rec.id, year) for rec in reenrol_list
+            )
+            return self.replace(chord(reenrol_group, next_phase))
 
+        return self.replace(next_phase)
+
+    @celery.task(bind=True)
+    def _rollover_maintenance_phase(
+        self, task_id, new_config_id, current_id, convenor_id
+    ):
         # ROUTINE DATABASE HOUSEKEEPING
-
         post_task_update_msg(
             self,
             task_id,
@@ -590,34 +555,36 @@ def register_rollover_tasks(celery):
             "Performing routine database maintenance...",
         )
 
-        # perform maintenance on EnrollmentRecords
-        maintenance_query = db.session.query(EnrollmentRecord.id).filter(
-            EnrollmentRecord.pclass_id == config.pclass_id
+        try:
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
+                id=current_id
+            ).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        maintenance_list = (
+            db.session.query(EnrollmentRecord.id)
+            .filter(EnrollmentRecord.pclass_id == config.pclass_id)
+            .all()
+        )
+        next_phase = _rollover_descriptions_phase.si(
+            task_id, new_config_id, current_id, convenor_id
         )
 
-        maintenance_group = group(
-            enrollment_maintenance.si(rec.id) for rec in maintenance_query.all()
-        )
-
-        maintenance_task: GroupResult = maintenance_group.apply_async()
-        maintenance_task.get(disable_sync_subtasks=False)
-
-        if not maintenance_task.successful():
-            post_task_update_msg(
-                self,
-                task_id,
-                "FAILURE",
-                TaskRecord.FAILURE,
-                100,
-                "Could not perform maintenance for enrolment records",
+        if maintenance_list:
+            maint_group = group(
+                enrollment_maintenance.si(rec.id) for rec in maintenance_list
             )
-            maintenance_task.forget()
-            raise Ignore()
+            return self.replace(chord(maint_group, next_phase))
 
-        maintenance_task.forget()
+        return self.replace(next_phase)
 
-        ## RESET PROJECT DESCRIPTION LIFECYCLES
-
+    @celery.task(bind=True)
+    def _rollover_descriptions_phase(
+        self, task_id, new_config_id, current_id, convenor_id
+    ):
+        # RESET PROJECT DESCRIPTION LIFECYCLES
         post_task_update_msg(
             self,
             task_id,
@@ -627,46 +594,43 @@ def register_rollover_tasks(celery):
             "Reset project description lifecycles...",
         )
 
-        # build group of project descriptions attached to this project class
-        project_descs = set()
+        try:
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
+                id=current_id
+            ).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
+        # use get_description() to account for default-description logic
+        project_descs = set()
         projects = (
             db.session.query(Project)
             .filter(Project.project_classes.any(id=config.pclass_id))
             .all()
         )
-
-        # want to use get_description() to get ProjectDescription, to account for logic
-        # associated with having a default
         for p in projects:
             desc = p.get_description(config.pclass_id)
             if desc is not None:
                 project_descs.add(desc.id)
 
-        # build set of tasks to reset project descriptions
-        descs_group = group(
-            reset_project_description.si(d_id) for d_id in project_descs
+        next_phase = _rollover_confirm_requests_phase.si(
+            task_id, new_config_id, current_id, convenor_id
         )
 
-        descs_task: GroupResult = descs_group.apply_async()
-        descs_task.get(disable_sync_subtasks=False)
-
-        if not descs_task.successful():
-            post_task_update_msg(
-                self,
-                task_id,
-                "FAILURE",
-                TaskRecord.FAILURE,
-                100,
-                "Could not reset project description lifecycles",
+        if project_descs:
+            descs_group = group(
+                reset_project_description.si(d_id) for d_id in project_descs
             )
-            descs_task.forget()
-            raise Ignore()
+            return self.replace(chord(descs_group, next_phase))
 
-        descs_task.forget()
+        return self.replace(next_phase)
 
-        ## REMOVE UNUSED CONFIRMATION REQUESTS
-
+    @celery.task(bind=True)
+    def _rollover_confirm_requests_phase(
+        self, task_id, new_config_id, current_id, convenor_id
+    ):
+        # REMOVE UNUSED CONFIRMATION REQUESTS
         post_task_update_msg(
             self,
             task_id,
@@ -676,8 +640,15 @@ def register_rollover_tasks(celery):
             "Remove stale confirmation requests...",
         )
 
-        # remove ConfirmRequest items that were never actioned
-        confirm_request_query = (
+        try:
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
+                id=current_id
+            ).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        confirm_list = (
             db.session.query(ConfirmRequest)
             .join(SelectingStudent, SelectingStudent.id == ConfirmRequest.owner_id)
             .join(
@@ -689,52 +660,15 @@ def register_rollover_tasks(celery):
             )
             .all()
         )
+        finalize = rollover_finalize.si(task_id, new_config_id, convenor_id)
 
-        confirm_request_group = group(
-            remove_confirm_request.si(rec.id) for rec in confirm_request_query
-        )
-
-        confirm_task: GroupResult = confirm_request_group.apply_async()
-        confirm_task.get(disable_sync_subtasks=False)
-
-        if not confirm_task.successful():
-            post_task_update_msg(
-                self,
-                task_id,
-                "FAILURE",
-                TaskRecord.FAILURE,
-                100,
-                "Could not remove stale confirmation requests",
+        if confirm_list:
+            confirm_group = group(
+                remove_confirm_request.si(rec.id) for rec in confirm_list
             )
-            confirm_task.forget()
-            raise Ignore()
+            return self.replace(chord(confirm_group, finalize))
 
-        confirm_task.forget()
-
-        ## FINALIZE
-
-        post_task_update_msg(
-            self, task_id, "SUCCESS", TaskRecord.SUCCESS, 100, "Rollover complete"
-        )
-
-        finalize_task: GroupResult = rollover_finalize.si(
-            new_config_id, convenor_id
-        ).apply_async()
-        finalize_task.get(disable_sync_subtasks=False)
-
-        if not finalize_task.successful():
-            post_task_update_msg(
-                self,
-                task_id,
-                "FAILURE",
-                TaskRecord.FAILURE,
-                100,
-                "An error occurred when finalizing the rollover transaction",
-            )
-            finalize_task.forget()
-            raise Ignore()
-
-        finalize_task.forget()
+        return self.replace(finalize)
 
     @celery.task()
     def rollover_backup_msg(task_id):
@@ -747,7 +681,11 @@ def register_rollover_tasks(celery):
         )
 
     @celery.task(bind=True)
-    def rollover_finalize(self, new_config_id, convenor_id):
+    def rollover_finalize(self, task_id, new_config_id, convenor_id):
+        post_task_update_msg(
+            self, task_id, "SUCCESS", TaskRecord.SUCCESS, 100, "Rollover complete"
+        )
+
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
             config = ProjectClassConfig.query.filter_by(id=new_config_id).first()
@@ -876,7 +814,7 @@ def register_rollover_tasks(celery):
 
     @celery.task(bind=True)
     def convert_selector(
-            self, new_config_id, old_config_id, sel_id, match_id, use_markers
+        self, new_config_id, old_config_id, sel_id, match_id, use_markers
     ):
         if not isinstance(use_markers, bool):
             use_markers = bool(int(use_markers))
@@ -942,8 +880,8 @@ def register_rollover_tasks(celery):
             return
 
         if (
-                match is not None
-                and selector.config.project_class not in match.available_pclasses
+            match is not None
+            and selector.config.project_class not in match.available_pclasses
         ):
             self.update_state(
                 "FAILURE",
@@ -1072,9 +1010,9 @@ def register_rollover_tasks(celery):
                 if (
                     selector.academic_year is not None
                     and not selector.student.has_graduated
-                        and selector.academic_year
-                        == new_config.start_year
-                        - (1 if new_config.select_in_previous_cycle else 0)
+                    and selector.academic_year
+                    == new_config.start_year
+                    - (1 if new_config.select_in_previous_cycle else 0)
                 ):
                     print("##    selector is in first year of project")
 
@@ -1104,9 +1042,9 @@ def register_rollover_tasks(celery):
                             return
 
                 elif (
-                        selector.academic_year is not None
-                        and not selector.student.has_graduated
-                        and selector.academic_year >= new_config.start_year
+                    selector.academic_year is not None
+                    and not selector.student.has_graduated
+                    and selector.academic_year >= new_config.start_year
                 ):
                     print(
                         "##    selector is in year {yr} of project".format(
@@ -1274,7 +1212,7 @@ def register_rollover_tasks(celery):
 
     @celery.task(bind=True)
     def attach_selectors_submitters(
-            self, new_config_id, old_config_id, sid, current_year
+        self, new_config_id, old_config_id, sid, current_year
     ):
         # get current configuration record
         try:
@@ -1334,8 +1272,8 @@ def register_rollover_tasks(celery):
 
                     # do not attach if student's programme is not associated with the project type
                     if (
-                            not config.selection_open_to_all
-                            and programme not in config.programmes
+                        not config.selection_open_to_all
+                        and programme not in config.programmes
                     ):
                         return False
 
@@ -1500,8 +1438,8 @@ def register_rollover_tasks(celery):
             renroll_offset = -1 if record.pclass.reenroll_supervisors_early else 0
 
             if (
-                    record.supervisor_reenroll is not None
-                    and record.supervisor_reenroll + renroll_offset <= current_year
+                record.supervisor_reenroll is not None
+                and record.supervisor_reenroll + renroll_offset <= current_year
             ):
                 record.supervisor_state = EnrollmentRecord.SUPERVISOR_ENROLLED
                 record.supervisor_reenroll = None
@@ -1518,8 +1456,8 @@ def register_rollover_tasks(celery):
         # re-enrol markers in the year they come off sabbatical
         if record.marker_state != EnrollmentRecord.MARKER_ENROLLED:
             if (
-                    record.marker_reenroll is not None
-                    and record.marker_reenroll <= current_year
+                record.marker_reenroll is not None
+                and record.marker_reenroll <= current_year
             ):
                 record.marker_state = EnrollmentRecord.MARKER_ENROLLED
                 record.marker_reenroll = None
@@ -1534,8 +1472,8 @@ def register_rollover_tasks(celery):
         # re-enrol moderator in the year they come off sabbatical
         if record.moderator_state != EnrollmentRecord.MODERATOR_ENROLLED:
             if (
-                    record.moderator_reenroll is not None
-                    and record.moderator_reenroll <= current_year
+                record.moderator_reenroll is not None
+                and record.moderator_reenroll <= current_year
             ):
                 record.moderator_state = EnrollmentRecord.MODERATOR_ENROLLED
                 record.moderator_reenroll = None
@@ -1552,8 +1490,8 @@ def register_rollover_tasks(celery):
         # re-enrol presentation assessors in the year they come off sabbatical
         if record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
             if (
-                    record.presentations_reenroll is not None
-                    and record.presentations_reenroll <= current_year
+                record.presentations_reenroll is not None
+                and record.presentations_reenroll <= current_year
             ):
                 record.presentations_state = EnrollmentRecord.PRESENTATIONS_ENROLLED
                 record.presentations_reenroll = None
@@ -1610,8 +1548,8 @@ def register_rollover_tasks(celery):
             if (
                 record.validator_id is None
                 or record.validated_timestamp is None
-                    or record.workflow_state
-                    != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED
+                or record.workflow_state
+                != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED
             ):
                 record.validated_id = None
                 record.validated_timestamp = None
@@ -1621,8 +1559,8 @@ def register_rollover_tasks(celery):
             # for workflow_state
             if (
                 record.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_QUEUED
-                    and record.workflow_state
-                    != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED
+                and record.workflow_state
+                != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED
             ):
                 record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
 

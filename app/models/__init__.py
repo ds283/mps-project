@@ -54,7 +54,7 @@ from .scheduling import *
 from .students import *
 from .submissions import *
 from .tenants import *
-from .users import Role, User
+from .users import *
 from .utilities import *
 
 ProjectLike = Union[Project, LiveProject]

@@ -1,0 +1,118 @@
+{% extends "base_app.html" %}
+
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_datatables() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#events-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: {
+                    'url': $SCRIPT_ROOT + '/convenor/inspect_template_events_ajax/{{ event_template.id }}?url={{ url|urlencode if url else "" }}&text={{ text|urlencode if text else "" }}',
+                    type: 'POST',
+                    data: function (args) {
+                        return {"args": JSON.stringify(args)};
+                    }
+                },
+                "fnDrawCallback": function () {
+                    $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
+                    $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'});
+                },
+                columns: [
+                    {
+                        data: 'name',
+                        searchable: true,
+                        orderable: true
+                    },
+                    {
+                        data: 'attendees',
+                        searchable: false,
+                        orderable: false
+                    },
+                    {
+                        data: 'datetime',
+                        searchable: false,
+                        orderable: true,
+                        render: function (data, type, row) {
+                            if (type === 'sort') {
+                                return data.sortvalue;
+                            }
+                            return data.display;
+                        }
+                    },
+                    {
+                        data: 'attendance',
+                        searchable: false,
+                        orderable: false
+                    },
+                    {
+                        data: 'menu',
+                        searchable: false,
+                        orderable: false
+                    }
+                ],
+                order: [[2, 'asc']]
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Events &ndash; {{ event_template.name }}
+{% endblock %}
+
+{% block bodyblock %}
+    {% if url and text %}
+        <div class="top-return-link">
+            <a class="text-decoration-none" href="{{ url }}">
+                <i class="fas fa-backward"></i> Return to {{ text }}
+            </a>
+        </div>
+    {% endif %}
+
+    <div class="card border-primary mt-3 mb-3">
+        <div class="card-header bg-primary text-white">
+            Supervision events for template <strong>{{ event_template.name }}</strong>
+            in unit <strong>{{ unit.name }}</strong>
+            ({{ period.display_name }})
+        </div>
+        <div class="card-body">
+            <div class="mb-2">
+                <span class="badge bg-secondary me-1">{{ event_template.event_as_str }}</span>
+                <span class="badge bg-secondary me-1">{{ event_template.target_role_as_str }}</span>
+                {% if event_template.monitor_attendance %}
+                    <span class="text-success small"><i class="fas fa-check-circle"></i> Attendance monitored</span>
+                {% else %}
+                    <span class="text-muted small"><i class="fas fa-times-circle"></i> Attendance not monitored</span>
+                {% endif %}
+            </div>
+            <table id="events-table" class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th width="22%">Student</th>
+                    <th width="22%">Attendees</th>
+                    <th width="22%">Date, time &amp; location</th>
+                    <th width="19%">Attendance</th>
+                    <th width="15%">Actions</th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+
+    {% if url and text %}
+        <div>
+            <a class="text-decoration-none" href="{{ url }}">
+                <i class="fas fa-backward"></i> Return to {{ text }}
+            </a>
+        </div>
+    {% endif %}
+{% endblock %}

@@ -39,24 +39,23 @@ email_template_to_labels = db.Table(
 
 
 class EmailTemplateTypesMixin:
+    ## SYSTEM EMAILS
+
     # backups
     BACKUP_REPORT_THINNING = 1
-
-    # close_selection
-    CLOSE_SELECTION_CONVENOR = 2
-
-    # go_live
-    GO_LIVE_CONVENOR = 3
-    GO_LIVE_FACULTY = 4
-    GO_LIVE_SELECTOR = 5
 
     # maintenance
     MAINTENANCE_LOST_ASSETS = 6
     MAINTENANCE_UNATTACHED_ASSETS = 7
 
-    # marking
-    MARKING_MARKER = 8
-    MARKING_SUPERVISOR = 9
+    # services
+    SERVICES_CC_EMAIL = 39
+    SERVICES_SEND_EMAIL = 40
+
+    # system
+    SYSTEM_GARBAGE_COLLECTION = 43
+
+    ## TENANT SPECIALIZABLE
 
     # matching
     MATCHING_DRAFT_NOTIFY_FACULTY = 10
@@ -67,6 +66,31 @@ class EmailTemplateTypesMixin:
     MATCHING_FINAL_UNNEEDED_FACULTY = 15
     MATCHING_GENERATED = 16
     MATCHING_NOTIFY_EXCEL_REPORT = 17
+
+    # scheduling
+    SCHEDULING_AVAILABILITY_REMINDER = 30
+    SCHEDULING_AVAILABILITY_REQUEST = 31
+    SCHEDULING_DRAFT_NOTIFY_FACULTY = 32
+    SCHEDULING_DRAFT_NOTIFY_STUDENTS = 33
+    SCHEDULING_DRAFT_UNNEEDED_FACULTY = 34
+    SCHEDULING_FINAL_NOTIFY_FACULTY = 35
+    SCHEDULING_FINAL_NOTIFY_STUDENTS = 36
+    SCHEDULING_FINAL_UNNEEDED_FACULTY = 37
+    SCHEDULING_GENERATED = 38
+
+    ## PROJECT CLASS SPECIALIZABLE
+
+    # close_selection
+    CLOSE_SELECTION_CONVENOR = 2
+
+    # go_live
+    GO_LIVE_CONVENOR = 3
+    GO_LIVE_FACULTY = 4
+    GO_LIVE_SELECTOR = 5
+
+    # marking
+    MARKING_MARKER = 8
+    MARKING_SUPERVISOR = 9
 
     # notifications
     NOTIFICATIONS_REQUEST_MEETING = 18
@@ -86,21 +110,6 @@ class EmailTemplateTypesMixin:
     PUSH_FEEDBACK_PUSH_TO_STUDENT = 28
     PUSH_FEEDBACK_PUSH_TO_SUPERVISOR = 29
 
-    # scheduling
-    SCHEDULING_AVAILABILITY_REMINDER = 30
-    SCHEDULING_AVAILABILITY_REQUEST = 31
-    SCHEDULING_DRAFT_NOTIFY_FACULTY = 32
-    SCHEDULING_DRAFT_NOTIFY_STUDENTS = 33
-    SCHEDULING_DRAFT_UNNEEDED_FACULTY = 34
-    SCHEDULING_FINAL_NOTIFY_FACULTY = 35
-    SCHEDULING_FINAL_NOTIFY_STUDENTS = 36
-    SCHEDULING_FINAL_UNNEEDED_FACULTY = 37
-    SCHEDULING_GENERATED = 38
-
-    # services
-    SERVICES_CC_EMAIL = 39
-    SERVICES_SEND_EMAIL = 40
-
     # student_notifications
     STUDENT_NOTIFICATIONS_CHOICES_RECEIVED = 41
     STUDENT_NOTIFICATIONS_CHOICES_RECEIVED_PROXY = 42
@@ -108,21 +117,17 @@ class EmailTemplateTypesMixin:
     # attendance reminder
     ATTENDANCE_PROMPT = 44
 
-    # system
-    SYSTEM_GARBAGE_COLLECTION = 43
-
 
 # Human-readable names for each template type
 _TYPE_NAMES = {
+    ## SYSTEM ONLY
     EmailTemplateTypesMixin.BACKUP_REPORT_THINNING: "Backup: Report thinning",
-    EmailTemplateTypesMixin.CLOSE_SELECTION_CONVENOR: "Close selection: Convenor",
-    EmailTemplateTypesMixin.GO_LIVE_CONVENOR: "Go live: Convenor",
-    EmailTemplateTypesMixin.GO_LIVE_FACULTY: "Go live: Faculty",
-    EmailTemplateTypesMixin.GO_LIVE_SELECTOR: "Go live: Selector",
     EmailTemplateTypesMixin.MAINTENANCE_LOST_ASSETS: "Maintenance: Lost assets",
     EmailTemplateTypesMixin.MAINTENANCE_UNATTACHED_ASSETS: "Maintenance: Unattached assets",
-    EmailTemplateTypesMixin.MARKING_MARKER: "Marking: Marker",
-    EmailTemplateTypesMixin.MARKING_SUPERVISOR: "Marking: Supervisor",
+    EmailTemplateTypesMixin.SERVICES_CC_EMAIL: "Services: CC email",
+    EmailTemplateTypesMixin.SERVICES_SEND_EMAIL: "Services: Send email",
+    EmailTemplateTypesMixin.SYSTEM_GARBAGE_COLLECTION: "System: Garbage collection",
+    ## TENANT SPECIALIZABLE
     EmailTemplateTypesMixin.MATCHING_DRAFT_NOTIFY_FACULTY: "Matching: Draft notify faculty",
     EmailTemplateTypesMixin.MATCHING_DRAFT_NOTIFY_STUDENTS: "Matching: Draft notify students",
     EmailTemplateTypesMixin.MATCHING_DRAFT_UNNEEDED_FACULTY: "Matching: Draft unneeded faculty",
@@ -131,6 +136,22 @@ _TYPE_NAMES = {
     EmailTemplateTypesMixin.MATCHING_FINAL_UNNEEDED_FACULTY: "Matching: Final unneeded faculty",
     EmailTemplateTypesMixin.MATCHING_GENERATED: "Matching: Generated",
     EmailTemplateTypesMixin.MATCHING_NOTIFY_EXCEL_REPORT: "Matching: Notify Excel report",
+    EmailTemplateTypesMixin.SCHEDULING_AVAILABILITY_REMINDER: "Scheduling: Availability reminder",
+    EmailTemplateTypesMixin.SCHEDULING_AVAILABILITY_REQUEST: "Scheduling: Availability request",
+    EmailTemplateTypesMixin.SCHEDULING_DRAFT_NOTIFY_FACULTY: "Scheduling: Draft notify faculty",
+    EmailTemplateTypesMixin.SCHEDULING_DRAFT_NOTIFY_STUDENTS: "Scheduling: Draft notify students",
+    EmailTemplateTypesMixin.SCHEDULING_DRAFT_UNNEEDED_FACULTY: "Scheduling: Draft unneeded faculty",
+    EmailTemplateTypesMixin.SCHEDULING_FINAL_NOTIFY_FACULTY: "Scheduling: Final notify faculty",
+    EmailTemplateTypesMixin.SCHEDULING_FINAL_NOTIFY_STUDENTS: "Scheduling: Final notify students",
+    EmailTemplateTypesMixin.SCHEDULING_FINAL_UNNEEDED_FACULTY: "Scheduling: Final unneeded faculty",
+    EmailTemplateTypesMixin.SCHEDULING_GENERATED: "Scheduling: Generated",
+    ## PROJECT CLASS SPECIALIZABLE
+    EmailTemplateTypesMixin.CLOSE_SELECTION_CONVENOR: "Close selection: Convenor",
+    EmailTemplateTypesMixin.GO_LIVE_CONVENOR: "Go live: Convenor",
+    EmailTemplateTypesMixin.GO_LIVE_FACULTY: "Go live: Faculty",
+    EmailTemplateTypesMixin.GO_LIVE_SELECTOR: "Go live: Selector",
+    EmailTemplateTypesMixin.MARKING_MARKER: "Marking: Marker",
+    EmailTemplateTypesMixin.MARKING_SUPERVISOR: "Marking: Supervisor",
     EmailTemplateTypesMixin.NOTIFICATIONS_REQUEST_MEETING: "Notifications: Request meeting",
     EmailTemplateTypesMixin.NOTIFICATIONS_FACULTY_ROLLUP: "Notifications: Faculty rollup",
     EmailTemplateTypesMixin.NOTIFICATIONS_FACULTY_SINGLE: "Notifications: Faculty single",
@@ -143,22 +164,93 @@ _TYPE_NAMES = {
     EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_MARKER: "Push feedback: To marker",
     EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_STUDENT: "Push feedback: To student",
     EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR: "Push feedback: To supervisor",
-    EmailTemplateTypesMixin.SCHEDULING_AVAILABILITY_REMINDER: "Scheduling: Availability reminder",
-    EmailTemplateTypesMixin.SCHEDULING_AVAILABILITY_REQUEST: "Scheduling: Availability request",
-    EmailTemplateTypesMixin.SCHEDULING_DRAFT_NOTIFY_FACULTY: "Scheduling: Draft notify faculty",
-    EmailTemplateTypesMixin.SCHEDULING_DRAFT_NOTIFY_STUDENTS: "Scheduling: Draft notify students",
-    EmailTemplateTypesMixin.SCHEDULING_DRAFT_UNNEEDED_FACULTY: "Scheduling: Draft unneeded faculty",
-    EmailTemplateTypesMixin.SCHEDULING_FINAL_NOTIFY_FACULTY: "Scheduling: Final notify faculty",
-    EmailTemplateTypesMixin.SCHEDULING_FINAL_NOTIFY_STUDENTS: "Scheduling: Final notify students",
-    EmailTemplateTypesMixin.SCHEDULING_FINAL_UNNEEDED_FACULTY: "Scheduling: Final unneeded faculty",
-    EmailTemplateTypesMixin.SCHEDULING_GENERATED: "Scheduling: Generated",
-    EmailTemplateTypesMixin.SERVICES_CC_EMAIL: "Services: CC email",
-    EmailTemplateTypesMixin.SERVICES_SEND_EMAIL: "Services: Send email",
     EmailTemplateTypesMixin.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED: "Student notifications: Choices received",
     EmailTemplateTypesMixin.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED_PROXY: "Student notifications: Choices received (proxy)",
     EmailTemplateTypesMixin.ATTENDANCE_PROMPT: "Attendance: Prompt",
-    EmailTemplateTypesMixin.SYSTEM_GARBAGE_COLLECTION: "System: Garbage collection",
 }
+
+TENANT_SPECIALIZABLE_TEMPLATES = [
+    ## TENANT SPECIALIZABLE ONLY
+    EmailTemplateTypesMixin.MATCHING_DRAFT_NOTIFY_FACULTY,
+    EmailTemplateTypesMixin.MATCHING_DRAFT_NOTIFY_STUDENTS,
+    EmailTemplateTypesMixin.MATCHING_DRAFT_UNNEEDED_FACULTY,
+    EmailTemplateTypesMixin.MATCHING_FINAL_NOTIFY_FACULTY,
+    EmailTemplateTypesMixin.MATCHING_FINAL_NOTIFY_STUDENTS,
+    EmailTemplateTypesMixin.MATCHING_FINAL_UNNEEDED_FACULTY,
+    EmailTemplateTypesMixin.MATCHING_GENERATED,
+    EmailTemplateTypesMixin.MATCHING_NOTIFY_EXCEL_REPORT,
+    EmailTemplateTypesMixin.SCHEDULING_AVAILABILITY_REMINDER,
+    EmailTemplateTypesMixin.SCHEDULING_AVAILABILITY_REQUEST,
+    EmailTemplateTypesMixin.SCHEDULING_DRAFT_NOTIFY_FACULTY,
+    EmailTemplateTypesMixin.SCHEDULING_DRAFT_NOTIFY_STUDENTS,
+    EmailTemplateTypesMixin.SCHEDULING_DRAFT_UNNEEDED_FACULTY,
+    EmailTemplateTypesMixin.SCHEDULING_FINAL_NOTIFY_FACULTY,
+    EmailTemplateTypesMixin.SCHEDULING_FINAL_NOTIFY_STUDENTS,
+    EmailTemplateTypesMixin.SCHEDULING_FINAL_UNNEEDED_FACULTY,
+    EmailTemplateTypesMixin.SCHEDULING_GENERATED,
+    ## PROJECT CLASS SPECIALIZABLE
+    EmailTemplateTypesMixin.CLOSE_SELECTION_CONVENOR,
+    EmailTemplateTypesMixin.GO_LIVE_CONVENOR,
+    EmailTemplateTypesMixin.GO_LIVE_FACULTY,
+    EmailTemplateTypesMixin.GO_LIVE_SELECTOR,
+    EmailTemplateTypesMixin.MARKING_MARKER,
+    EmailTemplateTypesMixin.MARKING_SUPERVISOR,
+    EmailTemplateTypesMixin.NOTIFICATIONS_REQUEST_MEETING,
+    EmailTemplateTypesMixin.NOTIFICATIONS_FACULTY_ROLLUP,
+    EmailTemplateTypesMixin.NOTIFICATIONS_FACULTY_SINGLE,
+    EmailTemplateTypesMixin.NOTIFICATIONS_STUDENT_ROLLUP,
+    EmailTemplateTypesMixin.NOTIFICATIONS_STUDENT_SINGLE,
+    EmailTemplateTypesMixin.PROJECT_CONFIRMATION_REMINDER,
+    EmailTemplateTypesMixin.PROJECT_CONFIRMATION_REQUESTED,
+    EmailTemplateTypesMixin.PROJECT_CONFIRMATION_NEW_COMMENT,
+    EmailTemplateTypesMixin.PROJECT_CONFIRMATION_REVISE_REQUEST,
+    EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_MARKER,
+    EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_STUDENT,
+    EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR,
+    EmailTemplateTypesMixin.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED,
+    EmailTemplateTypesMixin.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED_PROXY,
+    EmailTemplateTypesMixin.ATTENDANCE_PROMPT,
+]
+
+PCLASS_SPECIALIZABLE_TEMPLATES = [
+    ## TENANT SPECIALIZABLE ONLY
+    EmailTemplateTypesMixin.MATCHING_DRAFT_NOTIFY_FACULTY,
+    EmailTemplateTypesMixin.MATCHING_DRAFT_NOTIFY_STUDENTS,
+    EmailTemplateTypesMixin.MATCHING_DRAFT_UNNEEDED_FACULTY,
+    EmailTemplateTypesMixin.MATCHING_FINAL_NOTIFY_FACULTY,
+    EmailTemplateTypesMixin.MATCHING_FINAL_NOTIFY_STUDENTS,
+    EmailTemplateTypesMixin.MATCHING_FINAL_UNNEEDED_FACULTY,
+    EmailTemplateTypesMixin.SCHEDULING_AVAILABILITY_REMINDER,
+    EmailTemplateTypesMixin.SCHEDULING_AVAILABILITY_REQUEST,
+    EmailTemplateTypesMixin.SCHEDULING_DRAFT_NOTIFY_FACULTY,
+    EmailTemplateTypesMixin.SCHEDULING_DRAFT_NOTIFY_STUDENTS,
+    EmailTemplateTypesMixin.SCHEDULING_DRAFT_UNNEEDED_FACULTY,
+    EmailTemplateTypesMixin.SCHEDULING_FINAL_NOTIFY_FACULTY,
+    EmailTemplateTypesMixin.SCHEDULING_FINAL_NOTIFY_STUDENTS,
+    EmailTemplateTypesMixin.SCHEDULING_FINAL_UNNEEDED_FACULTY,
+    ## PROJECT CLASS SPECIALIZABLE
+    EmailTemplateTypesMixin.CLOSE_SELECTION_CONVENOR,
+    EmailTemplateTypesMixin.GO_LIVE_CONVENOR,
+    EmailTemplateTypesMixin.GO_LIVE_FACULTY,
+    EmailTemplateTypesMixin.GO_LIVE_SELECTOR,
+    EmailTemplateTypesMixin.MARKING_MARKER,
+    EmailTemplateTypesMixin.MARKING_SUPERVISOR,
+    EmailTemplateTypesMixin.NOTIFICATIONS_REQUEST_MEETING,
+    EmailTemplateTypesMixin.NOTIFICATIONS_FACULTY_ROLLUP,
+    EmailTemplateTypesMixin.NOTIFICATIONS_FACULTY_SINGLE,
+    EmailTemplateTypesMixin.NOTIFICATIONS_STUDENT_ROLLUP,
+    EmailTemplateTypesMixin.NOTIFICATIONS_STUDENT_SINGLE,
+    EmailTemplateTypesMixin.PROJECT_CONFIRMATION_REMINDER,
+    EmailTemplateTypesMixin.PROJECT_CONFIRMATION_REQUESTED,
+    EmailTemplateTypesMixin.PROJECT_CONFIRMATION_NEW_COMMENT,
+    EmailTemplateTypesMixin.PROJECT_CONFIRMATION_REVISE_REQUEST,
+    EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_MARKER,
+    EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_STUDENT,
+    EmailTemplateTypesMixin.PUSH_FEEDBACK_PUSH_TO_SUPERVISOR,
+    EmailTemplateTypesMixin.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED,
+    EmailTemplateTypesMixin.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED_PROXY,
+    EmailTemplateTypesMixin.ATTENDANCE_PROMPT,
+]
 
 
 class EmailTemplateLabel(db.Model, ColouredLabelMixin, EditingMetadataMixin):

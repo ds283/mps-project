@@ -13,4 +13,15 @@ from flask import Blueprint
 
 convenor = Blueprint("convenor", __name__)
 
-from . import views
+from . import (
+    dashboard,
+    documents,
+    email_templates,
+    lifecycle,
+    marking_feedback,
+    projects,
+    selector_details,
+    selectors,
+    student_tasks,
+    submitters,
+)

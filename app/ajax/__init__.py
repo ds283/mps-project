@@ -8,19 +8,22 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from . import admin
-from . import archive
-from . import convenor
-from . import home
-from . import project
-from . import site
-from . import student
-from . import users
-from . import faculty
-from . import reports
-from . import user_approver
-from . import project_approver
-from . import documents
-from . import projecthub
-from . import public_browser
-from . import tenants
+from . import (
+    admin,
+    archive,
+    convenor,
+    documents,
+    email_templates,
+    faculty,
+    home,
+    project,
+    project_approver,
+    projecthub,
+    public_browser,
+    reports,
+    site,
+    student,
+    tenants,
+    user_approver,
+    users,
+)

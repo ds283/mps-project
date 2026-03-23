@@ -11,9 +11,9 @@
 from typing import List
 
 from flask import current_app, render_template, url_for
-from jinja2 import Template, Environment
+from jinja2 import Environment, Template
 
-from ...models import SupervisionEventTemplate, SubmissionPeriodUnit
+from ...models import SubmissionPeriodUnit, SupervisionEventTemplate
 
 # language=jinja2
 _name = """
@@ -23,9 +23,9 @@ _name = """
 </div>
 {% set num_events = event.number_events %}
 {% if num_events == 1 %}
-    <div class="small text-muted mt-1">1 event</div>
+    <div class="small mt-2"><a class="btn btn-xs btn-outline-secondary" href="{{ url_for('convenor.inspect_template_events', template_id=event.id, url=return_url, text='event templates') }}">Show 1 event&hellip;</a></div>
 {% elif num_events > 1 %}
-    <div class="small text-muted mt-1">{{ num_events }} events</div>
+    <div class="small mt-2"><a class="btn btn-xs btn-outline-secondary" href="{{ url_for('convenor.inspect_template_events', template_id=event.id, url=return_url, text='event templates') }}">Show {{ num_events }} events&hellip;</a></div>
 {% endif %}
 """
 
@@ -105,6 +105,7 @@ def supervision_event_templates_data(
                 name_templ,
                 event=t,
                 event_label=t.event_as_str,
+                return_url=return_url,
             ),
             "target_role": render_template(
                 target_role_templ,

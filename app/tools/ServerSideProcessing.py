@@ -409,3 +409,18 @@ class ServerSideInMemoryHandler(ServerSideBase):
             )
         else:
             return jsonify({"draw": self._request_draw, "error": self._fail_msg})
+
+
+# For convenience, allow a trivial SQLAlchemy-compatible object that wraps a simple list.
+# ServerSideInMemoryHandler accepts any iterable for its query argument when
+# a row_filter is not needed; we pass a fake query-like object that simply
+# returns the combined list from .all().
+class FakeQuery:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def all(self):
+        return self._rows
+
+    def count(self):
+        return len(self._rows)

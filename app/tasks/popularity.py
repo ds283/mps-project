@@ -15,12 +15,12 @@ from uuid import uuid1
 
 from celery import group, states
 from celery.exceptions import Ignore
-from celery.result import GroupResult, AsyncResult
+from celery.result import AsyncResult, GroupResult
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import LiveProject, ProjectClass, ProjectClassConfig, PopularityRecord
+from ..models import LiveProject, PopularityRecord, ProjectClass, ProjectClassConfig
 
 
 def compute_rank(self, num_live, rank_type, cid, uuid, query, accessor, writer):
@@ -477,7 +477,7 @@ def register_popularity_tasks(celery):
 
             if retained_record is not None:
                 for record in records:
-                    if record.id is not None and record.id != retained_record.id:
+                    if record is not None and record.id != retained_record.id:
                         dropped.append((record.id, str(record.datestamp)))
                         db.session.delete(record)
 

@@ -10,8 +10,15 @@
 
 from collections.abc import Iterable
 from datetime import date, datetime, time, timedelta
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 from urllib.parse import urljoin
+
+# import symbols that are needed just for type annotations, but are not needed at runtime, and would
+# cause circular import errors if they were imported directly
+if TYPE_CHECKING:
+    from .assessment import PresentationAssessment
+    from .projects import Project
+    from .submissions import SubmissionRecord, SubmissionRole
 
 from flask_security import current_user
 from sqlalchemy import and_, or_, orm
@@ -388,7 +395,7 @@ class ProjectClass(
 
         # remove this project class from any projects that have been attached with it
         for proj in self.projects:
-            proj: "Project"
+            proj: Project
             proj.remove_project_class(self)
 
     def enable(self):

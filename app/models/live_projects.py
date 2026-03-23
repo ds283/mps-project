@@ -770,7 +770,6 @@ class LiveProject(
 def _LiveProject_assessors_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         from .scheduling import (
-            ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
             _ScheduleSlot_is_valid,
@@ -798,7 +797,6 @@ def _LiveProject_assessors_append_handler(target, value, initiator):
 def _LiveProject_assessors_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         from .scheduling import (
-            ScheduleAttempt,
             ScheduleSlot,
             _ScheduleAttempt_is_valid,
             _ScheduleSlot_is_valid,

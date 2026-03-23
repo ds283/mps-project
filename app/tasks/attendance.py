@@ -98,9 +98,11 @@ def register_attendance_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def check_event_for_attendance_prompt(self, event_id: int):
+        msg = f"Testing event #{event_id} for an attendance email prompt"
+        print(msg)
         self.update_state(
             state=states.STARTED,
-            meta={"msg": f"Testing event #{event_id} for an attendance email prompt"},
+            meta={"msg": msg},
         )
 
         try:
@@ -124,6 +126,11 @@ def register_attendance_tasks(celery):
         config: ProjectClassConfig = sub.config
         unit: SubmissionPeriodUnit = event.unit
 
+        student_name: str = sub.student.user.name
+        event_label: str = f'"{event.name}"'
+        if event.time is not None:
+            event_label += f" on {event.time.strftime('%A %-d %B %Y at %H:%M')}"
+
         # REMOVE LATER
         # restrict emails to just user #1
         # if owner.user_id != 1:
@@ -134,7 +141,8 @@ def register_attendance_tasks(celery):
         #     raise Ignore()
 
         if config.year != year:
-            msg = {"msg": f"Event #{event_id} is for a different year"}
+            msg = {"msg": f"Event #{event_id} {event_label} for {student_name} belongs to a different academic year"}
+            print(msg["msg"])
             self.update_state(
                 state=states.SUCCESS,
                 meta=msg,
@@ -142,7 +150,8 @@ def register_attendance_tasks(celery):
             return msg
 
         if sub.retired:
-            msg = {"msg": f"Event #{event_id} is for a retired student"}
+            msg = {"msg": f"Event #{event_id} {event_label}: student {student_name} is retired"}
+            print(msg["msg"])
             self.update_state(
                 state=states.SUCCESS,
                 meta=msg,
@@ -151,8 +160,9 @@ def register_attendance_tasks(celery):
 
         if period.feedback_open:
             msg = {
-                "msg": f"Event #{event_id} belongs to a submission period that has been opened for reedback"
+                "msg": f"Event #{event_id} {event_label} for {student_name} belongs to a submission period that has been opened for feedback"
             }
+            print(msg["msg"])
             self.update_state(
                 state=states.SUCCESS,
                 meta=msg,
@@ -161,8 +171,9 @@ def register_attendance_tasks(celery):
 
         if period.closed:
             msg = {
-                "msg": f"Event #{event_id} belongs to a submission period that has been closed"
+                "msg": f"Event #{event_id} {event_label} for {student_name} belongs to a submission period that has been closed"
             }
+            print(msg["msg"])
             self.update_state(
                 state=states.SUCCESS,
                 meta=msg,
@@ -170,7 +181,8 @@ def register_attendance_tasks(celery):
             return msg
 
         if event.attendance is not None:
-            msg = {"msg": f"Event #{event_id} already has attendance recorded"}
+            msg = {"msg": f"Event #{event_id} {event_label} for {student_name} already has attendance recorded"}
+            print(msg["msg"])
             self.update_state(
                 state=states.SUCCESS,
                 meta=msg,
@@ -178,14 +190,18 @@ def register_attendance_tasks(celery):
             return msg
 
         if event.mute:
-            msg = {"msg": f"Event #{event_id} is muted"}
+            msg = {"msg": f"Event #{event_id} {event_label} for {student_name} is muted"}
+            print(msg["msg"])
             self.update_state(state=states.SUCCESS, meta=msg)
             return msg
+
+        owner_name: str = owner.user.name
 
         # is this event in the past?
         # to decide that, we need to know when the owner has asked for prompts to be delivered
         if owner.mute:
-            msg = {"msg": f"SubmissionRole #{owner.id} is muted"}
+            msg = {"msg": f"Event #{event_id} {event_label} for {student_name}: owner {owner_name} is muted"}
+            print(msg["msg"])
             self.update_state(
                 state=states.SUCCESS,
                 meta=msg,
@@ -194,8 +210,9 @@ def register_attendance_tasks(celery):
 
         if not owner.prompt_after_event:
             msg = {
-                "msg": f"SubmissionRole #{owner.id} has not requested an email prompt"
+                "msg": f"Event #{event_id} {event_label} for {student_name}: owner {owner_name} has not requested an email prompt"
             }
+            print(msg["msg"])
             self.update_state(
                 state=states.SUCCESS,
                 meta=msg,
@@ -203,7 +220,8 @@ def register_attendance_tasks(celery):
             return msg
 
         if event.prompt_sent_timestamp is not None:
-            msg = {"msg": f"SubmissionRole #{owner.id} has already been notified"}
+            msg = {"msg": f"Event #{event_id} {event_label} for {student_name}: owner {owner_name} has already been notified"}
+            print(msg["msg"])
             self.update_state(
                 state=states.SUCCESS,
                 meta=msg,
@@ -226,7 +244,8 @@ def register_attendance_tasks(celery):
         # if the event has not yet taken place, then no need to send a prompt yet
         now = datetime.now()
         if target_time > now:
-            msg = {"msg": f"Event #{event_id} is not yet in the past"}
+            msg = {"msg": f"Event #{event_id} {event_label} for {student_name} is not yet in the past"}
+            print(msg["msg"])
             self.update_state(
                 state=states.SUCCESS,
                 meta=msg,
@@ -245,7 +264,8 @@ def register_attendance_tasks(celery):
 
         # is today a UK holiday?
         if today in holiday_calendar:
-            msg = {"msg": f"Today ({today}) is a UK holiday, so not sending emails"}
+            msg = {"msg": f"Event #{event_id} {event_label} for {student_name}: today ({today}) is a UK holiday, so not sending emails"}
+            print(msg["msg"])
             self.update_state(
                 state=states.SUCCESS,
                 meta=msg,
@@ -255,8 +275,9 @@ def register_attendance_tasks(celery):
         # is today a working day?
         if not is_busday(today):
             msg = {
-                "msg": f"Today ({today}) is not a working day, so not sending emails"
+                "msg": f"Event #{event_id} {event_label} for {student_name}: today ({today}) is not a working day, so not sending emails"
             }
+            print(msg["msg"])
             self.update_state(
                 state=states.SUCCESS,
                 meta=msg,
@@ -269,7 +290,9 @@ def register_attendance_tasks(celery):
         # So should send only if the target time passed recently.
         delta_time: timedelta = now - target_time
         if delta_time.days > 5:
-            msg = {"msg": f"Event #{event_id} is too old to send a prompt"}
+            age_str = humanize.precisedelta(delta_time, minimum_unit="days", format="%d")
+            msg = {"msg": f"Event #{event_id} {event_label} for {student_name} is too old to send a prompt (age: {age_str})"}
+            print(msg["msg"])
             self.update_state(
                 state=states.SUCCESS,
                 meta=msg,

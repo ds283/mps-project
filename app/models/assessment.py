@@ -320,7 +320,7 @@ class PresentationAssessment(
 
     @property
     def available_buildings(self):
-        from .models import Building, Room
+        from .scheduling import Building, Room
 
         q = self.sessions.subquery()
 
@@ -342,7 +342,7 @@ class PresentationAssessment(
 
     @property
     def available_rooms(self):
-        from .models import Building, Room
+        from .scheduling import Building, Room
 
         q = self.sessions.subquery()
 
@@ -1339,7 +1339,7 @@ class PresentationSession(
 
     @property
     def ordered_rooms(self):
-        from .models import Building, Room
+        from .scheduling import Building, Room
 
         query = (
             db.session.query(session_to_rooms.c.room_id)

@@ -21,6 +21,7 @@ from sqlalchemy_utils.types.encrypted.encrypted_type import AesGcmEngine
 from ..cache import cache
 from ..database import db
 from ..shared.sqlalchemy import get_count
+from .assessment import PresentationAssessment, _PresentationAssessment_is_valid
 from .associations import (
     faculty_affiliations,
     faculty_batch_to_tenants,
@@ -29,10 +30,13 @@ from .associations import (
 )
 from .config import get_AES_key
 from .defaults import DEFAULT_STRING_LENGTH
-from .assessment import PresentationAssessment, _PresentationAssessment_is_valid
 from .matching import MatchingAttempt, MatchingRecord, _MatchingRecord_is_valid
 from .model_mixins import ColouredLabelMixin, EditingMetadataMixin, _get_current_year
-from .projects import _Project_is_offerable, _Project_num_assessors, _Project_num_supervisors
+from .projects import (
+    _Project_is_offerable,
+    _Project_num_assessors,
+    _Project_num_supervisors,
+)
 
 
 class FacultyData(db.Model, EditingMetadataMixin):
@@ -136,7 +140,8 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return self.user.email
 
     def _supervisor_pool_query(self, pclass):
-        from .models import Project, ProjectClass
+        from .project_class import ProjectClass
+        from .projects import Project
 
         if isinstance(pclass, ProjectClass):
             pclass_id = pclass.id
@@ -168,7 +173,8 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return {"label": f"In pool for: {n}", "type": "info"}
 
     def _projects_supervisable_query(self, pclass):
-        from .models import Project, ProjectClass
+        from .project_class import ProjectClass
+        from .projects import Project
 
         if isinstance(pclass, ProjectClass):
             pclass_id = pclass.id
@@ -206,7 +212,8 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return {"label": f"{n} supervisable", "type": "success"}
 
     def _projects_offered_query(self, pclass):
-        from .models import Project, ProjectClass
+        from .project_class import ProjectClass
+        from .projects import Project
 
         if isinstance(pclass, ProjectClass):
             pclass_id = pclass.id
@@ -240,7 +247,8 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return {"label": f"{n} offered", "type": "success"}
 
     def variants_offered(self, pclass, filter_warnings=None, filter_errors=None):
-        from .models import Project, ProjectClass, ProjectDescription
+        from .project_class import ProjectClass
+        from .projects import Project, ProjectDescription
 
         if isinstance(pclass, ProjectClass):
             pclass_id = pclass.id
@@ -335,7 +343,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         :param group:
         :return:
         """
-        from .models import Project
+        from .projects import Project
 
         self.affiliations.remove(group)
 
@@ -392,7 +400,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         :param pclass:
         :return:
         """
-        from .models import Project
+        from .projects import Project
 
         # find enrolment record for this project class
         record = self.get_enrollment_record(pclass)
@@ -471,7 +479,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return record.enrolled_labels
 
     def get_enrollment_record(self, pclass):
-        from .models import ProjectClass
+        from .project_class import ProjectClass
 
         if isinstance(pclass, ProjectClass):
             pcl_id = pclass.id
@@ -484,7 +492,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
     @property
     def ordered_enrollments(self):
-        from .models import ProjectClass
+        from .project_class import ProjectClass
 
         return self.enrollments.join(
             ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id
@@ -510,7 +518,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         Return list of projects for which this faculty member is a convenor
         :return:
         """
-        from .models import ProjectClass
+        from .project_class import ProjectClass
 
         pcls = (
             self.convenor_for.order_by(ProjectClass.name).all()
@@ -582,14 +590,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
         pclass=None,
         period=None,
     ):
-        from .models import (
-            LiveProject,
-            ProjectClassConfig,
-            SubmissionPeriodRecord,
-            SubmissionRecord,
-            SubmissionRole,
-            SubmittingStudent,
-        )
+        from .live_projects import LiveProject, SubmittingStudent
+        from .project_class import ProjectClassConfig
+        from .submissions import SubmissionPeriodRecord, SubmissionRole
 
         # at most one of config_id, config, pclass_id, pclass should be defined
         items = sum(
@@ -666,7 +669,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         Return a list of current SubmissionRecord instances for which we are supervisor
         :return:
         """
-        from .models import SubmissionRole
+        from .submissions import SubmissionRole
 
         return self._apply_assignment_filters(
             [
@@ -687,7 +690,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         Return a list of current SubmissionRecord instances for which we are marker
         :return:
         """
-        from .models import SubmissionRole
+        from .submissions import SubmissionRole
 
         return self._apply_assignment_filters(
             SubmissionRole.ROLE_MARKER, config_id, config, pclass_id, pclass, period
@@ -700,7 +703,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         Return a list of current SubmissionRecord instances for which we are moderator
         :return:
         """
-        from .models import SubmissionRole
+        from .submissions import SubmissionRole
 
         return self._apply_assignment_filters(
             SubmissionRole.ROLE_MODERATOR, config_id, config, pclass_id, pclass, period
@@ -709,14 +712,10 @@ class FacultyData(db.Model, EditingMetadataMixin):
     def presentation_assignments(
         self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
     ):
-        from .models import (
-            PresentationSession,
-            ProjectClassConfig,
-            ScheduleAttempt,
-            ScheduleSlot,
-            SubmissionPeriodRecord,
-            SubmissionRecord,
-        )
+        from .assessment import PresentationSession
+        from .project_class import ProjectClassConfig
+        from .scheduling import ScheduleAttempt, ScheduleSlot
+        from .submissions import SubmissionPeriodRecord, SubmissionRecord
 
         # at most one of config_id, config, pclass_id, pclass should be defined
         items = sum(
@@ -817,7 +816,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         Return (supervising CATS, marking CATS) for the current year
         :return:
         """
-        from .models import ProjectClass, ProjectClassConfig
+        from .project_class import ProjectClass, ProjectClassConfig
 
         if isinstance(config_proxy, ProjectClassConfig):
             config = config_proxy
@@ -876,12 +875,9 @@ class FacultyData(db.Model, EditingMetadataMixin):
         return supv, mark, moderate, pres
 
     def has_late_feedback(self, config_proxy, faculty_id):
-        from .models import (
-            ProjectClass,
-            ProjectClassConfig,
-            ScheduleSlot,
-            SubmissionRecord,
-        )
+        from .project_class import ProjectClass, ProjectClassConfig
+        from .scheduling import ScheduleSlot
+        from .submissions import SubmissionRecord
 
         if isinstance(config_proxy, ProjectClassConfig):
             config_id = config_proxy.id
@@ -919,7 +915,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
     @property
     def outstanding_availability_requests(self):
-        from .models import AssessorAttendanceData, PresentationAssessment
+        from .assessment import AssessorAttendanceData, PresentationAssessment
 
         query = (
             db.session.query(AssessorAttendanceData)
@@ -944,7 +940,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
     @property
     def editable_availability_requests(self):
-        from .models import AssessorAttendanceData, PresentationAssessment
+        from .assessment import AssessorAttendanceData, PresentationAssessment
 
         query = (
             db.session.query(AssessorAttendanceData.assessment_id)
@@ -977,12 +973,8 @@ class FacultyData(db.Model, EditingMetadataMixin):
         Compute how many students this supervisor is 'accessible' for (which may be unbounded)
         :return:
         """
-        from .models import (
-            Project,
-            ProjectClass,
-            ProjectClassConfig,
-            ProjectDescription,
-        )
+        from .project_class import ProjectClass, ProjectClassConfig
+        from .projects import Project, ProjectDescription
 
         total = 0.0
         unbounded = False
@@ -1063,7 +1055,12 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
 def _FacultyData_delete_cache(faculty_id):
     from .live_projects import LiveProject
-    from .scheduling import ScheduleAttempt, ScheduleSlot, _ScheduleAttempt_is_valid, _ScheduleSlot_is_valid
+    from .scheduling import (
+        ScheduleAttempt,
+        ScheduleSlot,
+        _ScheduleAttempt_is_valid,
+        _ScheduleSlot_is_valid,
+    )
     from .utilities import _MatchingAttempt_is_valid
 
     year = _get_current_year()
@@ -1547,7 +1544,12 @@ class EnrollmentRecord(db.Model, EditingMetadataMixin):
 
 def _delete_EnrollmentRecord_cache(faculty_id):
     from .live_projects import LiveProject
-    from .scheduling import ScheduleAttempt, ScheduleSlot, _ScheduleAttempt_is_valid, _ScheduleSlot_is_valid
+    from .scheduling import (
+        ScheduleAttempt,
+        ScheduleSlot,
+        _ScheduleAttempt_is_valid,
+        _ScheduleSlot_is_valid,
+    )
     from .utilities import _MatchingAttempt_is_valid
 
     cache.delete_memoized(_Project_is_offerable)

@@ -10,7 +10,7 @@
 
 from ..database import db
 from .defaults import DEFAULT_STRING_LENGTH
-from .models import ColouredLabelMixin
+from .model_mixins import ColouredLabelMixin
 
 
 class Tenant(db.Model, ColouredLabelMixin):

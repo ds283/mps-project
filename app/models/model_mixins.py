@@ -293,7 +293,7 @@ def ProjectConfigurationMixinFactory(
 
         @property
         def ordered_tags(self):
-            from app.models.models import ProjectTag
+            from .projects import ProjectTag
 
             query = (
                 db.session.query(tags_mapped_column.label("tag_id"))
@@ -345,7 +345,7 @@ def ProjectConfigurationMixinFactory(
 
         @property
         def ordered_skills(self):
-            from app.models.models import SkillGroup, TransferableSkill
+            from .academic import SkillGroup, TransferableSkill
 
             query = (
                 db.session.query(skills_mapped_column.label("skill_id"))
@@ -380,7 +380,7 @@ def ProjectConfigurationMixinFactory(
 
         @property
         def ordered_programmes(self):
-            from app.models.models import DegreeProgramme, DegreeType
+            from .academic import DegreeProgramme, DegreeType
 
             query = (
                 db.session.query(programmes_mapped_column.label("programme_id"))
@@ -449,12 +449,9 @@ def ProjectConfigurationMixinFactory(
                     db.session.commit()
 
         def _assessor_list_query(self, pclass):
-            from app.models.models import (
-                EnrollmentRecord,
-                FacultyData,
-                ProjectClass,
-                User,
-            )
+            from .faculty import EnrollmentRecord, FacultyData
+            from .project_class import ProjectClass
+            from .users import User
 
             if isinstance(pclass, int):
                 pclass_id = pclass
@@ -507,7 +504,7 @@ def ProjectConfigurationMixinFactory(
             :param faculty:
             :return:
             """
-            from app.models.models import EnrollmentRecord, FacultyData
+            from .faculty import EnrollmentRecord, FacultyData
 
             if not isinstance(faculty, FacultyData):
                 faculty = db.session.query(FacultyData).filter_by(id=faculty).one()
@@ -642,12 +639,9 @@ def ProjectConfigurationMixinFactory(
                     db.session.commit()
 
         def _supervisor_list_query(self, pclass):
-            from app.models.models import (
-                EnrollmentRecord,
-                FacultyData,
-                ProjectClass,
-                User,
-            )
+            from .faculty import EnrollmentRecord, FacultyData
+            from .project_class import ProjectClass
+            from .users import User
 
             if isinstance(pclass, int):
                 pclass_id = pclass
@@ -695,7 +689,7 @@ def ProjectConfigurationMixinFactory(
             :param faculty:
             :return:
             """
-            from app.models.models import EnrollmentRecord, FacultyData
+            from .faculty import EnrollmentRecord, FacultyData
 
             if not isinstance(faculty, FacultyData):
                 faculty = db.session.query(FacultyData).filter_by(id=faculty).one()
@@ -859,7 +853,7 @@ def ProjectDescriptionMixinFactory(
         # METHODS
 
         def _level_modules_query(self, level_id):
-            from app.models.models import Module
+            from .academic import Module
 
             query = (
                 db.session.query(module_mapped_column.label("module_id"))
@@ -886,7 +880,7 @@ def ProjectDescriptionMixinFactory(
 
         @property
         def ordered_modules(self):
-            from app.models.models import FHEQ_Level, Module
+            from .academic import FHEQ_Level, Module
 
             query = (
                 db.session.query(module_mapped_column.label("module_id"))
@@ -978,13 +972,16 @@ def AssetMixinFactory(acl_name, acr_name):
             return db.relationship("Role", secondary=acr_name, lazy="dynamic")
 
         def _get_userid(self, user):
-            from app.models.models import User
+            from .users import User
 
             user_obj: User = self._get_user(user)
             return user_obj.id
 
         def _get_user(self, user):
-            from app.models.models import FacultyData, StudentData, SubmissionRole, User
+            from .faculty import FacultyData
+            from .students import StudentData
+            from .submissions import SubmissionRole
+            from .users import User
 
             # dereference a Werkzeug LocalProxy if needed, eg. if current_user is passed to us
             if hasattr(user, "_get_current_object"):
@@ -1008,13 +1005,13 @@ def AssetMixinFactory(acl_name, acr_name):
             return user_obj
 
         def _get_roleid(self, role):
-            from app.models.models import Role
+            from .users import Role
 
             role_obj: Role = self._get_role(role)
             return role_obj.id
 
         def _get_role(self, role):
-            from app.models.models import Role
+            from .users import Role
 
             if isinstance(role, Role):
                 role_obj = role
@@ -1052,7 +1049,7 @@ def AssetMixinFactory(acl_name, acr_name):
             return False
 
         def get_eligible_roles(self, user):
-            from app.models.models import Role
+            from .users import Role
 
             user_obj = self._get_user(user)
 

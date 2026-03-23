@@ -520,7 +520,8 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
 
     @property
     def ordered_selecting(self):
-        from .models import ProjectClass, ProjectClassConfig, SelectingStudent
+        from .live_projects import SelectingStudent
+        from .project_class import ProjectClass, ProjectClassConfig
 
         return (
             self.selecting.join(
@@ -532,7 +533,8 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
 
     @property
     def ordered_submitting(self):
-        from .models import ProjectClass, ProjectClassConfig, SubmittingStudent
+        from .live_projects import SubmittingStudent
+        from .project_class import ProjectClass, ProjectClassConfig
 
         return (
             self.submitting.join(
@@ -544,12 +546,9 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
 
     @property
     def active_availability_events(self):
-        from .models import (
-            PresentationAssessment,
-            SubmissionRecord,
-            SubmitterAttendanceData,
-            SubmittingStudent,
-        )
+        from .assessment import PresentationAssessment, SubmitterAttendanceData
+        from .live_projects import SubmittingStudent
+        from .submissions import SubmissionRecord
 
         return (
             db.session.query(PresentationAssessment, SubmissionRecord)

@@ -18,7 +18,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from .defaults import DEFAULT_STRING_LENGTH
-from .models import ColouredLabelMixin, EditingMetadataMixin, ProjectClass
+from .model_mixins import ColouredLabelMixin, EditingMetadataMixin
+from .project_class import ProjectClass
 from .tenants import Tenant
 
 email_template_to_labels = db.Table(

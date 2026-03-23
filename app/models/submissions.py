@@ -690,6 +690,7 @@ def _SubmissionRole_update_handler(mapper, connection, target):
         )
         if record is not None:
             from .live_projects import _SubmittingStudent_is_valid
+
             cache.delete_memoized(_SubmittingStudent_is_valid, record.owner_id)
 
 
@@ -708,6 +709,7 @@ def _SubmissionRole_insert_handler(mapper, connection, target):
         )
         if record is not None:
             from .live_projects import _SubmittingStudent_is_valid
+
             cache.delete_memoized(_SubmittingStudent_is_valid, record.owner_id)
 
 
@@ -726,6 +728,7 @@ def _SubmissionRole_delete_handler(mapper, connection, target):
         )
         if record is not None:
             from .live_projects import _SubmittingStudent_is_valid
+
             cache.delete_memoized(_SubmittingStudent_is_valid, record.owner_id)
 
 
@@ -1854,7 +1857,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     @property
     def schedule_slot(self):
-        from .models import ScheduleAttempt, ScheduleSlot
+        from .scheduling import ScheduleAttempt, ScheduleSlot
 
         if not self.period.has_deployed_schedule:
             return None
@@ -1897,7 +1900,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         allowed_roles: Optional[List[Role]] = None,
         ordering: Optional[List] = None,
     ):
-        from .models import SubmittedAsset
+        from .assets import SubmittedAsset
 
         allowed_user_ids = (
             [x.id for x in allowed_users] if allowed_users is not None else None
@@ -1944,7 +1947,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         allowed_roles: Optional[List[Role]] = None,
         ordering: Optional[List] = None,
     ):
-        from .models import SubmittedAsset
+        from .assets import SubmittedAsset
 
         allowed_user_ids = (
             [x.id for x in allowed_users] if allowed_users is not None else None
@@ -2023,7 +2026,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     @property
     def ordered_attachments(self):
-        from .models import SubmittedAsset
+        from .assets import SubmittedAsset
 
         query = self._build_submitted_attachment_query(
             allowed_users=None,
@@ -2066,7 +2069,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     @property
     def article_list(self):
-        from .models import (
+        from .content import (
             ConvenorSubmitterArticle,
             FormattedArticle,
             ProjectSubmitterArticle,
@@ -2247,7 +2250,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return get_count(query)
 
     def _check_access_control_groups(self, asset):
-        from .models import GeneratedAsset, SubmittedAsset
+        from .assets import GeneratedAsset, SubmittedAsset
 
         asset: Union[SubmittedAsset, GeneratedAsset]
         modified = False
@@ -2261,7 +2264,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return modified
 
     def _check_access_control_users(self, asset, allow_student=False):
-        from .models import GeneratedAsset, SubmittedAsset
+        from .assets import GeneratedAsset, SubmittedAsset
 
         asset: Union[SubmittedAsset, GeneratedAsset]
         modified = False
@@ -2331,7 +2334,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         Fix (some) issues with record configuration
         :return:
         """
-        from .models import SubmittedAsset
+        from .assets import SubmittedAsset
 
         modified = False
 
@@ -2370,7 +2373,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         Return a list of possible issues with the current SubmissionRecord
         :return:
         """
-        from .models import AssetLicense
+        from .assets import AssetLicense
 
         messages = []
 
@@ -2539,6 +2542,7 @@ def _SubmissionRecord_update_handler(mapper, connection, target):
 
     with db.session.no_autoflush:
         from .live_projects import _SubmittingStudent_is_valid
+
         cache.delete_memoized(_SubmissionRecord_is_valid, target.id)
         cache.delete_memoized(_SubmittingStudent_is_valid, target.owner_id)
 
@@ -2552,6 +2556,7 @@ def _SubmissionRecord_insert_handler(mapper, connection, target):
 
     with db.session.no_autoflush:
         from .live_projects import _SubmittingStudent_is_valid
+
         cache.delete_memoized(_SubmissionRecord_is_valid, target.id)
         cache.delete_memoized(_SubmittingStudent_is_valid, target.owner_id)
 
@@ -2565,6 +2570,7 @@ def _SubmissionRecord_delete_handler(mapper, connection, target):
 
     with db.session.no_autoflush:
         from .live_projects import _SubmittingStudent_is_valid
+
         cache.delete_memoized(_SubmissionRecord_is_valid, target.id)
         cache.delete_memoized(_SubmittingStudent_is_valid, target.owner_id)
 
@@ -2717,6 +2723,7 @@ class Bookmark(db.Model):
 def _Bookmark_insert_handler(mapping, connection, target):
     with db.session.no_autoflush:
         from .live_projects import _SelectingStudent_is_valid
+
         cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 
@@ -2724,6 +2731,7 @@ def _Bookmark_insert_handler(mapping, connection, target):
 def _Bookmark_update_handler(mapping, connection, target):
     with db.session.no_autoflush:
         from .live_projects import _SelectingStudent_is_valid
+
         cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 
@@ -2731,6 +2739,7 @@ def _Bookmark_update_handler(mapping, connection, target):
 def _Bookmark_delete_handler(mapping, connection, target):
     with db.session.no_autoflush:
         from .live_projects import _SelectingStudent_is_valid
+
         cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 
@@ -2901,6 +2910,7 @@ def _SelectionRecord_update_handler(mapper, connection, target):
         cache.delete_memoized(_MatchingAttempt_hint_status)
 
         from .live_projects import _SelectingStudent_is_valid
+
         cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 
@@ -2911,6 +2921,7 @@ def _SelectionRecord_insert_handler(mapper, connection, target):
         cache.delete_memoized(_MatchingAttempt_hint_status)
 
         from .live_projects import _SelectingStudent_is_valid
+
         cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 
@@ -2921,6 +2932,7 @@ def _SelectionRecord_delete_handler(mapper, connection, target):
         cache.delete_memoized(_MatchingAttempt_hint_status)
 
         from .live_projects import _SelectingStudent_is_valid
+
         cache.delete_memoized(_SelectingStudent_is_valid, target.owner_id)
 
 

@@ -2390,7 +2390,6 @@ def edit_student(id):
         data.last_edit_timestamp = datetime.now()
 
         # validation workflow fields are handled by SQLAlchemy listeners
-        # see models.py
 
         _datastore.commit()
 

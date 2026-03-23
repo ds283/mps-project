@@ -665,7 +665,8 @@ def _get_object_id(obj):
 def add_notification(
     user, event, object_1, object_2=None, autocommit=True, notification_id=None
 ):
-    from .models import FacultyData, StudentData
+    from .faculty import FacultyData
+    from .students import StudentData
 
     if (
         isinstance(user, User)
@@ -811,7 +812,8 @@ def add_notification(
 
 
 def delete_notification(user, event, object_1, object_2=None):
-    from .models import FacultyData, StudentData
+    from .faculty import FacultyData
+    from .students import StudentData
 
     if (
         isinstance(user, User)

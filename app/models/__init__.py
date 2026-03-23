@@ -8,32 +8,55 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+# ############################
+from typing import List, Tuple, Union
+
+from .academic import *
+from .assessment import *
+from .assets import *
+from .associations import *
 from .choices import (
+    academic_titles,
+    academic_titles_dict,
+    auto_enrol_year_choices,
+    email_freq_choices,
+    extent_choices,
+    matching_history_choices,
+    semester_choices,
+    session_choices,
+    short_academic_titles,
+    short_academic_titles_dict,
+    solver_choices,
+    start_year_choices,
     student_level_choices,
     year_choices,
-    extent_choices,
-    start_year_choices,
-    academic_titles,
-    short_academic_titles,
-    academic_titles_dict,
-    short_academic_titles_dict,
-    matching_history_choices,
-    solver_choices,
-    session_choices,
-    semester_choices,
-    email_freq_choices,
-    auto_enrol_year_choices,
 )
+from .content import *
 from .defaults import (
-    DEFAULT_STRING_LENGTH,
-    IP_LENGTH,
-    YEAR_LENGTH,
-    PASSWORD_HASH_LENGTH,
-    SERIALIZED_LAYOUT_LENGTH,
     DEFAULT_ASSIGNED_MARKERS,
     DEFAULT_ASSIGNED_MODERATORS,
+    DEFAULT_STRING_LENGTH,
+    IP_LENGTH,
+    PASSWORD_HASH_LENGTH,
+    SERIALIZED_LAYOUT_LENGTH,
+    YEAR_LENGTH,
 )
-from .emails import EmailTemplate, EmailTemplateLabel
-from .models import *
-from .scheduler import CrontabSchedule, IntervalSchedule, DatabaseSchedulerEntry
-from .tenants import Tenant
+from .emails import *
+from .faculty import *
+from .feedback import *
+from .live_projects import *
+from .matching import *
+from .model_mixins import *
+from .project_class import *
+from .projects import *
+from .scheduler import *
+from .scheduling import *
+from .students import *
+from .submissions import *
+from .tenants import *
+from .users import Role, User
+from .utilities import *
+
+ProjectLike = Union[Project, LiveProject]
+ProjectLikeList = List[ProjectLike]
+ProjectDescLikeList = List[Tuple[ProjectLike, ProjectDescription]]

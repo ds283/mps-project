@@ -326,16 +326,18 @@ def register_backup_tasks(celery):
                 drop_record: BackupRecord = (
                     db.session.query(BackupRecord).filter_by(id=drop_id).first()
                 )
-                dropped.append((drop_id, str(drop_record.date)))
+                if drop_record is not None:
+                    dropped.append((drop_id, str(drop_record.date)))
 
-                success, msg = remove_backup(drop_id)
+                    success, msg = remove_backup(drop_id)
 
-                if not success:
-                    self.update_state(
-                        state="FAILED",
-                        meta={"msg": "Delete failed: {msg}".format(msg=msg)},
-                    )
-                    raise self.retry()
+                    if not success:
+                        db.session.rollback()
+                        self.update_state(
+                            state="FAILED",
+                            meta={"msg": "Delete failed: {msg}".format(msg=msg)},
+                        )
+                        raise self.retry()
 
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

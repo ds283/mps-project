@@ -495,6 +495,8 @@ def set_attendance(event_id, attendance):
 
     try:
         event.attendance = attendance
+        event.last_edit_id = current_user.id
+        event.last_edit_timestamp = datetime.now()
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -605,6 +607,8 @@ def edit_event_team(event_id):
                 event.team.remove(role)
             for role in new_team:
                 event.team.append(role)
+            event.last_edit_id = current_user.id
+            event.last_edit_timestamp = datetime.now()
             db.session.commit()
             flash(
                 f'Supervision team for event "{event.name}" has been updated.',
@@ -815,6 +819,8 @@ def reassign_event_owner(event_id):
 
             # Update the owner
             event.owner_id = new_owner_role.id
+            event.last_edit_id = current_user.id
+            event.last_edit_timestamp = datetime.now()
 
             db.session.commit()
             flash(
@@ -898,6 +904,8 @@ def set_regular_meeting_time(role_id):
                 target_date = unit_start_date + timedelta(days=weekday_shift)
                 event.time = datetime.combine(target_date, role.regular_meeting_time)
                 event.location = role.regular_meeting_location
+                event.last_edit_id = current_user.id
+                event.last_edit_timestamp = datetime.now()
 
             db.session.commit()
         except SQLAlchemyError as e:
@@ -956,6 +964,8 @@ def set_mute_event(event_id, value):
 
     try:
         event.mute = value_
+        event.last_edit_id = current_user.id
+        event.last_edit_timestamp = datetime.now()
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -1115,6 +1125,8 @@ def change_event_time(event_id):
         try:
             event.time = form.time.data
             event.location = form.location.data
+            event.last_edit_id = current_user.id
+            event.last_edit_timestamp = datetime.now()
 
             db.session.commit()
         except SQLAlchemyError as e:

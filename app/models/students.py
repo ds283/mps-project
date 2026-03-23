@@ -8,6 +8,11 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .live_projects import SelectingStudent, SubmittingStudent
+
 from sqlalchemy import and_
 from sqlalchemy.orm import validates
 from sqlalchemy_utils import EncryptedType
@@ -492,7 +497,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
         years = set()
 
         for rec in self.selecting.filter_by(retired=True):
-            rec: SelectingStudent
+            rec: "SelectingStudent"
             if rec.config is not None and rec.config.year is not None:
                 year = rec.config.year
                 years.add(year)
@@ -502,7 +507,7 @@ class StudentData(db.Model, WorkflowMixin, EditingMetadataMixin):
                 selector_records[year].append(rec)
 
         for rec in self.submitting.filter_by(retired=True):
-            rec: SubmittingStudent
+            rec: "SubmittingStudent"
             if rec.config is not None and rec.config.year is not None:
                 year = rec.config.year
                 years.add(year)

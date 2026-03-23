@@ -8,9 +8,19 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from datetime import datetime, timedelta
+from typing import List, Optional
+
+from sqlalchemy import orm
+from sqlalchemy.event import listens_for
+
+from ..cache import cache
+from ..database import db
 from ..shared.quickfixes import QUICKFIX_POPULATE_SELECTION_FROM_BOOKMARKS_AVAILABLE
+from ..shared.sqlalchemy import get_count
 from .assessment import _PresentationAssessment_is_valid
 from .associations import (
+    live_assessors,
     live_project_programmes,
     live_project_skills,
     live_project_supervision,
@@ -20,23 +30,37 @@ from .associations import (
     sel_group_filter_table,
     sel_skill_filter_table,
 )
-from .defaults import IP_LENGTH
+from .defaults import DEFAULT_STRING_LENGTH, IP_LENGTH
+from .faculty import FacultyData
 from .matching import (
     MatchingRecord,
     _delete_MatchingRecord_cache,
     _MatchingRecord_is_valid,
 )
 from .model_mixins import (
+    AlternativesPriorityMixin,
     ConfirmRequestStatesMixin,
+    ProjectConfigurationMixinFactory,
+    ProjectDescriptionMixinFactory,
 )
-from .project_class import *
-from .project_class import _get_submission_period
-from .projects import *
+from .project_class import (
+    ProjectClassConfig,
+    SubmissionPeriodDefinitionLike,
+    _get_submission_period,
+)
+from .projects import Project, ProjectAlternative
 from .students import StudentData
 from .submissions import Bookmark, CustomOffer, SelectionRecord, SubmissionRecord
-
-# Import wildcard symbols needed from already-extracted modules
-from .utilities import *
+from .users import User
+from .utilities import (
+    ConvenorSelectorTask,
+    ConvenorSubmitterTask,
+    ConvenorTasksMixinFactory,
+    EmailNotification,
+    PopularityRecord,
+    add_notification,
+    delete_notification,
+)
 
 
 class LiveProject(

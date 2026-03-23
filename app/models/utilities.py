@@ -12,8 +12,14 @@ import json
 from datetime import datetime
 from os import path
 from time import time as current_seconds_since_epoch
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    from .faculty import EnrollmentRecord
+    from .live_projects import LiveProject, MatchingRecord, SelectingStudent
+    from .project_class import ProjectClassConfig
 
 from flask import current_app
 from sqlalchemy import and_, or_, orm
@@ -263,9 +269,9 @@ def ConvenorTasksMixinFactory(subclass):
                 ~subclass.complete,
                 ~subclass.dropped,
                 or_(
-                    subclass.defer_date == None,
+                    subclass.defer_date.is_(None),
                     and_(
-                        subclass.defer_date != None,
+                        subclass.defer_date.is_not(None),
                         subclass.defer_date <= func.curdate(),
                     ),
                 ),
@@ -276,7 +282,7 @@ def ConvenorTasksMixinFactory(subclass):
             return self.tasks.filter(
                 ~subclass.complete,
                 ~subclass.dropped,
-                subclass.due_date != None,
+                subclass.due_date.is_not(None),
                 subclass.due_date < func.curdate(),
             )
 
@@ -366,7 +372,11 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
     subject_operations = {}
 
     # define utility decorator to insert into dispatch table
-    assign = lambda table, key: lambda f: table.setdefault(key, f)
+    def assign(table, key):
+        def decorator(f):
+            return table.setdefault(key, f)
+
+        return decorator
 
     @assign(str_operations, EmailNotificationsMixin.CONFIRMATION_REQUEST_CREATED)
     def _request_created(self):
@@ -515,6 +525,7 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
     @assign(str_operations, EmailNotificationsMixin.FACULTY_REENROLL_SUPERVISOR)
     def _request_reenroll_supervisor(self):
         from .faculty import EnrollmentRecord
+
         record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
         if record is None:
             return "<missing database row>"
@@ -532,6 +543,7 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
     @assign(str_operations, EmailNotificationsMixin.FACULTY_REENROLL_MARKER)
     def _request_reenroll_marker(self):
         from .faculty import EnrollmentRecord
+
         record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
         if record is None:
             return "<missing database row>"
@@ -546,6 +558,7 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
     @assign(str_operations, EmailNotificationsMixin.FACULTY_REENROLL_MODERATOR)
     def _request_reenroll_moderator(self):
         from .faculty import EnrollmentRecord
+
         record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
         if record is None:
             return "<missing database row>"
@@ -560,6 +573,7 @@ class EmailNotification(db.Model, EmailNotificationsMixin):
     @assign(str_operations, EmailNotificationsMixin.FACULTY_REENROLL_PRESENTATIONS)
     def _request_reenroll_presentations(self):
         from .faculty import EnrollmentRecord
+
         record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
         if record is None:
             return "<missing database row>"

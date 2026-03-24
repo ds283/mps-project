@@ -301,9 +301,9 @@ def _resolve_tenant_and_pclass(tenant, pclass) -> Tuple[Optional[int], Optional[
 
 
 def _find_template(
-        template_type: int,
-        tenant_id: Optional[int],
-        pclass_id: Optional[int],
+    template_type: int,
+    tenant_id: Optional[int],
+    pclass_id: Optional[int],
 ) -> "EmailTemplate":
     """
     Find the active EmailTemplate that best matches the given type, tenant, and pclass,
@@ -339,9 +339,9 @@ _ManifestEntry = Tuple[bool, str, Optional[str], Optional[str]]
 
 
 def _process_attachments(
-        msg: EmailMultiAlternatives,
-        attachments,
-        max_attachment_size: int,
+    msg: EmailMultiAlternatives,
+    attachments,
+    max_attachment_size: int,
 ) -> List[_ManifestEntry]:
     """
     Iterate over EmailWorkflowItemAttachment instances, attaching each file to *msg*
@@ -399,7 +399,9 @@ def _process_attachments(
         display_name = (
             attachment.name
             if attachment.name
-            else (str(asset.target_name) if asset.target_name else str(asset.unique_name))
+            else (
+                str(asset.target_name) if asset.target_name else str(asset.unique_name)
+            )
         )
 
         if current_size + asset_size > max_attachment_size:
@@ -413,7 +415,9 @@ def _process_attachments(
                 )
             manifest.append((False, display_name, download_url, attachment.description))
         else:
-            msg.attach(filename=display_name, mimetype=asset.mimetype, content=storage.get())
+            msg.attach(
+                filename=display_name, mimetype=asset.mimetype, content=storage.get()
+            )
             current_size += asset_size
             manifest.append((True, display_name, None, attachment.description))
 
@@ -421,7 +425,7 @@ def _process_attachments(
 
 
 def _build_attachments_footer(
-        manifest: List[Tuple[bool, str, Optional[str], Optional[str]]],
+    manifest: List[Tuple[bool, str, Optional[str], Optional[str]]],
 ) -> str:
     """
     Build a nicely-formatted HTML footer listing all attachments and download links.
@@ -566,8 +570,8 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
         subject_kwargs: Optional[Dict[str, Any]] = None,
         body_kwargs: Optional[Dict[str, Any]] = None,
         body_attachments: Optional[Dict[str, Callable]] = None,
-            attachments=None,
-            max_attachment_size: int = DEFAULT_MAX_ATTACHMENT_SIZE,
+        attachments=None,
+        max_attachment_size: int = DEFAULT_MAX_ATTACHMENT_SIZE,
         tenant=None,
         pclass=None,
     ):

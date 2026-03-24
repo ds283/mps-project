@@ -17,6 +17,7 @@ from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
+from .assets import GeneratedAsset, SubmittedAsset, TemporaryAsset
 from .defaults import DEFAULT_STRING_LENGTH
 from .model_mixins import ColouredLabelMixin, EditingMetadataMixin
 from .project_class import ProjectClass
@@ -489,3 +490,248 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
             pass
 
         return msg
+
+
+class EmailWorkflowItemAttachment(db.Model):
+    __tablename__ = "email_workflow_item_attachments"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # link to generated asset
+    generated_asset_id = db.Column(
+        db.Integer(), db.ForeignKey("generated_assets.id"), nullable=True
+    )
+    generated_asset = db.relationship(
+        "GeneratedAsset",
+        foreign_keys=[generated_asset_id],
+        uselist=False,
+        backref=db.backref("email_workflow_item_attachments", lazy="dynamic"),
+    )
+
+    # link to submitted asset
+    submitted_asset_id = db.Column(
+        db.Integer(), db.ForeignKey("submitted_assets.id"), nullable=True
+    )
+    submitted_asset = db.relationship(
+        "SubmittedAsset",
+        foreign_keys=[submitted_asset_id],
+        uselist=False,
+        backref=db.backref("email_workflow_item_attachments", lazy="dynamic"),
+    )
+
+    # link to temporary asset
+    temporary_asset_id = db.Column(
+        db.Integer(), db.ForeignKey("temporary_assets.id"), nullable=True
+    )
+    temporary_asset = db.relationship(
+        "TemporaryAsset",
+        foreign_keys=[temporary_asset_id],
+        uselist=False,
+        backref=db.backref("email_workflow_item_attachments", lazy="dynamic"),
+    )
+
+    # manifest comment/description
+    description = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
+    )
+
+    @classmethod
+    def build_(
+        cls,
+        description,
+        generated_asset=None,
+        submitted_asset=None,
+        temporary_asset=None,
+    ):
+        # check that at only one of generated_asset, submitted_asset, and temporary_asset is specified
+        num_assets = (
+            (1 if generated_asset is not None else 0)
+            + (1 if submitted_asset is not None else 0)
+            + (1 if temporary_asset is not None else 0)
+        )
+        if num_assets != 1:
+            raise RuntimeError(
+                f"Exactly one of generated_asset, submitted_asset, and temporary_asset must be specified, but got {num_assets} instead"
+            )
+
+        if description is None or len(description) == 0:
+            raise RuntimeError(
+                f'Invalid description "{description}" (value="{description}") in EmailWorkflowItemAttachment.build_()'
+            )
+
+        generated_asset_id: Optional[int] = None
+        submitted_asset_id: Optional[int] = None
+        temporary_asset_id: Optional[int] = None
+
+        if isinstance(generated_asset, GeneratedAsset):
+            generated_asset_id = generated_asset.id
+        elif isinstance(generated_asset, int):
+            generated_asset_id = generated_asset
+        elif generated_asset is not None:
+            raise RuntimeError(
+                f'Invalid generated_asset type "{type(generated_asset)}" (value="{generated_asset}") in EmailWorkflowItemAttachment.build_()'
+            )
+
+        if isinstance(submitted_asset, SubmittedAsset):
+            submitted_asset_id = submitted_asset.id
+        elif isinstance(submitted_asset, int):
+            submitted_asset_id = submitted_asset
+        elif submitted_asset is not None:
+            raise RuntimeError(
+                f'Invalid submitted_asset type "{type(submitted_asset)}" (value="{submitted_asset}") in EmailWorkflowItemAttachment.build_()'
+            )
+
+        if isinstance(temporary_asset, TemporaryAsset):
+            temporary_asset_id = temporary_asset.id
+        elif isinstance(temporary_asset, int):
+            temporary_asset_id = temporary_asset
+        elif temporary_asset is not None:
+            raise RuntimeError(
+                f'Invalid temporary_asset type "{type(temporary_asset)}" (value="{temporary_asset}") in EmailWorkflowItemAttachment.build_()'
+            )
+
+        return cls(
+            generated_asset_id=generated_asset_id,
+            submitted_asset_id=submitted_asset_id,
+            temporary_asset_id=temporary_asset_id,
+            description=description,
+        )
+
+
+# association table linking EmailWorkflowManifestItem to EmailWorkflowItem
+email_workflow_item_attachment_to_workflow_item = db.Table(
+    "email_workflow_item_attachment_to_workflow_item",
+    db.Column(
+        "email_workflow_item_attachment_id",
+        db.Integer(),
+        db.ForeignKey("email_workflow_item_attachments.id"),
+    ),
+    db.Column(
+        "email_workflow_item_id", db.Integer(), db.ForeignKey("email_workflow_items.id")
+    ),
+)
+
+
+class EmailWorkflowItem(db.Model, EditingMetadataMixin):
+    __tablename__ = "email_workflow_items"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # subject payload, formatted as a JSON-serialized dictionary
+    subject_payload = db.Column(db.Text())
+
+    # body payload, formatted as a JSON-serialized dictionary
+    body_payload = db.Column(db.Text())
+
+    # explicit subject override for this email
+    subject_override = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+
+    # explicit body override for this email
+    body_override = db.Column(db.Text())
+
+    # email sent timestamp
+    sent_timestamp = db.Column(db.DateTime(), index=True)
+
+    # list of attachments
+    attachments = db.relationship(
+        "EmailWorkflowItemAttachment",
+        secondary=email_workflow_item_attachment_to_workflow_item,
+        lazy="dynamic",
+        backref=db.backref("email_workflow_item", lazy="dynamic"),
+    )
+
+    # logged email identifier (valid once the email has been sent)
+    email_log_id = db.Column(db.Integer(), db.ForeignKey("email_log.id"), nullable=True)
+    email_log = db.relationship(
+        "EmailLog",
+        foreign_keys=[email_log_id],
+        uselist=False,
+        backref=db.backref("email_workflow_items", lazy="dynamic"),
+    )
+
+
+# association table for email workflows to project classes
+email_workflow_to_pclasses = db.Table(
+    "email_workflow_to_pclasses",
+    db.Column("email_workflow_id", db.Integer(), db.ForeignKey("email_workflows.id")),
+    db.Column("project_class_id", db.Integer(), db.ForeignKey("project_classes.id")),
+)
+
+
+class EmailWorkflow(db.Model, EditingMetadataMixin):
+    __tablename__ = "email_workflows"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # completed flag
+    completed = db.Column(db.Boolean(), nullable=False, default=False)
+
+    # completed timestamp
+    completed_timestamp = db.Column(db.DateTime(), index=True)
+
+    # send time - no emails will be sent before this time
+    send_time = db.Column(db.DateTime(), nullable=False)
+
+    # paused flag - is this workflow currently paused?
+    paused = db.Column(db.Boolean(), nullable=False, default=False)
+
+    # associated project classes
+    pclasses = db.relationship(
+        "ProjectClass",
+        secondary=email_workflow_to_pclasses,
+        lazy="dynamic",
+        backref=db.backref("workflows", lazy="dynamic"),
+    )
+
+    # name of workflow
+    name = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=False
+    )
+
+    # creation datestamp, userid and last edited datestamp, userid are recorded via the EditingMetadataMixin
+
+    # link to EmailTemplate to be used
+    template_id = db.Column(
+        db.Integer(), db.ForeignKey("email_templates.id"), nullable=False
+    )
+    template = db.relationship(
+        "EmailTemplate", backref=db.backref("workflows", lazy="dynamic")
+    )
+
+    @classmethod
+    def build_(cls, name, template, send_time, pclasses=None):
+        if name is None or len(name) == 0:
+            raise RuntimeError(
+                f'Invalid name "{name}" (value="{name}") in EmailWorkflow.build_()'
+            )
+
+        if template is None:
+            raise RuntimeError(
+                f'Invalid template "{template}" (value="{template}") in EmailWorkflow.build_()'
+            )
+
+        if send_time is None:
+            raise RuntimeError(
+                f'Invalid send_time "{send_time}" (value="{send_time}") in EmailWorkflow.build_()'
+            )
+
+        if pclasses is None:
+            pclasses = []
+        elif isinstance(pclasses, ProjectClass):
+            pclasses = [pclasses]
+        elif not isinstance(pclasses, Iterable):
+            raise RuntimeError(
+                f'Invalid pclasses type "{type(pclasses)}" (value="{pclasses}") in EmailWorkflow.build_()'
+            )
+
+        return cls(
+            name=name,
+            template=template,
+            send_time=send_time,
+            pclasses=pclasses,
+            completed=False,
+            paused=False,
+        )

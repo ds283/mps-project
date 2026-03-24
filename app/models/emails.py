@@ -7,6 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+import json
 from datetime import datetime
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
@@ -631,6 +632,9 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
     # explicit body override for this email
     body_override = db.Column(db.Text())
 
+    # granular pause flag for this specific email item
+    paused = db.Column(db.Boolean(), nullable=False, default=False)
+
     # email sent timestamp
     sent_timestamp = db.Column(db.DateTime(), index=True)
 
@@ -658,6 +662,30 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
         uselist=False,
         backref=db.backref("email_workflow_items", lazy="dynamic"),
     )
+
+    @classmethod
+    def build_(cls, subject_payload, body_payload, attachments=None):
+        if attachments is None:
+            attachments = []
+
+        if isinstance(attachments, EmailWorkflowItemAttachment):
+            attachments = [attachments]
+        elif not isinstance(attachments, Iterable):
+            raise RuntimeError(
+                f'Invalid attachments type "{type(attachments)}" (value="{attachments}") in EmailWorkflowItem.build_()'
+            )
+
+        return cls(
+            subject_payload=json.dumps(subject_payload),
+            body_payload=json.dumps(body_payload),
+            attachments=attachments,
+            subject_override=None,
+            body_override=None,
+            paused=False,
+            sent_timestamp=None,
+            send_in_progress_timestamp=None,
+            celery_send_in_progress_task_id=None,
+        )
 
 
 # association table for email workflows to project classes

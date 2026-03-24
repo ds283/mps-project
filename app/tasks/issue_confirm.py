@@ -9,7 +9,7 @@
 #
 
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from celery import chain, group
 from celery.exceptions import Ignore
@@ -21,6 +21,8 @@ from ..models import (
     BackupRecord,
     DescriptionComment,
     EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
     EnrollmentRecord,
     FacultyData,
     ProjectClass,
@@ -30,6 +32,7 @@ from ..models import (
     TaskRecord,
     User,
 )
+from ..models.emails import encode_email_payload
 from ..shared.sqlalchemy import get_count
 from ..task_queue import progress_update, register_task
 
@@ -222,11 +225,31 @@ def register_issue_confirm_tasks(celery):
             )
             raise Ignore()
 
+        template = EmailTemplate.find_template_(
+            EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass=config.project_class
+        )
+        workflow = EmailWorkflow.build_(
+            name=f"Confirmation request: {config.project_class.name}",
+            template=template,
+            defer=timedelta(hours=1),
+            pclasses=[config.project_class],
+        )
+        db.session.add(workflow)
+        db.session.flush()
+        workflow_id = workflow.id
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
         notify = celery.tasks["app.tasks.utilities.email_notification"]
 
         task = chain(
             group(
-                send_notification_email.si(d, config_id)
+                send_notification_email.si(d, config_id, workflow_id)
                 for d in notify_list
                 if d is not None
             ),
@@ -327,46 +350,45 @@ def register_issue_confirm_tasks(celery):
         return faculty_id
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_notification_email(self, faculty_id, config_id):
+    def send_notification_email(self, faculty_id, config_id, workflow_id):
         try:
             data: FacultyData = FacultyData.query.filter_by(id=faculty_id).first()
             config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
                 id=config_id
             ).first()
+            workflow: EmailWorkflow = EmailWorkflow.query.filter_by(id=workflow_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if data is None or config is None:
+        if data is None or config is None or workflow is None:
             self.update_state(
                 "FAILURE", meta={"msg": "Could not load database records"}
             )
             raise Ignore()
 
-        projects = data.projects_offered(config.project_class)
+        projects = list(data.projects_offered(config.project_class))
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.PROJECT_CONFIRMATION_REQUESTED,
-            to=[data.user.email],
-            subject_kwargs={"name": config.project_class.name},
-            body_kwargs={
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"name": config.project_class.name}),
+            body_payload=encode_email_payload({
                 "user": data.user,
                 "pclass": config.project_class,
                 "config": config,
                 "number_projects": len(projects),
                 "projects": projects,
-            },
+            }),
+            recipient_list=[data.user.email],
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send confirmation request email to {r}".format(
-                r=", ".join(msg.to)
-            ),
-        )
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         return 1
 
@@ -391,11 +413,31 @@ def register_issue_confirm_tasks(celery):
         for faculty in config.faculty_waiting_confirmation:
             recipients.add(faculty.id)
 
+        template = EmailTemplate.find_template_(
+            EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass=config.project_class
+        )
+        workflow = EmailWorkflow.build_(
+            name=f"Confirmation reminder: {config.project_class.name}",
+            template=template,
+            defer=timedelta(hours=1),
+            pclasses=[config.project_class],
+        )
+        db.session.add(workflow)
+        db.session.flush()
+        workflow_id = workflow.id
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
         notify = celery.tasks["app.tasks.utilities.email_notification"]
 
         tasks = chain(
             group(
-                send_reminder_email.si(r, config_id)
+                send_reminder_email.si(r, config_id, workflow_id)
                 for r in recipients
                 if r is not None
             ),
@@ -405,46 +447,45 @@ def register_issue_confirm_tasks(celery):
         return self.replace(tasks)
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_reminder_email(self, faculty_id, config_id):
+    def send_reminder_email(self, faculty_id, config_id, workflow_id):
         try:
             data: FacultyData = FacultyData.query.filter_by(id=faculty_id).first()
             config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
                 id=config_id
             ).first()
+            workflow: EmailWorkflow = EmailWorkflow.query.filter_by(id=workflow_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if data is None or config is None:
+        if data is None or config is None or workflow is None:
             self.update_state(
                 "FAILURE", meta={"msg": "Could not load database records"}
             )
             raise Ignore()
 
-        projects = data.projects_offered(config.project_class)
+        projects = list(data.projects_offered(config.project_class))
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.PROJECT_CONFIRMATION_REMINDER,
-            to=[data.user.email],
-            subject_kwargs={"name": config.project_class.name},
-            body_kwargs={
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"name": config.project_class.name}),
+            body_payload=encode_email_payload({
                 "user": data.user,
                 "pclass": config.project_class,
                 "config": config,
                 "number_projects": len(projects),
                 "projects": projects,
-            },
+            }),
+            recipient_list=[data.user.email],
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send confirmation reminder email to {r}".format(
-                r=", ".join(msg.to)
-            ),
-        )
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         return 1
 
@@ -596,30 +637,40 @@ def register_issue_confirm_tasks(celery):
         project = record.parent
         owner = project.owner
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.PROJECT_CONFIRMATION_REVISE_REQUEST,
-            to=[owner.user.email],
-            reply_to=[current_user.email],
-            subject_kwargs={"name": project.name, "desc": record.label},
-            body_kwargs={
+        template = EmailTemplate.find_template_(
+            EmailTemplate.PROJECT_CONFIRMATION_REVISE_REQUEST
+        )
+        workflow = EmailWorkflow.build_(
+            name=f"Confirmation revision request: {project.name}",
+            template=template,
+            defer=timedelta(hours=1),
+            pclasses=list(record.project_classes),
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"name": project.name, "desc": record.label}),
+            body_payload=encode_email_payload({
                 "user": owner.user,
-                "pclasses": record.project_classes,
+                "pclasses": list(record.project_classes),
                 "project": project,
                 "record": record,
                 "pcl_names": pcl_names,
                 "current_user": current_user,
-            },
+            }),
+            recipient_list=[owner.user.email],
+            reply_to=[current_user.email],
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send description revision request to {r}".format(
-                r=", ".join(msg.to)
-            ),
-        )
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         return 1
 
@@ -726,26 +777,40 @@ def register_issue_confirm_tasks(celery):
         if len(recipients) == 0:
             return
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.PROJECT_CONFIRMATION_NEW_COMMENT,
-            to=list(recipients),
-            subject_kwargs={
-                "proj": comment.parent.parent.name,
-                "desc": comment.parent.label,
-            },
-            body_kwargs={
-                "comment": comment,
-                "project": comment.parent.parent,
-                "desc": comment.parent,
-            },
-        )
+        project: ProjectDescription = comment.parent
+        desc_project = project.parent
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Notify watchers of new comment".format(r=", ".join(msg.to)),
+        template = EmailTemplate.find_template_(
+            EmailTemplate.PROJECT_CONFIRMATION_NEW_COMMENT
         )
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        workflow = EmailWorkflow.build_(
+            name=f"New comment notification: {desc_project.name}",
+            template=template,
+            defer=timedelta(hours=1),
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({
+                "proj": desc_project.name,
+                "desc": project.label,
+            }),
+            body_payload=encode_email_payload({
+                "comment": comment,
+                "project": desc_project,
+                "desc": project,
+            }),
+            recipient_list=list(recipients),
+        )
+        item.workflow = workflow
+        db.session.add(item)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         return 1

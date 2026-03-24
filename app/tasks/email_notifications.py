@@ -9,6 +9,7 @@
 
 from datetime import datetime, date, timedelta
 
+
 import holidays
 from celery import chain, group
 from celery.exceptions import Ignore
@@ -28,7 +29,10 @@ from ..models import (
     SelectingStudent,
     ProjectClassConfig,
     EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
 )
+from ..models.emails import encode_email_payload
 from ..shared.utils import get_current_year
 from ..task_queue import progress_update, register_task
 
@@ -534,26 +538,34 @@ def register_email_notification_tasks(celery):
 
         outstanding_crqs = _get_outstanding_faculty_confirmation_requests(user)
 
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.NOTIFICATIONS_FACULTY_SINGLE,
-            to=[user.email],
-            subject_kwargs={"subject": notification.msg_subject()},
-            body_kwargs={
+        template = EmailTemplate.find_template_(EmailTemplate.NOTIFICATIONS_FACULTY_SINGLE)
+        workflow = EmailWorkflow.build_(
+            name=f"Faculty notification email: {user.name}",
+            template=template,
+            defer=timedelta(minutes=15),
+            creator=user,
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"subject": notification.msg_subject()}),
+            body_payload=encode_email_payload({
                 "user": user,
                 "notification": notification,
                 "outstanding": outstanding_crqs,
-            },
+            }),
+            recipient_list=[user.email],
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send notification email to {r}".format(r=", ".join(msg.to)),
-        )
-
-        # queue Celery task to send the email
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         # return id of the notification we've just handled; this will eventually be passed through to the
         # reset_notifications and reset_last_email_time handlers
@@ -621,26 +633,34 @@ def register_email_notification_tasks(celery):
         else:
             subject = "Projects web portal: summary of notifications and events"
 
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.NOTIFICATIONS_FACULTY_ROLLUP,
-            to=[user.email],
-            subject_kwargs={"subject": subject},
-            body_kwargs={
+        template = EmailTemplate.find_template_(EmailTemplate.NOTIFICATIONS_FACULTY_ROLLUP)
+        workflow = EmailWorkflow.build_(
+            name=f"Faculty notification rollup email: {user.name}",
+            template=template,
+            defer=timedelta(minutes=15),
+            creator=user,
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"subject": subject}),
+            body_payload=encode_email_payload({
                 "user": user,
                 "notifications": notifications,
                 "outstanding": outstanding_crqs,
-            },
+            }),
+            recipient_list=[user.email],
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send notification email to {r}".format(r=", ".join(msg.to)),
-        )
-
-        # queue Celery task to send the email
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         previous_set = set(previous_ids)
         ids_set = set(n_ids)
@@ -677,30 +697,44 @@ def register_email_notification_tasks(celery):
         # if req is None, assume ConfirmRequest has been deleted but the corresponding EmailNotification has been
         # orphaned. That means we should do nothing
         if req is not None:
-            msg = EmailTemplate.apply_(
-                template_type=EmailTemplate.NOTIFICATIONS_REQUEST_MEETING,
-                to=[req.owner.student.user.email, req.project.owner.user.email],
-                reply_to=[req.project.owner.user.email],
-                subject_kwargs={"name": req.project.config.project_class.name},
-                body_kwargs={
+            template = EmailTemplate.find_template_(
+                EmailTemplate.NOTIFICATIONS_REQUEST_MEETING,
+                pclass=req.project.config.project_class,
+            )
+            workflow = EmailWorkflow.build_(
+                name=f"Meeting request notification: {req.project.name}",
+                template=template,
+                defer=timedelta(minutes=15),
+                pclasses=[req.project.config.project_class],
+            )
+            db.session.add(workflow)
+            db.session.flush()
+
+            item = EmailWorkflowItem.build_(
+                subject_payload=encode_email_payload(
+                    {"name": req.project.config.project_class.name}
+                ),
+                body_payload=encode_email_payload({
                     "supervisor": req.project.owner.user,
                     "student": req.owner.student,
                     "config": req.project.config,
                     "project": req.project,
-                },
+                }),
+                recipient_list=[
+                    req.owner.student.user.email,
+                    req.project.owner.user.email,
+                ],
+                reply_to=[req.project.owner.user.email],
             )
+            item.workflow = workflow
+            db.session.add(item)
 
-            # register a new task in the database
-            task_id = register_task(
-                msg.subject,
-                description='Send meeting setup email for "{proj}"'.format(
-                    proj=req.project.name
-                ),
-            )
-
-            # queue Celery task to send the email
-            send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-            send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
 
         # pass through previous_ids
         return previous_ids
@@ -724,22 +758,30 @@ def register_email_notification_tasks(celery):
             )
             raise Ignore()
 
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.NOTIFICATIONS_STUDENT_SINGLE,
-            to=[user.email],
-            subject_kwargs={"subject": notification.msg_subject()},
-            body_kwargs={"user": user, "notification": notification},
+        template = EmailTemplate.find_template_(EmailTemplate.NOTIFICATIONS_STUDENT_SINGLE)
+        workflow = EmailWorkflow.build_(
+            name=f"Student notification email: {user.name}",
+            template=template,
+            defer=timedelta(minutes=15),
+            creator=user,
         )
+        db.session.add(workflow)
+        db.session.flush()
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send notification email to {r}".format(r=", ".join(msg.to)),
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"subject": notification.msg_subject()}),
+            body_payload=encode_email_payload({"user": user, "notification": notification}),
+            recipient_list=[user.email],
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        # queue Celery task to send the email
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         return n_id
 
@@ -805,26 +847,34 @@ def register_email_notification_tasks(celery):
         else:
             subject = "Projects web portal: summary of notifications and events"
 
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.NOTIFICATIONS_STUDENT_ROLLUP,
-            to=[user.email],
-            subject_kwargs={"subject": subject},
-            body_kwargs={
+        template = EmailTemplate.find_template_(EmailTemplate.NOTIFICATIONS_STUDENT_ROLLUP)
+        workflow = EmailWorkflow.build_(
+            name=f"Student notification rollup email: {user.name}",
+            template=template,
+            defer=timedelta(minutes=15),
+            creator=user,
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"subject": subject}),
+            body_payload=encode_email_payload({
                 "user": user,
                 "notifications": notifications,
                 "outstanding": outstanding_crqs,
-            },
+            }),
+            recipient_list=[user.email],
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send notification email to {r}".format(r=", ".join(msg.to)),
-        )
-
-        # queue Celery task to send the email
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         previous_set = set(previous_ids)
         ids_set = set(n_ids)

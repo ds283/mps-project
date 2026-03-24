@@ -22,6 +22,8 @@ from ..database import db
 from ..models import (
     EmailLog,
     EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
     ProjectClassConfig,
     StudentData,
     SubmissionPeriodRecord,
@@ -32,6 +34,7 @@ from ..models import (
     SupervisionEvent,
     User,
 )
+from ..models.emails import encode_email_payload
 from ..shared.utils import get_current_year
 from ..task_queue import register_task
 
@@ -299,7 +302,6 @@ def register_attendance_tasks(celery):
             )
             return msg
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         owner_user: User = owner.user
         sd: StudentData = sub.student
         student_user: User = sd.user
@@ -357,11 +359,21 @@ def register_attendance_tasks(celery):
         else:
             human_start_time = f"on {target_time.strftime('%A %d %B')} at {target_time.strftime('%H:%M')}"
 
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.ATTENDANCE_PROMPT,
-            to=[owner_user.email],
-            subject_kwargs={"name": student_user.name},
-            body_kwargs={
+        template = EmailTemplate.find_template_(
+            EmailTemplate.ATTENDANCE_PROMPT, pclass=config.project_class
+        )
+        workflow = EmailWorkflow.build_(
+            name=f"Attendance prompt: {config.name} — {owner_user.name} for {student_user.name}",
+            template=template,
+            defer=timedelta(minutes=15),
+            pclasses=[config.project_class],
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"name": student_user.name}),
+            body_payload=encode_email_payload({
                 "event": event,
                 "user": owner_user,
                 "sd": sd,
@@ -374,18 +386,14 @@ def register_attendance_tasks(celery):
                 "attendance_not_notified_api_url": attendance_not_notified_api_url,
                 "mute_event_api_url": mute_event_api_url,
                 "mute_role_api_url": mute_role_api_url,
-            },
-            pclass=config.project_class,
+            }),
+            recipient_list=[owner_user.email],
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        task_id = register_task(
-            msg.subject,
-            description=f"{config.name}: Send attendance prompt to {owner_user.name} for {student_user.name}/{unit.name}",
-        )
-
-        # Set prompt_sent_timestamp before dispatching the email so that a crash or
-        # failure in the send task cannot cause a duplicate prompt to be sent.
-        # It is preferable to occasionally miss a reminder than to spam multiple copies.
+        # Set prompt_sent_timestamp before committing so that a crash cannot
+        # cause a duplicate prompt to be queued.
         event.prompt_sent_timestamp = datetime.now()
         try:
             db.session.commit()
@@ -393,12 +401,7 @@ def register_attendance_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        send_tasks = chain(
-            send_log_email.s(task_id, msg),
-            mark_attendance_prompt_sent.s(event_id),
-        )
-
-        return self.replace(send_tasks)
+        return None
 
     @celery.task(bind=True, default_retry_delay=30)
     def mark_attendance_prompt_sent(self, result_data, event_id):

@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from celery import chain, group
 from celery.exceptions import Ignore
@@ -21,6 +21,8 @@ from ..database import db
 from ..models import (
     BackupRecord,
     EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
     EnrollmentRecord,
     FacultyData,
     LiveProject,
@@ -31,6 +33,7 @@ from ..models import (
     TaskRecord,
     User,
 )
+from ..models.emails import encode_email_payload
 from ..shared.convenor import add_liveproject
 from ..task_queue import progress_update, register_task
 
@@ -38,16 +41,16 @@ from ..task_queue import progress_update, register_task
 def register_golive_tasks(celery):
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
     def pclass_golive(
-            self,
-            task_id,
-            config_id,
-            convenor_id,
-            deadline,
-            auto_close,
-            notify_faculty,
-            notify_selectors,
-            accommodate_matching,
-            full_CATS,
+        self,
+        task_id,
+        config_id,
+        convenor_id,
+        deadline,
+        auto_close,
+        notify_faculty,
+        notify_selectors,
+        accommodate_matching,
+        full_CATS,
     ):
         progress_update(
             task_id, TaskRecord.RUNNING, 0, "Preparing to Go Live...", autocommit=True
@@ -115,8 +118,8 @@ def register_golive_tasks(celery):
         year = config.year
 
         if (
-                config.selector_lifecycle
-                == ProjectClassConfig.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED
+            config.selector_lifecycle
+            == ProjectClassConfig.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED
         ):
             convenor.post_message(
                 "Cannot yet Go Live for {name} {yra}-{yrb} "
@@ -131,8 +134,8 @@ def register_golive_tasks(celery):
             return self.replace(golive_fail.si(task_id, convenor_id))
 
         if (
-                config.selector_lifecycle
-                == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
+            config.selector_lifecycle
+            == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
         ):
             convenor.post_message(
                 "Cannot yet Go Live for {name} {yra}-{yrb} "
@@ -369,11 +372,28 @@ def register_golive_tasks(celery):
             if user not in config.golive_notified and data.id not in faculty:
                 faculty.add(data.id)
 
+        template = EmailTemplate.find_template_(
+            EmailTemplate.GO_LIVE_FACULTY, pclass=config.project_class
+        )
+        workflow = EmailWorkflow.build_(
+            name=f"Go Live faculty notifications: {config.project_class.name}",
+            template=template,
+            defer=timedelta(hours=1),
+            pclasses=[config.project_class],
+        )
+        db.session.add(workflow)
+        try:
+            db.session.flush()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
         notify = celery.tasks["app.tasks.utilities.email_notification"]
 
         task = chain(
             group(
-                faculty_notification_email.si(d, config_id, deadline)
+                faculty_notification_email.si(d, config_id, deadline, workflow.id)
                 for d in faculty
                 if d is not None
             ),
@@ -383,6 +403,13 @@ def register_golive_tasks(celery):
                 "info",
             ),
         )
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         return self.replace(task)
 
@@ -421,16 +448,33 @@ def register_golive_tasks(celery):
 
         for sel in config.selecting_students.filter_by(retired=False).all():
             if (
-                    sel.student.user not in config.golive_notified
-                    and sel.id not in selectors
+                sel.student.user not in config.golive_notified
+                and sel.id not in selectors
             ):
                 selectors.add(sel.id)
+
+        template = EmailTemplate.find_template_(
+            EmailTemplate.GO_LIVE_SELECTOR, pclass=config.project_class
+        )
+        workflow = EmailWorkflow.build_(
+            name=f"Go Live selector notifications: {config.project_class.name}",
+            template=template,
+            defer=timedelta(hours=1),
+            pclasses=[config.project_class],
+        )
+        db.session.add(workflow)
+        try:
+            db.session.flush()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         notify = celery.tasks["app.tasks.utilities.email_notification"]
 
         task = chain(
             group(
-                student_notification_email.si(d, config_id, deadline)
+                student_notification_email.si(d, config_id, deadline, workflow.id)
                 for d in selectors
                 if d is not None
             ),
@@ -438,6 +482,13 @@ def register_golive_tasks(celery):
                 convenor_id, "{n} notification{pl} issued to student selectors", "info"
             ),
         )
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         return self.replace(task)
 
@@ -468,7 +519,7 @@ def register_golive_tasks(celery):
             raise self.retry()
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
-    def faculty_notification_email(self, faculty_id, config_id, deadline):
+    def faculty_notification_email(self, faculty_id, config_id, deadline, workflow_id):
         if isinstance(deadline, str):
             deadline = parser.parse(deadline).date()
         else:
@@ -480,11 +531,14 @@ def register_golive_tasks(celery):
             config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
                 id=config_id
             ).first()
+            workflow: EmailWorkflow = EmailWorkflow.query.filter_by(
+                id=workflow_id
+            ).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if data is None or config is None:
+        if data is None or config is None or workflow is None:
             self.update_state(
                 "FAILURE", meta={"msg": "Could not load database records"}
             )
@@ -501,40 +555,36 @@ def register_golive_tasks(celery):
                     projects_use_signoff = True
                     break
 
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.GO_LIVE_FACULTY,
-            to=[data.user.email],
-            subject_kwargs={"name": config.project_class.name},
-            body_kwargs={
-                "deadline": deadline,
-                "user": data.user,
-                "pclass": config.project_class,
-                "config": config,
-                "number_projects": len(projects),
-                "projects": projects,
-                "expect_requests": (expect_requests and projects_use_signoff),
-            },
-            pclass=config.project_class,
-        )
-
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send confirmation request email to {r}".format(
-                r=", ".join(msg.to)
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"name": config.project_class.name}),
+            body_payload=encode_email_payload(
+                {
+                    "deadline": deadline,
+                    "user": data.user,
+                    "pclass": config.project_class,
+                    "config": config,
+                    "number_projects": len(projects),
+                    "projects": projects,
+                    "expect_requests": (expect_requests and projects_use_signoff),
+                }
             ),
+            recipient_list=[data.user.email],
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        email_chain = chain(
-            send_log_email.si(task_id, msg), set_notified.si(config_id, faculty_id)
-        )
-        email_chain.apply_async(task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
+        set_notified.apply_async(args=(config_id, faculty_id))
         return 1
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
-    def student_notification_email(self, selector_id, config_id, deadline):
+    def student_notification_email(self, selector_id, config_id, deadline, workflow_id):
         if isinstance(deadline, str):
             deadline = parser.parse(deadline).date()
         else:
@@ -546,44 +596,43 @@ def register_golive_tasks(celery):
             config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
                 id=config_id
             ).first()
+            workflow: EmailWorkflow = EmailWorkflow.query.filter_by(
+                id=workflow_id
+            ).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if data is None or config is None:
+        if data is None or config is None or workflow is None:
             self.update_state(
                 "FAILURE", meta={"msg": "Could not load database records"}
             )
             raise Ignore()
 
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.GO_LIVE_SELECTOR,
-            to=[data.student.user.email],
-            subject_kwargs={"name": config.project_class.name},
-            body_kwargs={
-                "user": data.student.user,
-                "student": data,
-                "pclass": config.project_class,
-                "config": config,
-                "deadline": deadline,
-            },
-            pclass=config.project_class,
-        )
-
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send confirmation request email to {r}".format(
-                r=", ".join(msg.to)
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"name": config.project_class.name}),
+            body_payload=encode_email_payload(
+                {
+                    "user": data.student.user,
+                    "student": data,
+                    "pclass": config.project_class,
+                    "config": config,
+                    "deadline": deadline,
+                }
             ),
+            recipient_list=[data.student.user.email],
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        email_chain = chain(
-            send_log_email.si(task_id, msg), set_notified.si(config_id, data.student_id)
-        )
-        email_chain.apply_async(task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
+        set_notified.apply_async(args=(config_id, data.student_id))
         return 1
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
@@ -650,25 +699,41 @@ def register_golive_tasks(celery):
             for user in config.project_class.office_contacts:
                 recipients.add(user.email)
 
-            msg = EmailTemplate.apply_(
-                template_type=EmailTemplate.GO_LIVE_CONVENOR,
-                to=list(recipients),
-                subject_kwargs={"name": config.project_class.name},
-                body_kwargs={
-                    "pclass": config.project_class,
-                    "config": config,
-                    "deadline": deadline,
-                },
-                pclass=config.project_class,
+            template = EmailTemplate.find_template_(
+                EmailTemplate.GO_LIVE_CONVENOR, pclass=config.project_class
             )
-
-            # register a new task in the database
-            task_id = register_task(
-                msg.subject, description="Send convenor email notification"
+            workflow = EmailWorkflow.build_(
+                name=f"Go Live convenor summary: {config.project_class.name}",
+                template=template,
+                defer=timedelta(hours=1),
+                pclasses=[config.project_class],
+                creator=convenor,
             )
+            db.session.add(workflow)
+            db.session.flush()
 
-            send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-            send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+            item = EmailWorkflowItem.build_(
+                subject_payload=encode_email_payload(
+                    {"name": config.project_class.name}
+                ),
+                body_payload=encode_email_payload(
+                    {
+                        "pclass": config.project_class,
+                        "config": config,
+                        "deadline": deadline,
+                    }
+                ),
+                recipient_list=list(recipients),
+            )
+            item.workflow = workflow
+            db.session.add(item)
+
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
 
     @celery.task(bind=True, default_retry_delay=30)
     def golive_fail(self, task_id, convenor_id):

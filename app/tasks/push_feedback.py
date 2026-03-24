@@ -8,20 +8,20 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime
-from functools import partial
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import List, Optional
 
-from celery import chain, group
+from celery import group
 from celery.exceptions import Ignore
 from flask import current_app
-from flask_mailman import EmailMessage
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import (
-    EmailLog,
     EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
+    EmailWorkflowItemAttachment,
     FeedbackReport,
     GeneratedAsset,
     ProjectClass,
@@ -33,9 +33,8 @@ from ..models import (
     SubmittingStudent,
     User,
 )
-from ..shared.asset_tools import AssetCloudAdapter
-from ..task_queue import register_task
-from .shared.utils import attach_asset_to_email_msg, report_error, report_info
+from ..models.emails import encode_email_payload
+from .shared.utils import report_info
 
 
 def register_push_feedback_tasks(celery):
@@ -132,40 +131,24 @@ def register_push_feedback_tasks(celery):
     # default max attachment size to 50 Mb
     MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024
 
-    def _attach_reports(record: SubmissionRecord, msg: EmailMessage):
-        current_size = 0
-
-        # track attached documents
-        manifest = []
-
+    def _collect_feedback_attachments(
+        record: SubmissionRecord,
+    ) -> List[EmailWorkflowItemAttachment]:
         if not record.feedback_generated:
-            return manifest
+            return []
 
-        # bucket map must be loaded at execution time, because we don't know what configuration we will use
-        # (e.g. could even vary by which container we are running in)
-        buckets = current_app.config.get("OBJECT_STORAGE_BUCKETS")
-
+        attachments = []
         for report in record.feedback_reports:
             report: FeedbackReport
             asset: GeneratedAsset = report.asset
-            object_store = buckets[asset.bucket]
-
-            storage = AssetCloudAdapter(
-                asset, object_store, audit_data=f"push_feedback.attach_reports"
+            attachments.append(
+                EmailWorkflowItemAttachment.build_(
+                    name=str(asset.target_name or asset.unique_name),
+                    description="feedback report",
+                    generated_asset=asset,
+                )
             )
-            d = attach_asset_to_email_msg(
-                msg,
-                storage,
-                current_size,
-                filename=asset.target_name,
-                max_attached_size=MAX_ATTACHMENT_SIZE,
-                description="feedback report",
-                endpoint="download_generated_asset",
-            )
-            current_size += d.attached_size
-            manifest.extend(d.manifest)
-
-        return manifest
+        return attachments
 
     @celery.task(bind=True, default_retry_delay=30)
     def push_student_feedback(self, record_id, user_id, cc_convenor, test_email):
@@ -198,40 +181,58 @@ def register_push_feedback_tasks(celery):
                 "source": f"push_student_feedback (student={student.name})",
             }
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT,
-            to=[test_email if test_email is not None else student.email],
-            subject_kwargs={"proj": pclass.name, "name": period.display_name},
-            body_kwargs={
-                "sub": sub,
-                "sd": sd,
-                "student": student,
-                "period": period,
-                "pclass": pclass,
-                "record": record,
-            },
-            body_attachments={"attached_docs": partial(_attach_reports, record)},
-            pclass=pclass,
-        )
+        attachments = _collect_feedback_attachments(record)
 
+        template = EmailTemplate.find_template_(
+            EmailTemplate.PUSH_FEEDBACK_PUSH_TO_STUDENT, pclass=pclass
+        )
+        workflow = EmailWorkflow.build_(
+            name=f"Push student feedback: {pclass.name} — {student.name}",
+            template=template,
+            defer=timedelta(minutes=15),
+            pclasses=[pclass],
+            max_attachment_size=MAX_ATTACHMENT_SIZE,
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        recipient_list = [test_email if test_email is not None else student.email]
         if test_email is None and cc_convenor:
-            msg.cc = [config.convenor_email]
+            recipient_list.append(config.convenor_email)
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="{proj}: Push {name} feedback to {r}".format(
-                r=", ".join(msg.to), proj=pclass.name, name=period.display_name
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload(
+                {"proj": pclass.name, "name": period.display_name}
             ),
+            body_payload=encode_email_payload(
+                {
+                    "sub": sub,
+                    "sd": sd,
+                    "student": student,
+                    "period": period,
+                    "pclass": pclass,
+                    "record": record,
+                }
+            ),
+            recipient_list=recipient_list,
+            attachments=attachments,
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        send_tasks = chain(
-            send_log_email.s(task_id, msg),
-            mark_submitter_feedback_sent.s(record_id, user_id, test_email),
-        )
+        if test_email is None:
+            record.feedback_sent = True
+            record.feedback_push_id = user_id
+            record.feedback_push_timestamp = datetime.now()
 
-        return self.replace(send_tasks)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        return {"push_submitter": 1}
 
     @celery.task(bind=True, default_retry_delay=30)
     def push_role_feedback(
@@ -302,242 +303,65 @@ def register_push_feedback_tasks(celery):
                 f"push_role_feedback: unknown template_name '{template_name}'"
             )
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
+        all_attachments = []
+        for submitter in submitters:
+            all_attachments.extend(_collect_feedback_attachments(submitter))
 
-        msg = EmailTemplate.apply_(
-            template_type=email_template_type,
-            to=[test_email if test_email is not None else person.email],
-            subject_kwargs={
-                "pclass_name": pclass.name,
-                "period_name": period.display_name,
-                "email_subject": email_subject,
-            },
-            body_kwargs={
-                "person": person,
-                "submitters": submitters,
-                "period": period,
-                "pclass": pclass,
-            },
-            body_attachments={
-                f"submitter_{submitter.id}": partial(_attach_reports, submitter)
-                for submitter in submitters
-            },
-            pclass=pclass,
+        template = EmailTemplate.find_template_(email_template_type, pclass=pclass)
+        workflow = EmailWorkflow.build_(
+            name=f"Push role feedback: {pclass.name} — {person.name}",
+            template=template,
+            defer=timedelta(minutes=15),
+            pclasses=[pclass],
+            max_attachment_size=MAX_ATTACHMENT_SIZE,
         )
+        db.session.add(workflow)
+        db.session.flush()
 
+        recipient_list = [test_email if test_email is not None else person.email]
         if test_email is None and cc_convenor:
-            msg.cc = [config.convenor_email]
+            recipient_list.append(config.convenor_email)
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="{proj}: Push {name} feedback to {r}".format(
-                r=", ".join(msg.to), proj=pclass.name, name=period.display_name
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload(
+                {
+                    "pclass_name": pclass.name,
+                    "period_name": period.display_name,
+                    "email_subject": email_subject,
+                }
             ),
-        )
-
-        send_tasks = chain(
-            send_log_email.s(task_id, msg),
-            mark_role_feedback_sent.s(
-                person_id, period_id, user_id, target_roles, test_email, outcome_label
+            body_payload=encode_email_payload(
+                {
+                    "person": person,
+                    "submitters": submitters,
+                    "period": period,
+                    "pclass": pclass,
+                }
             ),
+            recipient_list=recipient_list,
+            attachments=all_attachments,
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        return self.replace(send_tasks)
-
-    @celery.task(bind=True, default_retry_delay=5)
-    def mark_submitter_feedback_sent(self, result_data, record_id, user_id, test_email):
-        if "outcome" not in result_data:
-            print(
-                f"!! mark_submitter_feedback_sent: no outcome in result_data (result_data={result_data})"
-            )
-            return {"error": 1}
-
-        outcome = result_data["outcome"]
-        if outcome in ["unknown", "failure"]:
-            print(
-                f"!! mark_submitter_feedback_sent: outcome was unknown or failure (result_data={result_data})"
-            )
-            return {"error": 1}
-
-        if outcome in ["no-store"]:
-            print(
-                f"!! mark_submitter_feedback_sent: outcome was marked no-store (result_data={result_data})"
-            )
-            return {"push_submitter": 1}
-
-        user: Optional[User] = None
-        if user_id is not None:
-            try:
-                user = db.session.query(User).filter_by(id=user_id).first()
-            except SQLAlchemyError as e:
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
-
-        if outcome != "success":
-            report_error(
-                f'Unexpected outcome "{outcome}" from send_log_email task (data={result_data})',
-                "mark_submitter_feedback_sent",
-                user,
-            )
-
-        if test_email is not None:
-            print(
-                f">> mark_submitter_feedback_sent: not marking as sent because test_email={test_email}"
-            )
-            return {"push_submitter": 1}
-
-        try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if record is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            print("!! mark_submitter_feedback_sent: Could not load SubmissionRecord")
-            data = {"error": 1}
-            if "key" in result_data:
-                data = data | {"push_submitter": 1}
-            return data
-
-        if "key" in result_data:
-            try:
-                email: Optional[EmailLog] = (
-                    db.session.query(EmailLog).filter_by(id=result_data["key"]).first()
-                )
-            except SQLAlchemyError as e:
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
-
-            # TODO: add to an email log for this SubmissionRecord
-
-        record.feedback_sent = True
-        record.feedback_push_id = user_id
-        record.feedback_push_timestamp = datetime.now()
+        if test_email is None:
+            for record in period.submissions:
+                record: SubmissionRecord
+                for role in record.roles:
+                    role: SubmissionRole
+                    if (
+                        not role.feedback_sent
+                        and role.user_id == person_id
+                        and role.role in target_roles
+                    ):
+                        role.feedback_sent = True
+                        role.feedback_push_id = user_id
+                        role.feedback_push_timestamp = datetime.now()
 
         try:
             db.session.commit()
         except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        return {"push_submitter": 1}
-
-    @celery.task(bind=True, default_retry_delay=5)
-    def mark_role_feedback_sent(
-        self,
-        result_data,
-        person_id,
-        period_id,
-        user_id,
-        target_roles,
-        test_email,
-        outcome_label,
-    ):
-        if "outcome" not in result_data:
-            print(
-                f"!! mark_role_feedback_sent: no outcome in result_data (result_data={result_data})"
-            )
-            return {"error": 1}
-
-        outcome = result_data["outcome"]
-        if outcome in ["unknown", "failure"]:
-            print(
-                f"!! mark_role_feedback_sent: outcome was unknown or failure (result_data={result_data})"
-            )
-            return {"error": 1}
-
-        if outcome in ["no-store"]:
-            print(
-                f"!! mark_role_feedback_sent: outcome was no-store (result_data={result_data})"
-            )
-            return {outcome_label: 1}
-
-        try:
-            person: User = db.session.query(User).filter_by(id=person_id).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if person is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            return {"error": 1}
-
-        user: Optional[User] = None
-        if user_id is not None:
-            try:
-                user = db.session.query(User).filter_by(id=user_id).first()
-            except SQLAlchemyError as e:
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
-
-        if outcome != "success":
-            report_error(
-                f'Unexpected outcome "{outcome}" from send_log_email task (data={result_data})',
-                "mark_role_feedback_sent",
-                user,
-            )
-
-        if test_email is not None:
-            print(
-                f">> mark_role_feedback_sent: not marking as sent because test_email={test_email}"
-            )
-            return {outcome_label: 1}
-
-        try:
-            period: SubmissionPeriodRecord = (
-                db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
-            )
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if period is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            print("!! mark_role_feedback_sent: Could not load SubmissionRecord")
-            data = {"error": 1}
-            if "key" in result_data:
-                data = data | {outcome_label: 1}
-            return data
-
-        email: Optional[EmailLog] = None
-        if "key" in result_data:
-            try:
-                email = (
-                    db.session.query(EmailLog).filter_by(id=result_data["key"]).first()
-                )
-            except SQLAlchemyError as e:
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
-
-        for record in period.submissions:
-            record: SubmissionRecord
-            for role in record.roles:
-                role: SubmissionRole
-                if (
-                    not role.feedback_sent
-                    and role.user_id == person_id
-                    and role.role in target_roles
-                ):
-                    role.feedback_sent = True
-                    role.feedback_push_id = user_id
-                    role.feedback_push_timestamp = datetime.now()
-
-                    if email is not None:
-                        role.email_log.append(email)
-
-        try:
-            db.session.commit()
-        except SQLAlchemyError as e:
+            db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 

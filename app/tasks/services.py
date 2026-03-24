@@ -15,9 +15,11 @@ from celery.exceptions import Ignore
 from flask import current_app, render_template_string
 from sqlalchemy.exc import SQLAlchemyError
 
+from datetime import timedelta
+
 from ..database import db
-from ..models import User, EmailTemplate
-from ..task_queue import register_task
+from ..models import User, EmailTemplate, EmailWorkflow, EmailWorkflowItem
+from ..models.emails import encode_email_payload
 
 
 def register_services_tasks(celery):
@@ -67,25 +69,30 @@ def register_services_tasks(celery):
         if isinstance(reply_to, str):
             reply_to = [reply_to]
 
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.SERVICES_SEND_EMAIL,
-            to=[formataddr((record.name, record.email))],
+        template = EmailTemplate.find_template_(EmailTemplate.SERVICES_SEND_EMAIL)
+        workflow = EmailWorkflow.build_(
+            name=f"Direct email: {subject} → {record.name}",
+            template=template,
+            defer=timedelta(minutes=15),
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"subject": subject}),
+            body_payload=encode_email_payload({"body": body_text}),
+            recipient_list=[formataddr((record.name, record.email))],
             reply_to=reply_to,
-            subject_kwargs={"subject": subject},
-            body_kwargs={"body": body_text},
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send direct email to {name} ({email})".format(
-                name=record.name, email=record.email
-            ),
-        )
-
-        # queue Celery task to send the email
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
     @celery.task(bind=True, default_retry_delay=30)
     def send_notify(self, prior_result, pair, subject, body, reply_to):
@@ -94,23 +101,30 @@ def register_services_tasks(celery):
         if isinstance(reply_to, str):
             reply_to = [reply_to]
 
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.SERVICES_CC_EMAIL,
-            to=[to_addr],
+        template = EmailTemplate.find_template_(EmailTemplate.SERVICES_CC_EMAIL)
+        workflow = EmailWorkflow.build_(
+            name=f"CC email: {subject} → {pair[1]}",
+            template=template,
+            defer=timedelta(minutes=15),
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"subject": subject}),
+            body_payload=encode_email_payload({"body": body}),
+            recipient_list=[to_addr],
             reply_to=reply_to,
-            subject_kwargs={"subject": subject},
-            body_kwargs={"body": body},
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send copy of direct email to {addr}".format(addr=pair[1]),
-        )
-
-        # queue Celery task to send the email
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
     @celery.task(bind=True, default_retry_delay=30)
     def send_email_list(
@@ -139,22 +153,30 @@ def register_services_tasks(celery):
         if isinstance(reply_to, str):
             reply_to = list[reply_to]
 
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.SERVICES_SEND_EMAIL,
-            to=[to_addr],
+        template = EmailTemplate.find_template_(EmailTemplate.SERVICES_SEND_EMAIL)
+        workflow = EmailWorkflow.build_(
+            name=f"Direct email: {subject} → {pair[1]}",
+            template=template,
+            defer=timedelta(minutes=15),
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"subject": subject}),
+            body_payload=encode_email_payload({"body": body}),
+            recipient_list=[to_addr],
             reply_to=reply_to,
-            subject_kwargs={"subject": subject},
-            body_kwargs={"body": body},
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject, description="Send direct email to {addr}".format(addr=pair[1])
-        )
-
-        # queue Celery task to send the email
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
     @celery.task(bind=True, default_retry_delay=5)
     def email_success(self, prior_result, subject, user_id):

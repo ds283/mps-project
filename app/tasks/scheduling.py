@@ -48,7 +48,11 @@ from ..models import (
     SubmissionRole,
     DownloadCentreItem,
     EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
+    EmailWorkflowItemAttachment,
 )
+from ..models.emails import encode_email_payload
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.scratch import ScratchFileManager
 from ..shared.security import validate_nonce
@@ -1361,32 +1365,38 @@ def _process_PuLP_solution(
 
 
 def _send_offline_email(celery, record, user, lp_asset):
-    send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
+    from ..database import db
+    from sqlalchemy.exc import SQLAlchemyError
 
-    msg = EmailTemplate.apply_(
-        template_type=EmailTemplate.SCHEDULING_GENERATED,
-        to=[user.email],
-        subject_kwargs={"name": record.name},
-        body_kwargs={"name": record.name, "user": user},
+    attachment = EmailWorkflowItemAttachment.build_(
+        name="schedule.lp",
+        description="LP/MPS file for offline solver",
+        generated_asset=lp_asset,
     )
 
-    # TODO: will be problems when generated LP/MPS files are too large; should instead send a download link
-    object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
-    lp_storage: AssetCloudAdapter = AssetCloudAdapter(
-        lp_asset, object_store, audit_data="scheduling._send_offline_email #1"
+    template = EmailTemplate.find_template_(EmailTemplate.SCHEDULING_GENERATED)
+    workflow = EmailWorkflow.build_(
+        name=f"Scheduling offline email: {record.name}",
+        template=template,
+        defer=timedelta(hours=1),
     )
+    db.session.add(workflow)
+    db.session.flush()
 
-    msg.attach(
-        filename=str("schedule.lp"),
-        mimetype=lp_asset.mimetype,
-        content=lp_storage.get(),
+    item = EmailWorkflowItem.build_(
+        subject_payload=encode_email_payload({"name": record.name}),
+        body_payload=encode_email_payload({"name": record.name, "user": user}),
+        recipient_list=[user.email],
+        attachments=[attachment],
     )
+    item.workflow = workflow
+    db.session.add(item)
 
-    # register a new task in the database
-    task_id = register_task(
-        msg.subject, description="Email to {r}".format(r=", ".join(msg.to))
-    )
-    send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
 
 def _write_LP_file(record: ScheduleAttempt, prob, user):
@@ -2279,40 +2289,40 @@ def register_scheduling_tasks(celery):
         user = student.user
         event = record.owner
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        if is_draft:
-            msg = EmailTemplate.apply_(
-                template_type=EmailTemplate.SCHEDULING_DRAFT_NOTIFY_STUDENTS,
-                to=[user.email],
-                subject_kwargs={"name": event.name},
-                body_kwargs={
-                    "user": user,
-                    "event": event,
-                    "slot": record.get_student_slot(sub_record.owner_id).first(),
-                    "period": sub_record.period,
-                    "schedule": record,
-                },
-            )
-        else:
-            msg = EmailTemplate.apply_(
-                template_type=EmailTemplate.SCHEDULING_FINAL_NOTIFY_STUDENTS,
-                to=[user.email],
-                subject_kwargs={"name": event.name},
-                body_kwargs={
-                    "user": user,
-                    "event": event,
-                    "slot": record.get_student_slot(sub_record.owner_id).first(),
-                    "period": sub_record.period,
-                    "schedule": record,
-                },
-            )
-
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send schedule email to {r}".format(r=", ".join(msg.to)),
+        template_type = (
+            EmailTemplate.SCHEDULING_DRAFT_NOTIFY_STUDENTS
+            if is_draft
+            else EmailTemplate.SCHEDULING_FINAL_NOTIFY_STUDENTS
         )
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        template = EmailTemplate.find_template_(template_type)
+        workflow = EmailWorkflow.build_(
+            name=f"Scheduling student notification: {event.name} — {user.name}",
+            template=template,
+            defer=timedelta(hours=1),
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"name": event.name}),
+            body_payload=encode_email_payload({
+                "user": user,
+                "event": event,
+                "slot": record.get_student_slot(sub_record.owner_id).first(),
+                "period": sub_record.period,
+                "schedule": record,
+            }),
+            recipient_list=[user.email],
+        )
+        item.workflow = workflow
+        db.session.add(item)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         return 1
 
@@ -2406,53 +2416,51 @@ def register_scheduling_tasks(celery):
 
         slots = record.get_faculty_slots(faculty.id).all()
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         if is_draft:
-            if len(slots) > 0:
-                msg = EmailTemplate.apply_(
-                    template_type=EmailTemplate.SCHEDULING_DRAFT_NOTIFY_FACULTY,
-                    to=[user.email],
-                    subject_kwargs={"name": event.name},
-                    body_kwargs={
-                        "user": user,
-                        "event": event,
-                        "slots": slots,
-                        "schedule": record,
-                    },
-                )
-            else:
-                msg = EmailTemplate.apply_(
-                    template_type=EmailTemplate.SCHEDULING_DRAFT_UNNEEDED_FACULTY,
-                    to=[user.email],
-                    subject_kwargs={"name": event.name},
-                    body_kwargs={"user": user, "event": event, "schedule": record},
-                )
+            template_type = (
+                EmailTemplate.SCHEDULING_DRAFT_NOTIFY_FACULTY
+                if len(slots) > 0
+                else EmailTemplate.SCHEDULING_DRAFT_UNNEEDED_FACULTY
+            )
         else:
-            if len(slots) > 0:
-                msg = EmailTemplate.apply_(
-                    template_type=EmailTemplate.SCHEDULING_FINAL_NOTIFY_FACULTY,
-                    to=[user.email],
-                    subject_kwargs={"name": event.name},
-                    body_kwargs={
-                        "user": user,
-                        "event": event,
-                        "slots": slots,
-                        "schedule": record,
-                    },
-                )
-            else:
-                msg = EmailTemplate.apply_(
-                    template_type=EmailTemplate.SCHEDULING_FINAL_UNNEEDED_FACULTY,
-                    to=[user.email],
-                    subject_kwargs={"name": event.name},
-                    body_kwargs={"user": user, "event": event, "schedule": record},
-                )
+            template_type = (
+                EmailTemplate.SCHEDULING_FINAL_NOTIFY_FACULTY
+                if len(slots) > 0
+                else EmailTemplate.SCHEDULING_FINAL_UNNEEDED_FACULTY
+            )
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send schedule email to {r}".format(r=", ".join(msg.to)),
+        template = EmailTemplate.find_template_(template_type)
+        workflow = EmailWorkflow.build_(
+            name=f"Scheduling assessor notification: {event.name} — {user.name}",
+            template=template,
+            defer=timedelta(hours=1),
         )
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        db.session.add(workflow)
+        db.session.flush()
+
+        if len(slots) > 0:
+            body_payload = encode_email_payload({
+                "user": user,
+                "event": event,
+                "slots": slots,
+                "schedule": record,
+            })
+        else:
+            body_payload = encode_email_payload({"user": user, "event": event, "schedule": record})
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"name": event.name}),
+            body_payload=body_payload,
+            recipient_list=[user.email],
+        )
+        item.workflow = workflow
+        db.session.add(item)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         return 1

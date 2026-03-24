@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 import json
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from flask import current_app, render_template_string, url_for
@@ -702,6 +702,16 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
 
         return msg
 
+    @staticmethod
+    def find_template_(template_type: int, tenant=None, pclass=None) -> "EmailTemplate":
+        """
+        Find the active EmailTemplate that best matches the given type, tenant, and pclass.
+        Delegates to the module-level _find_template helper, resolving tenant/pclass arguments
+        to their integer IDs first.
+        """
+        tenant_id, pclass_id = _resolve_tenant_and_pclass(tenant, pclass)
+        return _find_template(template_type, tenant_id, pclass_id)
+
 
 class EmailWorkflowItemAttachment(db.Model):
     __tablename__ = "email_workflow_item_attachments"
@@ -834,6 +844,7 @@ class EmailWorkflowItemAttachment(db.Model):
             generated_asset_id=generated_asset_id,
             submitted_asset_id=submitted_asset_id,
             temporary_asset_id=temporary_asset_id,
+            name=name,
             description=description,
         )
 
@@ -1122,12 +1133,13 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
         elif isinstance(template, int):
             template_ = (
                 db.session.query(EmailTemplate)
-                .filter(EmailTemplate.template_id == template)
+                .filter(EmailTemplate.type == template, EmailTemplate.active.is_(True))
+                .order_by(EmailTemplate.version.desc())
                 .first()
             )
             if template_ is None:
-                raise RuntimeError(f"EmailTemplate with id #{template} not found")
-            template_kwargs["template"] = template
+                raise RuntimeError(f"EmailTemplate with type #{template} not found")
+            template_kwargs["template"] = template_
         else:
             raise RuntimeError(
                 f'Invalid template type "{type(template)}" (value="{template}") in EmailWorkflow.build_(): expected EmailTemplate instance or integer primary key'
@@ -1165,3 +1177,73 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
             last_edit_id=None,
             **template_kwargs,
         )
+
+
+# ---------------------------------------------------------------------------
+# Email payload encoding helpers
+# ---------------------------------------------------------------------------
+
+_OBJECT_PREFIX = "__object__"
+_DATE_PREFIX = "__date__"
+_DATETIME_PREFIX = "__datetime__"
+_INTKEYS_MARKER = "__intkeys__"
+
+
+def _encode_payload_value(value) -> Any:
+    """
+    Recursively encode a single template-kwarg value for JSON storage.
+
+    Rules:
+    - None, bool, int, float, str  → stored as-is
+    - date (not datetime)          → "__date__<isoformat>"
+    - datetime                     → "__datetime__<isoformat>"
+    - SQLAlchemy model instance    → "__object__<ClassName>:<pk>"
+    - list / tuple / set           → JSON array, each element encoded recursively
+    - dict                         → JSON object; if any key is an int, a "__intkeys__"
+                                     flag is added so the decoder can restore int keys
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value
+    if isinstance(value, str):
+        return value
+    if isinstance(value, datetime):
+        return f"{_DATETIME_PREFIX}{value.isoformat()}"
+    if isinstance(value, date):
+        return f"{_DATE_PREFIX}{value.isoformat()}"
+    # SQLAlchemy model: check for the presence of a mapped primary-key column named 'id'
+    if hasattr(value, "__tablename__") and hasattr(value, "id"):
+        return f"{_OBJECT_PREFIX}{type(value).__name__}:{value.id}"
+    if isinstance(value, (list, tuple, set)):
+        return [_encode_payload_value(item) for item in value]
+    if isinstance(value, dict):
+        has_int_keys = any(isinstance(k, int) for k in value.keys())
+        encoded: Dict[str, Any] = {}
+        if has_int_keys:
+            encoded[_INTKEYS_MARKER] = True
+        for k, v in value.items():
+            encoded[str(k)] = _encode_payload_value(v)
+        return encoded
+    raise ValueError(
+        f"encode_email_payload: cannot encode value of type {type(value).__name__!r}: {value!r}"
+    )
+
+
+def encode_email_payload(kwargs: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """
+    Encode a dict of Jinja2 template kwargs for storage as a JSON email payload.
+
+    SQLAlchemy model instances are encoded as '__object__<ClassName>:<pk>' strings.
+    date/datetime values use '__date__' and '__datetime__' prefixes respectively.
+    Lists, sets, and tuples become JSON arrays.
+    Dicts with integer keys are stored with a '__intkeys__' flag so the decoder
+    can restore the original int-keyed mapping.
+
+    Returns None when kwargs is None.
+    """
+    if kwargs is None:
+        return None
+    return {k: _encode_payload_value(v) for k, v in kwargs.items()}

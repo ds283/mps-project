@@ -35,6 +35,8 @@ from ..models import (
     BackupRecord,
     ConvenorTask,
     EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
     EnrollmentRecord,
     FacultyData,
     LiveProject,
@@ -49,6 +51,7 @@ from ..models import (
     Tenant,
     User,
 )
+from ..models.emails import encode_email_payload
 from ..shared.actions import do_cancel_confirm, do_confirm, do_deconfirm_to_pending
 from ..shared.context.global_context import render_template_context
 from ..shared.projects import (
@@ -1284,31 +1287,33 @@ def submit_student_selection(sel_id):
         _ = store_selection(sel)
         db.session.commit()
 
-        celery = current_app.extensions["celery"]
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
+        template = EmailTemplate.find_template_(
+            EmailTemplate.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED_PROXY,
+            pclass=sel.config.project_class,
+        )
+        workflow = EmailWorkflow.build_(
+            name=f"Proxy choice submission: {sel.config.project_class.name} — {sel.student.user.name}",
+            template=template,
+            defer=timedelta(minutes=15),
+            pclasses=[sel.config.project_class],
+        )
+        db.session.add(workflow)
+        db.session.flush()
 
-        msg = EmailTemplate.apply_(
-            type=EmailTemplate.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED_PROXY,
-            to=[sel.student.user.email, current_user.email],
-            reply_to=[current_user.email],
-            subject_kwargs={"pcl": sel.config.project_class.name},
-            body_kwargs={
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"pcl": sel.config.project_class.name}),
+            body_payload=encode_email_payload({
                 "user": sel.student.user,
                 "pclass": sel.config.project_class,
                 "config": sel.config,
                 "sel": sel,
-            },
-            pclass=sel.config.project_class,
+            }),
+            recipient_list=[sel.student.user.email, current_user.email],
+            reply_to=[current_user.email],
         )
-
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send project choices confirmation email to {r}".format(
-                r=", ".join(msg.to)
-            ),
-        )
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        item.workflow = workflow
+        db.session.add(item)
+        db.session.commit()
 
         flash(
             "Project choices for this selector have been successfully stored. A confirmation email has been sent to the selector's registered email address (and copied to you).",

@@ -8,8 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from email.utils import parseaddr
+from typing import Dict, Optional
 from smtplib import (
     SMTPAuthenticationError,
     SMTPConnectError,
@@ -28,7 +29,130 @@ from flask_mailman import Mail
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import EmailLog, EmailTemplate, EmailWorkflow, EmailWorkflowItem, User
+from ..models import (
+    AssessorAttendanceData,
+    ConfirmRequest,
+    DescriptionComment,
+    EmailLog,
+    EmailNotification,
+    EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
+    FacultyData,
+    LiveProject,
+    MatchingAttempt,
+    MatchingRecord,
+    PresentationAssessment,
+    Project,
+    ProjectClass,
+    ProjectClassConfig,
+    ProjectDescription,
+    ScheduleAttempt,
+    ScheduleSlot,
+    SelectingStudent,
+    StudentData,
+    SubmissionPeriodRecord,
+    SubmissionRecord,
+    SubmissionRole,
+    SubmittingStudent,
+    SupervisionEvent,
+    User,
+)
+from ..models.emails import (
+    _DATE_PREFIX,
+    _DATETIME_PREFIX,
+    _INTKEYS_MARKER,
+    _OBJECT_PREFIX,
+)
+
+# ---------------------------------------------------------------------------
+# Mapping from encoded model class name → SQLAlchemy model class.
+# Extend this when new model types appear in email template kwargs.
+# ---------------------------------------------------------------------------
+_MODEL_REGISTRY: Dict[str, type] = {
+    "AssessorAttendanceData": AssessorAttendanceData,
+    "ConfirmRequest": ConfirmRequest,
+    "DescriptionComment": DescriptionComment,
+    "EmailNotification": EmailNotification,
+    "FacultyData": FacultyData,
+    "LiveProject": LiveProject,
+    "MatchingAttempt": MatchingAttempt,
+    "MatchingRecord": MatchingRecord,
+    "PresentationAssessment": PresentationAssessment,
+    "Project": Project,
+    "ProjectClass": ProjectClass,
+    "ProjectClassConfig": ProjectClassConfig,
+    "ProjectDescription": ProjectDescription,
+    "ScheduleAttempt": ScheduleAttempt,
+    "ScheduleSlot": ScheduleSlot,
+    "SelectingStudent": SelectingStudent,
+    "StudentData": StudentData,
+    "SubmissionPeriodRecord": SubmissionPeriodRecord,
+    "SubmissionRecord": SubmissionRecord,
+    "SubmissionRole": SubmissionRole,
+    "SubmittingStudent": SubmittingStudent,
+    "SupervisionEvent": SupervisionEvent,
+    "User": User,
+}
+
+
+def _decode_payload_value(value):
+    """
+    Recursively decode a single value from an email payload dict.
+
+    - Strings starting with '__object__<ClassName>:<pk>' are looked up in the DB.
+    - Strings starting with '__date__' are parsed to a date.
+    - Strings starting with '__datetime__' are parsed to a datetime.
+    - Lists are decoded element-by-element.
+    - Dicts marked with '__intkeys__' have their string keys converted back to ints.
+
+    Raises LookupError if a required database object cannot be found.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        if value.startswith(_OBJECT_PREFIX):
+            rest = value[len(_OBJECT_PREFIX):]
+            model_name, pk_str = rest.rsplit(":", 1)
+            pk = int(pk_str)
+            model_cls = _MODEL_REGISTRY.get(model_name)
+            if model_cls is None:
+                raise LookupError(
+                    f"_decode_payload_value: unknown model class '{model_name}'"
+                )
+            obj = db.session.query(model_cls).filter_by(id=pk).first()
+            if obj is None:
+                raise LookupError(
+                    f"_decode_payload_value: {model_name} with id={pk} not found in database"
+                )
+            return obj
+        if value.startswith(_DATETIME_PREFIX):
+            return datetime.fromisoformat(value[len(_DATETIME_PREFIX):])
+        if value.startswith(_DATE_PREFIX):
+            return date.fromisoformat(value[len(_DATE_PREFIX):])
+        return value
+    if isinstance(value, list):
+        return [_decode_payload_value(item) for item in value]
+    if isinstance(value, dict):
+        if value.get(_INTKEYS_MARKER):
+            return {
+                int(k): _decode_payload_value(v)
+                for k, v in value.items()
+                if k != _INTKEYS_MARKER
+            }
+        return {k: _decode_payload_value(v) for k, v in value.items()}
+    return value
+
+
+def _decode_email_payload(payload_dict: Optional[dict]) -> Optional[dict]:
+    """
+    Decode a full email payload dict, reconstructing all encoded values.
+    Returns None when payload_dict is None.
+    Raises LookupError for any '__object__' reference that cannot be resolved.
+    """
+    if payload_dict is None:
+        return None
+    return {k: _decode_payload_value(v) for k, v in payload_dict.items()}
 
 
 def register_email_workflow_tasks(celery, mail: Mail):
@@ -158,8 +282,31 @@ def register_email_workflow_tasks(celery, mail: Mail):
                     f"send_workflow_item: rendering from template type={template.type} "
                     f"for EmailWorkflowItem id={item_id}"
                 )
-                subject_kwargs = item.subject_payload_dict or None
-                body_kwargs = item.body_payload_dict or None
+                # Decode stored payloads, resolving any '__object__' DB references.
+                try:
+                    subject_kwargs = _decode_email_payload(item.subject_payload_dict) or None
+                    body_kwargs = _decode_email_payload(item.body_payload_dict) or None
+                except LookupError as lookup_err:
+                    current_app.logger.exception(
+                        f"send_workflow_item: database lookup failed while decoding payload "
+                        f"for EmailWorkflowItem id={item_id}",
+                        exc_info=lookup_err,
+                    )
+                    item.error_condition = True
+                    item.error_message = (
+                        f"Payload decode error — database object not found: {lookup_err}"
+                    )
+                    item.send_in_progress_timestamp = None
+                    item.celery_send_in_progress_task_id = None
+                    try:
+                        db.session.commit()
+                    except SQLAlchemyError:
+                        db.session.rollback()
+                    return {
+                        "outcome": "error",
+                        "item_id": item_id,
+                        "error": str(lookup_err),
+                    }
                 msg = EmailTemplate.apply_(
                     template_type=template.type,
                     to=to,

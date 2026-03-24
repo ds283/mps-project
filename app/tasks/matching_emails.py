@@ -8,7 +8,7 @@
 # Contributors: ds283$ <$>
 #
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from distutils.util import strtobool
 from typing import List
 
@@ -19,6 +19,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import (
     EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
     FacultyData,
     MatchingAttempt,
     MatchingRecord,
@@ -29,7 +31,8 @@ from ..models import (
     Tenant,
     User,
 )
-from ..task_queue import progress_update, register_task
+from ..models.emails import encode_email_payload
+from ..task_queue import progress_update
 
 
 def register_matching_email_tasks(celery):
@@ -154,52 +157,46 @@ def register_matching_email_tasks(celery):
         config: ProjectClassConfig = matches[0].selector.config
         pclass: ProjectClass = config.project_class
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        if is_draft:
-            msg = EmailTemplate.apply_(
-                template_type=EmailTemplate.MATCHING_DRAFT_NOTIFY_STUDENTS,
-                to=[user.email],
-                subject_kwargs={
-                    "name": config.name,
-                    "yra": record.submit_year_a,
-                    "yrb": record.submit_year_b,
-                },
-                body_kwargs={
-                    "user": user,
-                    "config": config,
-                    "pclass": pclass,
-                    "attempt": record,
-                    "matches": matches,
-                    "number": len(matches),
-                },
-                pclass=pclass,
-            )
-        else:
-            msg = EmailTemplate.apply_(
-                template_type=EmailTemplate.MATCHING_FINAL_NOTIFY_STUDENTS,
-                to=[user.email],
-                subject_kwargs={
-                    "name": config.name,
-                    "yra": record.submit_year_a,
-                    "yrb": record.submit_year_b,
-                },
-                body_kwargs={
-                    "user": user,
-                    "config": config,
-                    "pclass": pclass,
-                    "attempt": record,
-                    "matches": matches,
-                    "number": len(matches),
-                },
-                pclass=pclass,
-            )
-
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send schedule email to {r}".format(r=", ".join(msg.to)),
+        template_type = (
+            EmailTemplate.MATCHING_DRAFT_NOTIFY_STUDENTS
+            if is_draft
+            else EmailTemplate.MATCHING_FINAL_NOTIFY_STUDENTS
         )
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        template = EmailTemplate.find_template_(template_type, pclass=pclass)
+        workflow = EmailWorkflow.build_(
+            name=f"Matching selector notification: {config.name} — {user.name}",
+            template=template,
+            defer=timedelta(hours=1),
+            pclasses=[pclass],
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({
+                "name": config.name,
+                "yra": record.submit_year_a,
+                "yrb": record.submit_year_b,
+            }),
+            body_payload=encode_email_payload({
+                "user": user,
+                "config": config,
+                "pclass": pclass,
+                "attempt": record,
+                "matches": matches,
+                "number": len(matches),
+            }),
+            recipient_list=[user.email],
+        )
+        item.workflow = workflow
+        db.session.add(item)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         return 1
 
@@ -337,6 +334,8 @@ def register_matching_email_tasks(celery):
             convenors.add(config.convenor)
             tenants.add(pclass.tenant)
 
+        workflow_pclasses = list(pclasses)
+
         email_pclass = None
         email_tenant = None
         if len(pclasses) == 1:
@@ -346,89 +345,66 @@ def register_matching_email_tasks(celery):
         elif len(tenants) == 1:
             email_tenant: Tenant = tenants.pop()
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
         if is_draft:
-            if len(matches) > 0:
-                msg = EmailTemplate.apply_(
-                    template_type=EmailTemplate.MATCHING_DRAFT_NOTIFY_FACULTY,
-                    to=[user.email],
-                    subject_kwargs={
-                        "yra": record.submit_year_a,
-                        "yrb": record.submit_year_b,
-                    },
-                    body_kwargs={
-                        "user": user,
-                        "fac": fac,
-                        "attempt": record,
-                        "matches": matched_ids_by_pclass,
-                        "convenors": convenors,
-                    },
-                    pclass=email_pclass,
-                    tenant=email_tenant,
-                )
-            else:
-                msg = EmailTemplate.apply_(
-                    template_type=EmailTemplate.MATCHING_DRAFT_UNNEEDED_FACULTY,
-                    to=[user.email],
-                    subject_kwargs={
-                        "yra": record.submit_year_a,
-                        "yrb": record.submit_year_b,
-                    },
-                    body_kwargs={
-                        "user": user,
-                        "fac": fac,
-                        "attempt": record,
-                        "yra": record.submit_year_a,
-                        "yrb": record.submit_year_b,
-                    },
-                    pclass=email_pclass,
-                    tenant=email_tenant,
-                )
+            template_type = (
+                EmailTemplate.MATCHING_DRAFT_NOTIFY_FACULTY
+                if len(matches) > 0
+                else EmailTemplate.MATCHING_DRAFT_UNNEEDED_FACULTY
+            )
         else:
-            if len(matches) > 0:
-                msg = EmailTemplate.apply_(
-                    template_type=EmailTemplate.MATCHING_FINAL_NOTIFY_FACULTY,
-                    to=[user.email],
-                    subject_kwargs={
-                        "yra": record.submit_year_a,
-                        "yrb": record.submit_year_b,
-                    },
-                    body_kwargs={
-                        "user": user,
-                        "fac": fac,
-                        "attempt": record,
-                        "matches": matched_ids_by_pclass,
-                        "convenors": convenors,
-                        "yra": record.submit_year_a,
-                        "yrb": record.submit_year_b,
-                    },
-                    pclass=email_pclass,
-                    tenant=email_tenant,
-                )
-            else:
-                msg = EmailTemplate.apply_(
-                    template_type=EmailTemplate.MATCHING_FINAL_UNNEEDED_FACULTY,
-                    to=[user.email],
-                    subject_kwargs={
-                        "yra": record.submit_year_a,
-                        "yrb": record.submit_year_b,
-                    },
-                    body_kwargs={
-                        "user": user,
-                        "fac": fac,
-                        "attempt": record,
-                        "yra": record.submit_year_a,
-                        "yrb": record.submit_year_b,
-                    },
-                    pclass=email_pclass,
-                    tenant=email_tenant,
-                )
+            template_type = (
+                EmailTemplate.MATCHING_FINAL_NOTIFY_FACULTY
+                if len(matches) > 0
+                else EmailTemplate.MATCHING_FINAL_UNNEEDED_FACULTY
+            )
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send schedule email to {r}".format(r=", ".join(msg.to)),
+        template = EmailTemplate.find_template_(
+            template_type, pclass=email_pclass, tenant=email_tenant
         )
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        workflow = EmailWorkflow.build_(
+            name=f"Matching supervisor notification: {record.name} — {user.name}",
+            template=template,
+            defer=timedelta(hours=1),
+            pclasses=workflow_pclasses,
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        if len(matches) > 0:
+            body_payload = encode_email_payload({
+                "user": user,
+                "fac": fac,
+                "attempt": record,
+                "matches": matched_ids_by_pclass,
+                "convenors": list(convenors),
+                "yra": record.submit_year_a,
+                "yrb": record.submit_year_b,
+            })
+        else:
+            body_payload = encode_email_payload({
+                "user": user,
+                "fac": fac,
+                "attempt": record,
+                "yra": record.submit_year_a,
+                "yrb": record.submit_year_b,
+            })
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({
+                "yra": record.submit_year_a,
+                "yrb": record.submit_year_b,
+            }),
+            body_payload=body_payload,
+            recipient_list=[user.email],
+        )
+        item.workflow = workflow
+        db.session.add(item)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         return 1

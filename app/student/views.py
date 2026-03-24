@@ -9,7 +9,7 @@
 #
 
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from functools import partial
 from typing import Optional
 
@@ -30,6 +30,8 @@ from ..models import (
     DegreeType,
     EmailNotification,
     EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
     LiveProject,
     MessageOfTheDay,
     PresentationAssessment,
@@ -47,6 +49,7 @@ from ..models import (
     User,
     add_notification,
 )
+from ..models.emails import encode_email_payload
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import (
     get_count,
@@ -61,7 +64,6 @@ from ..shared.validators import (
     validate_submission_viewable,
     validate_using_assessment,
 )
-from ..task_queue import register_task
 from ..tools import ServerSideSQLHandler
 from . import student
 from .actions import store_selection
@@ -987,30 +989,32 @@ def submit(sid):
         _ = store_selection(sel)
         db.session.commit()
 
-        celery = current_app.extensions["celery"]
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
+        template = EmailTemplate.find_template_(
+            EmailTemplate.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED,
+            pclass=sel.config.project_class,
+        )
+        workflow = EmailWorkflow.build_(
+            name=f"Choices received: {sel.config.project_class.name} — {sel.student.user.name}",
+            template=template,
+            defer=timedelta(minutes=15),
+            pclasses=[sel.config.project_class],
+        )
+        db.session.add(workflow)
+        db.session.flush()
 
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED,
-            to=[sel.student.user.email],
-            subject_kwargs={"pcl": sel.config.project_class.name},
-            body_kwargs={
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"pcl": sel.config.project_class.name}),
+            body_payload=encode_email_payload({
                 "user": sel.student.user,
                 "pclass": sel.config.project_class,
                 "config": sel.config,
                 "sel": sel,
-            },
-            pclass=sel.config.project_class,
+            }),
+            recipient_list=[sel.student.user.email],
         )
-
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send project choices confirmation email to {r}".format(
-                r=", ".join(msg.to)
-            ),
-        )
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        item.workflow = workflow
+        db.session.add(item)
+        db.session.commit()
 
         flash(
             "Your project preferences were submitted successfully. A confirmation email has been sent to your registered email address.",

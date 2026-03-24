@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from celery import chain, group
 from flask import current_app
@@ -18,12 +18,15 @@ from ..database import db
 from ..models import (
     BackupRecord,
     EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
     ProjectClassConfig,
     SelectingStudent,
     SelectionRecord,
     TaskRecord,
     User,
 )
+from ..models.emails import encode_email_payload
 from ..task_queue import progress_update, register_task
 
 
@@ -160,25 +163,36 @@ def register_close_selection_tasks(celery):
                 recipients.add(user.email)
 
             data = config.selector_data
-            msg = EmailTemplate.apply_(
-                template_type=EmailTemplate.CLOSE_SELECTION_CONVENOR,
-                to=list(recipients),
-                subject_kwargs={"name": config.project_class.name},
-                body_kwargs={
+            template = EmailTemplate.find_template_(
+                EmailTemplate.CLOSE_SELECTION_CONVENOR, pclass=config.project_class
+            )
+            workflow = EmailWorkflow.build_(
+                name=f"Close selection convenor notification: {config.project_class.name}",
+                template=template,
+                defer=timedelta(minutes=15),
+                pclasses=[config.project_class],
+            )
+            db.session.add(workflow)
+            db.session.flush()
+
+            item = EmailWorkflowItem.build_(
+                subject_payload=encode_email_payload({"name": config.project_class.name}),
+                body_payload=encode_email_payload({
                     "pclass": config.project_class,
                     "config": config,
                     "data": data,
-                },
-                pclass=config.project_class,
+                }),
+                recipient_list=list(recipients),
             )
+            item.workflow = workflow
+            db.session.add(item)
 
-            # register a new task in the database
-            task_id = register_task(
-                msg.subject, description="Send convenor email notification"
-            )
-
-            send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-            send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
 
     @celery.task(bind=True)
     def close_fail(self, task_id, convenor_id):

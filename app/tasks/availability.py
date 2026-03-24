@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 from celery import group, chain
 from celery.exceptions import Ignore
@@ -29,7 +29,10 @@ from ..models import (
     SubmitterAttendanceData,
     SubmissionRecord,
     EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
 )
+from ..models.emails import encode_email_payload
 from ..shared.sqlalchemy import get_count
 from ..task_queue import progress_update, register_task
 
@@ -415,26 +418,32 @@ def register_availability_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.SCHEDULING_AVAILABILITY_REQUEST,
-            to=[a_record.faculty.user.email],
-            subject_kwargs={"name": a_record.assessment.name},
-            body_kwargs={
+        template = EmailTemplate.find_template_(EmailTemplate.SCHEDULING_AVAILABILITY_REQUEST)
+        workflow = EmailWorkflow.build_(
+            name=f"Scheduling availability request: {a_record.assessment.name}",
+            template=template,
+            defer=timedelta(hours=1),
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"name": a_record.assessment.name}),
+            body_payload=encode_email_payload({
                 "event": a_record.assessment,
                 "deadline": deadline,
                 "user": a_record.faculty.user,
-            },
+            }),
+            recipient_list=[a_record.faculty.user.email],
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send availability request email to {r}".format(
-                r=", ".join(msg.to)
-            ),
-        )
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         return 1
 
@@ -917,21 +926,30 @@ def register_availability_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        msg = EmailTemplate.apply_(
-            template_type=EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER,
-            to=[assessor.faculty.user.email],
-            subject_kwargs={"name": assessor.assessment.name},
-            body_kwargs={"event": assessor.assessment, "user": assessor.faculty.user},
+        template = EmailTemplate.find_template_(EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER)
+        workflow = EmailWorkflow.build_(
+            name=f"Scheduling availability reminder: {assessor.assessment.name}",
+            template=template,
+            defer=timedelta(hours=1),
         )
+        db.session.add(workflow)
+        db.session.flush()
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject,
-            description="Send availability reminder email to {r}".format(
-                r=", ".join(msg.to)
-            ),
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"name": assessor.assessment.name}),
+            body_payload=encode_email_payload({
+                "event": assessor.assessment,
+                "user": assessor.faculty.user,
+            }),
+            recipient_list=[assessor.faculty.user.email],
         )
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        item.workflow = workflow
+        db.session.add(item)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         return 1

@@ -646,6 +646,15 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
         db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")
     )
 
+    # number of send attempts that have been made
+    send_attempts = db.Column(db.Integer(), nullable=False, default=0)
+
+    # is there a current error condition?
+    error_condition = db.Column(db.Boolean(), nullable=False, default=False)
+
+    # any error message
+    error_message = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+
     # list of attachments
     attachments = db.relationship(
         "EmailWorkflowItemAttachment",
@@ -655,12 +664,16 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
     )
 
     # logged email identifier (valid once the email has been sent)
+    # we should delete this EmailWorkflowItem if/when the EmailLog item
+    # it produces is deleted
     email_log_id = db.Column(db.Integer(), db.ForeignKey("email_log.id"), nullable=True)
     email_log = db.relationship(
         "EmailLog",
         foreign_keys=[email_log_id],
         uselist=False,
-        backref=db.backref("email_workflow_items", lazy="dynamic"),
+        backref=db.backref(
+            "email_workflow_items", lazy="dynamic", cascade="all, delete-orphan"
+        ),
     )
 
     @classmethod
@@ -685,6 +698,9 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
             sent_timestamp=None,
             send_in_progress_timestamp=None,
             celery_send_in_progress_task_id=None,
+            send_attempts=0,
+            error_condition=False,
+            error_message=None,
         )
 
 

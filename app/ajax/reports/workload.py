@@ -10,13 +10,13 @@
 
 from typing import List
 
-from flask import jsonify, get_template_attribute, current_app, render_template
-from jinja2 import Template, Environment
+from flask import current_app, get_template_attribute, jsonify, render_template
+from jinja2 import Environment, Template
 
 from ...cache import cache
 from ...models import (
-    FacultyData,
     EnrollmentRecord,
+    FacultyData,
     ProjectClassConfig,
 )
 from ...shared.sqlalchemy import get_count
@@ -238,13 +238,13 @@ _full_workload = """
     {% endif %}
 {% endfor %}
 {% if ns.count > 0 %}<hr>{% endif %}
-<span class="text-primary mt-2"><strong>{{ tot }} CATS</strong></span>
+<span class="text-success mt-2 fs-5"><strong>{{ tot }} CATS</strong></span>
 """
 
 
 # language=jinja2
 _simple_workload = """
-<span class="text-primary"><strong>{{ tot }} CATS</strong></span>
+<span class="text-success fs-5"><strong>{{ tot }} CATS</strong></span>
 """
 
 
@@ -302,25 +302,6 @@ _full_allocation = """
         {{ total }} allocations &rightarrow; {{ CATS_dict.values()|sum }} CATS
     </div>
 {% endmacro %}
-{% macro presentation_list(enrolments, num_dict, CATS_dict, assigned_dict, total, tabindex, title) %}
-    {% for record in enrolments %}
-        {% if record.pclass_id in num_dict %}
-            {% set num = num_dict[record.pclass_id] %}
-            {% set CATS = CATS_dict[record.pclass_id] %}
-            {% if num > 0 %}
-                <div class="d-flex flex-row justify-content-start align-items-center gap-2">
-                    {% set swatch_colour = record.pclass.make_CSS_style() %}
-                    {{ medium_swatch(swatch_colour) }}
-                    <span class="small">{{ record.pclass.abbreviation }}</span>
-                    <span class="small text-success"><strong>{{ num }}</strong> &rightarrow; {{ CATS }} CATS</span>
-                </div>
-            {% endif %}
-        {% endif %}
-    {% endfor %}
-    <div class="mt-1 small text-secondary">
-        {{ total }} allocations &rightarrow; {{ CATS_dict.values()|sum }} CATS
-    </div>
-{% endmacro %}
 {% if total_supervising > 0 %}
     <div class="bg-light p-2 mb-2">
         <span>Supervising</span>
@@ -342,7 +323,7 @@ _full_allocation = """
 {% if total_presentations > 0 %}
     <div class="bg-light p-2 mb-2">
         <span>Presentations</span>
-        {{ presentation_list(enrolments, num_presentations, CATS_presentations, assigned_presentations, total_presentations, "13", "Presentations allocation") }}
+        {{ allocation_list(enrolments, num_presentations, CATS_presentations, assigned_presentations, total_presentations, "13", "Presentations allocation") }}
     </div>
 {% endif %}
 """
@@ -505,9 +486,6 @@ def _element_base(
     )
 
     availability, unbounded = f.student_availability
-
-    # TODO: presentation ScheduleSlot allocation isn't currently attached to the "allocation" entry -
-    #  these should be shown, just as for supervising/marking/moderating allocation
 
     simple_label = get_template_attribute("labels.html", "simple_label")
     small_swatch = get_template_attribute("swatch.html", "small_swatch")

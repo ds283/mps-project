@@ -163,17 +163,28 @@
                         {# deal with presentation if this period has one #}
                         {% if period.has_presentation %}
                             {% if period.has_deployed_schedule %}
-                                {% set schedule = period.deployed_schedule %}
-                                {% set slot = period.get_student_presentation_slot(sub.id) %}
-                                <div class="dashboard-subtitle pt-1 pb-1">{{ schedule.event_name }}</div>
-                                {% if slot is not none %}
-                                    <span class="text-secondary">{{ slot.session.label_as_string }} {{ slot.room.full_name }}</span>
-                                    {% for assessor in slot.assessors %}
-                                        <span class="badge bg-secondary">{{ assessor.user.name }}</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">Assessor information missing</span>
-                                    {% endfor %}
-                                {% else %}
+                                {% set pres_roles = record.presentation_assessor_roles %}
+                                {% set pns = namespace(shown=0) %}
+                                {% for slot_id, slot_roles in pres_roles|groupby('schedule_slot_id') %}
+                                    {% set slot = slot_roles[0].schedule_slot %}
+                                    {% if slot is not none %}
+                                        {% set pns.shown = pns.shown + 1 %}
+                                        <div class="dashboard-subtitle pt-1 pb-1">{{ slot.owner.event_name }}</div>
+                                        <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-2">
+                                            <span class="text-primary">{{ slot.session.label_as_string }} {{ slot.room.full_name }}</span>
+                                            {% for role in slot_roles %}
+                                                <div class="text-secondary"><i
+                                                        class="fas fa-user"></i> {{ role.user.name }}</div>
+                                            {% else %}
+                                                <div class="text-danger"><i class="fas fa-exclamation-triangle"></i>
+                                                    Assessor information missing
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                                {% if pns.shown == 0 %}
+                                    <div class="dashboard-subtitle mt-3 mb-2">Presentation assessment</div>
                                     <span class="badge bg-warning text-dark">Not attending</span>
                                 {% endif %}
                             {% else %}

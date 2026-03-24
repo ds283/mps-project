@@ -253,7 +253,6 @@ def create_app():
 
     import app.tasks as tasks
 
-    tasks.register_send_log_email(celery, mail)
     tasks.register_email_workflow_tasks(celery, mail)
     tasks.register_utility_tasks(celery)
     tasks.register_email(celery)

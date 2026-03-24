@@ -35,7 +35,6 @@ from .push_feedback import register_push_feedback_tasks
 from .rollover import register_rollover_tasks
 from .scheduling import register_scheduling_tasks
 from .selecting import register_selecting_tasks
-from .send_log_email import register_send_log_email
 from .services import register_services_tasks
 from .sessions import register_session_tasks
 from .system import register_system_tasks

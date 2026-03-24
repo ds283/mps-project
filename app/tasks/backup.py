@@ -23,14 +23,13 @@ from uuid import uuid4
 from celery import chain, group
 from celery.exceptions import Ignore
 from dateutil import parser
-from flask import current_app, render_template
-from flask_mailman import EmailMessage
+from flask import current_app
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
-from .. import register_task
 from ..database import db
-from ..models import BackupLabel, BackupRecord
+from ..models import BackupLabel, BackupRecord, EmailTemplate, EmailWorkflow, EmailWorkflowItem
+from ..models.emails import encode_email_payload
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.backup import (
     compute_current_backup_count,
@@ -364,7 +363,7 @@ def register_backup_tasks(celery):
 
         # don't execute if we are not on a live backup platform
         if not current_app.config.get("BACKUP_IS_LIVE", False):
-            raise Ignore()
+            return
 
         # order thinning_result by bins
         def sort_comparator(a, b):
@@ -387,27 +386,29 @@ def register_backup_tasks(celery):
 
         app_name = current_app.config.get("APP_NAME", "mpsprojects")
 
-        msg = EmailMessage(
-            subject=f"[{app_name}] Backup thinning report at {timestamp_human}",
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
-            to=[email],
+        template = EmailTemplate.find_template_(EmailTemplate.BACKUP_REPORT_THINNING)
+        workflow = EmailWorkflow.build_(
+            name=f"Backup thinning report at {timestamp_human}",
+            template=template,
+            defer=timedelta(minutes=1),
         )
-        msg.body = render_template(
-            "email/backups/report_thinning.txt",
-            result=sorted_result,
-            date=timestamp_human,
-        )
+        db.session.add(workflow)
+        db.session.flush()
 
-        task_id = register_task(
-            msg.subject,
-            description="Send backup thinning report to {r}".format(
-                r=", ".join(msg.to)
-            ),
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"app_name": app_name, "date": timestamp_human}),
+            body_payload=encode_email_payload({"result": sorted_result, "date": timestamp_human}),
+            recipient_list=[email],
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         self.update_state(state="SUCCESS")
 

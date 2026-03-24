@@ -9,11 +9,12 @@
 #
 
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from sys import stderr
 from urllib import parse
 
 import latex2markdown
+import markdown
 import redis
 from dozer import Dozer
 from flask import Flask, current_app, g, make_response, request
@@ -22,7 +23,7 @@ from flask_babel import Babel
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_healthz import Healthz
 from flask_login.signals import user_logged_in
-from flask_mailman import EmailMultiAlternatives, Mail
+from flask_mailman import Mail
 from flask_migrate import Migrate
 from flask_security import (
     LoginForm,
@@ -42,14 +43,15 @@ from .cache import cache
 from .database import db
 from .instance.version import site_copyright_dates, site_revision
 from .limiter import limiter
-from .models import MessageOfTheDay, Notification, User
+from .models import EmailTemplate, EmailWorkflow, EmailWorkflowItem, MessageOfTheDay, Notification, User
+from .models.emails import encode_email_payload
 from .shared.context.global_context import (
     build_static_context_data,
     get_global_context_data,
     render_template_context,
 )
 from .shared.utils import home_dashboard_url
-from .task_queue import background_task, make_celery, register_task
+from .task_queue import background_task, make_celery
 from .thirdparty.flask_bleach import Bleach
 from .thirdparty.flask_bootstrap5 import Bootstrap
 from .thirdparty.flask_markdown import Markdown
@@ -68,23 +70,31 @@ class PatchedMailUtil(MailUtil):
     def send_mail(
         self, template, subject, recipient, sender, body, html, user, **kwargs
     ):
-        # get send-log-email celery task
-        celery = current_app.extensions["celery"]
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
+        html_body = html if html else markdown.markdown(body)
 
-        msg = EmailMultiAlternatives(
-            subject=subject, from_email=sender, to=[recipient], body=body
+        email_template = EmailTemplate.find_template_(EmailTemplate.SERVICES_SEND_EMAIL)
+        workflow = EmailWorkflow.build_(
+            name=f"Security email: {subject}",
+            template=email_template,
+            defer=timedelta(minutes=1),
         )
-        if html:
-            msg.attach_alternative(html, "text/html")
+        db.session.add(workflow)
+        db.session.flush()
 
-        # register a new task in the database
-        task_id = register_task(
-            msg.subject, description="Email to {r}".format(r=", ".join(msg.to))
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"subject": subject}),
+            body_payload=encode_email_payload({"body": html_body}),
+            recipient_list=[recipient],
+            from_email=sender,
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        # queue Celery task to send the email
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
 
 def read_configuration(app: Flask, config_name: str):

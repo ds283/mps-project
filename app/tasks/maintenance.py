@@ -15,14 +15,12 @@ from typing import Iterable, List, Mapping, Union
 
 from celery import group, states
 from celery.exceptions import Ignore
-from flask import current_app, render_template
-from flask_mailman import EmailMessage
+from flask import current_app
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 import app.shared.cloud_object_store.encryption_types as encryptions
 
-from .. import register_task
 from ..database import db
 from ..models import (
     AssessorAttendanceData,
@@ -30,6 +28,9 @@ from ..models import (
     DegreeProgramme,
     DegreeType,
     DownloadCentreItem,
+    EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
     GeneratedAsset,
     LiveProject,
     MatchingEnumeration,
@@ -51,6 +52,7 @@ from ..models import (
     TemporaryAsset,
     User,
 )
+from ..models.emails import encode_email_payload
 from ..shared.asset_tools import (
     AssetCloudAdapter,
     AssetCloudScratchContextManager,
@@ -625,8 +627,7 @@ def register_maintenance_tasks(celery):
         return self.replace(
             group(*tasks)
             | issue_asset_report.s(
-                "email/maintenance/lost_assets.txt",
-                "[{app_name}] Lost asset report at {time}",
+                EmailTemplate.MAINTENANCE_LOST_ASSETS,
                 notify_email,
             )
         )
@@ -642,8 +643,7 @@ def register_maintenance_tasks(celery):
         return self.replace(
             group(*tasks)
             | issue_asset_report.s(
-                "email/maintenance/unattached_assets.txt",
-                "[{app_name}] Unattached asset report at {time}",
+                EmailTemplate.MAINTENANCE_UNATTACHED_ASSETS,
                 notify_email,
             )
         )
@@ -785,8 +785,7 @@ def register_maintenance_tasks(celery):
     def issue_asset_report(
         self,
         lost_assets,
-        template: str,
-        subject: str,
+            template_type: int,
         notify_email: Union[str, List[str]],
     ):
         now = datetime.now()
@@ -804,21 +803,29 @@ def register_maintenance_tasks(celery):
         if len(stripped_assets) == 0:
             raise Ignore()
 
-        msg = EmailMessage(
-            subject=subject.format(app_name=app_name, time=now_human),
-            from_email=current_app.config["MAIL_DEFAULT_SENDER"],
-            reply_to=[current_app.config["MAIL_REPLY_TO"]],
-            to=to_list,
+        template = EmailTemplate.find_template_(template_type)
+        workflow = EmailWorkflow.build_(
+            name=f"Asset report at {now_human}",
+            template=template,
+            defer=timedelta(minutes=1),
         )
-        msg.body = render_template(template, assets=stripped_assets, date=now)
+        db.session.add(workflow)
+        db.session.flush()
 
-        task_id = register_task(
-            msg.subject,
-            description="Send assets report to {r}".format(r=", ".join(to_list)),
+        item = EmailWorkflowItem.build_(
+            subject_payload=encode_email_payload({"app_name": app_name, "time": now_human}),
+            body_payload=encode_email_payload({"assets": stripped_assets, "date": now}),
+            recipient_list=to_list,
         )
+        item.workflow = workflow
+        db.session.add(item)
 
-        send_log_email = celery.tasks["app.tasks.send_log_email.send_log_email"]
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         self.update_state(state=states.SUCCESS)
 

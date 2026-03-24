@@ -17,6 +17,7 @@ from html2text import HTML2Text
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
+from .. import User
 from ..database import db
 from .assets import GeneratedAsset, SubmittedAsset, TemporaryAsset
 from .defaults import DEFAULT_STRING_LENGTH
@@ -950,6 +951,7 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
         from_email=None,
         reply_to=None,
         attachments=None,
+        creator=None,
     ):
         if recipient_list is None:
             recipient_list = []
@@ -982,6 +984,16 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
                 f'Invalid attachments type "{type(attachments)}" (value="{attachments}") in EmailWorkflowItem.build_()'
             )
 
+        creator_id_ = None
+        if isinstance(creator, User):
+            creator_id_ = creator.id
+        elif isinstance(creator, int):
+            creator_id_ = creator
+        elif creator is not None:
+            raise RuntimeError(
+                f'Invalid creator type "{type(creator)}" (value="{creator}") in EmailWorkflow.build_(): expected User instance or integer primary key'
+            )
+
         return cls(
             recipient_list=json.dumps(recipient_list),
             from_email=from_email,
@@ -998,6 +1010,10 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
             send_attempts=0,
             error_condition=False,
             error_message=None,
+            creator_id=creator_id_,
+            creation_timestamp=datetime.now(),
+            last_edit_timestamp=None,
+            last_edit_id=None,
         )
 
 
@@ -1095,6 +1111,7 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
         defer=None,
         pclasses=None,
         max_attachment_size=DEFAULT_MAX_ATTACHMENT_SIZE,
+        creator=None,
     ):
         if name is None or not isinstance(name, str) or len(name) == 0:
             raise RuntimeError(
@@ -1140,6 +1157,16 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
                 f'Invalid template type "{type(template)}" (value="{template}") in EmailWorkflow.build_(): expected EmailTemplate instance or integer primary key'
             )
 
+        creator_id_ = None
+        if isinstance(creator, User):
+            creator_id_ = creator.id
+        elif isinstance(creator, int):
+            creator_id_ = creator
+        elif creator is not None:
+            raise RuntimeError(
+                f'Invalid creator type "{type(creator)}" (value="{creator}") in EmailWorkflow.build_(): expected User instance or integer primary key'
+            )
+
         if pclasses is None:
             pclasses = []
         elif isinstance(pclasses, ProjectClass):
@@ -1156,5 +1183,9 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
             completed=False,
             paused=False,
             max_attachment_size=max_attachment_size,
+            creation_timestamp=datetime.now(),
+            creator_id=creator_id_,
+            last_edit_timestamp=None,
+            last_edit_id=None,
             **template_kwargs,
         )

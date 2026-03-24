@@ -272,9 +272,9 @@ _full_allocation = """
 {%- macro assigned_list(assigned) -%}
     {%- for record in assigned -%}
         <div class='small'>
-            {{ loop.index }}. {{ record.owner.student.user.name }}
-            {% if record.project is not none -%}
-                <em>{{ truncate_name(record.project.name, maxlength=40) }}</em>
+            {{ loop.index }}. {{ record.submission.owner.student.user.name }}
+            {% if record.submission.project is not none -%}
+                <em>{{ truncate_name(record.submission.project.name, maxlength=40) }}</em>
             {%- endif -%}
         </div>
     {%- else -%}

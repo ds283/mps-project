@@ -1,0 +1,15 @@
+<span class="badge bg-secondary">
+    {% if config.uses_supervisor %}
+        S {{ CATS_sup }}
+    {% endif %}
+    {% if config.uses_marker %}
+        Ma {{ CATS_mark }}
+    {% endif %}
+    {% if config.uses_moderator %}
+        Mo {{ CATS_moderate }}
+    {% endif %}
+    {% if config.uses_presentations %}
+        P {{ CATS_pres }}
+    {% endif %}
+</span>
+<span class="badge bg-primary">T {{ CATS_sup+CATS_mark+CATS_moderate+CATS_pres }}</span>

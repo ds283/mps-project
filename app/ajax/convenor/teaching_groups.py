@@ -16,7 +16,7 @@ from ...models import SubmissionPeriodRecord
 # language=jinja2
 _group = """
 {% for rec in assignments %}
-    <div>{{ rec.owner.student.user.name }}</div>
+    <div>{{ rec.submission.owner.student.user.name }}</div>
 {% endfor %}
 """
 

@@ -1,0 +1,39 @@
+{% from "convenor/workload/_macros.html" import feedback_state_tag %}
+{% macro presentation_tag(rec, show_period) %}
+    {% set r = rec.submission %}
+    {% set sub = r.owner %}
+    {% set config = sub.config %}
+    {% set pclass = config.project_class %}
+    {% set student = sub.student %}
+    {% set user = student.user %}
+    {% set slot = rec.schedule_slot %}
+    <div>
+        <div class="dropdown assignment-label">
+            <a class="badge text-decoration-none text-nohover-light bg-info text-dark btn-table-block dropdown-toggle"
+               data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
+                {% if show_period %}#{{ r.submission_period }}: {% endif %}
+                {{ user.name }}
+            </a>
+            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                {% set disabled = not pclass.publish %}
+                <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}"
+                   {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>
+                    <i class="fas fa-comments fa-fw"></i> Show feedback
+                </a>
+            </div>
+        </div>
+        {% if slot %}
+            <span class="badge bg-secondary">{{ slot.session.label_as_string }} &bull; {{ slot.room.full_name }}</span>
+        {% endif %}
+        {{ feedback_state_tag(rec, rec.feedback_state, 'Feedback') }}
+    </div>
+{% endmacro %}
+{% if recs|length >= 1 %}
+    <div class="d-flex flex-row justify-content-start gap-2">
+        {% for rec in recs %}
+            {{ presentation_tag(rec, config.number_submissions > 1) }}
+        {% endfor %}
+    </div>
+{% else %}
+    <span class="badge bg-secondary">None</span>
+{% endif %}

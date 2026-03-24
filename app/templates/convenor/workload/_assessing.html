@@ -1,0 +1,37 @@
+{% macro marker_tag(rec, show_period) %}
+    {% set r = rec.submission %}
+    {% set sub = r.owner %}
+    {% set config = sub.config %}
+    {% set pclass = config.project_class %}
+    {% set student = sub.student %}
+    {% set user = student.user %}
+    <div>
+        <div class="dropdown assignment-label">
+            <a class="badge text-decoration-none text-nohover-light bg-secondary btn-table-block dropdown-toggle"
+               href="" role="button" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
+                {% if show_period %}#{{ r.submission_period }}: {% endif %}
+                {{ user.name }}
+            </a>
+            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
+                {% set disabled = not pclass.publish %}
+                <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}"
+                   {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>
+                    <i class="fas fa-comments fa-fw"></i> Show feedback
+                </a>
+                <a class="dropdown-item d-flex gap-2"
+                   href="{{ url_for('convenor.edit_roles', sub_id=sub.id, record_id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">
+                    <i class="fas fa-user-circle fa-fw"></i> Edit roles...
+                </a>
+            </div>
+        </div>
+    </div>
+{% endmacro %}
+{% if recs|length >= 1 %}
+    <div class="d-flex flex-row justify-content-start gap-2"></div>
+    {% for rec in recs %}
+        {{ marker_tag(rec, config.number_submissions > 1) }}
+    {% endfor %}
+    </div>
+{% else %}
+    <span class="badge bg-secondary">None</span>
+{% endif %}

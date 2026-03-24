@@ -25,8 +25,6 @@ from .assessment import PresentationAssessment, _PresentationAssessment_is_valid
 from .associations import (
     faculty_affiliations,
     faculty_batch_to_tenants,
-    faculty_to_slots,
-    submitter_to_slots,
 )
 from .config import get_AES_key
 from .defaults import DEFAULT_STRING_LENGTH
@@ -580,7 +578,72 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         return {"label": f"Assessor for: {num}", "type": "info"}
 
-    def _apply_assignment_filters(
+    def supervisor_assignments(
+        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
+    ):
+        """
+        Return a list of current SubmissionRole instances for which we are supervisor
+        :return:
+        """
+        from .submissions import SubmissionRole
+
+        return self._apply_role_assignment_filters(
+            [
+                SubmissionRole.ROLE_SUPERVISOR,
+                SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+            ],
+            config_id,
+            config,
+            pclass_id,
+            pclass,
+            period,
+        )
+
+    def marker_assignments(
+        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
+    ):
+        """
+        Return a list of current SubmissionRole instances for which we are marker
+        :return:
+        """
+        from .submissions import SubmissionRole
+
+        return self._apply_role_assignment_filters(
+            SubmissionRole.ROLE_MARKER, config_id, config, pclass_id, pclass, period
+        )
+
+    def moderator_assignments(
+        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
+    ):
+        """
+        Return a list of current SubmissionRole instances for which we are moderator
+        :return:
+        """
+        from .submissions import SubmissionRole
+
+        return self._apply_role_assignment_filters(
+            SubmissionRole.ROLE_MODERATOR, config_id, config, pclass_id, pclass, period
+        )
+
+    def presentation_assignments(
+        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
+    ):
+        """
+        Return a list of current SubmissionRole instances for which we are a presentation assessor
+        :return:
+        """
+        from .submissions import SubmissionRole
+
+        return self._apply_role_assignment_filters(
+            SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
+            config_id,
+            config,
+            pclass_id,
+            pclass,
+            period,
+        )
+
+    def _apply_role_assignment_filters(
         self,
         roles,
         config_id=None,
@@ -589,7 +652,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         pclass=None,
         period=None,
     ):
-        from .live_projects import LiveProject, SubmittingStudent
+        from .live_projects import SubmittingStudent
         from .project_class import ProjectClassConfig
         from .submissions import (
             SubmissionPeriodRecord,
@@ -609,7 +672,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
         if items != 3:
             raise RuntimeError(
                 "At most one project-class specifier should be passed to "
-                "FacultyData._apply_assignment_filters. Received types were:"
+                "FacultyData._apply_role_assignment_filters. Received types were: "
                 "config_id={ty1}, config={ty2}, pclass_id={ty3}, "
                 "pclass={ty4}".format(
                     ty1=type(config_id),
@@ -623,19 +686,15 @@ class FacultyData(db.Model, EditingMetadataMixin):
             roles = [roles]
 
         query = (
-            db.session.query(SubmissionRecord)
+            db.session.query(SubmissionRole)
             .filter(
                 and_(
-                    SubmissionRecord.retired.is_(False),
-                    SubmissionRecord.roles.any(
-                        and_(
-                            SubmissionRole.role.in_(roles),
-                            SubmissionRole.user_id == self.id,
-                        )
-                    ),
+                    SubmissionRole.role.in_(roles),
+                    SubmissionRole.user_id == self.id,
                 )
             )
-            .join(LiveProject, LiveProject.id == SubmissionRecord.project_id)
+            .join(SubmissionRecord, SubmissionRecord.id == SubmissionRole.submission_id)
+            .filter(SubmissionRecord.retired.is_(False))
             .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id)
             .join(
                 SubmissionPeriodRecord,
@@ -665,155 +724,6 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         return query
 
-    def supervisor_assignments(
-        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
-    ):
-        """
-        Return a list of current SubmissionRecord instances for which we are supervisor
-        :return:
-        """
-        from .submissions import SubmissionRole
-
-        return self._apply_assignment_filters(
-            [
-                SubmissionRole.ROLE_SUPERVISOR,
-                SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-            ],
-            config_id,
-            config,
-            pclass_id,
-            pclass,
-            period,
-        )
-
-    def marker_assignments(
-        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
-    ):
-        """
-        Return a list of current SubmissionRecord instances for which we are marker
-        :return:
-        """
-        from .submissions import SubmissionRole
-
-        return self._apply_assignment_filters(
-            SubmissionRole.ROLE_MARKER, config_id, config, pclass_id, pclass, period
-        )
-
-    def moderator_assignments(
-        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
-    ):
-        """
-        Return a list of current SubmissionRecord instances for which we are moderator
-        :return:
-        """
-        from .submissions import SubmissionRole
-
-        return self._apply_assignment_filters(
-            SubmissionRole.ROLE_MODERATOR, config_id, config, pclass_id, pclass, period
-        )
-
-    def presentation_assignments(
-        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
-    ):
-        from .assessment import PresentationSession
-        from .project_class import ProjectClassConfig
-        from .scheduling import ScheduleAttempt, ScheduleSlot
-        from .submissions import SubmissionPeriodRecord, SubmissionRecord
-
-        # at most one of config_id, config, pclass_id, pclass should be defined
-        items = sum(
-            [
-                int(config_id is None),
-                int(config is None),
-                int(pclass_id is None),
-                int(pclass is None),
-            ]
-        )
-        if items != 3:
-            raise RuntimeError(
-                "At most one project-class specifier should be passed to "
-                "FacultyData.presentation_assignments. Received types were:"
-                "config_id={ty1}, config={ty2}, pclass_id={ty3}, "
-                "pclass={ty4}".format(
-                    ty1=type(config_id),
-                    ty2=type(config),
-                    ty3=type(pclass_id),
-                    ty4=type(pclass),
-                )
-            )
-
-        query = (
-            db.session.query(faculty_to_slots.c.slot_id)
-            .filter(faculty_to_slots.c.faculty_id == self.id)
-            .subquery()
-        )
-
-        slot_query = (
-            db.session.query(ScheduleSlot)
-            .join(query, query.c.slot_id == ScheduleSlot.id)
-            .join(ScheduleAttempt, ScheduleAttempt.id == ScheduleSlot.owner_id)
-            .filter(ScheduleAttempt.deployed.is_(True))
-            .subquery()
-        )
-
-        slot_ids = (
-            db.session.query(ScheduleSlot.id)
-            .join(slot_query, slot_query.c.id == ScheduleSlot.id)
-            .subquery()
-        )
-
-        filtered_ids = (
-            db.session.query(slot_ids.c.id)
-            .join(submitter_to_slots, submitter_to_slots.c.slot_id == slot_ids.c.id)
-            .join(
-                SubmissionRecord,
-                SubmissionRecord.id == submitter_to_slots.c.submitter_id,
-            )
-            .filter(SubmissionRecord.retired.is_(False))
-            .join(
-                SubmissionPeriodRecord,
-                SubmissionPeriodRecord.id == SubmissionRecord.period_id,
-            )
-        )
-
-        if isinstance(period, int):
-            filtered_ids = filtered_ids.filter(
-                SubmissionPeriodRecord.submission_period == period
-            )
-        elif period is not None:
-            raise ValueError("Expected period identifier to be an integer")
-
-        filtered_ids = filtered_ids.join(
-            ProjectClassConfig,
-            ProjectClassConfig.id == SubmissionPeriodRecord.config_id,
-        )
-
-        if config_id is not None:
-            filtered_ids = filtered_ids.filter(ProjectClassConfig.id == config_id)
-        elif config is not None:
-            filtered_ids = filtered_ids.filter(ProjectClassConfig.id == config.id)
-        elif pclass_id is not None:
-            filtered_ids = filtered_ids.filter(
-                ProjectClassConfig.pclass_id == pclass_id
-            )
-        elif pclass is not None:
-            filtered_ids = filtered_ids.filter(
-                ProjectClassConfig.pclass_id == pclass.id
-            )
-
-        filtered_ids = filtered_ids.distinct().subquery()
-
-        return (
-            db.session.query(ScheduleSlot)
-            .join(filtered_ids, filtered_ids.c.id == ScheduleSlot.id)
-            .join(
-                PresentationSession, PresentationSession.id == ScheduleSlot.session_id
-            )
-            .order_by(
-                PresentationSession.date.asc(), PresentationSession.session_type.asc()
-            )
-        )
-
     def CATS_assignment(self, config_proxy):
         """
         Return (supervising CATS, marking CATS) for the current year
@@ -833,28 +743,28 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         if config.uses_supervisor:
             supv = self.supervisor_assignments(config_id=config.id)
-            supv_CATS = [x.supervising_CATS for x in supv]
+            supv_CATS = [x.submission.supervising_CATS for x in supv]
             supv_total = sum(x for x in supv_CATS if x is not None)
         else:
             supv_total = 0
 
         if config.uses_marker:
             mark = self.marker_assignments(config_id=config.id)
-            mark_CATS = [x.marking_CATS for x in mark]
+            mark_CATS = [x.submission.marking_CATS for x in mark]
             mark_total = sum(x for x in mark_CATS if x is not None)
         else:
             mark_total = 0
 
         if config.uses_moderator:
             moderate = self.moderator_assignments(config_id=config.id)
-            moderate_CATS = [x.moderation_CATS for x in moderate]
+            moderate_CATS = [x.submission.moderation_CATS for x in moderate]
             moderate_total = sum(x for x in moderate_CATS if x is not None)
         else:
             moderate_total = 0
 
         if config.uses_presentations:
             pres = self.presentation_assignments(config_id=config.id)
-            pres_CATS = [x.assessor_CATS for x in pres]
+            pres_CATS = [x.submission.assessor_CATS for x in pres]
             pres_total = sum(x for x in pres_CATS if x is not None)
         else:
             pres_total = 0
@@ -879,8 +789,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
     def has_late_feedback(self, config_proxy, faculty_id):
         from .project_class import ProjectClass, ProjectClassConfig
-        from .scheduling import ScheduleSlot
-        from .submissions import SubmissionRecord
+        from .submissions import SubmissionRole
 
         if isinstance(config_proxy, ProjectClassConfig):
             config_id = config_proxy.id
@@ -890,22 +799,22 @@ class FacultyData(db.Model, EditingMetadataMixin):
             config_id = config_proxy
 
         supervisor_late = [
-            x.supervisor_feedback_state == SubmissionRecord.FEEDBACK_LATE
+            x.feedback_state == SubmissionRole.FEEDBACK_LATE
             for x in self.supervisor_assignments(config_id=config_id)
         ]
 
         response_late = [
-            x.supervisor_response_state == SubmissionRecord.FEEDBACK_LATE
+            x.response_state == SubmissionRole.FEEDBACK_LATE
             for x in self.supervisor_assignments(config_id=config_id)
         ]
 
         marker_late = [
-            x.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE
+            x.feedback_state == SubmissionRole.FEEDBACK_LATE
             for x in self.marker_assignments(config_id=config_id)
         ]
 
         presentation_late = [
-            x.feedback_state(faculty_id) == ScheduleSlot.FEEDBACK_LATE
+            x.feedback_state == SubmissionRole.FEEDBACK_LATE
             for x in self.presentation_assignments(config_id=config_id)
         ]
 

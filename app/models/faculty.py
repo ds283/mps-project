@@ -578,9 +578,7 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         return {"label": f"Assessor for: {num}", "type": "info"}
 
-    def supervisor_assignments(
-        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
-    ):
+    def supervisor_assignments(self, config=None, pclass=None, period=None):
         """
         Return a list of current SubmissionRole instances for which we are supervisor
         :return:
@@ -588,20 +586,13 @@ class FacultyData(db.Model, EditingMetadataMixin):
         from .submissions import SubmissionRole
 
         return self._apply_role_assignment_filters(
-            [
-                SubmissionRole.ROLE_SUPERVISOR,
-                SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-            ],
-            config_id,
-            config,
-            pclass_id,
-            pclass,
-            period,
+            [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR],
+            config=config,
+            pclass=pclass,
+            period=period,
         )
 
-    def marker_assignments(
-        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
-    ):
+    def marker_assignments(self, config=None, pclass=None, period=None):
         """
         Return a list of current SubmissionRole instances for which we are marker
         :return:
@@ -609,12 +600,10 @@ class FacultyData(db.Model, EditingMetadataMixin):
         from .submissions import SubmissionRole
 
         return self._apply_role_assignment_filters(
-            SubmissionRole.ROLE_MARKER, config_id, config, pclass_id, pclass, period
+            SubmissionRole.ROLE_MARKER, config=config, pclass=pclass, period=period
         )
 
-    def moderator_assignments(
-        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
-    ):
+    def moderator_assignments(self, config=None, pclass=None, period=None):
         """
         Return a list of current SubmissionRole instances for which we are moderator
         :return:
@@ -622,12 +611,10 @@ class FacultyData(db.Model, EditingMetadataMixin):
         from .submissions import SubmissionRole
 
         return self._apply_role_assignment_filters(
-            SubmissionRole.ROLE_MODERATOR, config_id, config, pclass_id, pclass, period
+            SubmissionRole.ROLE_MODERATOR, config=config, pclass=pclass, period=period
         )
 
-    def presentation_assignments(
-        self, config_id=None, config=None, pclass_id=None, pclass=None, period=None
-    ):
+    def presentation_assignments(self, config=None, pclass=None, period=None):
         """
         Return a list of current SubmissionRole instances for which we are a presentation assessor
         :return:
@@ -636,51 +623,19 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         return self._apply_role_assignment_filters(
             SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
-            config_id,
-            config,
-            pclass_id,
-            pclass,
-            period,
+            config=config,
+            pclass=pclass,
+            period=period,
         )
 
-    def _apply_role_assignment_filters(
-        self,
-        roles,
-        config_id=None,
-        config=None,
-        pclass_id=None,
-        pclass=None,
-        period=None,
-    ):
+    def _apply_role_assignment_filters(self, roles, config=None, pclass=None, period=None):
         from .live_projects import SubmittingStudent
-        from .project_class import ProjectClassConfig
+        from .project_class import ProjectClass, ProjectClassConfig
         from .submissions import (
             SubmissionPeriodRecord,
             SubmissionRecord,
             SubmissionRole,
         )
-
-        # at most one of config_id, config, pclass_id, pclass should be defined
-        items = sum(
-            [
-                int(config_id is None),
-                int(config is None),
-                int(pclass_id is None),
-                int(pclass is None),
-            ]
-        )
-        if items != 3:
-            raise RuntimeError(
-                "At most one project-class specifier should be passed to "
-                "FacultyData._apply_role_assignment_filters. Received types were: "
-                "config_id={ty1}, config={ty2}, pclass_id={ty3}, "
-                "pclass={ty4}".format(
-                    ty1=type(config_id),
-                    ty2=type(config),
-                    ty3=type(pclass_id),
-                    ty4=type(pclass),
-                )
-            )
 
         if not isinstance(roles, list):
             roles = [roles]
@@ -702,25 +657,34 @@ class FacultyData(db.Model, EditingMetadataMixin):
             )
         )
 
-        if config_id is not None:
-            query = query.filter(SubmittingStudent.config_id == config_id)
-        elif config is not None:
-            query = query.filter(SubmittingStudent.config_id == config.id)
-        elif pclass_id is not None:
-            query = query.join(
-                ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id
-            ).filter(ProjectClassConfig.pclass_id == pclass_id)
+        if config is not None:
+            if isinstance(config, int):
+                query = query.filter(SubmittingStudent.config_id == config)
+            elif isinstance(config, ProjectClassConfig):
+                query = query.filter(SubmittingStudent.config_id == config.id)
+            else:
+                raise ValueError(
+                    f"Unexpected type for config parameter: {type(config)}"
+                )
         elif pclass is not None:
             query = query.join(
                 ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id
-            ).filter(ProjectClassConfig.pclass_id == pclass.id)
+            )
+            if isinstance(pclass, int):
+                query = query.filter(ProjectClassConfig.pclass_id == pclass)
+            elif isinstance(pclass, ProjectClass):
+                query = query.filter(ProjectClassConfig.pclass_id == pclass.id)
+            else:
+                raise ValueError(
+                    f"Unexpected type for pclass parameter: {type(pclass)}"
+                )
 
         if period is None:
             query = query.order_by(SubmissionPeriodRecord.submission_period.asc())
         elif isinstance(period, int):
             query = query.filter(SubmissionPeriodRecord.submission_period == period)
         else:
-            raise ValueError("Expected period identifier to be an integer")
+            raise ValueError(f"Unexpected type for period parameter: {type(period)}")
 
         return query
 
@@ -742,28 +706,28 @@ class FacultyData(db.Model, EditingMetadataMixin):
             )
 
         if config.uses_supervisor:
-            supv = self.supervisor_assignments(config_id=config.id)
+            supv = self.supervisor_assignments(config=config)
             supv_CATS = [x.submission.supervising_CATS for x in supv]
             supv_total = sum(x for x in supv_CATS if x is not None)
         else:
             supv_total = 0
 
         if config.uses_marker:
-            mark = self.marker_assignments(config_id=config.id)
+            mark = self.marker_assignments(config=config)
             mark_CATS = [x.submission.marking_CATS for x in mark]
             mark_total = sum(x for x in mark_CATS if x is not None)
         else:
             mark_total = 0
 
         if config.uses_moderator:
-            moderate = self.moderator_assignments(config_id=config.id)
+            moderate = self.moderator_assignments(config=config)
             moderate_CATS = [x.submission.moderation_CATS for x in moderate]
             moderate_total = sum(x for x in moderate_CATS if x is not None)
         else:
             moderate_total = 0
 
         if config.uses_presentations:
-            pres = self.presentation_assignments(config_id=config.id)
+            pres = self.presentation_assignments(config=config)
             pres_CATS = [x.submission.assessor_CATS for x in pres]
             pres_total = sum(x for x in pres_CATS if x is not None)
         else:
@@ -800,22 +764,22 @@ class FacultyData(db.Model, EditingMetadataMixin):
 
         supervisor_late = [
             x.feedback_state == SubmissionRole.FEEDBACK_LATE
-            for x in self.supervisor_assignments(config_id=config_id)
+            for x in self.supervisor_assignments(config=config_id)
         ]
 
         response_late = [
             x.response_state == SubmissionRole.FEEDBACK_LATE
-            for x in self.supervisor_assignments(config_id=config_id)
+            for x in self.supervisor_assignments(config=config_id)
         ]
 
         marker_late = [
             x.feedback_state == SubmissionRole.FEEDBACK_LATE
-            for x in self.marker_assignments(config_id=config_id)
+            for x in self.marker_assignments(config=config_id)
         ]
 
         presentation_late = [
             x.feedback_state == SubmissionRole.FEEDBACK_LATE
-            for x in self.presentation_assignments(config_id=config_id)
+            for x in self.presentation_assignments(config=config_id)
         ]
 
         return (

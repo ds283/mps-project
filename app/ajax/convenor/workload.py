@@ -20,10 +20,10 @@ def faculty_workload_data(config: ProjectClassConfig, faculty):
     fd: FacultyData
     for u, fd in faculty:
         CATS_sup, CATS_mark, CATS_moderate, CATS_pres = fd.CATS_assignment(config)
-        projects = fd.supervisor_assignments(config_id=config.id).all()
-        marking = fd.marker_assignments(config_id=config.id).all()
-        moderating = fd.moderator_assignments(config_id=config.id).all()
-        presentations = fd.presentation_assignments(config_id=config.id).all()
+        projects = fd.supervisor_assignments(config=config).all()
+        marking = fd.marker_assignments(config=config).all()
+        moderating = fd.moderator_assignments(config=config).all()
+        presentations = fd.presentation_assignments(config=config).all()
 
         data.append(
             {

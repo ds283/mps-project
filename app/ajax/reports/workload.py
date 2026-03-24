@@ -476,22 +476,22 @@ def _element_base(
         configs[pclass_id] = config
 
         if config.uses_supervisor:
-            data = f.supervisor_assignments(config_id=config.id)
+            data = f.supervisor_assignments(config=config)
             assigned_supervising[pclass_id] = data.all()
             num_supervising[pclass_id] = get_count(data)
 
         if config.uses_marker:
-            data = f.marker_assignments(config_id=config.id)
+            data = f.marker_assignments(config=config)
             assigned_marking[pclass_id] = data.all()
             num_marking[pclass_id] = get_count(data)
 
         if config.uses_moderator:
-            data = f.moderator_assignments(config_id=config.id)
+            data = f.moderator_assignments(config=config)
             assigned_moderating[pclass_id] = data.all()
             num_moderating[pclass_id] = get_count(data)
 
         if config.uses_presentations:
-            data = f.presentation_assignments(config_id=config.id)
+            data = f.presentation_assignments(config=config)
             assigned_presentations[pclass_id] = data.all()
             num_presentations[pclass_id] = get_count(data)
 

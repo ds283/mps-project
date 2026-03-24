@@ -31,7 +31,7 @@ def teaching_group_by_faculty(data, config, show_period):
             "group": render_template_string(
                 _group,
                 assignments=f.supervisor_assignments(
-                    config_id=config.id, period=show_period
+                    config=config, period=show_period
                 ).all(),
             ),
         }

@@ -20,6 +20,7 @@ from flask import (
     jsonify,
     redirect,
     request,
+    session,
     url_for,
 )
 from flask_security import current_user, roles_accepted
@@ -43,6 +44,7 @@ from ..models import (
     ProjectClassConfig,
     ProjectDescription,
     SelectingStudent,
+    Tenant,
     User,
 )
 from ..shared.actions import do_cancel_confirm, do_confirm, do_deconfirm_to_pending
@@ -313,11 +315,36 @@ def confirmation_reminder_individual(fac_id, config_id):
 @convenor.route("/show_unofferable")
 @roles_accepted("faculty", "admin", "root")
 def show_unofferable():
-    # special-case of unattached projects; reject user if not administrator
     if not validate_is_administrator():
         return redirect(redirect_url())
 
-    return render_template_context("convenor/unofferable.html")
+    allowed_tenants = [t.id for t in current_user.tenants]
+    tenant_filter = request.args.get("tenant_filter")
+
+    # if no tenant filter supplied, check if one is stored in session
+    if tenant_filter is None and session.get("convenor_unofferable_tenant_filter"):
+        tenant_filter = session["convenor_unofferable_tenant_filter"]
+
+    if tenant_filter is not None:
+        tenant: Tenant = db.session.query(Tenant).filter_by(id=tenant_filter).first()
+        if tenant is None:
+            tenant_filter = "all"
+        elif not current_user.has_role("root") and tenant.id not in allowed_tenants:
+            tenant_filter = "all"
+
+    # write tenant filter into session if it is not empty
+    if tenant_filter is not None:
+        session["convenor_unofferable_tenant_filter"] = tenant_filter
+
+    # build list of available tenants
+    if current_user.has_role("root"):
+        tenants = db.session.query(Tenant).all()
+    else:
+        tenants = list(current_user.tenants)
+
+    return render_template_context(
+        "convenor/unofferable.html", tenants=tenants, tenant_filter=tenant_filter
+    )
 
 
 @convenor.route("/unofferable_ajax", methods=["POST"])
@@ -332,6 +359,14 @@ def unofferable_ajax():
         return jsonify({})
 
     allowed_tenants = [t.id for t in current_user.tenants]
+    tenant_filter = request.args.get("tenant_filter")
+
+    if tenant_filter is not None:
+        tenant: Tenant = db.session.query(Tenant).filter_by(id=tenant_filter).first()
+        if tenant is None:
+            tenant_filter = "all"
+        elif not current_user.has_role("root") and tenant.id not in allowed_tenants:
+            tenant_filter = "all"
 
     base_query = (
         db.session.query(Project)
@@ -347,9 +382,18 @@ def unofferable_ajax():
             ),
         )
     )
-    if not current_user.has_role("root"):
+
+    from ..shared.conversions import is_integer
+
+    flag, tenant_value = is_integer(tenant_filter)
+
+    if flag:
         base_query = base_query.filter(
-            Project.project_classes.any(ProjectClass.tenant.in_(allowed_tenants)),
+            Project.project_classes.any(ProjectClass.tenant_id == tenant_value)
+        )
+    elif not current_user.has_role("root"):
+        base_query = base_query.filter(
+            Project.project_classes.any(ProjectClass.tenant_id.in_(allowed_tenants)),
         )
 
     def row_filter(row: Project):

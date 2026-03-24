@@ -1,18 +1,15 @@
 {% from "convenor/workload/_macros.html" import feedback_state_tag %}
-{% macro presentation_tag(rec, show_period) %}
+{% macro student_entry(rec, show_period) %}
     {% set r = rec.submission %}
     {% set sub = r.owner %}
     {% set config = sub.config %}
     {% set pclass = config.project_class %}
-    {% set student = sub.student %}
-    {% set user = student.user %}
-    {% set slot = rec.schedule_slot %}
+    {% set user = sub.student.user %}
     <div>
-        <div class="dropdown assignment-label">
-            <a class="badge text-decoration-none text-nohover-light bg-info text-dark btn-table-block dropdown-toggle"
-               data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                {% if show_period %}#{{ r.submission_period }}: {% endif %}
-                {{ user.name }}
+        <div class="dropdown">
+            <a class="small text-decoration-none link-secondary dropdown-toggle" data-bs-toggle="dropdown"
+               role="button" href="" aria-haspopup="true" aria-expanded="false">
+                {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ user.name }}
             </a>
             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                 {% set disabled = not pclass.publish %}
@@ -22,16 +19,28 @@
                 </a>
             </div>
         </div>
-        {% if slot %}
-            <span class="badge bg-secondary">{{ slot.session.label_as_string }} &bull; {{ slot.room.full_name }}</span>
-        {% endif %}
         {{ feedback_state_tag(rec, rec.feedback_state, 'Feedback') }}
     </div>
 {% endmacro %}
 {% if recs|length >= 1 %}
-    <div class="d-flex flex-row justify-content-start gap-2">
-        {% for rec in recs %}
-            {{ presentation_tag(rec, config.number_submissions > 1) }}
+    {% set show_period = config.number_submissions > 1 %}
+    <div class="d-flex flex-row flex-wrap justify-content-start gap-2">
+        {% for slot_id, slot_recs in recs|groupby('schedule_slot_id') %}
+            {% set slot_recs = slot_recs|list %}
+            {% set slot = slot_recs[0].schedule_slot %}
+            <div>
+                {% if slot %}
+                    <div class="small">
+                        <div class="text-primary fw-semibold">{{ slot.session.label_as_string }}</div>
+                        <div class="small text-secondary">{{ slot.room.full_name }}</div>
+                    </div>
+                {% endif %}
+                <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+                    {% for rec in slot_recs %}
+                        {{ student_entry(rec, show_period) }}
+                    {% endfor %}
+                </div>
+            </div>
         {% endfor %}
     </div>
 {% else %}

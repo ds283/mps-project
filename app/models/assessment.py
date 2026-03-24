@@ -155,7 +155,7 @@ class PresentationAssessment(
 
     @property
     def is_closed(self):
-        return self.cloed
+        return self.closed
 
     @property
     def availability_outstanding_count(self):

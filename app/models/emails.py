@@ -17,13 +17,13 @@ from html2text import HTML2Text
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
-from .. import User
 from ..database import db
 from .assets import GeneratedAsset, SubmittedAsset, TemporaryAsset
 from .defaults import DEFAULT_STRING_LENGTH
 from .model_mixins import ColouredLabelMixin, EditingMetadataMixin
 from .project_class import ProjectClass
 from .tenants import Tenant
+from .users import User
 
 # default max attachment size is 10 Mb
 DEFAULT_MAX_ATTACHMENT_SIZE = 1024 * 1024 * 10

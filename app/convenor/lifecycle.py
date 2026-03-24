@@ -43,7 +43,9 @@ from ..models import (
     ProjectClass,
     ProjectClassConfig,
     ProjectDescription,
+    ResearchGroup,
     SelectingStudent,
+    SubmissionRecord,
     Tenant,
     User,
 )
@@ -319,31 +321,162 @@ def show_unofferable():
         return redirect(redirect_url())
 
     allowed_tenants = [t.id for t in current_user.tenants]
+
+    # --- tenant filter ---
     tenant_filter = request.args.get("tenant_filter")
 
-    # if no tenant filter supplied, check if one is stored in session
     if tenant_filter is None and session.get("convenor_unofferable_tenant_filter"):
         tenant_filter = session["convenor_unofferable_tenant_filter"]
 
-    if tenant_filter is not None:
+    if tenant_filter is not None and tenant_filter != "all":
         tenant: Tenant = db.session.query(Tenant).filter_by(id=tenant_filter).first()
         if tenant is None:
             tenant_filter = "all"
         elif not current_user.has_role("root") and tenant.id not in allowed_tenants:
             tenant_filter = "all"
 
-    # write tenant filter into session if it is not empty
     if tenant_filter is not None:
         session["convenor_unofferable_tenant_filter"] = tenant_filter
 
-    # build list of available tenants
+    # --- pclass filter ---
+    pclass_filter = request.args.get("pclass_filter")
+
+    if pclass_filter is None and session.get("convenor_unofferable_pclass_filter"):
+        pclass_filter = session["convenor_unofferable_pclass_filter"]
+
+    if pclass_filter is not None and pclass_filter != "all":
+        pclass: ProjectClass = (
+            db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
+        )
+        if pclass is None:
+            pclass_filter = "all"
+        elif (
+            not current_user.has_role("root")
+            and pclass.tenant_id not in allowed_tenants
+        ):
+            pclass_filter = "all"
+
+    if pclass_filter is not None:
+        session["convenor_unofferable_pclass_filter"] = pclass_filter
+
+    # --- group filter ---
+    group_filter = request.args.get("group_filter")
+
+    if group_filter is None and session.get("convenor_unofferable_group_filter"):
+        group_filter = session["convenor_unofferable_group_filter"]
+
+    if group_filter is not None and group_filter != "all":
+        group: ResearchGroup = (
+            db.session.query(ResearchGroup).filter_by(id=group_filter).first()
+        )
+        if group is None:
+            group_filter = "all"
+        elif not current_user.has_role("root"):
+            group_tenant_ids = {t.id for t in group.tenants}
+            if not set(allowed_tenants).intersection(group_tenant_ids):
+                group_filter = "all"
+
+    if group_filter is not None:
+        session["convenor_unofferable_group_filter"] = group_filter
+
+    # --- build list of available tenants ---
     if current_user.has_role("root"):
         tenants = db.session.query(Tenant).all()
     else:
         tenants = list(current_user.tenants)
 
+    # --- build list of available project classes (tenant-scoped) ---
+    from ..shared.conversions import is_integer
+
+    flag, tenant_value = is_integer(tenant_filter)
+
+    if current_user.has_role("root"):
+        if flag:
+            pclasses = (
+                db.session.query(ProjectClass)
+                .filter(ProjectClass.active, ProjectClass.tenant_id == tenant_value)
+                .order_by(ProjectClass.name.asc())
+                .all()
+            )
+        else:
+            pclasses = (
+                db.session.query(ProjectClass)
+                .filter(ProjectClass.active)
+                .order_by(ProjectClass.name.asc())
+                .all()
+            )
+    else:
+        if flag:
+            pclasses = (
+                db.session.query(ProjectClass)
+                .filter(
+                    ProjectClass.active,
+                    ProjectClass.tenant_id == tenant_value,
+                    ProjectClass.tenant_id.in_(allowed_tenants),
+                )
+                .order_by(ProjectClass.name.asc())
+                .all()
+            )
+        else:
+            pclasses = (
+                db.session.query(ProjectClass)
+                .filter(
+                    ProjectClass.active, ProjectClass.tenant_id.in_(allowed_tenants)
+                )
+                .order_by(ProjectClass.name.asc())
+                .all()
+            )
+
+    # --- build list of available research groups (tenant-scoped) ---
+    if current_user.has_role("root"):
+        if flag:
+            groups = (
+                db.session.query(ResearchGroup)
+                .filter(
+                    ResearchGroup.active,
+                    ResearchGroup.tenants.any(Tenant.id == tenant_value),
+                )
+                .order_by(ResearchGroup.name.asc())
+                .all()
+            )
+        else:
+            groups = (
+                db.session.query(ResearchGroup)
+                .filter(ResearchGroup.active)
+                .order_by(ResearchGroup.name.asc())
+                .all()
+            )
+    else:
+        if flag:
+            groups = (
+                db.session.query(ResearchGroup)
+                .filter(
+                    ResearchGroup.active,
+                    ResearchGroup.tenants.any(Tenant.id == tenant_value),
+                    ResearchGroup.tenants.any(Tenant.id.in_(allowed_tenants)),
+                )
+                .order_by(ResearchGroup.name.asc())
+                .all()
+            )
+        else:
+            groups = (
+                db.session.query(ResearchGroup)
+                .filter(
+                    ResearchGroup.active,
+                    ResearchGroup.tenants.any(Tenant.id.in_(allowed_tenants)),
+                )
+                .order_by(ResearchGroup.name.asc())
+                .all()
+            )
+
     return render_template_context(
-        "convenor/unofferable.html", tenants=tenants, tenant_filter=tenant_filter
+        "convenor/unofferable.html",
+        tenants=tenants,
+        tenant_filter=tenant_filter,
+        pclasses=pclasses,
+        pclass_filter=pclass_filter,
+        groups=groups,
+        group_filter=group_filter,
     )
 
 
@@ -359,14 +492,40 @@ def unofferable_ajax():
         return jsonify({})
 
     allowed_tenants = [t.id for t in current_user.tenants]
-    tenant_filter = request.args.get("tenant_filter")
 
-    if tenant_filter is not None:
+    tenant_filter = request.args.get("tenant_filter")
+    pclass_filter = request.args.get("pclass_filter")
+    group_filter = request.args.get("group_filter")
+
+    if tenant_filter is not None and tenant_filter != "all":
         tenant: Tenant = db.session.query(Tenant).filter_by(id=tenant_filter).first()
         if tenant is None:
             tenant_filter = "all"
         elif not current_user.has_role("root") and tenant.id not in allowed_tenants:
             tenant_filter = "all"
+
+    if pclass_filter is not None and pclass_filter != "all":
+        pclass: ProjectClass = (
+            db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
+        )
+        if pclass is None:
+            pclass_filter = "all"
+        elif (
+            not current_user.has_role("root")
+            and pclass.tenant_id not in allowed_tenants
+        ):
+            pclass_filter = "all"
+
+    if group_filter is not None and group_filter != "all":
+        group: ResearchGroup = (
+            db.session.query(ResearchGroup).filter_by(id=group_filter).first()
+        )
+        if group is None:
+            group_filter = "all"
+        elif not current_user.has_role("root"):
+            group_tenant_ids = {t.id for t in group.tenants}
+            if not set(allowed_tenants).intersection(group_tenant_ids):
+                group_filter = "all"
 
     base_query = (
         db.session.query(Project)
@@ -395,6 +554,14 @@ def unofferable_ajax():
         base_query = base_query.filter(
             Project.project_classes.any(ProjectClass.tenant_id.in_(allowed_tenants)),
         )
+
+    flag, pclass_value = is_integer(pclass_filter)
+    if flag:
+        base_query = base_query.filter(Project.project_classes.any(id=pclass_value))
+
+    flag, group_value = is_integer(group_filter)
+    if flag:
+        base_query = base_query.filter(Project.group_id == group_value)
 
     def row_filter(row: Project):
         # don't show offerable projects

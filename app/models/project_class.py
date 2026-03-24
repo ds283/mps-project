@@ -2384,12 +2384,7 @@ class SubmissionPeriodRecord(db.Model):
         assessments: List[PresentationAssessment] = self.presentation_assessments.all()
         num_deployed = sum(1 for a in assessments if a.is_deployed)
 
-        if num_deployed == 0:
-            return False
-        elif num_deployed == 1:
-            return True
-
-        raise RuntimeError("Too many assessments deployed for this submission period")
+        return num_deployed > 0
 
     @property
     def deployed_schedule(self):

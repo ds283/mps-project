@@ -389,6 +389,8 @@ class SubmissionRole(
             return self._marker_feedback_state
         elif self.role in [SubmissionRole.ROLE_MODERATOR]:
             return self._moderator_feedback_state
+        elif self.role in [SubmissionRole.ROLE_PRESENTATION_ASSESSOR]:
+            return self._presentation_assessor_feedback_state
 
         return SubmissionRole.FEEDBACK_NOT_REQUIRED
 
@@ -425,6 +427,32 @@ class SubmissionRole(
     @property
     def _moderator_feedback_state(self):
         return SubmissionRole.FEEDBACK_NOT_REQUIRED
+
+    @property
+    def _presentation_assessor_feedback_state(self):
+        if not self.uses_presentation_feedback:
+            return SubmissionRole.FEEDBACK_NOT_REQUIRED
+
+        period: SubmissionPeriodRecord = self.submission.period
+        if not period.config.project_class.publish:
+            return SubmissionRole.FEEDBACK_NOT_REQUIRED
+
+        slot = self.schedule_slot
+        if slot is None:
+            return SubmissionRole.FEEDBACK_NOT_REQUIRED
+
+        today = date.today()
+        if today <= slot.session.date:
+            return SubmissionRole.FEEDBACK_NOT_YET
+
+        if self.submitted_feedback:
+            return SubmissionRole.FEEDBACK_SUBMITTED
+
+        if self.feedback_valid:
+            return SubmissionRole.FEEDBACK_ENTERED
+
+        closed = slot.owner.owner.is_closed
+        return SubmissionRole.FEEDBACK_LATE if closed else SubmissionRole.FEEDBACK_WAITING
 
     @property
     def feedback_valid(self):
@@ -1843,6 +1871,43 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             return None
 
         return slot_query.first()
+
+    @property
+    def presentation_assessor_roles(self) -> List[SubmissionRole]:
+        """
+        Return all SubmissionRole instances with role ROLE_PRESENTATION_ASSESSOR
+        """
+        return [r for r in self.roles if r.role == SubmissionRole.ROLE_PRESENTATION_ASSESSOR]
+
+    def presentation_assessor_roles_by_slot(self) -> List[tuple]:
+        """
+        Return PRESENTATION_ASSESSOR SubmissionRole instances grouped by ScheduleSlot.
+        Returns a list of (slot, [roles]) pairs in first-seen order.
+        """
+        groups: dict = {}
+        slot_order: list = []
+
+        for role in self.roles:
+            if role.role == SubmissionRole.ROLE_PRESENTATION_ASSESSOR:
+                slot = role.schedule_slot
+                if slot not in groups:
+                    groups[slot] = []
+                    slot_order.append(slot)
+                groups[slot].append(role)
+
+        return [(slot, groups[slot]) for slot in slot_order]
+
+    @property
+    def has_scheduled_presentation_slots(self) -> bool:
+        """
+        Returns True if this SubmissionRecord has any PRESENTATION_ASSESSOR roles
+        with an associated ScheduleSlot.
+        """
+        return any(
+            role.schedule_slot is not None
+            for role in self.roles
+            if role.role == SubmissionRole.ROLE_PRESENTATION_ASSESSOR
+        )
 
     def is_in_assessor_pool(self, fac_id):
         """

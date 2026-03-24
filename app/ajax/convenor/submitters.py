@@ -22,269 +22,12 @@ _cohort = """
 
 
 # language=jinja2
-_feedback_state_tag = """
-{% macro feedback_state_tag(obj, state=none) %}
-    {% if state is none %}{% set state = obj.feedback_state %}{% endif %}
-    {% if state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="badge bg-secondary">Feedback not yet required</span> #}
-    {% elif state == obj.FEEDBACK_WAITING %}
-        <div class="small text-secondary">Feedback waiting</div>
-    {% elif state == obj.FEEDBACK_SUBMITTED %}
-        {# <div class="small text-success">Feedback submitted</div> #}
-    {% elif state == obj.FEEDBACK_ENTERED %}
-        <div class="small text-primary">Feedback in progress</div>
-    {% elif state == obj.FEEDBACK_LATE %}
-        <div class="small text-danger">Feedback late</div>
-    {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
-    {% else %}
-        <div class="badge bg-danger">Feedback error &ndash; unknown state</div>
-    {% endif %}
-{% endmacro %}
-"""
-
-# language=jinja2
-_response_state_tag = """
-{% macro response_state_tag(obj, label) %}
-    {% set state = obj.response_state %}
-    {% if state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="badge bg-secondary">Response not yet required</span> #}
-    {% elif state == obj.FEEDBACK_WAITING %}
-        <div class="small text-secondary">Response waiting</div>
-    {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <div class="small text-success">Response submitted</div>
-    {% elif state == obj.FEEDBACK_ENTERED %}
-        <div class="small text-primary">Response in progress</div>
-    {% elif state == obj.FEEDBACK_LATE %}
-        <div class="small time-danger">Response late</div>
-    {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
-    {% else %}
-        <div class="badge bg-danger">Response error &ndash; unknown state</div>
-    {% endif %}
-{% endmacro %}
-"""
-
-# language=jinja2
-_roles_list = """
-{% macro roles_list(roles, label) %}
-    {% set num_roles = roles|length %}
-    {% if num_roles > 0 %}
-        <div class="d-flex flex-column justify-content-start align-items-start gap-1">
-            <div class="small fw-semibold">{{ label }}</div>
-            {% for role in roles %}
-                <div>
-                    <a class="small text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
-                    {% if role.grade %}
-                        <div class="fs-5 {% if role.signed_off %}text-primary{% else %}text-secondary{% endif %}">{{ role.grade|round(precision=1) }}%</div>
-                    {% endif %}
-                    {{ feedback_state_tag(role) }}
-                    {{ response_state_tag(role) }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-{% endmacro %}
-"""
-
-# language=jinja2
-_project_tag = """
-{% macro project_tag(r, show_period, error_block_popover) %}
-    {% set sub = r.owner %}
-    {% set config = sub.config %}
-    {% set pclass = config.project_class %}
-    {% set style = pclass.make_CSS_style() %}
-    {% set period = r.period %}
-    {% set current_period = config.current_period %}
-    {% set number_submissions = config.number_submissions %}
-    <div class="bg-light p-2 mb-2 {% if number_submissions > 1 and period.submission_period == current_period.submission_period %}border border-info{% endif %}">
-        {% if r.project is not none %}
-            <div class="d-flex flex-row flex-wrap justify-content-between align-items-start gap-2">
-                <div class="d-flex flex-column justify-content-start align-items-start gap-1">
-                    {# BASIC DETAILS #}
-                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-3">
-                        {% if r.project.name|length < 70 %}
-                            {% set proj_name = r.project.name %}
-                        {% else %}
-                            {% set proj_name = r.project.name[0:70] + '...' %}
-                        {% endif %}
-                        <a class="fw-semibold text-decoration-none" href="{{ url_for('faculty.live_project', pid=r.project_id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">{{ proj_name }}</a>
-                        {% if r.has_issues %}
-                            <i class="fas fa-exclamation-triangle text-danger"></i>
-                        {% endif %}
-                        <a class="btn btn-xs btn-outline-secondary" href="{{ url_for('projecthub.hub', subid=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Project page&hellip;</a>
-                    </div>
-
-                    {# ATTENDANCE #}
-                    {% set attendance_data = r.get_attendance_data() %}
-                    {% if attendance_data and attendance_data['total'] > 0 %}
-                        {% set total = attendance_data["total"] %}
-                        {% set missing = attendance_data["missing"] %}
-                        {% set recorded = attendance_data["recorded"] %}
-                        {% set attendance_percent = attendance_data["attendance"] %}
-                        <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
-                            <div>
-                                <div class="small text-muted">Recorded</div>
-                                <div class="fw-bold fs-4 {% if missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_data['recorded'] }}</div>
-                            </div>
-                            <div>
-                                <div class="small text-muted">Missing</div>
-                                <div class="fw-bold fs-4 {% if missing == 0 %}text-success{% else %}text-danger{% endif %}">{{ attendance_data['missing'] }}</div>
-                            </div>
-                            {% if attendance_percent >= 0.0 %}
-                                <div>
-                                    <div class="small text-muted">Attendance</div>
-                                    <div class="fw-bold fs-4 text-success">{{ attendance_percent|round(precision=0) }}%</div>
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-
-                    {# GRADES #}
-                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
-                        {% if r.supervision_grade %}
-                            <div>
-                                <div class="small text-muted">Supervision</div>
-                                <div class="fw-bold fs-4 text-success">{{ r.supervision_grade|round(precision=1) }}%</div>
-                            </div>
-                        {% endif %}
-                        {% if r.report_grade %}
-                            <div>
-                                <div class="small text-muted">Report</div>
-                                <div class="fw-bold fs-4 text-success">{{ r.report_grade|round(precision=1) }}%</div>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-1">
-                    {% if r.project.generic or r.project.owner is none %}
-                        <div class="small text-primary text-capitalize">Generic</div>
-                    {% else %}
-                        <div class="small">
-                            <span class="text-muted">Owner</span>
-                            <a class="fw-semibold text-decoration-none" href="mailto:{{ r.project.owner.user.email }}">{{ r.project.owner.user.name }}</a>
-                        </div>
-                    {% endif %}
-                    <div class="small dropdown assignment-label">
-                        <a class="text-primary small text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">Change</a>
-                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                            {% set disabled = period.is_feedback_open %}
-                            {% if disabled %}
-                                <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-exclamation-triangle fa-fw"></i> Can't reassign project</a>
-                            {% else %}
-                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.manual_assign', id=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
-                                    <i class="fas fa-folder fa-fw"></i> Assign project...
-                                </a>
-                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.deassign_project', id=r.id) }}"><i class="fas fa-times fa-fw"></i> Deassign project</a>
-                            {% endif %}
-                            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_roles', sub_id=sub.id, record_id=r.id, text='convenor submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"><i class="fas fa-user-circle fa-fw"></i> Edit roles...</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="d-flex flex-row justify-content-start align-items-center flex-wrap gap-2">
-                {% if show_period %}<div class="small text-muted"><em><strong>{{ period.display_name }}</strong></em></div>{% endif %}
-                {% if sub.published %}
-                    {% if r.report is not none %}
-                        <div class="text-success small"><i class="fas fa-check-circle"></i> Report uploaded</div>
-                    {% endif %}
-                    {% set number_attachments = r.number_attachments %}
-                    {% if number_attachments > 0 %}
-                        <div class="text-secondary small"><i class="fas fa-file"></i> {{ number_attachments }} attachments</div>
-                    {% endif %}
-                    {% if r.feedback_generated %}
-                        <div class="d-flex flex-row justify-content-start align-items-start gap-2">
-                            <div class="text-success small"><i class="fas fa-check-circle"></i> Feedback report generated</div>
-                            <a class="text-danger text-decoration-none small" href="{{ url_for('convenor.remove_feedback_report', rec_id=r.id) }}">Remove</a>
-                        </div>
-                        {% if r.feedback_sent %}
-                            <div class="text-success small"><i class="fas fa-check-circle"></i> Feedback sent</div>
-                        {% endif %}
-                    {% elif r.has_feedback %}
-                        <div class="text-secondary small"><i class="fas fa-check-circle"></i> Feedback ready</div>
-                    {% endif %}
-                    {% if r.report is none and period.canvas_enabled and not period.closed and r.canvas_submission_available is true %}
-                        <a class="link-success text-decoration-none small" href="{{ url_for('documents.pull_report_from_canvas', rid=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}">Pull report from Canvas...</a>
-                    {% endif %}
-                {% endif %}
-            </div>
-            <div class="d-flex flex-row justify-content-start align-items-start gap-4 mt-1">
-                {% if config.uses_supervisor %}
-                    {{ roles_list(r.supervisor_roles, 'Supervisor roles') }}
-                {% endif %}
-                {% if config.uses_marker %}
-                    {{ roles_list(r.marker_roles, 'Marker roles') }}
-                {% endif %}
-                {% if config.uses_moderator %}
-                    {{ roles_list(r.moderator_roles, 'Moderator roles') }}
-                {% endif %}
-                {% if config.uses_presentations and period.has_presentation %}
-                    <div class="d-flex flex-column justify-content-start align-items-start gap-1">
-                        <div class="small fw-semibold">Presentation</div>
-                        {% if period.has_deployed_schedule %}
-                            {% set slot = r.schedule_slot %}
-                            <div class="dropdown assignment-label">
-                                {% if slot is not none %}
-                                    <a class="small text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                        {{ slot.session.label_as_string }}
-                                    </a>
-                                {% else %}
-                                    <a class="small text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                        Not attending
-                                    </a>
-                                {% endif %}
-                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                                    {% set disabled = not r.can_assign_feedback %}
-                                    <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-                                        <i class="fas fa-comments fa-fw"></i> Add new feedback
-                                    </a>
-                                </div>
-                            </div>
-                            {% if slot is not none %}
-                                {% set fns = namespace(flag=false) %}
-                                {% for a in slot.assessors %}
-                                    <div>
-                                        <a class="small text-decoration-none" href="mailto:{{ a.user.email }}">{{ a.user.name }}</a>
-                                        {{ feedback_state_tag(r, r.presentation_feedback_state(a.id)) }}
-                                        {% if slot.feedback_state(a.id) > slot.FEEDBACK_NOT_YET %}
-                                            {% set fns.flag = true %}
-                                        {% endif %}
-                                    </div>
-                                {% endfor %}
-                                {% if fns.flag and r.number_presentation_feedback == 0 %}
-                                    <div class="small text-danger">Feedback required</div>
-                                {% endif %}
-                            {% endif %}
-                        {% else %}
-                            <div class="small text-secondary">Awaiting scheduling</div>
-                        {% endif %}
-                    </div>
-                {% endif %}
-            </div>
-        {% else %}
-            <div class="d-flex flex-row justify-content-start align-items-center gap-2">
-                <div class="small text-muted"><em><strong>{{ period.display_name }}</strong></em></div>
-                <div>
-                    <a class="badge text-decoration-none text-nohover-light bg-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">No project allocated</a>
-                </div>
-            </div>
-        {% endif %}
-        {% if r.has_issues %}
-            {% set errors = r.errors %}
-            {% set warnings = r.warnings %}
-            <div class="d-flex flex-row justify-content-start align-items-center gap-2 mt-2">
-                {{ error_block_popover(errors, warnings) }}
-            </div>
-        {% endif %}
-    </div>
-{% endmacro %}
-"""
-
-# language=jinja2
 _periods = """
 {% set recs = sub.ordered_assignments.all() %}
 <div class="d-flex flex-row justify-content-start align-items-start gap-2"></div>
     {% for rec in recs %}
         {% set number_submissions = rec.owner.config.number_submissions %}
-        {{ project_tag(rec, number_submissions > 1, error_block_popover) }}
+        {{ project_tag(rec, number_submissions > 1) }}
     {% else %}
         <div class="badge bg-danger">None</div>
     {% endfor %}
@@ -310,13 +53,13 @@ _menu = """
         {% endif %}
         {% if sub.student.has_timeline %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.timeline', student_id=sub.student.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
-                <i class="fas fa-history fa-fw"></i> Show history... 
+                <i class="fas fa-history fa-fw"></i> Show history...
             </a>
         {% endif %}
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_tasks', type=2, sid=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
             <i class="fas fa-tasks fa-fw"></i> Tasks...
         </a>
-        
+
         {% if sub.published and pclass.publish %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.unpublish_assignment', id=sub.id) }}">
                 <i class="fas fa-eye-slash fa-fw"></i> Unpublish
@@ -331,7 +74,7 @@ _menu = """
                     <i class="fas fa-eye-slash fa-fw"></i> Cannot publish
                 </a>
             {% endif %}
-        {% endif %}        
+        {% endif %}
         <div role="separator" class="dropdown-divider"></div>
 
         {% set disabled = not pclass.publish %}
@@ -369,6 +112,7 @@ _menu = """
 
 # language=jinja2
 _name = """
+{% from "error_block.html" import error_block_inline %}
 {% set config = sub.config %}
 {% set pclass = config.project_class %}
 {% set student = sub.student %}
@@ -380,7 +124,7 @@ _name = """
         {% elif sub.canvas_missing %}
             <i class="fas fa-circle me-1 text-danger" data-bs-toggle="tooltip" title="This student is not enrolled on the linked Canvas site"></i>
         {% else %}
-            <i class="fas fa-unlink me-1" data-bs-toggle="tooltip" title="Information associated with this student for the linked Canvas site has not yet been synchronized"></i> 
+            <i class="fas fa-unlink me-1" data-bs-toggle="tooltip" title="Information associated with this student for the linked Canvas site has not yet been synchronized"></i>
         {% endif %}
     {% endif %}
     {% if show_name %}
@@ -437,31 +181,6 @@ def _build_menu_templ() -> Template:
     return current_app.jinja_env.from_string(_menu)
 
 
-def _build_feedback_state_tag():
-    return current_app.jinja_env.from_string(
-        _feedback_state_tag
-    ).module.feedback_state_tag
-
-
-def _build_response_state_tag():
-    return current_app.jinja_env.from_string(
-        _response_state_tag
-    ).module.response_state_tag
-
-
-def _build_roles_list():
-    # roles_list calls feedback_state_tag and response_state_tag, so all three must be
-    # compiled into the same template module for the internal calls to resolve
-    src = _feedback_state_tag + _response_state_tag + _roles_list
-    return current_app.jinja_env.from_string(src).module.roles_list
-
-
-def _build_project_tag():
-    # project_tag calls roles_list and feedback_state_tag; compile all four together
-    src = _feedback_state_tag + _response_state_tag + _roles_list + _project_tag
-    return current_app.jinja_env.from_string(src).module.project_tag
-
-
 def submitters_data(students, config, show_name, show_number, sort_number):
     submittter_state = config.submitter_lifecycle
     allow_delete = (
@@ -469,13 +188,10 @@ def submitters_data(students, config, show_name, show_number, sort_number):
     )
 
     # since these templates are loaded from disk, Jinja2 will cache them automatically
-    error_block_popover = get_template_attribute(
-        "error_block.html", "error_block_popover"
-    )
-    error_block_inline = get_template_attribute(
-        "error_block.html", "error_block_inline"
-    )
     simple_label = get_template_attribute("labels.html", "simple_label")
+    project_tag = get_template_attribute(
+        "convenor/submitters_macros.html", "project_tag"
+    )
 
     # however, template *strings* are not cached
     # we have to do this ourselves
@@ -483,11 +199,6 @@ def submitters_data(students, config, show_name, show_number, sort_number):
     cohort_templ: Template = _build_cohort_templ()
     periods_templ: Template = _build_periods_templ()
     menu_templ: Template = _build_menu_templ()
-
-    feedback_state_tag = _build_feedback_state_tag()
-    response_state_tag = _build_response_state_tag()
-    roles_list = _build_roles_list()
-    project_tag = _build_project_tag()
 
     data = [
         {
@@ -497,7 +208,6 @@ def submitters_data(students, config, show_name, show_number, sort_number):
                     sub=s,
                     show_name=show_name,
                     show_number=show_number,
-                    error_block_inline=error_block_inline,
                 ),
                 "sortvalue": s.student.exam_number
                 if sort_number
@@ -512,11 +222,6 @@ def submitters_data(students, config, show_name, show_number, sort_number):
             "periods": render_template(
                 periods_templ,
                 sub=s,
-                config=config,
-                error_block_popover=error_block_popover,
-                feedback_state_tag=feedback_state_tag,
-                response_state_tag=response_state_tag,
-                roles_list=roles_list,
                 project_tag=project_tag,
             ),
             "menu": render_template(menu_templ, sub=s, allow_delete=allow_delete),

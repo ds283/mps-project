@@ -183,6 +183,15 @@ class SubmissionRole(
         backref=db.backref("roles", lazy="dynamic"),
     )
 
+    # optional link to possible owning ScheduleSlot, used for PRESENTATION_ASSESSOR roles to identify the session
+    schedule_slot_id = db.Column(db.Integer(), db.ForeignKey("schedule_slots.id"))
+    schedule_slot = db.relationship(
+        "ScheduleSlot",
+        foreign_keys=[schedule_slot_id],
+        uselist=False,
+        backref=db.backref("submission_roles", lazy="dynamic"),
+    )
+
     # owning user (note: we link to a user record, rather than a FacultyData record, because the
     # assigned person does not have to be a FacultyData instance, e.g. for external examiners)
     user_id = db.Column(db.Integer(), db.ForeignKey("users.id"))

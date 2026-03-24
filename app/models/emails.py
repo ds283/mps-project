@@ -9,9 +9,9 @@
 #
 import json
 from datetime import datetime
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
-from flask import current_app, render_template_string
+from flask import current_app, render_template_string, url_for
 from flask_mailman import EmailMultiAlternatives
 from html2text import HTML2Text
 from sqlalchemy import or_
@@ -259,6 +259,223 @@ PCLASS_SPECIALIZABLE_TEMPLATES = [
 ]
 
 
+def _resolve_tenant_and_pclass(tenant, pclass) -> Tuple[Optional[int], Optional[int]]:
+    """
+    Resolve the tenant and pclass arguments to their integer IDs.
+    Returns (tenant_id, pclass_id).
+    """
+    tenant_id = None
+    if isinstance(tenant, int):
+        tenant_id = tenant
+    elif isinstance(tenant, Tenant):
+        tenant_id = tenant.id
+    elif tenant is not None:
+        raise RuntimeError(
+            f'Invalid tenant type "{type(tenant)}" (value="{tenant}") in EmailTemplate.apply_()'
+        )
+
+    pclass_id = None
+    if isinstance(pclass, int):
+        pclass_obj = db.session.query(ProjectClass).filter_by(id=pclass).first()
+        pclass_id = pclass
+        if tenant_id is None:
+            tenant_id = pclass_obj.tenant_id
+        elif tenant_id != pclass_obj.tenant_id:
+            raise RuntimeError(
+                f'Tenant mismatch between pclass "{pclass_obj.name}" and tenant in EmailTemplate.apply_()'
+            )
+    elif isinstance(pclass, ProjectClass):
+        pclass_id = pclass.id
+        if tenant_id is None:
+            tenant_id = pclass.tenant_id
+        elif tenant_id != pclass.tenant_id:
+            raise RuntimeError(
+                f'Tenant mismatch between pclass "{pclass.name}" and tenant in EmailTemplate.apply_()'
+            )
+    elif pclass is not None:
+        raise RuntimeError(
+            f'Invalid project class type "{type(pclass)}" (value="{pclass}") in EmailTemplate.apply_()'
+        )
+
+    return tenant_id, pclass_id
+
+
+def _find_template(
+        template_type: int,
+        tenant_id: Optional[int],
+        pclass_id: Optional[int],
+) -> "EmailTemplate":
+    """
+    Find the active EmailTemplate that best matches the given type, tenant, and pclass,
+    preferring the most-specific (pclass > tenant > global) and highest-versioned entry.
+    """
+    query = db.session.query(EmailTemplate).filter(
+        EmailTemplate.type == template_type, EmailTemplate.active.is_(True)
+    )
+    if tenant_id is not None:
+        query = query.filter(
+            or_(EmailTemplate.tenant_id == tenant_id, EmailTemplate.tenant_id.is_(None))
+        )
+    if pclass_id is not None:
+        query = query.filter(
+            or_(EmailTemplate.pclass_id == pclass_id, EmailTemplate.pclass_id.is_(None))
+        )
+    query = query.order_by(
+        EmailTemplate.pclass_id.desc(),
+        EmailTemplate.tenant_id.desc(),
+        EmailTemplate.version.desc(),
+    )
+
+    template = query.first()
+    if template is None:
+        raise RuntimeError(
+            f"No active template found for EmailTemplate type {template_type}"
+        )
+    return template
+
+
+# Manifest entry: (attached, display_name, download_url, description)
+_ManifestEntry = Tuple[bool, str, Optional[str], Optional[str]]
+
+
+def _process_attachments(
+        msg: EmailMultiAlternatives,
+        attachments,
+        max_attachment_size: int,
+) -> List[_ManifestEntry]:
+    """
+    Iterate over EmailWorkflowItemAttachment instances, attaching each file to *msg*
+    when the running total would not exceed *max_attachment_size* (bytes), or recording
+    a download link otherwise.  Returns a manifest list of _ManifestEntry tuples.
+    """
+    from ..shared.asset_tools import AssetCloudAdapter
+
+    if isinstance(attachments, EmailWorkflowItemAttachment):
+        attachment_list = [attachments]
+    elif isinstance(attachments, Iterable):
+        attachment_list = list(attachments)
+    else:
+        raise RuntimeError(
+            f'Invalid attachments type "{type(attachments)}" in EmailTemplate.apply_()'
+        )
+
+    buckets = current_app.config.get("OBJECT_STORAGE_BUCKETS", {})
+    current_size = 0
+    manifest: List[_ManifestEntry] = []
+
+    for attachment in attachment_list:
+        # determine which asset type this attachment points to
+        if attachment.generated_asset is not None:
+            asset = attachment.generated_asset
+            endpoint = "download_generated_asset"
+        elif attachment.submitted_asset is not None:
+            asset = attachment.submitted_asset
+            endpoint = "download_submitted_asset"
+        elif attachment.temporary_asset is not None:
+            asset = attachment.temporary_asset
+            endpoint = None  # no public download endpoint for TemporaryAsset
+        else:
+            continue
+
+        object_store = buckets.get(asset.bucket)
+        if object_store is None:
+            current_app.logger.warning(
+                f"_process_attachments: no object store for bucket '{asset.bucket}'; skipping"
+            )
+            continue
+
+        storage = AssetCloudAdapter(
+            asset,
+            object_store,
+            audit_data=f"EmailTemplate.apply_() attachment id={attachment.id}",
+        )
+        if not storage.exists():
+            current_app.logger.warning(
+                f"_process_attachments: asset {asset.id} not found in object store; skipping"
+            )
+            continue
+
+        asset_size = asset.filesize or 0
+        display_name = (
+            attachment.name
+            if attachment.name
+            else (str(asset.target_name) if asset.target_name else str(asset.unique_name))
+        )
+
+        if current_size + asset_size > max_attachment_size:
+            download_url: Optional[str] = None
+            if endpoint is not None:
+                download_url = url_for(
+                    f"admin.{endpoint}",
+                    asset_id=asset.id,
+                    filename=display_name,
+                    _external=True,
+                )
+            manifest.append((False, display_name, download_url, attachment.description))
+        else:
+            msg.attach(filename=display_name, mimetype=asset.mimetype, content=storage.get())
+            current_size += asset_size
+            manifest.append((True, display_name, None, attachment.description))
+
+    return manifest
+
+
+def _build_attachments_footer(
+        manifest: List[Tuple[bool, str, Optional[str], Optional[str]]],
+) -> str:
+    """
+    Build a nicely-formatted HTML footer listing all attachments and download links.
+
+    Each entry in manifest is a 4-tuple:
+        (attached, display_name, download_url, description)
+    where:
+        attached     – True if the file was attached to the email
+        display_name – human-readable filename
+        download_url – URL for download (None if not applicable or no endpoint)
+        description  – optional description string
+    """
+    if not manifest:
+        return ""
+
+    lines = [
+        "<hr>",
+        '<h4 style="margin-bottom: 4px;">Attachments</h4>',
+        "<ul>",
+    ]
+
+    for attached, display_name, download_url, description in manifest:
+        lines.append("<li>")
+        if attached:
+            entry_html = display_name
+        else:
+            if download_url:
+                entry_html = f'<a href="{download_url}">{display_name}</a>'
+            else:
+                entry_html = display_name
+
+        lines.append(f"<p>{entry_html}")
+
+        sub_items = []
+        if description:
+            sub_items.append(description)
+        if not attached:
+            sub_items.append(
+                "<strong>This file is too large to be sent as an attachment.</strong>"
+                " Please download using the link provided."
+            )
+
+        if sub_items:
+            lines.append('<ul style="line-height: 100%">')
+            for item in sub_items:
+                lines.append(f"<li>{item}</li>")
+            lines.append("</ul>")
+
+        lines.append("</p></li>")
+
+    lines.append("</ul>")
+    return "\n".join(lines)
+
+
 class EmailTemplateLabel(db.Model, ColouredLabelMixin, EditingMetadataMixin):
     """
     Represents a label applied to a backup
@@ -349,6 +566,8 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
         subject_kwargs: Optional[Dict[str, Any]] = None,
         body_kwargs: Optional[Dict[str, Any]] = None,
         body_attachments: Optional[Dict[str, Callable]] = None,
+            attachments=None,
+            max_attachment_size: int = DEFAULT_MAX_ATTACHMENT_SIZE,
         tenant=None,
         pclass=None,
     ):
@@ -361,81 +580,17 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
         :param subject_kwargs:
         :param body_kwargs:
         :param body_attachments:
+        :param attachments: a single EmailWorkflowItemAttachment or an iterable thereof
+        :param max_attachment_size: maximum total attachment size in bytes (default 10 MB)
         :param tenant:
         :param pclass:
         :return:
         """
-        tenant_id = None
-        if isinstance(tenant, int):
-            tenant_id = tenant
-        elif isinstance(tenant, Tenant):
-            tenant_id = tenant.id
-        elif tenant is None:
-            pass
-        else:
-            raise RuntimeError(
-                f'Invalid tenant type "{type(tenant)}" (value="{tenant}") in EmailTemplate.apply_()'
-            )
-
-        pclass_id = None
-        if isinstance(pclass, int):
-            pclass_obj = db.session.query(ProjectClass).filter_by(id=pclass).first()
-            pclass_id = pclass
-            if tenant_id is None:
-                tenant_id = pclass_obj.tenant_id
-            elif tenant_id != pclass_obj.tenant_id:
-                raise RuntimeError(
-                    f'Tenant mismatch between pclass "{pclass_obj.name}" and tenant "{tenant.name}" in EmailTemplate.apply_()'
-                )
-        elif isinstance(pclass, ProjectClass):
-            pclass_id = pclass.id
-            if tenant_id is None:
-                tenant_id = pclass.tenant_id
-            elif tenant_id != pclass.tenant_id:
-                raise RuntimeError(
-                    f'Tenant mismatch between pclass "{pclass.name}" and tenant "{tenant.name}" in EmailTemplate.apply_()'
-                )
-        elif pclass is None:
-            pass
-        else:
-            raise RuntimeError(
-                f'Invalid project class type "{type(pclass)}" (value="{pclass}") in EmailTemplate.apply_()'
-            )
-
-        # find active template at highest level of override
-        templ_query = db.session.query(EmailTemplate).filter(
-            EmailTemplate.type == template_type, EmailTemplate.active.is_(True)
-        )
-        if tenant_id is not None:
-            templ_query = templ_query.filter(
-                or_(
-                    EmailTemplate.tenant_id == tenant_id,
-                    EmailTemplate.tenant_id.is_(None),
-                )
-            )
-        if pclass_id is not None:
-            templ_query = templ_query.filter(
-                or_(
-                    EmailTemplate.pclass_id == pclass_id,
-                    EmailTemplate.pclass_id.is_(None),
-                )
-            )
-        templ_query = templ_query.order_by(
-            EmailTemplate.pclass_id.desc(),
-            EmailTemplate.tenant_id.desc(),
-            EmailTemplate.version.desc(),
-        )
-
-        template: Optional[EmailTemplate] = templ_query.first()
-
-        if template is None:
-            raise RuntimeError(
-                f"No active template found for EmailTemplate type {template_type}"
-            )
+        tenant_id, pclass_id = _resolve_tenant_and_pclass(tenant, pclass)
+        template = _find_template(template_type, tenant_id, pclass_id)
 
         if from_email is None:
             from_email = current_app.config["MAIL_DEFAULT_SENDER"]
-
         if reply_to is None:
             reply_to = [current_app.config["MAIL_REPLY_TO"]]
 
@@ -443,13 +598,11 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
             raise RuntimeError(
                 f'Invalid recipient list type "{type(to)}" (value="{to}") in EmailTemplate.apply_()'
             )
-
         if not isinstance(reply_to, Iterable):
             raise RuntimeError(
                 f'Invalid reply_to list type "{type(reply_to)}" (value="{reply_to}") in EmailTemplate.apply_()'
             )
 
-        # format subject string
         subject_str: str = (
             template.subject.format(**subject_kwargs)
             if subject_kwargs is not None
@@ -457,41 +610,38 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
         )
 
         msg = EmailMultiAlternatives(
-            subject=subject_str,
-            from_email=from_email,
-            reply_to=reply_to,
-            to=to,
+            subject=subject_str, from_email=from_email, reply_to=reply_to, to=to
         )
 
-        # perform any attachments, storing output in body_kwargs where it can be used if desired
+        # perform any legacy body_attachments, injecting results into body_kwargs
         if body_attachments is not None:
             for label, callable in body_attachments.items():
                 output = callable(msg)
                 if label not in body_kwargs:
                     body_kwargs[label] = output
 
-        # format HTML body text
         html_str: str = (
             render_template_string(template.html_body, **body_kwargs)
             if body_kwargs is not None
             else template.html_body
         )
 
-        # generate plain text version of HTML body (html2text basically produces Markdown)
-        h = HTML2Text()
-        plain_str: str = h.handle(html_str)
+        # attach files / generate download links and append manifest footer
+        if attachments is not None:
+            manifest = _process_attachments(msg, attachments, max_attachment_size)
+            if manifest:
+                html_str = html_str + _build_attachments_footer(manifest)
 
+        plain_str: str = HTML2Text().handle(html_str)
         msg.body = plain_str
         msg.attach_alternative(html_str, "text/html")
 
-        # update last_used field for this template
         try:
             template.last_used = datetime.now()
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            pass
 
         return msg
 

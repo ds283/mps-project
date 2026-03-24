@@ -8,8 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, get_template_attribute, current_app, render_template
-from jinja2 import Template, Environment
+from flask import current_app, get_template_attribute, jsonify, render_template
+from jinja2 import Template
 
 from ...models import ProjectClassConfig
 
@@ -22,7 +22,7 @@ _cohort = """
 
 
 # language=jinja2
-_periods = """
+_feedback_state_tag = """
 {% macro feedback_state_tag(obj, state=none) %}
     {% if state is none %}{% set state = obj.feedback_state %}{% endif %}
     {% if state == obj.FEEDBACK_NOT_YET %}
@@ -30,16 +30,20 @@ _periods = """
     {% elif state == obj.FEEDBACK_WAITING %}
         <div class="small text-secondary">Feedback waiting</div>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
-        {# <div class="small text-success">Feedback submitted</div> #}        
+        {# <div class="small text-success">Feedback submitted</div> #}
     {% elif state == obj.FEEDBACK_ENTERED %}
-        <div class="small text-primary">Feedback in progress</div>        
+        <div class="small text-primary">Feedback in progress</div>
     {% elif state == obj.FEEDBACK_LATE %}
         <div class="small text-danger">Feedback late</div>
     {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
     {% else %}
         <div class="badge bg-danger">Feedback error &ndash; unknown state</div>
-    {% endif %}        
+    {% endif %}
 {% endmacro %}
+"""
+
+# language=jinja2
+_response_state_tag = """
 {% macro response_state_tag(obj, label) %}
     {% set state = obj.response_state %}
     {% if state == obj.FEEDBACK_NOT_YET %}
@@ -47,16 +51,20 @@ _periods = """
     {% elif state == obj.FEEDBACK_WAITING %}
         <div class="small text-secondary">Response waiting</div>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <div class="small text-success">Response submitted</div>        
+        <div class="small text-success">Response submitted</div>
     {% elif state == obj.FEEDBACK_ENTERED %}
-        <div class="small text-primary">Response in progress</div>        
+        <div class="small text-primary">Response in progress</div>
     {% elif state == obj.FEEDBACK_LATE %}
         <div class="small time-danger">Response late</div>
     {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
     {% else %}
         <div class="badge bg-danger">Response error &ndash; unknown state</div>
-    {% endif %}        
+    {% endif %}
 {% endmacro %}
+"""
+
+# language=jinja2
+_roles_list = """
 {% macro roles_list(roles, label) %}
     {% set num_roles = roles|length %}
     {% if num_roles > 0 %}
@@ -75,7 +83,11 @@ _periods = """
         </div>
     {% endif %}
 {% endmacro %}
-{% macro project_tag(r, show_period) %}
+"""
+
+# language=jinja2
+_project_tag = """
+{% macro project_tag(r, show_period, error_block_popover) %}
     {% set sub = r.owner %}
     {% set config = sub.config %}
     {% set pclass = config.project_class %}
@@ -125,7 +137,7 @@ _periods = """
                             {% endif %}
                         </div>
                     {% endif %}
-                    
+
                     {# GRADES #}
                     <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-2">
                         {% if r.supervision_grade %}
@@ -264,11 +276,15 @@ _periods = """
         {% endif %}
     </div>
 {% endmacro %}
+"""
+
+# language=jinja2
+_periods = """
 {% set recs = sub.ordered_assignments.all() %}
 <div class="d-flex flex-row justify-content-start align-items-start gap-2"></div>
     {% for rec in recs %}
         {% set number_submissions = rec.owner.config.number_submissions %}
-        {{ project_tag(rec, number_submissions > 1) }}
+        {{ project_tag(rec, number_submissions > 1, error_block_popover) }}
     {% else %}
         <div class="badge bg-danger">None</div>
     {% endfor %}
@@ -406,29 +422,50 @@ _name = """
 
 
 def _build_name_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string(_name)
+    return current_app.jinja_env.from_string(_name)
 
 
 def _build_cohort_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string(_cohort)
+    return current_app.jinja_env.from_string(_cohort)
 
 
 def _build_periods_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string(_periods)
+    return current_app.jinja_env.from_string(_periods)
 
 
 def _build_menu_templ() -> Template:
-    env: Environment = current_app.jinja_env
-    return env.from_string(_menu)
+    return current_app.jinja_env.from_string(_menu)
+
+
+def _build_feedback_state_tag():
+    return current_app.jinja_env.from_string(
+        _feedback_state_tag
+    ).module.feedback_state_tag
+
+
+def _build_response_state_tag():
+    return current_app.jinja_env.from_string(
+        _response_state_tag
+    ).module.response_state_tag
+
+
+def _build_roles_list():
+    # roles_list calls feedback_state_tag and response_state_tag, so all three must be
+    # compiled into the same template module for the internal calls to resolve
+    src = _feedback_state_tag + _response_state_tag + _roles_list
+    return current_app.jinja_env.from_string(src).module.roles_list
+
+
+def _build_project_tag():
+    # project_tag calls roles_list and feedback_state_tag; compile all four together
+    src = _feedback_state_tag + _response_state_tag + _roles_list + _project_tag
+    return current_app.jinja_env.from_string(src).module.project_tag
 
 
 def submitters_data(students, config, show_name, show_number, sort_number):
     submittter_state = config.submitter_lifecycle
     allow_delete = (
-            submittter_state <= ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+        submittter_state <= ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
     )
 
     # since these templates are loaded from disk, Jinja2 will cache them automatically
@@ -446,6 +483,11 @@ def submitters_data(students, config, show_name, show_number, sort_number):
     cohort_templ: Template = _build_cohort_templ()
     periods_templ: Template = _build_periods_templ()
     menu_templ: Template = _build_menu_templ()
+
+    feedback_state_tag = _build_feedback_state_tag()
+    response_state_tag = _build_response_state_tag()
+    roles_list = _build_roles_list()
+    project_tag = _build_project_tag()
 
     data = [
         {
@@ -472,6 +514,10 @@ def submitters_data(students, config, show_name, show_number, sort_number):
                 sub=s,
                 config=config,
                 error_block_popover=error_block_popover,
+                feedback_state_tag=feedback_state_tag,
+                response_state_tag=response_state_tag,
+                roles_list=roles_list,
+                project_tag=project_tag,
             ),
             "menu": render_template(menu_templ, sub=s, allow_delete=allow_delete),
         }

@@ -1,15 +1,18 @@
-<span class="badge bg-secondary">
+<div class="d-flex flex-column justify-content-start align-items-start gap-1">
     {% if config.uses_supervisor %}
-        S {{ CATS_sup }}
+        <div class="text-primary">S: {{ CATS_sup }}</div>
     {% endif %}
     {% if config.uses_marker %}
-        Ma {{ CATS_mark }}
+        <div class="text-primary">Mk: {{ CATS_mark }}</div>
     {% endif %}
     {% if config.uses_moderator %}
-        Mo {{ CATS_moderate }}
+        <div class="text-primary">Mo {{ CATS_moderate }}</div>
     {% endif %}
     {% if config.uses_presentations %}
-        P {{ CATS_pres }}
+        <div class="text-primary">P {{ CATS_pres }}</div>
     {% endif %}
-</span>
-<span class="badge bg-primary">T {{ CATS_sup+CATS_mark+CATS_moderate+CATS_pres }}</span>
+    <div>
+        <hr>
+        <div class="text-success fw-semibold fs-5">Total {{ CATS_sup+CATS_mark+CATS_moderate+CATS_pres }}</div>
+    </div>
+</div>

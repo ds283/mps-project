@@ -3,14 +3,12 @@
     {% set sub = r.owner %}
     {% set config = sub.config %}
     {% set pclass = config.project_class %}
-    {% set student = sub.student %}
-    {% set user = student.user %}
+    {% set user = sub.student.user %}
     <div>
-        <div class="dropdown assignment-label">
-            <a class="badge text-decoration-none text-nohover-light bg-secondary btn-table-block dropdown-toggle"
+        <div class="dropdown">
+            <a class="small link-secondary text-decoration-none dropdown-toggle"
                href="" role="button" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
-                {% if show_period %}#{{ r.submission_period }}: {% endif %}
-                {{ user.name }}
+                {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ user.name }}
             </a>
             <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
                 {% set disabled = not pclass.publish %}
@@ -27,11 +25,11 @@
     </div>
 {% endmacro %}
 {% if recs|length >= 1 %}
-    <div class="d-flex flex-row justify-content-start gap-2"></div>
-    {% for rec in recs %}
-        {{ marker_tag(rec, config.number_submissions > 1) }}
-    {% endfor %}
+    <div class="d-flex flex-column justify-content-start gap-1">
+        {% for rec in recs %}
+            {{ marker_tag(rec, config.number_submissions > 1) }}
+        {% endfor %}
     </div>
 {% else %}
-    <span class="badge bg-secondary">None</span>
+    <span class="text-secondary small"><i class="fas fa-ban fa-fw"></i> None</span>
 {% endif %}

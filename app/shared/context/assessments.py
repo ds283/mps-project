@@ -7,8 +7,8 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 
-from .utils import get_pclass_config_list
 from ..utils import get_current_year
+from .utils import get_pclass_config_list
 
 
 def get_schedule_message_data(configs=None):
@@ -29,7 +29,7 @@ def get_schedule_message_data(configs=None):
                 if period.has_deployed_schedule:
                     schedule = period.deployed_schedule
 
-                    if schedule.owner.is_feedback_open:
+                    if not schedule.owner.is_closed:
                         if schedule.owner.has_errors:
                             if schedule.event_name not in error_events:
                                 messages.append(

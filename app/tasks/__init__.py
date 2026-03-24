@@ -9,6 +9,7 @@
 #
 
 from .assessment import register_assessment_tasks
+from .deploy_schedule import register_deploy_schedule_tasks
 from .assessors import register_assessor_tasks
 from .attendance import register_attendance_tasks
 from .availability import register_availability_tasks

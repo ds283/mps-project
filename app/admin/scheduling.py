@@ -1402,14 +1402,14 @@ def deploy_schedule(id):
             )
         else:
             flash(
-                f'Schedule "{record.name}" is not yet available for deployment because it has not yet terminated.',
+                f'Schedule "{record.name}" is not available for deployment because it has not yet terminated.',
                 "info",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            f'Schedule "{record.name}" did not yield an optimal solution and is not available for deployment.',
+            f'Schedule "{record.name}" did not yield an usable solution and is not available for deployment.',
             "info",
         )
         return redirect(redirect_url())
@@ -1426,6 +1426,25 @@ def deploy_schedule(id):
             "Please contact a system administrator",
             "error",
         )
+        return redirect(redirect_url())
+
+    celery = current_app.extensions["celery"]
+    deploy_task = celery.tasks["app.tasks.deploy_schedule.deploy_schedule"]
+
+    tk_name = f'Deploy schedule "{record.name}"'
+    tk_description = "Populate presentation assessor roles for deployed schedule"
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
+    final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
+    error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
+
+    seq = chain(
+        init.si(task_id, tk_name),
+        deploy_task.si(record.id, current_user.id),
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async(task_id=task_id)
 
     return redirect(redirect_url())
 
@@ -1449,14 +1468,14 @@ def undeploy_schedule(id):
             )
         else:
             flash(
-                f'Schedule "{record.name}" is not yet available for undeployment because it has not yet terminated.',
+                f'Schedule "{record.name}" is not available for undeployment because it has not yet terminated.',
                 "error",
             )
         return redirect(redirect_url())
 
     if not record.solution_usable:
         flash(
-            f'Schedule "{record.name}" did not yield an optimal solution and is not available for deployment.',
+            f'Schedule "{record.name}" did not yield an usable solution and is not available for deployment.',
             "info",
         )
         return redirect(redirect_url())
@@ -1478,6 +1497,25 @@ def undeploy_schedule(id):
             "Please contact a system administrator",
             "error",
         )
+        return redirect(redirect_url())
+
+    celery = current_app.extensions["celery"]
+    undeploy_task = celery.tasks["app.tasks.deploy_schedule.undeploy_schedule"]
+
+    tk_name = f'Undeploy schedule "{record.name}"'
+    tk_description = "Remove presentation assessor roles for undeployed schedule"
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
+    final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
+    error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
+
+    seq = chain(
+        init.si(task_id, tk_name),
+        undeploy_task.si(record.id, current_user.id),
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async(task_id=task_id)
 
     return redirect(redirect_url())
 

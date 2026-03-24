@@ -472,8 +472,8 @@ class ScheduleAttempt(
 
     @property
     def is_revokable(self):
-        # can't revoke if parent event is closed for feedback
-        if not self.owner.is_feedback_open:
+        # can't revoke if parent event is closed
+        if self.owner.is_closed:
             return False
 
         today = date.today()
@@ -482,11 +482,6 @@ class ScheduleAttempt(
             # can't revoke if any schedule slot is in the past
             if slot.session.date <= today:
                 return False
-
-            # can't revoke if any feedback has been added
-            for talk in slot.talks:
-                if get_count(talk.presentation_feedback) > 0:
-                    return False
 
         return True
 
@@ -513,6 +508,7 @@ def _ScheduleAttempt_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.id)
         from .assessment import _PresentationAssessment_is_valid
+
         cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
 
 
@@ -523,6 +519,7 @@ def _ScheduleAttempt_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.id)
         from .assessment import _PresentationAssessment_is_valid
+
         cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
 
 
@@ -533,6 +530,7 @@ def _ScheduleAttempt_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.id)
         from .assessment import _PresentationAssessment_is_valid
+
         cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
 
 
@@ -541,6 +539,7 @@ def _ScheduleSlot_is_valid(id):
     obj: ScheduleSlot = db.session.query(ScheduleSlot).filter_by(id=id).one()
     attempt: ScheduleAttempt = obj.owner
     from .assessment import PresentationAssessment
+
     assessment: PresentationAssessment = attempt.owner
     session: PresentationSession = obj.session
 
@@ -632,8 +631,8 @@ def _ScheduleSlot_is_valid(id):
         for assessor in obj.assessors:
             rec = assessor.get_enrollment_record(pclass.id)
             if rec is None or (
-                    rec is not None
-                    and rec.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED
+                rec is not None
+                and rec.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED
             ):
                 errors[("enrollment", assessor.id)] = (
                     'Assessor "{name}" is scheduled in this slot, but is not '
@@ -685,9 +684,9 @@ def _ScheduleSlot_is_valid(id):
         project: LiveProject = talk.project
 
         if (
-                attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.ALL_IN_POOL
-                or attempt.all_assessors_in_pool
-                == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_POOL
+            attempt.all_assessors_in_pool == AssessorPoolChoicesMixin.ALL_IN_POOL
+            or attempt.all_assessors_in_pool
+            == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_POOL
         ):
             found_match = False
             for assessor in talk.project.assessor_list:
@@ -704,10 +703,10 @@ def _ScheduleSlot_is_valid(id):
                 )
 
         elif (
-                attempt.all_assessors_in_pool
-                == AssessorPoolChoicesMixin.ALL_IN_RESEARCH_GROUP
-                or attempt.all_assessors_in_pool
-                == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_RESEARCH_GROUP
+            attempt.all_assessors_in_pool
+            == AssessorPoolChoicesMixin.ALL_IN_RESEARCH_GROUP
+            or attempt.all_assessors_in_pool
+            == AssessorPoolChoicesMixin.AT_LEAST_ONE_IN_RESEARCH_GROUP
         ):
             found_match = False
             if project.group is not None:
@@ -765,8 +764,8 @@ def _ScheduleSlot_is_valid(id):
                 talk_j = talks_list[j]
 
                 if talk_i.project_id == talk_j.project_id and (
-                        talk_i.project is not None
-                        and talk_i.project.dont_clash_presentations
+                    talk_i.project is not None
+                    and talk_i.project.dont_clash_presentations
                 ):
                     errors[("clash", (talk_i.id, talk_j.id))] = (
                         'Submitters "{name_a}" and "{name_b}" share a project '
@@ -1000,8 +999,8 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
             return ScheduleSlot.FEEDBACK_NOT_REQUIRED
 
         if (
-                not period.collect_presentation_feedback
-                or not period.config.project_class.publish
+            not period.collect_presentation_feedback
+            or not period.config.project_class.publish
         ):
             return ScheduleSlot.FEEDBACK_NOT_REQUIRED
 
@@ -1019,11 +1018,11 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
         # we use ENTERED rather than WAITING if possible
         s = min(state)
         if s == ScheduleSlot.FEEDBACK_WAITING and any(
-                [
-                    s == ScheduleSlot.FEEDBACK_ENTERED
-                    or s == ScheduleSlot.FEEDBACK_SUBMITTED
-                    for s in state
-                ]
+            [
+                s == ScheduleSlot.FEEDBACK_ENTERED
+                or s == ScheduleSlot.FEEDBACK_SUBMITTED
+                for s in state
+            ]
         ):
             return ScheduleSlot.FEEDBACK_ENTERED
 
@@ -1148,6 +1147,7 @@ def _ScheduleSlot_update_handler(mapper, connection, target):
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
         if target.owner is not None:
             from .assessment import _PresentationAssessment_is_valid
+
             cache.delete_memoized(
                 _PresentationAssessment_is_valid, target.owner.owner_id
             )
@@ -1162,6 +1162,7 @@ def _ScheduleSlot_insert_handler(mapper, connection, target):
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
         if target.owner is not None:
             from .assessment import _PresentationAssessment_is_valid
+
             cache.delete_memoized(
                 _PresentationAssessment_is_valid, target.owner.owner_id
             )
@@ -1176,6 +1177,7 @@ def _ScheduleSlot_delete_handler(mapper, connection, target):
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
         if target.owner is not None:
             from .assessment import _PresentationAssessment_is_valid
+
             cache.delete_memoized(
                 _PresentationAssessment_is_valid, target.owner.owner_id
             )
@@ -1190,6 +1192,7 @@ def _ScheduleSlot_assessors_append_handler(target, value, initiator):
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
         if target.owner is not None:
             from .assessment import _PresentationAssessment_is_valid
+
             cache.delete_memoized(
                 _PresentationAssessment_is_valid, target.owner.owner_id
             )
@@ -1204,6 +1207,7 @@ def _ScheduleSlot_assessors_remove_handler(target, value, initiator):
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
         if target.owner is not None:
             from .assessment import _PresentationAssessment_is_valid
+
             cache.delete_memoized(
                 _PresentationAssessment_is_valid, target.owner.owner_id
             )
@@ -1218,6 +1222,7 @@ def _ScheduleSlot_talks_append_handler(target, value, initiator):
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
         if target.owner is not None:
             from .assessment import _PresentationAssessment_is_valid
+
             cache.delete_memoized(
                 _PresentationAssessment_is_valid, target.owner.owner_id
             )
@@ -1232,6 +1237,7 @@ def _ScheduleSlot_talks_remove_handler(target, value, initiator):
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
         if target.owner is not None:
             from .assessment import _PresentationAssessment_is_valid
+
             cache.delete_memoized(
                 _PresentationAssessment_is_valid, target.owner.owner_id
             )

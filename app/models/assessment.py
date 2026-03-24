@@ -115,7 +115,10 @@ class PresentationAssessment(
     # requests skipped timestamp
     availability_skipped_timestamp = db.Column(db.DateTime())
 
-    # FEEDBACK LIFECYCLE
+    # ASSESSMENT LIFECYCLE
+
+    # is this assessment closed?
+    closed = db.Column(db.Boolean(), default=False, nullable=False)
 
     # feedback is open
     feedback_open = db.Column(db.Boolean())
@@ -149,6 +152,10 @@ class PresentationAssessment(
     @property
     def is_feedback_open(self):
         return self.feedback_open
+
+    @property
+    def is_closed(self):
+        return self.cloed
 
     @property
     def availability_outstanding_count(self):
@@ -469,7 +476,7 @@ class PresentationAssessment(
 
     @property
     def is_closable(self):
-        if not self.is_feedback_open:
+        if self.is_closed:
             return False
 
         if not self.is_deployed:

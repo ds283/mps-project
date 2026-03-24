@@ -271,8 +271,16 @@ def perform_delete_assessment(id):
 
     url = request.args.get("url", url_for("admin.manage_assessments"))
 
-    db.session.delete(assessment)
-    db.session.commit()
+    try:
+        db.session.delete(assessment)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash(
+            f'Could not delete assessment "{assessment.name}" due to a database error. Please contact a system administrator',
+            "error",
+        )
 
     return redirect(url)
 
@@ -294,7 +302,7 @@ def close_assessment(id):
     if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not assessment.is_feedback_open:
+    if assessment.is_closed:
         return redirect(redirect_url())
 
     if not assessment.is_closable:
@@ -305,18 +313,18 @@ def close_assessment(id):
         )
         return redirect(redirect_url())
 
-    title = "Close feedback for assessment"
-    panel_title = "Close feedback for assessment <strong>{name}</strong>".format(
+    title = "Close assessment"
+    panel_title = "Close assessment <strong>{name}</strong>".format(
         name=assessment.name
     )
 
     action_url = url_for("admin.perform_close_assessment", id=id, url=request.referrer)
     message = (
-        "<p>Please confirm that you wish to close feedback for the assessment "
+        "<p>Please confirm that you wish to close the assessment "
         "<strong>{name}</strong>.</p>"
         "<p>This action cannot be undone.</p>".format(name=assessment.name)
     )
-    submit_label = "Close feedback"
+    submit_label = "Close assessment"
 
     return render_template_context(
         "admin/danger_confirm.html",
@@ -345,21 +353,30 @@ def perform_close_assessment(id):
     if not validate_assessment(assessment, current_year=current_year):
         return redirect(redirect_url())
 
-    if not assessment.is_feedback_open:
+    if assessment.is_closed:
         return redirect(redirect_url())
 
     if not assessment.is_closable:
         flash(
-            'Cannot close assessment "{name}" because one or more closing criteria have not been met. Check '
-            "that all scheduled sessions are in the past.".format(name=assessment.name),
+            'Cannot close assessment "{name}" because one or more closing criteria have not been met. Check that all scheduled sessions are in the past.'.format(
+                name=assessment.name
+            ),
             "info",
         )
         return redirect(redirect_url())
 
     url = request.args.get("url", url_for("admin.manage_assessments"))
 
-    assessment.is_feedback_open = False
-    db.session.commit()
+    try:
+        assessment.closed = False
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash(
+            f'Could not close assessment "{assessment.name}" due to a database error. Please contact a system administrator',
+            "error",
+        )
 
     return redirect(url)
 
@@ -964,10 +981,11 @@ def add_session(id):
     if not validate_assessment(assessment):
         return redirect(redirect_url())
 
-    if not assessment.is_feedback_open:
+    if not assessment.is_closed:
         flash(
-            'Event "{name}" has been closed to feedback and its sessions can no longer be '
-            "edited".format(name=assessment.name),
+            'Event "{name}" has been closed and its sessions can no longer be edited'.format(
+                name=assessment.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -1026,10 +1044,11 @@ def edit_session(id):
     if not validate_assessment(sess.owner):
         return redirect(redirect_url())
 
-    if not sess.owner.is_feedback_open:
+    if sess.owner.is_closed:
         flash(
-            'Event "{name}" has been closed to feedback and its sessions can no longer be '
-            "edited".format(name=sess.owner.name),
+            'Event "{name}" has been closed to feedback and its sessions can no longer be edited'.format(
+                name=sess.owner.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -1082,10 +1101,11 @@ def delete_session(id):
     if not validate_assessment(sess.owner):
         return redirect(redirect_url())
 
-    if not sess.owner.is_feedback_open:
+    if sess.owner.is_closed:
         flash(
-            'Event "{name}" has been closed to feedback and its sessions can no longer be '
-            "edited".format(name=sess.owner.name),
+            'Event "{name}" has been closed to feedback and its sessions can no longer be edited'.format(
+                name=sess.owner.name
+            ),
             "info",
         )
         return redirect(redirect_url())
@@ -1701,10 +1721,11 @@ def assessor_session_availability(id):
 
     sess: PresentationSession = PresentationSession.query.get_or_404(id)
 
-    if not sess.owner.is_feedback_open:
+    if sess.owner.is_closed:
         flash(
-            'Event "{name}" has been closed to feedback and its sessions can no longer be '
-            "edited".format(name=sess.owner.name),
+            'Event "{name}" has been closed and its sessions can no longer be edited'.format(
+                name=sess.owner.name
+            ),
             "info",
         )
         return redirect(redirect_url())

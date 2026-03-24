@@ -346,6 +346,7 @@ class SubmissionRole(
         obj = cls(**kwargs)
 
         defaults = {
+            "schedule_slot_id": None,
             "mute": False,
             "prompt_after_event": True,
             "prompt_at_fixed_time": False,
@@ -1659,7 +1660,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         if count == 0:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
-        closed = not slot.owner.owner.is_feedback_open
+        closed = slot.owner.owner.is_closed
 
         today = date.today()
         if today <= slot.session.date:
@@ -1742,14 +1743,14 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             slot = self.schedule_slot
 
             if slot is not None:
-                closed = not slot.owner.owner.is_feedback_open
+                closed = slot.owner.owner.is_closed
             else:
                 if not self.period.has_deployed_schedule:
                     closed = False
                 else:
                     schedule = self.period.deployed_schedule
                     assessment = schedule.owner
-                    closed = not assessment.is_feedback_open
+                    closed = assessment.is_closed
 
             if closed:
                 for feedback in self.presentation_feedback:

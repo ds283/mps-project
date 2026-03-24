@@ -709,6 +709,23 @@ class EmailWorkflowItemAttachment(db.Model):
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
+    # link back to parent EmailWorkflowItem; ondelete="CASCADE" ensures DB-level cleanup
+    # when the parent item is deleted. The backref provides EmailWorkflowItem.attachments
+    # as a lazy dynamic query, with cascade="all, delete" for ORM-level cascade.
+    workflow_item_id = db.Column(
+        db.Integer(),
+        db.ForeignKey("email_workflow_items.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    workflow_item = db.relationship(
+        "EmailWorkflowItem",
+        foreign_keys=[workflow_item_id],
+        uselist=False,
+        backref=db.backref(
+            "attachments", lazy="dynamic", cascade="all, delete", passive_deletes=True
+        ),
+    )
+
     # link to generated asset
     generated_asset_id = db.Column(
         db.Integer(), db.ForeignKey("generated_assets.id"), nullable=True
@@ -821,27 +838,28 @@ class EmailWorkflowItemAttachment(db.Model):
         )
 
 
-# association table linking EmailWorkflowItemAttachment to EmailWorkflowItem
-email_workflow_item_attachment_to_workflow_item = db.Table(
-    "email_workflow_item_attachment_to_workflow_item",
-    db.Column(
-        "email_workflow_item_attachment_id",
-        db.Integer(),
-        db.ForeignKey("email_workflow_item_attachments.id", ondelete="CASCADE"),
-    ),
-    db.Column(
-        "email_workflow_item_id",
-        db.Integer(),
-        db.ForeignKey("email_workflow_items.id", ondelete="CASCADE"),
-    ),
-)
-
-
 class EmailWorkflowItem(db.Model, EditingMetadataMixin):
     __tablename__ = "email_workflow_items"
 
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
+
+    # link back to parent EmailWorkflow; ondelete="CASCADE" ensures DB-level cleanup
+    # when the parent workflow is deleted. The backref provides EmailWorkflow.items
+    # as a lazy dynamic query, with cascade="all, delete" for ORM-level cascade.
+    workflow_id = db.Column(
+        db.Integer(),
+        db.ForeignKey("email_workflows.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    workflow = db.relationship(
+        "EmailWorkflow",
+        foreign_keys=[workflow_id],
+        uselist=False,
+        backref=db.backref(
+            "items", lazy="dynamic", cascade="all, delete", passive_deletes=True
+        ),
+    )
 
     # recipient list, formatted as a JSON-serialized list of email address strings
     recipient_list = db.Column(db.Text())
@@ -889,17 +907,6 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
 
     # any error message
     error_message = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
-
-    # list of attachments
-    # cascade="all, delete" ensures EmailWorkflowItemAttachment records are deleted
-    # when this EmailWorkflowItem is deleted
-    attachments = db.relationship(
-        "EmailWorkflowItemAttachment",
-        secondary=email_workflow_item_attachment_to_workflow_item,
-        lazy="dynamic",
-        cascade="all, delete",
-        backref=db.backref("email_workflow_item", lazy="dynamic"),
-    )
 
     # logged email identifier (valid once the email has been sent)
     # we should delete this EmailWorkflowItem if/when the EmailLog item
@@ -1017,25 +1024,6 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
         )
 
 
-# association table linking EmailWorkflow to EmailWorkflowItem
-# ondelete="CASCADE" on both columns means the DB will clean up association rows
-# automatically if either side is deleted directly (belt-and-suspenders alongside
-# the ORM-level cascade="all, delete" on EmailWorkflow.items).
-email_workflow_to_items = db.Table(
-    "email_workflow_to_items",
-    db.Column(
-        "email_workflow_id",
-        db.Integer(),
-        db.ForeignKey("email_workflows.id", ondelete="CASCADE"),
-    ),
-    db.Column(
-        "email_workflow_item_id",
-        db.Integer(),
-        db.ForeignKey("email_workflow_items.id", ondelete="CASCADE"),
-    ),
-)
-
-
 # association table for email workflows to project classes
 email_workflow_to_pclasses = db.Table(
     "email_workflow_to_pclasses",
@@ -1061,18 +1049,6 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
 
     # paused flag - is this workflow currently paused?
     paused = db.Column(db.Boolean(), nullable=False, default=False)
-
-    # associated email workflow items
-    # cascade="all, delete" ensures EmailWorkflowItem records (and transitively their
-    # EmailWorkflowItemAttachment records) are deleted when this EmailWorkflow is deleted.
-    # The backref provides EmailWorkflowItem.workflow for reverse navigation.
-    items = db.relationship(
-        "EmailWorkflowItem",
-        secondary=email_workflow_to_items,
-        lazy="dynamic",
-        cascade="all, delete",
-        backref=db.backref("workflow", lazy="select", uselist=False),
-    )
 
     # associated project classes
     pclasses = db.relationship(

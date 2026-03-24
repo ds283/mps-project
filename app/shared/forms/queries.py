@@ -12,43 +12,44 @@ from typing import Iterable, List, Optional
 from flask_login import current_user
 from sqlalchemy import or_
 
-from ..utils import get_current_year
 from ...database import db
 from ...models import (
-    User,
-    DegreeType,
-    DegreeProgramme,
-    SkillGroup,
-    FacultyData,
-    ProjectClass,
-    Role,
-    ResearchGroup,
-    EnrollmentRecord,
-    Supervisor,
-    Project,
-    ProjectDescription,
-    MatchingAttempt,
-    SubmissionPeriodRecord,
-    assessment_to_periods,
-    PresentationAssessment,
-    ProjectClassConfig,
-    Building,
-    Room,
-    PresentationFeedback,
-    FHEQ_Level,
-    ScheduleSlot,
-    PresentationSession,
-    ScheduleAttempt,
     AssetLicense,
-    ProjectTagGroup,
-    ProjectTag,
     BackupLabel,
-    TemplateTag,
-    FeedbackAsset,
-    Tenant,
+    Building,
+    DegreeProgramme,
+    DegreeType,
     EmailTemplateLabel,
+    EnrollmentRecord,
+    FacultyData,
+    FeedbackAsset,
+    FHEQ_Level,
+    MatchingAttempt,
+    PresentationAssessment,
+    PresentationSession,
+    Project,
+    ProjectClass,
+    ProjectClassConfig,
+    ProjectDescription,
+    ProjectTag,
+    ProjectTagGroup,
+    ResearchGroup,
+    Role,
+    Room,
+    ScheduleAttempt,
+    ScheduleSlot,
+    SkillGroup,
+    SubmissionPeriodRecord,
+    Supervisor,
+    TemplateTag,
+    Tenant,
+    User,
+    assessment_to_periods,
+    description_pclasses,
+    project_pclasses,
+    roles_to_users,
 )
-from ...models import project_pclasses, description_pclasses, roles_to_users
+from ..utils import get_current_year
 
 
 def GetActiveDegreeTypes():
@@ -500,46 +501,6 @@ def GetAllRooms():
 
 def BuildRoomLabel(room):
     return room.full_name + " (capacity = {n})".format(n=room.capacity)
-
-
-def GetPresentationFeedbackFaculty(record_id):
-    used_ids = (
-        db.session.query(PresentationFeedback.assessor_id)
-        .filter(PresentationFeedback.owner_id == record_id)
-        .distinct()
-        .subquery()
-    )
-
-    return (
-        db.session.query(FacultyData)
-        .join(User, User.id == FacultyData.id)
-        .filter(User.active)
-        .join(used_ids, used_ids.c.assessor_id == FacultyData.id, isouter=True)
-        .filter(used_ids.c.assessor_id == None)
-        .order_by(User.last_name, User.first_name)
-    )
-
-
-def GetPresentationAssessorFaculty(record_id, slot_id):
-    used_ids = (
-        db.session.query(PresentationFeedback.assessor_id)
-        .filter(PresentationFeedback.owner_id == record_id)
-        .distinct()
-        .subquery()
-    )
-
-    slot = db.session.query(ScheduleSlot).filter_by(id=slot_id).one()
-    available_ids = slot.assessors.subquery()
-
-    return (
-        db.session.query(FacultyData)
-        .join(available_ids, available_ids.c.id == FacultyData.id)
-        .join(User, User.id == FacultyData.id)
-        .filter(User.active)
-        .join(used_ids, used_ids.c.assessor_id == FacultyData.id, isouter=True)
-        .filter(used_ids.c.assessor_id == None)
-        .order_by(User.last_name, User.first_name)
-    )
 
 
 def GetFHEQLevels():

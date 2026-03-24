@@ -120,9 +120,6 @@ class PresentationAssessment(
     # is this assessment closed?
     closed = db.Column(db.Boolean(), default=False, nullable=False)
 
-    # feedback is open
-    feedback_open = db.Column(db.Boolean())
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -148,10 +145,6 @@ class PresentationAssessment(
             return AvailabilityRequestStateMixin.AVAILABILITY_REQUESTED
 
         return AvailabilityRequestStateMixin.AVAILABILITY_CLOSED
-
-    @property
-    def is_feedback_open(self):
-        return self.feedback_open
 
     @property
     def is_closed(self):

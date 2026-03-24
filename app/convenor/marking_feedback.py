@@ -34,7 +34,6 @@ from app.convenor import convenor
 
 from ..database import db
 from ..faculty.forms import (
-    PresentationFeedbackForm,
     SubmissionRoleFeedbackForm,
     SubmissionRoleResponseForm,
 )
@@ -45,7 +44,6 @@ from ..models import (
     LiveProject,
     MatchingRecord,
     MatchingRole,
-    PresentationFeedback,
     ProjectClass,
     ProjectClassConfig,
     SelectionRecord,
@@ -78,7 +76,6 @@ from ..tools import ServerSideInMemoryHandler, ServerSideSQLHandler
 from .forms import (
     AddSubmissionPeriodUnitFormFactory,
     AddSupervisionEventTemplateFormFactory,
-    AssignPresentationFeedbackFormFactory,
     EditPeriodRecordFormFactory,
     EditProjectConfigFormFactory,
     EditSubmissionPeriodRecordPresentationsForm,
@@ -192,8 +189,8 @@ def open_feedback(id):
 
     state = config.submitter_lifecycle
     if (
-            state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
-            and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
+        state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+        and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
     ):
         flash(
             "Feedback cannot be opened at this stage in the project lifecycle.", "info"
@@ -255,8 +252,8 @@ def open_feedback(id):
                 return response
 
         elif (
-                hasattr(feedback_form, "send_notifications")
-                and feedback_form.send_notifications.data
+            hasattr(feedback_form, "send_notifications")
+            and feedback_form.send_notifications.data
         ):
             return _send_feedback_notifications_request(
                 config, deadline, feedback_form, id, period, url
@@ -285,7 +282,7 @@ def _test_notifications(deadline: datetime, feedback_form, id, url):
 
 
 def _close_period_request(
-        config: ProjectClassConfig, id, period: SubmissionPeriodRecord, url
+    config: ProjectClassConfig, id, period: SubmissionPeriodRecord, url
 ):
     if period.collect_project_feedback:
         title = "Immediately close {proj}/{period}".format(
@@ -336,7 +333,7 @@ def _close_period_request(
 
 
 def _send_feedback_notifications_request(
-        config, deadline, feedback_form, id, period, url
+    config, deadline, feedback_form, id, period, url
 ):
     # issue confirmation request
     title = "Issue unsent marking notifications for {proj}/{period}".format(
@@ -428,7 +425,7 @@ def _open_feedback_request(config, deadline, feedback_form, id, period, url):
 
 
 def _process_update_deadline(
-        config: ProjectClassConfig, deadline, id, period: SubmissionPeriodRecord, url
+    config: ProjectClassConfig, deadline, id, period: SubmissionPeriodRecord, url
 ):
     if not period.collect_project_feedback:
         return _close_period_request(config, id, period, url)
@@ -481,8 +478,8 @@ def test_notifications(id):
 
     state = config.submitter_lifecycle
     if (
-            state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
-            and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
+        state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+        and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
     ):
         flash(
             "Feedback cannot be opened at this stage in the project lifecycle.", "info"
@@ -559,8 +556,8 @@ def do_send_notifications(id):
 
     state = config.submitter_lifecycle
     if (
-            state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
-            and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
+        state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+        and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
     ):
         flash(
             "Feedback cannot be opened at this stage in the project lifecycle.", "info"
@@ -634,8 +631,8 @@ def do_open_feedback(id):
 
     state = config.submitter_lifecycle
     if (
-            state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
-            and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
+        state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+        and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
     ):
         flash(
             "Feedback cannot be opened at this stage in the project lifecycle.", "info"
@@ -746,8 +743,8 @@ def immediate_close_feedback(id):
 
     state = config.submitter_lifecycle
     if (
-            state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
-            and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
+        state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+        and state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
     ):
         flash(
             "Feedback cannot be closed at this stage in the project lifecycle.", "info"
@@ -834,18 +831,18 @@ def close_feedback(id):
     if url is None:
         url = redirect_url()
 
-    title = 'Close feedback for "{name}"'.format(name=config.name)
-    panel_title = "Close feedback for <strong>{name}</strong>".format(name=config.name)
+    title = 'Close assessment "{name}"'.format(name=config.name)
+    panel_title = "Close assessment <strong>{name}</strong>".format(name=config.name)
 
     action_url = url_for("convenor.do_close_feedback", id=id, url=url)
     message = (
-        "<p>Are you sure that you wish to close feedback for project class "
+        "<p>Are you sure that you wish to close this assessment for project class "
         "<strong>{name}</strong>?</p>"
-        "<p>After closure, no immediate action is taken automatically by the platform. "
-        "Feedback becomes available to push to students when required.</p>"
+        "<p>After closure, no immediate action is taken automatically by the platform, "
+        "but no further edits can be made.</p>"
         "<p>This action cannot be undone.</p>".format(name=config.name)
     )
-    submit_label = "Close feedback"
+    submit_label = "Close assessment"
 
     return render_template_context(
         "admin/danger_confirm.html",
@@ -995,7 +992,7 @@ def edit_project_config(pid):
 
 
 def _validate_submission_period(
-        record: SubmissionPeriodRecord, config: ProjectClassConfig
+    record: SubmissionPeriodRecord, config: ProjectClassConfig
 ):
     # reject is user is not a convenor for the associated project class
     if not validate_is_convenor(config.project_class):
@@ -1152,8 +1149,8 @@ def publish_assignment(id):
         return redirect(redirect_url())
 
     if (
-            sub.config.submitter_lifecycle
-            >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+        sub.config.submitter_lifecycle
+        >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
     ):
         flash(
             "It is now too late to publish an assignment to students for this project class.",
@@ -1191,8 +1188,8 @@ def unpublish_assignment(id):
         return redirect(redirect_url())
 
     if (
-            sub.config.submitter_lifecycle
-            >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+        sub.config.submitter_lifecycle
+        >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
     ):
         flash(
             "It is now too late to unpublish an assignment for this project class.",
@@ -1228,8 +1225,8 @@ def publish_all_assignments(id):
         return redirect(redirect_url())
 
     if (
-            config.submitter_lifecycle
-            >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+        config.submitter_lifecycle
+        >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
     ):
         flash(
             "It is now too late to publish assignments to students for this project class.",
@@ -1277,8 +1274,8 @@ def unpublish_all_assignments(id):
         return redirect(redirect_url())
 
     if (
-            config.submitter_lifecycle
-            >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+        config.submitter_lifecycle
+        >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
     ):
         flash(
             "It is now too late to unpublish assignments for this project class.",
@@ -2237,74 +2234,6 @@ def deassign_project(id):
     return redirect(redirect_url())
 
 
-@convenor.route("/assign_presentation_feedback/<int:id>/", methods=["GET", "POST"])
-@roles_accepted("faculty", "admin", "root")
-def assign_presentation_feedback(id):
-    # id labels a SubmissionRecord
-    talk: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
-
-    if not validate_is_convenor(talk.owner.config.project_class):
-        return redirect(redirect_url())
-
-    if not validate_assign_feedback(talk):
-        return redirect(redirect_url())
-
-    slot = talk.schedule_slot
-    AssignPresentationFeedbackForm = AssignPresentationFeedbackFormFactory(
-        record_id=talk.id, slot_id=slot.id if slot is not None else None
-    )
-
-    form = AssignPresentationFeedbackForm(request.form)
-
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
-
-    if form.validate_on_submit():
-        feedback = PresentationFeedback(
-            owner_id=talk.id,
-            assessor=form.assessor.data,
-            positive=form.positive_feedback.data,
-            negative=form.improvement_feedback.data,
-            submitted=True,
-            timestamp=datetime.now(),
-        )
-
-        db.session.add(feedback)
-        db.session.commit()
-
-        return redirect(url)
-
-    return render_template_context(
-        "faculty/dashboard/edit_feedback.html",
-        form=form,
-        title="Assign presentation feedback",
-        unique_id="assign-{id}".format(id=id),
-        formtitle="Assign presentation feedback for <strong>{num}</strong>".format(
-            num=talk.owner.student.user.name
-        ),
-        submit_url=url_for(
-            "convenor.assign_presentation_feedback", id=talk.id, url=url
-        ),
-    )
-
-
-@convenor.route("/delete_presentation_feedback/<int:id>/", methods=["GET", "POST"])
-@roles_accepted("faculty", "admin", "root")
-def delete_presentation_feedback(id):
-    # id labels PresentationFeedback record
-    feedback: PresentationFeedback = PresentationFeedback.query.get_or_404(id)
-
-    talk = feedback.owner
-    if not validate_is_convenor(talk.owner.config.project_class):
-        return redirect(redirect_url())
-
-    db.session.delete(feedback)
-    db.session.commit()
-
-    return redirect(redirect_url())
-
-
 @convenor.route("/edit_feedback/<int:id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def edit_feedback(id):
@@ -2367,7 +2296,7 @@ def edit_feedback(id):
         title="Edit feedback",
         unique_id="role-{id}".format(id=id),
         formtitle='Edit feedback for <i class="fas fa-user-circle"></i> '
-                  "<strong>{name}</strong>".format(name=record.student_identifier["label"]),
+        "<strong>{name}</strong>".format(name=record.student_identifier["label"]),
         submit_url=url_for("convenor.edit_feedback", id=id, url=url),
         period=period,
         record=role,
@@ -2482,138 +2411,6 @@ def unsubmit_feedback(id):
             "Could not unsubmit feedback due to a database error. Please contact a system administrator.",
             "error",
         )
-
-    return redirect(redirect_url())
-
-
-@convenor.route(
-    "/presentation_edit_feedback/<int:feedback_id>", methods=["GET", "POST"]
-)
-@roles_accepted("faculty", "admin", "root")
-def presentation_edit_feedback(feedback_id):
-    # feedback_id labels a PresentationFeedback instance
-    feedback = PresentationFeedback.query.get_or_404(feedback_id)
-
-    talk = feedback.owner
-    if not validate_is_convenor(talk.owner.config.project_class):
-        return redirect(redirect_url())
-
-    slot = feedback.owner.schedule_slot
-    if slot is None:
-        flash("Could not edit feedback because the scheduled slot is unset.", "error")
-        return redirect(redirect_url())
-
-    if not slot.owner.deployed:
-        flash(
-            "Can not edit feedback because the schedule containing this slot has not been deployed.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    form = PresentationFeedbackForm(request.form)
-
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
-
-    if form.validate_on_submit():
-        feedback.positive = form.positive_feedback.data
-        feedback.improvement_feedback = form.improvement_feedback.data
-
-        if feedback.submitted:
-            feedback.timestamp = datetime.now()
-
-        db.session.commit()
-
-        return redirect(url)
-
-    else:
-        if request.method == "GET":
-            form.positive_feedback.data = feedback.positive
-            form.improvement_feedback.data = feedback.improvement_feedback
-
-    return render_template_context(
-        "faculty/dashboard/edit_feedback.html",
-        form=form,
-        unique_id="pres-{id}".format(id=id),
-        title="Edit presentation feedback from {supervisor}".format(
-            supervisor=feedback.assessor.user.name
-        ),
-        formtitle='Edit presentation feedback from <i class="fas fa-user-circle"></i> '
-                  "<strong>{supervisor}</strong> "
-                  'for <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(
-            supervisor=feedback.assessor.user.name, name=talk.owner.student.user.name
-        ),
-        submit_url=url_for(
-            "convenor.presentation_edit_feedback", feedback_id=feedback_id, url=url
-        ),
-        assessment=slot.owner.owner,
-        dont_show_warnings=True,
-    )
-
-
-@convenor.route("/presentation_submit_feedback/<int:feedback_id>")
-@roles_accepted("faculty", "admin", "root")
-def presentation_submit_feedback(feedback_id):
-    # feedback_id labels a PresentationFeedback instance
-    feedback = PresentationFeedback.query.get_or_404(feedback_id)
-
-    talk = feedback.owner
-    if not validate_is_convenor(talk.owner.config.project_class):
-        return redirect(redirect_url())
-
-    slot = feedback.owner.schedule_slot
-    if slot is None:
-        flash("Could not edit feedback because the scheduled slot is unset.", "error")
-        return redirect(redirect_url())
-
-    if not slot.owner.deployed:
-        flash(
-            "Can not edit feedback because the schedule containing this slot has not been deployed.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if not talk.is_presentation_assessor_valid(feedback.assessor_id):
-        flash("Cannot submit feedback because it is still incomplete.", "error")
-        return redirect(redirect_url())
-
-    feedback.submitted = True
-    feedback.timestamp = datetime.now()
-    db.session.commit()
-
-    return redirect(redirect_url())
-
-
-@convenor.route("/presentation_unsubmit_feedback/<int:feedback_id>")
-@roles_accepted("faculty", "admin", "root")
-def presentation_unsubmit_feedback(feedback_id):
-    # feedback_id labels a PresentationFeedback instance
-    feedback = PresentationFeedback.query.get_or_404(feedback_id)
-
-    talk = feedback.owner
-    if not validate_is_convenor(talk.owner.config.project_class):
-        return redirect(redirect_url())
-
-    slot = feedback.owner.schedule_slot
-    if slot is None:
-        flash("Could not edit feedback because the scheduled slot is unset.", "error")
-        return redirect(redirect_url())
-
-    if not slot.owner.deployed:
-        flash(
-            "Can not edit feedback because the schedule containing this slot has not been deployed.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if not slot.owner.owner.is_feedback_open:
-        flash("Cannot unsubmit feedback after an assessment has closed.", "error")
-        return redirect(redirect_url())
-
-    feedback.submitted = False
-    feedback.timestamp = None
-    db.session.commit()
 
     return redirect(redirect_url())
 

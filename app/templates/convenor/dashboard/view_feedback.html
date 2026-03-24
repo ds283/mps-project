@@ -22,7 +22,8 @@
             {% endif %}
 
             {% if form.selector is defined %}
-                <form action="{{ url_for('convenor.view_feedback', sub_id=submitter.id, url=url, text=text) }}" method="POST" name="selector_form">
+                <form action="{{ url_for('convenor.view_feedback', sub_id=submitter.id, url=url, text=text) }}"
+                      method="POST" name="selector_form">
                     {{ form.hidden_tag() }}
                     <span class="form-text"><strong>Select submission period to review</strong></span>
                     {{ on_click_selector_field(form.selector) }}
@@ -34,16 +35,21 @@
                     <div class="card mt-3 mb-3">
                         <div class="card-header">
                             <div class="d-flex flex-row justify-content-between align-items-center w-100">
-                                <div>Feedback from <i class="fas fa-user-circle"></i> {{ role.user.name }} ({{ role.role_label }})</div>
+                                <div>Feedback from <i class="fas fa-user-circle"></i> {{ role.user.name }}
+                                    ({{ role.role_label }})
+                                </div>
                                 <div class="d-flex flex-row justify-content-end align-items-center gap-2">
                                     {% if role.submitted_feedback and role.feedback_timestamp %}
                                         <span class="small text-success me-2">Submitted at {{ role.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                     {% endif %}
-                                    <a href="{{ url_for('convenor.edit_feedback', id=role.id, url=url_for('convenor.view_feedback', id=record.id, url=url, text=text)) }}" class="btn btn-sm btn-outline-secondary">Edit...</a>
+                                    <a href="{{ url_for('convenor.edit_feedback', id=role.id, url=url_for('convenor.view_feedback', id=record.id, url=url, text=text)) }}"
+                                       class="btn btn-sm btn-outline-secondary">Edit...</a>
                                     {% if not role.submitted_feedback %}
-                                        <a href="{{ url_for('convenor.submit_feedback', id=role.id) }}" class="btn btn-sm btn-outline-success">Submit</a>
+                                        <a href="{{ url_for('convenor.submit_feedback', id=role.id) }}"
+                                           class="btn btn-sm btn-outline-success">Submit</a>
                                     {% else %}
-                                        <a href="{{ url_for('convenor.unsubmit_feedback', id=role.id) }}" class="btn btn-sm btn-outline-secondary">Unsubmit</a>
+                                        <a href="{{ url_for('convenor.unsubmit_feedback', id=role.id) }}"
+                                           class="btn btn-sm btn-outline-secondary">Unsubmit</a>
                                     {% endif %}
                                 </div>
                             </div>
@@ -80,46 +86,6 @@
                 </div>
             {% endif %}
 
-            {% if record.uses_presentation_feedback %}
-                {% set ns = namespace(count=0) %}
-                {% set slot = record.schedule_slot %}
-                {% for feedback in record.presentation_feedback %}
-                    {% set ns.count = ns.count + 1 %}
-                    <div class="card mt-3 mb-3">
-                        <div class="card-header">
-                            <div class="row vertical-align">
-                                <div class="col-5">
-                                    Presentation feedback from <strong>{{ feedback.assessor.user.name }}</strong>
-                                </div>
-                                <div class="col-7">
-                                    <div class="float-end">
-                                        {% if feedback.timestamp %}
-                                            <span class="badge bg-secondary">Submitted at {{ feedback.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                                        {% endif %}
-                                        {% set valid = record.is_presentation_assessor_valid(feedback.assessor_id) %}
-                                        {% set submitted = record.presentation_assessor_submitted(feedback.assessor_id) %}
-                                        <a href="{{ url_for('convenor.presentation_edit_feedback', feedback_id=feedback.id, url=url_for('convenor.view_feedback', id=record.id, url=url, text=text)) }}" class="btn btn-sm btn-table-block btn-secondary">Edit</a>
-                                        {% if not submitted %}
-                                            <a href="{{ url_for('convenor.presentation_submit_feedback', feedback_id=feedback.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
-                                        {% else %}
-                                            <a href="{{ url_for('convenor.presentation_unsubmit_feedback', feedback_id=feedback.id) }}" class="btn btn-sm btn-table-block btn-secondary">Unsubmit</a>
-                                        {% endif %}
-                                        <a href="{{ url_for('convenor.delete_presentation_feedback', id=feedback.id) }}" class="btn btn-sm btn-table-block btn-danger">Delete</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <span class="dashboard-subtitle">Positive aspects</span>
-                            {{ feedback.positive|latextomarkdown|markdown|bclean|blinkify|safe }}
-                            <hr class="intro-divider">
-                            <span class="dashboard-subtitle">Negative aspects</span>
-                            {{ feedback.negative|latextomarkdown|markdown|bclean|blinkify|safe }}
-                        </div>
-                    </div>
-                {% endfor %}
-            {% endif %}
-
             {% if record.student_feedback_submitted %}
                 {% set supv_roles = record.supervisor_roles %}
                 <div class="card border-success mt-3 mb-3">
@@ -146,12 +112,15 @@
                                             <span class="small text-success me-2">Response at {{ role.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                         {% endif %}
                                         {% if role.acknowledge_student %}
-                                            <span class="badge bg-success"><i class="fas fa-check"></i> Acknowledged</span>
+                                            <span class="badge bg-success"><i
+                                                    class="fas fa-check"></i> Acknowledged</span>
                                         {% endif %}
                                         {% if role.acknowledge_student and not role.submitted_response %}
-                                            <a href="{{ url_for('convenor.edit_response', id=role.id, url=url_for('convenor.view_feedback', id=record.id, url=url, text=text)) }}" class="btn btn-sm btn-outline-secondary">Edit...</a>
+                                            <a href="{{ url_for('convenor.edit_response', id=role.id, url=url_for('convenor.view_feedback', id=record.id, url=url, text=text)) }}"
+                                               class="btn btn-sm btn-outline-secondary">Edit...</a>
                                             {% if role.response_valid %}
-                                                <a href="{{ url_for('convenor.submit_response', id=role.id) }}" class="btn btn-sm btn-outline-success">Submit</a>
+                                                <a href="{{ url_for('convenor.submit_response', id=role.id) }}"
+                                                   class="btn btn-sm btn-outline-success">Submit</a>
                                             {% endif %}
                                         {% endif %}
                                     </div>

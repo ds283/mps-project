@@ -110,53 +110,6 @@ class CanvasStudent(db.Model):
     canvas_user_id = db.Column(db.Integer(), nullable=False)
 
 
-class PresentationFeedback(db.Model):
-    """
-    Collect details of feedback for a student presentation
-    """
-
-    __tablename__ = "presentation_feedback"
-
-    # unique id for this record
-    id = db.Column(db.Integer(), primary_key=True)
-
-    # submission record owning this feedback
-    owner_id = db.Column(db.Integer(), db.ForeignKey("submission_records.id"))
-    owner = db.relationship(
-        "SubmissionRecord",
-        foreign_keys=[owner_id],
-        uselist=False,
-        backref=db.backref(
-            "presentation_feedback",
-            lazy="dynamic",
-            cascade="all, delete, delete-orphan",
-        ),
-    )
-
-    # assessor
-    assessor_id = db.Column(db.Integer(), db.ForeignKey("faculty_data.id"))
-    assessor = db.relationship(
-        "FacultyData",
-        foreign_keys=[assessor_id],
-        uselist=False,
-        backref=db.backref("presentation_feedback", lazy="dynamic"),
-    )
-
-    # FEEDBACK (IF USED)
-
-    # presentation positive feedback
-    positive = db.Column(db.Text())
-
-    # presentation negative feedback
-    negative = db.Column(db.Text())
-
-    # submitted flag
-    submitted = db.Column(db.Boolean())
-
-    # timestamp of submission
-    timestamp = db.Column(db.DateTime())
-
-
 class SubmissionRole(
     db.Model,
     SubmissionRoleTypesMixin,
@@ -1219,10 +1172,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # ROLES
 
     # 'roles' member created by back-reference from SubmissionRole
-
-    # PRESENTATIONS
-
-    # 'presentation_feedback' member created by back-reference from PresentationFeedback
 
     # TODO: Remove the fields below
 

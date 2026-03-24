@@ -33,7 +33,6 @@ from ..models import (
     MessageOfTheDay,
     Module,
     PresentationAssessment,
-    PresentationFeedback,
     PresentationSession,
     Project,
     ProjectClass,
@@ -99,7 +98,6 @@ from .forms import (
     FacultyPreviewFormFactory,
     FacultySettingsFormFactory,
     MoveDescriptionFormFactory,
-    PresentationFeedbackForm,
     SkillSelectorForm,
     SubmissionRoleFeedbackForm,
     SubmissionRoleResponseForm,
@@ -1108,10 +1106,10 @@ def duplicate_description(did):
         new_label = "{label} #{suffix}".format(label=desc.label, suffix=suffix)
 
         if (
-                ProjectDescription.query.filter_by(
-                    parent_id=desc.parent_id, label=new_label
-                ).first()
-                is None
+            ProjectDescription.query.filter_by(
+                parent_id=desc.parent_id, label=new_label
+            ).first()
+            is None
         ):
             break
 
@@ -1211,12 +1209,12 @@ def move_description(did):
                     remove.add(pclass)
 
                 elif (
-                        get_count(
-                            new_project.descriptions.filter(
-                                ProjectDescription.project_classes.any(id=pclass.id)
-                            )
+                    get_count(
+                        new_project.descriptions.filter(
+                            ProjectDescription.project_classes.any(id=pclass.id)
                         )
-                        > 0
+                    )
+                    > 0
                 ):
                     remove.add(pclass)
 
@@ -1705,15 +1703,15 @@ def project_preview(id):
     )
 
     allow_approval = (
-            (current_user.has_role("project_approver") or current_user.has_role("root"))
-            and desc is not None
-            and allow_approval_for_description(desc.id)
+        (current_user.has_role("project_approver") or current_user.has_role("root"))
+        and desc is not None
+        and allow_approval_for_description(desc.id)
     )
 
     show_comments = (
-            allow_approval
-            or (data.owner is not None and current_user.id == data.owner.id)
-            or current_user.has_role("convenor")
+        allow_approval
+        or (data.owner is not None and current_user.id == data.owner.id)
+        or current_user.has_role("convenor")
     )
 
     if desc is not None:
@@ -1775,10 +1773,10 @@ def dashboard():
     if main_config.enable_2026_ATAS_campaign:
         # only consider jumping to landing page if this user belongs to a tenant participating in the campaign
         if (
-                get_count(
-                    current_user.tenants.filter(Tenant.in_2026_ATAS_campaign.is_(True))
-                )
-                > 0
+            get_count(
+                current_user.tenants.filter(Tenant.in_2026_ATAS_campaign.is_(True))
+            )
+            > 0
         ):
             data = check_2026_ATAS(fd)
             if len(data["projects"]) > 0:
@@ -1808,15 +1806,15 @@ def dashboard():
             include = False
 
             if (
-                    (
-                            pclass.uses_supervisor
-                            and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
-                    )
-                    or (
+                (
+                    pclass.uses_supervisor
+                    and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
+                )
+                or (
                     config.uses_marker
                     and config.display_marker
                     and record.marker_state == EnrollmentRecord.MARKER_ENROLLED
-            )
+                )
                 or (
                     config.uses_presentations
                     and config.display_presentations
@@ -1842,21 +1840,21 @@ def dashboard():
 
                     if (
                         (pclass.uses_supervisor and num_s_records > 0)
-                            or (
+                        or (
                             config.uses_marker
                             and config.display_marker
                             and num_mk_records > 0
-                    )
-                            or (
+                        )
+                        or (
                             config.uses_moderator
                             and config.display_marker
                             and num_mo_records > 0
-                    )
-                            or (
+                        )
+                        or (
                             config.uses_presentations
                             and config.display_presentations
                             and len(pres_slots) > 0
-                    )
+                        )
                     ):
                         include = True
                         break
@@ -1874,13 +1872,13 @@ def dashboard():
     # build list of system messages to consider displaying
     messages = []
     for message in (
-            db.session.query(MessageOfTheDay)
-                    .filter(
-                MessageOfTheDay.show_faculty,
-                ~MessageOfTheDay.dismissed_by.any(id=current_user.id),
-            )
-                    .order_by(MessageOfTheDay.issue_date.desc())
-                    .all()
+        db.session.query(MessageOfTheDay)
+        .filter(
+            MessageOfTheDay.show_faculty,
+            ~MessageOfTheDay.dismissed_by.any(id=current_user.id),
+        )
+        .order_by(MessageOfTheDay.issue_date.desc())
+        .all()
     ):
         include = message.project_classes.first() is None
         if not include:
@@ -2233,7 +2231,7 @@ def edit_feedback(id):
         return redirect(redirect_url())
 
     if not validate_submission_role(
-            role, allow_roles=["supervisor", "marker", "moderator"]
+        role, allow_roles=["supervisor", "marker", "moderator"]
     ):
         return redirect(redirect_url())
 
@@ -2297,7 +2295,7 @@ def edit_feedback(id):
         title="Edit feedback",
         unique_id="role-{id}".format(id=role.id),
         formtitle='Edit feedback for <i class="fas fa-user-circle"></i> '
-                  "<strong>{name}</strong>".format(name=record.student_identifier["label"]),
+        "<strong>{name}</strong>".format(name=record.student_identifier["label"]),
         submit_url=url_for("faculty.edit_feedback", id=id, url=url),
         period=period,
         record=role,
@@ -2319,7 +2317,7 @@ def submit_feedback(id):
         return redirect(redirect_url())
 
     if not validate_submission_role(
-            role, allow_roles=["supervisor", "marker", "moderator"]
+        role, allow_roles=["supervisor", "marker", "moderator"]
     ):
         return redirect(redirect_url())
 
@@ -2390,7 +2388,7 @@ def unsubmit_feedback(id):
         return redirect(redirect_url())
 
     if not validate_submission_role(
-            role, allow_roles=["supervisor", "marker", "moderator"]
+        role, allow_roles=["supervisor", "marker", "moderator"]
     ):
         return redirect(redirect_url())
 
@@ -2470,171 +2468,6 @@ def acknowledge_feedback(id):
         return redirect(redirect_url())
 
     record.acknowledge_feedback = True
-    db.session.commit()
-
-    return redirect(redirect_url())
-
-
-@faculty.route(
-    "/presentation_edit_feedback/<int:slot_id>/<int:talk_id>", methods=["GET", "POST"]
-)
-@roles_required("faculty")
-def presentation_edit_feedback(slot_id, talk_id):
-    # slot_id labels a ScheduleSlot
-    # talk_id labels a SubmissionRecord
-    slot = ScheduleSlot.query.get_or_404(slot_id)
-    talk = SubmissionRecord.query.get_or_404(talk_id)
-
-    if get_count(slot.talks.filter_by(id=talk.id)) != 1:
-        flash("This talk/slot combination does not form a scheduled pair", "error")
-        return redirect(redirect_url())
-
-    if not validate_presentation_assessor(slot):
-        return redirect(redirect_url())
-
-    if not validate_assessment(slot.owner.owner):
-        return redirect(redirect_url())
-
-    if not slot.owner.deployed:
-        flash(
-            "Can not edit feedback because the schedule containing this slot has not been deployed.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if not slot.owner.owner.is_feedback_open and talk.presentation_assessor_submitted(
-            current_user.id
-    ):
-        flash(
-            "It is not possible to edit feedback after an assessment event has been closed.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    feedback = talk.presentation_feedback.filter_by(assessor_id=current_user.id).first()
-    if feedback is None:
-        feedback = PresentationFeedback(
-            owner_id=talk.id,
-            assessor_id=current_user.id,
-            positive=None,
-            negative=None,
-            submitted=False,
-            timestamp=None,
-        )
-        db.session.add(feedback)
-        db.session.commit()
-
-    form = PresentationFeedbackForm(request.form)
-
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
-
-    if form.validate_on_submit():
-        feedback.positive = form.positive_feedback.data
-        feedback.negative = form.improvement_feedback.data
-
-        if feedback.submitted:
-            feedback.timestamp = datetime.now()
-
-        db.session.commit()
-
-        return redirect(url)
-
-    else:
-        if request.method == "GET":
-            form.positive_feedback.data = feedback.positive
-            form.improvement_feedback.data = feedback.negative
-
-    return render_template_context(
-        "faculty/dashboard/edit_feedback.html",
-        form=form,
-        unique_id="pres-{id}".format(id=id),
-        title="Edit presentation feedback",
-        formtitle="Edit presentation feedback for <strong>{num}</strong>".format(
-            num=talk.owner.student.user.name
-        ),
-        submit_url=url_for(
-            "faculty.presentation_edit_feedback",
-            slot_id=slot_id,
-            talk_id=talk_id,
-            url=url,
-        ),
-        assessment=slot.owner.owner,
-    )
-
-
-@faculty.route("/presentation_submit_feedback/<int:slot_id>/<int:talk_id>")
-@roles_required("faculty")
-def presentation_submit_feedback(slot_id, talk_id):
-    # slot_id labels a ScheduleSlot
-    # talk_id labels a SubmissionRecord
-    slot = ScheduleSlot.query.get_or_404(slot_id)
-    talk = SubmissionRecord.query.get_or_404(talk_id)
-
-    if get_count(slot.talks.filter_by(id=talk.id)) != 1:
-        flash("This talk/slot combination does not form a scheduled pair", "error")
-        return redirect(redirect_url())
-
-    if not validate_presentation_assessor(slot):
-        return redirect(redirect_url())
-
-    if not validate_assessment(slot.owner.owner):
-        return redirect(redirect_url())
-
-    if not slot.owner.deployed:
-        flash(
-            "Can not submit feedback because the schedule containing this slot has not been deployed.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if not talk.is_presentation_assessor_valid(current_user.id):
-        flash("Cannot submit feedback because it is still incomplete.", "error")
-        return redirect(redirect_url())
-
-    feedback = talk.presentation_feedback.filter_by(assessor_id=current_user.id).one()
-
-    feedback.submitted = True
-    feedback.timestamp = datetime.now()
-    db.session.commit()
-
-    return redirect(redirect_url())
-
-
-@faculty.route("/presentation_unsubmit_feedback/<int:slot_id>/<int:talk_id>")
-@roles_required("faculty")
-def presentation_unsubmit_feedback(slot_id, talk_id):
-    # slot_id labels a ScheduleSlot
-    # talk_id labels a SubmissionRecord
-    slot = ScheduleSlot.query.get_or_404(slot_id)
-    talk = SubmissionRecord.query.get_or_404(talk_id)
-
-    if get_count(slot.talks.filter_by(id=talk.id)) != 1:
-        flash("This talk/slot combination does not form a scheduled pair", "error")
-        return redirect(redirect_url())
-
-    if not validate_presentation_assessor(slot):
-        return redirect(redirect_url())
-
-    if not validate_assessment(slot.owner.owner):
-        return redirect(redirect_url())
-
-    if not slot.owner.deployed:
-        flash(
-            "Can not submit feedback because the schedule containing this slot has not been deployed.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if not slot.owner.owner.is_feedback_open:
-        flash("Cannot unsubmit feedback after an assessment has closed.", "error")
-        return redirect(redirect_url())
-
-    feedback = talk.presentation_feedback.filter_by(assessor_id=current_user.id).one()
-
-    feedback.submitted = False
-    feedback.timestamp = None
     db.session.commit()
 
     return redirect(redirect_url())

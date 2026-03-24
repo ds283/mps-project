@@ -8,8 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify, get_template_attribute, current_app, render_template
-from jinja2 import Template, Environment
+from flask import current_app, get_template_attribute, jsonify, render_template
+from jinja2 import Environment, Template
 
 # language=jinja2
 _name = """
@@ -183,7 +183,7 @@ _menu = """
         <div class="dropdown-header">Administration</div>
         {% set disabled = not a.is_closable %}
         <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}" {% if not disabled %}href="{{ url_for('admin.close_assessment', id=a.id) }}"{% endif %}>
-            <i class="fas fa-times-circle fa-fw"></i> Close feedback
+            <i class="fas fa-times-circle fa-fw"></i> Close assessment
         </a>
     </div>
 </div>

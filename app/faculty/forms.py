@@ -13,61 +13,60 @@ from typing import List
 
 from flask_security.forms import Form
 from wtforms import (
-    StringField,
+    BooleanField,
     IntegerField,
     SelectField,
+    StringField,
     SubmitField,
     TextAreaField,
-    BooleanField,
 )
-from wtforms.validators import InputRequired, Optional, Length, ValidationError
+from wtforms.validators import InputRequired, Length, Optional, ValidationError
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
-from ..models import DEFAULT_STRING_LENGTH, ProjectClass, Tenant
-from ..models import Project
+from ..models import DEFAULT_STRING_LENGTH, Project, ProjectClass, Tenant
 from ..shared.forms.mixins import (
-    SaveChangesMixin,
+    DefaultLicenseMixin,
     EditUserNameMixin,
-    FirstLastNameMixin,
+    EmailSettingsMixin,
     FacultyDataMixinFactory,
     FeedbackMixin,
-    EmailSettingsMixin,
-    DefaultLicenseMixin,
+    FirstLastNameMixin,
+    SaveChangesMixin,
 )
 from ..shared.forms.queries import (
-    GetActiveFaculty,
-    BuildActiveFacultyName,
-    CurrentUserResearchGroups,
-    AllResearchGroups,
-    CurrentUserProjectClasses,
     AllProjectClasses,
-    GetSupervisorRoles,
-    GetSkillGroups,
+    AllResearchGroups,
     AvailableProjectDescriptionClasses,
-    ProjectDescriptionClasses,
-    GetMaskableRoles,
+    BuildActiveFacultyName,
+    BuildTagGroup,
+    BuildTagName,
+    CurrentUserProjectClasses,
+    CurrentUserResearchGroups,
+    GetActiveFaculty,
+    GetActiveTags,
     GetDestinationProjects,
     GetDestinationProjectsPClass,
-    GetActiveTags,
-    BuildTagName,
-    BuildTagGroup,
+    GetMaskableRoles,
+    GetSkillGroups,
+    GetSupervisorRoles,
+    ProjectDescriptionClasses,
 )
 from ..shared.forms.widgets import GroupedTagSelectField
 from ..shared.forms.wtf_validators import (
     globally_unique_project,
-    unique_or_original_project,
     project_unique_label,
     project_unique_or_original_label,
+    unique_or_original_project,
 )
 
 
 def ProjectMixinFactory(
-        allowed_tenants,
-        convenor_editing: bool,
-        uses_tags: bool,
-        uses_research_groups: bool,
-        project_classes_qf,
-        group_qf,
+    allowed_tenants,
+    convenor_editing: bool,
+    uses_tags: bool,
+    uses_research_groups: bool,
+    project_classes_qf,
+    group_qf,
 ):
     class ProjectMixin:
         if convenor_editing:
@@ -236,10 +235,10 @@ def ProjectMixinFactory(
 
 
 def AddProjectFormFactory(
-        allowed_tenants: List[Tenant],
-        convenor_editing=False,
-        uses_tags=True,
-        uses_research_groups=True,
+    allowed_tenants: List[Tenant],
+    convenor_editing=False,
+    uses_tags=True,
+    uses_research_groups=True,
 ):
     Mixin = ProjectMixinFactory(
         allowed_tenants,
@@ -270,10 +269,10 @@ def AddProjectFormFactory(
 
 
 def EditProjectFormFactory(
-        allowed_tenants: List[Tenant],
-        convenor_editing=False,
-        uses_tags=True,
-        uses_research_groups=True,
+    allowed_tenants: List[Tenant],
+    convenor_editing=False,
+    uses_tags=True,
+    uses_research_groups=True,
 ):
     Mixin = ProjectMixinFactory(
         allowed_tenants,
@@ -480,10 +479,6 @@ class SubmissionRoleFeedbackForm(Form, FeedbackMixin):
 
 
 class MarkerFeedbackForm(Form, FeedbackMixin):
-    pass
-
-
-class PresentationFeedbackForm(Form, FeedbackMixin):
     pass
 
 

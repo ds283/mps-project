@@ -289,7 +289,7 @@ def perform_delete_assessment(id):
 @roles_required("root")
 def close_assessment(id):
     """
-    Close feedback for an existing assessment event
+    Close an existing assessment event
     :param id:
     :return:
     """
@@ -340,7 +340,7 @@ def close_assessment(id):
 @roles_required("root")
 def perform_close_assessment(id):
     """
-    Close feedback for an existing assessment event
+    Close an existing assessment event
     :param id:
     :return:
     """

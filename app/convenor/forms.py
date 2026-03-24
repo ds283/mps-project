@@ -66,8 +66,6 @@ from ..shared.forms.queries import (
     GetAllPossibleSupervisors,
     GetCanvasEnabledConvenors,
     GetPossibleSupervisors,
-    GetPresentationAssessorFaculty,
-    GetPresentationFeedbackFaculty,
 )
 from ..shared.forms.wtf_validators import (
     NotOptionalIf,
@@ -80,9 +78,9 @@ from ..shared.forms.wtf_validators import (
 
 
 def GoLiveFormFactory(
-        submit_label="Go live",
-        live_and_close_label="Go live and immediately close",
-        datebox_label="Deadline",
+    submit_label="Go live",
+    live_and_close_label="Go live and immediately close",
+    datebox_label="Deadline",
 ):
     class GoLiveForm(Form):
         # Go Live
@@ -134,9 +132,9 @@ def GoLiveFormFactory(
 
 
 def ChangeDeadlineFormFactory(
-        submit_label="Close selections",
-        change_label="Change deadline",
-        datebox_label="The current deadline is",
+    submit_label="Close selections",
+    change_label="Change deadline",
+    datebox_label="The current deadline is",
 ):
     class ChangeDeadlineForm(Form):
         # Close selections
@@ -159,9 +157,9 @@ def ChangeDeadlineFormFactory(
 
 
 def IssueFacultyConfirmRequestFormFactory(
-        submit_label="Issue confirmation requests",
-        skip_label="Skip confirmation step",
-        datebox_label="Deadline",
+    submit_label="Issue confirmation requests",
+    skip_label="Skip confirmation step",
+    datebox_label="Deadline",
 ):
     class IssueFacultyConfirmRequestForm(Form):
         # deadline for confirmation responses
@@ -180,11 +178,11 @@ def IssueFacultyConfirmRequestFormFactory(
 
 
 def OpenFeedbackFormFactory(
-        submit_label="Open feedback period",
-        datebox_label="Deadline",
-        include_send_button=False,
-        include_test_button=False,
-        include_close_button=False,
+    submit_label="Open feedback period",
+    datebox_label="Deadline",
+    include_send_button=False,
+    include_test_button=False,
+    include_close_button=False,
 ):
     class OpenFeedbackForm(Form):
         # deadline for feedback
@@ -262,7 +260,7 @@ def PeriodRecordMixinFactory(enable_canvas=True):
         name = StringField(
             "Name",
             description="Optional. Enter a textual name for this submission "
-                        'period, such as "Autumn Term". Leave blank to use the default name.',
+            'period, such as "Autumn Term". Leave blank to use the default name.',
             validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
         )
 
@@ -483,22 +481,6 @@ def ManualAssignFormFactory(config: ProjectClassConfig, is_admin: bool):
         pass
 
     return ManualAssignForm
-
-
-def AssignPresentationFeedbackFormFactory(record_id, slot_id=None):
-    if slot_id is None:
-        qf = partial(GetPresentationFeedbackFaculty, record_id)
-    else:
-        qf = partial(GetPresentationAssessorFaculty, record_id, slot_id)
-
-    class AssignPresentationFeedbackForm(Form, FeedbackMixin):
-        assessor = QuerySelectField(
-            "Assign feedback to assessor",
-            query_factory=qf,
-            get_label=BuildActiveFacultyName,
-        )
-
-    return AssignPresentationFeedbackForm
 
 
 class ConvenorTaskMixin:

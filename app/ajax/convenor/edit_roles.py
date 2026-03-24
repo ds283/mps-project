@@ -14,7 +14,6 @@ from flask import render_template_string
 
 from ...models import SubmissionRole
 
-
 # language=jinja2
 _name = """
 <a href="mailto:{{ user.email }}">{{ user.name }}</a>
@@ -83,16 +82,53 @@ _details = """
         {% endif %}
     </div>
 {% else %}
-    <div class="small">
-        Automatically populated
-        {% if role.creation_timestamp is not none %}
-            on {{ role.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-        {% endif %}
-        {% if role.submission.matching_record is not none %}
-            {% set attempt = role.submission.matching_record.matching_attempt %}
-            from match <strong>{{ attempt.name }}</strong>
-        {% endif %}
-    </div>
+    {% if role.role in [role.ROLE_SUPERVISOR, role.ROLE_RESPONSIBLE_SUPERVISOR, role.ROLE_MARKER] %}
+        <div class="small">
+            Automatically populated
+            {% if role.creation_timestamp is not none %}
+                on {{ role.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+            {% endif %}
+            {% if role.submission.matching_record is not none %}
+                {% set attempt = role.submission.matching_record.matching_attempt %}
+                from match <strong>{{ attempt.name }}</strong>
+            {% endif %}
+        </div>
+    {% elif role.role == role.ROLE_PRESENTATION_ASSESSOR %}
+        <div class="small">
+            Automatically populated
+            {% if role.creation_timestamp is not none %}
+                on {{ role.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+            {% endif %}
+            {% if role.schedule_slot is not none %}
+                {% set slot = role.schedule_slot %}
+                {% set attempt = slot.owner %}
+                {% set assessment = attempt.owner %}
+                from assessment slot
+                {% if slot.session is not none %}
+                    <strong>{{ slot.session.label_as_string }}</strong>
+                    {% if slot.room is not none %}
+                        in room <strong>{{ slot.room.full_name }}</strong>
+                    {% endif %}
+                {% endif %}
+                in schedule <strong>{{ attempt.name }}</strong>
+                (assessment: <strong>{{ assessment.name }}</strong>)
+            {% endif %}
+        </div>
+    {% elif role.role in [role.ROLE_MODERATOR, role.ROLE_EXAM_BOARD, role.ROLE_EXTERNAL_EXAMINER] %}
+        <div class="small text-muted">
+            <i class="fas fa-question-circle fa-fw"></i> Origin of role is unknown
+            {% if role.creation_timestamp is not none %}
+                (recorded {{ role.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }})
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="small">
+            Automatically populated
+            {% if role.creation_timestamp is not none %}
+                on {{ role.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+            {% endif %}
+        </div>
+    {% endif %}
 {% endif %}
 {% if role.last_edited_by is not none %}
     <div class="mt-1 small">

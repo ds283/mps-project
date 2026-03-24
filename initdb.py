@@ -1576,6 +1576,7 @@ def migrate_schedule_submission_roles(app):
                         user_id=assessor.id,
                         role=SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
                         schedule_slot_id=slot.id,
+                        weight=1.0,
                     )
                     db.session.add(role)
                     added += 1

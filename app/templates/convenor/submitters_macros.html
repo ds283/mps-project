@@ -198,7 +198,7 @@
                     {% endif %}
                 {% endif %}
             </div>
-            <div class="d-flex flex-row justify-content-start align-items-start gap-4 mt-1">
+            <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-4 mt-1">
                 {% if config.uses_supervisor %}
                     {{ roles_list(r.supervisor_roles, 'Supervisor roles') }}
                 {% endif %}
@@ -209,46 +209,21 @@
                     {{ roles_list(r.moderator_roles, 'Moderator roles') }}
                 {% endif %}
                 {% if config.uses_presentations and period.has_presentation %}
-                    <div class="d-flex flex-column justify-content-start align-items-start gap-1">
-                        <div class="small fw-semibold">Presentation</div>
-                        {% if period.has_deployed_schedule %}
-                            {% set slots_and_roles = r.presentation_assessor_roles_by_slot() %}
-                            {% if slots_and_roles %}
-                                {% for slot, slot_roles in slots_and_roles %}
-                                    <div class="dropdown assignment-label">
-                                        <a class="small text-decoration-none dropdown-toggle" data-bs-toggle="dropdown"
-                                           role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                            {{ slot.session.label_as_string }}
-                                        </a>
-                                        <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                                            {% set disabled = not r.can_assign_feedback %}
-                                            <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}"
-                                               {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-                                                <i class="fas fa-comments fa-fw"></i> Add new feedback
-                                            </a>
-                                        </div>
-                                    </div>
-                                    {{ roles_list(slot_roles, '') }}
-                                {% endfor %}
-                            {% else %}
-                                <div class="dropdown assignment-label">
-                                    <a class="small text-decoration-none dropdown-toggle" data-bs-toggle="dropdown"
-                                       role="button" href="" aria-haspopup="true" aria-expanded="false">
-                                        Not attending
-                                    </a>
-                                    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                                        {% set disabled = not r.can_assign_feedback %}
-                                        <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}"
-                                           {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-                                            <i class="fas fa-comments fa-fw"></i> Add new feedback
-                                        </a>
-                                    </div>
-                                </div>
-                            {% endif %}
+                    {% if period.has_deployed_schedule %}
+                        {% set slots_and_roles = r.presentation_assessor_roles_by_slot() %}
+                        {% if slots_and_roles %}
+                            {% for slot, slot_roles in slots_and_roles %}
+                                {{ roles_list(slot_roles, 'Presentation ' + slot.session.label_as_string) }}
+                            {% endfor %}
                         {% else %}
-                            <div class="small text-secondary">Awaiting scheduling</div>
+                            <div class="text-danger fw-semibold"><i class="fas fa-exclamation-triangle"></i>
+                                Presentation: Not attending
+                            </div>
                         {% endif %}
-                    </div>
+                    {% else %}
+                        <div class="text-secondary"><i class="fas fa-info-circle"></i> Presentation: Awaiting scheduling
+                        </div>
+                    {% endif %}
                 {% endif %}
             </div>
         {% else %}

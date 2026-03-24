@@ -452,7 +452,9 @@ class SubmissionRole(
             return SubmissionRole.FEEDBACK_ENTERED
 
         closed = slot.owner.owner.is_closed
-        return SubmissionRole.FEEDBACK_LATE if closed else SubmissionRole.FEEDBACK_WAITING
+        return (
+            SubmissionRole.FEEDBACK_LATE if closed else SubmissionRole.FEEDBACK_WAITING
+        )
 
     @property
     def feedback_valid(self):
@@ -1716,23 +1718,16 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         """
 
         # is there any presentation feedback available?
+        flag: bool = False
         if self.period.has_presentation and self.period.collect_presentation_feedback:
-            slot = self.schedule_slot
-
-            if slot is not None:
-                closed = slot.owner.owner.is_closed
-            else:
-                if not self.period.has_deployed_schedule:
-                    closed = False
-                else:
-                    schedule = self.period.deployed_schedule
-                    assessment = schedule.owner
-                    closed = assessment.is_closed
-
-            if closed:
-                for feedback in self.presentation_feedback:
-                    if feedback.submitted:
-                        return True
+            allowed_roles = [
+                SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
+            ]
+            flag = flag | any(
+                role.submitted_feedback
+                for role in self.roles
+                if role.role in allowed_roles
+            )
 
         # otherwise, is there any feedback available from other supervision/marker roles?
         if self.period.collect_project_feedback and self.period.closed:
@@ -1741,13 +1736,13 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
                 SubmissionRole.ROLE_MARKER,
             ]
-            return any(
+            flag = flag | any(
                 role.submitted_feedback
                 for role in self.roles
                 if role.role in allowed_roles
             )
 
-        return False
+        return flag
 
     @property
     def has_feedback_to_push(self):
@@ -1877,7 +1872,9 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         """
         Return all SubmissionRole instances with role ROLE_PRESENTATION_ASSESSOR
         """
-        return [r for r in self.roles if r.role == SubmissionRole.ROLE_PRESENTATION_ASSESSOR]
+        return [
+            r for r in self.roles if r.role == SubmissionRole.ROLE_PRESENTATION_ASSESSOR
+        ]
 
     def presentation_assessor_roles_by_slot(self) -> List[tuple]:
         """

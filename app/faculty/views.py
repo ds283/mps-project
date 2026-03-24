@@ -1831,12 +1831,7 @@ def dashboard():
                     num_s_records = period.number_supervisor_records(current_user.id)
                     num_mk_records = period.number_marker_records(current_user.id)
                     num_mo_records = period.number_moderator_records(current_user.id)
-
-                    pres_slots = (
-                        period.get_faculty_presentation_slots(current_user.id)
-                        if (period.has_presentation and period.has_deployed_schedule)
-                        else []
-                    )
+                    num_p_records = period.number_presentation_records(current_user.id)
 
                     if (
                         (pclass.uses_supervisor and num_s_records > 0)
@@ -1853,7 +1848,7 @@ def dashboard():
                         or (
                             config.uses_presentations
                             and config.display_presentations
-                            and len(pres_slots) > 0
+                            and num_p_records > 0
                         )
                     ):
                         include = True

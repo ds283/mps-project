@@ -2312,17 +2312,12 @@ class SubmissionPeriodRecord(db.Model):
     def get_presentation_assessor_records(self, user):
         return self._unordered_records_query(user, "presentation").all()
 
-    def get_faculty_presentation_slots(self, fac):
-        schedule = self.deployed_schedule
-        return schedule.get_faculty_slots(fac).all()
+    def number_presentation_assessor_records(self, user) -> int:
+        return get_count(self._unordered_records_query(user, "presentation"))
 
     @property
     def uses_supervisor_feedback(self):
         return self.collect_project_feedback and self.config.uses_supervisor
-
-    def get_student_presentation_slot(self, student):
-        schedule = self.deployed_schedule
-        return schedule.get_student_slot(student).first()
 
     @property
     def uses_marker_feedback(self):
@@ -2388,23 +2383,6 @@ class SubmissionPeriodRecord(db.Model):
         num_deployed = sum(1 for a in assessments if a.is_deployed)
 
         return num_deployed > 0
-
-    @property
-    def deployed_schedule(self):
-        if not self.has_presentation:
-            return None
-
-        assessments: List[PresentationAssessment] = self.presentation_assessments.all()
-        deployed = [a.deployed_schedule for a in assessments if a.is_deployed]
-
-        num_deployed = len(deployed)
-        if num_deployed == 0:
-            return None
-
-        # TODO: deployed_schedule should return a list, allowing multiple schedules to be deployed
-        return deployed[-1]
-        #
-        # raise RuntimeError("Too many assessments deployed for this submission period")
 
     @property
     def number_submitters_feedback_pushed(self):

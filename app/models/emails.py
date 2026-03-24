@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from flask import current_app, render_template_string, url_for
@@ -931,23 +931,46 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
         cls,
         name,
         template,
-        send_time,
+        send_time=None,
+        defer=None,
         pclasses=None,
         max_attachment_size=DEFAULT_MAX_ATTACHMENT_SIZE,
     ):
-        if name is None or len(name) == 0:
+        if name is None or not isinstance(name, str) or len(name) == 0:
             raise RuntimeError(
-                f'Invalid name "{name}" (value="{name}") in EmailWorkflow.build_()'
+                f"Workflow must have a non-null name in EmailWorkflow.build_()"
             )
 
         if template is None:
             raise RuntimeError(
-                f'Invalid template "{template}" (value="{template}") in EmailWorkflow.build_()'
+                "Template parameter provided to workflow cannot be null in EmailWorkflow.build_()"
             )
 
-        if send_time is None:
+        if send_time is not None and defer is not None:
             raise RuntimeError(
-                f'Invalid send_time "{send_time}" (value="{send_time}") in EmailWorkflow.build_()'
+                "EmailWorkflow.build_(): send_time and defer cannot both be specified"
+            )
+
+        if send_time is None and defer is None:
+            raise RuntimeError(
+                "EmailWorkflow.build_(): exactly one of send_time or defer must be specified"
+            )
+
+        if defer is not None:
+            if not isinstance(defer, timedelta):
+                raise RuntimeError(
+                    f'Invalid defer type "{type(defer)}" (value="{defer}") in EmailWorkflow.build_(): defer must be a timedelta'
+                )
+            send_time = datetime.now() + defer
+
+        template_kwargs: dict = {}
+        if isinstance(template, EmailTemplate):
+            template_kwargs["template"] = template
+        elif isinstance(template, int):
+            template_kwargs["template_id"] = template
+        else:
+            raise RuntimeError(
+                f'Invalid template type "{type(template)}" (value="{template}") in EmailWorkflow.build_(): expected EmailTemplate instance or integer primary key'
             )
 
         if pclasses is None:
@@ -961,10 +984,10 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
 
         return cls(
             name=name,
-            template=template,
             send_time=send_time,
             pclasses=pclasses,
             completed=False,
             paused=False,
             max_attachment_size=max_attachment_size,
+            **template_kwargs,
         )

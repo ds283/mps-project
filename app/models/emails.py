@@ -649,6 +649,58 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
 
         return msg
 
+    @staticmethod
+    def apply_raw_(
+        subject: str,
+        html_body: str,
+        to: List[str],
+        from_email: Optional[str] = None,
+        reply_to: Optional[List[str]] = None,
+        attachments=None,
+        max_attachment_size: int = DEFAULT_MAX_ATTACHMENT_SIZE,
+    ):
+        """
+        Build an EmailMultiAlternatives from pre-rendered subject and HTML body strings,
+        without using any template instance and without updating any last-used timestamp.
+        Shares attachment processing and HTML-to-text conversion logic with apply_().
+        :param subject: pre-rendered subject string
+        :param html_body: pre-rendered HTML body string
+        :param to: list of recipient addresses
+        :param from_email: optional sender address; defaults to MAIL_DEFAULT_SENDER
+        :param reply_to: optional reply-to list; defaults to [MAIL_REPLY_TO]
+        :param attachments: a single EmailWorkflowItemAttachment or an iterable thereof
+        :param max_attachment_size: maximum total attachment size in bytes (default 10 MB)
+        :return: EmailMultiAlternatives instance ready to send
+        """
+        if from_email is None:
+            from_email = current_app.config["MAIL_DEFAULT_SENDER"]
+        if reply_to is None:
+            reply_to = [current_app.config["MAIL_REPLY_TO"]]
+
+        if not isinstance(to, Iterable):
+            raise RuntimeError(
+                f'Invalid recipient list type "{type(to)}" (value="{to}") in EmailTemplate.apply_raw_()'
+            )
+        if not isinstance(reply_to, Iterable):
+            raise RuntimeError(
+                f'Invalid reply_to list type "{type(reply_to)}" (value="{reply_to}") in EmailTemplate.apply_raw_()'
+            )
+
+        msg = EmailMultiAlternatives(
+            subject=subject, from_email=from_email, reply_to=reply_to, to=to
+        )
+
+        if attachments is not None:
+            manifest = _process_attachments(msg, attachments, max_attachment_size)
+            if manifest:
+                html_body = html_body + _build_attachments_footer(manifest)
+
+        plain_str: str = HTML2Text().handle(html_body)
+        msg.body = plain_str
+        msg.attach_alternative(html_body, "text/html")
+
+        return msg
+
 
 class EmailWorkflowItemAttachment(db.Model):
     __tablename__ = "email_workflow_item_attachments"
@@ -768,16 +820,18 @@ class EmailWorkflowItemAttachment(db.Model):
         )
 
 
-# association table linking EmailWorkflowManifestItem to EmailWorkflowItem
+# association table linking EmailWorkflowItemAttachment to EmailWorkflowItem
 email_workflow_item_attachment_to_workflow_item = db.Table(
     "email_workflow_item_attachment_to_workflow_item",
     db.Column(
         "email_workflow_item_attachment_id",
         db.Integer(),
-        db.ForeignKey("email_workflow_item_attachments.id"),
+        db.ForeignKey("email_workflow_item_attachments.id", ondelete="CASCADE"),
     ),
     db.Column(
-        "email_workflow_item_id", db.Integer(), db.ForeignKey("email_workflow_items.id")
+        "email_workflow_item_id",
+        db.Integer(),
+        db.ForeignKey("email_workflow_items.id", ondelete="CASCADE"),
     ),
 )
 
@@ -787,6 +841,18 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
 
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
+
+    # recipient list, formatted as a JSON-serialized list of email address strings
+    recipient_list = db.Column(db.Text())
+
+    # optional sender address override; if None, MAIL_DEFAULT_SENDER is used
+    from_email = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
+    )
+
+    # optional reply-to override, formatted as a JSON-serialized list of address strings;
+    # if None, [MAIL_REPLY_TO] is used
+    reply_to = db.Column(db.Text(), nullable=True)
 
     # subject payload, formatted as a JSON-serialized dictionary
     subject_payload = db.Column(db.Text())
@@ -824,10 +890,13 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
     error_message = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
     # list of attachments
+    # cascade="all, delete" ensures EmailWorkflowItemAttachment records are deleted
+    # when this EmailWorkflowItem is deleted
     attachments = db.relationship(
         "EmailWorkflowItemAttachment",
         secondary=email_workflow_item_attachment_to_workflow_item,
         lazy="dynamic",
+        cascade="all, delete",
         backref=db.backref("email_workflow_item", lazy="dynamic"),
     )
 
@@ -844,8 +913,65 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
         ),
     )
 
+    @property
+    def recipient_addresses(self) -> List[str]:
+        """Deserialize the JSON-encoded recipient list."""
+        if self.recipient_list is None:
+            return []
+        return json.loads(self.recipient_list)
+
+    @property
+    def reply_to_list(self) -> Optional[List[str]]:
+        """Deserialize the JSON-encoded reply-to list, or return None if not set."""
+        if self.reply_to is None:
+            return None
+        return json.loads(self.reply_to)
+
+    @property
+    def subject_payload_dict(self) -> Dict[str, Any]:
+        """Deserialize the JSON-encoded subject payload."""
+        if self.subject_payload is None:
+            return {}
+        return json.loads(self.subject_payload)
+
+    @property
+    def body_payload_dict(self) -> Dict[str, Any]:
+        """Deserialize the JSON-encoded body payload."""
+        if self.body_payload is None:
+            return {}
+        return json.loads(self.body_payload)
+
     @classmethod
-    def build_(cls, subject_payload, body_payload, attachments=None):
+    def build_(
+        cls,
+        subject_payload,
+        body_payload,
+        recipient_list=None,
+        from_email=None,
+        reply_to=None,
+        attachments=None,
+    ):
+        if recipient_list is None:
+            recipient_list = []
+        elif isinstance(recipient_list, str):
+            recipient_list = [recipient_list]
+        elif not isinstance(recipient_list, Iterable):
+            raise RuntimeError(
+                f'Invalid recipient_list type "{type(recipient_list)}" (value="{recipient_list}") in EmailWorkflowItem.build_()'
+            )
+        else:
+            recipient_list = list(recipient_list)
+
+        if reply_to is not None:
+            if isinstance(reply_to, str):
+                reply_to = [reply_to]
+            elif not isinstance(reply_to, Iterable):
+                raise RuntimeError(
+                    f'Invalid reply_to type "{type(reply_to)}" (value="{reply_to}") in EmailWorkflowItem.build_()'
+                )
+            else:
+                reply_to = list(reply_to)
+
         if attachments is None:
             attachments = []
 
@@ -857,6 +983,9 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
             )
 
         return cls(
+            recipient_list=json.dumps(recipient_list),
+            from_email=from_email,
+            reply_to=json.dumps(reply_to) if reply_to is not None else None,
             subject_payload=json.dumps(subject_payload),
             body_payload=json.dumps(body_payload),
             attachments=attachments,
@@ -870,6 +999,25 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
             error_condition=False,
             error_message=None,
         )
+
+
+# association table linking EmailWorkflow to EmailWorkflowItem
+# ondelete="CASCADE" on both columns means the DB will clean up association rows
+# automatically if either side is deleted directly (belt-and-suspenders alongside
+# the ORM-level cascade="all, delete" on EmailWorkflow.items).
+email_workflow_to_items = db.Table(
+    "email_workflow_to_items",
+    db.Column(
+        "email_workflow_id",
+        db.Integer(),
+        db.ForeignKey("email_workflows.id", ondelete="CASCADE"),
+    ),
+    db.Column(
+        "email_workflow_item_id",
+        db.Integer(),
+        db.ForeignKey("email_workflow_items.id", ondelete="CASCADE"),
+    ),
+)
 
 
 # association table for email workflows to project classes
@@ -897,6 +1045,18 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
 
     # paused flag - is this workflow currently paused?
     paused = db.Column(db.Boolean(), nullable=False, default=False)
+
+    # associated email workflow items
+    # cascade="all, delete" ensures EmailWorkflowItem records (and transitively their
+    # EmailWorkflowItemAttachment records) are deleted when this EmailWorkflow is deleted.
+    # The backref provides EmailWorkflowItem.workflow for reverse navigation.
+    items = db.relationship(
+        "EmailWorkflowItem",
+        secondary=email_workflow_to_items,
+        lazy="dynamic",
+        cascade="all, delete",
+        backref=db.backref("workflow", lazy="select", uselist=False),
+    )
 
     # associated project classes
     pclasses = db.relationship(

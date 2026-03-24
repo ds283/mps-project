@@ -634,6 +634,14 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
     # email sent timestamp
     sent_timestamp = db.Column(db.DateTime(), index=True)
 
+    # send in progress timestamp
+    send_in_progress_timestamp = db.Column(db.DateTime(), index=True)
+
+    # celery id of sending task
+    celery_send_in_progress_task_id = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")
+    )
+
     # list of attachments
     attachments = db.relationship(
         "EmailWorkflowItemAttachment",

@@ -24,6 +24,9 @@ from .model_mixins import ColouredLabelMixin, EditingMetadataMixin
 from .project_class import ProjectClass
 from .tenants import Tenant
 
+# default max attachment size is 10 Mb
+DEFAULT_MAX_ATTACHMENT_SIZE = 1024 * 1024 * 10
+
 email_template_to_labels = db.Table(
     "email_templates_to_labels",
     db.Column(
@@ -532,6 +535,11 @@ class EmailWorkflowItemAttachment(db.Model):
         backref=db.backref("email_workflow_item_attachments", lazy="dynamic"),
     )
 
+    # manifest name
+    name = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
+    )
+
     # manifest comment/description
     description = db.Column(
         db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
@@ -540,6 +548,7 @@ class EmailWorkflowItemAttachment(db.Model):
     @classmethod
     def build_(
         cls,
+        name,
         description,
         generated_asset=None,
         submitted_asset=None,
@@ -554,6 +563,11 @@ class EmailWorkflowItemAttachment(db.Model):
         if num_assets != 1:
             raise RuntimeError(
                 f"Exactly one of generated_asset, submitted_asset, and temporary_asset must be specified, but got {num_assets} instead"
+            )
+
+        if name is None or len(name) == 0:
+            raise RuntimeError(
+                f'Invalid name "{name}" (value="{name}") in EmailWorkflowItemAttachment.build_()'
             )
 
         if description is None or len(description) == 0:
@@ -753,8 +767,20 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
         "EmailTemplate", backref=db.backref("workflows", lazy="dynamic")
     )
 
+    # maximum attachment size
+    max_attachment_size = db.Column(
+        db.Integer(), nullable=False, default=DEFAULT_MAX_ATTACHMENT_SIZE
+    )
+
     @classmethod
-    def build_(cls, name, template, send_time, pclasses=None):
+    def build_(
+        cls,
+        name,
+        template,
+        send_time,
+        pclasses=None,
+        max_attachment_size=DEFAULT_MAX_ATTACHMENT_SIZE,
+    ):
         if name is None or len(name) == 0:
             raise RuntimeError(
                 f'Invalid name "{name}" (value="{name}") in EmailWorkflow.build_()'
@@ -786,4 +812,5 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
             pclasses=pclasses,
             completed=False,
             paused=False,
+            max_attachment_size=max_attachment_size,
         )

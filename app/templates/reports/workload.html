@@ -1,5 +1,9 @@
 {% extends "base_app.html" %}
 
+{% if not tenant_filter or tenant_filter is none %}
+    {% set tenant_filter = 'all' %}
+{% endif %}
+
 {% if not group_filter or group_filter is none %}
     {% set group_filter = 'all' %}
 {% endif %}
@@ -21,34 +25,55 @@
             $('#workload-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/reports/workload_ajax?group_filter={{ group_filter }}&detail={{ detail }}', dataSrc: '' },
-                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'}); $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'}); },
+                ajax: {
+                    url: $SCRIPT_ROOT + '/reports/workload_ajax?group_filter={{ group_filter }}&detail={{ detail }}&tenant_filter={{ tenant_filter }}',
+                    dataSrc: ''
+                },
+                "fnDrawCallback": function () {
+                    $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
+                    $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'});
+                },
                 columns: [
-                    { data: 'name',
-                      render: {
-                        _: 'display',
-                        sort: 'sortstring' } },
-                    { data: 'groups' },
-                    { data: 'enrollments',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'} },
-                    { data: 'allocation',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'} },
-                    { data: 'availability',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'} },
-                    { data: 'workload',
-                      render: {
-                        _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'} }
+                    {
+                        data: 'name',
+                        render: {
+                            _: 'display',
+                            sort: 'sortstring'
+                        }
+                    },
+                    {data: 'groups'},
+                    {
+                        data: 'enrollments',
+                        render: {
+                            _: 'display',
+                            sort: 'sortvalue',
+                            type: 'sortvalue'
+                        }
+                    },
+                    {
+                        data: 'allocation',
+                        render: {
+                            _: 'display',
+                            sort: 'sortvalue',
+                            type: 'sortvalue'
+                        }
+                    },
+                    {
+                        data: 'availability',
+                        render: {
+                            _: 'display',
+                            sort: 'sortvalue',
+                            type: 'sortvalue'
+                        }
+                    },
+                    {
+                        data: 'workload',
+                        render: {
+                            _: 'display',
+                            sort: 'sortvalue',
+                            type: 'sortvalue'
+                        }
+                    }
                 ],
                 deferRender: true
             });
@@ -68,28 +93,47 @@
                 <div class="row">
                     <div class="col-12">
                         <p>Level of detail</p>
-                        <a href="{{ url_for('reports.workload', group_filter=group_filter, detail='full') }}"
+                        <a href="{{ url_for('reports.workload', tenant_filter=tenant_filter, group_filter=group_filter, detail='full') }}"
                            class="btn btn-sm filter-btn {% if detail is none or detail == 'full' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Full information
                         </a>
-                        <a href="{{ url_for('reports.workload', group_filter=group_filter, detail='simple') }}"
+                        <a href="{{ url_for('reports.workload', tenant_filter=tenant_filter, group_filter=group_filter, detail='simple') }}"
                            class="btn btn-sm filter-btn {% if detail == 'simple' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                             Simplified display
                         </a>
                     </div>
                 </div>
 
+                {% if tenants is not none and tenants|length > 1 %}
+                    <hr class="intro-divider">
+                    <div class="row">
+                        <div class="col-12">
+                            <p>Filter by tenant</p>
+                            <a href="{{ url_for('reports.workload', tenant_filter='all', group_filter=group_filter, detail=detail) }}"
+                               class="btn btn-sm filter-btn {% if tenant_filter is none or tenant_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                All
+                            </a>
+                            {% for tenant in tenants %}
+                                <a href="{{ url_for('reports.workload', tenant_filter=tenant.id, group_filter=group_filter, detail=detail) }}"
+                                   class="btn btn-sm filter-btn {% if tenant_filter == tenant.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                    {{ tenant.name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
                 {% if groups is not none and groups|length > 0 %}
                     <hr class="intro-divider">
                     <div class="row">
                         <div class="col-12">
                             <p>Filter by affiliation or research group</p>
-                            <a href="{{ url_for('reports.workload', group_filter='all', detail=detail) }}"
+                            <a href="{{ url_for('reports.workload', tenant_filter=tenant_filter, group_filter='all', detail=detail) }}"
                                class="btn btn-sm filter-btn {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                 All
                             </a>
                             {% for group in groups %}
-                                <a href="{{ url_for('reports.workload', group_filter=group.id, detail=detail) }}"
+                                <a href="{{ url_for('reports.workload', tenant_filter=tenant_filter, group_filter=group.id, detail=detail) }}"
                                    class="btn btn-sm filter-btn {% if group_filter == group.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     {{ group.name }}
                                 </a>
@@ -106,11 +150,16 @@
                     <th width="10%"> Affiliations</th>
                     <th width="33%"> Enrolments</th>
                     <th width="24%"> Allocation</th>
-                    <th width="8%"> <div>Availability <i class="fas fa-info-circle text-muted" data-bs-toggle="tooltip" data-bs-html="true" title="<i>Availability</i> is the maximum CATS-weighted number of students who could be assigned to this supervisor"></i></div></th>
+                    <th width="8%">
+                        <div>Availability <i class="fas fa-info-circle text-muted" data-bs-toggle="tooltip"
+                                             data-bs-html="true"
+                                             title="<i>Availability</i> is the maximum CATS-weighted number of students who could be assigned to this supervisor"></i>
+                        </div>
+                    </th>
                     <th width="15%"> Workload</th>
                 </tr>
                 </thead>
             </table>
         </div>
     </div>
-{%  endblock %}
+{% endblock %}

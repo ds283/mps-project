@@ -14,35 +14,36 @@ from typing import List, Set
 from bokeh.embed import components
 from bokeh.models.ranges import Range1d
 from bokeh.plotting import figure
-from flask import redirect, flash, request, session
-from flask_security import roles_accepted, current_user
-from sqlalchemy import or_, and_
+from flask import flash, redirect, request, session
+from flask_security import current_user, roles_accepted
+from sqlalchemy import and_, or_
 from sqlalchemy.sql import func
 
 import app.ajax as ajax
-from . import reports
+
 from ..database import db
 from ..models import (
-    User,
-    FacultyData,
-    ResearchGroup,
-    SkillGroup,
-    ProjectClass,
-    ProjectClassConfig,
-    Project,
-    LiveProject,
-    StudentData,
     DegreeProgramme,
     DegreeType,
     EnrollmentRecord,
+    FacultyData,
+    LiveProject,
+    Project,
+    ProjectClass,
+    ProjectClassConfig,
     ProjectDescription,
+    ResearchGroup,
+    SkillGroup,
+    StudentData,
     Tenant,
+    User,
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.conversions import is_integer
 from ..shared.projects import project_list_SQL_handler
 from ..shared.utils import redirect_url
 from ..tools import ServerSideSQLHandler
+from . import reports
 
 
 @reports.route("/workload")
@@ -55,7 +56,23 @@ def workload():
     allowed_tenants = [t.id for t in current_user.tenants]
 
     group_filter = request.args.get("group_filter")
+    tenant_filter = request.args.get("tenant_filter")
     detail = request.args.get("detail")
+
+    # if no tenant filter supplied, check if one is stored in session
+    if tenant_filter is None and session.get("reports_workload_tenant_filter"):
+        tenant_filter = session["reports_workload_tenant_filter"]
+
+    if tenant_filter is not None:
+        tenant: Tenant = db.session.query(Tenant).filter_by(id=tenant_filter).first()
+        if tenant is None:
+            tenant_filter = "all"
+        elif not current_user.has_role("root") and tenant.id not in allowed_tenants:
+            tenant_filter = "all"
+
+    # write tenant filter into session if it is not empty
+    if tenant_filter is not None:
+        session["reports_workload_tenant_filter"] = tenant_filter
 
     # if no group filter supplied, check if one is stored in session
     if group_filter is None and session.get("reports_workload_group_filter"):
@@ -84,21 +101,54 @@ def workload():
     if detail is not None:
         session["reports_workload_detail"] = detail
 
-    # root user can see all groups; otherwise, we only show groups belonging to the same tenant
+    # build list of available tenants
     if current_user.has_role("root"):
-        groups = db.session.query(ResearchGroup).filter_by(active=True).all()
+        tenants = db.session.query(Tenant).all()
     else:
-        groups = (
-            db.session.query(ResearchGroup)
-            .filter(
-                ResearchGroup.active.is_(True),
-                ResearchGroup.tenants.any(Tenant.id.in_(allowed_tenants)),
+        tenants = list(current_user.tenants)
+
+    # build list of available groups, filtered by tenant if specified
+    flag, tenant_value = is_integer(tenant_filter)
+    if current_user.has_role("root"):
+        if flag:
+            groups = (
+                db.session.query(ResearchGroup)
+                .filter(
+                    ResearchGroup.active.is_(True),
+                    ResearchGroup.tenants.any(Tenant.id == tenant_value),
+                )
+                .all()
             )
-            .all()
-        )
+        else:
+            groups = db.session.query(ResearchGroup).filter_by(active=True).all()
+    else:
+        if flag:
+            groups = (
+                db.session.query(ResearchGroup)
+                .filter(
+                    ResearchGroup.active.is_(True),
+                    ResearchGroup.tenants.any(Tenant.id == tenant_value),
+                    ResearchGroup.tenants.any(Tenant.id.in_(allowed_tenants)),
+                )
+                .all()
+            )
+        else:
+            groups = (
+                db.session.query(ResearchGroup)
+                .filter(
+                    ResearchGroup.active.is_(True),
+                    ResearchGroup.tenants.any(Tenant.id.in_(allowed_tenants)),
+                )
+                .all()
+            )
 
     return render_template_context(
-        "reports/workload.html", groups=groups, group_filter=group_filter, detail=detail
+        "reports/workload.html",
+        tenants=tenants,
+        groups=groups,
+        tenant_filter=tenant_filter,
+        group_filter=group_filter,
+        detail=detail,
     )
 
 
@@ -112,7 +162,15 @@ def workload_ajax():
     allowed_tenants = [t.id for t in current_user.tenants]
 
     group_filter = request.args.get("group_filter")
+    tenant_filter = request.args.get("tenant_filter")
     detail = request.args.get("detail")
+
+    if tenant_filter is not None:
+        tenant: Tenant = db.session.query(Tenant).filter_by(id=tenant_filter).first()
+        if tenant is None:
+            tenant_filter = "all"
+        elif not current_user.has_role("root") and tenant.id not in allowed_tenants:
+            tenant_filter = "all"
 
     if group_filter is not None:
         group: ResearchGroup = (
@@ -132,12 +190,15 @@ def workload_ajax():
             .filter(User.active)
         )
     else:
-        allowed_tenants = [t.id for t in current_user.tenants]
         fac_query = (
             db.session.query(FacultyData)
             .join(User, User.id == FacultyData.id)
             .filter(User.active, User.tenants.any(Tenant.id.in_(allowed_tenants)))
         )
+
+    flag, tenant_value = is_integer(tenant_filter)
+    if flag:
+        fac_query = fac_query.filter(User.tenants.any(Tenant.id == tenant_value))
 
     flag, group_value = is_integer(group_filter)
     if flag:

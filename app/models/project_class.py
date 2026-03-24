@@ -2309,6 +2309,9 @@ class SubmissionPeriodRecord(db.Model):
     def get_moderator_records(self, user):
         return self._ordered_records_query(user, "moderator", "exam").all()
 
+    def get_presentation_assessor_records(self, user):
+        return self._unordered_records_query(user, "presentation").all()
+
     def get_faculty_presentation_slots(self, fac):
         schedule = self.deployed_schedule
         return schedule.get_faculty_slots(fac).all()

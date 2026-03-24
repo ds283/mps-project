@@ -3,18 +3,19 @@
 
 {% macro presentation_assignments(period, faculty_id, is_sabbatical, is_exempt, reenroll_date) %}
     {% if period.has_deployed_schedule %}
-        {% set schedule = period.deployed_schedule %}
-        <div>
-            <span class="dashboard-subtitle mt-3 mb-2">{{ schedule.event_name }}</span>
-            (<a class="text-decoration-none" href="{{ url_for('admin.view_schedule', tag=schedule.tag) }}">view full
-            schedule</a>)
-        </div>
-        {% set records = period.get_faculty_presentation_slots(faculty_id) %}
-        {% if records|length > 0 %}
+        {% set roles = period.get_presentation_assessor_records(faculty_id) %}
+        {% if roles|length > 0 %}
             {% set ns=namespace(count=0) %}
-            {% for slot in records %}
-                {% if slot.belongs_to(period) %}
+            {% for slot_id, slot_roles in roles|groupby('schedule_slot_id') %}
+                {% set slot = slot_roles[0].schedule_slot %}
+                {% if slot is not none %}
                     {% set ns.count = ns.count + 1 %}
+                    <div>
+                        <span class="dashboard-subtitle mt-3 mb-2">{{ slot.owner.event_name }}</span>
+                        (<a class="text-decoration-none"
+                            href="{{ url_for('admin.view_schedule', tag=slot.owner.tag) }}">view full
+                        schedule</a>)
+                    </div>
                     <div class="d-flex flex-row justify-content-start align-items-start gap-2">
                         <span class="text-primary">{{ slot.session.label_as_string }}</span>
                         <span class="text-primary">{{ slot.room.full_name }}</span>
@@ -29,54 +30,51 @@
                         </tr>
                         </thead>
                         <tbody>
-                        {% for talk in slot.talks %}
-                            {% if talk.belongs_to(period) %}
-                                {% set valid = talk.is_presentation_assessor_valid(faculty_id) %}
-                                {% set submitted = talk.presentation_assessor_submitted(faculty_id) %}
-                                {% set uses_feedback = talk.uses_presentation_feedback %}
-                                <tr>
-                                    <td>
-                                        <a class="text-decoration-none"
-                                           href="mailto:{{ talk.owner.student.user.email }}">{{ unformatted_label(talk.student_identifier) }}</a>
-                                    </td>
-                                    <td>
-                                        <a class="text-decoration-none"
-                                           href="mailto:{{ talk.project.owner.user.email }}">{{ talk.project.owner.user.name }}</a>
-                                    </td>
-                                    <td>
-                                        <a class="text-decoration-none"
-                                           href="{{ url_for('faculty.live_project', pid=talk.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
-                                            {{ talk.project.name }} (No. {{ talk.project.number }})
-                                        </a>
-                                        {% if uses_feedback %}
-                                            <div>
-                                                {% if submitted %}
-                                                    <span class="badge bg-success"><i class="fas fa-check"></i> Feedback submitted</span>
-                                                {% elif not slot.owner.owner.is_feedback_open and not submitted %}
-                                                    <span class="badge bg-warning text-dark"><i
-                                                            class="fas fa-times"></i> Feedback missing</span>
-                                                {% endif %}
-                                            </div>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div style="text-align: right;" class="float-end">
-                                            <div class="dropdown">
-                                                <button class="btn btn-outline-secondary btn-sm full-width-button dropdown-toggle"
-                                                        type="button" data-bs-toggle="dropdown">
-                                                    Actions
-                                                </button>
-                                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-                                                    <a class="dropdown-item d-flex gap-2"
-                                                       href="{{ url_for('documents.submitter_documents', sid=talk.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i
-                                                            class="fas fa-file fa-fw"></i> Manage documents
-                                                        ({{ talk.number_attachments }})...</a>
-                                                </div>
+                        {% for role in slot_roles %}
+                            {% set talk = role.submission %}
+                            {% set uses_feedback = role.uses_presentation_feedback %}
+                            <tr>
+                                <td>
+                                    <a class="text-decoration-none"
+                                       href="mailto:{{ talk.owner.student.user.email }}">{{ unformatted_label(talk.student_identifier) }}</a>
+                                </td>
+                                <td>
+                                    <a class="text-decoration-none"
+                                       href="mailto:{{ talk.project.owner.user.email }}">{{ talk.project.owner.user.name }}</a>
+                                </td>
+                                <td>
+                                    <a class="text-decoration-none"
+                                       href="{{ url_for('faculty.live_project', pid=talk.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                                        {{ talk.project.name }} (No. {{ talk.project.number }})
+                                    </a>
+                                    {% if uses_feedback %}
+                                        <div>
+                                            {% if role.submitted_feedback %}
+                                                <span class="badge bg-success"><i class="fas fa-check"></i> Feedback submitted</span>
+                                            {% elif not slot.owner.owner.is_feedback_open %}
+                                                <span class="badge bg-warning text-dark"><i
+                                                        class="fas fa-times"></i> Feedback missing</span>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div style="text-align: right;" class="float-end">
+                                        <div class="dropdown">
+                                            <button class="btn btn-outline-secondary btn-sm full-width-button dropdown-toggle"
+                                                    type="button" data-bs-toggle="dropdown">
+                                                Actions
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+                                                <a class="dropdown-item d-flex gap-2"
+                                                   href="{{ url_for('documents.submitter_documents', sid=talk.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i
+                                                        class="fas fa-file fa-fw"></i> Manage documents
+                                                    ({{ talk.number_attachments }})...</a>
                                             </div>
                                         </div>
-                                    </td>
-                                </tr>
-                            {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
                         {% endfor %}
                         </tbody>
                     </table>

@@ -43,8 +43,8 @@ def register_email_workflow_tasks(celery, mail: Mail):
         workflows = (
             db.session.query(EmailWorkflow)
             .filter(
-                EmailWorkflow.completed == False,
-                EmailWorkflow.paused == False,
+                EmailWorkflow.completed.is_(False),
+                EmailWorkflow.paused.is_(False),
                 EmailWorkflow.send_time <= now,
             )
             .all()
@@ -62,10 +62,10 @@ def register_email_workflow_tasks(celery, mail: Mail):
                 db.session.query(EmailWorkflowItem)
                 .filter(
                     EmailWorkflowItem.workflow_id == workflow.id,
-                    EmailWorkflowItem.sent_timestamp == None,
-                    EmailWorkflowItem.paused == False,
-                    EmailWorkflowItem.send_in_progress_timestamp == None,
-                    EmailWorkflowItem.celery_send_in_progress_task_id == None,
+                    EmailWorkflowItem.sent_timestamp.is_(None),
+                    EmailWorkflowItem.paused.is_(False),
+                    EmailWorkflowItem.send_in_progress_timestamp.is_(None),
+                    EmailWorkflowItem.celery_send_in_progress_task_id.is_(None),
                 )
                 .all()
             )
@@ -315,7 +315,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
         stuck_items = (
             db.session.query(EmailWorkflowItem)
             .filter(
-                EmailWorkflowItem.celery_send_in_progress_task_id != None,
+                EmailWorkflowItem.celery_send_in_progress_task_id.is_not(None),
             )
             .all()
         )

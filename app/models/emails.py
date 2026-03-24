@@ -1127,7 +1127,14 @@ class EmailWorkflow(db.Model, EditingMetadataMixin):
         if isinstance(template, EmailTemplate):
             template_kwargs["template"] = template
         elif isinstance(template, int):
-            template_kwargs["template_id"] = template
+            template_ = (
+                db.session.query(EmailTemplate)
+                .filter(EmailTemplate.template_id == template)
+                .first()
+            )
+            if template_ is None:
+                raise RuntimeError(f"EmailTemplate with id #{template} not found")
+            template_kwargs["template"] = template
         else:
             raise RuntimeError(
                 f'Invalid template type "{type(template)}" (value="{template}") in EmailWorkflow.build_(): expected EmailTemplate instance or integer primary key'

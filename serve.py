@@ -22,6 +22,7 @@ from initdb import (
     import_examiner_data,
     import_supervisor_data,
     initial_populate_database,
+    migrate_schedule_submission_roles,
     populate_CATS_limits,
     populate_email_templates,
 )
@@ -92,6 +93,9 @@ with app.app_context():
     if getattr(initdb_module, "INITDB_ATTENDANCE_IMPORT", None) is not None:
         db.session.commit()
         import_attendance_data(app, initdb_module)
+
+    db.session.commit()
+    migrate_schedule_submission_roles(app)
 
 
 if __name__ == "__main__":

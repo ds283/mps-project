@@ -21,7 +21,7 @@ from ...models import EmailWorkflow, EmailWorkflowItem
 
 # language=jinja2
 _workflow_name_col = """
-<div class="fw-semibold">{{ w.name }}</div>
+<div class="text-primary">{{ w.name }}</div>
 {% if pclasses %}
     <div class="mt-1">
         {% for pc in pclasses %}

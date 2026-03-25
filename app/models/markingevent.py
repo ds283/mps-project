@@ -13,21 +13,45 @@ from .defaults import DEFAULT_STRING_LENGTH
 from .model_mixins import EditingMetadataMixin
 
 
-class MarkingScheme(db.Model, EditingMetadataMixin):
+class MarkingSchemeMixin:
+    # name of this marking scheme
+    name = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
+    )
+
+    # HTML-formatted title to be displayed on the marking form
+    title = db.Column(db.Text(), nullable=False)
+
+    # HTML-formatted rubric to be displayed to markers
+    rubric = db.Column(db.Text(), nullable=False)
+
+    # JSON-serialized marking scheme schema
+    schema = db.Column(db.Text(), nullable=False)
+
+    # are the standard feedback fields (what was good/suggestions for improvement) used?
+    uses_standard_feedback = db.Column(db.Boolean(), default=False)
+
+
+class MarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
     """
     Represents a marking scheme to be used as part of a marking workflow.
     The mark scheme defines what questions are asked. This is encoded in a JSON-serialized schema.
-    The schema may contain the following components:
-      "title": title field, to be displayed at the top of the marking form
-      "rubric": instructions to markers
-      "fields": ordered list of questions. Each question is a dict with the following keys:
-        - "key": string used as a unique identified for the question
-        - "text": text of the question, should be formatted on the marking form that is presented to the user
-        - "field_type": dict defining the type of response expected, containing the following keys:
-          * "type": one of "boolean", "text", "number", "percent"
-          * "min", "max": used with the number type to specify maximum and minimum allowed values
-          * "precision": used with the number type to specify the number of decimal places that are retained
-          * "default": an optional default value
+    The schema may is an ordered list of blocks. Each block is a dict with the following keys:
+        - "title": string to be displayed as the title of the block
+        - "fields": ordered list of questions. Each question is a dict with the following keys:
+            - "key": string used as a unique identified for the question
+            - "text": text of the question, should be formatted on the marking form that is presented to the user
+            - "field_type": dict defining the type of response expected, containing the following keys:
+                * "type": one of "boolean", "text", "number", "percent"
+                * "min", "max": used with the number type to specify maximum and minimum allowed values
+                * "precision": used with the number type to specify the number of decimal places that are retained
+                * "default": an optional default value
+
+    The different field types map to WTForms fields:
+        - "boolean" -> BooleanField, with a suitable default if the "default" key is present
+        - "text" -> TextField
+        - "number" -> FloatField, with a suitable default if the "default" key is present, and "min"/"max" values enforced by validators. The "precision" key should be implemented by rounding the output to the required precision.
+        - "percent" -> FloatField, but with "min"/"max" automatically chosen to be 0 and 100, and a precision of 1
     """
 
     __tablename__ = "marking_schemes"
@@ -41,16 +65,18 @@ class MarkingScheme(db.Model, EditingMetadataMixin):
     )
     pclass = db.relationship("ProjectClass", foreign_keys=[pclass_id], uselist=False)
 
-    # name of this marking scheme
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
-    )
 
-    # JSON-serialized marking scheme schema
-    schema = db.Column(db.Text(), nullable=False)
+class LiveMarkingScheme(db.Model, MarkingSchemeMixin):
+    """
+    Duplicates a MarkingScheme.
+    Gives a permanent record of the marking scheme used for any particular MarkingEvent, so that subsequent changes to the marking scheme
+    don't mean that we lose an understanding of the schema
+    """
 
-    # are the standard feedback fields (what was good/suggestions for improvement) used?
-    uses_standard_feedback = db.Column(db.Boolean(), default=False)
+    __tablename__ = "live_marking_schemes"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
 
 
 class MarkingEvent(db.Model, EditingMetadataMixin):
@@ -124,9 +150,14 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
 
     # mark scheme to use for this workflow
     scheme_id = db.Column(
-        db.Integer(), db.ForeignKey("marking_schemes.id"), nullable=False
+        db.Integer(), db.ForeignKey("live_marking_schemes.id"), nullable=False
     )
-    scheme = db.relationship("MarkingScheme", foreign_keys=[scheme_id], uselist=False)
+    scheme = db.relationship(
+        "LiveMarkingScheme",
+        foreign_keys=[scheme_id],
+        uselist=False,
+        backref=db.backref("marking_workflows", lazy="dynamic"),
+    )
 
     # attachments that should be included with this workflow
     attachments = db.relationship(

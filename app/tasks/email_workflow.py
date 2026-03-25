@@ -447,10 +447,39 @@ def register_email_workflow_tasks(celery, mail: Mail):
             )
             raise self.retry()
 
+        # Check whether all items in the workflow have now been sent.
+        remaining = (
+            db.session.query(EmailWorkflowItem)
+            .filter(
+                EmailWorkflowItem.workflow_id == workflow.id,
+                EmailWorkflowItem.sent_timestamp.is_(None),
+            )
+            .count()
+        )
+
+        workflow_completed = False
+        if remaining == 0:
+            print(
+                f"send_workflow_item: all items sent for workflow '{workflow.name}' "
+                f"(id={workflow.id}); marking as completed"
+            )
+            workflow.completed = True
+            workflow.completed_timestamp = datetime.now()
+            try:
+                db.session.commit()
+                workflow_completed = True
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception(
+                    f"send_workflow_item: SQLAlchemyError marking workflow id={workflow.id} as completed",
+                    exc_info=e,
+                )
+
         return {
             "outcome": "success",
             "item_id": item_id,
             "log_id": log.id if log is not None else None,
+            "workflow_completed": workflow_completed,
         }
 
     @celery.task(bind=True, serializer="pickle")

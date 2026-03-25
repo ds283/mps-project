@@ -1203,11 +1203,19 @@ class ScheduledTaskMixin:
             "app.tasks.cloud_api_audit.send_api_events_to_telemetry",
             "Send Cloud API audit events to telemetry object store",
         ),
-        ("celery.backend_cleanup", "Periodic Celery backend cleanup"),
+        (
+            "app.tasks.email_workflow.poll_email_workflows",
+            "Periodically check for dispatch of email workflows",
+        ),
+        (
+            "app.tasks.email_workflow.cleanup_workflow_sends",
+            "Periodically check for stuck or failed email dispatch tasks",
+        ),
         (
             "app.tasks.attendance.check_for_attendance_prompts",
             "Check for prompts to record attendance for a supervision event",
         ),
+        ("celery.backend_cleanup", "Periodic Celery backend cleanup"),
     ]
 
     task = SelectField("Task", choices=tasks_available)

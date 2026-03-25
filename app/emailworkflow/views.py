@@ -104,7 +104,6 @@ def pause_workflow(id):
     try:
         workflow.paused = True
         db.session.commit()
-        flash(f'Workflow "{workflow.name}" has been paused.', "success")
     except SQLAlchemyError as e:
         db.session.rollback()
         flash("Could not pause workflow due to a database error.", "error")
@@ -124,7 +123,6 @@ def unpause_workflow(id):
     try:
         workflow.paused = False
         db.session.commit()
-        flash(f'Workflow "{workflow.name}" has been unpaused.', "success")
     except SQLAlchemyError as e:
         db.session.rollback()
         flash("Could not unpause workflow due to a database error.", "error")
@@ -150,7 +148,6 @@ def edit_workflow(id):
 
             workflow.last_edit_timestamp = datetime.now()
             db.session.commit()
-            flash(f'Workflow "{workflow.name}" has been updated.', "success")
         except SQLAlchemyError as e:
             db.session.rollback()
             flash("Could not update workflow due to a database error.", "error")
@@ -227,7 +224,6 @@ def pause_item(id):
     try:
         item.paused = True
         db.session.commit()
-        flash("Email workflow item has been paused.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
         flash("Could not pause item due to a database error.", "error")
@@ -251,7 +247,6 @@ def unpause_item(id):
     try:
         item.paused = False
         db.session.commit()
-        flash("Email workflow item has been unpaused.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
         flash("Could not unpause item due to a database error.", "error")

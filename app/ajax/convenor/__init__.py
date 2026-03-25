@@ -26,6 +26,12 @@ from .liveproject_alternatives import (
 )
 from .liveprojects import liveprojects_data
 from .manual_assign import manual_assign_data
+from .markingevent import (
+    marking_event_data,
+    marking_workflow_data,
+    submitter_report_data,
+    marking_report_data,
+)
 from .outstanding_confirm import outstanding_confirm_data
 from .project_alternatives import project_alternatives, new_project_alternative
 from .selector_grid import selector_grid_data

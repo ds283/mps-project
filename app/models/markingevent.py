@@ -186,6 +186,48 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
 
     __table_args__ = (db.UniqueConstraint("event_id", "name"),)
 
+    # note that the "submitter_reports" property is set back backref from the SubmitterReport relationship
+
+    # HOWEVER, note that MarkingReport is not linked direct to MarkingWorkflow, but only indirectly
+    # via SubmitterReport. We do this so that there is only one route from MarkingReport to MarkingWorkflow,
+    # and they can't drift out of sync (i.e. the tables are in normalized form).
+    # This means that we don't have a "marking_reports" property directly, but we can synthesize one
+    @property
+    def marking_reports(self):
+        # TODO: This approach may not scale if self.submitter_reports is every large
+        submitter_report_ids = [r.id for r in self.submitter_reports]
+        return db.session.query(MarkingReport).filter(
+            MarkingReport.submitter_report_id.in_(submitter_report_ids)
+        )
+
+    # obtain role name as string
+    @property
+    def role_as_str(self) -> str:
+        return self._role_string.get(self.role, "Unknown")
+
+    @property
+    def roleid_as_str(self) -> str:
+        return self._role_id.get(self.role, "unknown")
+
+    # convenience accessors
+    @property
+    def number_submitter_reports(self) -> int:
+        return self.submitter_reports.count()
+
+    @property
+    def number_marking_reports(self) -> int:
+        return self.marking_reports.count()
+
+    @property
+    def number_marking_reports_distributed(self) -> int:
+        return self.marking_reports.filter(MarkingReport.distributed.is_(True)).count()
+
+    @property
+    def number_marking_reports_with_feedback(self) -> int:
+        return self.marking_reports.filter(
+            MarkingReport.feedback_submitted.is_(True)
+        ).count()
+
 
 # association table of SubmitterReport to EmailLog, to track feedback emails
 submitter_feedback_to_email_log = db.Table(

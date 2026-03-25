@@ -91,6 +91,16 @@
                 <span class="badge {% if pane == 'todo' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ num_to_dos }}</span>
             </a>
         </li>
+        {% set marking_events_count = convenor_data.get('marking_events', 0) %}
+        {% if marking_events_count > 0 %}
+            <li class="nav-item">
+                <a class="nav-link {% if pane == 'assessment_archive' %}active{% endif %}"
+                   href="{{ url_for('convenor.marking_events_inspector', pclass_id=pclass.id) }}">
+                    Assessment archive
+                    <span class="badge {% if pane == 'assessment_archive' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ marking_events_count }}</span>
+                </a>
+            </li>
+        {% endif %}
     </ul>
     {% block tabblock %}
     {% endblock %}

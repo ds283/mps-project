@@ -45,6 +45,8 @@ from ...models import (
     ResearchGroup,
     ConfirmRequest,
     Tenant,
+    MarkingEvent,
+    SubmissionPeriodRecord,
 )
 
 
@@ -152,6 +154,18 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     declined_custom_q = build_declined_custom_query(config)
     declined_custom = get_count(declined_custom_q)
 
+    # Count marking events from closed submission periods
+    marking_events_count = get_count(
+        db.session.query(MarkingEvent)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == MarkingEvent.period_id)
+        .filter(
+            and_(
+                SubmissionPeriodRecord.config.has(pclass_id=pclass.id),
+                SubmissionPeriodRecord.closed == True,
+            )
+        )
+    )
+
     return {
         "faculty": enrolled_fac_count,
         "total_faculty": all_fac_count,
@@ -172,6 +186,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         "custom_total": all_custom,
         "custom_accepted": accepted_custom,
         "custom_declined": declined_custom,
+        "marking_events": marking_events_count,
     }
 
 

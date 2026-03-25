@@ -48,19 +48,39 @@ def validate_is_convenor(
     :param pclass: Project class model instance
     :return: True/False
     """
-    # any user with an admin role is OK
-    if current_user.has_role("admin") or current_user.has_role("root"):
+    # root users can always access
+    if current_user.has_role("root"):
         return True
+
+    # admin users can access if they belong to the same tenant as the project class
+    if current_user.has_role("admin"):
+        # if pclass has a tenant, check that user belongs to the same tenant
+        # (for backwards compatibility, allow access if pclass has no tenant)
+        if pclass.tenant_id is None:
+            return True
+        if pclass.tenant is not None and any(
+                [t.id == pclass.tenant_id for t in current_user.tenants]
+        ):
+            return True
 
     # convenor for this pclass is ok
     if pclass.is_convenor(current_user.id):
         return True
 
-    # if the current user has any of the specified roles, that is ok
+    # if the current user has any of the specified roles, check tenancy and allow access
     if allow_roles is not None:
         for role in allow_roles:
             if current_user.has_role(role):
-                return True
+                # for external_examiner and exam_board roles, check tenancy
+                if role in ["external_examiner", "exam_board"]:
+                    if pclass.tenant_id is None:
+                        return True
+                    if pclass.tenant is not None and any(
+                            [t.id == pclass.tenant_id for t in current_user.tenants]
+                    ):
+                        return True
+                else:
+                    return True
 
     if message:
         flash(

@@ -18,6 +18,7 @@ from . import (
     documents,
     email_templates,
     lifecycle,
+    markingevent,
     marking_feedback,
     projects,
     selector_details,

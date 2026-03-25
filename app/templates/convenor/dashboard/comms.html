@@ -22,7 +22,7 @@
                         {% set w = data.w %}
                         <tr>
                             <td>
-                                <div class="text-primary">{{ w.name }}</div>
+                                <div class="text-success">{{ w.name }}</div>
                                 {% if current_user.has_role('root') or current_user.has_role('admin') or current_user.has_role('email') %}
                                     <div class="mt-1">
                                         <a class="text-decoration-none small"

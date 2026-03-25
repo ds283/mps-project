@@ -968,7 +968,7 @@ def delete_role(role_id):
         )
 
     title = "Delete role"
-    panel_title = f'Delete {role.role_label} role for <i class="fas fa-user-circle"></i> <strong>{sub_user.name}</strong>'
+    panel_title = f'Delete {role.role_as_str} role for <i class="fas fa-user-circle"></i> <strong>{sub_user.name}</strong>'
 
     action_url = url_for("convenor.perform_delete_role", role_id=role_id, url=url)
     message = f'<p>Please confirm that you wish to delete the {role.role_as_str} role for <i class="fas fa-user-circle"></i> <strong>{role_user.name}</strong> belonging to submitter <i class="fas fa-user-circle"></i> <strong>{sub_user.name}</strong>.</p><p>This action cannot be undone.</p>'

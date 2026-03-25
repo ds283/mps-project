@@ -29,6 +29,8 @@ from app.convenor import convenor
 
 from ..database import db
 from ..models import (
+    EmailWorkflow,
+    EmailWorkflowItem,
     EnrollmentRecord,
     FacultyData,
     FilterRecord,
@@ -160,6 +162,102 @@ def status(id):
         todo=todo,
         return_url=return_url,
         return_text=return_text,
+    )
+
+
+@convenor.route("/comms/<int:id>")
+@roles_accepted("faculty", "admin", "root")
+def comms(id):
+    # get details for project class
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    # get current configuration record for this project class
+    config: ProjectClassConfig = pclass.most_recent_config
+    if config is None:
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
+        return redirect(redirect_url())
+
+    from sqlalchemy import func
+
+    # fetch last 15 EmailWorkflow events for this pclass
+    workflows = (
+        pclass.workflows.order_by(EmailWorkflow.send_time.desc()).limit(15).all()
+    )
+
+    # prepare data for each workflow (similar to email_workflow_data in app/ajax/site/email_workflows.py)
+    workflow_data = []
+    for w in workflows:
+        # Item counts via sub-queries for efficiency
+        total = (
+                db.session.query(func.count(EmailWorkflowItem.id))
+                .filter(EmailWorkflowItem.workflow_id == w.id)
+                .scalar()
+                or 0
+        )
+        sent = (
+                db.session.query(func.count(EmailWorkflowItem.id))
+                .filter(
+                    EmailWorkflowItem.workflow_id == w.id,
+                    EmailWorkflowItem.sent_timestamp.isnot(None),
+                )
+                .scalar()
+                or 0
+        )
+        pending = (
+                db.session.query(func.count(EmailWorkflowItem.id))
+                .filter(
+                    EmailWorkflowItem.workflow_id == w.id,
+                    EmailWorkflowItem.sent_timestamp.is_(None),
+                )
+                .scalar()
+                or 0
+        )
+        errors = (
+                db.session.query(func.count(EmailWorkflowItem.id))
+                .filter(
+                    EmailWorkflowItem.workflow_id == w.id,
+                    EmailWorkflowItem.error_condition.is_(True),
+                )
+                .scalar()
+                or 0
+        )
+        item_paused = (
+                db.session.query(func.count(EmailWorkflowItem.id))
+                .filter(
+                    EmailWorkflowItem.workflow_id == w.id,
+                    EmailWorkflowItem.paused.is_(True),
+                )
+                .scalar()
+                or 0
+        )
+
+        workflow_data.append(
+            {
+                "w": w,
+                "total": total,
+                "sent": sent,
+                "pending": pending,
+                "errors": errors,
+                "item_paused": item_paused,
+            }
+        )
+
+    data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template_context(
+        "convenor/dashboard/comms.html",
+        pane="comms",
+        pclass=pclass,
+        config=config,
+        convenor_data=data,
+        workflow_data=workflow_data,
     )
 
 

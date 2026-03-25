@@ -16,7 +16,7 @@
                 serverSide: true, processing: true,
                 language: {{ bootstrap_spinner() }},
                 ajax: {
-                    url: $SCRIPT_ROOT + '/emailworkflow/workflow_items_ajax/{{ workflow.id }}',
+                    url: $SCRIPT_ROOT + '/emailworkflow/workflow_items_ajax/{{ workflow.id }}?url={{ url|urlencode }}&text={{ text|urlencode }}',
                     type: 'POST',
                     data: function (args) {
                         return {"args": JSON.stringify(args)};

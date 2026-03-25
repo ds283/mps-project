@@ -187,7 +187,8 @@ def workflow_items(id):
 @emailworkflow.route("/workflow_items_ajax/<int:id>", methods=["POST"])
 @roles_accepted(*_ROLES)
 def workflow_items_ajax(id):
-    workflow: EmailWorkflow = EmailWorkflow.query.get_or_404(id)
+    url = request.args.get("url", url_for("emailworkflow.email_workflows"))
+    text = request.args.get("text", "Email workflows")
 
     base_query = db.session.query(EmailWorkflowItem).filter(
         EmailWorkflowItem.workflow_id == id
@@ -200,7 +201,9 @@ def workflow_items_ajax(id):
     }
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(ajax.site.email_workflow_item_data)
+        return handler.build_payload(
+            lambda items: ajax.site.email_workflow_item_data(items, url, text)
+        )
 
 
 # ---------------------------------------------------------------------------

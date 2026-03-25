@@ -1,0 +1,119 @@
+{% extends "convenor/dashboard/nav.html" %}
+
+{% block tabblock %}
+    <div class="card border-secondary mt-3 mb-3">
+        <div class="card-header">
+            <strong>Recent email communications</strong>
+        </div>
+        <div class="card-body">
+            {% if workflow_data|length > 0 %}
+                <table class="table table-sm table-striped">
+                    <thead>
+                    <tr>
+                        <th width="20%">Workflow</th>
+                        <th width="15%">Status</th>
+                        <th width="15%">Scheduled</th>
+                        <th width="20%">Items</th>
+                        <th width="30%">Details</th>
+                    </tr>
+                    </thead>
+                    <tbody class="table-group-divider">
+                    {% for data in workflow_data %}
+                        {% set w = data.w %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ w.name }}</div>
+                                {% if current_user.has_role('root') or current_user.has_role('admin') or current_user.has_role('email') %}
+                                    <div class="mt-1">
+                                        <a class="text-decoration-none small"
+                                           href="{{ url_for('emailworkflow.workflow_items', id=w.id, url=url_for('convenor.comms', id=pclass.id), text='Comms dashboard') }}">
+                                            <i class="fas fa-search fa-fw"></i> Inspect...
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex flex-row flex-wrap gap-2">
+                                    {% if w.completed %}
+                                        <span class="badge bg-success"><i class="fas fa-check-circle fa-fw"></i> Completed</span>
+                                    {% else %}
+                                        <span class="badge bg-primary"><i
+                                                class="fas fa-clock fa-fw"></i> In progress</span>
+                                    {% endif %}
+                                    {% if w.paused %}
+                                        <span class="badge bg-warning text-dark"><i
+                                                class="fas fa-pause-circle fa-fw"></i> Paused</span>
+                                    {% endif %}
+                                </div>
+                                {% if w.completed and w.completed_timestamp %}
+                                    <div class="text-muted small mt-1">{{ w.completed_timestamp.strftime("%a %d %b %Y %H:%M") }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ w.send_time.strftime("%a %d %b %Y") }}</div>
+                                <div class="text-muted small">{{ w.send_time.strftime("%H:%M") }}</div>
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <div>
+                                        <span class="badge bg-secondary">{{ data.total }}</span>
+                                        total
+                                    </div>
+                                    {% if data.total > 0 %}
+                                        <div class="mt-1">
+                                            <span class="badge bg-success">{{ data.sent }}</span> sent &nbsp;
+                                            <span class="badge bg-primary">{{ data.pending }}</span> pending
+                                        </div>
+                                        {% if data.errors > 0 %}
+                                            <div class="mt-1">
+                                                <span class="badge bg-danger"><i
+                                                        class="fas fa-exclamation-triangle fa-fw"></i> {{ data.errors }}</span>
+                                                error{{ 's' if data.errors != 1 else '' }}
+                                            </div>
+                                        {% endif %}
+                                        {% if data.item_paused > 0 %}
+                                            <div class="mt-1">
+                                                <span class="badge bg-warning text-dark"><i
+                                                        class="fas fa-pause fa-fw"></i> {{ data.item_paused }}</span>
+                                                item{{ 's' if data.item_paused != 1 else '' }} paused
+                                            </div>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small text-muted">
+                                    {% if w.created_by %}
+                                        <div><i class="fas fa-user fa-fw"></i> Created by
+                                            <strong>{{ w.created_by.name }}</strong>
+                                        </div>
+                                    {% endif %}
+                                    {% if w.creation_timestamp %}
+                                        <div><i class="fas fa-calendar-plus fa-fw"></i>
+                                            {{ w.creation_timestamp.strftime("%a %d %b %Y %H:%M") }}
+                                        </div>
+                                    {% endif %}
+                                    {% if w.last_edit_id %}
+                                        <div class="mt-1"><i class="fas fa-edit fa-fw"></i> Edited by
+                                            <strong>{{ w.last_edited_by.name if w.last_edited_by else '#' ~ w.last_edit_id }}</strong>
+                                        </div>
+                                        {% if w.last_edit_timestamp %}
+                                            <div><i class="fas fa-calendar-check fa-fw"></i>
+                                                {{ w.last_edit_timestamp.strftime("%a %d %b %Y %H:%M") }}
+                                            </div>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="alert alert-info">
+                    No recent email communications found for this project class.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

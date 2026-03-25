@@ -127,7 +127,7 @@ _workflow_menu = """
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <a class="dropdown-item d-flex gap-2"
-           href="{{ url_for('emailworkflow.workflow_items', id=w.id) }}">
+           href="{{ url_for('emailworkflow.workflow_items', id=w.id, url=url_for('emailworkflow.email_workflows'), text='Email workflows') }}">
             <i class="fas fa-search fa-fw"></i> Inspect...
         </a>
         <div class="dropdown-divider"></div>
@@ -156,42 +156,79 @@ def email_workflow_data(workflows):
     data = []
     for w in workflows:
         pclasses = list(w.pclasses.all())
-        max_attach = humanize.naturalsize(w.max_attachment_size) if w.max_attachment_size else "None"
+        max_attach = (
+            humanize.naturalsize(w.max_attachment_size)
+            if w.max_attachment_size
+            else "None"
+        )
 
         # Item counts via sub-queries for efficiency
-        total = db.session.query(func.count(EmailWorkflowItem.id)).filter(
-            EmailWorkflowItem.workflow_id == w.id
-        ).scalar() or 0
-        sent = db.session.query(func.count(EmailWorkflowItem.id)).filter(
-            EmailWorkflowItem.workflow_id == w.id,
-            EmailWorkflowItem.sent_timestamp.isnot(None),
-        ).scalar() or 0
-        pending = db.session.query(func.count(EmailWorkflowItem.id)).filter(
-            EmailWorkflowItem.workflow_id == w.id,
-            EmailWorkflowItem.sent_timestamp.is_(None),
-        ).scalar() or 0
-        errors = db.session.query(func.count(EmailWorkflowItem.id)).filter(
-            EmailWorkflowItem.workflow_id == w.id,
-            EmailWorkflowItem.error_condition.is_(True),
-        ).scalar() or 0
-        item_paused = db.session.query(func.count(EmailWorkflowItem.id)).filter(
-            EmailWorkflowItem.workflow_id == w.id,
-            EmailWorkflowItem.paused.is_(True),
-        ).scalar() or 0
+        total = (
+            db.session.query(func.count(EmailWorkflowItem.id))
+            .filter(EmailWorkflowItem.workflow_id == w.id)
+            .scalar()
+            or 0
+        )
+        sent = (
+            db.session.query(func.count(EmailWorkflowItem.id))
+            .filter(
+                EmailWorkflowItem.workflow_id == w.id,
+                EmailWorkflowItem.sent_timestamp.isnot(None),
+            )
+            .scalar()
+            or 0
+        )
+        pending = (
+            db.session.query(func.count(EmailWorkflowItem.id))
+            .filter(
+                EmailWorkflowItem.workflow_id == w.id,
+                EmailWorkflowItem.sent_timestamp.is_(None),
+            )
+            .scalar()
+            or 0
+        )
+        errors = (
+            db.session.query(func.count(EmailWorkflowItem.id))
+            .filter(
+                EmailWorkflowItem.workflow_id == w.id,
+                EmailWorkflowItem.error_condition.is_(True),
+            )
+            .scalar()
+            or 0
+        )
+        item_paused = (
+            db.session.query(func.count(EmailWorkflowItem.id))
+            .filter(
+                EmailWorkflowItem.workflow_id == w.id,
+                EmailWorkflowItem.paused.is_(True),
+            )
+            .scalar()
+            or 0
+        )
 
-        data.append({
-            "name": render_template_string(_workflow_name_col, w=w, pclasses=pclasses),
-            "status": render_template_string(_workflow_status_col, w=w),
-            "template": render_template_string(_workflow_template_col, w=w, max_attach=max_attach),
-            "send_time": render_template_string(_workflow_send_time_col, w=w),
-            "items": render_template_string(
-                _workflow_items_col, w=w,
-                total=total, sent=sent, pending=pending,
-                errors=errors, item_paused=item_paused,
-            ),
-            "details": render_template_string(_workflow_details_col, w=w),
-            "menu": render_template_string(_workflow_menu, w=w),
-        })
+        data.append(
+            {
+                "name": render_template_string(
+                    _workflow_name_col, w=w, pclasses=pclasses
+                ),
+                "status": render_template_string(_workflow_status_col, w=w),
+                "template": render_template_string(
+                    _workflow_template_col, w=w, max_attach=max_attach
+                ),
+                "send_time": render_template_string(_workflow_send_time_col, w=w),
+                "items": render_template_string(
+                    _workflow_items_col,
+                    w=w,
+                    total=total,
+                    sent=sent,
+                    pending=pending,
+                    errors=errors,
+                    item_paused=item_paused,
+                ),
+                "details": render_template_string(_workflow_details_col, w=w),
+                "menu": render_template_string(_workflow_menu, w=w),
+            }
+        )
     return data
 
 
@@ -409,23 +446,28 @@ _item_menu = """
 """
 
 
-def email_workflow_item_data(items):
+def email_workflow_item_data(items, return_url, return_text):
     data = []
     for item in items:
-        return_url = url_for("emailworkflow.workflow_items", id=item.workflow_id)
-        return_text = "Workflow items"
-
-        data.append({
-            "name": render_template_string(_item_name_col, item=item),
-            "status": render_template_string(_item_status_col, item=item),
-            "error": render_template_string(_item_error_col, item=item),
-            "task": render_template_string(
-                _item_task_col, item=item, return_url=return_url, return_text=return_text
-            ),
-            "details": render_template_string(_item_details_col, item=item),
-            "attachments": render_template_string(_item_attachments_col, item=item),
-            "menu": render_template_string(
-                _item_menu, item=item, return_url=return_url, return_text=return_text
-            ),
-        })
+        data.append(
+            {
+                "name": render_template_string(_item_name_col, item=item),
+                "status": render_template_string(_item_status_col, item=item),
+                "error": render_template_string(_item_error_col, item=item),
+                "task": render_template_string(
+                    _item_task_col,
+                    item=item,
+                    return_url=return_url,
+                    return_text=return_text,
+                ),
+                "details": render_template_string(_item_details_col, item=item),
+                "attachments": render_template_string(_item_attachments_col, item=item),
+                "menu": render_template_string(
+                    _item_menu,
+                    item=item,
+                    return_url=return_url,
+                    return_text=return_text,
+                ),
+            }
+        )
     return data

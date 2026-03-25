@@ -21,7 +21,8 @@
                     <div class="card card-body bg-light border-0 email-display">
                         <p>To:
                             {% for user in email.recipients -%}
-                                {%- if loop.index > 1 -%}, {% endif -%}<strong>{{ user.name }}</strong> <a href="mailto::{{ user.email }}">&lt;{{ user.email }}&gt;</a>
+                                {%- if loop.index > 1 -%}, {% endif -%}<strong>{{ user.name }}</strong>
+                                <a href="mailto::{{ user.email }}">&lt;{{ user.email }}&gt;</a>
                             {%- else -%}
                                 <span class="badge bg-secondary">Nobody</span>
                             {%- endfor %}
@@ -32,7 +33,9 @@
                     {% if email.body and email.body|length > 0 %}
                         <div class="card card-body bg-light mt-2 border-0 email-display">
                             <div class="mb-1"><strong>Plain text content</strong></div>
-                            <div><pre>{{ email.body }}</pre></div>
+                            <div>
+                                <pre>{{ email.body }}</pre>
+                            </div>
                         </div>
                     {% endif %}
                     {% if email.html and email.html|length > 0 %}
@@ -41,8 +44,72 @@
                             <div>{{ email.html|safe }}</div>
                         </div>
                     {% endif %}
+                    {% if email.attachments.count() > 0 %}
+                        <div class="card card-body bg-light mt-2 border-0 email-display">
+                            <div class="mb-1"><strong>Attachments</strong></div>
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Details</th>
+                                    <th>Expiry</th>
+                                    <th>Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for att in email.attachments %}
+                                    {% set asset = att.generated_asset or att.submitted_asset or att.temporary_asset %}
+                                    <tr>
+                                        <td>{{ att.name }}</td>
+                                        <td>{{ att.description }}</td>
+                                        <td>
+                                            <div class="small">
+                                                <div>Size: {{ asset.human_file_size() if asset else 'Unknown' }}</div>
+                                                <div>Bucket: <span
+                                                        class="badge bg-secondary">{{ asset.bucket if asset else 'Unknown' }}</span>
+                                                </div>
+                                                {% if asset and asset.compressed %}
+                                                    <span class="badge bg-info">Compressed</span>
+                                                {% endif %}
+                                                {% if asset and asset.encryption != 0 %}
+                                                    <span class="badge bg-warning text-dark">Encrypted</span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if asset and asset.expiry %}
+                                                <span class="badge bg-danger">{{ asset.expiry.strftime("%a %d %b %Y %H:%M") }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">None</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if att.generated_asset_id %}
+                                                <a href="{{ url_for('admin.download_generated_asset', asset_id=att.generated_asset_id) }}"
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-download"></i> Download
+                                                </a>
+                                            {% elif att.submitted_asset_id %}
+                                                <a href="{{ url_for('admin.download_submitted_asset', asset_id=att.submitted_asset_id) }}"
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-download"></i> Download
+                                                </a>
+                                            {% else %}
+                                                <button class="btn btn-sm btn-outline-secondary" disabled>
+                                                    <i class="fas fa-download"></i> Download
+                                                </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
                     <div class="d-flex flex-row justify-content-end mt-2 align-content-start">
-                        <a href="{{ url_for('admin.delete_email', id=email.id) }}" class="btn btn-outline-danger">Delete</a>
+                        <a href="{{ url_for('admin.delete_email', id=email.id) }}"
+                           class="btn btn-outline-danger">Delete</a>
                     </div>
                 </div>
             </div>

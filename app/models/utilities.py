@@ -866,6 +866,71 @@ class EmailLog(db.Model):
     html = db.Column(db.Text())
 
 
+class EmailLogAttachment(db.Model):
+    __tablename__ = "email_log_attachments"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # link back to parent EmailLog
+    log_id = db.Column(
+        db.Integer(),
+        db.ForeignKey("email_log.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    log = db.relationship(
+        "EmailLog",
+        foreign_keys=[log_id],
+        uselist=False,
+        backref=db.backref(
+            "attachments", lazy="dynamic", cascade="all, delete", passive_deletes=True
+        ),
+    )
+
+    # link to generated asset
+    generated_asset_id = db.Column(
+        db.Integer(), db.ForeignKey("generated_assets.id"), nullable=True
+    )
+    generated_asset = db.relationship(
+        "GeneratedAsset",
+        foreign_keys=[generated_asset_id],
+        uselist=False,
+        backref=db.backref("email_log_attachments", lazy="dynamic"),
+    )
+
+    # link to submitted asset
+    submitted_asset_id = db.Column(
+        db.Integer(), db.ForeignKey("submitted_assets.id"), nullable=True
+    )
+    submitted_asset = db.relationship(
+        "SubmittedAsset",
+        foreign_keys=[submitted_asset_id],
+        uselist=False,
+        backref=db.backref("email_log_attachments", lazy="dynamic"),
+    )
+
+    # link to temporary asset
+    temporary_asset_id = db.Column(
+        db.Integer(), db.ForeignKey("temporary_assets.id"), nullable=True
+    )
+    temporary_asset = db.relationship(
+        "TemporaryAsset",
+        foreign_keys=[temporary_asset_id],
+        uselist=False,
+        backref=db.backref("email_log_attachments", lazy="dynamic"),
+    )
+
+    # manifest name
+    name = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
+    )
+
+    # manifest comment/description
+    description = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
+    )
+
+
 class MessageOfTheDay(db.Model):
     """
     Model a message broadcast to all users, or a specific subset of users

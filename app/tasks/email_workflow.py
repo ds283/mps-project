@@ -10,7 +10,6 @@
 
 from datetime import date, datetime, timedelta
 from email.utils import parseaddr
-from typing import Dict, Optional
 from smtplib import (
     SMTPAuthenticationError,
     SMTPConnectError,
@@ -23,6 +22,7 @@ from smtplib import (
     SMTPSenderRefused,
     SMTPServerDisconnected,
 )
+from typing import Dict, Optional
 
 from flask import current_app
 from flask_mailman import Mail
@@ -34,6 +34,7 @@ from ..models import (
     ConfirmRequest,
     DescriptionComment,
     EmailLog,
+    EmailLogAttachment,
     EmailNotification,
     EmailTemplate,
     EmailWorkflow,
@@ -112,7 +113,7 @@ def _decode_payload_value(value):
         return None
     if isinstance(value, str):
         if value.startswith(_OBJECT_PREFIX):
-            rest = value[len(_OBJECT_PREFIX):]
+            rest = value[len(_OBJECT_PREFIX) :]
             model_name, pk_str = rest.rsplit(":", 1)
             pk = int(pk_str)
             model_cls = _MODEL_REGISTRY.get(model_name)
@@ -127,9 +128,9 @@ def _decode_payload_value(value):
                 )
             return obj
         if value.startswith(_DATETIME_PREFIX):
-            return datetime.fromisoformat(value[len(_DATETIME_PREFIX):])
+            return datetime.fromisoformat(value[len(_DATETIME_PREFIX) :])
         if value.startswith(_DATE_PREFIX):
-            return date.fromisoformat(value[len(_DATE_PREFIX):])
+            return date.fromisoformat(value[len(_DATE_PREFIX) :])
         return value
     if isinstance(value, list):
         return [_decode_payload_value(item) for item in value]
@@ -288,7 +289,9 @@ def register_email_workflow_tasks(celery, mail: Mail):
                 )
                 # Decode stored payloads, resolving any '__object__' DB references.
                 try:
-                    subject_kwargs = _decode_email_payload(item.subject_payload_dict) or None
+                    subject_kwargs = (
+                        _decode_email_payload(item.subject_payload_dict) or None
+                    )
                     body_kwargs = _decode_email_payload(item.body_payload_dict) or None
                 except LookupError as lookup_err:
                     current_app.logger.exception(
@@ -297,9 +300,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
                         exc_info=lookup_err,
                     )
                     item.error_condition = True
-                    item.error_message = (
-                        f"Payload decode error — database object not found: {lookup_err}"
-                    )
+                    item.error_message = f"Payload decode error — database object not found: {lookup_err}"
                     item.send_in_progress_timestamp = None
                     item.celery_send_in_progress_task_id = None
                     try:
@@ -434,6 +435,17 @@ def register_email_workflow_tasks(celery, mail: Mail):
                 html=html,
             )
             db.session.add(log)
+
+            for att in item.attachments:
+                new_att = EmailLogAttachment(
+                    log=log,
+                    name=att.name,
+                    description=att.description,
+                    generated_asset_id=att.generated_asset_id,
+                    submitted_asset_id=att.submitted_asset_id,
+                    temporary_asset_id=att.temporary_asset_id,
+                )
+                db.session.add(new_att)
 
         item.email_log = log
 

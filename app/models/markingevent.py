@@ -36,6 +36,10 @@ class MarkingSchemeMixin:
     # are the standard feedback fields (what was good/suggestions for improvement) used?
     uses_standard_feedback = db.Column(db.Boolean(), default=False)
 
+    # tolerance between different markers before a moderation intervention is required,
+    # expressed as a percentage
+    marker_tolerance = db.Column(db.Numeric(8, 3), default=15)
+
 
 class MarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
     """
@@ -191,7 +195,8 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
         backref=db.backref("marking_workflows", lazy="dynamic"),
     )
 
-    # attachments that should be included with this workflow
+    # attachments (already uploaded by the convenor as SubmissionPeriod attachments)
+    # that should be included with this workflow
     attachments = db.relationship(
         "PeriodAttachment",
         secondary=marking_workflow_to_attachments,

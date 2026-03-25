@@ -78,6 +78,12 @@ class LiveMarkingScheme(db.Model, MarkingSchemeMixin):
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
+    # parent marking scheme
+    parent_id = db.Column(
+        db.Integer(), db.ForeignKey("marking_schemes.id"), nullable=False
+    )
+    parent = db.relationship("MarkingScheme", foreign_keys=[parent_id], uselist=False)
+
 
 class MarkingEvent(db.Model, EditingMetadataMixin):
     """
@@ -150,7 +156,7 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
 
     # mark scheme to use for this workflow
     scheme_id = db.Column(
-        db.Integer(), db.ForeignKey("live_marking_schemes.id"), nullable=False
+        db.Integer(), db.ForeignKey("live_marking_schemes.id"), nullable=True
     )
     scheme = db.relationship(
         "LiveMarkingScheme",

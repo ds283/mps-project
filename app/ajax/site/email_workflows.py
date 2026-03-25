@@ -131,7 +131,11 @@ _workflow_menu = """
             <i class="fas fa-search fa-fw"></i> Inspect...
         </a>
         <div class="dropdown-divider"></div>
-        {% if w.paused %}
+        {% if w.completed %}
+            <span class="dropdown-item d-flex gap-2 disabled">
+                <i class="fas fa-pause fa-fw"></i> Pause
+            </span>
+        {% elif w.paused %}
             <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('emailworkflow.unpause_workflow', id=w.id) }}">
                 <i class="fas fa-play fa-fw"></i> Unpause
@@ -142,11 +146,13 @@ _workflow_menu = """
                 <i class="fas fa-pause fa-fw"></i> Pause
             </a>
         {% endif %}
-        <div class="dropdown-divider"></div>
-        <a class="dropdown-item d-flex gap-2"
-           href="{{ url_for('emailworkflow.edit_workflow', id=w.id) }}">
-            <i class="fas fa-cog fa-fw"></i> Change properties...
-        </a>
+        {% if not w.completed %}
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item d-flex gap-2"
+               href="{{ url_for('emailworkflow.edit_workflow', id=w.id) }}">
+                <i class="fas fa-cog fa-fw"></i> Change properties...
+            </a>
+        {% endif %}
     </div>
 </div>
 """
@@ -408,7 +414,11 @@ _item_menu = """
             <i class="fas fa-eye fa-fw"></i> Preview...
         </a>
         <div class="dropdown-divider"></div>
-        {% if item.paused %}
+        {% if item.sent_timestamp %}
+            <span class="dropdown-item d-flex gap-2 disabled">
+                <i class="fas fa-pause fa-fw"></i> Pause
+            </span>
+        {% elif item.paused %}
             <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('emailworkflow.unpause_item', id=item.id, url=return_url) }}">
                 <i class="fas fa-play fa-fw"></i> Unpause

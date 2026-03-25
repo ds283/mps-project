@@ -97,6 +97,10 @@ def email_workflows_ajax():
 def pause_workflow(id):
     workflow: EmailWorkflow = EmailWorkflow.query.get_or_404(id)
 
+    if workflow.completed:
+        flash("Cannot pause a completed workflow.", "error")
+        return redirect(url_for("emailworkflow.email_workflows"))
+
     if workflow.paused:
         flash("This workflow is already paused.", "info")
         return redirect(url_for("emailworkflow.email_workflows"))
@@ -116,6 +120,10 @@ def pause_workflow(id):
 def unpause_workflow(id):
     workflow: EmailWorkflow = EmailWorkflow.query.get_or_404(id)
 
+    if workflow.completed:
+        flash("Cannot unpause a completed workflow.", "error")
+        return redirect(url_for("emailworkflow.email_workflows"))
+
     if not workflow.paused:
         flash("This workflow is not paused.", "info")
         return redirect(url_for("emailworkflow.email_workflows"))
@@ -134,10 +142,15 @@ def unpause_workflow(id):
 @roles_accepted(*_ROLES)
 def edit_workflow(id):
     workflow: EmailWorkflow = EmailWorkflow.query.get_or_404(id)
-    form = EditWorkflowForm(obj=workflow)
 
     url = request.args.get("url", url_for("emailworkflow.email_workflows"))
     text = request.args.get("text", "Email workflows")
+
+    if workflow.completed:
+        flash("Cannot edit properties of a completed workflow.", "error")
+        return redirect(url)
+
+    form = EditWorkflowForm(obj=workflow)
 
     if form.validate_on_submit():
         try:
@@ -220,6 +233,10 @@ def pause_item(id):
         "url", url_for("emailworkflow.workflow_items", id=item.workflow_id)
     )
 
+    if item.sent_timestamp is not None:
+        flash("Cannot pause an item that has already been sent.", "error")
+        return redirect(url)
+
     if item.paused:
         flash("This item is already paused.", "info")
         return redirect(url)
@@ -242,6 +259,10 @@ def unpause_item(id):
     url = request.args.get(
         "url", url_for("emailworkflow.workflow_items", id=item.workflow_id)
     )
+
+    if item.sent_timestamp is not None:
+        flash("Cannot unpause an item that has already been sent.", "error")
+        return redirect(url)
 
     if not item.paused:
         flash("This item is not paused.", "info")

@@ -150,7 +150,7 @@ _workflow_menu = """
             <div class="dropdown-divider"></div>
             <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('emailworkflow.edit_workflow', id=w.id) }}">
-                <i class="fas fa-cog fa-fw"></i> Change properties...
+                <i class="fas fa-cog fa-fw"></i> Edit properties...
             </a>
         {% endif %}
     </div>

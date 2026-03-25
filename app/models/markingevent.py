@@ -8,9 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 from ..database import db
-from . import SubmissionRoleTypesMixin
 from .defaults import DEFAULT_STRING_LENGTH
 from .model_mixins import EditingMetadataMixin
+from .submissions import SubmissionRoleTypesMixin
 
 
 class MarkingSchemeMixin:
@@ -112,7 +112,7 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
     closed = db.Column(db.Boolean(), default=False, nullable=False)
 
 
-# association table of SubmissionPeriodAttachment instances that should be included with each workflow
+# association table of PeriodAttachment instances that should be included with each workflow
 marking_workflow_to_attachments = db.Table(
     "marking_workflow_to_attachments",
     db.Column(
@@ -161,7 +161,7 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
 
     # attachments that should be included with this workflow
     attachments = db.relationship(
-        "SubmissionPeriodAttachment",
+        "PeriodAttachment",
         secondary=marking_workflow_to_attachments,
         backref=db.backref("marking_workflows", lazy="dynamic"),
     )
@@ -208,7 +208,7 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
 
     # signed off by
     signed_off_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
-    signed_off_by = db.relationship("User", foreignkeys=[signed_off_id], uselist=False)
+    signed_off_by = db.relationship("User", foreign_keys=[signed_off_id], uselist=False)
 
     # has feedback been pushed out to the student for this period?
     feedback_sent = db.Column(db.Boolean(), default=False)
@@ -237,7 +237,9 @@ marking_distribution_to_email_log = db.Table(
         db.ForeignKey("marking_reports.id"),
         primary_key=True,
     ),
-    db.Column(),
+    db.Column(
+        "email_log_id", db.Integer(), db.ForeignKey("email_log.id"), primary_key=True
+    ),
 )
 
 

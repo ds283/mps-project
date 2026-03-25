@@ -437,13 +437,13 @@ def register_email_workflow_tasks(celery, mail: Mail):
             db.session.add(log)
 
             for att in item.attachments:
-                new_att = EmailLogAttachment(
+                new_att = EmailLogAttachment.build_(
                     log=log,
                     name=att.name,
                     description=att.description,
-                    generated_asset_id=att.generated_asset_id,
-                    submitted_asset_id=att.submitted_asset_id,
-                    temporary_asset_id=att.temporary_asset_id,
+                    generated_asset=att.generated_asset_id,
+                    submitted_asset=att.submitted_asset_id,
+                    temporary_asset=att.temporary_asset_id,
                 )
                 db.session.add(new_att)
 

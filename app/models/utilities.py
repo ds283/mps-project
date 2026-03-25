@@ -12,7 +12,7 @@ import json
 from datetime import datetime
 from os import path
 from time import time as current_seconds_since_epoch
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from urllib.parse import urljoin
 from uuid import uuid4
 
@@ -35,6 +35,7 @@ from ..cache import cache
 from ..database import db
 from ..shared.formatters import format_size
 from ..shared.sqlalchemy import get_count
+from .assets import GeneratedAsset, SubmittedAsset, TemporaryAsset
 from .associations import (
     backup_record_to_labels,
     convenor_group_filter_table,
@@ -929,6 +930,77 @@ class EmailLogAttachment(db.Model):
     description = db.Column(
         db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
     )
+
+    @classmethod
+    def build_(
+            cls,
+            log,
+            name,
+            description,
+            generated_asset=None,
+            submitted_asset=None,
+            temporary_asset=None,
+    ):
+        # check that exactly one of generated_asset, submitted_asset, and temporary_asset is specified
+        num_assets = (
+                (1 if generated_asset is not None else 0)
+                + (1 if submitted_asset is not None else 0)
+                + (1 if temporary_asset is not None else 0)
+        )
+        if num_assets != 1:
+            raise RuntimeError(
+                f"Exactly one of generated_asset, submitted_asset, and temporary_asset must be specified, but got {num_assets} instead"
+            )
+
+        if name is None or len(name) == 0:
+            raise RuntimeError(
+                f'Invalid name "{name}" (value="{name}") in EmailLogAttachment.build_()'
+            )
+
+        if description is None or len(description) == 0:
+            raise RuntimeError(
+                f'Invalid description "{description}" (value="{description}") in EmailLogAttachment.build_()'
+            )
+
+        generated_asset_id: Optional[int] = None
+        submitted_asset_id: Optional[int] = None
+        temporary_asset_id: Optional[int] = None
+
+        if isinstance(generated_asset, GeneratedAsset):
+            generated_asset_id = generated_asset.id
+        elif isinstance(generated_asset, int):
+            generated_asset_id = generated_asset
+        elif generated_asset is not None:
+            raise RuntimeError(
+                f'Invalid generated_asset type "{type(generated_asset)}" (value="{generated_asset}") in EmailLogAttachment.build_()'
+            )
+
+        if isinstance(submitted_asset, SubmittedAsset):
+            submitted_asset_id = submitted_asset.id
+        elif isinstance(submitted_asset, int):
+            submitted_asset_id = submitted_asset
+        elif submitted_asset is not None:
+            raise RuntimeError(
+                f'Invalid submitted_asset type "{type(submitted_asset)}" (value="{submitted_asset}") in EmailLogAttachment.build_()'
+            )
+
+        if isinstance(temporary_asset, TemporaryAsset):
+            temporary_asset_id = temporary_asset.id
+        elif isinstance(temporary_asset, int):
+            temporary_asset_id = temporary_asset
+        elif temporary_asset is not None:
+            raise RuntimeError(
+                f'Invalid temporary_asset type "{type(temporary_asset)}" (value="{temporary_asset}") in EmailLogAttachment.build_()'
+            )
+
+        return cls(
+            log=log,
+            generated_asset_id=generated_asset_id,
+            submitted_asset_id=submitted_asset_id,
+            temporary_asset_id=temporary_asset_id,
+            name=name,
+            description=description,
+        )
 
 
 class MessageOfTheDay(db.Model):

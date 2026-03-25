@@ -154,7 +154,9 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
     # and have this role will be assigned to this workflow
     role = db.Column(db.Integer(), nullable=False)
 
-    # mark scheme to use for this workflow
+    # mark scheme to use for this workflow.
+    # The scheme should NOT be empty, but we allow nullable for backwards compatibility with
+    # old cycles where no marking scheme existed
     scheme_id = db.Column(
         db.Integer(), db.ForeignKey("live_marking_schemes.id"), nullable=True
     )

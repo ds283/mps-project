@@ -45,6 +45,7 @@ from .emails import *
 from .faculty import *
 from .feedback import *
 from .live_projects import *
+from .markingevent import *
 from .matching import *
 from .model_mixins import *
 from .project_class import *

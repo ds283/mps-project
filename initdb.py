@@ -32,6 +32,9 @@ from app.models import (
     EnrollmentRecord,
     FacultyData,
     LiveProject,
+    MarkingEvent,
+    MarkingReport,
+    MarkingWorkflow,
     Project,
     ProjectClass,
     ProjectClassConfig,
@@ -44,6 +47,7 @@ from app.models import (
     SubmissionPeriodUnit,
     SubmissionRecord,
     SubmissionRole,
+    SubmitterReport,
     SubmittingStudent,
     SupervisionEvent,
     Tenant,
@@ -1596,4 +1600,260 @@ def migrate_schedule_submission_roles(app):
 
     print(
         f"** migrate_schedule_submission_roles: complete — {added} role(s) added, {skipped} skipped"
+    )
+
+
+def _track(counter, created):
+    counter[0 if created else 1] += 1
+
+
+def _get_or_create_marking_event(period, name, now):
+    existing = (
+        db.session.query(MarkingEvent)
+        .filter(MarkingEvent.period_id == period.id, MarkingEvent.name == name)
+        .first()
+    )
+    if existing is not None:
+        return existing, False
+    event = MarkingEvent(
+        period_id=period.id,
+        name=name,
+        closed=True,
+        creator_id=1,
+        creation_timestamp=now,
+    )
+    db.session.add(event)
+    return event, True
+
+
+def _get_or_create_marking_workflow(event, name, role, now):
+    existing = (
+        db.session.query(MarkingWorkflow)
+        .filter(MarkingWorkflow.event_id == event.id, MarkingWorkflow.name == name)
+        .first()
+    )
+    if existing is not None:
+        return existing, False
+    workflow = MarkingWorkflow(
+        event_id=event.id,
+        name=name,
+        role=role,
+        scheme_id=None,
+        creator_id=1,
+        creation_timestamp=now,
+    )
+    db.session.add(workflow)
+    return workflow, True
+
+
+def _get_or_create_submitter_report(
+        record,
+        workflow,
+        now,
+        *,
+        grade,
+        signed_off_id,
+        feedback_sent,
+        feedback_push_id,
+        feedback_push_timestamp,
+        grade_generated_by_id,
+        grade_generated_timestamp,
+):
+    existing = (
+        db.session.query(SubmitterReport)
+        .filter(
+            SubmitterReport.record_id == record.id,
+            SubmitterReport.workflow_id == workflow.id,
+        )
+        .first()
+    )
+    if existing is not None:
+        return existing, False
+    sr = SubmitterReport(
+        record_id=record.id,
+        workflow_id=workflow.id,
+        grade=grade,
+        signed_off_id=signed_off_id,
+        feedback_sent=feedback_sent,
+        feedback_push_id=feedback_push_id,
+        feedback_push_timestamp=feedback_push_timestamp,
+        grade_generated_by_id=grade_generated_by_id,
+        grade_generated_timestamp=grade_generated_timestamp,
+        creator_id=1,
+        creation_timestamp=now,
+    )
+    db.session.add(sr)
+    return sr, True
+
+
+def _get_or_create_marking_report(role, submitter_report, now, *, grade, copy_feedback_from):
+    existing = (
+        db.session.query(MarkingReport)
+        .filter(
+            MarkingReport.role_id == role.id,
+            MarkingReport.submitter_report_id == submitter_report.id,
+        )
+        .first()
+    )
+    if existing is not None:
+        return existing, False
+    mr = MarkingReport(
+        role_id=role.id,
+        submitter_report_id=submitter_report.id,
+        report="{}",
+        distributed=False,
+        report_submitted=False,
+        signed_off_id=None,
+        signed_off_timestamp=None,
+        grade=grade,
+        feedback_positive=copy_feedback_from.positive_feedback,
+        feedback_improvement=copy_feedback_from.improvements_feedback,
+        feedback_submitted=copy_feedback_from.submitted_feedback,
+        feedback_timestamp=copy_feedback_from.feedback_timestamp,
+        creator_id=1,
+        creation_timestamp=now,
+    )
+    db.session.add(mr)
+    return mr, True
+
+
+def migrate_to_marking_events(app):
+    """
+    Migrate grade/feedback data from SubmissionRole/SubmissionRecord into the new
+    MarkingEvent/MarkingWorkflow/SubmitterReport/MarkingReport framework.
+    Idempotent: safe to run multiple times.
+    """
+    now = datetime.now()
+    counts = {k: [0, 0] for k in ["events", "workflows", "submitter_reports", "marking_reports"]}
+
+    closed_periods = (
+        db.session.query(SubmissionPeriodRecord)
+        .filter(SubmissionPeriodRecord.closed.is_(True))
+        .all()
+    )
+
+    for period in closed_periods:
+
+        # BLOCK A: Presentation grading
+        if period.has_presentation and period.has_deployed_schedule:
+            pres_event, created = _get_or_create_marking_event(period, "Presentation grading", now)
+            _track(counts["events"], created)
+            pres_wf, created = _get_or_create_marking_workflow(
+                pres_event, "Presentation grading",
+                role=SubmissionRole.ROLE_PRESENTATION_ASSESSOR, now=now,
+            )
+            _track(counts["workflows"], created)
+            for record in period.submissions:
+                sr, created = _get_or_create_submitter_report(
+                    record, pres_wf, now,
+                    grade=0.0, signed_off_id=None,
+                    feedback_sent=False,
+                    feedback_push_id=None, feedback_push_timestamp=None,
+                    grade_generated_by_id=None, grade_generated_timestamp=None,
+                )
+                _track(counts["submitter_reports"], created)
+                for role in record.roles:
+                    if role.role != SubmissionRole.ROLE_PRESENTATION_ASSESSOR:
+                        continue
+                    mr, c = _get_or_create_marking_report(role, sr, now, grade=None, copy_feedback_from=role)
+                    _track(counts["marking_reports"], c)
+
+        # BLOCK B: Main report MarkingEvent
+        report_event, created = _get_or_create_marking_event(period, period.display_name, now)
+        _track(counts["events"], created)
+
+        if period.number_markers == 1:
+            # BLOCK C: single marker — ROLE_MARKER used as representative value
+            rpt_wf, created = _get_or_create_marking_workflow(
+                report_event, "Report grading",
+                role=SubmissionRole.ROLE_MARKER, now=now,
+            )
+            _track(counts["workflows"], created)
+            for record in period.submissions:
+                sr, created = _get_or_create_submitter_report(
+                    record, rpt_wf, now,
+                    grade=None, signed_off_id=None,
+                    feedback_sent=record.feedback_sent,
+                    feedback_push_id=record.feedback_push_id,
+                    feedback_push_timestamp=record.feedback_push_timestamp,
+                    grade_generated_by_id=record.grade_generated_id,
+                    grade_generated_timestamp=record.grade_generated_timestamp,
+                )
+                _track(counts["submitter_reports"], created)
+                if created:
+                    for fr in record.feedback_reports:
+                        sr.feedback_reports.append(fr)
+                for role in record.roles:
+                    if role.role not in (
+                            SubmissionRole.ROLE_SUPERVISOR,
+                            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                            SubmissionRole.ROLE_MARKER,
+                    ):
+                        continue
+                    mr, c = _get_or_create_marking_report(role, sr, now, grade=None, copy_feedback_from=role)
+                    _track(counts["marking_reports"], c)
+
+        elif period.number_markers == 2:
+            # BLOCK D1: Report grading (ROLE_MARKER)
+            rpt_wf, created = _get_or_create_marking_workflow(
+                report_event, "Report grading",
+                role=SubmissionRole.ROLE_MARKER, now=now,
+            )
+            _track(counts["workflows"], created)
+            for record in period.submissions:
+                sr, created = _get_or_create_submitter_report(
+                    record, rpt_wf, now,
+                    grade=record.report_grade, signed_off_id=None,
+                    feedback_sent=record.feedback_sent,
+                    feedback_push_id=record.feedback_push_id,
+                    feedback_push_timestamp=record.feedback_push_timestamp,
+                    grade_generated_by_id=record.grade_generated_id,
+                    grade_generated_timestamp=record.grade_generated_timestamp,
+                )
+                _track(counts["submitter_reports"], created)
+                if created:
+                    for fr in record.feedback_reports:
+                        sr.feedback_reports.append(fr)
+                for role in record.roles:
+                    if role.role != SubmissionRole.ROLE_MARKER:
+                        continue
+                    mr, c = _get_or_create_marking_report(role, sr, now, grade=role.grade, copy_feedback_from=role)
+                    _track(counts["marking_reports"], c)
+
+            # BLOCK D2: Supervisor observations
+            sup_wf, created = _get_or_create_marking_workflow(
+                report_event, "Supervisor observations",
+                role=SubmissionRole.ROLE_SUPERVISOR, now=now,
+            )
+            _track(counts["workflows"], created)
+            for record in period.submissions:
+                sr, created = _get_or_create_submitter_report(
+                    record, sup_wf, now,
+                    grade=record.supervision_grade, signed_off_id=None,
+                    feedback_sent=record.feedback_sent,
+                    feedback_push_id=record.feedback_push_id,
+                    feedback_push_timestamp=record.feedback_push_timestamp,
+                    grade_generated_by_id=record.grade_generated_id,
+                    grade_generated_timestamp=record.grade_generated_timestamp,
+                )
+                _track(counts["submitter_reports"], created)
+                for role in record.roles:
+                    if role.role not in (
+                            SubmissionRole.ROLE_SUPERVISOR,
+                            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                    ):
+                        continue
+                    mr, c = _get_or_create_marking_report(role, sr, now, grade=role.grade, copy_feedback_from=role)
+                    _track(counts["marking_reports"], c)
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        app.logger.exception("SQLAlchemyError in migrate_to_marking_events", exc_info=e)
+        return
+
+    print(
+        f"** migrate_to_marking_events: complete — "
+        + ", ".join(f"{k} {v[0]} added/{v[1]} skipped" for k, v in counts.items())
     )

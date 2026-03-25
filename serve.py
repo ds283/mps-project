@@ -23,6 +23,7 @@ from initdb import (
     import_supervisor_data,
     initial_populate_database,
     migrate_schedule_submission_roles,
+    migrate_to_marking_events,
     populate_CATS_limits,
     populate_email_templates,
 )
@@ -94,8 +95,11 @@ with app.app_context():
         db.session.commit()
         import_attendance_data(app, initdb_module)
 
+    # db.session.commit()
+    # migrate_schedule_submission_roles(app)
+
     db.session.commit()
-    migrate_schedule_submission_roles(app)
+    migrate_to_marking_events(app)
 
 
 if __name__ == "__main__":

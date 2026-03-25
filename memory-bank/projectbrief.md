@@ -67,4 +67,55 @@ relationships between students, faculty supervisors, markers, and project conven
 
 ## Current Status
 
-Production system actively managing student projects at an academic institution.
+Production system actively managing student projects at an academic institution. Recent development has focused on
+implementing campaign-specific functionality to support institutional requirements, including ATAS compliance campaigns
+and email template management systems.
+
+# task_progress RECOMMENDED
+
+When starting a new task, it is recommended to include a todo list using the task_progress parameter.
+
+1. Include a todo list using the task_progress parameter in your next tool call
+2. Create a comprehensive checklist of all steps needed
+3. Use markdown format: - [ ] for incomplete, - [x] for complete
+
+**Benefits of creating a todo/task_progress list now:**
+
+- Clear roadmap for implementation
+- Progress tracking throughout the task
+- Nothing gets forgotten or missed
+- Users can see, monitor, and edit the plan
+
+**Example structure:**```
+
+- [ ] Analyze requirements
+- [ ] Set up necessary files
+- [ ] Implement main functionality
+- [ ] Handle edge cases
+- [ ] Test the implementation
+- [ ] Verify results```
+
+Keeping the task_progress list updated helps track progress and ensures nothing is missed.
+
+<environment_details>
+
+# PyCharm Professional Visible Files
+
+(No visible files)
+
+# PyCharm Professional Open Tabs
+
+(No open tabs)
+
+# Current Time
+
+3/25/2026, 10:18:57 PM (Europe/London, UTC+0:00)
+
+# Context Window Usage
+
+26,425 / 131K tokens used (20%)
+
+# Current Mode
+
+ACT MODE
+</environment_details>

@@ -148,15 +148,15 @@
 
 ```yaml
 services:
-   - web: Flask application (gunicorn)
-   - nginx: Reverse proxy and static files
-   - mysql: Primary database
-   - mongodb: Document database
-   - redis: Cache and broker
-   - celery: Task workers
-   - beat: Task scheduler
-   - flower: Task monitoring
-   - minio: Object storage
+  - web: Flask application (gunicorn)
+  - nginx: Reverse proxy and static files
+  - mysql: Primary database
+  - mongodb: Document database
+  - redis: Cache and broker
+  - celery: Task workers
+  - beat: Task scheduler
+  - flower: Task monitoring
+  - minio: Object storage
 ```
 
 ### WSGI Server
@@ -396,3 +396,55 @@ celery -A celery_node beat
 - SQLAlchemy: Major version migrations need planning
 - Celery: Background compatibility considerations
 - Bootstrap: UI refresh required for major versions
+
+# task_progress RECOMMENDED
+
+When starting a new task, it is recommended to include a todo list using the task_progress parameter.
+
+1. Include a todo list using the task_progress parameter in your next tool call
+2. Create a comprehensive checklist of all steps needed
+3. Use markdown format: - [ ] for incomplete, - [x] for complete
+
+**Benefits of creating a todo/task_progress list now:**
+
+- Clear roadmap for implementation
+- Progress tracking throughout the task
+- Nothing gets forgotten or missed
+- Users can see, monitor, and edit the plan
+
+**Example structure:**```
+
+- [ ] Analyze requirements
+- [ ] Set up necessary files
+- [ ] Implement main functionality
+- [ ] Handle edge cases
+- [ ] Test the implementation
+- [ ] Verify results```
+
+Keeping the task_progress list updated helps track progress and ensures nothing is missed.
+
+<environment_details>
+
+# PyCharm Professional Visible Files
+
+memory-bank/systemPatterns.md
+
+# PyCharm Professional Open Tabs
+
+memory-bank/projectbrief.md
+memory-bank/productContext.md
+memory-bank/activeContext.md
+memory-bank/systemPatterns.md
+
+# Current Time
+
+3/25/2026, 10:24:38 PM (Europe/London, UTC+0:00)
+
+# Context Window Usage
+
+36,736 / 131K tokens used (28%)
+
+# Current Mode
+
+ACT MODE
+</environment_details>

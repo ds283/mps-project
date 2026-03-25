@@ -1,6 +1,6 @@
 # Active Context
 
-## Current Work Focus (Updated: 2026-03-23)
+## Current Work Focus (Updated: 2026-03-25)
 
 ### ATAS Campaign System for 2026
 
@@ -140,3 +140,53 @@ The email template system follows the established AJAX pattern:
 - Jinja2 sandbox mode may be needed for user-editable templates
 - Access control must restrict template editing to admins
 - Email sending should have rate limiting
+
+# task_progress RECOMMENDED
+
+When starting a new task, it is recommended to include a todo list using the task_progress parameter.
+
+1. Include a todo list using the task_progress parameter in your next tool call
+2. Create a comprehensive checklist of all steps needed
+3. Use markdown format: - [ ] for incomplete, - [x] for complete
+
+**Benefits of creating a todo/task_progress list now:**
+
+- Clear roadmap for implementation
+- Progress tracking throughout the task
+- Nothing gets forgotten or missed
+- Users can see, monitor, and edit the plan
+
+**Example structure:**```
+
+- [ ] Analyze requirements
+- [ ] Set up necessary files
+- [ ] Implement main functionality
+- [ ] Handle edge cases
+- [ ] Test the implementation
+- [ ] Verify results```
+
+Keeping the task_progress list updated helps track progress and ensures nothing is missed.
+
+<environment_details>
+
+# PyCharm Professional Visible Files
+
+memory-bank/productContext.md
+
+# PyCharm Professional Open Tabs
+
+memory-bank/projectbrief.md
+memory-bank/productContext.md
+
+# Current Time
+
+3/25/2026, 10:22:13 PM (Europe/London, UTC+0:00)
+
+# Context Window Usage
+
+29,467 / 131K tokens used (22%)
+
+# Current Mode
+
+ACT MODE
+</environment_details>

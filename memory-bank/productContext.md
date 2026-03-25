@@ -2,9 +2,10 @@
 
 ## What is MPS Project?
 
-The MPS (Multi-Project System) Project is a comprehensive web application designed to manage academic research projects,
-supervisions, and assessments in a university setting. It serves as a central platform for coordinating the entire
-lifecycle of student projects, from initial project proposals through to final assessment and archiving.
+The mpsproject platform ("MPS" refers to the School of Mathematical & Physical Sciences at the University of Sussex)
+is a comprehensive web application designed to manage research projects, supervisions, and assessments
+in a university setting. It serves as a central platform for coordinating the entire lifecycle of
+student projects, from initial project proposals through to final assessment and archiving.
 
 ## Problem It Solves
 
@@ -275,3 +276,52 @@ Unlike generic project management tools, MPS Project is:
 - Advanced analytics and predictions
 - API for third-party integrations
 - Broader applicability beyond original use case
+
+# task_progress RECOMMENDED
+
+When starting a new task, it is recommended to include a todo list using the task_progress parameter.
+
+1. Include a todo list using the task_progress parameter in your next tool call
+2. Create a comprehensive checklist of all steps needed
+3. Use markdown format: - [ ] for incomplete, - [x] for complete
+
+**Benefits of creating a todo/task_progress list now:**
+
+- Clear roadmap for implementation
+- Progress tracking throughout the task
+- Nothing gets forgotten or missed
+- Users can see, monitor, and edit the plan
+
+**Example structure:**```
+
+- [ ] Analyze requirements
+- [ ] Set up necessary files
+- [ ] Implement main functionality
+- [ ] Handle edge cases
+- [ ] Test the implementation
+- [ ] Verify results```
+
+Keeping the task_progress list updated helps track progress and ensures nothing is missed.
+
+<environment_details>
+
+# PyCharm Professional Visible Files
+
+memory-bank/projectbrief.md
+
+# PyCharm Professional Open Tabs
+
+memory-bank/projectbrief.md
+
+# Current Time
+
+3/25/2026, 10:20:02 PM (Europe/London, UTC+0:00)
+
+# Context Window Usage
+
+26,497 / 131K tokens used (20%)
+
+# Current Mode
+
+ACT MODE
+</environment_details>

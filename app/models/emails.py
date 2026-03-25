@@ -712,6 +712,30 @@ class EmailTemplate(db.Model, EmailTemplateTypesMixin, EditingMetadataMixin):
         tenant_id, pclass_id = _resolve_tenant_and_pclass(tenant, pclass)
         return _find_template(template_type, tenant_id, pclass_id)
 
+    @staticmethod
+    def render_content_(
+        template: "EmailTemplate",
+        subject_kwargs: Optional[Dict[str, Any]] = None,
+        body_kwargs: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[str, str]:
+        """
+        Render subject and HTML body from a template instance and kwargs dicts,
+        without constructing an email message or updating any timestamp.
+        Returns (subject_str, html_str).
+        Use this when you need the rendered output for preview or inspection purposes.
+        """
+        subject_str: str = (
+            template.subject.format(**subject_kwargs)
+            if subject_kwargs is not None
+            else template.subject
+        )
+        html_str: str = (
+            render_template_string(template.html_body, **body_kwargs)
+            if body_kwargs is not None
+            else template.html_body
+        )
+        return subject_str, html_str
+
 
 class EmailWorkflowItemAttachment(db.Model):
     __tablename__ = "email_workflow_item_attachments"

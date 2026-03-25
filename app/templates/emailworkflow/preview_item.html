@@ -1,0 +1,201 @@
+{% extends "base_app.html" %}
+
+{% block title %}Email preview – item #{{ item.id }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+            <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+        </a>
+        <h4 class="mb-0">
+            <i class="fas fa-eye fa-fw me-1"></i>
+            Email preview &ndash; item #{{ item.id }}
+        </h4>
+    </div>
+
+    {# ---- Header information ---- #}
+    <div class="card border-secondary mb-3">
+        <div class="card-header bg-secondary text-white">
+            <i class="fas fa-info-circle fa-fw me-1"></i> Envelope
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-2 text-muted">Subject</dt>
+                <dd class="col-sm-10">
+                    <strong>{{ subject_str }}</strong>
+                    {% if item.subject_override %}
+                        <span class="badge bg-info text-dark ms-2"
+                              data-bs-toggle="tooltip"
+                              title="This subject comes from the subject_override field, not the template.">Override</span>
+                    {% endif %}
+                </dd>
+
+                <dt class="col-sm-2 text-muted">To</dt>
+                <dd class="col-sm-10">
+                    {% if recipients %}
+                        {% for addr in recipients %}
+                            <span class="me-2"><a class="text-decoration-none"
+                                                  href="mailto:{{ addr }}">{{ addr }}</a></span>
+                        {% endfor %}
+                    {% else %}
+                        <span class="badge bg-warning text-dark">No recipients</span>
+                    {% endif %}
+                </dd>
+
+                {% if from_email_addr %}
+                    <dt class="col-sm-2 text-muted">From</dt>
+                    <dd class="col-sm-10"><a class="text-decoration-none"
+                                             href="mailto:{{ from_email_addr }}">{{ from_email_addr }}</a></dd>
+                {% endif %}
+
+                {% if reply_to_list %}
+                    <dt class="col-sm-2 text-muted">Reply-to</dt>
+                    <dd class="col-sm-10">
+                        {% for addr in reply_to_list %}
+                            <span class="me-2"><a class="text-decoration-none"
+                                                  href="mailto:{{ addr }}">{{ addr }}</a></span>
+                        {% endfor %}
+                    </dd>
+                {% endif %}
+
+                <dt class="col-sm-2 text-muted">Template</dt>
+                <dd class="col-sm-10">{{ email_template.type_name }}</dd>
+
+                <dt class="col-sm-2 text-muted">Workflow</dt>
+                <dd class="col-sm-10">
+                    <a class="text-decoration-none"
+                       href="{{ url_for('emailworkflow.workflow_items', id=workflow.id) }}">
+                        {{ workflow.name }}
+                    </a>
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    {# ---- HTML body ---- #}
+    <div class="card border-primary mb-3">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-code fa-fw me-1"></i> HTML body</span>
+            {% if item.body_override %}
+                <span class="badge bg-info text-dark"
+                      data-bs-toggle="tooltip"
+                      title="This body comes from the body_override field, not the template.">Override</span>
+            {% endif %}
+        </div>
+        <div class="card-body p-0">
+            {# Rendered HTML preview in sandboxed iframe #}
+            <div class="border-bottom p-3 bg-light">
+                <small class="text-muted fw-semibold">Rendered preview</small>
+            </div>
+            <div class="p-3">
+                <iframe id="html-preview"
+                        srcdoc="&lt;style&gt;body,td,th,p,div,span{font-family:'Roboto',Helvetica,Arial,sans-serif;font-size:14px;}&lt;/style&gt;{{ html_str|e }}"
+                        sandbox="allow-same-origin"
+                        style="width: 100%; min-height: 400px; border: 1px solid #dee2e6; border-radius: 4px;"
+                        onload="this.style.height = (this.contentWindow.document.body.scrollHeight + 30) + 'px';">
+                </iframe>
+            </div>
+            {# Raw HTML source #}
+            <div class="border-top p-3 bg-light">
+                <small class="text-muted fw-semibold">Raw HTML source</small>
+            </div>
+            <div class="p-3">
+                <pre class="mb-0 small"
+                     style="max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 1rem; border-radius: 4px; border: 1px solid #dee2e6;"><code>{{ html_str|e }}</code></pre>
+            </div>
+        </div>
+    </div>
+
+    {# ---- Plain text body ---- #}
+    <div class="card border-secondary mb-3">
+        <div class="card-header bg-secondary text-white">
+            <i class="fas fa-align-left fa-fw me-1"></i> Plain text body
+        </div>
+        <div class="card-body">
+            <pre class="mb-0 small"
+                 style="max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word;">{{ plain_str|e }}</pre>
+        </div>
+    </div>
+
+    {# ---- Attachments ---- #}
+    {% if attachment_infos %}
+        <div class="card border-info mb-3">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-paperclip fa-fw me-1"></i> Attachments ({{ attachment_infos|length }})
+            </div>
+            <div class="card-body">
+                {% set ns = namespace(current_type=None) %}
+                {% for info in attachment_infos %}
+                    {% if info.asset_type != ns.current_type %}
+                        {% set ns.current_type = info.asset_type %}
+                        <h6 class="text-muted mt-{% if not loop.first %}3{% else %}0{% endif %} mb-2">
+                            {% if info.asset_type == 'GeneratedAsset' %}
+                                <i class="fas fa-cog fa-fw"></i> Generated assets
+                            {% elif info.asset_type == 'SubmittedAsset' %}
+                                <i class="fas fa-upload fa-fw"></i> Submitted assets
+                            {% else %}
+                                <i class="fas fa-clock fa-fw"></i> Temporary assets
+                            {% endif %}
+                        </h6>
+                    {% endif %}
+
+                    {% set att = info.attachment %}
+                    {% set asset = info.asset %}
+                    <div class="card mb-2 border-light">
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="fw-semibold">
+                                        {{ att.name or asset.target_name or asset.unique_name or '(unnamed)' }}
+                                    </div>
+                                    {% if att.description %}
+                                        <div class="text-muted small">{{ att.description }}</div>
+                                    {% endif %}
+                                </div>
+                                {% if info.download_url %}
+                                    <a class="btn btn-sm btn-outline-primary ms-2"
+                                       href="{{ info.download_url }}">
+                                        <i class="fas fa-download fa-fw"></i> Download
+                                    </a>
+                                {% endif %}
+                            </div>
+                            <div class="mt-2 small text-muted d-flex flex-wrap gap-3">
+                                {% if asset.filesize %}
+                                    <span>
+                                        <i class="fas fa-weight-hanging fa-fw"></i>
+                                        {{ asset.filesize | filesizeformat }}
+                                        {% if asset.compressed and asset.compressed_size %}
+                                            &rarr; {{ asset.compressed_size | filesizeformat }} compressed
+                                        {% endif %}
+                                    </span>
+                                {% endif %}
+                                <span>
+                                    <i class="fas fa-database fa-fw"></i>
+                                    Bucket {{ asset.bucket }}
+                                </span>
+                                {% if asset.compressed %}
+                                    <span class="badge bg-secondary">Compressed</span>
+                                {% endif %}
+                                {% if asset.encryption %}
+                                    <span class="badge bg-warning text-dark">Encrypted</span>
+                                {% endif %}
+                                {% if asset.expiry %}
+                                    <span>
+                                        <i class="fas fa-calendar-times fa-fw"></i>
+                                        Expires {{ asset.expiry.strftime("%a %d %b %Y") }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <div class="card border-light mb-3">
+            <div class="card-body text-muted">
+                <i class="fas fa-paperclip fa-fw me-1"></i> No attachments
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

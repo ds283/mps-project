@@ -1,0 +1,65 @@
+{% extends "base_app.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import date_field %}
+{% from "datepicker.html" import import_datepicker %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_datepicker() }}
+
+    <script>
+        $(document).ready(function () {
+            $('#send_time_picker').datetimepicker({
+                format: 'DD/MM/YYYY HH:mm',
+                allowInputToggle: true,
+                sideBySide: true
+            });
+            {% if workflow.send_time %}
+                $('#send_time_picker').datetimepicker('date', moment('{{ workflow.send_time.strftime("%d/%m/%Y %H:%M") }}', 'DD/MM/YYYY HH:mm'));
+            {% endif %}
+        });
+    </script>
+{% endblock %}
+
+{% block title %}Edit workflow – {{ workflow.name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+            <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+        </a>
+        <h4 class="mb-0">
+            <i class="fas fa-cog fa-fw me-1"></i>
+            Edit properties &ndash; <strong>{{ workflow.name }}</strong>
+        </h4>
+    </div>
+
+    <div class="card border-primary mb-3">
+        <div class="card-header bg-primary text-white">
+            Workflow properties
+        </div>
+        <div class="card-body">
+            <form method="POST"
+                  action="{{ url_for('emailworkflow.edit_workflow', id=workflow.id, url=url, text=text) }}">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ date_field(form.send_time, 'send_time_picker') }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ wtf.render_field(form.max_attachment_size) }}
+                        <div class="form-text text-muted">
+                            Current
+                            value: {{ workflow.max_attachment_size | filesizeformat if workflow.max_attachment_size else '—' }}
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                    <a class="btn btn-outline-secondary ms-2" href="{{ url }}">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

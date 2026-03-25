@@ -502,6 +502,10 @@ def create_app():
 
     app.register_blueprint(campaigns_blueprint, url_prefix="/campaigns")
 
+    from .emailworkflow import emailworkflow as emailworkflow_blueprint
+
+    app.register_blueprint(emailworkflow_blueprint, url_prefix="/emailworkflow")
+
     from .archive import archive as archive_blueprint
 
     app.register_blueprint(archive_blueprint, url_prefix="/archive")

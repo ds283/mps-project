@@ -155,6 +155,10 @@ def _decode_email_payload(payload_dict: Optional[dict]) -> Optional[dict]:
     return {k: _decode_payload_value(v) for k, v in payload_dict.items()}
 
 
+# Public alias for use outside the tasks package (e.g., inspection/preview views).
+decode_email_payload = _decode_email_payload
+
+
 def register_email_workflow_tasks(celery, mail: Mail):
     @celery.task(bind=True, serializer="pickle")
     def poll_email_workflows(self):

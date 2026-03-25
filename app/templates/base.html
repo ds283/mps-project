@@ -499,6 +499,12 @@
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.scheduled_email') }}">
                                         <i class="fas fa-wrench fa-fw"></i> Scheduled email...
                                     </a>
+                                    {% if is_root or is_admin or is_emailer %}
+                                        <a class="dropdown-item d-flex gap-2"
+                                           href="{{ url_for('emailworkflow.email_workflows') }}">
+                                            <i class="fas fa-envelope-open-text fa-fw"></i> Email workflows...
+                                        </a>
+                                    {% endif %}
                                     <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.email_log') }}">
                                         <i class="fas fa-wrench fa-fw"></i> Email log...
                                     </a>

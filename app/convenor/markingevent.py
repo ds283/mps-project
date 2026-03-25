@@ -8,11 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-import json
 from functools import partial
 
 from flask import flash, jsonify, redirect, request, url_for
-from flask_security import current_user, roles_accepted
+from flask_security import roles_accepted
 from sqlalchemy import and_, func
 
 import app.ajax as ajax
@@ -34,7 +33,7 @@ from ..models import (
 )
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
-from ..shared.utils import get_current_year, redirect_url
+from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 from ..tools.ServerSideProcessing import ServerSideSQLHandler
 from . import convenor
@@ -99,17 +98,21 @@ def marking_events_ajax(pclass_id):
         .join(
             SubmissionPeriodRecord, SubmissionPeriodRecord.id == MarkingEvent.period_id
         )
+        .join(
+            ProjectClassConfig,
+            ProjectClassConfig.id == SubmissionPeriodRecord.config_id,
+        )
         .filter(
             and_(
                 SubmissionPeriodRecord.config.has(pclass_id=pclass.id),
-                SubmissionPeriodRecord.closed == True,
+                SubmissionPeriodRecord.closed.is_(True),
             )
         )
     )
 
     columns = {
         "period": {
-            "order": SubmissionPeriodRecord.name,
+            "order": ProjectClassConfig.year,
             "search": SubmissionPeriodRecord.name,
         },
         "name": {"order": MarkingEvent.name, "search": MarkingEvent.name},

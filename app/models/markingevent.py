@@ -7,10 +7,15 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+
 from ..database import db
 from .defaults import DEFAULT_STRING_LENGTH
+from .live_projects import SubmittingStudent
 from .model_mixins import EditingMetadataMixin
+from .project_class import ProjectClass, ProjectClassConfig
+from .students import StudentData
 from .submissions import SubmissionRoleTypesMixin
+from .users import User
 
 
 class MarkingSchemeMixin:
@@ -115,6 +120,15 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
     closed = db.Column(db.Boolean(), default=False, nullable=False)
 
     __table_args__ = (db.UniqueConstraint("period_id", "name"),)
+
+    # convenience accessors
+    @property
+    def config(self) -> ProjectClassConfig:
+        return self.period.config
+
+    @property
+    def pclass(self) -> ProjectClass:
+        return self.period.config.project_class
 
 
 # association table of PeriodAttachment instances that should be included with each workflow
@@ -336,6 +350,15 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
         "EmailLog", secondary=submitter_feedback_to_email_log, lazy="dynamic"
     )
 
+    # convenience accessors
+    @property
+    def submitter(self) -> SubmittingStudent:
+        return self.record.owner
+
+    @property
+    def student(self) -> StudentData:
+        return self.record.owner.student
+
 
 # association table of MarkingReport to EmailLog, to track distribution emails
 marking_distribution_to_email_log = db.Table(
@@ -430,3 +453,16 @@ class MarkingReport(db.Model, EditingMetadataMixin):
     def workflow(self):
         """Convenience accessor — the MarkingWorkflow is authoritative via the parent SubmitterReport."""
         return self.submitter_report.workflow
+
+    # convenience accessors
+    @property
+    def submitter(self) -> SubmittingStudent:
+        return self.submitter_report.submitter
+
+    @property
+    def student(self) -> StudentData:
+        return self.submitter_report.student
+
+    @property
+    def user(self) -> User:
+        return self.role.user

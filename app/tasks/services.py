@@ -27,11 +27,34 @@ def register_services_tasks(celery):
     def send_distribution_list(
             self, list_ids, notify_addresses, subject, body, reply_to, user_id
     ):
-        work = group(send_user_record.s(x, subject, body, reply_to) for x in list_ids)
+        try:
+            creator: User = db.session.query(User).filter_by(id=user_id).first() if user_id is not None else None
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        template = EmailTemplate.find_template_(EmailTemplate.SERVICES_SEND_EMAIL)
+        workflow = EmailWorkflow.build_(
+            name=f"Distribution email: {subject}",
+            template=template,
+            defer=timedelta(minutes=15),
+            creator=creator,
+        )
+        db.session.add(workflow)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        workflow_id = workflow.id
+
+        work = group(send_user_record.s(x, subject, body, reply_to, workflow_id) for x in list_ids)
 
         if isinstance(notify_addresses, list) and len(notify_addresses) > 0:
             notify = group(
-                send_notify.s(x, subject, body, reply_to) for x in notify_addresses
+                send_notify.s(x, subject, body, reply_to, workflow_id) for x in notify_addresses
             )
             work = work | notify
 
@@ -42,9 +65,10 @@ def register_services_tasks(celery):
         return self.replace(work)
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_user_record(self, user_id, subject, body, reply_to):
+    def send_user_record(self, user_id, subject, body, reply_to, workflow_id):
         try:
             record: User = db.session.query(User).filter_by(id=user_id).first()
+            workflow: EmailWorkflow = db.session.query(EmailWorkflow).filter_by(id=workflow_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -59,6 +83,16 @@ def register_services_tasks(celery):
                 )
             )
 
+        if workflow is None:
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load email workflow"}
+            )
+            raise KeyError(
+                "EmailWorkflow record corresponding to id={num} is missing".format(
+                    num=workflow_id
+                )
+            )
+
         body_text = render_template_string(
             body,
             name=record.name,
@@ -68,15 +102,6 @@ def register_services_tasks(celery):
 
         if isinstance(reply_to, str):
             reply_to = [reply_to]
-
-        template = EmailTemplate.find_template_(EmailTemplate.SERVICES_SEND_EMAIL)
-        workflow = EmailWorkflow.build_(
-            name=f"Direct email: {subject} → {record.name}",
-            template=template,
-            defer=timedelta(minutes=15),
-        )
-        db.session.add(workflow)
-        db.session.flush()
 
         item = EmailWorkflowItem.build_(
             subject_payload=encode_email_payload({"subject": subject}),
@@ -95,20 +120,27 @@ def register_services_tasks(celery):
             raise self.retry()
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_notify(self, prior_result, pair, subject, body, reply_to):
+    def send_notify(self, prior_result, pair, subject, body, reply_to, workflow_id):
         to_addr = formataddr(pair)
 
         if isinstance(reply_to, str):
             reply_to = [reply_to]
 
-        template = EmailTemplate.find_template_(EmailTemplate.SERVICES_CC_EMAIL)
-        workflow = EmailWorkflow.build_(
-            name=f"CC email: {subject} → {pair[1]}",
-            template=template,
-            defer=timedelta(minutes=15),
-        )
-        db.session.add(workflow)
-        db.session.flush()
+        try:
+            workflow: EmailWorkflow = db.session.query(EmailWorkflow).filter_by(id=workflow_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if workflow is None:
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load email workflow"}
+            )
+            raise KeyError(
+                "EmailWorkflow record corresponding to id={num} is missing".format(
+                    num=workflow_id
+                )
+            )
 
         item = EmailWorkflowItem.build_(
             subject_payload=encode_email_payload({"subject": subject}),
@@ -130,13 +162,36 @@ def register_services_tasks(celery):
     def send_email_list(
             self, to_addresses, notify_addresses, subject, body, reply_to, user_id
     ):
+        try:
+            creator: User = db.session.query(User).filter_by(id=user_id).first() if user_id is not None else None
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        template = EmailTemplate.find_template_(EmailTemplate.SERVICES_SEND_EMAIL)
+        workflow = EmailWorkflow.build_(
+            name=f"Email list: {subject}",
+            template=template,
+            defer=timedelta(minutes=15),
+            creator=creator,
+        )
+        db.session.add(workflow)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        workflow_id = workflow.id
+
         work = group(
-            send_email_addr.s(x, subject, body, reply_to) for x in to_addresses
+            send_email_addr.s(x, subject, body, reply_to, workflow_id) for x in to_addresses
         )
 
         if isinstance(notify_addresses, list) and len(notify_addresses) > 0:
             notify = group(
-                send_notify.s(x, subject, body, reply_to) for x in notify_addresses
+                send_notify.s(x, subject, body, reply_to, workflow_id) for x in notify_addresses
             )
             work = work | notify
 
@@ -147,20 +202,27 @@ def register_services_tasks(celery):
         return self.replace(work)
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_email_addr(self, pair, subject, body, reply_to):
+    def send_email_addr(self, pair, subject, body, reply_to, workflow_id):
         to_addr = formataddr(pair)
 
         if isinstance(reply_to, str):
-            reply_to = list[reply_to]
+            reply_to = [reply_to]
 
-        template = EmailTemplate.find_template_(EmailTemplate.SERVICES_SEND_EMAIL)
-        workflow = EmailWorkflow.build_(
-            name=f"Direct email: {subject} → {pair[1]}",
-            template=template,
-            defer=timedelta(minutes=15),
-        )
-        db.session.add(workflow)
-        db.session.flush()
+        try:
+            workflow: EmailWorkflow = db.session.query(EmailWorkflow).filter_by(id=workflow_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if workflow is None:
+            self.update_state(
+                "FAILURE", meta={"msg": "Could not load email workflow"}
+            )
+            raise KeyError(
+                "EmailWorkflow record corresponding to id={num} is missing".format(
+                    num=workflow_id
+                )
+            )
 
         item = EmailWorkflowItem.build_(
             subject_payload=encode_email_payload({"subject": subject}),

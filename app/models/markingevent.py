@@ -77,6 +77,9 @@ class MarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
         - "text" -> TextField
         - "number" -> FloatField, with a suitable default if the "default" key is present, and "min"/"max" values enforced by validators. The "precision" key should be implemented by rounding the output to the required precision.
         - "percent" -> FloatField, but with "min"/"max" automatically chosen to be 0 and 100, and a precision of 1
+
+    The validation "test" and "conflation_rule" fields should be valid Python expressions that evaluate to a boolean and a float representing a percentage, respectively.
+    They should use variables corresponding to the keys defined in the questions. To evaluate them, these keys will be replaced with the submitted response.
     """
 
     __tablename__ = "marking_schemes"

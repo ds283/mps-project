@@ -10,6 +10,9 @@
 
 from flask import current_app, get_template_attribute, render_template, url_for
 from jinja2 import Template
+from markupsafe import escape
+
+from ...shared.forms.wtf_validators import parse_schema
 
 # language=jinja2
 _marking_event_period = """
@@ -364,25 +367,87 @@ def marking_report_data(reports):
     ]
 
 
+_POPOVER_TEXT_MAX = 80
+
+
+def _parse_scheme_schema(scheme) -> list | None:
+    """Adapter: extract and validate schema from a MarkingScheme or LiveMarkingScheme object."""
+    try:
+        raw = scheme.schema_as_dict
+    except Exception:
+        return None
+    return parse_schema(raw)
+
+
+def _make_schema_block_summaries(blocks) -> list | None:
+    """
+    Convert a validated list of schema blocks (from parse_schema) into a list of
+    summary dicts suitable for passing to the _marking_scheme_schema template.
+    Returns None if blocks is None.
+    """
+    if blocks is None:
+        return None
+
+    summaries = []
+    for block in blocks:
+        lines = []
+        for field in block["fields"]:
+            text = field["text"]
+            if len(text) > _POPOVER_TEXT_MAX:
+                text = text[:_POPOVER_TEXT_MAX] + "\u2026"
+            field_type = field["field_type"]["type"]
+            lines.append(
+                f"<span class='badge bg-secondary'>{escape(field_type)}</span> {escape(text)}"
+            )
+        summaries.append(
+            {
+                "title": str(escape(block["title"])),
+                "question_count": len(block["fields"]),
+                "popover_html": "<br>".join(lines),
+            }
+        )
+
+    return summaries
+
+
 # language=jinja2
 _marking_scheme_name = """
-<div class="fw-semibold">{{ scheme.name }}</div>
+<div class="text-primary">{{ scheme.name }}</div>
 """
 
 # language=jinja2
 _marking_scheme_details = """
-<div class="small">
+<div class="small d-flex flex-column justify-content-start align-items-start gap-2">
     {% if scheme.uses_standard_feedback %}
-        <span class="badge bg-success">Standard feedback</span>
-    {% else %}
-        <span class="badge bg-secondary">No standard feedback</span>
+        <div class="text-success"><i class="fas fa-check-circle"></i> Standard feedback</div>
+    {% endif %}
+    {% if scheme.uses_tolerance %}
+        <div class="text-success"><i class="fas fa-check-circle"></i> Enforce tolerance: {{ "%.1f"|format(scheme.marker_tolerance) }}%</div>
     {% endif %}
 </div>
 """
 
 # language=jinja2
-_marking_scheme_tolerance = """
-<div>{{ "%.1f"|format(scheme.marker_tolerance) }}%</div>
+_marking_scheme_schema = """
+{% if schema_blocks %}
+    <div class="d-flex flex-column gap-2 small">
+        {% for block in schema_blocks %}
+            <div>
+                <span tabindex="0"
+                      role="button"
+                      data-bs-toggle="popover"
+                      data-bs-trigger="hover focus"
+                      data-bs-html="true"
+                      data-bs-title="{{ block.title }}"
+                      data-bs-content="{{ block.popover_html }}"
+                      class="text-primary">{{ block.title }}</span>
+                <span class="ms-1 text-muted">&ndash; {{ block.question_count }} question{{ 's' if block.question_count != 1 else '' }}</span>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <span class="badge bg-secondary">No schema</span>
+{% endif %}
 """
 
 # language=jinja2
@@ -407,14 +472,20 @@ def marking_scheme_data(url, text, schemes):
 
     name_tmpl = env.from_string(_marking_scheme_name)
     details_tmpl = env.from_string(_marking_scheme_details)
-    tolerance_tmpl = env.from_string(_marking_scheme_tolerance)
+    schema = env.from_string(_marking_scheme_schema)
     menu_tmpl = env.from_string(_marking_scheme_menu)
 
     return [
         {
             "name": render_template(name_tmpl, scheme=scheme),
             "details": render_template(details_tmpl, scheme=scheme),
-            "tolerance": render_template(tolerance_tmpl, scheme=scheme),
+            "schema": render_template(
+                schema,
+                scheme=scheme,
+                schema_blocks=_make_schema_block_summaries(
+                    _parse_scheme_schema(scheme)
+                ),
+            ),
             "menu": render_template(menu_tmpl, scheme=scheme, url=url, text=text),
         }
         for scheme in schemes

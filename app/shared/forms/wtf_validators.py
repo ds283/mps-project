@@ -791,6 +791,66 @@ def valid_json(form, field):
         raise ValidationError("Could not translate to a valid JSON object")
 
 
+_VALID_MARKING_FIELD_TYPES = {"boolean", "text", "number", "percent"}
+
+
+def parse_schema(data) -> list | None:
+    """
+    Validate the structure of a deserialized marking scheme schema.
+    `data` should be a Python object obtained from json.loads().
+    Returns the validated list of blocks, or None if the structure is invalid.
+
+    Expected layout: a list of blocks, each block a dict with:
+        "title": str
+        "fields": list of dicts, each with:
+            "key": str
+            "text": str
+            "field_type": dict with "type" in {"boolean", "text", "number", "percent"}
+    """
+    if not isinstance(data, list):
+        return None
+
+    for block in data:
+        if not isinstance(block, dict):
+            return None
+        if not isinstance(block.get("title"), str):
+            return None
+        fields = block.get("fields")
+        if not isinstance(fields, list):
+            return None
+        for field in fields:
+            if not isinstance(field, dict):
+                return None
+            if not isinstance(field.get("key"), str):
+                return None
+            if not isinstance(field.get("text"), str):
+                return None
+            ft = field.get("field_type")
+            if not isinstance(ft, dict):
+                return None
+            if ft.get("type") not in _VALID_MARKING_FIELD_TYPES:
+                return None
+
+    return data
+
+
+def valid_marking_schema(form, field):
+    """WTForms validator: checks that the field contains valid JSON conforming to the marking schema layout."""
+    try:
+        data = json.loads(field.data)
+    except TypeError:
+        raise ValidationError("Unexpected text encoding in schema")
+    except json.JSONDecodeError:
+        raise ValidationError("Schema is not valid JSON")
+
+    if parse_schema(data) is None:
+        raise ValidationError(
+            "Schema does not conform to the required layout: "
+            "expected a list of blocks, each with a title and a list of fields "
+            "(key, text, field_type with type one of boolean/text/number/percent)"
+        )
+
+
 def password_strength(form, field):
     username = form.username.data or ""
     first_name = form.first_name.data or ""

@@ -7,6 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+import json
 
 from ..database import db
 from .defaults import DEFAULT_STRING_LENGTH
@@ -42,6 +43,10 @@ class MarkingSchemeMixin:
     # tolerance between different markers before a moderation intervention is required,
     # expressed as a percentage
     marker_tolerance = db.Column(db.Numeric(8, 3), default=15)
+
+    @property
+    def schema_as_dict(self):
+        return json.loads(self.schema)
 
 
 class MarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):

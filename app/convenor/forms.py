@@ -75,6 +75,7 @@ from ..shared.forms.wtf_validators import (
     globally_unique_supervision_event_template,
     unique_or_original_submission_unit,
     unique_or_original_supervision_event_template,
+    valid_marking_schema,
 )
 
 
@@ -916,6 +917,7 @@ class MarkingSchemeMixin:
     schema = TextAreaField(
         "Schema (JSON)",
         description="Specify the marking scheme by defining a series of questions. For each question, specify the field type.",
+        validators=[valid_marking_schema],
     )
 
     uses_standard_feedback = BooleanField(

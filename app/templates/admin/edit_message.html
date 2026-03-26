@@ -21,10 +21,10 @@
                 placeholder: 'Leave blank to broadcast to all users'
             });
             tinymce.init({
-              selector: '#body-editor',
-                plugins: 'lists advlist autolink autosave codesample emoticons fullscreen hr link charmap wordcount',
-              toolbar: 'undo redo | styles removeformat | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | hr link codesample emoticons charmap | restoredraft paste pastetext | fullscreen',
-              menubar: 'false'
+                selector: '#body-editor',
+                plugins: 'lists advlist autolink autosave codesample emoticons fullscreen link searchreplace table visualblocks charmap wordcount',
+                toolbar: 'undo redo | blocks styles fontfamily fontsize forecolor backcolor removeformat | bold italic | alignleft aligncenter alignright alignjustify lineheight | outdent indent | numlist bullist table | link codesample emoticons charmap | restoredraft paste pastetext visualblocks | fullscreen',
+                menubar: 'edit insert view table',
             });
         });
     </script>
@@ -53,7 +53,7 @@
         <form action="{{ url_for('admin.add_message') }}" method="POST" name="message_form">
     {% endif %}
 
-        {{ form.hidden_tag() }}
+{{ form.hidden_tag() }}
 
 <div class="card mt-3 mb-3 card-body bg-well">
     {{ wtf.render_field(form.project_classes) }}
@@ -73,12 +73,12 @@
     {{ wtf.render_field(form.dismissible) }}
 </div>
 
-        <hr class="intro-divider">
+<hr class="intro-divider">
 
-        {{ wtf.render_field(form.title) }}
-        {{ wtf.render_field(form.body, id='body-editor') }}
+{{ wtf.render_field(form.title) }}
+{{ wtf.render_field(form.body, id='body-editor') }}
 
-        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+{{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
-    </form>
+</form>
 {% endblock %}

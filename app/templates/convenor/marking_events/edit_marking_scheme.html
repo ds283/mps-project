@@ -16,8 +16,9 @@
         $(document).ready(function () {
             tinymce.init({
                 selector: '#title-editor, #rubric-editor',
-                plugins: 'lists advlist autolink link charmap wordcount',
-                toolbar: 'undo redo | styles forecolor backcolor removeformat | bold italic | alignleft aligncenter alignright | numlist bullist | link charmap',
+                plugins: 'lists advlist autolink autosave codesample emoticons fullscreen link searchreplace table visualblocks charmap wordcount',
+                toolbar: 'undo redo | blocks styles fontfamily fontsize forecolor backcolor removeformat | bold italic | alignleft aligncenter alignright alignjustify lineheight | outdent indent | numlist bullist table | link codesample emoticons charmap | restoredraft paste pastetext visualblocks | fullscreen',
+                menubar: 'edit insert view table',
                 menubar: false
             });
 

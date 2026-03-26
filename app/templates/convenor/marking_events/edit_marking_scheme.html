@@ -47,6 +47,24 @@
                     alert("Invalid JSON: " + e.message);
                 }
             });
+
+            function updateToleranceFields() {
+                var usesTolerance = $('#uses_tolerance').prop('checked');
+
+                if (usesTolerance) {
+                    $('#marker-tolerance-section').show();
+                } else {
+                    $('#marker-tolerance-section').hide();
+                }
+            }
+
+            // run on page load
+            updateToleranceFields();
+
+            // run on checkbox change
+            $('#uses_tolerance').on('change', function () {
+                updateToleranceFields();
+            });
         });
     </script>
 
@@ -80,7 +98,10 @@
 
 {{ wtf.render_field(form.name) }}
 {{ wtf.render_field(form.uses_standard_feedback) }}
-{{ wtf.render_field(form.marker_tolerance) }}
+{{ wtf.render_field(form.uses_tolerance) }}
+<div class="mt-2" id="marker-tolerance-section">
+    {{ wtf.render_field(form.marker_tolerance) }}
+</div>
 
 <div class="card mt-3 mb-3 card-body bg-well">
     <p class="form-group-heading text-secondary fw-semibold mb-3">Marking form</p>

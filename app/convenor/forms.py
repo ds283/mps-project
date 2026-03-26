@@ -924,6 +924,12 @@ class MarkingSchemeMixin:
         description="Select if this scheme uses the standard feedback fields (what was good / suggestions for improvement)",
     )
 
+    uses_tolerance = BooleanField(
+        "Out-of-tolerance events between markers should trigger a moderation event",
+        description="Differences that are out-of-tolerance will trigger a moderator intervention",
+        default=True,
+    )
+
     marker_tolerance = DecimalField(
         "Marker tolerance (%)",
         places=1,
@@ -932,7 +938,6 @@ class MarkingSchemeMixin:
             InputRequired(message="A marker tolerance value is required"),
             NumberRange(min=0, max=100, message="Tolerance must be between 0 and 100"),
         ],
-        description="Differences that are out-of-tolerance will trigger a moderator intervention",
     )
 
 

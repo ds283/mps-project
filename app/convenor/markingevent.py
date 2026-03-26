@@ -436,6 +436,7 @@ def add_marking_scheme(pclass_id):
             rubric=form.rubric.data,
             schema=form.schema.data,
             uses_standard_feedback=form.uses_standard_feedback.data,
+            uses_tolerance=form.uses_tolerance.data,
             marker_tolerance=form.marker_tolerance.data,
             creator_id=current_user.id,
             creation_timestamp=datetime.now(),
@@ -493,6 +494,7 @@ def edit_marking_scheme(scheme_id):
         scheme.rubric = form.rubric.data
         scheme.schema = form.schema.data
         scheme.uses_standard_feedback = form.uses_standard_feedback.data
+        scheme.uses_tolerance = form.uses_tolerance.data
         scheme.marker_tolerance = form.marker_tolerance.data
         scheme.last_edit_id = current_user.id
         scheme.last_edit_timestamp = datetime.now()

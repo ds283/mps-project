@@ -34,7 +34,10 @@ class MarkingSchemeMixin:
     schema = db.Column(db.Text(), nullable=False)
 
     # are the standard feedback fields (what was good/suggestions for improvement) used?
-    uses_standard_feedback = db.Column(db.Boolean(), default=False)
+    uses_standard_feedback = db.Column(db.Boolean(), default=False, nullable=False)
+
+    # does this mark scheme use moderators to arbitrate between different markers when they return values out of tolerance?
+    uses_tolerance = db.Column(db.Boolean(), default=False, nullable=False)
 
     # tolerance between different markers before a moderation intervention is required,
     # expressed as a percentage

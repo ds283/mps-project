@@ -1,0 +1,146 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import edit_data %}
+{% from "tinymce.html" import import_tinymce %}
+{% from "codemirror-v5-json.html" import import_codemirror_v5_json %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_tinymce() }}
+    {{ import_codemirror_v5_json() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            tinymce.init({
+                selector: '#title-editor, #rubric-editor',
+                plugins: 'lists advlist autolink link charmap wordcount',
+                toolbar: 'undo redo | styles forecolor backcolor removeformat | bold italic | alignleft aligncenter alignright | numlist bullist | link charmap',
+                menubar: false
+            });
+
+            const editor = CodeMirror.fromTextArea(document.getElementById("schema-editor"), {
+                mode: {name: "javascript", json: true},  // JSON is a subset of the JS mode
+                lineNumbers: true,
+                matchBrackets: true,
+                autoCloseBrackets: true,
+                lint: true,                  // Red gutter markers on invalid JSON
+                gutters: [
+                    "CodeMirror-lint-markers",
+                    "CodeMirror-linenumbers",
+                    "CodeMirror-foldgutter"    // Remove if not using folding
+                ],
+                foldGutter: true,            // Remove if not using folding
+                lineWrapping: false,         // JSON is usually easier without wrapping
+                tabSize: 2,
+                indentWithTabs: false,
+            });
+
+            document.getElementById("format-btn").addEventListener("click", () => {
+                try {
+                    const raw = editor.getValue();
+                    const formatted = JSON.stringify(JSON.parse(raw), null, 2);
+                    editor.setValue(formatted);
+                } catch (e) {
+                    alert("Invalid JSON: " + e.message);
+                }
+            });
+        });
+    </script>
+
+    <style>
+        .CodeMirror {
+            height: 400px;
+            border: 1px solid #ced4da; /* Match Bootstrap's form-control border */
+            border-radius: 0.375rem;
+        }
+    </style>
+{% endblock %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {{ formtitle|safe }}
+{% endblock %}
+
+{% block form_content %}
+    {% if scheme %}
+        <form action="{{ url_for('convenor.edit_marking_scheme', scheme_id=scheme.id, url=url, text=text) }}"
+              method="POST" name="marking_scheme_form">
+    {% else %}
+        <form action="{{ url_for('convenor.add_marking_scheme', pclass_id=pclass.id, url=url, text=text) }}"
+              method="POST" name="marking_scheme_form">
+    {% endif %}
+
+{{ form.hidden_tag() }}
+
+{{ wtf.render_field(form.name) }}
+{{ wtf.render_field(form.uses_standard_feedback) }}
+{{ wtf.render_field(form.marker_tolerance) }}
+
+<div class="card mt-3 mb-3 card-body bg-well">
+    <p class="form-group-heading text-secondary fw-semibold mb-3">Marking form</p>
+    <div class="mb-3">
+        <label class="form-label fw-semibold">{{ form.title.label.text }}</label>
+        {% if form.title.description %}
+            <div class="form-text text-muted mb-2">{{ form.title.description }}</div>
+        {% endif %}
+        {{ form.title(id='title-editor', class='form-control') }}
+        {% if form.title.errors %}
+            {% for error in form.title.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    <div class="mb-3">
+        <label class="form-label fw-semibold">{{ form.rubric.label.text }}</label>
+        {% if form.rubric.description %}
+            <div class="form-text text-muted mb-2">{{ form.rubric.description }}</div>
+        {% endif %}
+        {{ form.rubric(id='rubric-editor', class='form-control') }}
+        {% if form.rubric.errors %}
+            {% for error in form.rubric.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mt-3 mb-3 card-body bg-well">
+    <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline">
+        <div class="form-group-heading text-secondary fw-semibold mb-3">JSON mark scheme definition</div>
+        <button type="button" id="format-btn" class="btn btn-sm btn-secondary">
+            Format JSON
+        </button>
+    </div>
+    <div>
+        <label class="form-label fw-semibold">{{ form.schema.label.text }}</label>
+        {% if form.schema.label.description %}
+            <div class="form-text text-muted mb-2">{{ form.schema.description }}</div>
+        {% endif %}
+        {{ form.schema(id='schema-editor', class='form-control', style='font-family: monospace; font-size: 0.875rem;') }}
+        {% if form.schema.errors %}
+            {% for error in form.schema.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+{{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+
+{#        {% if url and text %}#}
+{#            <a href="{{ url }}" class="btn btn-outline-secondary ms-2">{{ text }}</a>#}
+{#        {% endif %}#}
+
+</form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(scheme) }}
+    {{ super() }}
+{% endblock %}

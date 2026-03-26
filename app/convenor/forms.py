@@ -15,6 +15,7 @@ from flask_security.forms import Form
 from wtforms import (
     BooleanField,
     DateTimeField,
+    DecimalField,
     IntegerField,
     SelectField,
     StringField,
@@ -899,3 +900,61 @@ def EditSupervisionEventTemplateFormFactory(unit: SubmissionPeriodUnit):
         )
 
     return EditSupervisionEventTemplateForm
+
+
+class MarkingSchemeMixin:
+    title = TextAreaField(
+        "Title",
+        description="HTML-formatted title displayed at the top of the marking form",
+    )
+
+    rubric = TextAreaField(
+        "Rubric",
+        description="HTML-formatted instructions and guidance displayed to markers",
+    )
+
+    schema = TextAreaField(
+        "Schema (JSON)",
+        description="Specify the marking scheme by defining a series of questions. For each question, specify the field type.",
+    )
+
+    uses_standard_feedback = BooleanField(
+        "Uses standard feedback fields",
+        default=False,
+        description="Select if this scheme uses the standard feedback fields (what was good / suggestions for improvement)",
+    )
+
+    marker_tolerance = DecimalField(
+        "Marker tolerance (%)",
+        places=1,
+        default=15,
+        validators=[
+            InputRequired(message="A marker tolerance value is required"),
+            NumberRange(min=0, max=100, message="Tolerance must be between 0 and 100"),
+        ],
+        description="Differences that are out-of-tolerance will trigger a moderator intervention",
+    )
+
+
+class AddMarkingSchemeForm(Form, MarkingSchemeMixin):
+    name = StringField(
+        "Name",
+        validators=[
+            InputRequired(message="A name is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
+        description="Unique name for this marking scheme",
+    )
+
+    submit = SubmitField("Add marking scheme")
+
+
+class EditMarkingSchemeForm(Form, MarkingSchemeMixin, SaveChangesMixin):
+    name = StringField(
+        "Name",
+        validators=[
+            InputRequired(message="A name is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
+        description="Unique name for this marking scheme",
+    )

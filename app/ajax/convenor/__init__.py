@@ -29,6 +29,7 @@ from .manual_assign import manual_assign_data
 from .markingevent import (
     marking_event_data,
     marking_workflow_data,
+    marking_scheme_data,
     submitter_report_data,
     marking_report_data,
 )

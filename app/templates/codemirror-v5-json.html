@@ -1,0 +1,27 @@
+{% macro import_codemirror_v5_json() %}
+    <!-- Core -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.js"></script>
+
+    <!-- JSON mode (uses the JavaScript mode underneath) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/mode/javascript/javascript.min.js"></script>
+
+    <!-- Linting support (optional but recommended) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/lint/lint.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/lint/json-lint.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/lint/lint.css">
+
+    <!-- jsonlint — required by the lint addon -->
+    <script src="https://cdn.jsdelivr.net/npm/jsonlint@1.6.3/web/jsonlint.min.js"></script>
+
+    <!-- Bracket matching & auto-close -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/edit/closebrackets.min.js"></script>
+
+    <!-- Fold/collapse JSON sections (optional) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldgutter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/brace-fold.min.js"></script>
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldgutter.min.css">
+{% endmacro %}

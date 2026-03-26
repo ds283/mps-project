@@ -362,3 +362,60 @@ def marking_report_data(reports):
         }
         for report in reports
     ]
+
+
+# language=jinja2
+_marking_scheme_name = """
+<div class="fw-semibold">{{ scheme.name }}</div>
+"""
+
+# language=jinja2
+_marking_scheme_details = """
+<div class="small">
+    {% if scheme.uses_standard_feedback %}
+        <span class="badge bg-success">Standard feedback</span>
+    {% else %}
+        <span class="badge bg-secondary">No standard feedback</span>
+    {% endif %}
+</div>
+"""
+
+# language=jinja2
+_marking_scheme_tolerance = """
+<div>{{ "%.1f"|format(scheme.marker_tolerance) }}%</div>
+"""
+
+# language=jinja2
+_marking_scheme_menu = """
+<div class="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        Actions
+    </button>
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_marking_scheme', scheme_id=scheme.id, url=url, text=text) }}">
+            <i class="fas fa-edit fa-fw"></i> Edit scheme&hellip;
+        </a>
+    </div>
+</div>
+"""
+
+
+def marking_scheme_data(url, text, schemes):
+    """Format a MarkingScheme row for DataTables"""
+
+    env = current_app.jinja_env
+
+    name_tmpl = env.from_string(_marking_scheme_name)
+    details_tmpl = env.from_string(_marking_scheme_details)
+    tolerance_tmpl = env.from_string(_marking_scheme_tolerance)
+    menu_tmpl = env.from_string(_marking_scheme_menu)
+
+    return [
+        {
+            "name": render_template(name_tmpl, scheme=scheme),
+            "details": render_template(details_tmpl, scheme=scheme),
+            "tolerance": render_template(tolerance_tmpl, scheme=scheme),
+            "menu": render_template(menu_tmpl, scheme=scheme, url=url, text=text),
+        }
+        for scheme in schemes
+    ]

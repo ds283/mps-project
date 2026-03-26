@@ -54,7 +54,8 @@ class MarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
     Represents a marking scheme to be used as part of a marking workflow.
     The mark scheme defines what questions are asked. This is encoded in a JSON-serialized schema.
     The schema may is an ordered list of blocks. Each block is a dict with the following keys:
-        - "title": string to be displayed as the title of the block
+        - "title": HTML-formatted string to be displayed as the title of the block
+        - "description": optional HTML-formatted string to be displayed below the title, describing the purpose of this block
         - "fields": ordered list of questions. Each question is a dict with the following keys:
             - "key": string used as a unique identified for the question
             - "text": text of the question, should be formatted on the marking form that is presented to the user
@@ -63,6 +64,13 @@ class MarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
                 * "min", "max": used with the number type to specify maximum and minimum allowed values
                 * "precision": used with the number type to specify the number of decimal places that are retained
                 * "default": an optional default value
+        - "validation": A list of tests used to validate the response. Each test is a dict with the following keys:
+            - "test": string representing the test as a valid Python expression, with variables corresponding to the keys in the questions
+            - "action": a list action to take if validation fails. The available actions are
+                * "prevent_submit": the marking report should fail validation, so that it cannot be submitted at all. If "prevent_submit" is used it should be the only action.
+                * "email": generate an email to the convenor (and possibly other users) to with a notification of the validation failure.
+                * "web": show this validation failure to the convenor in the web interface
+        - "conflation_rule": string representing a valid Python expression the conflation rule used to generate a grade from this report, with variables corresponding to the keys in the questions
 
     The different field types map to WTForms fields:
         - "boolean" -> BooleanField, with a suitable default if the "default" key is present
@@ -160,6 +168,31 @@ marking_workflow_to_attachments = db.Table(
     ),
 )
 
+# association table linking users to a marking workflow, who should be notified when an out-of-tolerance situation is detected and
+# moderation is required
+notify_on_moderation_required = db.Table(
+    "notify_on_moderation_required",
+    db.Column("user_id", db.Integer(), db.ForeignKey("users.id"), primary_key=True),
+    db.Column(
+        "marking_workflow_id",
+        db.Integer(),
+        db.ForeignKey("marking_workflows.id"),
+        primary_key=True,
+    ),
+)
+
+## assocation table linking users to a marking workflow, who should be notified when an email is generated due to a validation failure
+notify_on_validation_failure = db.Table(
+    "notify_on_validation_failure",
+    db.Column("user_id", db.Integer(), db.ForeignKey("users.id"), primary_key=True),
+    db.Column(
+        "marking_workflow_id",
+        db.Integer(),
+        db.ForeignKey("marking_workflows.id"),
+        primary_key=True,
+    ),
+)
+
 
 class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
     """
@@ -186,6 +219,8 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
     # globally unique
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
+    __table_args__ = (db.UniqueConstraint("event_id", "name"),)
+
     # role that this workflow targets. All SubmissionRole instances that belong to the ProjectClassConfig for the parent MarkingEvent
     # and have this role will be assigned to this workflow
     role = db.Column(db.Integer(), nullable=False)
@@ -211,7 +246,15 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
         backref=db.backref("marking_workflows", lazy="dynamic"),
     )
 
-    __table_args__ = (db.UniqueConstraint("event_id", "name"),)
+    # list of users to notify when an out-of-tolerance situation is detected and moderation is required
+    notify_on_moderation_required = db.relationship(
+        "User", secondary=notify_on_moderation_required, lazy="dynamic"
+    )
+
+    # list of users to notify when an email is generated due to a validation failure
+    notify_on_validation_failure = db.relationship(
+        "User", secondary=notify_on_validation_failure, lazy="dynamic"
+    )
 
     # note that the "submitter_reports" property is set back backref from the SubmitterReport relationship
 
@@ -288,6 +331,21 @@ submitter_report_to_feedback_report = db.Table(
 )
 
 
+class SubmitterReportWorkflowStates:
+    NOT_READY = 999
+    READY_TO_DISTRIBUTE = 0
+    AWAITING_GRADING_REPORTS = 1
+    AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF = 2
+    AWAITING_FEEDBACK = 3
+    REPORTS_OUT_OF_TOLERANCE = 4
+    NEEDS_MODERATOR_ASSIGNED = 5
+    AWAITING_MODERATOR_REPORT = 6
+    READY_TO_GENERATE_GRADE = 7
+    READY_TO_SIGN_OFF = 8
+    READY_TO_GENERATE_FEEDBACK = 9
+    READY_TO_PUSH_FEEDBACK = 10
+
+
 class SubmitterReport(db.Model, EditingMetadataMixin):
     """
     Represents a consolidated marking report for a single submitter
@@ -318,6 +376,11 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
         foreign_keys=[workflow_id],
         uselist=False,
         backref=db.backref("submitter_reports", lazy="dynamic"),
+    )
+
+    # current workflow state
+    workflow_state = db.Column(
+        db.Integer(), nullable=False, default=SubmitterReportWorkflowStates.NOT_READY
     )
 
     # aggregated grade

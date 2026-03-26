@@ -1216,6 +1216,10 @@ class ScheduledTaskMixin:
             "Check for prompts to record attendance for a supervision event",
         ),
         ("celery.backend_cleanup", "Periodic Celery backend cleanup"),
+        (
+            "app.tasks.workflow_log.prune_workflow_log",
+            "Prune workflow log",
+        ),
     ]
 
     task = SelectField("Task", choices=tasks_available)

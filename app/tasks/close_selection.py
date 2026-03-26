@@ -27,6 +27,7 @@ from ..models import (
     User,
 )
 from ..models.emails import encode_email_payload
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update, register_task
 
 
@@ -145,7 +146,12 @@ def register_close_selection_tasks(celery):
             )
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Marked selection closed for '{config.name}' {config.submit_year_a}-{config.submit_year_b}",
+                user=convenor,
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -188,7 +194,12 @@ def register_close_selection_tasks(celery):
             db.session.add(item)
 
             try:
-                db.session.commit()
+                log_db_commit(
+                    f"Stored convenor email workflow notification for closing '{config.project_class.name}' selections",
+                    user=convenor,
+                    project_classes=config.project_class,
+                    endpoint=self.name,
+                )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -217,7 +228,11 @@ def register_close_selection_tasks(celery):
                 autocommit=False,
             )
 
-        db.session.commit()
+        log_db_commit(
+            "Posted close-selections failure message to convenor",
+            user=convenor,
+            endpoint=self.name,
+        )
 
     @celery.task(bind=True)
     def selector_close(self, sel_id):
@@ -255,7 +270,11 @@ def convert_bookmarks(sel):
     sel.submission_IP = None
 
     # allow exceptions to propagate up to calling function
-    db.session.commit()
+    log_db_commit(
+        f"Converted bookmarks to selection records for selector '{sel.student.user.name}'",
+        user=None,
+        project_classes=sel.config.project_class,
+    )
 
 
 def sanitize(sel):
@@ -267,4 +286,8 @@ def sanitize(sel):
             item.hint = SelectionRecord.SELECTION_HINT_NEUTRAL
 
     # allow exceptions to propagate up to calling function
-    db.session.commit()
+    log_db_commit(
+        f"Sanitized selection records for selector '{sel.student.user.name}'",
+        user=None,
+        project_classes=sel.config.project_class,
+    )

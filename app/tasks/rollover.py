@@ -49,6 +49,7 @@ from ..shared.convenor import add_blank_submitter, add_selector
 from ..shared.sqlalchemy import get_count
 from ..shared.tasks import post_task_update_msg
 from ..shared.utils import get_current_year
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update
 
 
@@ -154,7 +155,13 @@ def insert_new_pclass_config(self, old_config: ProjectClassConfig, convenor_id: 
             old_config.tasks.remove(tk)
             new_config.tasks.append(tk)
 
-        db.session.commit()
+        log_db_commit(
+            f"Created new ProjectClassConfig for {pclass.name} year {new_year} "
+            f"(rolled over from config #{old_config.id}), generated submission period records, "
+            f"retired old period records, and transferred rollover tasks",
+            project_classes=pclass,
+            endpoint=self.name,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -208,7 +215,10 @@ def register_rollover_tasks(celery):
                 db.session.flush()
                 db.session.delete(attempt)
 
-            db.session.commit()
+            log_db_commit(
+                f"Pruned {len(unused_attempts)} unused MatchingAttempt record(s) for year {current_year}",
+                endpoint=self.name,
+            )
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -719,7 +729,12 @@ def register_rollover_tasks(celery):
                 autocommit=False,
             )
 
-        db.session.commit()
+        log_db_commit(
+            f"Rollover finalized for {config.name}: posted success messages and UI updates to convenor",
+            user=convenor,
+            project_classes=config.project_class,
+            endpoint=self.name,
+        )
 
     @celery.task(bind=True)
     def rollover_fail(self, task_id, convenor_id):
@@ -769,7 +784,10 @@ def register_rollover_tasks(celery):
         item.retired = True
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Retired SelectingStudent #{sid} (student: {item.student.user.name})",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -804,7 +822,11 @@ def register_rollover_tasks(celery):
             rec.retired = True
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Retired SubmittingStudent #{sid} (student: {item.student.user.name}) "
+                f"and all associated SubmissionRecords",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -992,7 +1014,13 @@ def register_rollover_tasks(celery):
                             "assignment".format(num=match_rec.submission_period)
                         )
 
-                db.session.commit()
+                log_db_commit(
+                    f"Converted selector {selector.student.user.name} to SubmittingStudent "
+                    f"#{new_submitter.id} with {len(match_records)} SubmissionRecord(s) from match "
+                    f'"{match.name}"',
+                    project_classes=new_config.project_class,
+                    endpoint=self.name,
+                )
 
             except SQLAlchemyError as e:
                 db.session.rollback()
@@ -1167,7 +1195,12 @@ def register_rollover_tasks(celery):
 
                                     db.session.add(new_role)
 
-                            db.session.commit()
+                            log_db_commit(
+                                f"Converted selector {selector.student.user.name} to SubmittingStudent "
+                                f"#{new_submitter.id} carrying over project assignment(s) from previous year",
+                                project_classes=new_config.project_class,
+                                endpoint=self.name,
+                            )
 
                         else:
                             print("!!     failed to locate previous submitter record")
@@ -1372,7 +1405,12 @@ def register_rollover_tasks(celery):
                         linked_selector_id=generated_selector_id,
                     )
 
-            db.session.commit()
+            log_db_commit(
+                f"Auto-attached selector/submitter records for student {student.user.name} "
+                f"to {config.name} (new config #{new_config_id}, academic year {current_year})",
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1402,7 +1440,11 @@ def register_rollover_tasks(celery):
         record.CATS_presentation = None
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Cleared CATS allocations on EnrollmentRecord #{rec_id} "
+                f"(faculty: {record.owner.user.name}, pclass: {record.pclass.name})",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1513,7 +1555,11 @@ def register_rollover_tasks(celery):
                     )
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Re-enrolled faculty {record.owner.user.name} as needed for {record.pclass.name} "
+                f"(EnrollmentRecord #{rec_id}) based on re-enrolment dates for year {current_year}",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1572,7 +1618,11 @@ def register_rollover_tasks(celery):
             record.validated_timestamp = None
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Reset approval lifecycle for ProjectDescription #{desc_id} "
+                f'("{record.label}" on project "{record.parent.name}")',
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1596,7 +1646,10 @@ def register_rollover_tasks(celery):
         db.session.delete(record)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Removed stale ConfirmRequest #{request_id} during rollover",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

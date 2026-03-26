@@ -54,6 +54,7 @@ from ..models import (
 from ..models.emails import encode_email_payload
 from ..shared.actions import do_cancel_confirm, do_confirm, do_deconfirm_to_pending
 from ..shared.context.global_context import render_template_context
+from ..shared.workflow_logging import log_db_commit
 from ..shared.projects import (
     project_list_in_memory_handler,
 )
@@ -112,7 +113,11 @@ def issue_confirm_requests(id):
                 config.request_deadline = deadline
 
                 try:
-                    db.session.commit()
+                    log_db_commit(
+                        f'Adjusted confirmation deadline for "{config.name}" to {deadline}',
+                        user=current_user,
+                        project_classes=config.project_class,
+                    )
                     flash(
                         'The project confirmation deadline for "{proj}" has been successfully changed '
                         "to {deadline}.".format(
@@ -171,7 +176,11 @@ def issue_confirm_requests(id):
             config.confirmation_required = []
 
             try:
-                db.session.commit()
+                log_db_commit(
+                    f'Skipped faculty confirmation requests for "{config.name}"',
+                    user=current_user,
+                    project_classes=config.project_class,
+                )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -643,7 +652,11 @@ def force_confirm_all(id):
             task_args_list.append((rec.owner_id, config.pclass_id))
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Force-confirmed all outstanding project confirmations for "{config.name}"',
+            user=current_user,
+            project_classes=config.project_class,
+        )
         flash("All outstanding confirmation requests have been removed.", "success")
 
     except SQLAlchemyError as e:
@@ -705,7 +718,11 @@ def force_confirm(id, uid):
     try:
         if config.is_confirmation_required(uid):
             config.mark_confirmed(fac, message=False)
-            db.session.commit()
+            log_db_commit(
+                f'Force-confirmed project submissions for faculty "{fac.user.name}" in "{config.name}"',
+                user=current_user,
+                project_classes=config.project_class,
+            )
 
         # kick off a background task to check whether any other project classes in which this user is enrolled
         # have been reduced to zero confirmations left.
@@ -784,7 +801,11 @@ def confirm_description(config_id, did):
             if not config.has_confirmations_outstanding(desc.parent.owner):
                 config.mark_confirmed(desc.parent.owner, message=False)
 
-        db.session.commit()
+        log_db_commit(
+            f'Confirmed project description "{desc.label}" for "{desc.parent.name}" in "{config.name}"',
+            user=current_user,
+            project_classes=config.project_class,
+        )
 
         # kick off a background task to check whether any other project classes in which this user is enrolled
         # have been reduced to zero confirmations left.
@@ -1121,7 +1142,11 @@ def reverse_golive(config_id):
     config.live = False
     config.live_deadline = None
 
-    db.session.commit()
+    log_db_commit(
+        f'Reversed go-live for project class "{config.name}"',
+        user=current_user,
+        project_classes=config.project_class,
+    )
 
     return redirect(url_for("convenor.status", id=config.pclass_id))
 
@@ -1167,7 +1192,11 @@ def adjust_selection_deadline(configid):
             config.live_deadline = form.live_deadline.data
 
             try:
-                db.session.commit()
+                log_db_commit(
+                    f'Adjusted student selection deadline for "{config.name}" to {config.live_deadline}',
+                    user=current_user,
+                    project_classes=config.project_class,
+                )
                 flash(
                     'The deadline for student selections for "{proj}" has been successfully changed to {deadline}.'.format(
                         proj=config.name,
@@ -1285,7 +1314,11 @@ def submit_student_selection(sel_id):
 
     try:
         _ = store_selection(sel)
-        db.session.commit()
+        log_db_commit(
+            f'Submitted project choices for selector "{sel.student.user.name}" in "{sel.config.name}"',
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
 
         template = EmailTemplate.find_template_(
             EmailTemplate.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED_PROXY,
@@ -1313,7 +1346,11 @@ def submit_student_selection(sel_id):
         )
         item.workflow = workflow
         db.session.add(item)
-        db.session.commit()
+        log_db_commit(
+            f'Queued confirmation email for selector "{sel.student.user.name}" in "{sel.config.name}"',
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
 
         flash(
             "Project choices for this selector have been successfully stored. A confirmation email has been sent to the selector's registered email address (and copied to you).",
@@ -1391,7 +1428,11 @@ def confirm(sid, pid):
         sel, project, resolved_by=current_user, comment="Resolved by convenor action"
     ):
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Confirmed project "{project.name}" for selector "{sel.student.user.name}" in "{sel.config.name}"',
+                user=current_user,
+                project_classes=sel.config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1427,7 +1468,11 @@ def generate_confirm(sid, pid):
             comment="Confirmation generated and resolved by convenor",
         )
         db.session.add(req)
-        db.session.commit()
+        log_db_commit(
+            f'Generated confirmed request for project "{project.name}" and selector "{sel.student.user.name}" in "{sel.config.name}"',
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1457,7 +1502,11 @@ def deconfirm_to_pending(sid, pid):
 
     if do_deconfirm_to_pending(sel, project):
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Moved confirm request for project "{project.name}" and selector "{sel.student.user.name}" back to pending in "{sel.config.name}"',
+                user=current_user,
+                project_classes=sel.config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1487,7 +1536,11 @@ def cancel_confirm(sid, pid):
 
     if do_cancel_confirm(sel, project):
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Cancelled confirm request for project "{project.name}" and selector "{sel.student.user.name}" in "{sel.config.name}"',
+                user=current_user,
+                project_classes=sel.config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1523,7 +1576,11 @@ def project_confirm_all(pid):
         )
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Confirmed all waiting requests for live project "{project.name}" in "{project.config.name}"',
+            user=current_user,
+            project_classes=project.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1557,7 +1614,11 @@ def project_clear_requests(pid):
         db.session.delete(req)
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Cleared all waiting confirm requests for live project "{project.name}" in "{project.config.name}"',
+            user=current_user,
+            project_classes=project.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1591,7 +1652,11 @@ def project_remove_confirms(pid):
         db.session.delete(req)
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Removed all confirmed requests for live project "{project.name}" in "{project.config.name}"',
+            user=current_user,
+            project_classes=project.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1624,7 +1689,11 @@ def project_make_all_confirms_pending(pid):
         req.waiting()
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Moved all confirmed requests back to pending for live project "{project.name}" in "{project.config.name}"',
+            user=current_user,
+            project_classes=project.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1658,7 +1727,11 @@ def student_confirm_all(sid):
         )
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Confirmed all waiting requests for selector "{sel.student.user.name}" in "{sel.config.name}"',
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1690,7 +1763,11 @@ def student_remove_confirms(sid):
         db.session.delete(req)
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Removed all confirmed requests for selector "{sel.student.user.name}" in "{sel.config.name}"',
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1722,7 +1799,11 @@ def student_clear_requests(sid):
         db.session.delete(req)
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Cleared all waiting confirm requests for selector "{sel.student.user.name}" in "{sel.config.name}"',
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1753,7 +1834,11 @@ def student_make_all_confirms_pending(sid):
         req.waiting()
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Moved all confirmed requests back to pending for selector "{sel.student.user.name}" in "{sel.config.name}"',
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1778,7 +1863,11 @@ def enable_conversion(sid):
     sel.convert_to_submitter = True
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Enabled conversion to submitter for selector "{sel.student.user.name}" in "{sel.config.name}"',
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1803,7 +1892,11 @@ def disable_conversion(sid):
     sel.convert_to_submitter = False
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Disabled conversion to submitter for selector "{sel.student.user.name}" in "{sel.config.name}"',
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1993,7 +2086,11 @@ def convert_all(configid):
     for s in data:
         s.convert_to_submitter = True
 
-    db.session.commit()
+    log_db_commit(
+        f'Enabled conversion to submitter for all filtered selectors in "{config.name}"',
+        user=current_user,
+        project_classes=config.project_class,
+    )
 
     return redirect(redirect_url())
 
@@ -2030,7 +2127,11 @@ def convert_none(configid):
     for s in data:
         s.convert_to_submitter = False
 
-    db.session.commit()
+    log_db_commit(
+        f'Disabled conversion to submitter for all filtered selectors in "{config.name}"',
+        user=current_user,
+        project_classes=config.project_class,
+    )
 
     return redirect(redirect_url())
 
@@ -2052,7 +2153,11 @@ def student_clear_bookmarks(sid):
     for item in sel.bookmarks:
         db.session.delete(item)
 
-    db.session.commit()
+    log_db_commit(
+        f'Cleared all bookmarks for selector "{sel.student.user.name}" in "{sel.config.name}"',
+        user=current_user,
+        project_classes=sel.config.project_class,
+    )
 
     return redirect(redirect_url())
 
@@ -2263,6 +2368,10 @@ def perform_reset_popularity_data(id):
         return redirect(redirect_url())
 
     db.session.query(PopularityRecord).filter_by(config_id=id).delete()
-    db.session.commit()
+    log_db_commit(
+        f'Reset all popularity data for "{config.name}"',
+        user=current_user,
+        project_classes=config.project_class,
+    )
 
     return redirect(url_for("convenor.liveprojects", id=config.pclass_id))

@@ -56,6 +56,7 @@ from ..shared.asset_tools import (
 from ..shared.scratch import ScratchFileManager, ScratchGroupManager
 from ..shared.security import validate_nonce
 from ..task_queue import register_task
+from ..shared.workflow_logging import log_db_commit
 from .shared.utils import report_error, report_info
 
 AssetDictionary = Dict[str, AssetCloudScratchContextManager]
@@ -493,7 +494,12 @@ def register_marking_tasks(celery):
                 role.marking_distributed = True
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Distributed marking notifications for {student.user.name} ({pclass.name}): "
+                f"{len(supervisors_to_notify)} supervisor(s), {len(markers_to_notify)} examiner(s) notified",
+                project_classes=pclass,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -703,7 +709,13 @@ def register_marking_tasks(celery):
         )
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Saved conflated marks for {student.name} ({config.abbreviation}): "
+                f"supervision grade={record.supervision_grade:.1f}%, report grade={record.report_grade:.1f}%",
+                user=convenor,
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -1082,7 +1094,12 @@ def register_marking_tasks(celery):
                     new_asset.grant_user(project.owner.user)
 
                 try:
-                    db.session.commit()
+                    log_db_commit(
+                        f"Saved generated feedback report PDF for {student.name} ({pclass.name}, {period.display_name})",
+                        user=convenor,
+                        project_classes=pclass,
+                        endpoint=self.name,
+                    )
                 except SQLAlchemyError as e:
                     db.session.rollback()
                     current_app.logger.exception(

@@ -52,6 +52,7 @@ from ..shared.validators import (
     validate_assessment,
     validate_using_assessment,
 )
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import register_task
 from . import admin
 from .actions import availability_CSV_generator
@@ -133,7 +134,7 @@ def add_assessment():
         )
 
         db.session.add(data)
-        db.session.commit()
+        log_db_commit(f"Added new presentation assessment event '{data.name}'", user=current_user)
 
         return redirect(url_for("admin.manage_assessments"))
 
@@ -182,7 +183,7 @@ def edit_assessment(id):
         assessment.last_edit_id = current_user.id
         assessment.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        log_db_commit(f"Edited presentation assessment event '{assessment.name}'", user=current_user)
 
         return redirect(url_for("admin.manage_assessments"))
 
@@ -273,7 +274,7 @@ def perform_delete_assessment(id):
 
     try:
         db.session.delete(assessment)
-        db.session.commit()
+        log_db_commit(f"Deleted presentation assessment event '{assessment.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -369,7 +370,7 @@ def perform_close_assessment(id):
 
     try:
         assessment.closed = False
-        db.session.commit()
+        log_db_commit(f"Closed presentation assessment event '{assessment.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -547,7 +548,7 @@ def close_availability(id):
         return redirect(redirect_url())
 
     assessment.availability_closed = True
-    db.session.commit()
+    log_db_commit(f"Closed availability collection for assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -669,7 +670,7 @@ def reopen_availability(id):
     if assessment.availability_deadline < date.today():
         assessment.availability_deadline = date.today() + timedelta(weeks=1)
 
-    db.session.commit()
+    log_db_commit(f"Reopened availability collection for assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -767,7 +768,7 @@ def force_confirm_availability(assessment_id, faculty_id):
     if record is not None:
         record.confirmed = True
         record.confirmed_timestamp = datetime.now()
-        db.session.commit()
+        log_db_commit(f"Force-confirmed availability for {faculty.user.name} in assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -831,7 +832,7 @@ def schedule_set_limit(assessment_id, faculty_id):
 
     if form.validate_on_submit():
         record.assigned_limit = form.assigned_limit.data
-        db.session.commit()
+        log_db_commit(f"Updated assignment limit for {faculty.user.name} in assessment '{assessment.name}'", user=current_user)
 
         return redirect(url)
 
@@ -890,7 +891,7 @@ def remove_assessor(assessment_id, faculty_id):
 
     if record is not None:
         db.session.delete(record)
-        db.session.commit()
+        log_db_commit(f"Removed assessor {faculty.user.name} from assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -1005,7 +1006,7 @@ def add_session(id):
 
         try:
             db.session.add(sess)
-            db.session.commit()
+            log_db_commit(f"Added new session '{sess.name}' to assessment '{assessment.name}'", user=current_user)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1066,7 +1067,7 @@ def edit_session(id):
         sess.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited session '{sess.name}' in assessment '{sess.owner.name}'", user=current_user)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1128,7 +1129,7 @@ def delete_session(id):
             submitter.unavailable.remove(sess)
 
     db.session.delete(sess)
-    db.session.commit()
+    log_db_commit(f"Deleted session from assessment '{sess.owner.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -1202,7 +1203,7 @@ def assessment_attending(a_id, s_id):
         return redirect(redirect_url())
 
     data.submitter_attending(talk)
-    db.session.commit()
+    log_db_commit(f"Marked submitter as attending assessment '{data.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -1241,7 +1242,7 @@ def assessment_not_attending(a_id, s_id):
         return redirect(redirect_url())
 
     data.submitter_not_attending(talk)
-    db.session.commit()
+    log_db_commit(f"Marked submitter as not attending assessment '{data.name}'", user=current_user)
 
     # we leave availability information per-session intact, so that it is immediately available again
     # if this presenter is subsequently marked as attending
@@ -1432,7 +1433,7 @@ def submitter_available(sess_id, s_id):
         return redirect(redirect_url())
 
     sess.submitter_make_available(submitter)
-    db.session.commit()
+    log_db_commit(f"Marked submitter as available for session in assessment '{data.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -1467,7 +1468,7 @@ def submitter_unavailable(sess_id, s_id):
         return redirect(redirect_url())
 
     sess.submitter_make_unavailable(submitter)
-    db.session.commit()
+    log_db_commit(f"Marked submitter as unavailable for session in assessment '{data.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -1510,7 +1511,7 @@ def submitter_available_all_sessions(a_id, s_id):
     for s in assessment.sessions:
         s.submitter_make_available(submitter)
 
-    db.session.commit()
+    log_db_commit(f"Marked submitter as available for all sessions in assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -1553,7 +1554,7 @@ def submitter_unavailable_all_sessions(a_id, s_id):
     for s in assessment.sessions:
         s.submitter_make_unavailable(submitter)
 
-    db.session.commit()
+    log_db_commit(f"Marked submitter as unavailable for all sessions in assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -1591,7 +1592,7 @@ def session_all_submitters_available(sess_id):
 
         sess.submitter_make_available(rec)
 
-    db.session.commit()
+    log_db_commit(f"Marked all submitters as available for session in assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -1629,7 +1630,7 @@ def session_all_submitters_unavailable(sess_id):
 
         sess.submitter_make_unavailable(rec)
 
-    db.session.commit()
+    log_db_commit(f"Marked all submitters as unavailable for session in assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -1827,7 +1828,7 @@ def assessor_available(sess_id, f_id):
     fac: FacultyData = FacultyData.query.get_or_404(f_id)
     sess.faculty_make_available(fac)
 
-    db.session.commit()
+    log_db_commit(f"Marked assessor {fac.user.name} as available for session in assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -1863,7 +1864,7 @@ def assessor_ifneeded(sess_id, f_id):
     fac: FacultyData = FacultyData.query.get_or_404(f_id)
     sess.faculty_make_ifneeded(fac)
 
-    db.session.commit()
+    log_db_commit(f"Marked assessor {fac.user.name} as available if needed for session in assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -1899,7 +1900,7 @@ def assessor_unavailable(sess_id, f_id):
     fac: FacultyData = FacultyData.query.get_or_404(f_id)
     sess.faculty_make_unavailable(fac)
 
-    db.session.commit()
+    log_db_commit(f"Marked assessor {fac.user.name} as unavailable for session in assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -1936,7 +1937,7 @@ def assessor_available_all_sessions(a_id, f_id):
     for s in assessment.sessions:
         s.faculty_make_available(fac)
 
-    db.session.commit()
+    log_db_commit(f"Marked assessor {fac.user.name} as available for all sessions in assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -1973,7 +1974,7 @@ def assessor_unavailable_all_sessions(a_id, f_id):
     for s in assessment.sessions:
         s.faculty_make_unavailable(fac)
 
-    db.session.commit()
+    log_db_commit(f"Marked assessor {fac.user.name} as unavailable for all sessions in assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -2011,7 +2012,7 @@ def session_all_assessors_available(sess_id):
 
         sess.faculty_make_available(fac)
 
-    db.session.commit()
+    log_db_commit(f"Marked all assessors as available for session in assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -2049,6 +2050,6 @@ def session_all_assessors_unavailable(sess_id):
 
         sess.faculty_make_unavailable(fac)
 
-    db.session.commit()
+    log_db_commit(f"Marked all assessors as unavailable for session in assessment '{assessment.name}'", user=current_user)
 
     return redirect(redirect_url())

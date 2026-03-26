@@ -65,6 +65,7 @@ from ..shared.validators import (
     validate_using_assessment,
 )
 from ..tools import ServerSideSQLHandler
+from ..shared.workflow_logging import log_db_commit
 from . import student
 from .actions import store_selection
 from .forms import StudentFeedbackForm, StudentSettingsForm
@@ -449,7 +450,11 @@ def add_group_filter(id, gid):
     if group not in sel.group_filters:
         try:
             sel.group_filters.append(group)
-            db.session.commit()
+            log_db_commit(
+                f"Student {current_user.name} added research group filter '{group.name}' for {sel.config.project_class.name}",
+                user=current_user,
+                project_classes=sel.config.project_class,
+            )
         except (StaleDataError, IntegrityError):
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
@@ -467,7 +472,11 @@ def remove_group_filter(id, gid):
     if group in sel.group_filters:
         try:
             sel.group_filters.remove(group)
-            db.session.commit()
+            log_db_commit(
+                f"Student {current_user.name} removed research group filter '{group.name}' for {sel.config.project_class.name}",
+                user=current_user,
+                project_classes=sel.config.project_class,
+            )
         except StaleDataError:
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
@@ -483,7 +492,11 @@ def clear_group_filters(id):
 
     try:
         sel.group_filters = []
-        db.session.commit()
+        log_db_commit(
+            f"Student {current_user.name} cleared all research group filters for {sel.config.project_class.name}",
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
     except StaleDataError:
         # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
         # to the same endpoint?
@@ -501,7 +514,11 @@ def add_skill_filter(id, skill_id):
     if skill not in sel.skill_filters:
         try:
             sel.skill_filters.append(skill)
-            db.session.commit()
+            log_db_commit(
+                f"Student {current_user.name} added skill filter '{skill.name}' for {sel.config.project_class.name}",
+                user=current_user,
+                project_classes=sel.config.project_class,
+            )
         except (StaleDataError, IntegrityError):
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
@@ -519,7 +536,11 @@ def remove_skill_filter(id, skill_id):
     if skill in sel.skill_filters:
         try:
             sel.skill_filters.remove(skill)
-            db.session.commit()
+            log_db_commit(
+                f"Student {current_user.name} removed skill filter '{skill.name}' for {sel.config.project_class.name}",
+                user=current_user,
+                project_classes=sel.config.project_class,
+            )
         except StaleDataError:
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
@@ -535,7 +556,11 @@ def clear_skill_filters(id):
 
     try:
         sel.skill_filters = []
-        db.session.commit()
+        log_db_commit(
+            f"Student {current_user.name} cleared all skill filters for {sel.config.project_class.name}",
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
     except StaleDataError:
         # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
         # to the same endpoint?
@@ -586,7 +611,11 @@ def selector_view_project(sid, pid):
 
     project.last_view = datetime.today()
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Student {current_user.name} viewed project '{project.name}' for {config.project_class.name}",
+            user=current_user,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -682,7 +711,11 @@ def add_bookmark(sid, pid):
     if not bookmark_data.get("bookmarked"):
         bm = Bookmark(owner_id=sid, liveproject_id=pid, rank=sel.bookmarks.count() + 1)
         db.session.add(bm)
-        db.session.commit()
+        log_db_commit(
+            f"Student {current_user.name} bookmarked project '{project.name}' for {sel.config.project_class.name}",
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
 
     return redirect(redirect_url())
 
@@ -716,7 +749,11 @@ def remove_bookmark(sid, pid):
         sel.re_rank_bookmarks()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Student {current_user.name} removed bookmark for project '{project.name}' in {sel.config.project_class.name}",
+                user=current_user,
+                project_classes=sel.config.project_class,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not remove bookmark due to a database error. Please inform a system administrator.",
@@ -801,7 +838,11 @@ def request_confirmation(sid, pid):
         db.session.add(bm)
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Student {current_user.name} requested confirmation for project '{project.name}' in {config.project_class.name}",
+            user=current_user,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not issue confirmation request due to a database error. Please inform a system administrator.",
@@ -862,7 +903,11 @@ def cancel_confirmation(sid, pid):
             db.session.delete(req)
 
             try:
-                db.session.commit()
+                log_db_commit(
+                    f"Student {current_user.name} cancelled confirmation request for project '{project.name}' in {config.project_class.name}",
+                    user=current_user,
+                    project_classes=config.project_class,
+                )
             except SQLAlchemyError as e:
                 flash(
                     "Could not cancel confirmation request due to a database error. Please inform a system administrator.",
@@ -931,7 +976,11 @@ def update_ranking():
         bookmark.rank = rmap[bookmark.liveproject.id]
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Student {current_user.name} updated bookmark ranking for {config.project_class.name}",
+            user=current_user,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -987,7 +1036,11 @@ def submit(sid):
 
     try:
         _ = store_selection(sel)
-        db.session.commit()
+        log_db_commit(
+            f"Student {sel.student.user.name} submitted project preferences for {sel.config.project_class.name}",
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
 
         template = EmailTemplate.find_template_(
             EmailTemplate.STUDENT_NOTIFICATIONS_CHOICES_RECEIVED,
@@ -1014,7 +1067,11 @@ def submit(sid):
         )
         item.workflow = workflow
         db.session.add(item)
-        db.session.commit()
+        log_db_commit(
+            f"Queued confirmation email for {sel.student.user.name}'s project preference submission for {sel.config.project_class.name}",
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
 
         flash(
             "Your project preferences were submitted successfully. A confirmation email has been sent to your registered email address.",
@@ -1088,7 +1145,11 @@ def do_clear_submission(sid):
     sel.submission_IP = None
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Student {current_user.name} cleared submitted project preferences for {sel.config.project_class.name}",
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
         flash("Your project preferences have been cleared successfully.", "info")
     except SQLAlchemyError as e:
         flash(
@@ -1142,7 +1203,11 @@ def accept_custom_offer(offer_id):
     offer.last_edit_id = current_user.id
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Student {current_user.name} accepted custom offer for project '{offer.liveproject.name}' in {sel.config.project_class.name}",
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not accept custom offer due to a database error. Please inform a system administrator.",
@@ -1175,7 +1240,11 @@ def decline_custom_offer(offer_id):
     offer.last_edit_id = current_user.id
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Student {current_user.name} declined custom offer for project '{offer.liveproject.name}' in {sel.config.project_class.name}",
+            user=current_user,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not decline custom offer due to a database error. Please inform a system administrator.",
@@ -1278,7 +1347,11 @@ def edit_feedback(id):
 
     if form.validate_on_submit():
         record.student_feedback = form.feedback.data
-        db.session.commit()
+        log_db_commit(
+            f"Student {current_user.name} saved feedback draft for submission record #{record.id} in {config.project_class.name}",
+            user=current_user,
+            project_classes=config.project_class,
+        )
 
         return redirect(url)
 
@@ -1332,7 +1405,11 @@ def submit_feedback(id):
 
     record.student_feedback_submitted = True
     record.student_feedback_timestamp = datetime.now()
-    db.session.commit()
+    log_db_commit(
+        f"Student {current_user.name} submitted feedback for submission record #{record.id} in {config.project_class.name}",
+        user=current_user,
+        project_classes=config.project_class,
+    )
 
     return redirect(redirect_url())
 
@@ -1429,7 +1506,11 @@ def set_available(session_id, submitter_id):
     session.submitter_make_available(submission_record)
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Student {current_user.name} marked themselves as available for presentation session on {session.date_str} (assessment '{assessment.name}')",
+            user=current_user,
+            project_classes=owner.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1483,7 +1564,11 @@ def set_unavailable(session_id, submitter_id):
     session.submitter_make_unavailable(submission_record)
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Student {current_user.name} marked themselves as unavailable for presentation session on {session.date_str} (assessment '{assessment.name}')",
+            user=current_user,
+            project_classes=owner.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1514,7 +1599,10 @@ def settings():
         user.summary_frequency = form.summary_frequency.data
 
         flash("All changes saved", "success")
-        db.session.commit()
+        log_db_commit(
+            f"Student {current_user.name} updated their account settings",
+            user=current_user,
+        )
 
         return home_dashboard()
 

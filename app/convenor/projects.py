@@ -81,6 +81,7 @@ from ..shared.projects import (
     project_list_SQL_handler,
 )
 from ..shared.sqlalchemy import get_count
+from ..shared.workflow_logging import log_db_commit
 from ..shared.utils import (
     filter_assessors,
     get_convenor_filter_record,
@@ -310,7 +311,10 @@ def delete_project_alternative(alt_id):
 
     try:
         db.session.delete(alt)
-        db.session.commit()
+        log_db_commit(
+            f"Deleted project alternative (parent project id={alt.parent_id}, alternative project id={alt.alternative_id})",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not delete project alternative because of a database error. Please contact a system administrator.",
@@ -343,7 +347,10 @@ def edit_project_alternative(alt_id):
         alt.priority = form.priority.data
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Updated priority for project alternative (parent project id={alt.parent_id}, alternative project id={alt.alternative_id})",
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -457,7 +464,10 @@ def create_project_alternative(proj_id, alt_proj_id):
 
     try:
         db.session.add(alt)
-        db.session.commit()
+        log_db_commit(
+            f'Created project alternative: "{proj.name}" -> "{alt_proj.name}"',
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not create alternative due to a database error. Please contact a system administrator",
@@ -535,7 +545,11 @@ def delete_liveproject_alternative(alt_id):
 
     try:
         db.session.delete(alt)
-        db.session.commit()
+        log_db_commit(
+            f"Deleted LiveProject alternative (parent LiveProject id={alt.parent_id}, alternative LiveProject id={alt.alternative_id})",
+            user=current_user,
+            project_classes=alt.parent.config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not delete LiveProject alternative because of a database error. Please contact a system administrator.",
@@ -573,7 +587,11 @@ def edit_liveproject_alternative(alt_id):
         alt.priority = form.priority.data
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Updated priority for LiveProject alternative (parent LiveProject id={alt.parent_id}, alternative LiveProject id={alt.alternative_id})",
+                user=current_user,
+                project_classes=alt.parent.config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -694,7 +712,11 @@ def create_liveproject_alternative(lp_id, alt_lp_id):
 
     try:
         db.session.add(alt)
-        db.session.commit()
+        log_db_commit(
+            f'Created LiveProject alternative: "{lp.name}" -> "{alt_lp.name}"',
+            user=current_user,
+            project_classes=lp.config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not create alternative due to a database error. Please contact a system administrator",
@@ -757,7 +779,10 @@ def copy_alternative_to_library(alt_id):
         if alt.priority != library_alt.priority:
             library_alt.priority = alt.priority
 
-        db.session.commit()
+        log_db_commit(
+            f'Copied LiveProject alternative to library: "{library_project.name}" -> "{library_alt_project.name}"',
+            user=current_user,
+        )
 
     except SQLAlchemyError as e:
         flash(
@@ -796,7 +821,10 @@ def copy_project_alternative_reciprocal(alt_id):
 
     try:
         db.session.add(rcp)
-        db.session.commit()
+        log_db_commit(
+            f"Created reciprocal project alternative (parent project id={rcp.parent_id}, alternative project id={rcp.alternative_id})",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not create alternative due to a database error. Please contact a system administrator",
@@ -834,7 +862,11 @@ def copy_liveproject_alternative_reciprocal(alt_id):
 
     try:
         db.session.add(rcp)
-        db.session.commit()
+        log_db_commit(
+            f"Created reciprocal LiveProject alternative (parent LiveProject id={rcp.parent_id}, alternative LiveProject id={rcp.alternative_id})",
+            user=current_user,
+            project_classes=alt.parent.config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not create alternative due to a database error. Please contact a system administrator",
@@ -867,7 +899,10 @@ def edit_project_supervisors(proj_id):
         proj.supervisors = form.supervisors.data
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Updated supervisor pool for project "{proj.name}"',
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not save changes to supervisor pool because of a database error. Please contact a system administrator",
@@ -904,7 +939,11 @@ def edit_liveproject_supervisors(proj_id):
         proj.supervisors = form.supervisors.data
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Updated supervisor pool for LiveProject "{proj.name}"',
+                user=current_user,
+                project_classes=proj.config.project_class,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not save changed to supervisor pool because of a database error. Please contact a system administrator",
@@ -1307,7 +1346,11 @@ def perform_delete_live_project(pid):
         db.session.flush()
 
         db.session.delete(project)
-        db.session.commit()
+        log_db_commit(
+            f'Deleted LiveProject "{project.name}" from {config.name} {config.submit_year_a}-{config.submit_year_b}',
+            user=current_user,
+            project_classes=config.project_class,
+        )
 
     except SQLAlchemyError as e:
         flash(
@@ -1358,7 +1401,11 @@ def hide_liveproject(id):
 
     try:
         project.hidden = True
-        db.session.commit()
+        log_db_commit(
+            f'Marked LiveProject "{project.name}" as hidden for {config.name} {config.submit_year_a}-{config.submit_year_b}',
+            user=current_user,
+            project_classes=config.project_class,
+        )
 
     except SQLAlchemyError as e:
         flash(
@@ -1409,7 +1456,11 @@ def unhide_liveproject(id):
 
     try:
         project.hidden = False
-        db.session.commit()
+        log_db_commit(
+            f'Marked LiveProject "{project.name}" as visible for {config.name} {config.submit_year_a}-{config.submit_year_b}',
+            user=current_user,
+            project_classes=config.project_class,
+        )
 
     except SQLAlchemyError as e:
         flash(
@@ -1830,7 +1881,11 @@ def add_generic_task(config_id):
 
         try:
             config.tasks.append(task)
-            db.session.commit()
+            log_db_commit(
+                f'Created convenor task "{task.description}" for {config.name}',
+                user=current_user,
+                project_classes=config.project_class,
+            )
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1888,7 +1943,11 @@ def edit_generic_task(tid):
         task.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Updated convenor task "{task.description}" for {config.name}',
+                user=current_user,
+                project_classes=config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2046,7 +2105,10 @@ def add_project(pclass_id):
 
         try:
             db.session.add(project)
-            db.session.commit()
+            log_db_commit(
+                f'Added new project "{project.name}"',
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2194,7 +2256,10 @@ def edit_project(id, pclass_id):
         project.validate_programmes()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Updated project "{project.name}"',
+                user=current_user,
+            )
 
             # auto-enroll if implied by current project class associations
             if not project.generic:
@@ -2319,7 +2384,10 @@ def duplicate_project(id):
 
                     db.session.add(new_desc)
 
-            db.session.commit()
+            log_db_commit(
+                f'Duplicated project "{proj.name}" as "{new_proj.name}"',
+                user=current_user,
+            )
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -2377,7 +2445,10 @@ def activate_project(id, pclass_id):
     proj.enable()
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Activated project "{proj.name}"',
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2415,7 +2486,10 @@ def deactivate_project(id, pclass_id):
     proj.disable()
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Deactivated project "{proj.name}"',
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2473,7 +2547,10 @@ def add_description(pid, pclass_id):
 
         try:
             db.session.add(data)
-            db.session.commit()
+            log_db_commit(
+                f'Added new description "{data.label}" for project "{proj.name}"',
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2541,7 +2618,10 @@ def edit_description(did, pclass_id):
         desc.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Updated settings for description "{desc.label}" on project "{desc.parent.name}"',
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2602,7 +2682,10 @@ def edit_description_content(did, pclass_id):
         desc.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Updated content for description "{desc.label}" on project "{desc.parent.name}"',
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2715,7 +2798,10 @@ def description_attach_module(did, pclass_id, mod_id, level_id):
             desc.modules.append(module)
 
             try:
-                db.session.commit()
+                log_db_commit(
+                    f'Attached module "{module.name}" to project description "{desc.label}"',
+                    user=current_user,
+                )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2777,7 +2863,10 @@ def description_detach_module(did, pclass_id, mod_id, level_id):
         desc.modules.remove(module)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Detached module "{module.name}" from project description "{desc.label}"',
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2822,7 +2911,10 @@ def delete_description(did, pclass_id):
 
     try:
         db.session.delete(desc)
-        db.session.commit()
+        log_db_commit(
+            f'Deleted project description "{desc.label}" from project "{desc.parent.name}"',
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2890,7 +2982,10 @@ def duplicate_description(did, pclass_id):
 
     try:
         db.session.add(data)
-        db.session.commit()
+        log_db_commit(
+            f'Duplicated project description "{desc.label}" as "{new_label}" for project "{desc.parent.name}"',
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2983,7 +3078,10 @@ def move_description(did, pclass_id):
                 db.session.add(copy_desc)
 
             try:
-                db.session.commit()
+                log_db_commit(
+                    f'Moved project description variant "{desc.label}" from project "{old_project.name}" to "{new_project.name}"',
+                    user=current_user,
+                )
                 flash(
                     'Variant "{name}" successfully moved to project "{pname}"'.format(
                         name=desc.label, pname=new_project.name
@@ -3063,7 +3161,10 @@ def make_default_description(pid, pclass_id, did=None):
             return redirect(redirect_url())
 
     proj.default_id = did
-    db.session.commit()
+    log_db_commit(
+        f'Set default description (id={did}) for project "{proj.name}"',
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -3142,7 +3243,10 @@ def add_skill(projectid, skillid, pclass_id, sel_id):
 
     if skill not in proj.skills:
         proj.add_skill(skill)
-        db.session.commit()
+        log_db_commit(
+            f'Added transferable skill "{skill.name}" to project "{proj.name}"',
+            user=current_user,
+        )
 
     return redirect(
         url_for(
@@ -3173,7 +3277,10 @@ def remove_skill(projectid, skillid, pclass_id, sel_id):
 
     if skill in proj.skills:
         proj.remove_skill(skill)
-        db.session.commit()
+        log_db_commit(
+            f'Removed transferable skill "{skill.name}" from project "{proj.name}"',
+            user=current_user,
+        )
 
     return redirect(
         url_for(
@@ -3241,7 +3348,10 @@ def add_programme(id, pclass_id, prog_id):
 
     if proj.programmes is not None and programme not in proj.programmes:
         proj.add_programme(programme)
-        db.session.commit()
+        log_db_commit(
+            f'Added degree programme "{programme.full_name}" to project "{proj.name}"',
+            user=current_user,
+        )
 
     return redirect(redirect_url())
 
@@ -3269,7 +3379,10 @@ def remove_programme(id, pclass_id, prog_id):
 
     if proj.programmes is not None and programme in proj.programmes:
         proj.remove_programme(programme)
-        db.session.commit()
+        log_db_commit(
+            f'Removed degree programme "{programme.full_name}" from project "{proj.name}"',
+            user=current_user,
+        )
 
     return redirect(redirect_url())
 
@@ -3521,7 +3634,10 @@ def attach_all_assessors(proj_id, pclass_id):
     for assessor in assessors:
         proj.add_assessor(assessor, autocommit=False)
 
-    db.session.commit()
+    log_db_commit(
+        f'Attached all filtered assessors to project "{proj.name}"',
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -3554,7 +3670,10 @@ def remove_all_assessors(proj_id, pclass_id):
     for assessor in assessors:
         proj.remove_assessor(assessor, autocommit=False)
 
-    db.session.commit()
+    log_db_commit(
+        f'Removed all filtered assessors from project "{proj.name}"',
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -3577,7 +3696,11 @@ def liveproject_sync_assessors(proj_id, live_id):
     live_project.assessors = [
         f for f in library_project.assessors if library_project.is_assessor(f.id)
     ]
-    db.session.commit()
+    log_db_commit(
+        f'Synced assessors from library project "{library_project.name}" to live project "{live_project.name}"',
+        user=current_user,
+        project_classes=live_project.config.project_class,
+    )
 
     return redirect(redirect_url())
 
@@ -3597,7 +3720,11 @@ def liveproject_attach_assessor(live_id, fac_id):
 
     if faculty not in live_project.assessors:
         live_project.assessors.append(faculty)
-        db.session.commit()
+        log_db_commit(
+            f'Attached assessor "{faculty.user.name}" to live project "{live_project.name}"',
+            user=current_user,
+            project_classes=live_project.config.project_class,
+        )
 
     return redirect(redirect_url())
 
@@ -3617,6 +3744,10 @@ def liveproject_remove_assessor(live_id, fac_id):
 
     if fd in live_project.assessors:
         live_project.assessors.remove(fd)
-        db.session.commit()
+        log_db_commit(
+            f'Removed assessor "{fd.user.name}" from live project "{live_project.name}"',
+            user=current_user,
+            project_classes=live_project.config.project_class,
+        )
 
     return redirect(redirect_url())

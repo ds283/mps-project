@@ -24,6 +24,7 @@ from ..models import (
     TaskRecord,
 )
 from ..shared.tasks import post_task_update_msg
+from ..shared.workflow_logging import log_db_commit
 
 
 def _reassign_liveprojects(item_list, dest_config):
@@ -74,7 +75,10 @@ def register_selecting_tasks(celery):
                 confirm.viewed = True
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Marked unseen confirmation requests as viewed for faculty id={faculty_id} on config id={config_id}",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -143,7 +147,12 @@ def register_selecting_tasks(celery):
         sel.re_rank_selections()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Moved selector {sel.student.user.name} to project class config '{dest_config.name}'",
+                user=user,
+                project_classes=dest_config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -248,7 +257,12 @@ def register_selecting_tasks(celery):
             req.confirm(approver_id)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Approved all outstanding confirmation requests for '{config.name}'",
+                user=approver_id,
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -353,7 +367,11 @@ def register_selecting_tasks(celery):
             db.session.delete(req)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Deleted all outstanding confirmation requests for '{config.name}'",
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

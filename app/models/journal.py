@@ -14,6 +14,7 @@ from sqlalchemy_utils import EncryptedType
 from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 
 from ..database import db
+from . import DEFAULT_STRING_LENGTH
 from .config import get_AES_key
 
 # Association table linking StudentJournalEntry to ProjectClassConfig (many-to-many)
@@ -83,6 +84,13 @@ class StudentJournalEntry(db.Model):
         foreign_keys=[owner_id],
         uselist=False,
         backref=db.backref("journal_entries", lazy="dynamic"),
+    )
+
+    # title for this journal entry
+    title = db.Column(
+        EncryptedType(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), get_AES_key, AesEngine, "oneandzeroes"),
+        default=None,
+        nullable=True,
     )
 
     # Encrypted HTML body of the journal entry.

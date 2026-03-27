@@ -43,7 +43,7 @@
 {% block title %}Student journal — {{ student.user.name }}{% endblock %}
 
 {% block bodyblock %}
-    <div class="d-flex align-items-center mt-3 mb-2 gap-2 flex-wrap">
+    <div class="d-flex flex-row justify-content-start align-items-center mt-3 mb-2 gap-2 flex-wrap">
         {% if url %}
             <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
                 <i class="fas fa-arrow-left fa-fw"></i> {{ text or "Return" }}
@@ -53,10 +53,6 @@
             <i class="fas fa-book fa-fw me-1"></i>
             Journal: <strong>{{ student.user.name }}</strong>
         </h4>
-        <a class="btn btn-sm btn-outline-primary"
-           href="{{ url_for('convenor.add_journal_entry', student_id=student.id, url=request.url, text='Back to journal') }}">
-            <i class="fas fa-plus fa-fw"></i> Add entry...
-        </a>
     </div>
 
     <div class="card border-secondary mb-3">
@@ -117,6 +113,12 @@
                 </tr>
                 </thead>
             </table>
+            <div class="d-flex flex-row justify-content-center align-items-center mt-3 mb-2">
+                <a class="btn btn-lg btn-outline-primary"
+                   href="{{ url_for('convenor.add_journal_entry', student_id=student.id, url=request.url, text='Back to journal') }}">
+                    <i class="fas fa-plus fa-fw"></i> Add entry...
+                </a>
+            </div>
         </div>
     </div>
 {% endblock %}

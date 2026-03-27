@@ -162,6 +162,7 @@ def create_app():
 
     # import Sentry SDK
     import sentry_sdk
+    from sentry_sdk.integrations.celery import CeleryIntegration
     from sentry_sdk.integrations.flask import FlaskIntegration
 
     print("-- initializing Sentry SDK")
@@ -175,7 +176,10 @@ def create_app():
     if sentry_endpoint is not None:
         sentry_sdk.init(
             dsn=sentry_endpoint,
-            integrations=[FlaskIntegration()],
+            integrations=[
+                FlaskIntegration(),
+                CeleryIntegration(),
+            ],
             environment=sentry_env,
             # Set traces_sample_rate to 1.0 to capture 100%
             # of transactions for Tracing.

@@ -64,7 +64,6 @@ from .task_queue import background_task, make_celery
 from .thirdparty.flask_bleach import Bleach
 from .thirdparty.flask_bootstrap5 import Bootstrap
 from .thirdparty.flask_markdown import Markdown
-from .thirdparty.flask_rollbar import Rollbar
 from .thirdparty.flask_sessionstore import Session
 
 
@@ -122,7 +121,7 @@ def read_configuration(app: Flask, config_name: str):
     app.config.from_pyfile("logging.py")
     app.config.from_pyfile("healthz.py")
     app.config.from_pyfile("bleach.py")
-    app.config.from_pyfile("rollbar.py")
+    app.config.from_pyfile("sentry.py")
     app.config.from_pyfile("ratelimit.py")
     app.config.from_pyfile("database.py")
     app.config.from_pyfile("defaults.py")
@@ -160,6 +159,30 @@ def create_app():
 
     # load configuration files from 'instance' folder
     instance_folder = os.environ.get("INSTANCE_FOLDER")
+
+    # import Sentry SDK
+    import sentry_sdk
+    from sentry_sdk.integrations.flask import FlaskIntegration
+
+    print("-- initializing Sentry SDK")
+    sentry_endpoint = os.environ.get("SENTRY_ENDPOINT")
+    sentry_trace = 0.0
+    try:
+        float(os.environ.get("SENTRY_TRACE"))
+    except ValueError:
+        pass
+    sentry_env = os.environ.get("SENTRY_ENVIRONMENT")
+    if sentry_endpoint is not None:
+        sentry_sdk.init(
+            dsn=sentry_endpoint,
+            integrations=[FlaskIntegration()],
+            environment=sentry_env,
+            # Set traces_sample_rate to 1.0 to capture 100%
+            # of transactions for Tracing.
+            # We recommend adjusting this value in production,
+            traces_sample_rate=sentry_trace,
+        )
+
     print(f'-- using instance folder "{instance_folder}"', file=stderr)
     app = Flask(
         __name__, instance_relative_config=True, instance_path=str(instance_folder)
@@ -201,7 +224,6 @@ def create_app():
     mail = Mail(app)
     bleach = Bleach(app)
     md = Markdown(app, extensions=["smarty"])
-    rb = Rollbar(app)
     # qr = QRcode(app)
     bbl = Babel(app)
     healthz = Healthz(app)
@@ -426,26 +448,6 @@ def create_app():
 
         user.last_active = datetime.now()
         log_db_commit("Record last active timestamp on user login", user=user)
-
-    from flask import Request
-
-    class CustomRequest(Request):
-        @property
-        def rollbar_person(self):
-            db.session.rollback()
-
-            if current_user is None:
-                return None
-
-            # 'id' is required, 'username' and 'email' are indexed but optional.
-            # all values are strings.
-            return {
-                "id": str(current_user.id),
-                "username": str(current_user.username),
-                "email": str(current_user.email),
-            }
-
-    app.request_class = CustomRequest
 
     # IMPORT BLUEPRINTS
 

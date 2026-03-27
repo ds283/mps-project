@@ -4,6 +4,10 @@
 .idea
 .scannerwork
 .vscode
+.claude
+.clinerules
+.clineignore
+.prompts
 AWS
 Deployments
 MPS-Project.sqlite
@@ -13,9 +17,14 @@ assets
 backups
 basic_database
 build.sh
+Claude.md
 database-copies
+fix-latin1.py
+FYP_feedback_template.html.j2
 instance
 logs
+Mark schemes
+memory-bank
 mongodb
 mysql
 nginx
@@ -23,7 +32,9 @@ objectstore-data
 profiling
 profile
 scratch
+SQLAlchemy-mysql-base.patch
 restart.sh
 test_pdf.py
 venv
 worker-output
+workplan.md

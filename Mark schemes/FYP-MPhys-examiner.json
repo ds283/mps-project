@@ -1,0 +1,35 @@
+{
+  "scheme": [
+    {
+      "title": "Preamble",
+      "fields": [
+        {
+          "key": "conflict",
+          "text": "Please check to indicate that you have no conflict of interest in marking this report.",
+          "type": "boolean"
+        },
+        {
+          "key": "send",
+          "text": "Please check to indicate that your report accounts for any reasonable adjustments indicated. These may appear on an attached electronic sticker."
+        }
+      ]
+    },
+    {
+      "title": "Report grade",
+      "fields": [
+        {
+          "key": "grade",
+          "text": "Assigned grade (expressed as a percentage)",
+          "type": "percent"
+        }
+      ]
+    }
+  ],
+  "validation": [
+    {
+      "test": "not conflict",
+      "action": "prevent_submit"
+    }
+  ],
+  "conflation_rule": "grade"
+}

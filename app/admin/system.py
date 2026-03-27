@@ -2162,7 +2162,6 @@ def workflow_log_ajax():
         },
         "summary": {
             "search": WorkflowLogEntry.summary,
-            "search_collation": "utf8_general_ci",
         },
     }
 

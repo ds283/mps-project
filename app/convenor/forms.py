@@ -32,6 +32,7 @@ from wtforms.validators import (
 )
 from wtforms_alchemy import QuerySelectField, QuerySelectMultipleField
 
+from ..database import db
 from ..faculty.forms import ProjectMixinFactory
 from ..models import (
     DEFAULT_ASSIGNED_MARKERS,
@@ -51,8 +52,6 @@ from ..models import (
     SupervisionEventTemplate,
     Tenant,
 )
-from ..database import db
-from ..shared.utils import get_current_year
 from ..shared.forms.mixins import (
     FeedbackMixin,
     PeriodPresentationsMixin,
@@ -80,6 +79,7 @@ from ..shared.forms.wtf_validators import (
     unique_or_original_supervision_event_template,
     valid_marking_schema,
 )
+from ..shared.utils import get_current_year
 
 
 def GoLiveFormFactory(
@@ -976,6 +976,7 @@ def _build_journal_pclass_config_query(user):
     scoped by role and tenant membership.
     """
     if user.has_role("root"):
+
         def query_factory():
             year = get_current_year()
             return (
@@ -1032,14 +1033,23 @@ def _journal_pclass_config_label(config):
     return f"{config.project_class.name} ({year}/{str(year + 1)[-2:]})"
 
 
+class JournalEntryMixin:
+    title = StringField(
+        "Title",
+        validators=[
+            InputRequired(message="A title is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
+    )
+    entry = TextAreaField(
+        "Journal entry",
+    )
+
+
 def AddJournalEntryFormFactory(user):
     query_factory = _build_journal_pclass_config_query(user)
 
-    class AddJournalEntryForm(Form):
-        entry = TextAreaField(
-            "Journal entry",
-            validators=[InputRequired(message="A journal entry is required")],
-        )
+    class AddJournalEntryForm(Form, JournalEntryMixin):
         project_classes = QuerySelectMultipleField(
             "Project classes",
             query_factory=query_factory,
@@ -1053,11 +1063,7 @@ def AddJournalEntryFormFactory(user):
 def EditJournalEntryFormFactory(user):
     query_factory = _build_journal_pclass_config_query(user)
 
-    class EditJournalEntryForm(Form, SaveChangesMixin):
-        entry = TextAreaField(
-            "Journal entry",
-            validators=[InputRequired(message="A journal entry is required")],
-        )
+    class EditJournalEntryForm(Form, JournalEntryMixin, SaveChangesMixin):
         project_classes = QuerySelectMultipleField(
             "Project classes",
             query_factory=query_factory,

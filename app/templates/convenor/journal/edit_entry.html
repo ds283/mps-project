@@ -51,6 +51,8 @@
 
 {{ form.hidden_tag() }}
 
+{{ wtf.render_field(form.title, class='form-control') }}
+
 <div class="mb-3">
     <label class="form-label fw-semibold">{{ form.entry.label.text }}</label>
     {{ form.entry(id='entry-editor', class='form-control') }}

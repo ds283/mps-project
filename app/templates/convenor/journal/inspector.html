@@ -30,8 +30,8 @@
                     {data: 'timestamp', orderable: true, searchable: false},
                     {data: 'year', orderable: true, searchable: false},
                     {data: 'classes', orderable: false, searchable: false},
-                    {data: 'entry', orderable: false, searchable: false},
-                    {data: 'owner', orderable: false, searchable: false},
+                    {data: 'title', orderable: true, searchable: true},
+                    {data: 'owner', orderable: true, searchable: true},
                     {data: 'actions', orderable: false, searchable: false}
                 ],
                 order: [[0, 'desc']]
@@ -46,7 +46,7 @@
     <div class="d-flex flex-row justify-content-start align-items-center mt-3 mb-2 gap-2 flex-wrap">
         {% if url %}
             <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
-                <i class="fas fa-arrow-left fa-fw"></i> {{ text or "Return" }}
+                <i class="fas fa-arrow-left fa-fw"></i> {{ text|capitalize or "Return" }}
             </a>
         {% endif %}
         <h4 class="mb-0 me-auto">
@@ -107,14 +107,14 @@
                     <th width="14%">Timestamp</th>
                     <th width="7%">Year</th>
                     <th width="14%">Project classes</th>
-                    <th width="40%">Entry</th>
+                    <th width="40%">Title</th>
                     <th width="13%">Created by</th>
                     <th width="8%">Actions</th>
                 </tr>
                 </thead>
             </table>
             <div class="d-flex flex-row justify-content-center align-items-center mt-3 mb-2">
-                <a class="btn btn-lg btn-outline-primary"
+                <a class="btn btn-lg btn-secondary"
                    href="{{ url_for('convenor.add_journal_entry', student_id=student.id, url=request.url, text='Back to journal') }}">
                     <i class="fas fa-plus fa-fw"></i> Add entry...
                 </a>

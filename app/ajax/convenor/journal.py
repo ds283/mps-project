@@ -11,7 +11,7 @@ from typing import List
 
 from flask import current_app, render_template
 from flask_security import current_user
-from jinja2 import Template, Environment
+from jinja2 import Environment, Template
 
 from ...models import StudentData, StudentJournalEntry
 
@@ -42,11 +42,14 @@ _classes = """
 """
 
 # language=jinja2
-_entry_preview = """
-{% if entry.entry %}
-    <span class="small text-muted">{{ entry.entry | striptags | truncate(120) }}</span>
+_title = """
+{% if entry.title %}
+    <span class="text-primary fw-semibold">{{ entry.title }}</span>
 {% else %}
-    <span class="text-secondary small"><em>Empty</em></span>
+    <span class="text-secondary"><em>Untitled</em></span>
+{% endif %}
+{% if entry.entry %}
+    <div class="small text-muted mt-1">{{ entry.entry | striptags | truncate(100) }}</div>
 {% endif %}
 """
 
@@ -95,21 +98,20 @@ def journal_data(entries: List[StudentJournalEntry], student: StudentData):
     timestamp_templ: Template = _build_templ(_timestamp)
     year_templ: Template = _build_templ(_year)
     classes_templ: Template = _build_templ(_classes)
-    entry_preview_templ: Template = _build_templ(_entry_preview)
+    title_templ: Template = _build_templ(_title)
     owner_templ: Template = _build_templ(_owner)
     menu_templ: Template = _build_templ(_menu)
 
     def _process(e: StudentJournalEntry):
         return {
-            "timestamp": {
-                "display": render_template(timestamp_templ, entry=e),
-                "value": e.created_timestamp.timestamp() if e.created_timestamp else 0,
-            },
+            "timestamp": render_template(timestamp_templ, entry=e),
             "year": render_template(year_templ, entry=e),
             "classes": render_template(classes_templ, entry=e),
-            "entry": render_template(entry_preview_templ, entry=e),
+            "title": render_template(title_templ, entry=e),
             "owner": render_template(owner_templ, entry=e),
-            "actions": render_template(menu_templ, entry=e, student=student, current_user=current_user),
+            "actions": render_template(
+                menu_templ, entry=e, student=student, current_user=current_user
+            ),
         }
 
     return [_process(e) for e in entries]

@@ -12,10 +12,10 @@ from datetime import datetime
 
 from flask import current_app, flash, redirect, request, url_for
 from flask_security import current_user, roles_accepted
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
-
 from app.convenor import convenor
 
 from ..database import db
@@ -24,6 +24,7 @@ from ..models import (
     ProjectClassConfig,
     StudentData,
     StudentJournalEntry,
+    User,
     journal_entry_to_pclass_config,
 )
 from ..shared.context.global_context import render_template_context
@@ -121,14 +122,16 @@ def student_journal_ajax(student_id):
     if not _check_access(student):
         return redirect(redirect_url())
 
-    base_query = db.session.query(StudentJournalEntry).filter(
-        StudentJournalEntry.student_id == student_id
+    base_query = (
+        db.session.query(StudentJournalEntry)
+        .join(User, User.id == StudentJournalEntry.owner_id)
+        .filter(StudentJournalEntry.student_id == student_id)
     )
 
     if not (
-            current_user.has_role("root")
-            or current_user.has_role("admin")
-            or current_user.has_role("office")
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or current_user.has_role("office")
     ):
         base_query = _build_convenor_entry_filter(base_query)
 
@@ -136,8 +139,15 @@ def student_journal_ajax(student_id):
         "timestamp": {"order": StudentJournalEntry.created_timestamp},
         "year": {"order": StudentJournalEntry.config_year},
         "classes": {},
-        "entry": {},
-        "owner": {},
+        "title": {
+            "order": StudentJournalEntry.title,
+            "search": StudentJournalEntry.title,
+        },
+        "owner": {
+            "search": func.concat(User.first_name, " ", User.last_name),
+            "order": [User.last_name, User.first_name],
+            "search_collation": "utf8_general_ci",
+        },
         "actions": {},
     }
 
@@ -155,7 +165,9 @@ def add_journal_entry(student_id):
     if not _check_access(student):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.student_journal_inspector", student_id=student_id))
+    url = request.args.get(
+        "url", url_for("convenor.student_journal_inspector", student_id=student_id)
+    )
     text = request.args.get("text", "Back to journal")
 
     JournalForm = AddJournalEntryFormFactory(current_user)
@@ -168,6 +180,7 @@ def add_journal_entry(student_id):
             config_year=config_year,
             created_timestamp=datetime.now(),
             owner_id=current_user.id,
+            title=form.title.data,
             entry=form.entry.data,
         )
 
@@ -191,7 +204,14 @@ def add_journal_entry(student_id):
             )
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(url_for("convenor.student_journal_inspector", student_id=student_id, url=url, text=text))
+        return redirect(
+            url_for(
+                "convenor.student_journal_inspector",
+                student_id=student_id,
+                url=url,
+                text=text,
+            )
+        )
 
     return render_template_context(
         "convenor/journal/edit_entry.html",
@@ -225,6 +245,7 @@ def edit_journal_entry(entry_id):
     form = JournalForm(obj=entry)
 
     if form.validate_on_submit():
+        entry.title = form.title.data
         entry.entry = form.entry.data
         entry.project_classes = list(form.project_classes.data)
 

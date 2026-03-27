@@ -795,33 +795,43 @@ _VALID_MARKING_FIELD_TYPES = {"boolean", "text", "number", "percent"}
 _VALID_VALIDATION_ACTIONS = {"prevent_submit", "email", "web"}
 
 
-def parse_schema(data) -> list | None:
+def parse_schema(data) -> dict | None:
     """
     Validate the structure of a deserialized marking scheme schema.
     `data` should be a Python object obtained from json.loads().
-    Returns the validated list of blocks, or None if the structure is invalid.
+    Returns the validated schema dict, or None if the structure is invalid.
 
-    Expected layout: a list of blocks, each block a dict with:
-        "title": str (required)
-        "description": str (optional)
-        "fields": list of dicts (required), each with:
-            "key": str
-            "text": str
-            "field_type": dict with:
-                "type" in {"boolean", "text", "number", "percent"}
-                "min", "max": optional, used with number type
-                "precision": optional, used with number type
-                "default": optional
+    Expected layout: a dict with:
+        "scheme": list of section blocks (required), each block a dict with:
+            "title": str (required)
+            "description": str (optional)
+            "fields": list of dicts (required), each with:
+                "key": str (required)
+                "text": str (required)
+                "field_type": dict (required) with:
+                    "type" in {"boolean", "text", "number", "percent"} (required)
+                    "min", "max": optional, used with number type
+                    "precision": optional, used with number type
+                    "default": optional
+        "conflation_rule": str (required, valid Python expression)
         "validation": list of dicts (optional), each with:
-            "test": str (valid Python expression)
+            "test": str (required, valid Python expression)
             "action": list of strings from {"prevent_submit", "email", "web"}
                       ("prevent_submit" must be the only action if present)
-        "conflation_rule": str (optional, valid Python expression)
     """
-    if not isinstance(data, list):
+    if not isinstance(data, dict):
         return None
 
-    for block in data:
+    # "conflation_rule" is required and must be a string
+    if not isinstance(data.get("conflation_rule"), str):
+        return None
+
+    # "scheme" is required and must be a list of section blocks
+    scheme = data.get("scheme")
+    if not isinstance(scheme, list):
+        return None
+
+    for block in scheme:
         if not isinstance(block, dict):
             return None
         if not isinstance(block.get("title"), str):
@@ -849,29 +859,24 @@ def parse_schema(data) -> list | None:
             if ft.get("type") not in _VALID_MARKING_FIELD_TYPES:
                 return None
 
-        # Optional validation list
-        validation = block.get("validation")
-        if validation is not None:
-            if not isinstance(validation, list):
-                return None
-            for test_item in validation:
-                if not isinstance(test_item, dict):
-                    return None
-                if not isinstance(test_item.get("test"), str):
-                    return None
-                action = test_item.get("action")
-                if not isinstance(action, list):
-                    return None
-                if not all(a in _VALID_VALIDATION_ACTIONS for a in action):
-                    return None
-                # "prevent_submit" must be the only action if present
-                if "prevent_submit" in action and len(action) != 1:
-                    return None
-
-        # Optional conflation_rule
-        conflation_rule = block.get("conflation_rule")
-        if conflation_rule is not None and not isinstance(conflation_rule, str):
+    # Optional top-level validation list
+    validation = data.get("validation")
+    if validation is not None:
+        if not isinstance(validation, list):
             return None
+        for test_item in validation:
+            if not isinstance(test_item, dict):
+                return None
+            if not isinstance(test_item.get("test"), str):
+                return None
+            action = test_item.get("action")
+            if not isinstance(action, list):
+                return None
+            if not all(a in _VALID_VALIDATION_ACTIONS for a in action):
+                return None
+            # "prevent_submit" must be the only action if present
+            if "prevent_submit" in action and len(action) != 1:
+                return None
 
     return data
 
@@ -888,9 +893,9 @@ def valid_marking_schema(form, field):
     if parse_schema(data) is None:
         raise ValidationError(
             "Schema does not conform to the required layout: "
-            "expected a list of blocks, each with a title and a list of fields "
-            "(key, text, field_type with type one of boolean/text/number/percent), "
-            "and optional description, validation list, and conflation_rule"
+            "expected a dict with 'scheme' (list of section blocks, each with a title and fields), "
+            "'conflation_rule' (Python expression string), "
+            "and optional 'validation' list"
         )
 
 

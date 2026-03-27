@@ -370,7 +370,7 @@ def marking_report_data(reports):
 _POPOVER_TEXT_MAX = 80
 
 
-def _parse_scheme_schema(scheme) -> list | None:
+def _parse_scheme_schema(scheme) -> dict | None:
     """Adapter: extract and validate schema from a MarkingScheme or LiveMarkingScheme object."""
     try:
         raw = scheme.schema_as_dict
@@ -379,17 +379,17 @@ def _parse_scheme_schema(scheme) -> list | None:
     return parse_schema(raw)
 
 
-def _make_schema_block_summaries(blocks) -> list | None:
+def _make_schema_block_summaries(schema) -> list | None:
     """
-    Convert a validated list of schema blocks (from parse_schema) into a list of
+    Convert a validated schema dict (from parse_schema) into a list of
     summary dicts suitable for passing to the _marking_scheme_schema template.
-    Returns None if blocks is None.
+    Returns None if schema is None.
     """
-    if blocks is None:
+    if schema is None:
         return None
 
     summaries = []
-    for block in blocks:
+    for block in schema["scheme"]:
         lines = []
         for field in block["fields"]:
             text = field["text"]

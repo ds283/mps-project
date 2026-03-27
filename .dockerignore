@@ -23,7 +23,7 @@ fix-latin1.py
 FYP_feedback_template.html.j2
 instance
 logs
-Mark schemes
+reference-mark-schemes
 memory-bank
 mongodb
 mysql

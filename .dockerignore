@@ -32,7 +32,6 @@ objectstore-data
 profiling
 profile
 scratch
-SQLAlchemy-mysql-base.patch
 restart.sh
 test_pdf.py
 venv

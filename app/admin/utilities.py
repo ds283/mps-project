@@ -75,6 +75,7 @@ from ..shared.utils import (
     home_dashboard,
     redirect_url,
 )
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import register_task
 from ..tools import ServerSideInMemoryHandler, ServerSideSQLHandler
 from ..tools.ServerSideProcessing import FakeQuery
@@ -144,7 +145,7 @@ def add_room():
         )
 
         db.session.add(data)
-        db.session.commit()
+        log_db_commit(f"Added new venue room '{data.name}'", user=current_user)
 
         return redirect(url_for("admin.edit_rooms"))
 
@@ -172,7 +173,7 @@ def edit_room(id):
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        log_db_commit(f"Edited venue room '{data.name}'", user=current_user)
 
         return redirect(url_for("admin.edit_rooms"))
 

@@ -63,6 +63,7 @@ from ..shared.context.global_context import render_template_context
 from ..shared.context.root_dashboard import get_root_dashboard_data
 from ..shared.conversions import is_integer
 from ..shared.projects import create_new_tags, project_list_SQL_handler
+from ..shared.workflow_logging import log_db_commit
 from ..shared.utils import (
     allow_approval_for_description,
     filter_assessors,
@@ -500,7 +501,10 @@ def add_project():
 
         try:
             db.session.add(data)
-            db.session.commit()
+            log_db_commit(
+                f"Added new project '{data.name}' owned by {current_user.name}",
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -604,7 +608,10 @@ def edit_project(id):
         project.validate_programmes()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Edited project settings for '{project.name}' owned by {current_user.name}",
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -644,7 +651,11 @@ def remove_project_pclass(proj_id, pclass_id):
 
     try:
         proj.remove_project_class(pclass)
-        db.session.commit()
+        log_db_commit(
+            f"Removed project class '{pclass.name}' from project '{proj.name}'",
+            user=current_user,
+            project_classes=pclass,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -667,7 +678,10 @@ def activate_project(id):
         return redirect(redirect_url())
 
     proj.enable()
-    db.session.commit()
+    log_db_commit(
+        f"Activated project '{proj.name}' owned by {current_user.name}",
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -683,7 +697,10 @@ def deactivate_project(id):
         return redirect(redirect_url())
 
     data.disable()
-    db.session.commit()
+    log_db_commit(
+        f"Deactivated project '{data.name}' owned by {current_user.name}",
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -738,7 +755,10 @@ def perform_delete_project(id):
             db.session.delete(item)
 
         db.session.delete(data)
-        db.session.commit()
+        log_db_commit(
+            f"Deleted project '{data.name}' owned by {current_user.name}",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -787,7 +807,10 @@ def add_description(pid):
 
         try:
             db.session.add(data)
-            db.session.commit()
+            log_db_commit(
+                f"Added new description '{data.label}' for project '{proj.name}'",
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -855,7 +878,10 @@ def edit_description(did):
         desc.validate_modules()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Edited description settings '{desc.label}' for project '{desc.parent.name}'",
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -903,7 +929,10 @@ def edit_description_content(did):
         desc.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Edited description content '{desc.label}' for project '{desc.parent.name}'",
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -995,7 +1024,11 @@ def description_attach_module(did, mod_id, level_id):
             desc.modules.append(module)
 
             try:
-                db.session.commit()
+                log_db_commit(
+                    f"Attached recommended module '{module.name}' to description '{desc.label}' "
+                    f"for project '{desc.parent.name}'",
+                    user=current_user,
+                )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1045,7 +1078,11 @@ def description_detach_module(did, mod_id, level_id):
         desc.modules.remove(module)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Detached recommended module '{module.name}' from description '{desc.label}' "
+                f"for project '{desc.parent.name}'",
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1080,7 +1117,10 @@ def delete_description(did):
 
     try:
         db.session.delete(desc)
-        db.session.commit()
+        log_db_commit(
+            f"Deleted description '{desc.label}' from project '{desc.parent.name}'",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1142,7 +1182,10 @@ def duplicate_description(did):
 
     try:
         db.session.add(data)
-        db.session.commit()
+        log_db_commit(
+            f"Duplicated description '{desc.label}' as '{new_label}' for project '{desc.parent.name}'",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1229,7 +1272,11 @@ def move_description(did):
                 db.session.add(copy_desc)
 
             try:
-                db.session.commit()
+                log_db_commit(
+                    f"Moved description '{desc.label}' from project '{old_project.name}' "
+                    f"to project '{new_project.name}'",
+                    user=current_user,
+                )
                 flash(
                     'Variant "{name}" successfully moved to project "{pname}"'.format(
                         name=desc.label, pname=new_project.name
@@ -1290,7 +1337,10 @@ def make_default_description(pid, did=None):
             return redirect(redirect_url())
 
     proj.default_id = did
-    db.session.commit()
+    log_db_commit(
+        f"{'Set' if did is not None else 'Cleared'} default description for project '{proj.name}'",
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -1361,7 +1411,10 @@ def add_skill(projectid, skillid, sel_id):
 
     if skill not in proj.skills:
         proj.add_skill(skill)
-        db.session.commit()
+        log_db_commit(
+            f"Attached transferable skill '{skill.name}' to project '{proj.name}'",
+            user=current_user,
+        )
 
     return redirect(
         url_for("faculty.attach_skills", id=projectid, sel_id=sel_id, create=create)
@@ -1384,7 +1437,10 @@ def remove_skill(projectid, skillid, sel_id):
 
     if skill in proj.skills:
         proj.remove_skill(skill)
-        db.session.commit()
+        log_db_commit(
+            f"Detached transferable skill '{skill.name}' from project '{proj.name}'",
+            user=current_user,
+        )
 
     return redirect(
         url_for("faculty.attach_skills", id=projectid, sel_id=sel_id, create=create)
@@ -1424,7 +1480,10 @@ def add_programme(id, prog_id):
 
     if proj.programmes is not None and programme not in proj.programmes:
         proj.add_programme(programme)
-        db.session.commit()
+        log_db_commit(
+            f"Attached degree programme '{programme.full_name}' to project '{proj.name}'",
+            user=current_user,
+        )
 
     return redirect(redirect_url())
 
@@ -1443,7 +1502,10 @@ def remove_programme(id, prog_id):
 
     if proj.programmes is not None and programme in proj.programmes:
         proj.remove_programme(programme)
-        db.session.commit()
+        log_db_commit(
+            f"Detached degree programme '{programme.full_name}' from project '{proj.name}'",
+            user=current_user,
+        )
 
     return redirect(redirect_url())
 
@@ -1593,7 +1655,10 @@ def attach_all_assessors(proj_id):
     for assessor in assssors:
         proj.add_assessor(assessor, autocommit=False)
 
-    db.session.commit()
+    log_db_commit(
+        f"Attached all filtered assessors to project '{proj.name}'",
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -1617,7 +1682,10 @@ def remove_all_assessors(proj_id):
     for assessor in assessors:
         proj.remove_assessor(assessor, autocommit=False)
 
-    db.session.commit()
+    log_db_commit(
+        f"Removed all filtered assessors from project '{proj.name}'",
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -1688,7 +1756,10 @@ def project_preview(id):
             creation_timestamp=datetime.now(),
         )
         db.session.add(comment)
-        db.session.commit()
+        log_db_commit(
+            f"Posted comment on description '{desc.label}' for project '{data.name}'",
+            user=current_user,
+        )
 
         # notify watchers on this thread that a new comment has been posted
         celery = current_app.extensions["celery"]
@@ -2001,7 +2072,11 @@ def confirm_pclass(id):
     messages = []
     try:
         messages = config.mark_confirmed(current_user.faculty_data, message=True)
-        db.session.commit()
+        log_db_commit(
+            f"Faculty member {current_user.name} confirmed all projects for class '{config.name}'",
+            user=current_user,
+            project_classes=pclass,
+        )
 
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -2069,7 +2144,12 @@ def confirm_description(did, pclass_id):
         if not config.has_confirmations_outstanding(current_user.faculty_data):
             messages = config.mark_confirmed(current_user.faculty_data, message=True)
 
-        db.session.commit()
+        log_db_commit(
+            f"Faculty member {current_user.name} confirmed description '{desc.label}' "
+            f"for project '{desc.parent.name}' in class '{pcl.name}'",
+            user=current_user,
+            project_classes=pcl,
+        )
 
         # kick off a background task to check whether any other project classes in which this user is enrolled
         # have been reduced to zero confirmations left.
@@ -2114,7 +2194,11 @@ def confirm(sid, pid):
         return redirect(url_for(request.referrer))
 
     if do_confirm(sel, project, resolved_by=current_user):
-        db.session.commit()
+        log_db_commit(
+            f"Confirmed selection of project '{project.name}' for student {sel.student.user.name}",
+            user=current_user,
+            project_classes=project.config.project_class,
+        )
 
     return redirect(redirect_url())
 
@@ -2137,7 +2221,11 @@ def deconfirm_to_pending(sid, pid):
         return redirect(url_for(request.referrer))
 
     if do_deconfirm_to_pending(sel, project):
-        db.session.commit()
+        log_db_commit(
+            f"Moved selection of project '{project.name}' by student {sel.student.user.name} back to pending",
+            user=current_user,
+            project_classes=project.config.project_class,
+        )
 
     return redirect(redirect_url())
 
@@ -2160,7 +2248,11 @@ def cancel_confirm(sid, pid):
         return redirect(url_for(request.referrer))
 
     if do_cancel_confirm(sel, project):
-        db.session.commit()
+        log_db_commit(
+            f"Cancelled confirmation of project '{project.name}' for student {sel.student.user.name}",
+            user=current_user,
+            project_classes=project.config.project_class,
+        )
 
     return redirect(redirect_url())
 
@@ -2268,7 +2360,12 @@ def edit_feedback(id):
             role.feedback_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Saved feedback for submission by {record.student_identifier['label']} "
+                f"(role: {role.role_label})",
+                user=current_user,
+                project_classes=period.config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2356,7 +2453,12 @@ def submit_feedback(id):
         role.submitted_feedback = True
         role.feedback_timestamp = datetime.now()
 
-        db.session.commit()
+        log_db_commit(
+            f"Submitted feedback for submission by {record.student_identifier['label']} "
+            f"(role: {role.role_label})",
+            user=current_user,
+            project_classes=period.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2415,7 +2517,12 @@ def unsubmit_feedback(id):
         role.submitted_feedback = False
         role.feedback_timestamp = None
 
-        db.session.commit()
+        log_db_commit(
+            f"Unsubmitted feedback for submission by {record.student_identifier['label']} "
+            f"(role: {role.role_label})",
+            user=current_user,
+            project_classes=period.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2463,7 +2570,11 @@ def acknowledge_feedback(id):
         return redirect(redirect_url())
 
     record.acknowledge_feedback = True
-    db.session.commit()
+    log_db_commit(
+        f"Acknowledged student feedback for submission by {record.student_identifier['label']}",
+        user=current_user,
+        project_classes=period.config.project_class,
+    )
 
     return redirect(redirect_url())
 
@@ -2545,7 +2656,11 @@ def edit_response(id):
         role.response = form.feedback.data
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Saved response to student feedback for submission by {record.student_identifier['label']}",
+                user=current_user,
+                project_classes=period.config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2618,7 +2733,11 @@ def submit_response(id):
         role.submitted_response = True
         role.response_timestamp = datetime.now()
 
-        db.session.commit()
+        log_db_commit(
+            f"Submitted response to student feedback for submission by {record.student_identifier['label']}",
+            user=current_user,
+            project_classes=period.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2690,7 +2809,10 @@ def set_availability(id):
             raise RuntimeError("Unknown submit button in faculty.set_availability")
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Set availability for assessment '{assessment.name}' by {current_user.name}",
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2746,7 +2868,11 @@ def session_available(sess_id):
     session.faculty_make_available(current_user.faculty_data)
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Marked session '{session.short_date_string}' as available for assessment '{assessment.name}' "
+            f"by {current_user.name}",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2788,7 +2914,11 @@ def session_ifneeded(sess_id):
     session.faculty_make_ifneeded(current_user.faculty_data)
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Marked session '{session.short_date_string}' as if-needed for assessment '{assessment.name}' "
+            f"by {current_user.name}",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2830,7 +2960,11 @@ def session_unavailable(sess_id):
     session.faculty_make_unavailable(current_user.faculty_data)
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Marked session '{session.short_date_string}' as unavailable for assessment '{assessment.name}' "
+            f"by {current_user.name}",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2873,7 +3007,10 @@ def session_all_available(sess_id):
     for session in assessment.sessions:
         session.faculty_make_available(current_user.faculty_data)
 
-    db.session.commit()
+    log_db_commit(
+        f"Marked all sessions as available for assessment '{assessment.name}' by {current_user.name}",
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -2909,7 +3046,10 @@ def session_all_unavailable(sess_id):
     for session in assessment.sessions:
         session.faculty_make_unavailable(current_user.faculty_data)
 
-    db.session.commit()
+    log_db_commit(
+        f"Marked all sessions as unavailable for assessment '{assessment.name}' by {current_user.name}",
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -3044,7 +3184,10 @@ def settings():
         fd.last_edit_timestamp = datetime.now()
 
         flash("All changes saved", "success")
-        db.session.commit()
+        log_db_commit(
+            f"Updated faculty settings for {current_user.name}",
+            user=current_user,
+        )
 
         return home_dashboard()
 

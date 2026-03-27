@@ -64,6 +64,7 @@ from ..shared.utils import (
 from ..shared.validators import (
     validate_is_admin_or_convenor,
 )
+from ..shared.workflow_logging import log_db_commit
 from ..tools import ServerSideSQLHandler
 from . import admin
 from .forms import (
@@ -123,7 +124,7 @@ def global_config():
         config.enable_2026_ATAS_campaign = form.enable_2026_ATAS_campaign.data
 
         try:
-            db.session.commit()
+            log_db_commit("Updated global configuration settings", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -218,7 +219,7 @@ def add_group():
 
         try:
             db.session.add(group)
-            db.session.commit()
+            log_db_commit(f"Added new research group '{group.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -262,7 +263,7 @@ def edit_group(id):
         group.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited research group '{group.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -290,7 +291,7 @@ def activate_group(id):
     group.enable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Activated research group '{group.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -314,7 +315,7 @@ def deactivate_group(id):
     group.disable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Deactivated research group '{group.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -552,7 +553,7 @@ def add_degree_type():
 
         try:
             db.session.add(degree_type)
-            db.session.commit()
+            log_db_commit(f"Added new degree type '{degree_type.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -593,7 +594,7 @@ def edit_degree_type(id):
         type.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited degree type '{type.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -625,7 +626,7 @@ def activate_degree_type(id):
     degree_type.enable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Activated degree type '{degree_type.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -650,7 +651,7 @@ def deactivate_degree_type(id):
     degree_type.disable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Deactivated degree type '{degree_type.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -698,7 +699,7 @@ def add_degree_programme():
 
         try:
             db.session.add(programme)
-            db.session.commit()
+            log_db_commit(f"Added new degree programme '{programme.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -746,7 +747,7 @@ def edit_degree_programme(id):
         programme.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited degree programme '{programme.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -777,7 +778,7 @@ def activate_degree_programme(id):
     programme.enable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Activated degree programme '{programme.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -801,7 +802,7 @@ def deactivate_degree_programme(id):
     programme.disable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Deactivated degree programme '{programme.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -881,7 +882,7 @@ def attach_module(prog_id, mod_id, level_id):
         programme.modules.append(module)
 
         try:
-            db.session.commit()
+            log_db_commit(f"Attached module '{module.code} {module.name}' to degree programme '{programme.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -909,7 +910,7 @@ def detach_module(prog_id, mod_id, level_id):
         programme.modules.remove(module)
 
         try:
-            db.session.commit()
+            log_db_commit(f"Detached module '{module.code} {module.name}' from degree programme '{programme.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -945,7 +946,7 @@ def add_level():
 
         try:
             db.session.add(level)
-            db.session.commit()
+            log_db_commit(f"Added new FHEQ level '{level.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -981,7 +982,7 @@ def edit_level(id):
         level.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited FHEQ level '{level.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1012,7 +1013,7 @@ def activate_level(id):
     level.enable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Activated FHEQ level '{level.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1036,7 +1037,7 @@ def deactivate_level(id):
     skill.disable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Deactivated FHEQ level '{skill.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1081,7 +1082,7 @@ def add_module():
 
         try:
             db.session.add(module)
-            db.session.commit()
+            log_db_commit(f"Added new module '{module.code} {module.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1128,7 +1129,7 @@ def edit_module(id):
         module.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited module '{module.code} {module.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1159,7 +1160,7 @@ def retire_module(id):
     module.retire()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Retired module '{module.code} {module.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1183,7 +1184,7 @@ def unretire_module(id):
     module.unretire()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Un-retired module '{module.code} {module.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1273,7 +1274,7 @@ def add_skill():
 
         try:
             db.session.add(skill)
-            db.session.commit()
+            log_db_commit(f"Added new transferable skill '{skill.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1314,7 +1315,7 @@ def edit_skill(id):
         skill.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited transferable skill '{skill.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1348,7 +1349,7 @@ def activate_skill(id):
     skill.enable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Activated transferable skill '{skill.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1375,7 +1376,7 @@ def deactivate_skill(id):
     skill.disable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Deactivated transferable skill '{skill.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1452,7 +1453,7 @@ def add_skill_group():
 
         try:
             db.session.add(group)
-            db.session.commit()
+            log_db_commit(f"Added new transferable skill group '{group.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1493,7 +1494,7 @@ def edit_skill_group(id):
         group.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited transferable skill group '{group.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1527,7 +1528,7 @@ def activate_skill_group(id):
     group.enable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Activated transferable skill group '{group.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1554,7 +1555,7 @@ def deactivate_skill_group(id):
     group.disable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Deactivated transferable skill group '{group.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1632,7 +1633,7 @@ def add_project_tag_group():
 
         try:
             db.session.add(group)
-            db.session.commit()
+            log_db_commit(f"Added new project tag group '{group.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1676,7 +1677,7 @@ def edit_project_tag_group(gid):
         group.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited project tag group '{group.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1710,7 +1711,7 @@ def activate_project_tag_group(gid):
     group.enable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Activated project tag group '{group.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1745,7 +1746,7 @@ def deactivate_project_tag_group(gid):
     group.disable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Deactivated project tag group '{group.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1837,7 +1838,7 @@ def add_project_tag():
 
         try:
             db.session.add(tag)
-            db.session.commit()
+            log_db_commit(f"Added new project tag '{tag.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1880,7 +1881,7 @@ def edit_project_tag(tid):
             tag.colour = None
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited project tag '{tag.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1914,7 +1915,7 @@ def activate_project_tag(tid):
     tag.enable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Activated project tag '{tag.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1941,7 +1942,7 @@ def deactivate_project_tag(tid):
     tag.disable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Deactivated project tag '{tag.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1999,7 +2000,7 @@ def add_license():
 
         try:
             db.session.add(data)
-            db.session.commit()
+            log_db_commit(f"Added new content license '{data.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2041,7 +2042,7 @@ def edit_license(lid):
         license.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited content license '{license.name}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2073,7 +2074,7 @@ def activate_license(lid):
     license.enable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Activated content license '{license.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2098,7 +2099,7 @@ def deactivate_license(lid):
     license.disable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Deactivated content license '{license.name}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2288,7 +2289,7 @@ def add_pclass():
 
             db.session.flush()
             modified: bool = data.validate_presentations()
-            db.session.commit()
+            log_db_commit(f"Created new project class '{data.name}'", user=current_user, project_classes=data)
 
         except SQLAlchemyError as e:
             flash(
@@ -2410,7 +2411,7 @@ def edit_pclass(id):
         try:
             db.session.flush()
             modified: bool = pclass.validate_presentations()
-            db.session.commit()
+            log_db_commit(f"Edited project class '{pclass.name}'", user=current_user, project_classes=pclass)
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(
@@ -2500,7 +2501,7 @@ def edit_pclass_text(id):
         data.email_text_draft_match_preamble = form.email_text_draft_match_preamble.data
         data.email_text_final_match_preamble = form.email_text_final_match_preamble.data
 
-        db.session.commit()
+        log_db_commit(f"Edited text content for project class '{data.name}'", user=current_user, project_classes=data)
 
         return redirect(url_for("admin.edit_project_classes"))
 
@@ -2519,7 +2520,7 @@ def activate_pclass(id):
     """
     data = ProjectClass.query.get_or_404(id)
     data.enable()
-    db.session.commit()
+    log_db_commit(f"Activated project class '{data.name}'", user=current_user, project_classes=data)
 
     return redirect(redirect_url())
 
@@ -2534,7 +2535,7 @@ def deactivate_pclass(id):
     """
     data = ProjectClass.query.get_or_404(id)
     data.disable()
-    db.session.commit()
+    log_db_commit(f"Deactivated project class '{data.name}'", user=current_user, project_classes=data)
 
     return redirect(redirect_url())
 
@@ -2549,7 +2550,7 @@ def publish_pclass(id):
     """
     data = ProjectClass.query.get_or_404(id)
     data.set_published()
-    db.session.commit()
+    log_db_commit(f"Published project class '{data.name}'", user=current_user, project_classes=data)
 
     return redirect(redirect_url())
 
@@ -2564,7 +2565,7 @@ def unpublish_pclass(id):
     """
     data = ProjectClass.query.get_or_404(id)
     data.set_unpublished()
-    db.session.commit()
+    log_db_commit(f"Unpublished project class '{data.name}'", user=current_user, project_classes=data)
 
     return redirect(redirect_url())
 
@@ -2725,7 +2726,7 @@ def regenerate_period_records(id):
         db.session.delete(c)
 
     try:
-        db.session.commit()
+        log_db_commit(f"Regenerated submission period records for project class '{data.name}'", user=current_user, project_classes=data)
     except SQLAlchemyError as e:
         flash(
             "Could not update submission period records for this project class due to a database error. Please contact a system administrator.",
@@ -2802,7 +2803,8 @@ def add_period_definition(id):
         try:
             db.session.flush()
             modified: bool = pclass.validate_presentations()
-            db.session.commit()
+            log_db_commit(f"Added new submission period definition '{pd.name}' to project class '{pclass.name}'", user=current_user,
+                          project_classes=pclass)
         except SQLAlchemyError as e:
             flash(
                 "Could not add new submission period definition because of a database error. Please contact a system administrator.",
@@ -2866,7 +2868,8 @@ def edit_period_definition(id):
         try:
             db.session.flush()
             modified: bool = pd.owner.validate_presentations()
-            db.session.commit()
+            log_db_commit(f"Edited submission period definition '{pd.name}' for project class '{pd.owner.name}'", user=current_user,
+                          project_classes=pd.owner)
         except SQLAlchemyError as e:
             flash(
                 "Could not save changes because of a database error. Please contact a system administrator.",
@@ -2901,7 +2904,7 @@ def delete_period_definition(id):
         db.session.delete(data)
         db.session.flush()
         modified: bool = pclass.validate_presentations()
-        db.session.commit()
+        log_db_commit(f"Deleted submission period definition from project class '{pclass.name}'", user=current_user, project_classes=pclass)
     except SQLAlchemyError as e:
         flash(
             "Could not delete submission period definition because of a database error. Please contact a system administrator.",
@@ -2974,7 +2977,7 @@ def add_supervisor():
         )
         try:
             db.session.add(data)
-            db.session.commit()
+            log_db_commit(f"Added new supervisory role '{data.name}'", user=current_user)
         except SQLAlchemyError as e:
             flash(
                 "Could not add new supervisory team member definition because of a database error. Please contact a system administrator.",
@@ -3016,7 +3019,7 @@ def edit_supervisor(id):
         data.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited supervisory role '{data.name}'", user=current_user)
         except SQLAlchemyError as e:
             flash(
                 "Could not save changes because of a database error. Please contact a system administrator.",
@@ -3050,7 +3053,7 @@ def activate_supervisor(id):
     data.enable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Activated supervisory role '{data.name}'", user=current_user)
     except SQLAlchemyError as e:
         flash(
             "Could not activate supervisory team member because of a database error. Please contact a system administrator.",
@@ -3078,7 +3081,7 @@ def deactivate_supervisor(id):
     data.disable()
 
     try:
-        db.session.commit()
+        log_db_commit(f"Deactivated supervisory role '{data.name}'", user=current_user)
     except SQLAlchemyError as e:
         flash(
             "Could not deactivate supervisory team member because of a database error. Please contact a system administrator.",

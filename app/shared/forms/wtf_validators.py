@@ -12,9 +12,9 @@ import json
 
 from flask import current_app
 from flask_security import (
-    password_length_validator,
-    password_complexity_validator,
     password_breached_validator,
+    password_complexity_validator,
+    password_length_validator,
 )
 from python_usernames import is_safe_username
 from werkzeug.local import LocalProxy
@@ -23,33 +23,33 @@ from wtforms.validators import Optional
 
 from ...database import db
 from ...models import (
-    ResearchGroup,
-    DegreeType,
-    DegreeProgramme,
-    TransferableSkill,
-    SkillGroup,
-    ProjectClass,
-    Supervisor,
-    Role,
-    StudentData,
-    MatchingAttempt,
-    PresentationAssessment,
-    Building,
-    Room,
-    ScheduleAttempt,
-    Module,
-    Project,
-    ProjectDescription,
-    FHEQ_Level,
-    StudentBatchItem,
     AssetLicense,
-    ProjectTagGroup,
-    ProjectTag,
+    Building,
+    DegreeProgramme,
+    DegreeType,
+    FacultyBatchItem,
     FeedbackAsset,
     FeedbackRecipe,
-    FacultyBatchItem,
+    FHEQ_Level,
+    MatchingAttempt,
+    Module,
+    PresentationAssessment,
+    Project,
+    ProjectClass,
+    ProjectDescription,
+    ProjectTag,
+    ProjectTagGroup,
+    ResearchGroup,
+    Role,
+    Room,
+    ScheduleAttempt,
+    SkillGroup,
+    StudentBatchItem,
+    StudentData,
     SubmissionPeriodUnit,
     SupervisionEventTemplate,
+    Supervisor,
+    TransferableSkill,
 )
 
 _security = LocalProxy(lambda: current_app.extensions["security"])
@@ -195,7 +195,7 @@ def unique_or_original_course_code(form, field):
 def globally_unique_programme_abbreviation(form, field):
     degree_type = form.degree_type.data
     if DegreeProgramme.query.filter_by(
-            abbreviation=field.data, type_id=degree_type.id
+        abbreviation=field.data, type_id=degree_type.id
     ).first():
         raise ValidationError(
             "{name} is already associated with a degree programme of the same type".format(
@@ -207,8 +207,8 @@ def globally_unique_programme_abbreviation(form, field):
 def unique_or_original_programme_abbreviation(form, field):
     degree_type = form.degree_type.data
     if (
-            field.data == form.programme.abbreviation
-            and degree_type.id == form.programme.type_id
+        field.data == form.programme.abbreviation
+        and degree_type.id == form.programme.type_id
     ):
         return
 
@@ -217,8 +217,8 @@ def unique_or_original_programme_abbreviation(form, field):
 
 def globally_unique_transferable_skill(form, field):
     if TransferableSkill.query.filter(
-            TransferableSkill.name == field.data,
-            TransferableSkill.group_id == form.group.data.id,
+        TransferableSkill.name == field.data,
+        TransferableSkill.group_id == form.group.data.id,
     ).first():
         raise ValidationError(
             "{name} is already in use for a transferable skill".format(name=field.data)
@@ -410,7 +410,7 @@ def unique_or_original_project(form, field):
 
 def project_unique_label(form, field):
     if ProjectDescription.query.filter_by(
-            parent_id=form.project_id, label=field.data
+        parent_id=form.project_id, label=field.data
     ).first():
         raise ValidationError(
             "{name} is already used as a label for this project".format(name=field.data)
@@ -642,7 +642,7 @@ def unique_or_original_batch_item_email(batch_id, form, field):
 
 def globally_unique_batch_item_exam_number(batch_id, form, field):
     if StudentBatchItem.query.filter_by(
-            parent_id=batch_id, exam_number=field.data
+        parent_id=batch_id, exam_number=field.data
     ).first():
         raise ValidationError(
             "{name} is already in use as an exam number for this batch import".format(
@@ -660,7 +660,7 @@ def unique_or_original_batch_item_exam_number(batch_id, form, field):
 
 def globally_unique_batch_item_registration_number(batch_id, form, field):
     if StudentBatchItem.query.filter_by(
-            parent_id=batch_id, registration_number=field.data
+        parent_id=batch_id, registration_number=field.data
     ).first():
         return ValidationError(
             "{name} is already used as a registration number for this batch import".format(
@@ -792,6 +792,7 @@ def valid_json(form, field):
 
 
 _VALID_MARKING_FIELD_TYPES = {"boolean", "text", "number", "percent"}
+_VALID_VALIDATION_ACTIONS = {"prevent_submit", "email", "web"}
 
 
 def parse_schema(data) -> list | None:
@@ -801,11 +802,21 @@ def parse_schema(data) -> list | None:
     Returns the validated list of blocks, or None if the structure is invalid.
 
     Expected layout: a list of blocks, each block a dict with:
-        "title": str
-        "fields": list of dicts, each with:
+        "title": str (required)
+        "description": str (optional)
+        "fields": list of dicts (required), each with:
             "key": str
             "text": str
-            "field_type": dict with "type" in {"boolean", "text", "number", "percent"}
+            "field_type": dict with:
+                "type" in {"boolean", "text", "number", "percent"}
+                "min", "max": optional, used with number type
+                "precision": optional, used with number type
+                "default": optional
+        "validation": list of dicts (optional), each with:
+            "test": str (valid Python expression)
+            "action": list of strings from {"prevent_submit", "email", "web"}
+                      ("prevent_submit" must be the only action if present)
+        "conflation_rule": str (optional, valid Python expression)
     """
     if not isinstance(data, list):
         return None
@@ -815,6 +826,13 @@ def parse_schema(data) -> list | None:
             return None
         if not isinstance(block.get("title"), str):
             return None
+
+        # Optional description
+        description = block.get("description")
+        if description is not None and not isinstance(description, str):
+            return None
+
+        # Required fields list
         fields = block.get("fields")
         if not isinstance(fields, list):
             return None
@@ -830,6 +848,30 @@ def parse_schema(data) -> list | None:
                 return None
             if ft.get("type") not in _VALID_MARKING_FIELD_TYPES:
                 return None
+
+        # Optional validation list
+        validation = block.get("validation")
+        if validation is not None:
+            if not isinstance(validation, list):
+                return None
+            for test_item in validation:
+                if not isinstance(test_item, dict):
+                    return None
+                if not isinstance(test_item.get("test"), str):
+                    return None
+                action = test_item.get("action")
+                if not isinstance(action, list):
+                    return None
+                if not all(a in _VALID_VALIDATION_ACTIONS for a in action):
+                    return None
+                # "prevent_submit" must be the only action if present
+                if "prevent_submit" in action and len(action) != 1:
+                    return None
+
+        # Optional conflation_rule
+        conflation_rule = block.get("conflation_rule")
+        if conflation_rule is not None and not isinstance(conflation_rule, str):
+            return None
 
     return data
 
@@ -847,7 +889,8 @@ def valid_marking_schema(form, field):
         raise ValidationError(
             "Schema does not conform to the required layout: "
             "expected a list of blocks, each with a title and a list of fields "
-            "(key, text, field_type with type one of boolean/text/number/percent)"
+            "(key, text, field_type with type one of boolean/text/number/percent), "
+            "and optional description, validation list, and conflation_rule"
         )
 
 

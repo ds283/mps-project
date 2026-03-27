@@ -98,8 +98,8 @@ with app.app_context():
     # db.session.commit()
     # migrate_schedule_submission_roles(app)
 
-    db.session.commit()
-    migrate_to_marking_events(app)
+    # db.session.commit()
+    # migrate_to_marking_events(app)
 
 
 if __name__ == "__main__":

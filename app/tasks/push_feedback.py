@@ -34,6 +34,7 @@ from ..models import (
     User,
 )
 from ..models.emails import encode_email_payload
+from ..shared.workflow_logging import log_db_commit
 from .shared.utils import report_info
 
 
@@ -226,7 +227,12 @@ def register_push_feedback_tasks(celery):
             record.feedback_push_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Queued feedback email to student {student.name} ({pclass.name}, {period.display_name}) and marked feedback as sent",
+                user=user_id,
+                project_classes=pclass,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -359,7 +365,13 @@ def register_push_feedback_tasks(celery):
                         role.feedback_push_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Queued feedback email to {person.name} ({pclass.name}, {period.display_name}) covering "
+                f"{len(submitters)} submitter(s) and marked roles as sent",
+                user=user_id,
+                project_classes=pclass,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

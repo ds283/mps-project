@@ -57,6 +57,7 @@ from .submissions import *
 from .tenants import *
 from .users import *
 from .utilities import *
+from .workflow_log import *
 
 ProjectLike = Union[Project, LiveProject]
 ProjectLikeList = List[ProjectLike]

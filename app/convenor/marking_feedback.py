@@ -61,6 +61,7 @@ from ..shared.context.convenor_dashboard import (
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
+from ..shared.workflow_logging import log_db_commit
 from ..shared.utils import (
     build_submitters_data,
     get_current_year,
@@ -441,7 +442,11 @@ def _process_update_deadline(
     period.feedback_deadline = deadline
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Updated feedback deadline for "{config.name}" / "{period.display_name}" to {deadline}',
+            user=current_user,
+            project_classes=config.project_class,
+        )
         flash(
             "The feedback deadline for {proj}/{period} has been successfully changed "
             "to {deadline}.".format(
@@ -680,7 +685,11 @@ def do_open_feedback(id):
         period.feedback_timestamp = datetime.now()
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Opened feedback for "{config.name}" / "{period.display_name}" with deadline {period.feedback_deadline}',
+            user=current_user,
+            project_classes=config.project_class,
+        )
         flash(
             'Feedback for "{proj}" has been opened successfully, with deadline '
             "{deadline}.".format(
@@ -786,7 +795,11 @@ def immediate_close_feedback(id):
     period.closed_timestamp = now
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Immediately closed feedback for "{config.name}" / "{period.display_name}"',
+            user=current_user,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not modify feedback status due to a database error. Please contact a system administrator.",
@@ -902,7 +915,11 @@ def do_close_feedback(id):
     period.closed_timestamp = datetime.now()
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Closed feedback for "{config.name}" / "{period.display_name}"',
+            user=current_user,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not modify feedback status due to a database error. Please contact a system administrator.",
@@ -975,7 +992,11 @@ def edit_project_config(pid):
             config.canvas_login = form.canvas_login.data
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Saved project configuration for "{config.name}"',
+                user=current_user,
+                project_classes=config.project_class,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not save project configuration because of a database error. Please contact a system administrator.",
@@ -1070,7 +1091,11 @@ def edit_period_record(pid):
             record.canvas_assignment_id = edit_form.canvas_assignment_id.data
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Saved submission period configuration for "{record.display_name}" in "{config.name}"',
+                user=current_user,
+                project_classes=config.project_class,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not save submission period configuration because of a database error. Please contact a system administrator.",
@@ -1116,7 +1141,11 @@ def edit_period_presentation(pid):
             record.talk_format = edit_form.talk_format.data
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Saved presentation settings for submission period "{record.display_name}" in "{config.name}"',
+                user=current_user,
+                project_classes=config.project_class,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not save submission period configuration because of a database error. Please contact a system administrator.",
@@ -1161,7 +1190,11 @@ def publish_assignment(id):
     sub.published = True
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Published assignment for submitter "{sub.student.user.name}" in "{sub.config.name}"',
+            user=current_user,
+            project_classes=sub.config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not publish assignment because of a database error. Please contact a system administrator.",
@@ -1198,7 +1231,11 @@ def unpublish_assignment(id):
         return redirect(redirect_url())
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Unpublished assignment for submitter "{sub.student.user.name}" in "{sub.config.name}"',
+            user=current_user,
+            project_classes=sub.config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not unpublish assignment because of a database error. Please contact a system administrator.",
@@ -1247,7 +1284,11 @@ def publish_all_assignments(id):
         sel.published = True
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Published all filtered assignments for "{config.name}"',
+            user=current_user,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not publish assignments because of a database error. Please contact a system administrator.",
@@ -1296,7 +1337,11 @@ def unpublish_all_assignments(id):
         sel.published = False
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f'Unpublished all filtered assignments for "{config.name}"',
+            user=current_user,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not unpublish assignments because of a database error. Please contact a system administrator.",
@@ -2002,7 +2047,11 @@ def assign_revert(id):
 
             db.session.add(new_role)
 
-        db.session.commit()
+        log_db_commit(
+            f'Reverted submission record {rec.id} to match assignment for "{period.display_name}" in "{period.config.name}"',
+            user=current_user,
+            project_classes=period.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2079,7 +2128,11 @@ def assign_from_selection(id, sel_id):
                 )
                 db.session.add(role)
 
-        db.session.commit()
+        log_db_commit(
+            f'Assigned project "{lp.name}" to submission {rec.id} from selection for "{period.display_name}" in "{period.config.name}"',
+            user=current_user,
+            project_classes=period.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2163,7 +2216,11 @@ def assign_liveproject(id, pid):
                 )
                 db.session.add(role)
 
-        db.session.commit()
+        log_db_commit(
+            f'Assigned live project "{lp.name}" to submission {rec.id} for "{period.display_name}" in "{period.config.name}"',
+            user=current_user,
+            project_classes=period.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2222,7 +2279,11 @@ def deassign_project(id):
                 ).delete()
 
         rec.project = None
-        db.session.commit()
+        log_db_commit(
+            f'Removed project assignment from submission {rec.id} for "{rec.period.display_name}" in "{rec.period.config.name}"',
+            user=current_user,
+            project_classes=rec.period.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2274,7 +2335,11 @@ def edit_feedback(id):
             role.feedback_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Saved feedback for role {role.role_name} on submission {record.id} for "{period.display_name}" in "{record.project.config.name}"',
+                user=current_user,
+                project_classes=record.project.config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2353,7 +2418,11 @@ def submit_feedback(id):
         role.submitted_feedback = True
         role.feedback_timestamp = datetime.now()
 
-        db.session.commit()
+        log_db_commit(
+            f'Submitted feedback for role {role.role_name} on submission {record.id} for "{period.display_name}" in "{record.project.config.name}"',
+            user=current_user,
+            project_classes=record.project.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2403,7 +2472,11 @@ def unsubmit_feedback(id):
         role.submitted_feedback = False
         role.feedback_timestamp = None
 
-        db.session.commit()
+        log_db_commit(
+            f'Unsubmitted feedback for role {role.role_name} on submission {record.id} for "{period.display_name}" in "{record.project.config.name}"',
+            user=current_user,
+            project_classes=record.project.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2450,7 +2523,11 @@ def edit_response(id):
 
     if form.validate_on_submit():
         record.faculty_response = form.feedback.data
-        db.session.commit()
+        log_db_commit(
+            f'Saved faculty response for submission {record.id} in "{record.project.config.name}"',
+            user=current_user,
+            project_classes=record.project.config.project_class,
+        )
 
         return redirect(url)
 

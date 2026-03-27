@@ -56,6 +56,7 @@ from ..models import (
     User,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
+from ..shared.workflow_logging import log_db_commit
 from ..shared.excel import _normalize_excel_sheet_name
 from ..shared.scratch import ScratchFileManager
 from ..shared.security import validate_nonce
@@ -3454,7 +3455,10 @@ def _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user: User
                         number_populated += 1
                         break
 
-            db.session.commit()
+            log_db_commit(
+                f"Stored {number_populated} marker assignments from PuLP solution",
+                user=user,
+            )
             user.post_message(
                 "Populated {num} missing marker assignments".format(
                     num=number_populated
@@ -3519,7 +3523,11 @@ def _process_PuLP_solution(
         try:
             # note _store_PuLP_solution does not do a commit by itself
             _store_PuLP_solution(pulp_problem, record, init_data)
-            db.session.commit()
+            log_db_commit(
+                f"Stored optimal PuLP matching solution for attempt '{record.name}' (score={record.score})",
+                user=None,
+                endpoint=self.name,
+            )
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -3548,7 +3556,11 @@ def _process_PuLP_solution(
 
         record.finished = True
         record.celery_finished = True
-        db.session.commit()
+        log_db_commit(
+            f"Marked matching attempt '{record.name}' as finished with outcome '{record.outcome}'",
+            user=None,
+            endpoint=self.name,
+        )
 
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -3657,7 +3669,10 @@ def _store_enumeration_details(record, data: InitializationData):
     write_limits(MatchingEnumeration.MARKER_LIMITS, data.marker_data.enrolment_limit)
 
     # allow exception to propgate up to calling function
-    db.session.commit()
+    log_db_commit(
+        f"Stored enumeration details for matching attempt #{record.id}",
+        user=None,
+    )
 
 
 def register_matching_tasks(celery):
@@ -3805,7 +3820,11 @@ def register_matching_tasks(celery):
             message = render_template_string(message_tmpl, name=record.name)
             user.post_message(message, "success", autocommit=False)
 
-            db.session.commit()
+            log_db_commit(
+                f"Stored LP file asset and notified user '{user.name}' for offline matching attempt '{record.name}'",
+                user=user,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -4067,7 +4086,12 @@ def register_matching_tasks(celery):
                 "Finishing remove markers task...",
                 autocommit=False,
             )
-            db.session.commit()
+            log_db_commit(
+                f"Removed marker assignments for project class '{config.project_class.name}'",
+                user=user,
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -4099,7 +4123,11 @@ def register_matching_tasks(celery):
             record.project_id = record.original_project_id
             record.marker_id = record.original_marker_id
             record.rank = record.selector.project_rank(record.original_project_id)
-            db.session.commit()
+            log_db_commit(
+                f"Reverted matching record #{record.id} to original project and marker assignments",
+                user=None,
+                endpoint=self.name,
+            )
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -4131,7 +4159,11 @@ def register_matching_tasks(celery):
         try:
             record.last_edit_id = None
             record.last_edit_timestamp = None
-            db.session.commit()
+            log_db_commit(
+                f"Finalized revert of matching attempt '{record.name}': cleared last edit metadata",
+                user=None,
+                endpoint=self.name,
+            )
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -4357,7 +4389,11 @@ def register_matching_tasks(celery):
                 if old_attempt.lp_file is not None:
                     new_attempt.lp_file = copy_asset(old_attempt.lp_file)
 
-            db.session.commit()
+            log_db_commit(
+                f"Duplicated matching attempt '{old_attempt.name}' as '{new_name}' (new attempt #{new_attempt.id})",
+                user=None,
+                endpoint=self.name,
+            )
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -4851,7 +4887,13 @@ def register_matching_tasks(celery):
 
         if needs_commit:
             try:
-                db.session.commit()
+                log_db_commit(
+                    f"Stored submitter/submission records for selector '{sel.student.user.name}' "
+                    f"in '{config.project_class.name}' (matching record #{data.id})",
+                    user=user,
+                    project_classes=config.project_class,
+                    endpoint=self.name,
+                )
                 actions.append("commit")
             except SQLAlchemyError as e:
                 db.session.rollback()
@@ -4920,7 +4962,11 @@ def register_matching_tasks(celery):
             message = render_template_string(message_tmpl, name=record.name)
             user.post_message(message, "success", autocommit=False)
 
-            db.session.commit()
+            log_db_commit(
+                f"Stored Excel report asset for matching attempt '{record.name}' and notified user '{user.name}'",
+                user=user,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

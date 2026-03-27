@@ -227,10 +227,10 @@ _menu = """
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         {% if m.finished and m.solution_usable %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">
-                <i class="fas fa-search fa-fw"></i> Inspect match...
+                <i class="fas fa-search fa-fw"></i> Inspect match&hellip;
             </a>
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.match_export_excel', matching_id=m.id) }}">
-                <i class="fas fa-file fa-fw"></i> Export to Excel...
+                <i class="fas fa-file fa-fw"></i> Export to Excel&hellip;
             </a>
             <div role="separator" class="dropdown-divider"></div>
         {% endif %}    

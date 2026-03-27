@@ -51,8 +51,11 @@ from ..models import (
     MatchingAttempt,
     MessageOfTheDay,
     Notification,
+    ProjectClass,
     TaskRecord,
+    Tenant,
     User,
+    WorkflowLogEntry,
 )
 from ..shared.backup import (
     compute_current_backup_count,
@@ -1986,3 +1989,151 @@ def _compute_allowed_matching_years(current_year):
         allowed_years = allowed_years | {current_year}
 
     return allowed_years, data
+
+
+@admin.route("/workflow_log")
+@roles_required("root")
+def workflow_log():
+    """
+    Display the workflow log inspector.
+    """
+    pclass_filter = request.args.get("pclass_filter")
+    tenant_filter = request.args.get("tenant_filter")
+
+    # Restore filters from session if not supplied in the request
+    if pclass_filter is None and session.get("admin_workflow_log_pclass_filter"):
+        pclass_filter = session["admin_workflow_log_pclass_filter"]
+
+    if pclass_filter is not None:
+        pclass = db.session.query(ProjectClass).filter_by(id=pclass_filter).first()
+        if pclass is None:
+            pclass_filter = "all"
+
+    if pclass_filter is not None:
+        session["admin_workflow_log_pclass_filter"] = pclass_filter
+
+    if tenant_filter is None and session.get("admin_workflow_log_tenant_filter"):
+        tenant_filter = session["admin_workflow_log_tenant_filter"]
+
+    if tenant_filter is not None:
+        tenant = db.session.query(Tenant).filter_by(id=tenant_filter).first()
+        if tenant is None:
+            tenant_filter = "all"
+
+    if tenant_filter is not None:
+        session["admin_workflow_log_tenant_filter"] = tenant_filter
+
+    # Build lists for filter controls
+    tenants = db.session.query(Tenant).order_by(Tenant.name).all()
+    pclasses = db.session.query(ProjectClass).filter_by(active=True).order_by(ProjectClass.name).all()
+
+    return render_template_context(
+        "admin/workflow_log.html",
+        tenants=tenants,
+        pclasses=pclasses,
+        pclass_filter=pclass_filter,
+        tenant_filter=tenant_filter,
+    )
+
+
+@limiter.exempt
+@admin.route("/workflow_log_ajax", methods=["POST"])
+@roles_required("root")
+def workflow_log_ajax():
+    """
+    AJAX data point for workflow log inspector.
+    """
+    pclass_filter = request.args.get("pclass_filter")
+    tenant_filter = request.args.get("tenant_filter")
+
+    # Outer-join User so we can search on initiator name without losing background-task entries
+    base_query = db.session.query(WorkflowLogEntry).outerjoin(
+        User, User.id == WorkflowLogEntry.initiator_id
+    )
+
+    try:
+        pclass_value = int(pclass_filter)
+        base_query = base_query.filter(
+            WorkflowLogEntry.project_classes.any(ProjectClass.id == pclass_value)
+        )
+    except (TypeError, ValueError):
+        try:
+            tenant_value = int(tenant_filter)
+            base_query = base_query.filter(
+                WorkflowLogEntry.project_classes.any(
+                    ProjectClass.tenant_id == tenant_value
+                )
+            )
+        except (TypeError, ValueError):
+            pass
+
+    columns = {
+        "user": {
+            "search": func.concat(User.first_name, " ", User.last_name),
+            "search_collation": "utf8_general_ci",
+        },
+        "endpoint": {
+            "search": WorkflowLogEntry.endpoint,
+            "order": WorkflowLogEntry.endpoint,
+            "search_collation": "utf8_bin",
+        },
+        "timestamp": {
+            "search": func.date_format(
+                WorkflowLogEntry.timestamp, "%a %d %b %Y %H:%M:%S"
+            ),
+            "order": WorkflowLogEntry.timestamp,
+        },
+        "summary": {
+            "search": WorkflowLogEntry.summary,
+            "search_collation": "utf8_general_ci",
+        },
+    }
+
+    with ServerSideSQLHandler(request, base_query, columns) as handler:
+        return handler.build_payload(ajax.site.workflow_log_data)
+
+
+@admin.route("/workflow_log_export")
+@roles_required("root")
+def workflow_log_export():
+    """
+    Trigger an asynchronous export of the workflow log to an Excel spreadsheet,
+    which will be deposited in the current user's Download Centre.
+    """
+    pclass_filter = request.args.get("pclass_filter")
+    tenant_filter = request.args.get("tenant_filter")
+
+    pclass_id = None
+    try:
+        pclass_id = int(pclass_filter)
+    except (TypeError, ValueError):
+        pass
+
+    tenant_id = None
+    try:
+        tenant_id = int(tenant_filter)
+    except (TypeError, ValueError):
+        pass
+
+    celery = current_app.extensions["celery"]
+    export_task = celery.tasks["app.tasks.workflow_log.export_workflow_log"]
+    export_task.apply_async(
+        kwargs={
+            "user_id": current_user.id,
+            "pclass_id": pclass_id,
+            "tenant_id": tenant_id,
+        }
+    )
+
+    flash(
+        "Your workflow log export is being prepared and will appear in your "
+        "<strong>Download Centre</strong> when ready.",
+        "info",
+    )
+    return redirect(
+        url_for(
+            "admin.workflow_log",
+            pclass_filter=pclass_filter,
+            tenant_filter=tenant_filter,
+        )
+    )

@@ -35,6 +35,7 @@ from ..models import (
 )
 from ..models.emails import encode_email_payload
 from ..shared.convenor import add_liveproject
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update, register_task
 
 
@@ -213,7 +214,13 @@ def register_golive_tasks(celery):
             config.full_CATS = full_CATS
 
             try:
-                db.session.commit()
+                log_db_commit(
+                    f'Stored accommodate_matching="{accommodate_matching.name}" and full_CATS={full_CATS} '
+                    f"on {config.name} config for Go Live",
+                    user=convenor,
+                    project_classes=config.project_class,
+                    endpoint=self.name,
+                )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -405,7 +412,12 @@ def register_golive_tasks(celery):
         )
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Created Go Live faculty email workflow for {config.name} "
+                f"targeting {len(faculty)} enrolled supervisor(s)",
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -484,7 +496,12 @@ def register_golive_tasks(celery):
         )
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Created Go Live selector email workflow for {config.name} "
+                f"targeting {len(selectors)} student selector(s)",
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -512,7 +529,12 @@ def register_golive_tasks(celery):
         config.golive_notified.append(user)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Recorded {user.name} as Go Live-notified for {config.name}",
+                user=user,
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -574,7 +596,13 @@ def register_golive_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Created Go Live faculty notification email for {data.user.name} "
+                f"({config.name}, deadline {deadline})",
+                user=data.user,
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -626,7 +654,13 @@ def register_golive_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Created Go Live selector notification email for {data.student.user.name} "
+                f"({config.name}, deadline {deadline})",
+                user=data.student.user,
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -682,7 +716,13 @@ def register_golive_tasks(celery):
         config.golive_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Marked {config.name} {config.submit_year_a}-{config.submit_year_b} as live "
+                f"with deadline {deadline}; posted success message to convenor {convenor.name if convenor else 'N/A'}",
+                user=convenor,
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -729,7 +769,13 @@ def register_golive_tasks(celery):
             db.session.add(item)
 
             try:
-                db.session.commit()
+                log_db_commit(
+                    f"Created Go Live convenor summary email for {config.name} "
+                    f"{config.submit_year_a}-{config.submit_year_b} to {len(recipients)} recipient(s)",
+                    user=convenor,
+                    project_classes=config.project_class,
+                    endpoint=self.name,
+                )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -759,7 +805,12 @@ def register_golive_tasks(celery):
             )
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Recorded Go Live failure and posted error message to convenor "
+                f"{convenor.name if convenor else 'N/A'}",
+                user=convenor,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -812,7 +863,13 @@ def register_golive_tasks(celery):
             )
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Closed student selections for {config.name} "
+                f"{config.submit_year_a}-{config.submit_year_b}",
+                user=convenor,
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

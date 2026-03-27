@@ -2052,13 +2052,15 @@ def _compute_allowed_matching_years(current_year):
 
 
 @admin.route("/workflow_log")
-@roles_required("root")
+@roles_accepted("root", "admin", "convenor")
 def workflow_log():
     """
     Display the workflow log inspector.
     """
     pclass_filter = request.args.get("pclass_filter")
     tenant_filter = request.args.get("tenant_filter")
+    url = request.args.get("url")
+    text = request.args.get("text")
 
     # Restore filters from session if not supplied in the request
     if pclass_filter is None and session.get("admin_workflow_log_pclass_filter"):
@@ -2083,14 +2085,45 @@ def workflow_log():
     if tenant_filter is not None:
         session["admin_workflow_log_tenant_filter"] = tenant_filter
 
-    # Build lists for filter controls
-    tenants = db.session.query(Tenant).order_by(Tenant.name).all()
-    pclasses = (
-        db.session.query(ProjectClass)
-        .filter_by(active=True)
-        .order_by(ProjectClass.name)
-        .all()
-    )
+    # Build lists for filter controls, scoped by user role
+    is_root = current_user.has_role("root")
+    is_admin = current_user.has_role("admin")
+
+    if is_root:
+        tenants = db.session.query(Tenant).order_by(Tenant.name).all()
+        pclasses = (
+            db.session.query(ProjectClass)
+            .filter_by(active=True)
+            .order_by(ProjectClass.name)
+            .all()
+        )
+    elif is_admin:
+        tenants = current_user.tenants.order_by(Tenant.name).all()
+        user_tenant_ids = [t.id for t in tenants]
+        pclasses = (
+            db.session.query(ProjectClass)
+            .filter(
+                ProjectClass.active.is_(True),
+                ProjectClass.tenant_id.in_(user_tenant_ids),
+            )
+            .order_by(ProjectClass.name)
+            .all()
+        )
+    else:  # convenor only
+        tenants = None
+        fd = current_user.faculty_data
+        if fd is not None:
+            convenor_pclass_ids = [pc.id for pc in fd.convenor_for] + [
+                pc.id for pc in fd.coconvenor_for
+            ]
+            pclasses = (
+                db.session.query(ProjectClass)
+                .filter(ProjectClass.id.in_(convenor_pclass_ids))
+                .order_by(ProjectClass.name)
+                .all()
+            )
+        else:
+            pclasses = []
 
     return render_template_context(
         "admin/workflow_log.html",
@@ -2098,12 +2131,14 @@ def workflow_log():
         pclasses=pclasses,
         pclass_filter=pclass_filter,
         tenant_filter=tenant_filter,
+        url=url,
+        text=text,
     )
 
 
 @limiter.exempt
 @admin.route("/workflow_log_ajax", methods=["POST"])
-@roles_required("root")
+@roles_accepted("root", "admin", "convenor")
 def workflow_log_ajax():
     """
     AJAX data point for workflow log inspector.
@@ -2120,6 +2155,32 @@ def workflow_log_ajax():
         .outerjoin(StudentData, StudentData.id == WorkflowLogEntry.student_id)
         .outerjoin(student_user, student_user.id == StudentData.id)
     )
+
+    # Restrict visible entries to the user's access scope
+    is_root = current_user.has_role("root")
+    is_admin = current_user.has_role("admin")
+
+    if not is_root:
+        if is_admin:
+            user_tenant_ids = [t.id for t in current_user.tenants]
+            base_query = base_query.filter(
+                WorkflowLogEntry.project_classes.any(
+                    ProjectClass.tenant_id.in_(user_tenant_ids)
+                )
+            )
+        else:  # convenor
+            fd = current_user.faculty_data
+            if fd is not None:
+                convenor_pclass_ids = [pc.id for pc in fd.convenor_for] + [
+                    pc.id for pc in fd.coconvenor_for
+                ]
+            else:
+                convenor_pclass_ids = []
+            base_query = base_query.filter(
+                WorkflowLogEntry.project_classes.any(
+                    ProjectClass.id.in_(convenor_pclass_ids)
+                )
+            )
 
     try:
         pclass_value = int(pclass_filter)
@@ -2170,7 +2231,7 @@ def workflow_log_ajax():
 
 
 @admin.route("/workflow_log_export")
-@roles_required("root")
+@roles_accepted("root", "admin", "convenor")
 def workflow_log_export():
     """
     Trigger an asynchronous export of the workflow log to an Excel spreadsheet,
@@ -2178,6 +2239,8 @@ def workflow_log_export():
     """
     pclass_filter = request.args.get("pclass_filter")
     tenant_filter = request.args.get("tenant_filter")
+    url = request.args.get("url")
+    text = request.args.get("text")
 
     pclass_id = None
     try:
@@ -2211,5 +2274,57 @@ def workflow_log_export():
             "admin.workflow_log",
             pclass_filter=pclass_filter,
             tenant_filter=tenant_filter,
+            url=url,
+            text=text,
+        )
+    )
+
+
+@admin.route("/workflow_log_export_csv")
+@roles_accepted("root", "admin", "convenor")
+def workflow_log_export_csv():
+    """
+    Trigger an asynchronous export of the workflow log to a CSV file,
+    which will be deposited in the current user's Download Centre.
+    """
+    pclass_filter = request.args.get("pclass_filter")
+    tenant_filter = request.args.get("tenant_filter")
+    url = request.args.get("url")
+    text = request.args.get("text")
+
+    pclass_id = None
+    try:
+        pclass_id = int(pclass_filter)
+    except (TypeError, ValueError):
+        pass
+
+    tenant_id = None
+    try:
+        tenant_id = int(tenant_filter)
+    except (TypeError, ValueError):
+        pass
+
+    celery = current_app.extensions["celery"]
+    export_task = celery.tasks["app.tasks.workflow_log.export_workflow_log_csv"]
+    export_task.apply_async(
+        kwargs={
+            "user_id": current_user.id,
+            "pclass_id": pclass_id,
+            "tenant_id": tenant_id,
+        }
+    )
+
+    flash(
+        "Your workflow log CSV export is being prepared and will appear in your "
+        "<strong>Download Centre</strong> when ready.",
+        "info",
+    )
+    return redirect(
+        url_for(
+            "admin.workflow_log",
+            pclass_filter=pclass_filter,
+            tenant_filter=tenant_filter,
+            url=url,
+            text=text,
         )
     )

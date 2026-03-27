@@ -77,13 +77,27 @@
 {% endblock %}
 
 {% block bodyblock %}
+    {% if url and text %}
+        <div class="d-flex align-items-center mt-3 mb-2">
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+                <i class="fas fa-arrow-left fa-fw"></i> {{ text|capitalize }}
+            </a>
+        </div>
+    {% endif %}
+
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <span>Workflow events log</span>
-            <a href="{{ url_for('admin.workflow_log_export', pclass_filter=pclass_filter, tenant_filter=tenant_filter) }}"
-               class="btn btn-sm btn-light">
-                <i class="fas fa-file-excel fa-fw"></i> Export to Excel&hellip;
-            </a>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('admin.workflow_log_export', pclass_filter=pclass_filter, tenant_filter=tenant_filter, url=url, text=text) }}"
+                   class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-file-excel fa-fw"></i> Export to Excel&hellip;
+                </a>
+                <a href="{{ url_for('admin.workflow_log_export_csv', pclass_filter=pclass_filter, tenant_filter=tenant_filter, url=url, text=text) }}"
+                   class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-file-csv fa-fw"></i> Export to CSV&hellip;
+                </a>
+            </div>
         </div>
         <div class="card-body">
 
@@ -92,12 +106,12 @@
                     <div class="row">
                         <div class="col-12">
                             <p>Filter by tenant</p>
-                            <a href="{{ url_for('admin.workflow_log', pclass_filter=pclass_filter, tenant_filter='all') }}"
+                            <a href="{{ url_for('admin.workflow_log', pclass_filter=pclass_filter, tenant_filter='all', url=url, text=text) }}"
                                class="btn btn-sm filter-btn {% if tenant_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                 All
                             </a>
                             {% for tenant in tenants %}
-                                <a href="{{ url_for('admin.workflow_log', pclass_filter=pclass_filter, tenant_filter=tenant.id) }}"
+                                <a href="{{ url_for('admin.workflow_log', pclass_filter=pclass_filter, tenant_filter=tenant.id, url=url, text=text) }}"
                                    class="btn btn-sm filter-btn {% if tenant_filter == tenant.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     {{ tenant.name }}
                                 </a>
@@ -110,12 +124,12 @@
                         <div class="row">
                             <div class="col-12">
                                 <p>Filter by project class</p>
-                                <a href="{{ url_for('admin.workflow_log', pclass_filter='all', tenant_filter=tenant_filter) }}"
+                                <a href="{{ url_for('admin.workflow_log', pclass_filter='all', tenant_filter=tenant_filter, url=url, text=text) }}"
                                    class="btn btn-sm filter-btn {% if pclass_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     All
                                 </a>
                                 {% for pc in pclasses %}
-                                    <a href="{{ url_for('admin.workflow_log', pclass_filter=pc.id, tenant_filter=tenant_filter) }}"
+                                    <a href="{{ url_for('admin.workflow_log', pclass_filter=pc.id, tenant_filter=tenant_filter, url=url, text=text) }}"
                                        class="btn btn-sm filter-btn {% if pclass_filter == pc.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                         {{ pc.abbreviation }}
                                     </a>
@@ -129,12 +143,12 @@
                     <div class="row">
                         <div class="col-12">
                             <p>Filter by project class</p>
-                            <a href="{{ url_for('admin.workflow_log', pclass_filter='all', tenant_filter=tenant_filter) }}"
+                            <a href="{{ url_for('admin.workflow_log', pclass_filter='all', tenant_filter=tenant_filter, url=url, text=text) }}"
                                class="btn btn-sm filter-btn {% if pclass_filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                 All
                             </a>
                             {% for pc in pclasses %}
-                                <a href="{{ url_for('admin.workflow_log', pclass_filter=pc.id, tenant_filter=tenant_filter) }}"
+                                <a href="{{ url_for('admin.workflow_log', pclass_filter=pc.id, tenant_filter=tenant_filter, url=url, text=text) }}"
                                    class="btn btn-sm filter-btn {% if pclass_filter == pc.id|string %}btn-primary{% else %}btn-outline-secondary{% endif %}">
                                     {{ pc.abbreviation }}
                                 </a>

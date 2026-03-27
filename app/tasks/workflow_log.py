@@ -21,6 +21,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import (
     DownloadCentreItem,
+    FacultyData,
     GeneratedAsset,
     ProjectClass,
     Tenant,
@@ -85,6 +86,108 @@ def register_workflow_log_tasks(celery):
 
         self.update_state(state="FINISHED")
 
+    def _get_workflow_log_entries(
+            user: User, pclass_id: Optional[int], tenant_id: Optional[int]
+    ):
+        """
+        Query WorkflowLogEntry rows, applying both the user's access scope (based on role)
+        and the requested pclass/tenant filter.  Returns (entries, label_suffix).
+        """
+        pclass: Optional[ProjectClass] = None
+        if pclass_id is not None:
+            pclass = db.session.query(ProjectClass).filter_by(id=pclass_id).first()
+
+        tenant: Optional[Tenant] = None
+        if tenant_id is not None:
+            tenant = db.session.query(Tenant).filter_by(id=tenant_id).first()
+
+        query = db.session.query(WorkflowLogEntry)
+
+        # Scope restriction based on the exporting user's role
+        is_root = user.has_role("root")
+        is_admin = user.has_role("admin")
+
+        if not is_root:
+            if is_admin:
+                user_tenant_ids = [t.id for t in user.tenants]
+                query = query.filter(
+                    WorkflowLogEntry.project_classes.any(
+                        ProjectClass.tenant_id.in_(user_tenant_ids)
+                    )
+                )
+            else:  # convenor
+                fd = db.session.query(FacultyData).filter_by(id=user.id).first()
+                if fd is not None:
+                    convenor_pclass_ids = [pc.id for pc in fd.convenor_for] + [
+                        pc.id for pc in fd.coconvenor_for
+                    ]
+                else:
+                    convenor_pclass_ids = []
+                query = query.filter(
+                    WorkflowLogEntry.project_classes.any(
+                        ProjectClass.id.in_(convenor_pclass_ids)
+                    )
+                )
+
+        # Apply the requested filter (pclass takes priority over tenant)
+        if pclass is not None:
+            query = query.filter(
+                WorkflowLogEntry.project_classes.any(ProjectClass.id == pclass.id)
+            )
+        elif tenant is not None:
+            query = query.filter(
+                WorkflowLogEntry.project_classes.any(
+                    ProjectClass.tenant_id == tenant.id
+                )
+            )
+
+        entries = query.order_by(asc(WorkflowLogEntry.timestamp)).all()
+
+        label = ""
+        if pclass is not None:
+            label = f"_{pclass.abbreviation}"
+        elif tenant is not None:
+            label = f"_{tenant.name.replace(' ', '_')}"
+
+        return entries, label
+
+    def _build_workflow_log_records(entries):
+        """Build a list of dicts from WorkflowLogEntry objects for DataFrame construction."""
+        records = []
+        for entry in entries:
+            initiator_name = entry.initiator.name if entry.initiator is not None else ""
+            student_name = entry.student.user.name if entry.student is not None else ""
+            pclass_names = ", ".join(pc.name for pc in entry.project_classes)
+            records.append(
+                {
+                    "timestamp": entry.timestamp.strftime("%a %d %b %Y %H:%M:%S")
+                    if entry.timestamp
+                    else "",
+                    "user": initiator_name,
+                    "student": student_name,
+                    "endpoint": entry.endpoint or "",
+                    "project_classes": pclass_names,
+                    "summary": entry.summary or "",
+                }
+            )
+        return records
+
+    _WORKFLOW_LOG_COLUMNS = [
+        "timestamp",
+        "user",
+        "student",
+        "endpoint",
+        "project_classes",
+        "summary",
+    ]
+
+    # language=jinja2
+    _WORKFLOW_LOG_READY_TMPL = """
+    <div><strong>Your workflow log export is now available.</strong></div>
+    <div class="mt-2">You can find it in your
+    <a href="{{ url_for('home.download_centre') }}">Download Centre</a>.</div>
+    """
+
     @celery.task(bind=True, default_retry_delay=30)
     def export_workflow_log(
             self,
@@ -104,19 +207,9 @@ def register_workflow_log_tasks(celery):
             user: User = db.session.query(User).filter_by(id=user_id).first()
             if user is None:
                 self.update_state(
-                    state="FAILURE",
-                    meta={"msg": f"User #{user_id} not found"},
+                    state="FAILURE", meta={"msg": f"User #{user_id} not found"}
                 )
                 raise Ignore()
-
-            pclass: Optional[ProjectClass] = None
-            if pclass_id is not None:
-                pclass = db.session.query(ProjectClass).filter_by(id=pclass_id).first()
-
-            tenant: Optional[Tenant] = None
-            if tenant_id is not None:
-                tenant = db.session.query(Tenant).filter_by(id=tenant_id).first()
-
         except SQLAlchemyError as e:
             current_app.logger.exception(
                 "SQLAlchemyError exception in export_workflow_log()", exc_info=e
@@ -128,22 +221,7 @@ def register_workflow_log_tasks(celery):
         )
 
         try:
-            query = db.session.query(WorkflowLogEntry)
-
-            if pclass is not None:
-                query = query.filter(
-                    WorkflowLogEntry.project_classes.any(ProjectClass.id == pclass.id)
-                )
-            elif tenant is not None:
-                # Filter to entries that have at least one project class belonging to this tenant
-                query = query.filter(
-                    WorkflowLogEntry.project_classes.any(
-                        ProjectClass.tenant_id == tenant.id
-                    )
-                )
-
-            entries = query.order_by(asc(WorkflowLogEntry.timestamp)).all()
-
+            entries, label = _get_workflow_log_entries(user, pclass_id, tenant_id)
         except SQLAlchemyError as e:
             current_app.logger.exception(
                 "SQLAlchemyError exception in export_workflow_log()", exc_info=e
@@ -156,73 +234,11 @@ def register_workflow_log_tasks(celery):
         expiry = now + timedelta(weeks=4)
         object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
 
-        def make_asset(source_path: Path, target_name: str) -> GeneratedAsset:
-            asset = GeneratedAsset(
-                timestamp=now,
-                expiry=expiry,
-                target_name=target_name,
-                parent_asset_id=None,
-                license_id=None,
-            )
-
-            size = source_path.stat().st_size
-
-            with open(source_path, "rb") as f:
-                with AssetUploadManager(
-                        asset,
-                        data=BytesIO(f.read()),
-                        storage=object_store,
-                        audit_data="workflow_log.export_workflow_log",
-                        length=size,
-                        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        validate_nonce=validate_nonce,
-                ) as upload_mgr:
-                    pass
-
-            asset.grant_user(user)
-            db.session.add(asset)
-            db.session.flush()
-
-            download_item: DownloadCentreItem = DownloadCentreItem._build(
-                asset=asset,
-                user=user,
-                description="Workflow log export",
-            )
-            db.session.add(download_item)
-
-            return asset
-
         try:
             import pandas as pd
 
-            records = []
-            for entry in entries:
-                initiator_name = (
-                    entry.initiator.name if entry.initiator is not None else ""
-                )
-                pclass_names = ", ".join(pc.name for pc in entry.project_classes)
-                records.append(
-                    {
-                        "timestamp": entry.timestamp.strftime("%a %d %b %Y %H:%M:%S")
-                        if entry.timestamp
-                        else "",
-                        "user": initiator_name,
-                        "endpoint": entry.endpoint or "",
-                        "project_classes": pclass_names,
-                        "summary": entry.summary or "",
-                    }
-                )
-
-            df = pd.DataFrame.from_records(
-                records,
-                columns=["timestamp", "user", "endpoint", "project_classes", "summary"],
-            )
-
-            label = ""
-            if pclass is not None:
-                label = f"_{pclass.abbreviation}"
-            elif tenant is not None:
-                label = f"_{tenant.abbreviation}"
+            records = _build_workflow_log_records(entries)
+            df = pd.DataFrame.from_records(records, columns=_WORKFLOW_LOG_COLUMNS)
 
             file_stem = f"WorkflowLog{label}-{now.strftime('%Y-%m-%d_%H-%M-%S')}"
 
@@ -230,16 +246,37 @@ def register_workflow_log_tasks(celery):
                 output_path = mgr.path
                 sheet_name = _normalize_excel_sheet_name("Workflow log")
                 df.to_excel(output_path, sheet_name=sheet_name, index=False)
-                xlsx_asset = make_asset(output_path, file_stem)
 
-            # language=jinja2
-            message_tmpl = """
-            <div><strong>Your workflow log export is now available.</strong></div>
-            <div class="mt-2">You can find it in your
-            <a href="{{ url_for('home.download_centre') }}"
-               onclick="setTimeout(location.reload.bind(location), 1)">Download Centre</a>.</div>
-            """
-            message = render_template_string(message_tmpl)
+                asset = GeneratedAsset(
+                    timestamp=now,
+                    expiry=expiry,
+                    target_name=file_stem,
+                    parent_asset_id=None,
+                    license_id=None,
+                )
+                size = output_path.stat().st_size
+                with open(output_path, "rb") as f:
+                    with AssetUploadManager(
+                        asset,
+                        data=BytesIO(f.read()),
+                        storage=object_store,
+                        audit_data="workflow_log.export_workflow_log",
+                        length=size,
+                        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        validate_nonce=validate_nonce,
+                    ):
+                        pass
+
+                asset.grant_user(user)
+                db.session.add(asset)
+                db.session.flush()
+
+                download_item = DownloadCentreItem._build(
+                    asset=asset, user=user, description="Workflow log export"
+                )
+                db.session.add(download_item)
+
+            message = render_template_string(_WORKFLOW_LOG_READY_TMPL)
             user.post_message(message, "success", autocommit=False)
 
             db.session.commit()
@@ -248,6 +285,107 @@ def register_workflow_log_tasks(celery):
             db.session.rollback()
             current_app.logger.exception(
                 "SQLAlchemyError exception in export_workflow_log()", exc_info=e
+            )
+            raise self.retry()
+
+        self.update_state(state="SUCCESS", meta={"msg": "Export complete"})
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def export_workflow_log_csv(
+            self,
+            user_id: int,
+            pclass_id: Optional[int] = None,
+            tenant_id: Optional[int] = None,
+    ):
+        """
+        Export the workflow log (optionally filtered by project class or tenant) to a CSV file,
+        store it as a GeneratedAsset, and add a DownloadCentreItem for the user.
+        """
+        self.update_state(
+            state="STARTED", meta={"msg": "Preparing workflow log CSV export"}
+        )
+
+        try:
+            user: User = db.session.query(User).filter_by(id=user_id).first()
+            if user is None:
+                self.update_state(
+                    state="FAILURE", meta={"msg": f"User #{user_id} not found"}
+                )
+                raise Ignore()
+        except SQLAlchemyError as e:
+            current_app.logger.exception(
+                "SQLAlchemyError exception in export_workflow_log_csv()", exc_info=e
+            )
+            raise self.retry()
+
+        self.update_state(
+            state="STARTED", meta={"msg": "Querying workflow log entries"}
+        )
+
+        try:
+            entries, label = _get_workflow_log_entries(user, pclass_id, tenant_id)
+        except SQLAlchemyError as e:
+            current_app.logger.exception(
+                "SQLAlchemyError exception in export_workflow_log_csv()", exc_info=e
+            )
+            raise self.retry()
+
+        self.update_state(state="STARTED", meta={"msg": "Building CSV file"})
+
+        now = datetime.now()
+        expiry = now + timedelta(weeks=4)
+        object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+
+        try:
+            import pandas as pd
+
+            records = _build_workflow_log_records(entries)
+            df = pd.DataFrame.from_records(records, columns=_WORKFLOW_LOG_COLUMNS)
+
+            file_stem = f"WorkflowLog{label}-{now.strftime('%Y-%m-%d_%H-%M-%S')}"
+
+            with ScratchFileManager(suffix=".csv") as mgr:
+                output_path = mgr.path
+                df.to_csv(output_path, index=False)
+
+                asset = GeneratedAsset(
+                    timestamp=now,
+                    expiry=expiry,
+                    target_name=file_stem,
+                    parent_asset_id=None,
+                    license_id=None,
+                )
+                size = output_path.stat().st_size
+                with open(output_path, "rb") as f:
+                    with AssetUploadManager(
+                            asset,
+                            data=BytesIO(f.read()),
+                            storage=object_store,
+                            audit_data="workflow_log.export_workflow_log_csv",
+                            length=size,
+                            mimetype="text/csv",
+                            validate_nonce=validate_nonce,
+                    ):
+                        pass
+
+                asset.grant_user(user)
+                db.session.add(asset)
+                db.session.flush()
+
+                download_item = DownloadCentreItem._build(
+                    asset=asset, user=user, description="Workflow log CSV export"
+                )
+                db.session.add(download_item)
+
+            message = render_template_string(_WORKFLOW_LOG_READY_TMPL)
+            user.post_message(message, "success", autocommit=False)
+
+            db.session.commit()
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception(
+                "SQLAlchemyError exception in export_workflow_log_csv()", exc_info=e
             )
             raise self.retry()
 

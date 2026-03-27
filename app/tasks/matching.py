@@ -56,13 +56,13 @@ from ..models import (
     User,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
-from ..shared.workflow_logging import log_db_commit
 from ..shared.excel import _normalize_excel_sheet_name
 from ..shared.scratch import ScratchFileManager
 from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
 from ..shared.utils import get_current_year
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update
 
 FALLBACK_DEFAULT_SUPERVISOR_CATS = 35
@@ -4957,7 +4957,7 @@ def register_matching_tasks(celery):
             # language=jinja2
             message_tmpl = """
             <div><strong>The Excel report for matching "{{ name }}" is now available.</strong></div>
-            <div class="mt-2">You can find this report in your <a href="{{ url_for('home.download_centre') }}" onclick="setTimeout(location.reload.bind(location), 1)">Download Centre</a>.</div>
+            <div class="mt-2">You can find this report in your <a href="{{ url_for('home.download_centre') }}">Download Centre</a>.</div>
             """
             message = render_template_string(message_tmpl, name=record.name)
             user.post_message(message, "success", autocommit=False)

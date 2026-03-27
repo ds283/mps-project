@@ -77,9 +77,16 @@
                 </div>
             {% endif %}
             <div class="card mt-3 mb-3 card-body border-primary bg-well">
-                <div class="d-flex flex-row flex-wrap justify-content-start align-items-start mb-4">
-                    <div class="dashboard-project-title align-self-start me-2">{{ pclass.name }}
-                        {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</div>
+                <div class="d-flex flex-row flex-wrap justify-content-between align-items-start mb-4">
+                    <div class="dashboard-project-title align-self-start me-2">
+                        {{ pclass.name }}
+                        {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}
+                    </div>
+                    <div>
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="{{ url_for('admin.workflow_log', url=return_url, text=return_text) }}">Workflow log <i
+                                class="fas fa-arrow-right"></i></a>
+                    </div>
                 </div>
                 <div class="card mt-2 mb-2 card-body border-secondary">
                     {% call icon_block("cogs", icon_classes="pt-2 text-primary") %}

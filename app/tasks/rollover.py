@@ -786,6 +786,7 @@ def register_rollover_tasks(celery):
         try:
             log_db_commit(
                 f"Retired SelectingStudent #{sid} (student: {item.student.user.name})",
+                student=item.student,
                 endpoint=self.name,
             )
         except SQLAlchemyError as e:
@@ -825,6 +826,7 @@ def register_rollover_tasks(celery):
             log_db_commit(
                 f"Retired SubmittingStudent #{sid} (student: {item.student.user.name}) "
                 f"and all associated SubmissionRecords",
+                student=item.student,
                 endpoint=self.name,
             )
         except SQLAlchemyError as e:
@@ -1018,6 +1020,7 @@ def register_rollover_tasks(celery):
                     f"Converted selector {selector.student.user.name} to SubmittingStudent "
                     f"#{new_submitter.id} with {len(match_records)} SubmissionRecord(s) from match "
                     f'"{match.name}"',
+                    student=selector.student,
                     project_classes=new_config.project_class,
                     endpoint=self.name,
                 )
@@ -1198,6 +1201,7 @@ def register_rollover_tasks(celery):
                             log_db_commit(
                                 f"Converted selector {selector.student.user.name} to SubmittingStudent "
                                 f"#{new_submitter.id} carrying over project assignment(s) from previous year",
+                                student=selector.student,
                                 project_classes=new_config.project_class,
                                 endpoint=self.name,
                             )
@@ -1408,6 +1412,7 @@ def register_rollover_tasks(celery):
             log_db_commit(
                 f"Auto-attached selector/submitter records for student {student.user.name} "
                 f"to {config.name} (new config #{new_config_id}, academic year {current_year})",
+                student=student,
                 project_classes=config.project_class,
                 endpoint=self.name,
             )
@@ -1648,6 +1653,7 @@ def register_rollover_tasks(celery):
         try:
             log_db_commit(
                 f"Removed stale ConfirmRequest #{request_id} during rollover",
+                student=record.owner.student if record.owner is not None else None,
                 endpoint=self.name,
             )
         except SQLAlchemyError as e:

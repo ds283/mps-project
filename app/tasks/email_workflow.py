@@ -65,6 +65,7 @@ from ..models.emails import (
     _INTKEYS_MARKER,
     _OBJECT_PREFIX,
 )
+from ..shared.workflow_logging import log_db_commit
 
 # ---------------------------------------------------------------------------
 # Mapping from encoded model class name → SQLAlchemy model class.

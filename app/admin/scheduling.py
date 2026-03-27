@@ -48,6 +48,7 @@ from ..models import (
 from ..shared.context.global_context import render_template_context
 from ..shared.conversions import is_integer
 from ..shared.sqlalchemy import get_count
+from ..shared.workflow_logging import log_db_commit
 from ..shared.utils import (
     get_current_year,
     redirect_url,
@@ -221,7 +222,10 @@ def create_assessment_schedule(id):
         )
 
         db.session.add(schedule)
-        db.session.commit()
+        log_db_commit(
+            f'Create new schedule attempt "{schedule.name}" for assessment "{assessment.name}"',
+            user=current_user,
+        )
 
         if offline:
             celery = current_app.extensions["celery"]
@@ -437,7 +441,10 @@ def perform_adjust_assessment_schedule(id):
 
     try:
         db.session.add(new_schedule)
-        db.session.commit()
+        log_db_commit(
+            f'Create adjusted schedule attempt "{new_schedule.name}" for assessment "{assessment.name}"',
+            user=current_user,
+        )
 
     except SQLAlchemyError as e:
         flash(
@@ -538,7 +545,10 @@ def perform_terminate_schedule(id):
             record.lp_file = None
 
         db.session.delete(record)
-        db.session.commit()
+        log_db_commit(
+            f'Terminate and delete schedule attempt "{record.name}"',
+            user=current_user,
+        )
 
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -673,7 +683,10 @@ def perform_delete_schedule(id):
             record.lp_file = None
 
         db.session.delete(record)
-        db.session.commit()
+        log_db_commit(
+            f'Delete schedule "{record.name}"',
+            user=current_user,
+        )
 
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -907,7 +920,10 @@ def rename_schedule(id):
         try:
             record.name = form.name.data
             record.tag = form.tag.data
-            db.session.commit()
+            log_db_commit(
+                f'Rename schedule to "{record.name}"',
+                user=current_user,
+            )
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1213,7 +1229,10 @@ def publish_schedule(id):
 
     try:
         record.published = True
-        db.session.commit()
+        log_db_commit(
+            f'Publish schedule "{record.name}"',
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1262,7 +1281,10 @@ def unpublish_schedule(id):
 
     try:
         record.published = False
-        db.session.commit()
+        log_db_commit(
+            f'Unpublish schedule "{record.name}"',
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1417,7 +1439,10 @@ def deploy_schedule(id):
     try:
         record.deployed = True
         record.published = False
-        db.session.commit()
+        log_db_commit(
+            f'Deploy schedule "{record.name}"',
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1488,7 +1513,10 @@ def undeploy_schedule(id):
 
     try:
         record.deployed = False
-        db.session.commit()
+        log_db_commit(
+            f'Revoke deployment of schedule "{record.name}"',
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1833,7 +1861,10 @@ def schedule_delete_slot(id):
 
     try:
         db.session.delete(slot)
-        db.session.commit()
+        log_db_commit(
+            f'Delete empty slot from schedule "{record.name}"',
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2035,7 +2066,10 @@ def schedule_attach_assessor(slot_id, fac_id):
         record.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Attach assessor "{user.name}" to slot in schedule "{record.name}"',
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2109,7 +2143,10 @@ def schedule_remove_assessor(slot_id, fac_id):
         record.last_edit_id = current_user.id
         record.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        log_db_commit(
+            f'Remove assessor from slot in schedule "{record.name}"',
+            user=current_user,
+        )
 
     return redirect(redirect_url())
 
@@ -2280,7 +2317,10 @@ def schedule_move_submitter(old_id, new_id, talk_id):
     record.last_edit_id = current_user.id
     record.last_edit_timestamp = datetime.now()
 
-    db.session.commit()
+    log_db_commit(
+        f'Move submitter between slots in schedule "{record.name}"',
+        user=current_user,
+    )
 
     return redirect(
         url_for(
@@ -2336,7 +2376,10 @@ def schedule_move_room(slot_id, room_id):
     available_rooms = slot.alternative_rooms
     if room in available_rooms:
         slot.room_id = room.id
-        db.session.commit()
+        log_db_commit(
+            f'Move slot to room "{room.full_name}" in schedule "{record.name}"',
+            user=current_user,
+        )
 
     else:
         flash(
@@ -2529,6 +2572,9 @@ def merge_change_schedule(source_id, target_id, source_sched, target_sched):
     target_schedule.last_edit_id = current_user.id
     target_schedule.last_edit_timestamp = datetime.now()
 
-    db.session.commit()
+    log_db_commit(
+        f'Merge slot from schedule "{source_schedule.name}" into schedule "{target_schedule.name}"',
+        user=current_user,
+    )
 
     return redirect(redirect_url())

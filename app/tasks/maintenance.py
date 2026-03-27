@@ -61,6 +61,7 @@ from ..shared.asset_tools import (
 from ..shared.cloud_object_store import ObjectStore
 from ..shared.security import validate_nonce
 from ..shared.utils import get_count, get_current_year
+from ..shared.workflow_logging import log_db_commit
 
 
 def register_maintenance_tasks(celery):
@@ -147,7 +148,7 @@ def register_maintenance_tasks(celery):
                     ),
                 )
             ).delete()
-            db.session.commit()
+            log_db_commit("Deleted stale PopularityRecord instances older than 1 day with missing rank data", endpoint=self.name)
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -333,7 +334,7 @@ def register_maintenance_tasks(celery):
 
         if record.maintenance():
             try:
-                db.session.commit()
+                log_db_commit(f"Committed StudentData maintenance for student id={sid}", student=record, endpoint=self.name)
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -380,7 +381,7 @@ def register_maintenance_tasks(celery):
 
             record.selector = paired_selector
             try:
-                db.session.commit()
+                log_db_commit(f"Updated selector pairing for SubmittingStudent id={sid}", student=record.student, endpoint=self.name)
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -401,7 +402,7 @@ def register_maintenance_tasks(celery):
 
         if pclass.maintenance():
             try:
-                db.session.commit()
+                log_db_commit(f"Committed ProjectClass maintenance for pclass id={pid}", project_classes=pclass, endpoint=self.name)
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -422,7 +423,7 @@ def register_maintenance_tasks(celery):
 
         if project.maintenance():
             try:
-                db.session.commit()
+                log_db_commit(f"Committed Project maintenance for project id={pid}", endpoint=self.name)
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -443,7 +444,7 @@ def register_maintenance_tasks(celery):
 
         if project.maintenance():
             try:
-                db.session.commit()
+                log_db_commit(f"Committed LiveProject maintenance for liveproject id={pid}", endpoint=self.name)
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -474,7 +475,7 @@ def register_maintenance_tasks(celery):
 
         if desc.maintenance():
             try:
-                db.session.commit()
+                log_db_commit(f"Committed ProjectDescription maintenance for description id={pd_id}", endpoint=self.name)
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -495,7 +496,7 @@ def register_maintenance_tasks(celery):
 
         if record.maintenance():
             try:
-                db.session.commit()
+                log_db_commit(f"Committed AssessorAttendanceData maintenance for record id={id}", endpoint=self.name)
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -516,7 +517,7 @@ def register_maintenance_tasks(celery):
 
         if record.maintenance():
             try:
-                db.session.commit()
+                log_db_commit(f"Committed SubmitterAttendanceData maintenance for record id={id}", endpoint=self.name)
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -539,7 +540,7 @@ def register_maintenance_tasks(celery):
             # can purge this record
             try:
                 db.session.delete(record)
-                db.session.commit()
+                log_db_commit(f"Deleted stale ScheduleEnumeration record id={id} (schedule no longer awaiting upload)", endpoint=self.name)
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

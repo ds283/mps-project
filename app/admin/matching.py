@@ -65,6 +65,7 @@ from ..shared.utils import (
 from ..shared.validators import (
     validate_match_inspector,
 )
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update, register_task
 from ..tools import ServerSideInMemoryHandler
 from . import admin
@@ -194,7 +195,7 @@ def skip_matching():
             config.skip_matching = True
 
     try:
-        db.session.commit()
+        log_db_commit("Mark all active project class configs to skip automated matching", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -390,7 +391,7 @@ def create_match():
 
         try:
             db.session.add(attempt)
-            db.session.commit()
+            log_db_commit("Create new matching attempt and schedule matching task", user=current_user)
 
             if offline:
                 celery = current_app.extensions["celery"]
@@ -544,7 +545,7 @@ def perform_terminate_match(id):
             record.lp_file = None
 
         db.session.delete(record)
-        db.session.commit()
+        log_db_commit("Terminate matching task and delete associated matching attempt record", user=current_user)
 
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -681,7 +682,7 @@ def perform_delete_match(id):
             attempt.lp_file = None
 
         db.session.delete(attempt)
-        db.session.commit()
+        log_db_commit('Delete matching attempt "{name}"'.format(name=attempt.name), user=current_user)
         flash(
             'Match "{name}" was successfully deleted.'.format(name=attempt.name),
             "success",
@@ -784,7 +785,10 @@ def perform_clean_up_match(id):
             if not rec.selector.convert_to_submitter:
                 db.session.delete(rec)
 
-        db.session.commit()
+        log_db_commit(
+            'Clean up matching attempt "{name}" by removing records for non-converting selectors'.format(name=attempt.name),
+            user=current_user,
+        )
         flash(
             'Match "{name}" was successfully cleaned up.'.format(name=attempt.name),
             "success",
@@ -1038,7 +1042,7 @@ def rename_match(id):
     if form.validate_on_submit():
         try:
             record.name = form.name.data
-            db.session.commit()
+            log_db_commit('Rename matching attempt to "{name}"'.format(name=form.name.data), user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(
@@ -1538,7 +1542,7 @@ def replace_matching_record(src_id, dest_id):
         dest.matching_attempt.last_edit_id = current_user.id
         dest.matching_attempt.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        log_db_commit("Replace matching record project assignment and role assignments from source record", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -1614,7 +1618,7 @@ def insert_matching_record(src_id, attempt_id):
         dest_attempt.last_edit_id = current_user.id
         dest_attempt.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        log_db_commit("Insert new matching record copied from source into destination matching attempt", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -2299,7 +2303,7 @@ def delete_match_record(attempt_id, selector_id):
             records: MatchingRecord
             db.session.delete(record)
 
-        db.session.commit()
+        log_db_commit("Delete all matching records for selector from matching attempt", user=current_user)
 
     except SQLAlchemyError as e:
         flash(
@@ -2399,7 +2403,7 @@ def reassign_match_project(id, pid):
                 record.matching_attempt.last_edit_timestamp = datetime.now()
 
                 try:
-                    db.session.commit()
+                    log_db_commit("Reassign matched project for selector in matching attempt", user=current_user)
                 except SQLAlchemyError as e:
                     flash(
                         "Could not reassign matched project because a database error was encountered.",
@@ -2469,7 +2473,7 @@ def reassign_match_marker(id, mid):
         record.matching_attempt.last_edit_id = current_user.id
         record.matching_attempt.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        log_db_commit("Reassign marker for matching record", user=current_user)
 
     else:
         flash(
@@ -2541,7 +2545,7 @@ def reassign_supervisor_roles(rec_id):
                 record.roles.add(new_item)
 
         try:
-            db.session.commit()
+            log_db_commit("Reassign supervisor roles for matching record", user=current_user)
         except SQLAlchemyError as e:
             flash(
                 "Could not reassign supervisors for this matching record because a database error was encountered.",
@@ -2748,7 +2752,7 @@ def publish_match(id):
         return redirect(redirect_url())
 
     record.published = True
-    db.session.commit()
+    log_db_commit('Publish matching attempt "{name}" to convenors'.format(name=record.name), user=current_user)
 
     return redirect(redirect_url())
 
@@ -2795,7 +2799,7 @@ def unpublish_match(id):
         return redirect(redirect_url())
 
     record.published = False
-    db.session.commit()
+    log_db_commit('Unpublish matching attempt "{name}" from convenors'.format(name=record.name), user=current_user)
 
     return redirect(redirect_url())
 
@@ -2893,7 +2897,7 @@ def select_match(id):
         return redirect(redirect_url())
 
     record.selected = True
-    db.session.commit()
+    log_db_commit('Select matching attempt "{name}" for use during academic year rollover'.format(name=record.name), user=current_user)
 
     return redirect(url)
 
@@ -2940,7 +2944,7 @@ def deselect_match(id):
         return redirect(redirect_url())
 
     record.selected = False
-    db.session.commit()
+    log_db_commit('Deselect matching attempt "{name}" for academic year rollover'.format(name=record.name), user=current_user)
 
     return redirect(redirect_url())
 

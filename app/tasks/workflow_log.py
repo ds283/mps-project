@@ -96,7 +96,9 @@ def register_workflow_log_tasks(celery):
         Export the workflow log (optionally filtered by project class or tenant) to an Excel
         spreadsheet, store it as a GeneratedAsset, and add a DownloadCentreItem for the user.
         """
-        self.update_state(state="STARTED", meta={"msg": "Preparing workflow log export"})
+        self.update_state(
+            state="STARTED", meta={"msg": "Preparing workflow log export"}
+        )
 
         try:
             user: User = db.session.query(User).filter_by(id=user_id).first()
@@ -130,9 +132,7 @@ def register_workflow_log_tasks(celery):
 
             if pclass is not None:
                 query = query.filter(
-                    WorkflowLogEntry.project_classes.any(
-                        ProjectClass.id == pclass.id
-                    )
+                    WorkflowLogEntry.project_classes.any(ProjectClass.id == pclass.id)
                 )
             elif tenant is not None:
                 # Filter to entries that have at least one project class belonging to this tenant
@@ -197,10 +197,10 @@ def register_workflow_log_tasks(celery):
 
             records = []
             for entry in entries:
-                initiator_name = entry.initiator.name if entry.initiator is not None else ""
-                pclass_names = ", ".join(
-                    pc.name for pc in entry.project_classes
+                initiator_name = (
+                    entry.initiator.name if entry.initiator is not None else ""
                 )
+                pclass_names = ", ".join(pc.name for pc in entry.project_classes)
                 records.append(
                     {
                         "timestamp": entry.timestamp.strftime("%a %d %b %Y %H:%M:%S")

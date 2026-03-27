@@ -20,6 +20,7 @@ from .forms import EditCommentForm
 from ..database import db
 from ..models import ProjectDescription, DescriptionComment, EnrollmentRecord
 from ..shared.context.global_context import render_template_context
+from ..shared.workflow_logging import log_db_commit
 from ..shared.utils import (
     build_project_approval_queues,
     home_dashboard_url,
@@ -72,7 +73,7 @@ def approve(id):
 
     record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_VALIDATED
     # validator_id and validated_timestamp are set by validator for workflow_state
-    db.session.commit()
+    log_db_commit("Approved project description", user=current_user)
 
     return redirect(url)
 

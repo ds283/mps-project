@@ -20,6 +20,7 @@ from datetime import timedelta
 from ..database import db
 from ..models import User, EmailTemplate, EmailWorkflow, EmailWorkflowItem
 from ..models.emails import encode_email_payload
+from ..shared.workflow_logging import log_db_commit
 
 
 def register_services_tasks(celery):
@@ -42,7 +43,11 @@ def register_services_tasks(celery):
         )
         db.session.add(workflow)
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Create distribution email workflow: {subject}",
+                user=user_id,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -113,7 +118,11 @@ def register_services_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Queue distribution email to user #{user_id}: {subject}",
+                user=user_id,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -152,7 +161,10 @@ def register_services_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Queue notify email to {to_addr}: {subject}",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -177,7 +189,11 @@ def register_services_tasks(celery):
         )
         db.session.add(workflow)
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Create email list workflow: {subject}",
+                user=user_id,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -234,7 +250,10 @@ def register_services_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Queue email to address {to_addr}: {subject}",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

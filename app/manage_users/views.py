@@ -54,6 +54,7 @@ from ..models import (
 )
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
+from ..shared.workflow_logging import log_db_commit
 from ..shared.conversions import is_boolean, is_integer
 from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import func
@@ -160,7 +161,7 @@ def create_office(role):
 
         user.tenants = form.tenants.data
 
-        db.session.commit()
+        log_db_commit("Create office user account", user=user)
 
         return redirect(url_for("manage_users.edit_users"))
     else:
@@ -232,7 +233,7 @@ def create_faculty(role):
         )
 
         db.session.add(data)
-        db.session.commit()
+        log_db_commit("Create faculty user account", user=current_user)
 
         if form.submit.data:
             return redirect(
@@ -333,7 +334,7 @@ def create_student(role):
         )
 
         db.session.add(data)
-        db.session.commit()
+        log_db_commit("Create student user account", user=current_user, student=data)
 
         if pane is None or pane == "accounts":
             return redirect(url_for("manage_users.edit_users"))
@@ -896,7 +897,7 @@ def remove_all_CATS_limits():
                 FacultyData.CATS_presentation: None,
             }
         )
-        db.session.commit()
+        log_db_commit("Remove all CATS limits for faculty members", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -920,7 +921,7 @@ def remove_CATS_limits(fac_id):
         fac.CATS_marking = None
         fac.CATS_moderation = None
         fac.CATS_presentation = None
-        db.session.commit()
+        log_db_commit(f'Remove CATS limits for faculty member "{fac.user.name}"', user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -996,7 +997,7 @@ def batch_create_students():
                 try:
                     db.session.add(asset)
                     db.session.add(record)
-                    db.session.commit()
+                    log_db_commit("Upload student batch import list", user=current_user)
                 except SQLAlchemyError as e:
                     flash(
                         "Could not upload batch user list due to a database issue. Please contact an administrator.",
@@ -1101,7 +1102,7 @@ def batch_create_faculty():
                 try:
                     db.session.add(asset)
                     db.session.add(record)
-                    db.session.commit()
+                    log_db_commit("Upload faculty batch import list", user=current_user)
                 except SQLAlchemyError as e:
                     flash(
                         "Could not upload faculty batch user list due to a database issue. Please contact an administrator.",
@@ -1216,7 +1217,7 @@ def perform_delete_faculty_batch(batch_id):
         db.session.query(FacultyBatchItem).filter_by(parent_id=record.id).delete()
 
         db.session.delete(record)
-        db.session.commit()
+        log_db_commit(f'Delete faculty account import task "{record.name}"', user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -1316,7 +1317,7 @@ def perform_terminate_faculty_batch(batch_id):
         db.session.query(StudentBatchItem).filter_by(parent_id=record.id).delete()
 
         db.session.delete(record)
-        db.session.commit()
+        log_db_commit(f'Terminate faculty batch import task "{record.name}"', user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -1414,7 +1415,7 @@ def perform_terminate_student_batch(batch_id):
         db.session.query(StudentBatchItem).filter_by(parent_id=record.id).delete()
 
         db.session.delete(record)
-        db.session.commit()
+        log_db_commit(f'Terminate student batch import task "{record.name}"', user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -1499,7 +1500,7 @@ def perform_delete_student_batch(batch_id):
         db.session.query(StudentBatchItem).filter_by(parent_id=record.id).delete()
 
         db.session.delete(record)
-        db.session.commit()
+        log_db_commit(f'Delete student account import task "{record.name}"', user=current_user)
 
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -1756,7 +1757,7 @@ def edit_student_batch_item(item_id):
             if existing_record.email.lower() != record.email.lower():
                 record.dont_convert = True
 
-        db.session.commit()
+        log_db_commit("Save edits to student batch import item", user=current_user)
 
         return redirect(
             url_for("manage_users.view_student_batch_data", batch_id=record.parent.id)
@@ -1800,7 +1801,7 @@ def edit_faculty_batch_item(item_id):
                 record.existing_id = match.id
 
         try:
-            db.session.commit()
+            log_db_commit("Save edits to faculty batch import item", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(
@@ -1829,7 +1830,7 @@ def mark_faculty_batch_item_convert(item_id):
     record.dont_convert = False
 
     try:
-        db.session.commit()
+        log_db_commit("Mark faculty batch item for conversion", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -1851,7 +1852,7 @@ def mark_faculty_batch_item_dont_convert(item_id):
     record.dont_convert = True
 
     try:
-        db.session.commit()
+        log_db_commit("Mark faculty batch item not for conversion", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(

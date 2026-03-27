@@ -27,6 +27,7 @@ from ..models import (
     User,
 )
 from ..shared.internal_redis import get_redis
+from ..shared.workflow_logging import log_db_commit
 
 
 def register_system_tasks(celery):
@@ -76,7 +77,7 @@ def register_system_tasks(celery):
 
         try:
             db.session.query(TaskRecord).delete()
-            db.session.commit()
+            log_db_commit("Delete all background task records", endpoint=self.name)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -92,7 +93,7 @@ def register_system_tasks(celery):
 
         try:
             db.session.query(Notification).delete()
-            db.session.commit()
+            log_db_commit("Delete all notification records", endpoint=self.name)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -120,7 +121,7 @@ def register_system_tasks(celery):
         record.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
 
         try:
-            db.session.commit()
+            log_db_commit("Mark matching attempt as not solved after system reset", endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -147,7 +148,7 @@ def register_system_tasks(celery):
         record.outcome = ScheduleAttempt.OUTCOME_NOT_SOLVED
 
         try:
-            db.session.commit()
+            log_db_commit("Mark scheduling attempt as not solved after system reset", endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -173,7 +174,7 @@ def register_system_tasks(celery):
         record.success = False
 
         try:
-            db.session.commit()
+            log_db_commit("Mark student batch import as finished after system reset", endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -347,7 +348,7 @@ def register_system_tasks(celery):
         user.last_active = timestamp
 
         try:
-            db.session.commit()
+            log_db_commit("Update user last-active timestamp and mark stale notifications for removal", user=user, endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

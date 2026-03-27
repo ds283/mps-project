@@ -51,6 +51,7 @@ from .shared.context.global_context import (
     render_template_context,
 )
 from .shared.utils import home_dashboard_url
+from .shared.workflow_logging import log_db_commit
 from .task_queue import background_task, make_celery
 from .thirdparty.flask_bleach import Bleach
 from .thirdparty.flask_bootstrap5 import Bootstrap
@@ -91,7 +92,7 @@ class PatchedMailUtil(MailUtil):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit("Queue security email workflow for delivery")
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -321,7 +322,7 @@ def create_app():
             if request.endpoint is not None and "ajax" not in request.endpoint:
                 try:
                     Notification.query.filter_by(remove_on_pageload=True).delete()
-                    db.session.commit()
+                    log_db_commit("Remove transient notifications on page load", user=current_user)
                 except SQLAlchemyError as e:
                     current_app.logger.exception(
                         "SQLAlchemyError exception", exc_info=e
@@ -413,7 +414,7 @@ def create_app():
         # Notification.query.filter_by(user_id=user.id).delete()
 
         user.last_active = datetime.now()
-        db.session.commit()
+        log_db_commit("Record last active timestamp on user login", user=user)
 
     from flask import Request
 

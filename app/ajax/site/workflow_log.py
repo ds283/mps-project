@@ -21,6 +21,18 @@ _user_cell = """
 """
 
 # language=jinja2
+_student_cell = """
+{% if e.student is not none %}
+    <div>{{ e.student.user.name }}</div>
+    {% if e.student.exam_number %}
+        <div class="text-muted small">{{ e.student.exam_number }}</div>
+    {% endif %}
+{% else %}
+    <span class="text-muted small">—</span>
+{% endif %}
+"""
+
+# language=jinja2
 _pclasses_cell = """
 {% set pclasses = e.project_classes.all() %}
 {% if pclasses %}
@@ -37,6 +49,7 @@ def workflow_log_data(entries):
     data = [
         {
             "user": render_template_string(_user_cell, e=e),
+            "student": render_template_string(_student_cell, e=e),
             "endpoint": e.endpoint or "",
             "project_classes": render_template_string(_pclasses_cell, e=e),
             "timestamp": e.timestamp.strftime("%a %d %b %Y %H:%M:%S")

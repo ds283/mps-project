@@ -21,6 +21,7 @@ from ..models import (
     SupervisionEvent,
     User,
 )
+from ..shared.workflow_logging import log_db_commit
 from . import api
 
 
@@ -82,7 +83,7 @@ def set_event_attendance(event_id, owner_id, record_id, submitter_id, value):
 
     try:
         event.attendance = value
-        db.session.commit()
+        log_db_commit("Set attendance for supervision event", student=sd)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -141,7 +142,7 @@ def mute_event(event_id, owner_id, record_id):
 
     try:
         event.mute = True
-        db.session.commit()
+        log_db_commit("Muted supervision event", student=sd)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -183,7 +184,7 @@ def mute_role(role_id, record_id):
 
     try:
         role.mute = True
-        db.session.commit()
+        log_db_commit("Muted submission role notifications", student=sd)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

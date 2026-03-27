@@ -60,6 +60,7 @@ from ..shared.validators import (
     validate_is_administrator,
     validate_is_convenor,
 )
+from ..shared.workflow_logging import log_db_commit
 from ..tools import ServerSideSQLHandler
 from .forms import (
     AddSubmitterRoleForm,
@@ -512,7 +513,13 @@ def enrol_all_submitters(configid):
         )
 
     try:
-        db.session.commit()
+        log_db_commit(
+            'Bulk-enrolled {count} submitters for project class "{proj}"'.format(
+                count=len(candidates), proj=config.project_class.name
+            ),
+            user=current_user,
+            project_classes=config.project_class,
+        )
         flash(
             'Added {count} submitters to project "{proj}"'.format(
                 count=len(candidates), proj=config.project_class.name
@@ -613,7 +620,12 @@ def remove_feedback_report(rec_id):
 
         record.feedback_generated = False
 
-        db.session.commit()
+        log_db_commit(
+            "Removed feedback reports from submission record for submitter",
+            user=current_user,
+            student=sub.student,
+            project_classes=pclass,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -709,7 +721,12 @@ def do_delete_submitter(sid):
         sub.detach_records()
         db.session.delete(sub)
 
-        db.session.commit()
+        log_db_commit(
+            "Deleted submitter record",
+            user=current_user,
+            student=sub.student,
+            project_classes=sub.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -808,7 +825,11 @@ def do_delete_all_submitters(configid):
             item.detach_records()
             db.session.delete(item)
 
-        db.session.commit()
+        log_db_commit(
+            'Deleted all submitters for project class "{proj}"'.format(proj=config.project_class.name),
+            user=current_user,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -1007,7 +1028,12 @@ def perform_delete_role(role_id):
     try:
         db.session.delete(role)
 
-        db.session.commit()
+        log_db_commit(
+            "Deleted submission role from submission record",
+            user=current_user,
+            student=sub.student,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1065,7 +1091,12 @@ def add_role(record_id):
 
         try:
             db.session.add(role)
-            db.session.commit()
+            log_db_commit(
+                "Added new submission role to submission record",
+                user=current_user,
+                student=sub.student,
+                project_classes=config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1137,7 +1168,12 @@ def edit_role(role_id):
         role.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                "Saved changes to submission role",
+                user=current_user,
+                student=sub.student,
+                project_classes=config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

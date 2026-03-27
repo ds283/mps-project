@@ -27,6 +27,7 @@ from ..tools import ServerSideSQLHandler
 from ..tools.ServerSideProcessing import FakeQuery, ServerSideInMemoryHandler
 from . import tenants
 from .forms import AddTenantForm, EditTenantForm
+from ..shared.workflow_logging import log_db_commit
 
 
 @tenants.route("/edit_tenants")
@@ -67,7 +68,7 @@ def add_tenant():
 
         try:
             db.session.add(tenant)
-            db.session.commit()
+            log_db_commit("Added new tenant", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -97,7 +98,7 @@ def edit_tenant(id):
         tenant.in_2026_ATAS_campaign = form.in_2026_ATAS_campaign.data
 
         try:
-            db.session.commit()
+            log_db_commit("Edited tenant settings", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -278,7 +279,7 @@ def create_email_template(tenant_id, template_type):
 
     try:
         db.session.add(new_template)
-        db.session.commit()
+        log_db_commit("Created new tenant email template override", user=current_user)
         flash("Successfully created new tenant email template override.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -327,7 +328,7 @@ def edit_email_template(tenant_id, template_id):
         template.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit("Edited tenant email template", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -398,7 +399,7 @@ def duplicate_email_template(tenant_id, template_id):
 
     try:
         db.session.add(new_template)
-        db.session.commit()
+        log_db_commit("Duplicated tenant email template", user=current_user)
         flash(
             f"Successfully duplicated email template. New version is {new_version}.",
             "success",
@@ -431,7 +432,7 @@ def activate_email_template(tenant_id, template_id):
         template.active = True
         template.last_edit_timestamp = datetime.now()
         template.last_edit_id = current_user.id
-        db.session.commit()
+        log_db_commit("Activated tenant email template", user=current_user)
         flash("Successfully activated email template.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -461,7 +462,7 @@ def deactivate_email_template(tenant_id, template_id):
         template.active = False
         template.last_edit_timestamp = datetime.now()
         template.last_edit_id = current_user.id
-        db.session.commit()
+        log_db_commit("Deactivated tenant email template", user=current_user)
         flash("Successfully deactivated email template.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -489,7 +490,7 @@ def delete_email_template(tenant_id, template_id):
 
     try:
         db.session.delete(template)
-        db.session.commit()
+        log_db_commit("Deleted tenant email template", user=current_user)
         flash("Successfully deleted email template.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()

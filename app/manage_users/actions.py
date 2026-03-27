@@ -25,6 +25,7 @@ from flask_security.utils import (
 
 from ..database import db
 from ..models import Role, User
+from ..shared.workflow_logging import log_db_commit
 
 
 def _randompassword():
@@ -55,7 +56,7 @@ def register_user(**kwargs):
     user = User(**kwargs)
 
     db.session.add(user)
-    db.session.commit()
+    log_db_commit("Register new user account", user=user)
 
     # send confirmation email if we have been asked to
     if ask_confirm:
@@ -77,6 +78,6 @@ def register_user(**kwargs):
 
     else:
         user.confirmed_at = datetime.now()
-        db.session.commit()
+        log_db_commit("Confirm new user account registration", user=user)
 
     return user

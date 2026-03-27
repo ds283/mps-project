@@ -39,6 +39,7 @@ from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
+from ..shared.workflow_logging import log_db_commit
 from ..tools.ServerSideProcessing import ServerSideSQLHandler
 from . import convenor
 from .forms import AddMarkingSchemeForm, EditMarkingSchemeForm
@@ -444,7 +445,11 @@ def add_marking_scheme(pclass_id):
 
         try:
             db.session.add(scheme)
-            db.session.commit()
+            log_db_commit(
+                f'Added new marking scheme "{scheme.name}" for project class "{pclass.name}"',
+                user=current_user,
+                project_classes=pclass,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -500,7 +505,11 @@ def edit_marking_scheme(scheme_id):
         scheme.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Saved changes to marking scheme "{scheme.name}" for project class "{pclass.name}"',
+                user=current_user,
+                project_classes=pclass,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

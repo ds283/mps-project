@@ -42,6 +42,7 @@ from ..shared.utils import (
 from ..shared.validators import (
     validate_is_convenor,
 )
+from ..shared.workflow_logging import log_db_commit
 from ..tools import ServerSideInMemoryHandler
 from ..tools.ServerSideProcessing import FakeQuery
 
@@ -231,7 +232,11 @@ def create_email_template(pclass_id, template_type):
 
     try:
         db.session.add(new_template)
-        db.session.commit()
+        log_db_commit(
+            f"Created new email template override for project class '{pclass.name}'",
+            user=current_user,
+            project_classes=pclass,
+        )
         flash(f"Successfully created new email template override.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -287,7 +292,11 @@ def edit_email_template(pclass_id, template_id):
         template.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Saved edits to email template for project class '{pclass.name}'",
+                user=current_user,
+                project_classes=pclass,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -365,7 +374,11 @@ def duplicate_email_template(pclass_id, template_id):
 
     try:
         db.session.add(new_template)
-        db.session.commit()
+        log_db_commit(
+            f"Duplicated email template as version {new_version} for project class '{pclass.name}'",
+            user=current_user,
+            project_classes=pclass,
+        )
         flash(
             f"Successfully duplicated email template. New version is {new_version}.",
             "success",
@@ -406,7 +419,11 @@ def activate_email_template(pclass_id, template_id):
         template.active = True
         template.last_edit_timestamp = datetime.now()
         template.last_edited_id = current_user.id
-        db.session.commit()
+        log_db_commit(
+            f"Activated email template for project class '{pclass.name}'",
+            user=current_user,
+            project_classes=pclass,
+        )
         flash("Successfully activated email template.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -444,7 +461,11 @@ def deactivate_email_template(pclass_id, template_id):
         template.active = False
         template.last_edit_timestamp = datetime.now()
         template.last_edited_id = current_user.id
-        db.session.commit()
+        log_db_commit(
+            f"Deactivated email template for project class '{pclass.name}'",
+            user=current_user,
+            project_classes=pclass,
+        )
         flash("Successfully deactivated email template.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -480,7 +501,11 @@ def delete_email_template(pclass_id, template_id):
 
     try:
         db.session.delete(template)
-        db.session.commit()
+        log_db_commit(
+            f"Deleted email template for project class '{pclass.name}'",
+            user=current_user,
+            project_classes=pclass,
+        )
         flash("Successfully deleted email template.", "success")
     except SQLAlchemyError as e:
         db.session.rollback()

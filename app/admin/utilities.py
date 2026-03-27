@@ -189,7 +189,7 @@ def activate_room(id):
     data = Room.query.get_or_404(id)
 
     data.enable()
-    db.session.commit()
+    log_db_commit(f"Activated venue room '{data.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -201,7 +201,7 @@ def deactivate_room(id):
     data = Room.query.get_or_404(id)
 
     data.disable()
-    db.session.commit()
+    log_db_commit(f"Deactivated venue room '{data.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -246,7 +246,7 @@ def add_building():
         )
 
         db.session.add(data)
-        db.session.commit()
+        log_db_commit(f"Added new building '{data.name}'", user=current_user)
 
         return redirect(url_for("admin.edit_buildings"))
 
@@ -271,7 +271,7 @@ def edit_building(id):
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        log_db_commit(f"Edited building '{data.name}'", user=current_user)
 
         return redirect(url_for("admin.edit_buildings"))
 
@@ -290,7 +290,7 @@ def activate_building(id):
     data = Building.query.get_or_404(id)
 
     data.enable()
-    db.session.commit()
+    log_db_commit(f"Activated building '{data.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -302,7 +302,7 @@ def deactivate_building(id):
     data = Building.query.get_or_404(id)
 
     data.disable()
-    db.session.commit()
+    log_db_commit(f"Deactivated building '{data.name}'", user=current_user)
 
     return redirect(redirect_url())
 
@@ -392,7 +392,7 @@ def download_generated_asset(asset_id):
 
     try:
         db.session.add(record)
-        db.session.commit()
+        log_db_commit(f"Logged download of generated asset #{asset_id}", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -484,7 +484,7 @@ def download_submitted_asset(asset_id):
 
     try:
         db.session.add(record)
-        db.session.commit()
+        log_db_commit(f"Logged download of submitted asset #{asset_id}", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -559,7 +559,7 @@ def lock_backup(backup_id):
 
     try:
         backup.locked = True
-        db.session.commit()
+        log_db_commit(f"Locked backup record #{backup_id}", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -579,7 +579,7 @@ def unlock_backup(backup_id):
 
     try:
         backup.locked = False
-        db.session.commit()
+        log_db_commit(f"Unlocked backup record #{backup_id}", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -611,7 +611,7 @@ def edit_backup(backup_id):
             backup.unlock_date = form.unlock_date.data
 
         try:
-            db.session.commit()
+            log_db_commit(f"Saved labels and settings for backup record #{backup_id}", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemy exception", exc_info=e)
@@ -691,7 +691,7 @@ def upload_schedule(schedule_id):
 
                     try:
                         db.session.add(asset)
-                        db.session.commit()
+                        log_db_commit(f"Uploaded offline schedule solution for schedule #{schedule_id}", user=current_user)
                     except SQLAlchemyError as e:
                         db.session.rollback()
                         flash(
@@ -793,7 +793,7 @@ def upload_match(match_id):
 
                     try:
                         db.session.add(asset)
-                        db.session.commit()
+                        log_db_commit(f"Uploaded offline match solution for match #{match_id}", user=current_user)
                     except SQLAlchemyError as e:
                         db.session.rollback()
                         flash(
@@ -1155,7 +1155,7 @@ def asset_remove_expiry(asset_type, asset_id):
     asset.expiry = None
 
     try:
-        db.session.commit()
+        log_db_commit(f"Removed expiry date from {asset_type} asset #{asset_id}", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1192,7 +1192,7 @@ def asset_add_expiry(asset_type, asset_id):
     asset.expiry = datetime.now() + timedelta(days=7)
 
     try:
-        db.session.commit()
+        log_db_commit(f"Added expiry date to {asset_type} asset #{asset_id}", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1266,7 +1266,7 @@ def upload_feedback_asset():
 
             try:
                 db.session.add(feedback_asset)
-                db.session.commit()
+                log_db_commit(f"Uploaded feedback asset '{feedback_asset.label}'", user=current_user)
             except SQLAlchemyError as e:
                 db.session.rollback()
                 flash(
@@ -1314,7 +1314,7 @@ def edit_feedback_asset(asset_id):
         asset.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited feedback asset '{asset.label}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(
@@ -1353,7 +1353,7 @@ def add_feedback_recipe():
 
         try:
             db.session.add(recipe)
-            db.session.commit()
+            log_db_commit(f"Added feedback recipe '{recipe.label}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(
@@ -1391,7 +1391,7 @@ def edit_feedback_recipe(recipe_id):
         recipe.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited feedback recipe '{recipe.label}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(
@@ -1517,7 +1517,7 @@ def edit_global_email_template(id):
         template.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(f"Edited global email template #{id} '{template.subject}'", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1551,7 +1551,7 @@ def activate_global_email_template(id):
     template.active = True
 
     try:
-        db.session.commit()
+        log_db_commit(f"Activated global email template #{id} '{template.subject}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1596,7 +1596,7 @@ def deactivate_global_email_template(id):
     template.active = False
 
     try:
-        db.session.commit()
+        log_db_commit(f"Deactivated global email template #{id} '{template.subject}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1651,7 +1651,7 @@ def duplicate_global_email_template(id):
 
     try:
         db.session.add(new_template)
-        db.session.commit()
+        log_db_commit(f"Duplicated global email template #{id} as new version #{new_version}", user=current_user)
         flash(
             f"Email template duplicated successfully: new version is #{new_version}.",
             "success",
@@ -1753,7 +1753,7 @@ def perform_delete_global_email_template(id):
 
     try:
         db.session.delete(template)
-        db.session.commit()
+        log_db_commit(f"Deleted global email template #{id} '{template.subject}'", user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

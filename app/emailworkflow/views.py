@@ -21,6 +21,7 @@ from ..database import db
 from ..models import EmailWorkflow, EmailWorkflowItem
 from ..models.emails import EmailTemplate
 from ..shared.context.global_context import render_template_context
+from ..shared.workflow_logging import log_db_commit
 from ..tasks.email_workflow import decode_email_payload
 from ..tools.ServerSideProcessing import ServerSideSQLHandler
 from . import emailworkflow
@@ -107,7 +108,7 @@ def pause_workflow(id):
 
     try:
         workflow.paused = True
-        db.session.commit()
+        log_db_commit(f'Paused email workflow "{workflow.name}"', user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash("Could not pause workflow due to a database error.", "error")
@@ -130,7 +131,7 @@ def unpause_workflow(id):
 
     try:
         workflow.paused = False
-        db.session.commit()
+        log_db_commit(f'Unpaused email workflow "{workflow.name}"', user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash("Could not unpause workflow due to a database error.", "error")
@@ -160,7 +161,7 @@ def edit_workflow(id):
             from datetime import datetime
 
             workflow.last_edit_timestamp = datetime.now()
-            db.session.commit()
+            log_db_commit(f'Updated settings for email workflow "{workflow.name}"', user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             flash("Could not update workflow due to a database error.", "error")
@@ -243,7 +244,7 @@ def pause_item(id):
 
     try:
         item.paused = True
-        db.session.commit()
+        log_db_commit(f'Paused email workflow item "{item.workflow.name}"', user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash("Could not pause item due to a database error.", "error")
@@ -270,7 +271,7 @@ def unpause_item(id):
 
     try:
         item.paused = False
-        db.session.commit()
+        log_db_commit(f'Unpaused email workflow item "{item.workflow.name}"', user=current_user)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash("Could not unpause item due to a database error.", "error")

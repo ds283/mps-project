@@ -17,6 +17,7 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
+from ..shared.workflow_logging import log_db_commit
 from ..models import (
     EmailTemplate,
     EmailWorkflow,
@@ -112,7 +113,10 @@ def register_matching_email_tasks(celery):
             record.draft_to_selectors = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Record selector notification timestamp for matching attempt #{match_id}",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -192,7 +196,12 @@ def register_matching_email_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Queue matching {'draft' if is_draft else 'final'} notification email to selector {user.name} for {config.name}",
+                user=user,
+                project_classes=pclass,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -276,7 +285,10 @@ def register_matching_email_tasks(celery):
             record.draft_to_supervisors = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Record supervisor notification timestamp for matching attempt #{match_id}",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -401,7 +413,12 @@ def register_matching_email_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Queue matching {'draft' if is_draft else 'final'} notification email to supervisor {user.name} for attempt #{match_id}",
+                user=user,
+                project_classes=workflow_pclasses,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

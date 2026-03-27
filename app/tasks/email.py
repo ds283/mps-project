@@ -16,6 +16,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import EmailLog, EmailTemplateLabel
 from ..shared.sqlalchemy import get_count
+from ..shared.workflow_logging import log_db_commit
 
 
 def register_email(celery):
@@ -43,7 +44,7 @@ def register_email(celery):
                 email: EmailLog
                 db.session.delete(email)
 
-            db.session.commit()
+            log_db_commit("Prune old email log entries", endpoint=self.name)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -60,7 +61,7 @@ def register_email(celery):
 
         try:
             db.session.query(EmailLog).delete()
-            db.session.commit()
+            log_db_commit("Delete all email log records", endpoint=self.name)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -86,7 +87,7 @@ def register_email(celery):
                     )
                     db.session.delete(label)
 
-                db.session.commit()
+                log_db_commit("Prune unused email template labels", endpoint=self.name)
 
         except SQLAlchemyError as e:
             db.session.rollback()

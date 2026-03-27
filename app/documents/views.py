@@ -53,6 +53,7 @@ from ..models import (
     FeedbackReport,
 )
 from ..shared.security import validate_nonce
+from ..shared.workflow_logging import log_db_commit
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
@@ -192,7 +193,10 @@ def generate_processed_report(sid):
     record.celery_finished = None
 
     try:
-        db.session.commit()
+        log_db_commit(
+            "Initiated report processing for submission record",
+            project_classes=record.owner.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -298,7 +302,12 @@ def perform_delete_submitter_report(sid):
         # remove exemplar flag
         record.report_exemplar = None
 
-        db.session.commit()
+        log_db_commit(
+            "Removed report from submission record",
+            user=current_user,
+            student=record.owner.student,
+            project_classes=record.owner.config.project_class,
+        )
 
     except SQLAlchemyError as e:
         flash(
@@ -410,7 +419,12 @@ def upload_submitter_report(sid):
             record.report_exemplar = False
 
             try:
-                db.session.commit()
+                log_db_commit(
+                    "Uploaded report for submission record",
+                    user=current_user,
+                    student=record.owner.student,
+                    project_classes=record.owner.config.project_class,
+                )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 flash(
@@ -582,7 +596,12 @@ def edit_submitter_report(sid):
             processed_asset.license = form.license.data
 
         try:
-            db.session.commit()
+            log_db_commit(
+                "Saved changes to report asset record",
+                user=current_user,
+                student=record.owner.student,
+                project_classes=record.owner.config.project_class,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not save changes to this asset record due to a database error. Please contact a system administrator.",
@@ -634,7 +653,12 @@ def edit_submission_record_settings(sid):
             record.report_embargo = form.report_embargo.data
 
         try:
-            db.session.commit()
+            log_db_commit(
+                "Saved changes to submission record settings",
+                user=current_user,
+                student=record.owner.student,
+                project_classes=record.owner.config.project_class,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not save changes to this submission record due to a database error. Please contact a system administrator.",
@@ -709,7 +733,12 @@ def edit_submitter_attachment(aid):
             attachment.include_marker_emails = form.include_marker_emails.data
 
         try:
-            db.session.commit()
+            log_db_commit(
+                "Saved changes to submitter attachment asset record",
+                user=current_user,
+                student=record.owner.student,
+                project_classes=record.owner.config.project_class,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not save changes to this asset record due to a database error. Please contact a system administrator.",
@@ -844,7 +873,12 @@ def perform_delete_submitter_attachment(aid, sid):
         db.session.flush()
 
         db.session.delete(attachment)
-        db.session.commit()
+        log_db_commit(
+            "Deleted attachment from submission record",
+            user=current_user,
+            student=record.owner.student,
+            project_classes=record.owner.config.project_class,
+        )
 
     except SQLAlchemyError as e:
         flash(
@@ -966,7 +1000,12 @@ def upload_submitter_attachment(sid):
 
             try:
                 db.session.add(attachment)
-                db.session.commit()
+                log_db_commit(
+                    "Uploaded attachment for submission record",
+                    user=current_user,
+                    student=record.owner.student,
+                    project_classes=pclass,
+                )
             except SQLAlchemyError as e:
                 flash(
                     "Could not upload attachment due to a database issue. Please contact an administrator.",
@@ -1182,7 +1221,11 @@ def add_user_acl(user_id, attach_type, attach_id):
 
     try:
         asset.grant_user(user)
-        db.session.commit()
+        log_db_commit(
+            "Granted user access to asset",
+            user=current_user,
+            project_classes=pclass,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1211,7 +1254,11 @@ def remove_user_acl(user_id, attach_type, attach_id):
 
     try:
         asset.revoke_user(user)
-        db.session.commit()
+        log_db_commit(
+            "Revoked user access to asset",
+            user=current_user,
+            project_classes=pclass,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1240,7 +1287,11 @@ def add_role_acl(role_id, attach_type, attach_id):
 
     try:
         asset.grant_role(role)
-        db.session.commit()
+        log_db_commit(
+            "Granted role-based access to asset",
+            user=current_user,
+            project_classes=pclass,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1269,7 +1320,11 @@ def remove_role_acl(role_id, attach_type, attach_id):
 
     try:
         asset.revoke_role(role)
-        db.session.commit()
+        log_db_commit(
+            "Revoked role-based access to asset",
+            user=current_user,
+            project_classes=pclass,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

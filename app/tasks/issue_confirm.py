@@ -34,6 +34,7 @@ from ..models import (
 )
 from ..models.emails import encode_email_payload
 from ..shared.sqlalchemy import get_count
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update, register_task
 
 
@@ -197,7 +198,12 @@ def register_issue_confirm_tasks(celery):
         config.requests_issued_id = convenor_id
         config.requests_timestamp = datetime.now()
 
-        db.session.commit()
+        log_db_commit(
+            f"Marked confirmation requests as issued for project class '{config.name}'",
+            user=convenor_id,
+            project_classes=config.project_class,
+            endpoint=self.name,
+        )
 
         return notify_list
 
@@ -239,7 +245,11 @@ def register_issue_confirm_tasks(celery):
         workflow_id = workflow.id
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Created email workflow for confirmation requests: project class '{config.project_class.name}'",
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -288,7 +298,12 @@ def register_issue_confirm_tasks(celery):
                 autocommit=False,
             )
 
-        db.session.commit()
+        log_db_commit(
+            f"Finalized issue of confirmation requests for project class '{config.name}'",
+            user=convenor_id,
+            project_classes=config.project_class if config is not None else None,
+            endpoint=self.name,
+        )
 
     @celery.task(bind=True, default_retry_delay=30)
     def issue_fail(self, task_id, convenor_id):
@@ -317,7 +332,11 @@ def register_issue_confirm_tasks(celery):
             "error",
             autocommit=False,
         )
-        db.session.commit()
+        log_db_commit(
+            "Recorded failure of confirmation request issue",
+            user=convenor_id,
+            endpoint=self.name,
+        )
 
     @celery.task(bind=True, default_retry_delay=30)
     def issue_confirm(self, faculty_id, config_id):
@@ -341,7 +360,11 @@ def register_issue_confirm_tasks(celery):
 
         try:
             config.confirmation_required.append(data)
-            db.session.commit()
+            log_db_commit(
+                f"Added faculty '{data.user.name}' to confirmation required list for project class '{config.project_class.name}'",
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -384,7 +407,11 @@ def register_issue_confirm_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Queued confirmation request notification email for faculty '{data.user.name}' ({config.project_class.name})",
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -427,7 +454,11 @@ def register_issue_confirm_tasks(celery):
         workflow_id = workflow.id
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Created email workflow for confirmation reminders: project class '{config.project_class.name}'",
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -481,7 +512,11 @@ def register_issue_confirm_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Queued confirmation reminder email for faculty '{data.user.name}' ({config.project_class.name})",
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -538,7 +573,11 @@ def register_issue_confirm_tasks(celery):
             ):
                 config.confirmation_required.append(record.owner)
 
-        db.session.commit()
+        log_db_commit(
+            f"Adjusted confirmation required list for faculty after enrollment change (project class '{config.project_class.name}')",
+            project_classes=config.project_class,
+            endpoint=self.name,
+        )
 
     @celery.task(bind=True, default_retry_delay=30)
     def enrollment_created(self, enroll_id, current_year):
@@ -579,7 +618,11 @@ def register_issue_confirm_tasks(celery):
             ):
                 config.confirmation_required.append(record.owner)
 
-        db.session.commit()
+        log_db_commit(
+            f"Updated confirmation required list following enrollment creation (project class '{config.project_class.name}')",
+            project_classes=config.project_class,
+            endpoint=self.name,
+        )
 
     @celery.task(bind=True, default_retry_delay=30)
     def enrollment_deleted(self, pclass_id, faculty_id, current_year):
@@ -615,7 +658,11 @@ def register_issue_confirm_tasks(celery):
 
         if get_count(config.confirmation_required.filter_by(id=faculty_id)) > 0:
             config.confirmation_required.remove(faculty)
-            db.session.commit()
+            log_db_commit(
+                f"Removed faculty from confirmation required list following enrollment deletion (project class '{config.project_class.name}')",
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
 
     @celery.task(bind=True, default_retry_delay=30)
     def revise_notify(self, record_id, pcl_names, user_id):
@@ -666,7 +713,11 @@ def register_issue_confirm_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Queued revision request notification email for project '{project.name}'",
+                user=user_id,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

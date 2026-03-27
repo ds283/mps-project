@@ -150,6 +150,7 @@ def register_selecting_tasks(celery):
             log_db_commit(
                 f"Moved selector {sel.student.user.name} to project class config '{dest_config.name}'",
                 user=user,
+                student=sel.student,
                 project_classes=dest_config.project_class,
                 endpoint=self.name,
             )

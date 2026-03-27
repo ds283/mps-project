@@ -20,6 +20,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import LiveProject, PopularityRecord, ProjectClass, ProjectClassConfig
+from ..shared.workflow_logging import log_db_commit
 
 
 def compute_rank(self, num_live, rank_type, cid, uuid, query, accessor, writer):
@@ -84,7 +85,10 @@ def compute_rank(self, num_live, rank_type, cid, uuid, query, accessor, writer):
 
                 current_record += 1
 
-            db.session.commit()
+            log_db_commit(
+                f"Store {rank_type} rankings for project class config #{cid} (uuid={str(uuid)})",
+                endpoint=self.name,
+            )
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -159,7 +163,10 @@ def register_popularity_tasks(celery):
             data.popularity_data.append(rec)
             db.session.flush()
 
-            db.session.commit()
+            log_db_commit(
+                f"Insert PopularityRecord for LiveProject #{liveid} (uuid={str(uuid)}, score={score})",
+                endpoint=self.name,
+            )
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -225,7 +232,10 @@ def register_popularity_tasks(celery):
             for record in records:
                 record.lowest_score_rank = lowest_rank
 
-            db.session.commit()
+            log_db_commit(
+                f"Store lowest popularity score rank ({lowest_rank}) for config #{cid} (uuid={str(uuid)})",
+                endpoint=self.name,
+            )
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -410,7 +420,10 @@ def register_popularity_tasks(celery):
                         dropped.append((record.id, str(record.datestamp)))
                         db.session.delete(record)
 
-                db.session.commit()
+                log_db_commit(
+                    f"Thin popularity records for {period} {unit} bin: retained #{retained_record.id}, dropped {len(dropped)} record(s)",
+                    endpoint=self.name,
+                )
 
         except SQLAlchemyError as e:
             db.session.rollback()

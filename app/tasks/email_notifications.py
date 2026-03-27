@@ -34,6 +34,7 @@ from ..models import (
 )
 from ..models.emails import encode_email_payload
 from ..shared.utils import get_current_year
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update, register_task
 
 

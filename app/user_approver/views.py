@@ -22,6 +22,7 @@ from . import user_approver
 from ..database import db
 from ..models import StudentData, DegreeProgramme, DegreeType, WorkflowMixin, User
 from ..shared.context.global_context import render_template_context
+from ..shared.workflow_logging import log_db_commit
 from ..shared.conversions import is_integer
 from ..shared.utils import redirect_url
 from ..tools import ServerSideSQLHandler
@@ -165,7 +166,7 @@ def approve(id):
     record.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED
     record.validator_id = current_user.id
     record.validated_timestamp = datetime.now()
-    db.session.commit()
+    log_db_commit("Approved student record", user=current_user, student=record)
 
     return redirect(url_for("user_approver.validate", url=url, text=text))
 
@@ -181,7 +182,7 @@ def reject(id):
     record.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_REJECTED
     record.validator_id = current_user.id
     record.validated_timestamp = datetime.now()
-    db.session.commit()
+    log_db_commit("Rejected student record", user=current_user, student=record)
 
     return redirect(url_for("user_approver.validate", url=url, text=text))
 

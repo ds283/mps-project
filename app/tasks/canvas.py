@@ -37,6 +37,7 @@ from ..models import (
 from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetUploadManager, AssetCloudAdapter
 from ..shared.utils import get_main_config
+from ..shared.workflow_logging import log_db_commit
 
 
 def _URL_query(session: requests.Session, URL, **kwargs):
@@ -332,7 +333,11 @@ def register_canvas_tasks(celery):
             for sid in canvas_student_delete_list:
                 db.session.query(CanvasStudent).filter_by(id=sid).delete()
 
-            db.session.commit()
+            log_db_commit(
+                "Synchronize Canvas student list with submitter list",
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -543,7 +548,11 @@ def register_canvas_tasks(celery):
                     current_app.logger.warning(msg)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                "Synchronize Canvas submission availability flags",
+                project_classes=config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -787,7 +796,13 @@ def register_canvas_tasks(celery):
 
         try:
             db.session.add(asset)
-            db.session.commit()
+            log_db_commit(
+                "Save downloaded Canvas submission asset to database",
+                user=user_id,
+                student=submitter.student if submitter is not None else None,
+                project_classes=config.project_class if config is not None else None,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -886,7 +901,12 @@ def register_canvas_tasks(celery):
         record.turnitin_student_overlap = student_overlap
 
         try:
-            db.session.commit()
+            log_db_commit(
+                "Finalize pulled Canvas report: attach asset, set Turnitin scores, and queue processing",
+                user=user_id,
+                student=record.owner.student if record.owner is not None else None,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

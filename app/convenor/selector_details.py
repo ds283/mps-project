@@ -49,6 +49,7 @@ from ..shared.utils import (
 from ..shared.validators import (
     validate_is_convenor,
 )
+from ..shared.workflow_logging import log_db_commit
 from .forms import (
     CreateCustomOfferFormFactory,
     EditCustomOfferFormFactory,
@@ -151,7 +152,12 @@ def update_student_bookmarks():
         bookmark.rank = rmap[bookmark.liveproject.id]
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Updated bookmark ranking order for selector {sel.student.user.name}",
+            user=current_user,
+            student=sel.student,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -241,7 +247,12 @@ def perform_delete_student_bookmark(sid, bid):
         sel.re_rank_bookmarks()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Deleted bookmark for selector {sel.student.user.name}",
+                user=current_user,
+                student=sel.student,
+                project_classes=sel.config.project_class,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not remove bookmark due to a database error. Please inform a system administrator.",
@@ -341,7 +352,12 @@ def create_student_bookmark(sel_id, proj_id):
 
     try:
         db.session.add(bm)
-        db.session.commit()
+        log_db_commit(
+            f"Created bookmark for selector {sel.student.user.name} on project {proj.name}",
+            user=current_user,
+            student=sel.student,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not create bookmark due to a database error. Please contact a system administrator",
@@ -457,7 +473,12 @@ def update_student_choices():
         selection.rank = rmap[selection.liveproject.id]
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Updated selection ranking order for selector {sel.student.user.name}",
+            user=current_user,
+            student=sel.student,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -550,7 +571,12 @@ def perform_delete_student_choice(sid, cid):
         sel.re_rank_selections()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Deleted selection ranking for selector {sel.student.user.name}",
+                user=current_user,
+                student=sel.student,
+                project_classes=sel.config.project_class,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not remove ranking due to a database error. Please inform a system administrator.",
@@ -667,7 +693,12 @@ def create_student_ranking(sel_id, proj_id):
 
     try:
         db.session.add(rec)
-        db.session.commit()
+        log_db_commit(
+            f"Created selection ranking for selector {sel.student.user.name} on project {proj.name}",
+            user=current_user,
+            student=sel.student,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not create ranking due to a database error. Please contact a system administrator",
@@ -957,7 +988,12 @@ def create_custom_offer(sel_id, proj_id):
 
         try:
             db.session.add(offer)
-            db.session.commit()
+            log_db_commit(
+                f"Created custom offer for selector {sel.student.user.name} on project {proj.name}",
+                user=current_user,
+                student=sel.student,
+                project_classes=pclass,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not create custom offer due to a database error. Please contact a system administrator",
@@ -1013,7 +1049,12 @@ def edit_custom_offer(offer_id):
         offer.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Edited custom offer for selector {sel.student.user.name} on project {proj.name}",
+                user=current_user,
+                student=sel.student,
+                project_classes=pclass,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not save edited custom offer due to a database error. Please contact a system administrator",
@@ -1067,7 +1108,12 @@ def accept_custom_offer(offer_id):
     offer.last_edit_id = current_user.id
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Accepted custom offer for selector {sel.student.user.name} on project {proj.name}",
+            user=current_user,
+            student=sel.student,
+            project_classes=pclass,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not mark custom offer as accepted due to a database error. Please contact a system administrator.",
@@ -1094,7 +1140,12 @@ def decline_custom_offer(offer_id):
     offer.last_edit_id = current_user.id
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Declined custom offer for selector {offer.selector.student.user.name} on project {offer.liveproject.name}",
+            user=current_user,
+            student=offer.selector.student,
+            project_classes=offer.liveproject.config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not mark custom offer as declined due to a database error. Please contact a system administrator.",
@@ -1121,7 +1172,12 @@ def undecide_custom_offer(offer_id):
     offer.last_edit_id = current_user.id
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Reset custom offer to pending for selector {offer.selector.student.user.name} on project {offer.liveproject.name}",
+            user=current_user,
+            student=offer.selector.student,
+            project_classes=offer.liveproject.config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not mark custom offer as pending due to a database error. Please contact a system administrator.",
@@ -1143,9 +1199,19 @@ def delete_custom_offer(offer_id):
     if not validate_is_convenor(offer.liveproject.config.project_class):
         return redirect(redirect_url())
 
+    _offer_selector_name = offer.selector.student.user.name
+    _offer_project_name = offer.liveproject.name
+    _offer_pclass = offer.liveproject.config.project_class
+    _offer_student = offer.selector.student
+
     try:
         db.session.delete(offer)
-        db.session.commit()
+        log_db_commit(
+            f"Deleted custom offer for selector {_offer_selector_name} on project {_offer_project_name}",
+            user=current_user,
+            student=_offer_student,
+            project_classes=_offer_pclass,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not delete custom offer due to a database error. Please contact a system administrator.",
@@ -1187,7 +1253,11 @@ def add_group_filter(id, gid):
     if group not in record.group_filters:
         try:
             record.group_filters.append(group)
-            db.session.commit()
+            log_db_commit(
+                f"Added research group filter '{group.name}' for selector filter record",
+                user=current_user,
+                project_classes=record.config.project_class,
+            )
         except (StaleDataError, IntegrityError):
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
@@ -1211,7 +1281,11 @@ def remove_group_filter(id, gid):
     if group in record.group_filters:
         try:
             record.group_filters.remove(group)
-            db.session.commit()
+            log_db_commit(
+                f"Removed research group filter '{group.name}' from selector filter record",
+                user=current_user,
+                project_classes=record.config.project_class,
+            )
         except StaleDataError:
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
@@ -1232,7 +1306,11 @@ def clear_group_filters(id):
 
     try:
         record.group_filters = []
-        db.session.commit()
+        log_db_commit(
+            "Cleared all research group filters from selector filter record",
+            user=current_user,
+            project_classes=record.config.project_class,
+        )
     except StaleDataError:
         # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
         # to the same endpoint?
@@ -1256,7 +1334,11 @@ def add_skill_filter(id, skill_id):
     if skill not in record.skill_filters:
         try:
             record.skill_filters.append(skill)
-            db.session.commit()
+            log_db_commit(
+                f"Added transferable skill filter '{skill.name}' to selector filter record",
+                user=current_user,
+                project_classes=record.config.project_class,
+            )
         except (StaleDataError, IntegrityError):
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?

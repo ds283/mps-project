@@ -38,6 +38,7 @@ from ..models import (
     FacultyData,
 )
 from ..shared.asset_tools import AssetCloudAdapter
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update
 
 OUTCOME_CREATED = 0

@@ -47,6 +47,7 @@ from ..shared.utils import (
 from ..shared.validators import (
     validate_is_convenor,
 )
+from ..shared.workflow_logging import log_db_commit
 from ..student.actions import store_selection
 from .forms import (
     CustomCATSLimitForm,
@@ -74,7 +75,11 @@ def update_CATS(config_id):
     config.CATS_moderation = config.project_class.CATS_moderation
     config.CATS_presentation = config.project_class.CATS_presentation
 
-    db.session.commit()
+    log_db_commit(
+        "Updated CATS limits for project class config to match project class defaults",
+        user=current_user,
+        project_classes=config.project_class,
+    )
 
     return redirect(redirect_url())
 
@@ -132,7 +137,12 @@ def force_convert_bookmarks(sel_id):
     )
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Forced conversion of bookmarks to selections for selector {sel.student.user.name}",
+            user=current_user,
+            student=sel.student,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             'Could not force conversion of bookmarks for selector "{name}" because of a database error. '
@@ -190,7 +200,11 @@ def custom_CATS_limits(record_id):
         record.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Updated custom CATS limits for faculty member {record.owner.user.name} in project class {record.pclass.name}",
+                user=current_user,
+                project_classes=record.pclass,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not update custom CATS values due to a database error. Please contact a system administrator.",
@@ -227,7 +241,11 @@ def remove_CATS_limits(record_id):
     record.last_edit_timestamp = datetime.now()
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Removed custom CATS limits for faculty member {record.owner.user.name} in project class {record.pclass.name}",
+            user=current_user,
+            project_classes=record.pclass,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not reset custom CATS values due to a database error. Please contact a system administrator.",
@@ -424,7 +442,11 @@ def perform_delete_period_attachment(aid):
         db.session.flush()
         db.session.delete(attachment)
 
-        db.session.commit()
+        log_db_commit(
+            f"Deleted attachment from submission period {record.display_name}",
+            user=current_user,
+            project_classes=config.project_class,
+        )
 
     except SQLAlchemyError as e:
         flash(
@@ -531,7 +553,11 @@ def upload_period_attachment(pid):
 
             try:
                 db.session.add(attachment)
-                db.session.commit()
+                log_db_commit(
+                    f"Uploaded attachment '{attachment_file.filename}' to submission period {record.display_name}",
+                    user=current_user,
+                    project_classes=pclass,
+                )
             except SQLAlchemyError as e:
                 flash(
                     "Could not upload attachment due to a database issue. Please contact an administrator.",
@@ -613,7 +639,11 @@ def edit_period_attachment(aid):
             #     asset.revoke_roles(['faculty', 'office'])
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Edited attachment details for submission period {period.display_name}",
+                user=current_user,
+                project_classes=pclass,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not commit edits due to a database issue. Please contact an administrator.",
@@ -681,7 +711,11 @@ def update_period_attachments():
         attach.rank_order = rmap[attach.id]
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Updated attachment rank ordering for submission period #{period_id}",
+            user=current_user,
+            project_classes=record.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

@@ -60,6 +60,7 @@ from ..shared.utils import (
 from ..shared.validators import (
     validate_is_convenor,
 )
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import register_task
 from ..tools import ServerSideInMemoryHandler
 
@@ -750,7 +751,13 @@ def enrol_all_selectors(configid):
         for c in c_list:
             add_selector(c, configid, convert=convert, autocommit=False)
 
-        db.session.commit()
+        log_db_commit(
+            'Bulk-enrolled {count} selectors for project class "{proj}"'.format(
+                count=len(c_list), proj=config.project_class.name
+            ),
+            user=current_user,
+            project_classes=config.project_class,
+        )
         flash(
             'Added {count} selectors to project "{proj}"'.format(
                 count=len(c_list), proj=config.project_class.name
@@ -867,7 +874,12 @@ def delete_selector(sid):
         # delete should cascade to Bookmark and SelectionRecord items; also, no need to remove
         # matching_records elements because we are guaranteed that there aren't any
         db.session.delete(sel)
-        db.session.commit()
+        log_db_commit(
+            "Deleted selector record",
+            user=current_user,
+            student=sel.student,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -912,7 +924,12 @@ def do_delete_selector(sid):
         sel.detach_records()
         db.session.delete(sel)
 
-        db.session.commit()
+        log_db_commit(
+            "Deleted selector record (with bookmarks/matches detached)",
+            user=current_user,
+            student=sel.student,
+            project_classes=sel.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(

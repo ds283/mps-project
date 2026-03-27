@@ -40,6 +40,7 @@ from ..models import (
     User,
 )
 from ..shared.context.global_context import render_template_context
+from ..shared.workflow_logging import log_db_commit
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor, validate_submission_role
 from ..tools import ServerSideSQLHandler
@@ -328,7 +329,11 @@ def add_submission_period_article(pid):
 
         try:
             db.session.add(article)
-            db.session.commit()
+            log_db_commit(
+                f'Added new article "{article.title}" to submission period "{record.display_name}"',
+                user=current_user,
+                project_classes=config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -381,7 +386,11 @@ def edit_submission_period_article(aid):
         article.last_edit_id = current_user.id
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Updated article "{article.title}" in submission period "{record.display_name}"',
+                user=current_user,
+                project_classes=config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -497,7 +506,10 @@ def set_attendance(event_id, attendance):
         event.attendance = attendance
         event.last_edit_id = current_user.id
         event.last_edit_timestamp = datetime.now()
-        db.session.commit()
+        log_db_commit(
+            f'Set attendance for supervision event "{event.name}"',
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -609,7 +621,10 @@ def edit_event_team(event_id):
                 event.team.append(role)
             event.last_edit_id = current_user.id
             event.last_edit_timestamp = datetime.now()
-            db.session.commit()
+            log_db_commit(
+                f'Updated supervision team for event "{event.name}"',
+                user=current_user,
+            )
             flash(
                 f'Supervision team for event "{event.name}" has been updated.',
                 "success",
@@ -662,7 +677,10 @@ def edit_meeting_summary(event_id):
         event.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Saved meeting summary for supervision event "{event.name}"',
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -711,7 +729,10 @@ def edit_supervision_notes(event_id):
         event.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Saved supervision notes for event "{event.name}"',
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -822,7 +843,10 @@ def reassign_event_owner(event_id):
             event.last_edit_id = current_user.id
             event.last_edit_timestamp = datetime.now()
 
-            db.session.commit()
+            log_db_commit(
+                f'Reassigned owner of supervision event "{event.name}" to {new_owner_role.user.name}',
+                user=current_user,
+            )
             flash(
                 f"Event owner has been reassigned to <strong>{new_owner_role.user.name}</strong>.",
                 "success",
@@ -907,7 +931,12 @@ def set_regular_meeting_time(role_id):
                 event.last_edit_id = current_user.id
                 event.last_edit_timestamp = datetime.now()
 
-            db.session.commit()
+            log_db_commit(
+                f"Updated regular meeting time for supervision role of {sd.user.name}",
+                user=current_user,
+                student=sd,
+                project_classes=pclass,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -966,7 +995,10 @@ def set_mute_event(event_id, value):
         event.mute = value_
         event.last_edit_id = current_user.id
         event.last_edit_timestamp = datetime.now()
-        db.session.commit()
+        log_db_commit(
+            f'{"Muted" if value_ else "Unmuted"} notifications for supervision event "{event.name}"',
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

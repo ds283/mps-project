@@ -2583,7 +2583,12 @@ def submit_response(id):
         role.submitted_response = True
         role.response_timestamp = datetime.now()
 
-        db.session.commit()
+        log_db_commit(
+            "Submitted faculty response to student feedback",
+            user=current_user,
+            student=record.owner.student,
+            project_classes=record.project.config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2762,7 +2767,11 @@ def add_period_unit(period_id):
 
         try:
             db.session.add(unit)
-            db.session.commit()
+            log_db_commit(
+                f'Added new submission period unit "{unit.name}" to period "{period.display_name}"',
+                user=current_user,
+                project_classes=config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2811,7 +2820,11 @@ def edit_period_unit(unit_id):
         unit.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Saved changes to submission period unit "{unit.name}"',
+                user=current_user,
+                project_classes=config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2846,7 +2859,11 @@ def delete_period_unit(unit_id):
 
     try:
         db.session.delete(unit)
-        db.session.commit()
+        log_db_commit(
+            f'Deleted submission period unit "{unit.name}" from period "{period.display_name}"',
+            user=current_user,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2944,7 +2961,11 @@ def add_unit_event_template(unit_id):
 
         try:
             db.session.add(template)
-            db.session.commit()
+            log_db_commit(
+                f'Added new supervision event template "{template.name}" to unit "{unit.name}"',
+                user=current_user,
+                project_classes=config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2997,7 +3018,11 @@ def edit_unit_event_template(template_id):
         template.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f'Saved changes to supervision event template "{template.name}" in unit "{unit.name}"',
+                user=current_user,
+                project_classes=config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -3036,7 +3061,11 @@ def delete_unit_event_template(template_id):
 
     try:
         db.session.delete(template)
-        db.session.commit()
+        log_db_commit(
+            f'Deleted supervision event template "{template.name}" from unit "{unit.name}"',
+            user=current_user,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

@@ -54,6 +54,7 @@ from ..shared.utils import (
 from ..shared.validators import (
     validate_is_convenor,
 )
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import register_task
 from ..tools import ServerSideSQLHandler
 from .forms import (
@@ -257,7 +258,12 @@ def add_student_task(type, sid):
 
         try:
             obj.tasks.append(task)
-            db.session.commit()
+            log_db_commit(
+                f"Created new student task for {obj.student.user.name}",
+                user=current_user,
+                student=obj.student,
+                project_classes=config.project_class,
+            )
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -315,7 +321,12 @@ def edit_student_task(tid):
         task.last_edit_timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Saved edits to student task for {obj.student.user.name}",
+                user=current_user,
+                student=obj.student,
+                project_classes=config.project_class,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -442,7 +453,12 @@ def do_delete_task(tid):
     try:
         obj.tasks.remove(task)
         db.session.delete(task)
-        db.session.commit()
+        log_db_commit(
+            f"Deleted task '{task.description}'",
+            user=current_user,
+            student=obj.student if (task_type == 1 or task_type == 2) else None,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -520,7 +536,12 @@ def mark_task_complete(tid):
 
                 try:
                     obj.tasks.append(new_task)
-                    db.session.commit()
+                    log_db_commit(
+                        f"Generated repeat task '{task.description}' for {obj.student.user.name if (task_type == 1 or task_type == 2) else ''}",
+                        user=current_user,
+                        student=obj.student if (task_type == 1 or task_type == 2) else None,
+                        project_classes=config.project_class,
+                    )
                 except SQLAlchemyError as e:
                     db.session.rollback()
                     current_app.logger.exception(
@@ -541,7 +562,12 @@ def mark_task_complete(tid):
         )
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Changed completion status for task '{task.description}'",
+            user=current_user,
+            student=obj.student if (task_type == 1 or task_type == 2) else None,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -591,7 +617,12 @@ def mark_task_dropped(tid):
         )
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Changed dropped status for task '{task.description}'",
+            user=current_user,
+            student=obj.student if (task_type == 1 or task_type == 2) else None,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not change dropped status for this convenor task due to a database error. Please contact a system administrator.",

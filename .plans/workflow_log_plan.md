@@ -4,7 +4,8 @@
 
 This plan tracks implementation of a workflow log system for the MPS-Project platform.
 The log captures database commits with human-readable summaries, linked users, project classes,
-and the route/task that triggered the operation.
+the student to which the transaction applies (where one exists in context), and the route/task
+that triggered the operation.
 
 Status key: [ ] pending | [~] in progress | [x] complete
 
@@ -16,17 +17,19 @@ Status key: [ ] pending | [~] in progress | [x] complete
 
 ### Model: `WorkflowLogEntry`
 
-| Column       | Type        | Notes                                 |
-|--------------|-------------|---------------------------------------|
-| id           | Integer PK  |                                       |
-| timestamp    | DateTime    | indexed; set to `datetime.now()`      |
-| initiator_id | Integer FK  | → `users.id`; nullable (Celery tasks) |
-| endpoint     | String(255) | route name or Celery task name        |
-| summary      | Text        | human-readable description            |
+| Column       | Type        | Notes                                   |
+|--------------|-------------|-----------------------------------------|
+| id           | Integer PK  |                                         |
+| timestamp    | DateTime    | indexed; set to `datetime.now()`        |
+| initiator_id | Integer FK  | → `users.id`; nullable (Celery tasks)   |
+| student_id   | Integer FK  | → `student_data.id`; nullable           |
+| endpoint     | String(255) | indexed; route name or Celery task name |
+| summary      | Text        | human-readable description              |
 
 **Relationships:**
 
 - `initiator`: many-to-one → `User`
+- `student`: many-to-one → `StudentData`
 - `project_classes`: many-to-many → `ProjectClass` via association table `workflow_log_to_pclass`
 
 **Association table:** `workflow_log_to_pclass`
@@ -39,13 +42,10 @@ Status key: [ ] pending | [~] in progress | [x] complete
 - `app/models/__init__.py` — add `from .workflow_log import *`
 - `app/models/associations.py` — add the association table, OR define it inside `workflow_log.py`
 
-### Migration
+### Migrations
 
-Create Alembic migration using `flask db migrate` after adding the model, then review and
-adjust the generated script. Migration should create:
-
-- Table `workflow_log`
-- Table `workflow_log_to_pclass`
+- `ed750d09b4fd` — initial: creates `workflow_log` and `workflow_log_to_pclass` tables
+- `64d08845d758` — adds `student_id` column with FK to `student_data.id`
 
 ---
 
@@ -118,6 +118,7 @@ def log_db_commit(
         summary: str,
         *,
         user=None,  # User instance, user id (int), or None
+        student=None,  # StudentData instance, student_data id (int), or None
         project_classes=None,  # ProjectClass, list of ProjectClass, or None
         endpoint: str = None,  # explicit name; auto-detected from request context if None
         _commit: bool = True,  # if False, add log entry but don't commit (for callers that manage their own commit)
@@ -139,23 +140,41 @@ def log_db_commit(
 ### Normalisation helpers
 
 - Accept `user` as `User` instance, `int` id, or `None`
+- Accept `student` as `StudentData` instance, `int` id (student_data PK), or `None`
 - Accept `project_classes` as single instance, list, or `None`
+
+### Student resolution rules
+
+The `student` parameter should be populated whenever a `StudentData` instance (or one of its
+container objects) is available in the calling context:
+
+| Context object available            | Argument to pass                                       |
+|-------------------------------------|--------------------------------------------------------|
+| `StudentData` directly              | `student=sd`                                           |
+| `SelectingStudent sel`              | `student=sel.student`                                  |
+| `SubmittingStudent sub`             | `student=sub.student`                                  |
+| `SubmissionRecord record`           | `student=record.owner.student`                         |
+| `SubmitterReport report`            | `student=report.submitter_report.record.owner.student` |
+| `ConfirmRequest req` (has `.owner`) | `student=req.owner.student if req.owner else None`     |
+
+For operations that are scoped to a project class or faculty member (not a specific student),
+pass `student=None` (or omit the argument).
 
 ### Refactoring plan (Task 5)
 
 The full replacement of `db.session.commit()` calls is a large task that will be done
 incrementally over multiple sessions. Priority order:
 
-1. **Marking workflow** — `app/tasks/marking.py` (high-value, recently changed)
-2. **Submission/rollover** — `app/tasks/rollover.py`, `app/tasks/selecting.py`
+1. **Marking workflow** — `app/tasks/marking.py` ✓ complete
+2. **Submission/rollover** — `app/tasks/rollover.py`, `app/tasks/selecting.py` ✓ complete
 3. **Student/faculty operations** — routes in `app/student/`, `app/faculty/`
 4. **Admin operations** — routes in `app/admin/`
 5. **All remaining** — systematic pass through remaining tasks and routes
 
 For each replacement:
 
-- Identify what User, ProjectClass/ProjectClassConfig context is available
-- Replace `db.session.commit()` with `log_db_commit(summary, user=..., project_classes=..., endpoint=...)`
+- Identify what User, StudentData, ProjectClass/ProjectClassConfig context is available
+- Replace `db.session.commit()` with `log_db_commit(summary, user=..., student=..., project_classes=..., endpoint=...)`
 - If no meaningful context is available, call with just `summary`
 
 **Note:** The `_commit=False` variant allows callers to add a log entry without committing,
@@ -196,7 +215,7 @@ def workflow_log_ajax():
 - Extends `base_app.html`
 - Uses `datatables.html` macros
 - Filter controls (project class dropdown, tenant dropdown) similar to `reports/workload`
-- DataTables table with columns: User, Endpoint, Project classes, Timestamp, Summary
+- DataTables table with columns: User, Student, Route/task, Project classes, Timestamp, Summary
 
 ### AJAX formatter: `app/ajax/site/workflow_log.py`
 
@@ -266,15 +285,16 @@ Add to the `{% if is_root %}` block inside Site management dropdown, after "Back
 
 ## Implementation Status
 
-| Task | Description                    | Status | Notes                            |
-|------|--------------------------------|--------|----------------------------------|
-| 1    | Database model                 | [x]    | app/models/workflow_log.py       |
-| 2    | Size estimate                  | [x]    | ~74k rows in 50 MB; default 50k  |
-| 3    | Prune Celery task              | [x]    | app/tasks/workflow_log.py        |
-| 4+5  | log_db_commit() wrapper + plan | [x]    | app/shared/workflow_logging.py   |
-| 6    | Inspector route + UI           | [x]    | admin.workflow_log + template    |
-| 7    | Export to CSV/Excel            | [x]    | admin.workflow_log_export + task |
-| 8    | Menu entry                     | [x]    | base.html Site management menu   |
+| Task | Description                         | Status | Notes                                               |
+|------|-------------------------------------|--------|-----------------------------------------------------|
+| 1    | Database model                      | [x]    | app/models/workflow_log.py; student field added     |
+| 2    | Size estimate                       | [x]    | ~74k rows in 50 MB; default 50k                     |
+| 3    | Prune Celery task                   | [x]    | app/tasks/workflow_log.py                           |
+| 4+5  | log_db_commit() wrapper + plan      | [x]    | app/shared/workflow_logging.py; student= param      |
+| 6    | Inspector route + UI                | [x]    | admin.workflow_log + template; Student column added |
+| 7    | Export to CSV/Excel                 | [x]    | admin.workflow_log_export + task                    |
+| 8    | Menu entry                          | [x]    | base.html Site management menu                      |
+| 9    | student= in marking/rollover/select | [x]    | marking.py (3), rollover.py (6), selecting.py (1)   |
 
 ---
 
@@ -294,7 +314,11 @@ Add to the `{% if is_root %}` block inside Site management dropdown, after "Back
 
 - `app/models/__init__.py` — add workflow_log import
 - `app/tasks/__init__.py` — register workflow log tasks
-- `app/admin/system.py` — add inspector + export routes
+- `app/admin/system.py` — add inspector + export routes; StudentData join + student column
 - `app/admin/forms.py` — add prune task to task list
 - `app/ajax/site/__init__.py` — add workflow_log_data export
 - `app/templates/base.html` — add menu entry
+- `app/tasks/marking.py` — log_db_commit() with student= (dispatch_emails, conflate_marks, generate_feedback_report)
+- `app/tasks/rollover.py` — log_db_commit() with student= (retire_selector, retire_submitter, convert_selector ×2,
+  attach_selectors_submitters, remove_confirm_request)
+- `app/tasks/selecting.py` — log_db_commit() with student= (move_selector)

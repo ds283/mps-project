@@ -17,6 +17,7 @@ from ..models import (
     ScheduleAttempt,
     SubmissionRole,
 )
+from ..shared.workflow_logging import log_db_commit
 
 
 def register_deploy_schedule_tasks(celery):
@@ -79,7 +80,11 @@ def register_deploy_schedule_tasks(celery):
                     created += 1
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Create {created} SubmissionRole record(s) for schedule #{schedule_id} (skipped {skipped} duplicate(s))",
+                user=user_id,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -144,7 +149,11 @@ def register_deploy_schedule_tasks(celery):
                 removed += 1
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Remove {removed} and unlink {unlinked} SubmissionRole record(s) for schedule #{schedule_id}",
+                user=user_id,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

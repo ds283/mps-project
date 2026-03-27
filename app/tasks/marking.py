@@ -497,6 +497,7 @@ def register_marking_tasks(celery):
             log_db_commit(
                 f"Distributed marking notifications for {student.user.name} ({pclass.name}): "
                 f"{len(supervisors_to_notify)} supervisor(s), {len(markers_to_notify)} examiner(s) notified",
+                student=student,
                 project_classes=pclass,
                 endpoint=self.name,
             )
@@ -713,6 +714,7 @@ def register_marking_tasks(celery):
                 f"Saved conflated marks for {student.name} ({config.abbreviation}): "
                 f"supervision grade={record.supervision_grade:.1f}%, report grade={record.report_grade:.1f}%",
                 user=convenor,
+                student=sd,
                 project_classes=config.project_class,
                 endpoint=self.name,
             )
@@ -1097,6 +1099,7 @@ def register_marking_tasks(celery):
                     log_db_commit(
                         f"Saved generated feedback report PDF for {student.name} ({pclass.name}, {period.display_name})",
                         user=convenor,
+                        student=sd,
                         project_classes=pclass,
                         endpoint=self.name,
                     )

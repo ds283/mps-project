@@ -114,7 +114,7 @@ def _resolve_student_id(student) -> Optional[int]:
     if isinstance(student, int):
         return student
 
-    # Assume either a User or StudentData instance with a .id attribute (they are guaranteed to be the same)
+    # Assume a StudentData ORM instance with an .id attribute
     return getattr(student, "id", None)
 
 

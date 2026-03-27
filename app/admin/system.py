@@ -52,6 +52,7 @@ from ..models import (
     MessageOfTheDay,
     Notification,
     ProjectClass,
+    StudentData,
     TaskRecord,
     Tenant,
     User,
@@ -81,6 +82,7 @@ from ..shared.utils import (
 from ..shared.validators import (
     validate_is_admin_or_convenor,
 )
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update, register_task
 from ..tools import ServerSideSQLHandler
 from . import admin
@@ -194,7 +196,10 @@ def perform_global_rollover():
             canvas_url=current_config.canvas_url,
         )
         db.session.add(new_year)
-        db.session.commit()
+        log_db_commit(
+            f"Created new MainConfig record for academic year {next_year}-{next_year + 1} during global rollover",
+            user=current_user,
+        )
 
     except SQLAlchemyError as e:
         flash(
@@ -331,7 +336,10 @@ def delete_email(id):
 
     try:
         db.session.delete(email)
-        db.session.commit()
+        log_db_commit(
+            f"Deleted email log record #{id}",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not delete email because of a database error. Please contact a system administrator.",
@@ -522,7 +530,10 @@ def hold_notification(eid):
     notification.held = True
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Marked email notification #{eid} as held",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not mark notification as held because of a database error. Please contact a system administrator.",
@@ -546,7 +557,10 @@ def release_notification(eid):
     notification.held = False
 
     try:
-        db.session.commit()
+        log_db_commit(
+            f"Released email notification #{eid} from held status",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not mark notification as released because of a database error. Please contact a system administrator.",
@@ -608,7 +622,10 @@ def do_delete_notification(eid):
 
     try:
         db.session.delete(notification)
-        db.session.commit()
+        log_db_commit(
+            f"Deleted scheduled email notification #{eid}",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not delete notification because of a database error. Please contact a system administrator.",
@@ -695,7 +712,10 @@ def add_message():
         db.session.add(data)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Added new broadcast message '{form.title.data}'",
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not add message because of a database error. Please contact a system administrator.",
@@ -753,7 +773,10 @@ def edit_message(id):
         data.project_classes = form.project_classes.data
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Saved edits to broadcast message '{data.title}'",
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             flash(
                 "Could not save edited message because of a database error. Please contact a system administrator.",
@@ -792,7 +815,10 @@ def delete_message(id):
             return home_dashboard()
 
     db.session.delete(data)
-    db.session.commit()
+    log_db_commit(
+        f"Deleted broadcast message '{data.title}'",
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -810,7 +836,10 @@ def dismiss_message(id):
 
     if current_user not in message.dismissed_by:
         message.dismissed_by.append(current_user)
-        db.session.commit()
+        log_db_commit(
+            f"Recorded dismissal of broadcast message #{id} by user",
+            user=current_user,
+        )
 
     return redirect(redirect_url())
 
@@ -835,7 +864,10 @@ def reset_dismissals(id):
             return home_dashboard()
 
     message.dismissed_by = []
-    db.session.commit()
+    log_db_commit(
+        f"Reset all dismissals for broadcast message #{id}",
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -935,7 +967,10 @@ def add_interval_task():
         )
 
         db.session.add(data)
-        db.session.commit()
+        log_db_commit(
+            f"Added new fixed-interval scheduled task '{form.name.data}'",
+            user=current_user,
+        )
 
         return redirect(url_for("admin.scheduled_tasks"))
 
@@ -998,7 +1033,10 @@ def add_crontab_task():
         )
 
         db.session.add(data)
-        db.session.commit()
+        log_db_commit(
+            f"Added new crontab scheduled task '{form.name.data}'",
+            user=current_user,
+        )
 
         return redirect(url_for("admin.scheduled_tasks"))
 
@@ -1043,7 +1081,10 @@ def edit_interval_task(id):
         data.expires = form.expires.data
         data.date_changed = datetime.now()
 
-        db.session.commit()
+        log_db_commit(
+            f"Saved edits to fixed-interval scheduled task '{data.name}'",
+            user=current_user,
+        )
 
         return redirect(url_for("admin.scheduled_tasks"))
 
@@ -1106,7 +1147,10 @@ def edit_crontab_task(id):
         data.expires = form.expires.data
         data.date_changed = datetime.now()
 
-        db.session.commit()
+        log_db_commit(
+            f"Saved edits to crontab scheduled task '{data.name}'",
+            user=current_user,
+        )
 
         return redirect(url_for("admin.scheduled_tasks"))
 
@@ -1137,7 +1181,10 @@ def delete_scheduled_task(id):
     task = DatabaseSchedulerEntry.query.get_or_404(id)
 
     db.session.delete(task)
-    db.session.commit()
+    log_db_commit(
+        f"Deleted scheduled task '{task.name}'",
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -1153,7 +1200,10 @@ def activate_scheduled_task(id):
     task = DatabaseSchedulerEntry.query.get_or_404(id)
 
     task.enabled = True
-    db.session.commit()
+    log_db_commit(
+        f"Activated scheduled task '{task.name}'",
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -1169,7 +1219,10 @@ def deactivate_scheduled_task(id):
     task = DatabaseSchedulerEntry.query.get_or_404(id)
 
     task.enabled = False
-    db.session.commit()
+    log_db_commit(
+        f"Deactivated scheduled task '{task.name}'",
+        user=current_user,
+    )
 
     return redirect(redirect_url())
 
@@ -1901,7 +1954,10 @@ def terminate_background_task(id):
 
         # remove task from database
         db.session.delete(record)
-        db.session.commit()
+        log_db_commit(
+            f"Terminated and removed background task '{record.name}'",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         flash(
             'Could not terminate task "{name}" due to a database error. '
@@ -1931,7 +1987,10 @@ def delete_background_task(id):
     try:
         # remove task from database
         db.session.delete(record)
-        db.session.commit()
+        log_db_commit(
+            f"Deleted background task record '{record.name}'",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(
@@ -2046,9 +2105,11 @@ def workflow_log_ajax():
     pclass_filter = request.args.get("pclass_filter")
     tenant_filter = request.args.get("tenant_filter")
 
-    # Outer-join User so we can search on initiator name without losing background-task entries
-    base_query = db.session.query(WorkflowLogEntry).outerjoin(
-        User, User.id == WorkflowLogEntry.initiator_id
+    # Outer-join User and StudentData so we can search on both without losing background-task entries
+    base_query = (
+        db.session.query(WorkflowLogEntry)
+        .outerjoin(User, User.id == WorkflowLogEntry.initiator_id)
+        .outerjoin(StudentData, StudentData.id == WorkflowLogEntry.student_id)
     )
 
     try:
@@ -2070,6 +2131,11 @@ def workflow_log_ajax():
     columns = {
         "user": {
             "search": func.concat(User.first_name, " ", User.last_name),
+            "search_collation": "utf8_general_ci",
+        },
+        "student": {
+            "search": func.concat(StudentData.first_name, " ", StudentData.last_name),
+            "order": [StudentData.last_name, StudentData.first_name],
             "search_collation": "utf8_general_ci",
         },
         "endpoint": {

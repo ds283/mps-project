@@ -17,7 +17,7 @@ Journal entries may be sensitive. To store them securely in the database, use th
 column type and AesEngine to encrypt the entry. See the StudentData.exam_number field in @app/models/students.py
 for an example of how this is done.
 
-Implement the database models needed for this, but do NOT attempt to perform the database migration. I will
+Implement the database models needed, but do NOT attempt to perform the database migration. I will
 perform the migration manually.
 
 ### TASK 2
@@ -43,7 +43,7 @@ Use the select2 library to style the dropdown menu for the multiple-select field
 The freeform HTML field should be rendered using TinyMCE. See e.g.
 @app/templates/convenor/marking_events/edit_marking_scheme.html for an example of how to use TinyMCE.
 
-The Datatables front endd should be backed by an AJAX endpoint. Use the ServerSideSQLHandler pattern to implement
+The Datatables front end should be backed by an AJAX endpoint. Use the ServerSideSQLHandler pattern to implement
 searching, sorting, and pagination of the table. See e.g. workflow_items_ajax() in
 @app/emailworkflow/views.py for an example of how to do this.
 
@@ -68,3 +68,19 @@ create_custom_offer() route in @app/convenor/selector_detail.py. This should rep
 which routes through the @app/templates/admin/danger_confirm.html template to warn the user that deletion cannot
 be undone. You will need to implement a new Jinja2 template backed by a form to allow the user to enter the reason.
 However, show the same warning message to the user as the current implementation.
+
+### TASK 5
+
+Add an entry linking to the student's journal inspector to the Actions dropdown menu rendered from the _menu template
+in @app/ajax/users/shared.html.
+
+Add an entry linking to the journal inspector the Actions dropdown menu rendered in the convenor selectors and
+submitters views. These are implemented in @app/ajax/convenor/selectors.html and @app/ajax/submitters.html.
+
+For users with "root", "admin" or a convenor-level role for the appropriate project class, add a button the
+project hub page rendered by @app/templates/projecthub/hub.html to link to the student's journal inspector.
+Do NOT show this button (even disabled) to users with any lower level of access. Do NOT allow it to be visible
+to users with a "student" role, under any circumstances.
+
+Add a link to the student's journal inspector in the student_offcanvas() macro defined in
+@app/templates/admin/matching/student_offcanvas.html.

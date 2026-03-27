@@ -137,3 +137,22 @@ update the human-readable summary of the transaction if needed.
 All elements should be rendered using Jinja2 templates, not simply injected as raw strings. For efficiency,
 pre-evaluate the templates in the current Jinja2 environment obtained from the current Flask app before
 applying to the rows to be formatted.
+
+## Jinja2 templates
+
+## Global context
+
+The following variables are available in the global context for all templates
+
+- `is_faculty` is True for users with a "faculty" role
+- `is_student` is True for users with a "student" role
+- `is_convenor` is True for users with a "convenor" role (not necessarily for the project class relevant for the
+  template)
+- `is_root` is True for users with a "root" role
+- `is_admin` is True for users with an "admin" role
+- `is_office` is True for users with an "office" role
+- `is_authenticated` is True for authenticated users
+- `current_user` is the current user object
+- `current_tenant` is the current tenant object
+
+Look in _build_global_context() in @app/shared/context/global_context.py for more variables.

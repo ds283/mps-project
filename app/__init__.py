@@ -15,7 +15,6 @@ from urllib import parse
 
 import latex2markdown
 import markdown
-import redis
 from dozer import Dozer
 from flask import Flask, current_app, g, make_response, request
 from flask_assets import Environment
@@ -39,11 +38,20 @@ from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.middleware.profiler import ProfilerMiddleware
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+import redis
+
 from .cache import cache
 from .database import db
 from .instance.version import site_copyright_dates, site_revision
 from .limiter import limiter
-from .models import EmailTemplate, EmailWorkflow, EmailWorkflowItem, MessageOfTheDay, Notification, User
+from .models import (
+    EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
+    MessageOfTheDay,
+    Notification,
+    User,
+)
 from .models.emails import encode_email_payload
 from .shared.context.global_context import (
     build_static_context_data,
@@ -322,7 +330,10 @@ def create_app():
             if request.endpoint is not None and "ajax" not in request.endpoint:
                 try:
                     Notification.query.filter_by(remove_on_pageload=True).delete()
-                    log_db_commit("Remove transient notifications on page load", user=current_user)
+                    # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
+                    # this endpoint is too noisy
+                    # log_db_commit("Remove transient notifications on page load", user=current_user)
+                    db.session.commit()
                 except SQLAlchemyError as e:
                     current_app.logger.exception(
                         "SQLAlchemyError exception", exc_info=e

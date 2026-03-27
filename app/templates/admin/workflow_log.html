@@ -66,20 +66,20 @@
                         searchable: true
                     }
                 ],
-                order: [[3, 'desc']]
+                order: [[4, 'desc']]
             });
         });
     </script>
 {% endblock %}
 
 {% block title %}
-    Workflow log
+    Workflow events log
 {% endblock %}
 
 {% block bodyblock %}
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <span>Workflow log</span>
+            <span>Workflow events log</span>
             <a href="{{ url_for('admin.workflow_log_export', pclass_filter=pclass_filter, tenant_filter=tenant_filter) }}"
                class="btn btn-sm btn-light">
                 <i class="fas fa-file-excel fa-fw"></i> Export to Excel&hellip;

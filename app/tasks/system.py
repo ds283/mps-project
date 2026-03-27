@@ -121,7 +121,10 @@ def register_system_tasks(celery):
         record.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
 
         try:
-            log_db_commit("Mark matching attempt as not solved after system reset", endpoint=self.name)
+            log_db_commit(
+                "Mark matching attempt as not solved after system reset",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -148,7 +151,10 @@ def register_system_tasks(celery):
         record.outcome = ScheduleAttempt.OUTCOME_NOT_SOLVED
 
         try:
-            log_db_commit("Mark scheduling attempt as not solved after system reset", endpoint=self.name)
+            log_db_commit(
+                "Mark scheduling attempt as not solved after system reset",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -174,7 +180,10 @@ def register_system_tasks(celery):
         record.success = False
 
         try:
-            log_db_commit("Mark student batch import as finished after system reset", endpoint=self.name)
+            log_db_commit(
+                "Mark student batch import as finished after system reset",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -330,25 +339,32 @@ def register_system_tasks(celery):
             )
             raise Ignore()
 
+        allowed_notifications = [
+            Notification.USER_MESSAGE,
+            Notification.SHOW_HIDE_REQUEST,
+            Notification.REPLACE_TEXT_REQUEST,
+        ]
+
         notifications = (
-            user.notifications.filter(Notification.timestamp >= since)
+            user.notifications.filter(
+                Notification.timestamp >= since,
+                Notification.type.in_(allowed_notifications),
+            )
             .order_by(Notification.timestamp.asc())
             .all()
         )
 
         # mark any messages or instructions (as opposed to task progress updates) for removal on next page load
         for n in notifications:
-            if (
-                    n.type == Notification.USER_MESSAGE
-                    or n.type == Notification.SHOW_HIDE_REQUEST
-                    or n.type == Notification.REPLACE_TEXT_REQUEST
-            ):
-                n.remove_on_pageload = True
+            n.remove_on_pageload = True
 
         user.last_active = timestamp
 
         try:
-            log_db_commit("Update user last-active timestamp and mark stale notifications for removal", user=user, endpoint=self.name)
+            # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
+            # this endpoint is too noisy
+            # log_db_commit("Update user last-active timestamp and mark stale notifications for removal", user=user, endpoint=self.name)
+            db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

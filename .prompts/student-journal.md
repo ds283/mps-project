@@ -39,6 +39,10 @@ Use the select2 library to style the dropdown menu for the multiple-select field
 The freeform HTML field should be rendered using TinyMCE. See e.g.
 @app/templates/convenor/marking_events/edit_marking_scheme.html for an example of how to use TinyMCE.
 
+The Datatables front endd should be backed by an AJAX endpoint. Use the ServerSideSQLHandler pattern to implement
+searching, sorting, and pagination of the table. See e.g. workflow_items_ajax() in
+@app/emailworkflow/views.py for an example of how to do this.
+
 ### TASK 3
 
 Perform a refactoring to automatically create journal entries whenever a SubmittingStudent or SelectingStudent

@@ -9,7 +9,8 @@
 #
 from typing import Optional, Union
 
-from flask import current_app
+from flask import current_app, has_request_context
+from flask_security import current_user
 from sqlalchemy import or_, func
 
 from ..database import db
@@ -25,6 +26,7 @@ from ..models import (
     ConfirmRequest,
     CustomOffer,
 )
+from ..shared.journal import create_auto_journal_entry
 from ..shared.utils import get_current_year
 
 
@@ -165,6 +167,26 @@ def add_selector(student, config_id, convert=True, autocommit=False):
 
     generated_id = selector.id
 
+    # Auto-create a journal entry for user-initiated calls (not background tasks)
+    if has_request_context() and current_user.is_authenticated:
+        config = ProjectClassConfig.query.get(config_id)
+        pclass_name = config.project_class.name if config else "unknown"
+        year = config.year if config else "?"
+        year_str = f"{year}/{str(year + 1)[-2:]}" if isinstance(year, int) else str(year)
+        programme_name = item.programme.full_name if item.programme else "unknown"
+        academic_year = f"Year {item.academic_year}" if item.academic_year else "unknown"
+        html = (
+            f"<p>Selecting student record created for project class "
+            f"<strong>{pclass_name}</strong> ({year_str}).</p>"
+            f"<ul>"
+            f"<li>Student academic year: {academic_year}</li>"
+            f"<li>Degree programme: {programme_name}</li>"
+            f"<li>Action initiated by: {current_user.name}</li>"
+            f"</ul>"
+            f"<p><em>This entry was created automatically.</em></p>"
+        )
+        create_auto_journal_entry(item, html, project_class_config=config)
+
     if autocommit:
         # can expect exceptions to be caught by the client code
         db.session.commit()
@@ -210,6 +232,25 @@ def add_blank_submitter(
     # can expect exceptions to be caught by the client code
     db.session.add(submitter)
     db.session.flush()
+
+    # Auto-create a journal entry for user-initiated calls (not background tasks)
+    if has_request_context() and current_user.is_authenticated:
+        pclass_name = config.project_class.name if config.project_class else "unknown"
+        year = config.year
+        year_str = f"{year}/{str(year + 1)[-2:]}" if isinstance(year, int) else str(year)
+        programme_name = item.programme.full_name if item.programme else "unknown"
+        academic_year = f"Year {item.academic_year}" if item.academic_year else "unknown"
+        html = (
+            f"<p>Submitting student record created for project class "
+            f"<strong>{pclass_name}</strong> ({year_str}).</p>"
+            f"<ul>"
+            f"<li>Student academic year: {academic_year}</li>"
+            f"<li>Degree programme: {programme_name}</li>"
+            f"<li>Action initiated by: {current_user.name}</li>"
+            f"</ul>"
+            f"<p><em>This entry was created automatically.</em></p>"
+        )
+        create_auto_journal_entry(item, html, project_class_config=config)
 
     for i in range(0, config.number_submissions):
         period = config.get_period(i + 1)

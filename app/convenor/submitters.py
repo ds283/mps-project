@@ -60,10 +60,12 @@ from ..shared.validators import (
     validate_is_administrator,
     validate_is_convenor,
 )
+from ..shared.journal import create_auto_journal_entry
 from ..shared.workflow_logging import log_db_commit
 from ..tools import ServerSideSQLHandler
 from .forms import (
     AddSubmitterRoleForm,
+    ConfirmDeleteWithReasonForm,
     EditRolesFormFactory,
     EditSubmissionRoleForm,
 )
@@ -639,13 +641,12 @@ def remove_feedback_report(rec_id):
     return redirect(url)
 
 
-@convenor.route("/delete_submitter/<int:sid>")
+@convenor.route("/delete_submitter/<int:sid>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def delete_submitter(sid):
     """
-    Manually delete a submitter -- confirmation step
-    :param sid:
-    :return:
+    Manually delete a submitter. Shows a confirmation form that also collects a reason,
+    which is recorded in the student's journal.
     """
     sub: SubmittingStudent = SubmittingStudent.query.get_or_404(sid)
 
@@ -666,78 +667,74 @@ def delete_submitter(sid):
     url = request.args.get("url", None)
     if url is None:
         url = redirect_url()
+
+    form = ConfirmDeleteWithReasonForm(request.form)
+
+    if form.validate_on_submit():
+        student = sub.student
+        pclass = sub.config.project_class
+        config = sub.config
+        reason = form.reason.data
+
+        programme_name = student.programme.full_name if student.programme else "unknown"
+        academic_year = f"Year {student.academic_year}" if student.academic_year else "unknown"
+        year = config.year
+        year_str = f"{year}/{str(year + 1)[-2:]}" if isinstance(year, int) else str(year)
+        journal_html = (
+            f"<p>Submitting student record deleted for project class "
+            f"<strong>{pclass.name}</strong> ({year_str}).</p>"
+            f"<ul>"
+            f"<li>Student academic year: {academic_year}</li>"
+            f"<li>Degree programme: {programme_name}</li>"
+            f"<li>Action initiated by: {current_user.name}</li>"
+            f"</ul>"
+            f"<p><strong>Reason for deletion:</strong> {reason}</p>"
+            f"<p><em>This entry was created automatically.</em></p>"
+        )
+
+        try:
+            sub.detach_records()
+            db.session.delete(sub)
+            db.session.flush()
+
+            create_auto_journal_entry(student, journal_html, project_class_config=config)
+
+            log_db_commit(
+                "Deleted submitter record",
+                user=current_user,
+                student=student,
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash(
+                'Could not delete submitter due to a database error ("{n}"). Please contact a system administrator.'.format(
+                    n=e
+                ),
+                "error",
+            )
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url)
 
     title = 'Delete submitter "{name}"'.format(name=sub.student.user.name)
     panel_title = 'Delete submitter <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(
         name=sub.student.user.name
     )
-
-    action_url = url_for("convenor.do_delete_submitter", sid=sid, url=url)
     message = (
         '<p>Are you sure that you wish to delete submitter <i class="fas fa-user-circle"></i> <strong>{name}</strong>?</p>'
         "<p>This action cannot be undone.</p>".format(name=sub.student.user.name)
     )
-    submit_label = "Delete submitter"
 
     return render_template_context(
-        "admin/danger_confirm.html",
+        "convenor/journal/delete_with_reason.html",
+        form=form,
         title=title,
         panel_title=panel_title,
-        action_url=action_url,
+        action_url=url_for("convenor.delete_submitter", sid=sid, url=url),
         message=message,
-        submit_label=submit_label,
+        cancel_url=url,
     )
-
-
-@convenor.route("/do_delete_submitter/<int:sid>")
-@roles_accepted("faculty", "admin", "root")
-def do_delete_submitter(sid):
-    """
-    Manually delete a submitter -- action step
-    :param sid:
-    :return:
-    """
-    sub: SubmittingStudent = SubmittingStudent.query.get_or_404(sid)
-
-    # reject user if not a convenor for this project class
-    if not validate_is_convenor(sub.config.project_class):
-        return redirect(redirect_url())
-
-    if (
-            sub.config.submitter_lifecycle
-            > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
-    ):
-        flash(
-            "Manual deletion of submitters is only possible during normal project activity",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
-
-    try:
-        sub.detach_records()
-        db.session.delete(sub)
-
-        log_db_commit(
-            "Deleted submitter record",
-            user=current_user,
-            student=sub.student,
-            project_classes=sub.config.project_class,
-        )
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        flash(
-            'Could not delete submitter due to a database error ("{n}"). Please contact a system administrator.'.format(
-                n=e
-            ),
-            "error",
-        )
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-    return redirect(url)
 
 
 @convenor.route("/delete_all_submitters/<int:configid>")

@@ -1,0 +1,122 @@
+{% extends "base_app.html" %}
+
+{% from "datatables.html" import import_datatables, bootstrap_spinner %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_datatables() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#journal-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftipr',
+                stateSave: true,
+                serverSide: true, processing: true,
+                language: {{ bootstrap_spinner() }},
+                ajax: {
+                    url: $SCRIPT_ROOT + '/convenor/journal_ajax/{{ student.id }}',
+                    type: 'POST',
+                    data: function (args) {
+                        return {"args": JSON.stringify(args)};
+                    }
+                },
+                "fnDrawCallback": function () {
+                    $('body').tooltip({selector: '[data-bs-toggle="tooltip"]'});
+                    $('body').popover({selector: '[data-bs-toggle="popover"]', html: true, trigger: 'focus'});
+                },
+                columns: [
+                    {data: 'timestamp', orderable: true, searchable: false},
+                    {data: 'year', orderable: true, searchable: false},
+                    {data: 'classes', orderable: false, searchable: false},
+                    {data: 'entry', orderable: false, searchable: false},
+                    {data: 'owner', orderable: false, searchable: false},
+                    {data: 'actions', orderable: false, searchable: false}
+                ],
+                order: [[0, 'desc']]
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}Student journal — {{ student.user.name }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex align-items-center mt-3 mb-2 gap-2 flex-wrap">
+        {% if url %}
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+                <i class="fas fa-arrow-left fa-fw"></i> {{ text or "Return" }}
+            </a>
+        {% endif %}
+        <h4 class="mb-0 me-auto">
+            <i class="fas fa-book fa-fw me-1"></i>
+            Journal: <strong>{{ student.user.name }}</strong>
+        </h4>
+        <a class="btn btn-sm btn-outline-primary"
+           href="{{ url_for('convenor.add_journal_entry', student_id=student.id, url=request.url, text='Back to journal') }}">
+            <i class="fas fa-plus fa-fw"></i> Add entry...
+        </a>
+    </div>
+
+    <div class="card border-secondary mb-3">
+        <div class="card-header bg-secondary text-white">
+            <i class="fas fa-user-circle fa-fw me-1"></i> Student information
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-5 text-muted">Name</dt>
+                        <dd class="col-sm-7">{{ student.user.name }}</dd>
+                        <dt class="col-sm-5 text-muted">Email</dt>
+                        <dd class="col-sm-7">
+                            <a class="text-decoration-none"
+                               href="mailto:{{ student.user.email }}">{{ student.user.email }}</a>
+                        </dd>
+                    </dl>
+                </div>
+                <div class="col-md-4">
+                    <dl class="row mb-0 small">
+                        {% if student.programme %}
+                            <dt class="col-sm-5 text-muted">Programme</dt>
+                            <dd class="col-sm-7">{{ student.programme.full_name }}</dd>
+                        {% endif %}
+                        {% if student.cohort %}
+                            <dt class="col-sm-5 text-muted">Cohort</dt>
+                            <dd class="col-sm-7">{{ student.cohort }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+                <div class="col-md-4">
+                    <dl class="row mb-0 small">
+                        {% if student.academic_year %}
+                            <dt class="col-sm-5 text-muted">Academic year</dt>
+                            <dd class="col-sm-7">Year {{ student.academic_year }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-primary mb-3">
+        <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+            <div><i class="fas fa-book fa-fw me-1"></i> Journal entries</div>
+        </div>
+        <div class="card-body">
+            <table id="journal-table" class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th width="14%">Timestamp</th>
+                    <th width="7%">Year</th>
+                    <th width="14%">Project classes</th>
+                    <th width="40%">Entry</th>
+                    <th width="13%">Created by</th>
+                    <th width="8%">Actions</th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+{% endblock %}

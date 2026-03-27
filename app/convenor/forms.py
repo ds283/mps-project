@@ -42,6 +42,7 @@ from ..models import (
     FacultyData,
     LiveProject,
     Project,
+    ProjectClass,
     ProjectClassConfig,
     SubmissionPeriodRecord,
     SubmissionPeriodUnit,
@@ -50,6 +51,8 @@ from ..models import (
     SupervisionEventTemplate,
     Tenant,
 )
+from ..database import db
+from ..shared.utils import get_current_year
 from ..shared.forms.mixins import (
     FeedbackMixin,
     PeriodPresentationsMixin,
@@ -965,3 +968,110 @@ class EditMarkingSchemeForm(Form, MarkingSchemeMixin, SaveChangesMixin):
         ],
         description="Unique name for this marking scheme",
     )
+
+
+def _build_journal_pclass_config_query(user):
+    """
+    Return a callable that queries ProjectClassConfig instances accessible to the given user,
+    scoped by role and tenant membership.
+    """
+    if user.has_role("root"):
+        def query_factory():
+            year = get_current_year()
+            return (
+                db.session.query(ProjectClassConfig)
+                .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
+                .filter(ProjectClass.active.is_(True), ProjectClassConfig.year == year)
+                .order_by(ProjectClass.name)
+                .all()
+            )
+    elif user.has_role("admin") or user.has_role("office"):
+        tenant_ids = [t.id for t in user.tenants]
+
+        def query_factory():
+            year = get_current_year()
+            q = (
+                db.session.query(ProjectClassConfig)
+                .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
+                .filter(ProjectClass.active.is_(True), ProjectClassConfig.year == year)
+            )
+            if tenant_ids:
+                q = q.filter(ProjectClass.tenant_id.in_(tenant_ids))
+            else:
+                # user has no tenant associations: show nothing
+                return []
+            return q.order_by(ProjectClass.name).all()
+    else:
+        # convenor: only pclasses they manage (convenor or co-convenor)
+        faculty_data = user.faculty_data
+        convenor_pclass_ids = (
+            [pc.id for pc in faculty_data.convenor_projects] if faculty_data else []
+        )
+
+        def query_factory():
+            if not convenor_pclass_ids:
+                return []
+            year = get_current_year()
+            return (
+                db.session.query(ProjectClassConfig)
+                .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
+                .filter(
+                    ProjectClass.active.is_(True),
+                    ProjectClassConfig.year == year,
+                    ProjectClass.id.in_(convenor_pclass_ids),
+                )
+                .order_by(ProjectClass.name)
+                .all()
+            )
+
+    return query_factory
+
+
+def _journal_pclass_config_label(config):
+    year = config.year
+    return f"{config.project_class.name} ({year}/{str(year + 1)[-2:]})"
+
+
+def AddJournalEntryFormFactory(user):
+    query_factory = _build_journal_pclass_config_query(user)
+
+    class AddJournalEntryForm(Form):
+        entry = TextAreaField(
+            "Journal entry",
+            validators=[InputRequired(message="A journal entry is required")],
+        )
+        project_classes = QuerySelectMultipleField(
+            "Project classes",
+            query_factory=query_factory,
+            get_label=_journal_pclass_config_label,
+        )
+        submit = SubmitField("Save entry")
+
+    return AddJournalEntryForm
+
+
+def EditJournalEntryFormFactory(user):
+    query_factory = _build_journal_pclass_config_query(user)
+
+    class EditJournalEntryForm(Form, SaveChangesMixin):
+        entry = TextAreaField(
+            "Journal entry",
+            validators=[InputRequired(message="A journal entry is required")],
+        )
+        project_classes = QuerySelectMultipleField(
+            "Project classes",
+            query_factory=query_factory,
+            get_label=_journal_pclass_config_label,
+        )
+
+    return EditJournalEntryForm
+
+
+class ConfirmDeleteWithReasonForm(Form):
+    reason = TextAreaField(
+        "Reason for deletion",
+        render_kw={"rows": 4},
+        description="Please provide a brief explanation for why this record is being deleted",
+        validators=[InputRequired(message="A reason for deletion is required")],
+    )
+    submit = SubmitField("Delete")

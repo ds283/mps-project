@@ -1,0 +1,44 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block formtitle %}{{ panel_title|safe }}{% endblock %}
+
+{% block form_content %}
+    <form action="{{ action_url }}" method="POST" name="delete_form">
+        {{ form.hidden_tag() }}
+
+        <div class="card border-danger mt-3 mb-3">
+            <div class="card-header bg-danger text-white">
+                <strong>{{ panel_title|safe }}</strong>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    {{ message|safe }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">{{ form.reason.label.text }}</label>
+                    {% if form.reason.description %}
+                        <div class="form-text text-muted mb-2">{{ form.reason.description }}</div>
+                    {% endif %}
+                    {{ form.reason(class='form-control', rows=4) }}
+                    {% if form.reason.errors %}
+                        {% for error in form.reason.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <div class="d-flex gap-2 justify-content-end mt-3">
+                    {% if cancel_url %}
+                        <a class="btn btn-outline-secondary" href="{{ cancel_url }}">Cancel</a>
+                    {% endif %}
+                    {{ wtf.render_field(form.submit, button_map={'submit': 'danger'}) }}
+                </div>
+            </div>
+        </div>
+    </form>
+{% endblock %}

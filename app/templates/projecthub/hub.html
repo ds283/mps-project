@@ -446,6 +446,12 @@
                        href="{{ url_for('documents.submitter_documents', sid=record.id, url=return_url, text=return_text) }}">
                         <i class="fas fa-file"></i> Manage documents ({{ record.number_attachments }})...
                     </a>
+                    {% if not is_student and (hub_role.is_admin or hub_role.is_convenor) %}
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="{{ url_for('convenor.student_journal_inspector', student_id=record.student_id, url=return_url, text=return_text) }}">
+                            <i class="fas fa-book"></i> Journal...
+                        </a>
+                    {% endif %}
                 </div>
 
                 {# SHOW DASHBOARD TILEs #}

@@ -34,6 +34,9 @@ _menu = """
                 <i class="fas fa-history fa-fw"></i> Show history... 
             </a>
         {% endif %}
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_journal_inspector', student_id=student.student_id, url=url_for('convenor.selectors', id=pclass.id), text='selectors view') }}">
+            <i class="fas fa-book fa-fw"></i> View journal...
+        </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.selector_custom_offers', sel_id=student.id) }}">
             <i class="fas fa-cogs fa-fw"></i> Custom offers...
         </a>

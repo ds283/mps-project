@@ -41,6 +41,7 @@ from ..models import (
     TransferableSkill,
 )
 from ..shared.context.global_context import render_template_context
+from ..shared.journal import create_auto_journal_entry
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import (
     home_dashboard,
@@ -988,6 +989,22 @@ def create_custom_offer(sel_id, proj_id):
 
         try:
             db.session.add(offer)
+            db.session.flush()
+
+            programme_name = sel.student.programme.full_name if sel.student.programme else "unknown"
+            academic_year = f"Year {sel.student.academic_year}" if sel.student.academic_year else "unknown"
+            html = (
+                f"<p>Custom offer created for project <strong>{proj.name}</strong> "
+                f"(project class <strong>{pclass.name}</strong>).</p>"
+                f"<ul>"
+                f"<li>Student academic year: {academic_year}</li>"
+                f"<li>Degree programme: {programme_name}</li>"
+                f"<li>Action initiated by: {current_user.name}</li>"
+                f"</ul>"
+                f"<p><em>This entry was created automatically.</em></p>"
+            )
+            create_auto_journal_entry(sel.student, html, project_class_config=config)
+
             log_db_commit(
                 f"Created custom offer for selector {sel.student.user.name} on project {proj.name}",
                 user=current_user,
@@ -1202,10 +1219,28 @@ def delete_custom_offer(offer_id):
     _offer_selector_name = offer.selector.student.user.name
     _offer_project_name = offer.liveproject.name
     _offer_pclass = offer.liveproject.config.project_class
+    _offer_config = offer.liveproject.config
     _offer_student = offer.selector.student
+
+    programme_name = _offer_student.programme.full_name if _offer_student.programme else "unknown"
+    academic_year = f"Year {_offer_student.academic_year}" if _offer_student.academic_year else "unknown"
+    journal_html = (
+        f"<p>Custom offer deleted for project <strong>{_offer_project_name}</strong> "
+        f"(project class <strong>{_offer_pclass.name}</strong>).</p>"
+        f"<ul>"
+        f"<li>Student academic year: {academic_year}</li>"
+        f"<li>Degree programme: {programme_name}</li>"
+        f"<li>Action initiated by: {current_user.name}</li>"
+        f"</ul>"
+        f"<p><em>This entry was created automatically.</em></p>"
+    )
 
     try:
         db.session.delete(offer)
+        db.session.flush()
+
+        create_auto_journal_entry(_offer_student, journal_html, project_class_config=_offer_config)
+
         log_db_commit(
             f"Deleted custom offer for selector {_offer_selector_name} on project {_offer_project_name}",
             user=current_user,

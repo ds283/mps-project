@@ -60,9 +60,11 @@ from ..shared.utils import (
 from ..shared.validators import (
     validate_is_convenor,
 )
+from ..shared.journal import create_auto_journal_entry
 from ..shared.workflow_logging import log_db_commit
 from ..task_queue import register_task
 from ..tools import ServerSideInMemoryHandler
+from .forms import ConfirmDeleteWithReasonForm
 
 
 @convenor.route("/selectors/<int:id>")
@@ -814,90 +816,12 @@ def enrol_selector(sid, configid):
     return redirect(redirect_url())
 
 
-@convenor.route("/delete_selector/<int:sid>")
+@convenor.route("/delete_selector/<int:sid>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def delete_selector(sid):
     """
-    Manually delete a selector
-    :param sid:
-    :return:
-    """
-    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
-
-    # reject user if not a convenor for this project class
-    if not validate_is_convenor(sel.config.project_class):
-        return redirect(redirect_url())
-
-    if (
-            not (current_user.has_role("admin") or current_user.has_role("root"))
-            and sel.config.selector_lifecycle
-            > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
-    ):
-        flash(
-            "Manual deletion of selectors is only possible before student choices are closed",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if sel.has_bookmarks or sel.has_submitted or sel.has_matches:
-        url = request.args.get("url", None)
-        if url is None:
-            url = redirect_url()
-
-        title = 'Delete selector "{name}"'.format(name=sel.student.user.name)
-        panel_title = 'Delete selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(
-            name=sel.student.user.name
-        )
-
-        action_url = url_for("convenor.do_delete_selector", sid=sid, url=url)
-        message = (
-            '<p>Are you sure that you wish to delete selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>?</p>'
-            "<p>This selector has stored bookmarks, submitted a list of project choices, or has been included "
-            "in a matching.</p>"
-            "<p>This action cannot be undone. Any bookmarks and submitted preferences will be lost, and "
-            "the selector will be deleted from any matches of which they are currently part.</p>".format(
-                name=sel.student.user.name
-            )
-        )
-        submit_label = "Delete selector"
-
-        return render_template_context(
-            "admin/danger_confirm.html",
-            title=title,
-            panel_title=panel_title,
-            action_url=action_url,
-            message=message,
-            submit_label=submit_label,
-        )
-
-    try:
-        # delete should cascade to Bookmark and SelectionRecord items; also, no need to remove
-        # matching_records elements because we are guaranteed that there aren't any
-        db.session.delete(sel)
-        log_db_commit(
-            "Deleted selector record",
-            user=current_user,
-            student=sel.student,
-            project_classes=sel.config.project_class,
-        )
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        flash(
-            "Could not delete selector due to a database error. Please contact a system administrator.",
-            "error",
-        )
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-    return redirect(redirect_url())
-
-
-@convenor.route("/do_delete_selector/<int:sid>")
-@roles_accepted("faculty", "admin", "root")
-def do_delete_selector(sid):
-    """
-    Manually delete a selector -- action step
-    :param sid:
-    :return:
+    Manually delete a selector. Shows a confirmation form that also collects a reason,
+    which is recorded in the student's journal.
     """
     sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
 
@@ -920,25 +844,86 @@ def do_delete_selector(sid):
     if url is None:
         url = redirect_url()
 
-    try:
-        sel.detach_records()
-        db.session.delete(sel)
+    form = ConfirmDeleteWithReasonForm(request.form)
 
-        log_db_commit(
-            "Deleted selector record (with bookmarks/matches detached)",
-            user=current_user,
-            student=sel.student,
-            project_classes=sel.config.project_class,
-        )
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        flash(
-            "Could not delete selector due to a database error. Please contact a system administrator.",
-            "error",
-        )
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+    if form.validate_on_submit():
+        student = sel.student
+        pclass = sel.config.project_class
+        config = sel.config
+        reason = form.reason.data
+        has_associated_data = sel.has_bookmarks or sel.has_submitted or sel.has_matches
 
-    return redirect(url)
+        programme_name = student.programme.full_name if student.programme else "unknown"
+        academic_year = f"Year {student.academic_year}" if student.academic_year else "unknown"
+        year = config.year
+        year_str = f"{year}/{str(year + 1)[-2:]}" if isinstance(year, int) else str(year)
+        journal_html = (
+            f"<p>Selecting student record deleted for project class "
+            f"<strong>{pclass.name}</strong> ({year_str}).</p>"
+            f"<ul>"
+            f"<li>Student academic year: {academic_year}</li>"
+            f"<li>Degree programme: {programme_name}</li>"
+            f"<li>Action initiated by: {current_user.name}</li>"
+            f"</ul>"
+            f"<p><strong>Reason for deletion:</strong> {reason}</p>"
+            f"<p><em>This entry was created automatically.</em></p>"
+        )
+
+        try:
+            if has_associated_data:
+                sel.detach_records()
+            db.session.delete(sel)
+            db.session.flush()
+
+            create_auto_journal_entry(student, journal_html, project_class_config=config)
+
+            log_db_commit(
+                "Deleted selector record"
+                + (" (with bookmarks/matches detached)" if has_associated_data else ""),
+                user=current_user,
+                student=student,
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash(
+                "Could not delete selector due to a database error. Please contact a system administrator.",
+                "error",
+            )
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url)
+
+    title = 'Delete selector "{name}"'.format(name=sel.student.user.name)
+    panel_title = 'Delete selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>'.format(
+        name=sel.student.user.name
+    )
+
+    if sel.has_bookmarks or sel.has_submitted or sel.has_matches:
+        message = (
+            '<p>Are you sure that you wish to delete selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>?</p>'
+            "<p>This selector has stored bookmarks, submitted a list of project choices, or has been included "
+            "in a matching.</p>"
+            "<p>This action cannot be undone. Any bookmarks and submitted preferences will be lost, and "
+            "the selector will be deleted from any matches of which they are currently part.</p>".format(
+                name=sel.student.user.name
+            )
+        )
+    else:
+        message = (
+            '<p>Are you sure that you wish to delete selector <i class="fas fa-user-circle"></i> <strong>{name}</strong>?</p>'
+            "<p>This action cannot be undone.</p>".format(name=sel.student.user.name)
+        )
+
+    return render_template_context(
+        "convenor/journal/delete_with_reason.html",
+        form=form,
+        title=title,
+        panel_title=panel_title,
+        action_url=url_for("convenor.delete_selector", sid=sid, url=url),
+        message=message,
+        cancel_url=url,
+    )
 
 
 @convenor.route("/selector_grid/<int:id>")

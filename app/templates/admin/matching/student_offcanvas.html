@@ -93,7 +93,7 @@
                                 </div>
                             </div>
                         {% endfor %}
-                        <div class="mt-3">
+                        <div class="mt-3 d-flex flex-row justify-content-start align-items-center gap-2">
                             {% if return_text is not none and return_url is not none %}
                                 <a class="btn btn-sm btn-outline-secondary"
                                    href="{{ url_for('convenor.selector_choices', id=sel.id, text=return_text, url=return_url) }}">Edit
@@ -102,6 +102,10 @@
                                 <a class="btn btn-sm btn-outline-secondary"
                                    href="{{ url_for('convenor.selector_choices', id=sel.id) }}">Edit selection...</a>
                             {% endif %}
+                            <a class="btn btn-sm btn-outline-secondary"
+                               href="{{ url_for('convenor.student_journal_inspector', student_id=sel.student.id) }}">
+                                <i class="fas fa-book me-1"></i>View journal...
+                            </a>
                         </div>
                     </div>
                 </div>

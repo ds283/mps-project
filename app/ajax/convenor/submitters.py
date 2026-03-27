@@ -56,6 +56,9 @@ _menu = """
                 <i class="fas fa-history fa-fw"></i> Show history...
             </a>
         {% endif %}
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_journal_inspector', student_id=sub.student_id, url=url_for('convenor.submitters', id=pclass.id), text='submitters view') }}">
+            <i class="fas fa-book fa-fw"></i> View journal...
+        </a>
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_tasks', type=2, sid=sub.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
             <i class="fas fa-tasks fa-fw"></i> Tasks...
         </a>

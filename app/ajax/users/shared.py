@@ -106,6 +106,11 @@ _menu = """
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('student.timeline', student_id=user.id, url=url_for('manage_users.edit_users_students'), text='student accounts') }}">
                 <i class="fas fa-history fa-fw"></i> Show history...
             </a>
+            {% if user.student_data is not none %}
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.student_journal_inspector', student_id=user.student_data.id, url=url_for('manage_users.edit_users_students'), text='student accounts') }}">
+                    <i class="fas fa-book fa-fw"></i> View journal...
+                </a>
+            {% endif %}
         {% endif %}
 
         <div role="separator" class="dropdown-divider"></div>

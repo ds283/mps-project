@@ -1,0 +1,72 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "tinymce.html" import import_tinymce %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_tinymce() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            tinymce.init({
+                selector: '#entry-editor',
+                plugins: 'lists advlist autolink autosave link searchreplace visualblocks wordcount',
+                toolbar: 'undo redo | blocks styles | bold italic | alignleft aligncenter alignright | outdent indent | numlist bullist | link | restoredraft',
+                menubar: false
+            });
+
+            $('#project_classes').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select project classes (optional)...'
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block formtitle %}
+    {% if entry %}
+        Edit journal entry for <strong>{{ student.user.name }}</strong>
+    {% else %}
+        Add journal entry for <strong>{{ student.user.name }}</strong>
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    {% if entry %}
+        <form action="{{ url_for('convenor.edit_journal_entry', entry_id=entry.id, url=url, text=text) }}" method="POST"
+              name="journal_form">
+    {% else %}
+        <form action="{{ url_for('convenor.add_journal_entry', student_id=student.id, url=url, text=text) }}"
+              method="POST" name="journal_form">
+    {% endif %}
+
+{{ form.hidden_tag() }}
+
+<div class="mb-3">
+    <label class="form-label fw-semibold">{{ form.entry.label.text }}</label>
+    {{ form.entry(id='entry-editor', class='form-control') }}
+    {% if form.entry.errors %}
+        {% for error in form.entry.errors %}
+            <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+{{ wtf.render_field(form.project_classes, id='project_classes') }}
+
+<div class="mt-4 d-flex gap-2">
+    {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+    <a class="btn btn-outline-secondary" href="{{ url }}">Cancel</a>
+</div>
+
+</form>
+{% endblock %}

@@ -148,10 +148,7 @@ def register_maintenance_tasks(celery):
                     ),
                 )
             ).delete()
-            # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
-            # this endpoint is too noisy
-            # log_db_commit("Deleted stale PopularityRecord instances older than 1 day with missing rank data", endpoint=self.name)
-            db.session.commit()
+            db.session.commit()  # intentionally not logged: high-frequency maintenance loop
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -337,14 +334,7 @@ def register_maintenance_tasks(celery):
 
         if record.maintenance():
             try:
-                # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
-                # this endpoint is too noisy
-                # log_db_commit(
-                #     f"Committed StudentData maintenance for student id={sid}",
-                #     student=record,
-                #     endpoint=self.name,
-                # )
-                db.session.commit()
+                db.session.commit()  # intentionally not logged: high-frequency maintenance loop
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -391,14 +381,7 @@ def register_maintenance_tasks(celery):
 
             record.selector = paired_selector
             try:
-                # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
-                # this endpoint is too noisy
-                # log_db_commit(
-                #     f"Updated selector pairing for SubmittingStudent id={sid}",
-                #     student=record.student,
-                #     endpoint=self.name,
-                # )
-                db.session.commit()
+                db.session.commit()  # intentionally not logged: high-frequency maintenance loop
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -419,14 +402,7 @@ def register_maintenance_tasks(celery):
 
         if pclass.maintenance():
             try:
-                # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
-                # this endpoint is too noisy
-                # log_db_commit(
-                #     f"Committed ProjectClass maintenance for pclass id={pid}",
-                #     project_classes=pclass,
-                #     endpoint=self.name,
-                # )
-                db.session.commit()
+                db.session.commit()  # intentionally not logged: high-frequency maintenance loop
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -447,13 +423,7 @@ def register_maintenance_tasks(celery):
 
         if project.maintenance():
             try:
-                # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
-                # this endpoint is too noisy
-                # log_db_commit(
-                #     f"Committed Project maintenance for project id={pid}",
-                #     endpoint=self.name,
-                # )
-                db.session.commit()
+                db.session.commit()  # intentionally not logged: high-frequency maintenance loop
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -474,13 +444,7 @@ def register_maintenance_tasks(celery):
 
         if project.maintenance():
             try:
-                # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
-                # this endpoint is too noisy
-                # log_db_commit(
-                #     f"Committed LiveProject maintenance for liveproject id={pid}",
-                #     endpoint=self.name,
-                # )
-                db.session.commit()
+                db.session.commit()  # intentionally not logged: high-frequency maintenance loop
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -511,13 +475,7 @@ def register_maintenance_tasks(celery):
 
         if desc.maintenance():
             try:
-                # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
-                # this endpoint is too noisy
-                # log_db_commit(
-                #     f"Committed ProjectDescription maintenance for description id={pd_id}",
-                #     endpoint=self.name,
-                # )
-                db.session.commit()
+                db.session.commit()  # intentionally not logged: high-frequency maintenance loop
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -538,13 +496,7 @@ def register_maintenance_tasks(celery):
 
         if record.maintenance():
             try:
-                # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
-                # this endpoint is too noisy
-                # log_db_commit(
-                #     f"Committed AssessorAttendanceData maintenance for record id={id}",
-                #     endpoint=self.name,
-                # )
-                db.session.commit()
+                db.session.commit()  # intentionally not logged: high-frequency maintenance loop
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -565,13 +517,7 @@ def register_maintenance_tasks(celery):
 
         if record.maintenance():
             try:
-                # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
-                # this endpoint is too noisy
-                # log_db_commit(
-                #     f"Committed SubmitterAttendanceData maintenance for record id={id}",
-                #     endpoint=self.name,
-                # )
-                db.session.commit()
+                db.session.commit()  # intentionally not logged: high-frequency maintenance loop
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -594,13 +540,7 @@ def register_maintenance_tasks(celery):
             # can purge this record
             try:
                 db.session.delete(record)
-                # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
-                # this endpoint is too noisy
-                # log_db_commit(
-                #     f"Deleted stale ScheduleEnumeration record id={id} (schedule no longer awaiting upload)",
-                #     endpoint=self.name,
-                # )
-                db.session.commit()
+                db.session.commit()  # intentionally not logged: high-frequency maintenance loop
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -623,7 +563,10 @@ def register_maintenance_tasks(celery):
             # can purge this record
             try:
                 db.session.delete(record)
-                db.session.commit()
+                log_db_commit(
+                    f"Deleted stale MatchingEnumeration record id={id} (matching no longer awaiting upload)",
+                    endpoint=self.name,
+                )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -760,7 +703,10 @@ def register_maintenance_tasks(celery):
                     db.session.delete(item)
 
             db.session.delete(record)
-            db.session.commit()
+            log_db_commit(
+                f'Garbage collection deleted expired {asset_type} asset "{asset_name}" (id={record.id})',
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -884,7 +830,10 @@ def register_maintenance_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Committed asset report email workflow for {len(stripped_assets)} asset(s)",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -917,7 +866,10 @@ def register_maintenance_tasks(celery):
 
         if record.maintenance():
             try:
-                db.session.commit()
+                log_db_commit(
+                    f"Committed SubmissionRecord maintenance for record id={rec_id}",
+                    endpoint=self.name,
+                )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -984,7 +936,10 @@ def register_maintenance_tasks(celery):
                             pass
 
                 try:
-                    db.session.commit()
+                    log_db_commit(
+                        f'Re-encrypted {asset_type} asset "{asset_name}" (id={rec_id})',
+                        endpoint=self.name,
+                    )
                     storage.delete()
                 except SQLAlchemyError as e:
                     current_app.logger.exception(
@@ -1060,7 +1015,10 @@ def register_maintenance_tasks(celery):
                             pass
 
                 try:
-                    db.session.commit()
+                    log_db_commit(
+                        f"Re-encrypted backup record id={rec_id}",
+                        endpoint=self.name,
+                    )
                     storage.delete()
                 except SQLAlchemyError as e:
                     current_app.logger.exception(
@@ -1084,7 +1042,10 @@ def register_maintenance_tasks(celery):
             record.unlock_date = None
 
             try:
-                db.session.commit()
+                log_db_commit(
+                    f"Unlocked backup record id={rec_id} (unlock date reached)",
+                    endpoint=self.name,
+                )
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
@@ -1105,7 +1066,10 @@ def register_maintenance_tasks(celery):
                     print(f'@@ prune_project_tags: removing project tag "{label.name}"')
                     db.session.delete(label)
 
-                db.session.commit()
+                log_db_commit(
+                    f'Pruned unused project tag "{label.name}"',
+                    endpoint=self.name,
+                )
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1127,7 +1091,10 @@ def register_maintenance_tasks(celery):
                     )
                     db.session.delete(label)
 
-                db.session.commit()
+                log_db_commit(
+                    f'Pruned unused feedback template tag "{label.name}"',
+                    endpoint=self.name,
+                )
 
         except SQLAlchemyError as e:
             db.session.rollback()

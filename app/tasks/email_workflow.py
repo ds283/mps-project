@@ -242,7 +242,10 @@ def register_email_workflow_tasks(celery, mail: Mail):
         item.celery_send_in_progress_task_id = self.request.id
 
         try:
-            db.session.commit()
+            log_db_commit(
+                "Marked email workflow item as send in-progress",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception(
@@ -305,7 +308,10 @@ def register_email_workflow_tasks(celery, mail: Mail):
                     item.send_in_progress_timestamp = None
                     item.celery_send_in_progress_task_id = None
                     try:
-                        db.session.commit()
+                        log_db_commit(
+                            "Recorded payload decode error for email workflow item",
+                            endpoint=self.name,
+                        )
                     except SQLAlchemyError:
                         db.session.rollback()
                     return {
@@ -333,7 +339,10 @@ def register_email_workflow_tasks(celery, mail: Mail):
             item.send_in_progress_timestamp = None
             item.celery_send_in_progress_task_id = None
             try:
-                db.session.commit()
+                log_db_commit(
+                    "Recorded email build failure for workflow item",
+                    endpoint=self.name,
+                )
             except SQLAlchemyError:
                 db.session.rollback()
             raise self.retry()
@@ -366,7 +375,10 @@ def register_email_workflow_tasks(celery, mail: Mail):
             item.send_in_progress_timestamp = None
             item.celery_send_in_progress_task_id = None
             try:
-                db.session.commit()
+                log_db_commit(
+                    "Recorded TimeoutError for email workflow item send attempt",
+                    endpoint=self.name,
+                )
             except SQLAlchemyError:
                 db.session.rollback()
             raise self.retry()
@@ -392,7 +404,10 @@ def register_email_workflow_tasks(celery, mail: Mail):
             item.send_in_progress_timestamp = None
             item.celery_send_in_progress_task_id = None
             try:
-                db.session.commit()
+                log_db_commit(
+                    "Recorded SMTP error for email workflow item send attempt",
+                    endpoint=self.name,
+                )
             except SQLAlchemyError:
                 db.session.rollback()
             raise self.retry()
@@ -451,7 +466,10 @@ def register_email_workflow_tasks(celery, mail: Mail):
         item.email_log = log
 
         try:
-            db.session.commit()
+            log_db_commit(
+                "Persisted successful email send result for workflow item",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception(
@@ -479,7 +497,10 @@ def register_email_workflow_tasks(celery, mail: Mail):
             workflow.completed = True
             workflow.completed_timestamp = datetime.now()
             try:
-                db.session.commit()
+                log_db_commit(
+                    f"Marked email workflow '{workflow.name}' (id={workflow.id}) as completed",
+                    endpoint=self.name,
+                )
                 workflow_completed = True
             except SQLAlchemyError as e:
                 db.session.rollback()
@@ -569,7 +590,10 @@ def register_email_workflow_tasks(celery, mail: Mail):
 
         if cleaned > 0:
             try:
-                db.session.commit()
+                log_db_commit(
+                    f"Committed cleanup of {cleaned} stale in-progress email workflow item(s)",
+                    endpoint=self.name,
+                )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception(

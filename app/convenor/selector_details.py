@@ -1362,7 +1362,11 @@ def remove_skill_filter(id, skill_id):
     if skill in record.skill_filters:
         try:
             record.skill_filters.remove(skill)
-            db.session.commit()
+            log_db_commit(
+                f"Removed transferable skill filter '{skill.name}' from selector filter record",
+                user=current_user,
+                project_classes=record.config.project_class,
+            )
         except StaleDataError:
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
@@ -1383,7 +1387,11 @@ def clear_skill_filters(id):
 
     try:
         record.skill_filters = []
-        db.session.commit()
+        log_db_commit(
+            "Cleared all transferable skill filters from selector filter record",
+            user=current_user,
+            project_classes=record.config.project_class,
+        )
     except StaleDataError:
         # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
         # to the same endpoint?
@@ -1411,7 +1419,12 @@ def set_hint(id, hint):
 
     try:
         rec.set_hint(hint)
-        db.session.commit()
+        log_db_commit(
+            f"Set selection hint for selector {rec.owner.student.user.name} on project {rec.liveproject.name}",
+            user=current_user,
+            student=rec.owner.student,
+            project_classes=config.project_class,
+        )
     except SQLAlchemyError as e:
         flash(
             "Could not set selection hint due to a database error. Please contact a system administrator.",

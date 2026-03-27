@@ -38,6 +38,7 @@ from ..models import (
 from ..models.emails import encode_email_payload
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import get_current_year
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import register_task
 
 
@@ -127,7 +128,7 @@ def register_attendance_tasks(celery):
                     db.session.flush()
 
                     workflow_id = workflow.id
-                    db.session.commit()
+                    log_db_commit(f"Create attendance prompt email workflow for config {config.name}", endpoint=self.name)
 
                     tasks = group(
                         check_event_for_attendance_prompt.si(event.id, workflow_id)
@@ -461,7 +462,7 @@ def register_attendance_tasks(celery):
         # cause a duplicate prompt to be queued.
         event.prompt_sent_timestamp = datetime.now()
         try:
-            db.session.commit()
+            log_db_commit(f"Queue attendance prompt email and mark event #{event_id} as notified", endpoint=self.name)
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -533,7 +534,7 @@ def register_attendance_tasks(celery):
         owner.email_log.append(email_log)
 
         try:
-            db.session.commit()
+            log_db_commit(f"Record sent attendance prompt email log for event #{event_id}", endpoint=self.name)
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -565,7 +566,7 @@ def register_attendance_tasks(celery):
         if get_count(workflow.items) == 0:
             try:
                 db.session.delete(workflow)
-                db.session.commit()
+                log_db_commit(f"Delete empty attendance prompt email workflow #{workflow_id}", endpoint=self.name)
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

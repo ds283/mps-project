@@ -16,6 +16,7 @@ from .tools import check_2026_ATAS
 from ..models import FacultyData, Project, ProjectTag
 from ..shared.context.global_context import render_template_context
 from ..database import db
+from ..shared.workflow_logging import log_db_commit
 
 
 @campaigns.route("/atas_2026", methods=["GET", "POST"])
@@ -43,7 +44,7 @@ def atas_2026():
                     project.tags.append(tag)
 
         try:
-            db.session.commit()
+            log_db_commit("Saved ATAS 2026 project settings", user=current_user)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

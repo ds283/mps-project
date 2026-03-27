@@ -353,10 +353,7 @@ def create_app():
             if request.endpoint is not None and "ajax" not in request.endpoint:
                 try:
                     Notification.query.filter_by(remove_on_pageload=True).delete()
-                    # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
-                    # this endpoint is too noisy
-                    # log_db_commit("Remove transient notifications on page load", user=current_user)
-                    db.session.commit()
+                    db.session.commit()  # intentionally not logged: runs on every page load
                 except SQLAlchemyError as e:
                     current_app.logger.exception(
                         "SQLAlchemyError exception", exc_info=e

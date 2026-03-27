@@ -1027,7 +1027,10 @@ def set_mute_role(role_id, value):
 
     try:
         role.mute = value_
-        db.session.commit()
+        log_db_commit(
+            f'{"Muted" if value_ else "Unmuted"} notifications for submission role of {role.user.name}',
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1088,7 +1091,12 @@ def notify_settings(role_id):
                 fd.reminder_emails = form.reminder_emails.data
                 fd.reminder_frequency = form.reminder_frequency.data
 
-            db.session.commit()
+            log_db_commit(
+                f"Updated notification settings for supervision role of {sd.user.name}",
+                user=current_user,
+                student=sd,
+                project_classes=pclass,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1160,7 +1168,12 @@ def change_event_time(event_id):
             event.last_edit_id = current_user.id
             event.last_edit_timestamp = datetime.now()
 
-            db.session.commit()
+            log_db_commit(
+                f'Updated time and location for supervision event "{event.name}"',
+                user=current_user,
+                student=sd,
+                project_classes=pclass,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

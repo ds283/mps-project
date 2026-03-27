@@ -1872,7 +1872,7 @@ def mark_student_batch_item_convert(item_id):
     item: StudentBatchItem = StudentBatchItem.query.get_or_404(item_id)
 
     item.dont_convert = False
-    db.session.commit()
+    log_db_commit("Mark student batch item for conversion", user=current_user)
 
     return redirect(redirect_url())
 
@@ -1883,7 +1883,7 @@ def mark_student_batch_item_dont_convert(item_id):
     item: StudentBatchItem = StudentBatchItem.query.get_or_404(item_id)
 
     item.dont_convert = True
-    db.session.commit()
+    log_db_commit("Mark student batch item not for conversion", user=current_user)
 
     return redirect(redirect_url())
 
@@ -2560,7 +2560,7 @@ def edit_enrollment(id):
         record.last_edit_id = current_user.id
         record.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        log_db_commit("Edit faculty enrollment record", user=current_user)
 
         celery = current_app.extensions["celery"]
 
@@ -2726,7 +2726,7 @@ def add_role():
             colour=form.colour.data,
         )
         db.session.add(data)
-        db.session.commit()
+        log_db_commit("Add new user role", user=current_user)
 
         return redirect(url_for("manage_users.edit_roles"))
 
@@ -2752,7 +2752,7 @@ def edit_role(id):
         data.name = form.name.data
         data.description = form.description.data
         data.colour = form.colour.data
-        db.session.commit()
+        log_db_commit("Edit user role", user=current_user)
 
         return redirect(url_for("manage_users.edit_roles"))
 

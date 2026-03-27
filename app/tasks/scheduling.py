@@ -58,6 +58,7 @@ from ..shared.scratch import ScratchFileManager
 from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update, register_task
 
 # create type for availability matrices;
@@ -1005,7 +1006,7 @@ def _create_slots(self, record: ScheduleAttempt):
                 count += 1
 
     try:
-        db.session.commit()
+        log_db_commit("Create schedule slots", endpoint=self.name)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1325,7 +1326,7 @@ def _process_PuLP_solution(
                 assessor_dict,
                 slot_dict,
             )
-            db.session.commit()
+            log_db_commit("Store PuLP scheduling solution", endpoint=self.name)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1354,7 +1355,7 @@ def _process_PuLP_solution(
 
         record.finished = True
         record.celery_finished = True
-        db.session.commit()
+        log_db_commit("Mark schedule attempt as finished", endpoint=self.name)
 
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -1393,7 +1394,7 @@ def _send_offline_email(celery, record, user, lp_asset):
     db.session.add(item)
 
     try:
-        db.session.commit()
+        log_db_commit("Queue offline scheduling email workflow", user=user)
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1469,7 +1470,7 @@ def _store_enumeration_details(
     write_out(ScheduleEnumeration.PERIOD, number_to_period)
 
     # allow exceptions produced by SQLAlchemy to propagate up to calling function
-    db.session.commit()
+    log_db_commit("Store schedule enumeration details")
 
 
 def register_scheduling_tasks(celery):
@@ -1813,7 +1814,7 @@ def register_scheduling_tasks(celery):
             message = render_template_string(message_tmpl, name=record.name)
             user.post_message(message, "success", autocommit=False)
 
-            db.session.commit()
+            log_db_commit("Store offline schedule LP file and notify user", user=user, endpoint=self.name)
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -1959,7 +1960,7 @@ def register_scheduling_tasks(celery):
         try:
             record.talks = record.original_talks
             record.assessors = record.original_assessors
-            db.session.commit()
+            log_db_commit("Revert schedule slot to original assignments", endpoint=self.name)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1991,7 +1992,7 @@ def register_scheduling_tasks(celery):
         try:
             record.last_edit_id = None
             record.last_edit_timestamp = None
-            db.session.commit()
+            log_db_commit("Clear last-edit metadata after schedule revert", endpoint=self.name)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -2184,7 +2185,7 @@ def register_scheduling_tasks(celery):
                         old_record.lp_file, "schedule.lp", ext="lp"
                     )
 
-            db.session.commit()
+            log_db_commit("Persist duplicated schedule attempt", endpoint=self.name)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -2238,7 +2239,7 @@ def register_scheduling_tasks(celery):
             record.draft_to_submitters = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit("Record schedule published-to-submitters timestamp", endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2318,7 +2319,7 @@ def register_scheduling_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit("Queue schedule notification email to student submitter", user=user, endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2366,7 +2367,7 @@ def register_scheduling_tasks(celery):
             record.draft_to_assessors = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit("Record schedule published-to-assessors timestamp", endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -2457,7 +2458,7 @@ def register_scheduling_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit("Queue schedule notification email to faculty assessor", user=user, endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

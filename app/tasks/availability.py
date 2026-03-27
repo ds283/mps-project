@@ -34,6 +34,7 @@ from ..models import (
 )
 from ..models.emails import encode_email_payload
 from ..shared.sqlalchemy import get_count
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update, register_task
 
 
@@ -297,7 +298,11 @@ def register_availability_tasks(celery):
                 assessment.availability_skipped_id = None
                 assessment.availability_skipped_timestamp = None
 
-            db.session.commit()
+            log_db_commit(
+                "Updated availability settings for assessment",
+                user=user_id,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -364,7 +369,10 @@ def register_availability_tasks(celery):
                 a_record.available.append(session)
 
             db.session.add(a_record)
-            db.session.commit()
+            log_db_commit(
+                "Attached assessor attendance record for assessment",
+                endpoint=self.name,
+            )
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -413,7 +421,11 @@ def register_availability_tasks(celery):
             a_record.request_email_sent = True
             a_record.request_timestamp = datetime.now()
 
-            db.session.commit()
+            log_db_commit(
+                "Marked availability request email as sent for assessor",
+                user=a_record.faculty.user,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -440,7 +452,11 @@ def register_availability_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                "Queued availability request email workflow for assessor",
+                user=a_record.faculty.user,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -499,7 +515,10 @@ def register_availability_tasks(celery):
                 s_record.available.append(session)
 
             db.session.add(s_record)
-            db.session.commit()
+            log_db_commit(
+                "Attached submitter attendance record for assessment",
+                endpoint=self.name,
+            )
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -641,7 +660,11 @@ def register_availability_tasks(celery):
                 db.session.add(new_record)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                "Adjusted assessor attendance records after enrolment change",
+                user=record.owner.user,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -717,7 +740,10 @@ def register_availability_tasks(celery):
                 db.session.delete(record)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                "Adjusted assessor attendance records after unenrolment change",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -794,7 +820,10 @@ def register_availability_tasks(celery):
                 submitter.unavailable.remove(session)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                "Updated availability records after new session added to assessment",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -921,7 +950,11 @@ def register_availability_tasks(celery):
             assessor.reminder_email_sent = True
             assessor.last_reminder_timestamp = datetime.now()
 
-            db.session.commit()
+            log_db_commit(
+                "Marked availability reminder email as sent for assessor",
+                user=assessor.faculty.user,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -947,7 +980,11 @@ def register_availability_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                "Queued availability reminder email workflow for assessor",
+                user=assessor.faculty.user,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

@@ -1141,7 +1141,7 @@ def _perform_expiry_check(self, record_id, BatchType, BatchItemType):
             # cascade is set to delete all items, but do it by hand anwyay
             db.session.query(BatchItemType).filter_by(parent_id=record.id).delete()
             db.session.delete(record)
-            db.session.commit()
+            log_db_commit("Expired and deleted batch import record", endpoint=self.name)
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -1171,7 +1171,7 @@ def register_batch_create_tasks(celery):
                 record.success = False
 
                 try:
-                    db.session.commit()
+                    log_db_commit("Marked faculty batch record as failed (asset not found)", endpoint=self.name)
                 except SQLAlchemyError as e:
                     current_app.logger.exception(
                         "SQLAlchemyError exception", exc_info=e
@@ -1308,7 +1308,7 @@ def register_batch_create_tasks(celery):
         record.success = True
 
         try:
-            db.session.commit()
+            log_db_commit("Finalized faculty batch import", endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1330,7 +1330,7 @@ def register_batch_create_tasks(celery):
 
             record.report = report_string
             try:
-                db.session.commit()
+                log_db_commit("Saved faculty batch import report", endpoint=self.name)
             except SQLAlchemyError as e:
                 db.session.rollback()
                 # report the exception but otherwise allow it to pass silently
@@ -1378,7 +1378,7 @@ def register_batch_create_tasks(celery):
             batch.items.remove(item)
             db.session.delete(item)
 
-            db.session.commit()
+            log_db_commit("Imported faculty batch item", endpoint=self.name)
 
         except (SQLAlchemyError, IntegrityError) as e:
             db.session.rollback()
@@ -1434,7 +1434,7 @@ def register_batch_create_tasks(celery):
             record.converted = True
 
         try:
-            db.session.commit()
+            log_db_commit("Finalized faculty batch import results", user=user, endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1484,7 +1484,7 @@ def register_batch_create_tasks(celery):
                 record.success = False
 
                 try:
-                    db.session.commit()
+                    log_db_commit("Marked student batch record as failed (asset not found)", endpoint=self.name)
                 except SQLAlchemyError as e:
                     current_app.logger.exception(
                         "SQLAlchemyError exception", exc_info=e
@@ -1723,7 +1723,7 @@ def register_batch_create_tasks(celery):
         record.success = interpreted_lines <= current_line
 
         try:
-            db.session.commit()
+            log_db_commit("Finalized student batch import", endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1784,7 +1784,7 @@ def register_batch_create_tasks(celery):
 
             record.report = report_string
             try:
-                db.session.commit()
+                log_db_commit("Saved student batch import report", endpoint=self.name)
             except SQLAlchemyError as e:
                 db.session.rollback()
                 # report the exception but otherwise allow it to pass silently
@@ -1832,7 +1832,7 @@ def register_batch_create_tasks(celery):
             batch.items.remove(item)
             db.session.delete(item)
 
-            db.session.commit()
+            log_db_commit("Imported student batch item", endpoint=self.name)
 
         except (SQLAlchemyError, IntegrityError) as e:
             db.session.rollback()
@@ -1888,7 +1888,7 @@ def register_batch_create_tasks(celery):
             record.converted = True
 
         try:
-            db.session.commit()
+            log_db_commit("Finalized student batch import results", user=user, endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

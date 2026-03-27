@@ -768,7 +768,11 @@ def register_issue_confirm_tasks(celery):
                             autocommit=False,
                         )
 
-        db.session.commit()
+        log_db_commit(
+            "Propagated confirmation status across project classes for faculty user",
+            user=user_id,
+            endpoint=self.name,
+        )
 
     @celery.task(bind=True)
     def notify_comment(self, comment_id):
@@ -858,7 +862,10 @@ def register_issue_confirm_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Queued new comment notification email for project '{desc_project.name}'",
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

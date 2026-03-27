@@ -42,6 +42,7 @@ from ..shared.formatters import format_size
 from ..shared.scratch import ScratchFileManager
 from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count
+from ..shared.workflow_logging import log_db_commit
 
 
 def register_backup_tasks(celery):
@@ -196,7 +197,7 @@ def register_backup_tasks(celery):
 
                 try:
                     db.session.add(data)
-                    db.session.commit()
+                    log_db_commit(f"Store new backup record (key={key})", endpoint=self.name)
 
                 except SQLAlchemyError as e:
                     db.session.rollback()
@@ -404,7 +405,7 @@ def register_backup_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(f"Create backup thinning report email workflow at {timestamp_human}", endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -462,7 +463,7 @@ def register_backup_tasks(celery):
                     )
                     object_store.delete(item, audit_data="drop_absent_backups")
 
-            db.session.commit()
+            log_db_commit("Synchronise backup records with object store, removing absent entries", endpoint=self.name)
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

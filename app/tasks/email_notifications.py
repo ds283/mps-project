@@ -462,7 +462,7 @@ def register_email_notification_tasks(celery):
 
         try:
             db.session.delete(notification)
-            db.session.commit()
+            log_db_commit(f"Delete EmailNotification #{n_id}", endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -509,7 +509,7 @@ def register_email_notification_tasks(celery):
 
         user.last_email = datetime.now()
         try:
-            db.session.commit()
+            log_db_commit("Update last email timestamp for user", user=user, endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -562,7 +562,7 @@ def register_email_notification_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(f"Create faculty single notification email workflow for {user.name}", user=user, endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -657,7 +657,7 @@ def register_email_notification_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(f"Create faculty summary notification email workflow for {user.name}", user=user, endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -731,7 +731,7 @@ def register_email_notification_tasks(celery):
             db.session.add(item)
 
             try:
-                db.session.commit()
+                log_db_commit(f"Create new meeting request notification email workflow for project {req.project.name}", endpoint=self.name)
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -778,7 +778,7 @@ def register_email_notification_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(f"Create student single notification email workflow for {user.name}", user=user, endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -871,7 +871,7 @@ def register_email_notification_tasks(celery):
         db.session.add(item)
 
         try:
-            db.session.commit()
+            log_db_commit(f"Create student summary notification email workflow for {user.name}", user=user, endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

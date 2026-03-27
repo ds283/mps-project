@@ -19,6 +19,7 @@ from ..models import User, MessageOfTheDay
 from ..shared.context.global_context import render_template_context
 from ..shared.context.root_dashboard import get_root_dashboard_data
 from ..shared.utils import home_dashboard, get_approval_queue_data
+from ..shared.workflow_logging import log_db_commit
 
 
 @office.route("/dashboard")
@@ -82,7 +83,7 @@ def settings():
         user.summary_frequency = form.summary_frequency.data
 
         flash("All changes saved", "success")
-        db.session.commit()
+        log_db_commit("Saved office user settings", user=current_user)
 
         return home_dashboard()
 

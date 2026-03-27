@@ -89,7 +89,7 @@ def reject(id):
 
     record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_REJECTED
     # validator_id and validated_timestamp are set by validator for workflow_state
-    db.session.commit()
+    log_db_commit("Rejected project description", user=current_user)
 
     return redirect(url)
 
@@ -105,7 +105,7 @@ def requeue(id):
 
     record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
     # validator_id and validated_timestamp are set by validator for workflow_state
-    db.session.commit()
+    log_db_commit("Requeued project description for approval", user=current_user)
 
     return redirect(url)
 
@@ -143,7 +143,7 @@ def return_to_owner(id):
                     record.confirmed = False
                     names.add(pcl.name)
 
-    db.session.commit()
+    log_db_commit("Returned project description to owner for revision", user=current_user)
 
     celery = current_app.extensions["celery"]
     revise_notify = celery.tasks["app.tasks.issue_confirm.revise_notify"]
@@ -160,7 +160,7 @@ def publish_comment(id):
     comment = DescriptionComment.query.get_or_404(id)
 
     comment.visibility = DescriptionComment.VISIBILITY_PUBLISHED_BY_APPROVALS
-    db.session.commit()
+    log_db_commit("Published approvals comment to all users", user=current_user)
 
     return redirect(redirect_url())
 
@@ -195,7 +195,7 @@ def edit_comment(id):
 
         comment.last_edit_timestamp = datetime.now()
 
-        db.session.commit()
+        log_db_commit("Saved edits to approvals comment", user=current_user)
 
         return redirect(url)
 
@@ -274,7 +274,7 @@ def perform_delete_comment(id):
     comment.comment = None
     comment.deleted = True
     comment.last_edit_timestamp = datetime.now()
-    db.session.commit()
+    log_db_commit("Deleted approvals comment", user=current_user)
 
     return redirect(url)
 
@@ -286,7 +286,7 @@ def clean_comments(id):
     desc = ProjectDescription.query.get_or_404(id)
 
     desc.comments.filter_by(deleted=True).delete()
-    db.session.commit()
+    log_db_commit("Purged all deleted comments from project description thread", user=current_user)
 
     flash("All deleted comments have been removed from the thread.", "success")
     return redirect(redirect_url())

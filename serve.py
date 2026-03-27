@@ -10,7 +10,6 @@
 
 from importlib import import_module
 
-import flask_monitoringdashboard as dashboard
 from flask_security import current_user
 from sqlalchemy import inspect, text
 from waitress import serve
@@ -52,9 +51,6 @@ def get_user_id():
 
 
 app = create_app()
-dashboard.config.init_from(envvar="DASHBOARD_CONFIG_FILE")
-dashboard.config.group_by = get_user_id
-dashboard.bind(app)
 
 with app.app_context():
     engine = db.engine

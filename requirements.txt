@@ -51,7 +51,6 @@ Flask-Login==0.6.3
 Flask-Mailman==1.1.1
 Flask-Markdown==0.3
 Flask-Migrate==4.1.0
-Flask-MonitoringDashboard==5.0.2
 Flask-Principal==0.4.0
 flask-profiler==1.8.1
 flask-redis==0.4.0

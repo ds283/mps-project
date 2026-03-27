@@ -132,6 +132,10 @@ Changes to the database, apart from periodic maintenance tasks, are instrumented
 function defined in `app/shared/workflow_logging.py`. When making changes to any function that calls log_db_commit(),
 update the human-readable summary of the transaction if needed.
 
+### SQLAlchemty string columns
+
+SQLAlchemy String() columns should be declared with collation="utf8_bin" unless specified otherwise.
+
 ### AJAX row formatters for Datatables
 
 All elements should be rendered using Jinja2 templates, not simply injected as raw strings. For efficiency,
@@ -140,7 +144,7 @@ applying to the rows to be formatted.
 
 ## Jinja2 templates
 
-## Global context
+### Global context
 
 The following variables are available in the global context for all templates
 

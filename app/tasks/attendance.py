@@ -128,7 +128,11 @@ def register_attendance_tasks(celery):
                     db.session.flush()
 
                     workflow_id = workflow.id
-                    log_db_commit(f"Create attendance prompt email workflow for config {config.name}", endpoint=self.name)
+                    log_db_commit(
+                        f"Create attendance prompt email workflow for config {config.name}",
+                        endpoint=self.name,
+                        project_classes=[config.project_class],
+                    )
 
                     tasks = group(
                         check_event_for_attendance_prompt.si(event.id, workflow_id)
@@ -462,7 +466,12 @@ def register_attendance_tasks(celery):
         # cause a duplicate prompt to be queued.
         event.prompt_sent_timestamp = datetime.now()
         try:
-            log_db_commit(f"Queue attendance prompt email and mark event #{event_id} as notified", endpoint=self.name)
+            # PLEASE EXCLUDE FROM DATABASE INSTRUMENTATION SINCE ONLY A PERIODIC MAINTENANCE TASK
+            # log_db_commit(
+            #     f"Queue attendance prompt email and mark event #{event_id} as notified",
+            #     endpoint=self.name,
+            # )
+            db.session.commit()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -529,12 +538,18 @@ def register_attendance_tasks(celery):
             return msg
 
         owner: SubmissionRole = event.owner
+        record: SubmissionRecord = owner.submission
+        config: ProjectClassConfig = record.owner.config
 
         event.email_log.append(email_log)
         owner.email_log.append(email_log)
 
         try:
-            log_db_commit(f"Record sent attendance prompt email log for event #{event_id}", endpoint=self.name)
+            log_db_commit(
+                f"Record sent attendance prompt email log for event #{event_id}",
+                endpoint=self.name,
+                project_classes=[config.project_class],
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -566,7 +581,12 @@ def register_attendance_tasks(celery):
         if get_count(workflow.items) == 0:
             try:
                 db.session.delete(workflow)
-                log_db_commit(f"Delete empty attendance prompt email workflow #{workflow_id}", endpoint=self.name)
+                # PLEASE EXCLUDE FROM DATABASE INSTRUMENTATION SINCE ONLY A PERIODIC MAINTENANCE TASK
+                # log_db_commit(
+                #     f"Delete empty attendance prompt email workflow #{workflow_id}",
+                #     endpoint=self.name,
+                # )
+                db.session.commit()
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

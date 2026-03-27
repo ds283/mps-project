@@ -23,6 +23,8 @@
 * Implement UI for convenor to configure exemplar projects for each project class
 * Implement UI to expose these exemplar projects to students and supervisors via the project hub
 * Remove "faculty response" feedback from SubmissionRole et al, which has never been used
+* Work out how to call Celery tasks after an EmailWorkflowItem has dispatched. Need this to call
+  mark_attendance_prompt_sent() after sending attendance prompt.
 
 ## Refactoring
 

@@ -33,6 +33,7 @@ from flask_security import (
 )
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import aliased
 from sqlalchemy.sql import func
 
 import app.ajax as ajax
@@ -2084,7 +2085,12 @@ def workflow_log():
 
     # Build lists for filter controls
     tenants = db.session.query(Tenant).order_by(Tenant.name).all()
-    pclasses = db.session.query(ProjectClass).filter_by(active=True).order_by(ProjectClass.name).all()
+    pclasses = (
+        db.session.query(ProjectClass)
+        .filter_by(active=True)
+        .order_by(ProjectClass.name)
+        .all()
+    )
 
     return render_template_context(
         "admin/workflow_log.html",
@@ -2106,10 +2112,13 @@ def workflow_log_ajax():
     tenant_filter = request.args.get("tenant_filter")
 
     # Outer-join User and StudentData so we can search on both without losing background-task entries
+    initiator_user = aliased(User)
+    student_user = aliased(User)
     base_query = (
         db.session.query(WorkflowLogEntry)
-        .outerjoin(User, User.id == WorkflowLogEntry.initiator_id)
+        .outerjoin(initiator_user, initiator_user.id == WorkflowLogEntry.initiator_id)
         .outerjoin(StudentData, StudentData.id == WorkflowLogEntry.student_id)
+        .outerjoin(student_user, student_user.id == StudentData.id)
     )
 
     try:
@@ -2130,12 +2139,14 @@ def workflow_log_ajax():
 
     columns = {
         "user": {
-            "search": func.concat(User.first_name, " ", User.last_name),
+            "search": func.concat(
+                initiator_user.first_name, " ", initiator_user.last_name
+            ),
             "search_collation": "utf8_general_ci",
         },
         "student": {
-            "search": func.concat(StudentData.first_name, " ", StudentData.last_name),
-            "order": [StudentData.last_name, StudentData.first_name],
+            "search": func.concat(student_user.first_name, " ", student_user.last_name),
+            "order": [student_user.last_name, student_user.first_name],
             "search_collation": "utf8_general_ci",
         },
         "endpoint": {

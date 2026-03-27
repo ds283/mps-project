@@ -53,22 +53,46 @@ class MarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
     """
     Represents a marking scheme to be used as part of a marking workflow.
     The mark scheme defines what questions are asked. This is encoded in a JSON-serialized schema.
-    The schema may is an ordered list of blocks. Each block is a dict with the following keys:
-        - "title": string to be displayed as the title of the block
-        - "fields": ordered list of questions. Each question is a dict with the following keys:
-            - "key": string used as a unique identified for the question
-            - "text": text of the question, should be formatted on the marking form that is presented to the user
-            - "field_type": dict defining the type of response expected, containing the following keys:
-                * "type": one of "boolean", "text", "number", "percent"
-                * "min", "max": used with the number type to specify maximum and minimum allowed values
-                * "precision": used with the number type to specify the number of decimal places that are retained
-                * "default": an optional default value
+    Each schema should contain a "scheme" and "conflation_rule" element, and may optionally also
+    contain a "validation" element.
+        - "scheme": a scheme block, as described below
+        - "validation": a validation block, as described below
+        - "conflation_rule": string representing a valid Python expression the conflation rule used to generate a grade from this report,
+          with variables corresponding to the keys defined in the scheme block
+
+    SCHEME BLOCK
+    This consists of an ordered list of section blocks. Each section is a dict with the following keys:
+        - "title": REQUIRED, HTML-formatted string to be displayed as the title of the block
+        - "description": OPTIONAL, HTML-formatted string to be displayed below the title, describing the purpose of this block
+        - "fields": REQUIRED, ordered list of questions. Each question is a dict with the following keys:
+            - "key": REQUIRED, string used as a unique identified for the question
+            - "text": REQUIRED, text of the question, should be formatted on the marking form that is presented to the user
+            - "field_type": REQUIRED, dict defining the type of response expected, containing the following keys:
+                * "type": REQUIRED, one of "boolean", "text", "number", "percent"
+                * "min", "max": OPTIONAL, used with the number type to specify maximum and minimum allowed values
+                * "precision": OPTIONAL, used with the number type to specify the number of decimal places that are retained
+                * "default": OPTIONAL, an optional default value
 
     The different field types map to WTForms fields:
         - "boolean" -> BooleanField, with a suitable default if the "default" key is present
         - "text" -> TextField
-        - "number" -> FloatField, with a suitable default if the "default" key is present, and "min"/"max" values enforced by validators. The "precision" key should be implemented by rounding the output to the required precision.
+        - "number" -> FloatField, with a suitable default if the "default" key is present, and "min"/"max" values enforced by validators.
+          The "precision" key should be implemented by rounding the output to the required precision.
         - "percent" -> FloatField, but with "min"/"max" automatically chosen to be 0 and 100, and a precision of 1
+
+    VALIDATION BLOCK
+    The block contains a list of tests used to validate the response. Each test is a dict with the following keys:
+        - "test": string representing the test as a valid Python expression, with variables corresponding to the keys in the questions
+        - "action": a list action to take if validation fails. The available actions are
+            * "prevent_submit": the marking report should fail validation, so that it cannot be submitted at all. If "prevent_submit"
+              is used it should be the only action.
+            * "email": generate an email to the convenor (and possibly other users) to with a notification of the validation failure.
+            * "web": show this validation failure to the convenor in the web interface
+
+    NOTES
+    The validation "test" and "conflation_rule" fields should be valid Python expressions that evaluate to a boolean and a float
+    representing a percentage, respectively. They should use variables corresponding to the keys defined in the questions.
+    To evaluate them, these keys will be replaced with the submitted response.
     """
 
     __tablename__ = "marking_schemes"

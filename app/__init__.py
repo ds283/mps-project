@@ -181,6 +181,7 @@ def create_app():
             # of transactions for Tracing.
             # We recommend adjusting this value in production,
             traces_sample_rate=sentry_trace,
+            release=site_revision,
         )
 
     print(f'-- using instance folder "{instance_folder}"', file=stderr)

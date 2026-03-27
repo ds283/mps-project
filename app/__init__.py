@@ -165,7 +165,6 @@ def create_app():
     from sentry_sdk.integrations.celery import CeleryIntegration
     from sentry_sdk.integrations.flask import FlaskIntegration
 
-    print("-- initializing Sentry SDK")
     sentry_endpoint = os.environ.get("SENTRY_ENDPOINT")
     sentry_trace = 0.0
     try:
@@ -173,6 +172,9 @@ def create_app():
     except ValueError:
         pass
     sentry_env = os.environ.get("SENTRY_ENVIRONMENT")
+    print(
+        f'-- initializing Sentry SDK with trace rate {sentry_trace:.3g} for environment "{sentry_env}"'
+    )
     if sentry_endpoint is not None:
         sentry_sdk.init(
             dsn=sentry_endpoint,

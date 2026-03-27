@@ -85,10 +85,13 @@ def compute_rank(self, num_live, rank_type, cid, uuid, query, accessor, writer):
 
                 current_record += 1
 
-            log_db_commit(
-                f"Store {rank_type} rankings for project class config #{cid} (uuid={str(uuid)})",
-                endpoint=self.name,
-            )
+            # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
+            # this endpoint is too noisy
+            # log_db_commit(
+            #     f"Store {rank_type} rankings for project class config #{cid} (uuid={str(uuid)})",
+            #     endpoint=self.name,
+            # )
+            db.session.commit()
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -163,10 +166,13 @@ def register_popularity_tasks(celery):
             data.popularity_data.append(rec)
             db.session.flush()
 
-            log_db_commit(
-                f"Insert PopularityRecord for LiveProject #{liveid} (uuid={str(uuid)}, score={score})",
-                endpoint=self.name,
-            )
+            # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
+            # this endpoint is too noisy
+            # log_db_commit(
+            #     f"Insert PopularityRecord for LiveProject #{liveid} (uuid={str(uuid)}, score={score})",
+            #     endpoint=self.name,
+            # )
+            db.session.commit()
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -232,10 +238,13 @@ def register_popularity_tasks(celery):
             for record in records:
                 record.lowest_score_rank = lowest_rank
 
-            log_db_commit(
-                f"Store lowest popularity score rank ({lowest_rank}) for config #{cid} (uuid={str(uuid)})",
-                endpoint=self.name,
-            )
+            # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
+            # this endpoint is too noisy
+            # log_db_commit(
+            #     f"Store lowest popularity score rank ({lowest_rank}) for config #{cid} (uuid={str(uuid)})",
+            #     endpoint=self.name,
+            # )
+            db.session.commit()
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -333,8 +342,8 @@ def register_popularity_tasks(celery):
 
         # only compute popularity for project classes where student selections are open
         if (
-                config.selector_lifecycle
-                != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
+            config.selector_lifecycle
+            != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
         ):
             self.update_state(state=states.SUCCESS)
             return {
@@ -409,7 +418,7 @@ def register_popularity_tasks(celery):
 
             for record in records:
                 if record is not None and (
-                        highest_score is None or record.score > highest_score
+                    highest_score is None or record.score > highest_score
                 ):
                     highest_score = record.score
                     retained_record = record
@@ -420,10 +429,13 @@ def register_popularity_tasks(celery):
                         dropped.append((record.id, str(record.datestamp)))
                         db.session.delete(record)
 
-                log_db_commit(
-                    f"Thin popularity records for {period} {unit} bin: retained #{retained_record.id}, dropped {len(dropped)} record(s)",
-                    endpoint=self.name,
-                )
+                # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
+                # this endpoint is too noisy
+                # log_db_commit(
+                #     f"Thin popularity records for {period} {unit} bin: retained #{retained_record.id}, dropped {len(dropped)} record(s)",
+                #     endpoint=self.name,
+                # )
+                db.session.commit()
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -490,7 +502,7 @@ def register_popularity_tasks(celery):
                 pass
 
             elif max_daily_age is None or (
-                    max_daily_age is not None and age < max_daily_age
+                max_daily_age is not None and age < max_daily_age
             ):
                 if age.days in daily:
                     daily[age.days].append((record.id, record.datestamp))
@@ -545,8 +557,8 @@ def register_popularity_tasks(celery):
         )
 
         if (
-                config.selector_lifecycle
-                == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
+            config.selector_lifecycle
+            == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
         ):
             tasks = group(
                 thin_popularity_data.si(proj.id) for proj in config.live_projects

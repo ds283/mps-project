@@ -44,8 +44,7 @@ def register_background_tasks(celery):
                 )
             ).delete()
 
-            # PLEASE EXCLUDE FROM DATABASE INSTRUMENTATION SINCE ONLY A PERIODIC MAINTENANCE TASK
-            db.session.commit()
+            db.session.commit()  # intentionally not logged: periodic maintenance task
 
         except SQLAlchemyError as e:
             db.session.rollback()

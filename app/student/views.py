@@ -611,13 +611,7 @@ def selector_view_project(sid, pid):
 
     project.last_view = datetime.today()
     try:
-        # THIS IS NOT A WORKFLOW EVENT THAT CHANGES THE DATABASE, SO NO NEED TO INSTRUMENT
-        # log_db_commit(
-        #     f"Student {current_user.name} viewed project '{project.name}' for {config.project_class.name}",
-        #     user=current_user,
-        #     project_classes=config.project_class,
-        # )
-        db.session.commit()
+        db.session.commit()  # intentionally not logged: updates last-view timestamp on every project view
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

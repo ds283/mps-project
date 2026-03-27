@@ -451,10 +451,8 @@ def create_app():
         # Notification.query.filter_by(user_id=user.id).delete()
 
         user.last_active = datetime.now()
-        # THIS IS NOT A WORKFLOW EVENT THAT CHANGES THE DATABASE, SO NO NEED TO INSTRUMENT
-        # log_db_commit("Record last active timestamp on user login", user=user)
         try:
-            db.session.commit()
+            log_db_commit("Record last-active timestamp on user login", user=user, endpoint="login")
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 

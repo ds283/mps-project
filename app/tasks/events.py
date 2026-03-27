@@ -28,6 +28,7 @@ from ..models import (
     SubmittingStudent,
 )
 from ..shared.tasks import post_task_update_msg
+from ..shared.workflow_logging import log_db_commit
 
 
 def register_supervision_event_tasks(celery):
@@ -167,7 +168,12 @@ def register_supervision_event_tasks(celery):
                         db.session.add(event)
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Populated supervision events for submission period '{period.display_name}'",
+                user=user,
+                project_classes=period.config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

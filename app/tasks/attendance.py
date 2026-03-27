@@ -466,12 +466,7 @@ def register_attendance_tasks(celery):
         # cause a duplicate prompt to be queued.
         event.prompt_sent_timestamp = datetime.now()
         try:
-            # PLEASE EXCLUDE FROM DATABASE INSTRUMENTATION SINCE ONLY A PERIODIC MAINTENANCE TASK
-            # log_db_commit(
-            #     f"Queue attendance prompt email and mark event #{event_id} as notified",
-            #     endpoint=self.name,
-            # )
-            db.session.commit()
+            db.session.commit()  # intentionally not logged: periodic attendance notification task
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -581,12 +576,7 @@ def register_attendance_tasks(celery):
         if get_count(workflow.items) == 0:
             try:
                 db.session.delete(workflow)
-                # PLEASE EXCLUDE FROM DATABASE INSTRUMENTATION SINCE ONLY A PERIODIC MAINTENANCE TASK
-                # log_db_commit(
-                #     f"Delete empty attendance prompt email workflow #{workflow_id}",
-                #     endpoint=self.name,
-                # )
-                db.session.commit()
+                db.session.commit()  # intentionally not logged: periodic maintenance cleanup
             except SQLAlchemyError as e:
                 db.session.rollback()
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

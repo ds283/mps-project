@@ -17,6 +17,7 @@ from celery.exceptions import Ignore
 from ..database import db
 from ..models import User, ProjectClassConfig, EnrollmentRecord, Project, LiveProject
 from ..shared.sqlalchemy import get_count
+from ..shared.workflow_logging import log_db_commit
 
 
 def register_assessor_tasks(celery):
@@ -94,7 +95,12 @@ def register_assessor_tasks(celery):
             )
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Attached {faculty.user.name} as assessor to {count} library project(s) in class '{record.pclass.name}'",
+                user=user,
+                project_classes=record.pclass,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -177,7 +183,12 @@ def register_assessor_tasks(celery):
             )
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Attached {faculty.user.name} as assessor to {count} live project(s) in class '{record.pclass.name}'",
+                user=user,
+                project_classes=record.pclass,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

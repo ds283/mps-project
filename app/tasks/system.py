@@ -361,10 +361,7 @@ def register_system_tasks(celery):
         user.last_active = timestamp
 
         try:
-            # PLEASE EXCLUDE FROM POLICY TO INSTRUMENT AND LOG ALL COMMITS
-            # this endpoint is too noisy
-            # log_db_commit("Update user last-active timestamp and mark stale notifications for removal", user=user, endpoint=self.name)
-            db.session.commit()
+            db.session.commit()  # intentionally not logged: runs on every user activity heartbeat
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

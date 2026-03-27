@@ -22,6 +22,7 @@ from ..models import (
     SubmitterAttendanceData,
 )
 from ..shared.sqlalchemy import get_count
+from ..shared.workflow_logging import log_db_commit
 
 
 def register_assessment_tasks(celery):
@@ -84,4 +85,8 @@ def register_assessment_tasks(celery):
                         commit = True
 
         if commit:
-            db.session.commit()
+            log_db_commit(
+                f"Added submitter attendance records for SubmittingStudent id={submitter_id}",
+                student=submitter.student,
+                endpoint=self.name,
+            )

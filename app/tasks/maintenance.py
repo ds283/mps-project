@@ -1066,12 +1066,7 @@ def register_maintenance_tasks(celery):
                     print(f'@@ prune_project_tags: removing project tag "{label.name}"')
                     db.session.delete(label)
 
-                # PLEASE EXCLUDE FROM DATABASE INSTRUMENTATION SINCE ONLY A PERIODIC MAINTENANCE TASK
-                # log_db_commit(
-                #     f'Pruned unused project tag "{label.name}"',
-                #     endpoint=self.name,
-                # )
-                db.session.commit()
+                db.session.commit()  # intentionally not logged: high-frequency maintenance loop
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -1093,12 +1088,7 @@ def register_maintenance_tasks(celery):
                     )
                     db.session.delete(label)
 
-                # PLEASE EXCLUDE FROM DATABASE INSTRUMENTATION SINCE ONLY A PERIODIC MAINTENANCE TASK
-                # log_db_commit(
-                #     f'Pruned unused feedback template tag "{label.name}"',
-                #     endpoint=self.name,
-                # )
-                db.session.commit()
+                db.session.commit()  # intentionally not logged: high-frequency maintenance loop
 
         except SQLAlchemyError as e:
             db.session.rollback()

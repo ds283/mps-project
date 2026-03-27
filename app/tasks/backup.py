@@ -657,8 +657,7 @@ def register_backup_tasks(celery):
                     print(f'@@ prune_backup_labels: removing unused tag "{label.name}"')
                     db.session.delete(label)
 
-                # PLEASE EXCLUDE FROM DATABASE INSTRUMENTATION SINCE ONLY A PERIODIC MAINTENANCE TASK
-                db.session.commit()
+                db.session.commit()  # intentionally not logged: periodic maintenance task
 
         except SQLAlchemyError as e:
             db.session.rollback()

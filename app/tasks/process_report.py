@@ -29,6 +29,7 @@ from ..models import (
     StudentData,
 )
 from ..shared.security import validate_nonce
+from ..shared.workflow_logging import log_db_commit
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.scratch import ScratchFileManager
 
@@ -400,7 +401,12 @@ def register_process_report_tasks(celery):
                     new_asset.access_control_roles = asset.access_control_roles
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Processed submitted report for submission record id={record_id}",
+                student=record.owner.student,
+                project_classes=record.owner.config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -427,7 +433,12 @@ def register_process_report_tasks(celery):
         record.timestamp = datetime.now()
 
         try:
-            db.session.commit()
+            log_db_commit(
+                f"Finalized report processing for submission record id={record_id}",
+                student=record.owner.student,
+                project_classes=record.owner.config.project_class,
+                endpoint=self.name,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

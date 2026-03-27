@@ -13,6 +13,10 @@ They are owned by a single User instance associated with the user who created th
 that are created automatically in the background as explained in TASK 3. Each entry should contain a
 free-form HTML field containing the main journal entry.
 
+Journal entries may be sensitive. To store them securely in the database, use the EncryptedType() SQLAlchemy
+column type and AesEngine to encrypt the entry. See the StudentData.exam_number field in @app/models/students.py
+for an example of how this is done.
+
 Implement the database models needed for this, but do NOT attempt to perform the database migration. I will
 perform the migration manually.
 

@@ -62,6 +62,17 @@ class WorkflowLogEntry(db.Model):
         backref=db.backref("workflow_log_entries", lazy="dynamic"),
     )
 
+    # Student this transaction applies to, if present
+    student_id = db.Column(
+        db.Integer(), db.ForeignKey("student_data.id"), default=None, nullable=True
+    )
+    student = db.relationship(
+        "StudentData",
+        foreign_keys=[student_id],
+        uselist=False,
+        backref=db.backref("workflow_log_entries", lazy="dynamic"),
+    )
+
     # Name of the Flask route or Celery task that performed the commit
     endpoint = db.Column(
         db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"),

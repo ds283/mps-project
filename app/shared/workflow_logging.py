@@ -106,6 +106,18 @@ def _resolve_user_id(user) -> Optional[int]:
     return getattr(user, "id", None)
 
 
+def _resolve_student_id(student) -> Optional[int]:
+    """Return the integer primary key for student, or None."""
+    if student is None:
+        return None
+
+    if isinstance(student, int):
+        return student
+
+    # Assume either a User or StudentData instance with a .id attribute (they are guaranteed to be the same)
+    return getattr(student, "id", None)
+
+
 def _resolve_project_classes(project_classes) -> List:
     """Return a list of ProjectClass instances (possibly empty)."""
     if project_classes is None:
@@ -118,12 +130,13 @@ def _resolve_project_classes(project_classes) -> List:
 
 
 def log_db_commit(
-        summary: str,
-        *,
-        user=None,
-        project_classes=None,
-        endpoint: Optional[str] = None,
-        _commit: bool = True,
+    summary: str,
+    *,
+    user=None,
+    student=None,
+    project_classes=None,
+    endpoint: Optional[str] = None,
+    _commit: bool = True,
 ) -> Optional[WorkflowLogEntry]:
     """
     Add a WorkflowLogEntry to the current session and (by default) commit it.
@@ -135,11 +148,13 @@ def log_db_commit(
     """
     resolved_endpoint = _resolve_endpoint(endpoint)
     initiator_id = _resolve_user_id(user)
+    student_id = _resolve_student_id(student)
     pclasses = _resolve_project_classes(project_classes)
 
     entry = WorkflowLogEntry(
         timestamp=datetime.now(),
         initiator_id=initiator_id,
+        student_id=student_id,
         endpoint=resolved_endpoint,
         summary=summary,
     )

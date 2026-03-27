@@ -44,7 +44,9 @@ def register_email(celery):
                 email: EmailLog
                 db.session.delete(email)
 
-            log_db_commit("Prune old email log entries", endpoint=self.name)
+            # PLEASE EXCLUDE FROM DATABASE INSTRUMENTATION SINCE ONLY A PERIODIC MAINTENANCE TASK
+            # log_db_commit("Prune old email log entries", endpoint=self.name)
+            db.session.commit()
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -87,7 +89,9 @@ def register_email(celery):
                     )
                     db.session.delete(label)
 
-                log_db_commit("Prune unused email template labels", endpoint=self.name)
+                # PLEASE EXCLUDE FROM DATABASE INSTRUMENTATION SINCE ONLY A PERIODIC MAINTENANCE TASK
+                # log_db_commit("Prune unused email template labels", endpoint=self.name)
+                db.session.commit()
 
         except SQLAlchemyError as e:
             db.session.rollback()

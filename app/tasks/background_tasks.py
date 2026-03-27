@@ -8,15 +8,14 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from datetime import datetime, timedelta
+
 from flask import current_app
+from sqlalchemy import and_, or_
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import TaskRecord
-
-from datetime import datetime, timedelta
-
-from sqlalchemy import or_, and_
-from sqlalchemy.exc import SQLAlchemyError
 
 
 def register_background_tasks(celery):
@@ -44,6 +43,8 @@ def register_background_tasks(celery):
                     TaskRecord.start_date < limit,
                 )
             ).delete()
+
+            # PLEASE EXCLUDE FROM DATABASE INSTRUMENTATION SINCE ONLY A PERIODIC MAINTENANCE TASK
             db.session.commit()
 
         except SQLAlchemyError as e:

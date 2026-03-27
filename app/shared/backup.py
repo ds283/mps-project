@@ -15,10 +15,10 @@ from flask_login import current_user
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
+from ..database import db
+from ..models import BackupConfiguration, BackupLabel, BackupRecord
 from .asset_tools import AssetCloudAdapter
 from .sqlalchemy import get_count
-from ..database import db
-from ..models import BackupConfiguration, BackupRecord, BackupLabel
 
 
 def get_backup_config():
@@ -160,6 +160,8 @@ def remove_backup(id):
     # (so we are misled about what backups are being retained)
     try:
         db.session.delete(record)
+
+        # PLEASE EXCLUDE FROM DATABASE INSTRUMENTATION SINCE ONLY A PERIODIC MAINTENANCE TASK
         db.session.commit()
 
     except SQLAlchemyError as e:

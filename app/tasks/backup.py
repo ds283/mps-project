@@ -28,7 +28,13 @@ from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import BackupLabel, BackupRecord, EmailTemplate, EmailWorkflow, EmailWorkflowItem
+from ..models import (
+    BackupLabel,
+    BackupRecord,
+    EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
+)
 from ..models.emails import encode_email_payload
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.backup import (
@@ -651,6 +657,7 @@ def register_backup_tasks(celery):
                     print(f'@@ prune_backup_labels: removing unused tag "{label.name}"')
                     db.session.delete(label)
 
+                # PLEASE EXCLUDE FROM DATABASE INSTRUMENTATION SINCE ONLY A PERIODIC MAINTENANCE TASK
                 db.session.commit()
 
         except SQLAlchemyError as e:

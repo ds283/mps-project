@@ -816,7 +816,7 @@ def register_issue_confirm_tasks(celery):
             recipients = recipients.union(approvals_team)
 
         # split comment string into words and search for @-style tags
-        rgx = re.compile("([\w|@][\w']*\w|\w)")
+        rgx = re.compile(r"([\w@][\w']*\w|\w)")
         words = re.findall(rgx, comment.comment)
 
         tags = [w[1:] for w in words if w[0] == "@"]

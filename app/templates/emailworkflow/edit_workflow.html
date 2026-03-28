@@ -77,6 +77,23 @@
                         <a class="btn btn-outline-secondary" href="{{ url }}">Cancel</a>
                     </div>
                     <div class="d-flex flex-row flex-wrap justify-content-end align-items-center gap-2">
+                        {% set edit_wf_url = url_for('emailworkflow.edit_workflow', id=workflow.id, url=url, text=text) %}
+                        {% if workflow.template.pclass_id is not none %}
+                            <a class="btn btn-outline-secondary btn-sm"
+                               href="{{ url_for('convenor.email_templates', pclass_id=workflow.template.pclass_id, url=edit_wf_url, text='Edit workflow') }}">
+                                <i class="fas fa-envelope fa-fw"></i> Edit templates&hellip;
+                            </a>
+                        {% elif workflow.template.tenant_id is not none %}
+                            <a class="btn btn-outline-secondary btn-sm"
+                               href="{{ url_for('tenants.email_templates', tenant_id=workflow.template.tenant_id, url=edit_wf_url, text='Edit workflow') }}">
+                                <i class="fas fa-envelope fa-fw"></i> Edit templates&hellip;
+                            </a>
+                        {% elif is_root %}
+                            <a class="btn btn-outline-secondary btn-sm"
+                               href="{{ url_for('admin.global_email_templates') }}">
+                                <i class="fas fa-envelope fa-fw"></i> Edit templates&hellip;
+                            </a>
+                        {% endif %}
                         <a class="btn btn-outline-secondary btn-sm"
                            href="{{ url_for('emailworkflow.clone_workflow_template', id=workflow.id, url=url, text=text) }}">
                             <i class="fas fa-copy fa-fw"></i> Duplicate and edit template

@@ -943,6 +943,11 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
     # any error message
     error_message = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
+    # callbacks to invoke after a successful send, serialized as a JSON list of
+    # {"task": <task_name>, "args": [...], "kwargs": {...}} dicts;
+    # the primary key of the newly created EmailLog item is prepended to args at call time
+    callbacks = db.Column(db.Text(), nullable=True)
+
     # logged email identifier (valid once the email has been sent)
     # we should delete this EmailWorkflowItem if/when the EmailLog item
     # it produces is deleted
@@ -984,6 +989,13 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
             return {}
         return json.loads(self.body_payload)
 
+    @property
+    def callbacks_list(self) -> List[Dict]:
+        """Deserialize the JSON-encoded callbacks list."""
+        if self.callbacks is None:
+            return []
+        return json.loads(self.callbacks)
+
     @classmethod
     def build_(
         cls,
@@ -993,6 +1005,7 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
         from_email=None,
         reply_to=None,
         attachments=None,
+        callbacks=None,
         creator=None,
     ):
         if recipient_list is None:
@@ -1036,12 +1049,16 @@ class EmailWorkflowItem(db.Model, EditingMetadataMixin):
                 f'Invalid creator type "{type(creator)}" (value="{creator}") in EmailWorkflow.build_(): expected User instance or integer primary key'
             )
 
+        if callbacks is None:
+            callbacks = []
+
         return cls(
             recipient_list=json.dumps(recipient_list),
             from_email=from_email,
             reply_to=json.dumps(reply_to) if reply_to is not None else None,
             subject_payload=json.dumps(subject_payload),
             body_payload=json.dumps(body_payload),
+            callbacks=json.dumps(callbacks),
             attachments=attachments,
             subject_override=None,
             body_override=None,

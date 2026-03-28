@@ -875,7 +875,11 @@ def delete_selector(sid):
             db.session.delete(sel)
             db.session.flush()
 
-            create_auto_journal_entry(student, journal_html, project_class_config=config)
+            create_auto_journal_entry(
+                student, journal_html,
+                title=f"Selector record deleted: {pclass.name} ({year_str})",
+                project_class_config=config,
+            )
 
             log_db_commit(
                 "Deleted selector record"

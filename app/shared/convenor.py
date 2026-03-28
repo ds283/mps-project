@@ -185,7 +185,11 @@ def add_selector(student, config_id, convert=True, autocommit=False):
             f"</ul>"
             f"<p><em>This entry was created automatically.</em></p>"
         )
-        create_auto_journal_entry(item, html, project_class_config=config)
+        create_auto_journal_entry(
+            item, html,
+            title=f"Enrolled as selector: {pclass_name} ({year_str})",
+            project_class_config=config,
+        )
 
     if autocommit:
         # can expect exceptions to be caught by the client code
@@ -250,7 +254,11 @@ def add_blank_submitter(
             f"</ul>"
             f"<p><em>This entry was created automatically.</em></p>"
         )
-        create_auto_journal_entry(item, html, project_class_config=config)
+        create_auto_journal_entry(
+            item, html,
+            title=f"Enrolled as submitter: {pclass_name} ({year_str})",
+            project_class_config=config,
+        )
 
     for i in range(0, config.number_submissions):
         period = config.get_period(i + 1)

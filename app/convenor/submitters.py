@@ -697,7 +697,11 @@ def delete_submitter(sid):
             db.session.delete(sub)
             db.session.flush()
 
-            create_auto_journal_entry(student, journal_html, project_class_config=config)
+            create_auto_journal_entry(
+                student, journal_html,
+                title=f"Submitter record deleted: {pclass.name} ({year_str})",
+                project_class_config=config,
+            )
 
             log_db_commit(
                 "Deleted submitter record",

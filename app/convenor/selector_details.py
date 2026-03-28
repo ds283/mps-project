@@ -1003,7 +1003,11 @@ def create_custom_offer(sel_id, proj_id):
                 f"</ul>"
                 f"<p><em>This entry was created automatically.</em></p>"
             )
-            create_auto_journal_entry(sel.student, html, project_class_config=config)
+            create_auto_journal_entry(
+                sel.student, html,
+                title=f"Custom offer created: {proj.name}",
+                project_class_config=config,
+            )
 
             log_db_commit(
                 f"Created custom offer for selector {sel.student.user.name} on project {proj.name}",
@@ -1239,7 +1243,11 @@ def delete_custom_offer(offer_id):
         db.session.delete(offer)
         db.session.flush()
 
-        create_auto_journal_entry(_offer_student, journal_html, project_class_config=_offer_config)
+        create_auto_journal_entry(
+            _offer_student, journal_html,
+            title=f"Custom offer deleted: {_offer_project_name}",
+            project_class_config=_offer_config,
+        )
 
         log_db_commit(
             f"Deleted custom offer for selector {_offer_selector_name} on project {_offer_project_name}",

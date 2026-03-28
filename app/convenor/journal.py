@@ -124,7 +124,7 @@ def student_journal_ajax(student_id):
 
     base_query = (
         db.session.query(StudentJournalEntry)
-        .join(User, User.id == StudentJournalEntry.owner_id)
+        .join(User, User.id == StudentJournalEntry.owner_id, isouter=True)
         .filter(StudentJournalEntry.student_id == student_id)
     )
 

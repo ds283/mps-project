@@ -14,12 +14,13 @@ from ..database import db
 from ..models import MainConfig, StudentJournalEntry
 
 
-def create_auto_journal_entry(student, html_content, project_class_config=None):
+def create_auto_journal_entry(student, html_content, title=None, project_class_config=None):
     """
     Create an automatically-generated journal entry for a student with no owner.
 
     :param student: StudentData instance
     :param html_content: HTML string for the entry body
+    :param title: optional short title string for the entry
     :param project_class_config: optional single ProjectClassConfig to link the entry to
     """
     config = db.session.query(MainConfig).order_by(MainConfig.year.desc()).first()
@@ -30,6 +31,7 @@ def create_auto_journal_entry(student, html_content, project_class_config=None):
         config_year=config_year,
         created_timestamp=datetime.now(),
         owner_id=None,
+        title=title,
         entry=html_content,
     )
     db.session.add(entry)

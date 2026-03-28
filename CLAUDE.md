@@ -160,3 +160,8 @@ The following variables are available in the global context for all templates
 - `current_tenant` is the current tenant object
 
 Look in _build_global_context() in @app/shared/context/global_context.py for more variables.
+
+### Bootstrap markup
+
+- Prefer not to use `bg-info` or `text-info` classes, which are hard to read
+- Do not use `text-warning` which is hard to read

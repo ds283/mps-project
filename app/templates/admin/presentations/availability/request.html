@@ -19,7 +19,9 @@
             </div>
             <form action="{{ url_for('admin.initialize_assessment', id=assessment.id) }}"
                   method="POST" name="availability-fom">
+                {{ form.hidden_tag() }}
                 {{ date_field(form.availability_deadline, 'datetimepicker1') }}
+                {{ wtf.render_field(form.availability_template) }}
                 <div class="d-flex flex-row justify-content-end gap-2">
                     {% if not assessment.requested_availability %}
                         <a class="btn btn-outline-secondary" href="{{ url_for('admin.skip_availability', id=assessment.id) }}">

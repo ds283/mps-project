@@ -40,7 +40,7 @@ from ..task_queue import progress_update, register_task
 
 def register_issue_confirm_tasks(celery):
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
-    def pclass_issue(self, task_id, config_id, convenor_id, deadline):
+    def pclass_issue(self, task_id, config_id, convenor_id, deadline, confirm_template_id=None):
         progress_update(
             task_id,
             TaskRecord.RUNNING,
@@ -153,7 +153,7 @@ def register_issue_confirm_tasks(celery):
             ),
             issue_group,
             issue_update_db.s(task_id, config_id, convenor_id, deadline),
-            issue_notifications.s(task_id, config_id, convenor_id),
+            issue_notifications.s(task_id, config_id, convenor_id, confirm_template_id=confirm_template_id),
             issue_finalize.si(task_id, config_id, convenor_id),
         ).on_error(issue_fail.si(task_id, convenor_id))
 
@@ -208,7 +208,7 @@ def register_issue_confirm_tasks(celery):
         return notify_list
 
     @celery.task(bind=True, default_retry_delay=30)
-    def issue_notifications(self, notify_list, task_id, config_id, convenor_id):
+    def issue_notifications(self, notify_list, task_id, config_id, convenor_id, confirm_template_id=None):
         progress_update(
             task_id,
             TaskRecord.RUNNING,
@@ -231,9 +231,12 @@ def register_issue_confirm_tasks(celery):
             )
             raise Ignore()
 
-        template = EmailTemplate.find_template_(
-            EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass=config.project_class
-        )
+        if confirm_template_id is not None:
+            template = db.session.get(EmailTemplate, confirm_template_id)
+        else:
+            template = EmailTemplate.find_template_(
+                EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass=config.project_class
+            )
         workflow = EmailWorkflow.build_(
             name=f"Confirmation request: {config.project_class.name}",
             template=template,
@@ -420,7 +423,7 @@ def register_issue_confirm_tasks(celery):
         return 1
 
     @celery.task(bind=True, default_retry_delay=30)
-    def reminder_email(self, config_id, convenor_id):
+    def reminder_email(self, config_id, convenor_id, reminder_template_id=None):
         try:
             config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
                 id=config_id
@@ -440,9 +443,12 @@ def register_issue_confirm_tasks(celery):
         for faculty in config.faculty_waiting_confirmation:
             recipients.add(faculty.id)
 
-        template = EmailTemplate.find_template_(
-            EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass=config.project_class
-        )
+        if reminder_template_id is not None:
+            template = db.session.get(EmailTemplate, reminder_template_id)
+        else:
+            template = EmailTemplate.find_template_(
+                EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass=config.project_class
+            )
         workflow = EmailWorkflow.build_(
             name=f"Confirmation reminder: {config.project_class.name}",
             template=template,
@@ -478,22 +484,44 @@ def register_issue_confirm_tasks(celery):
         return self.replace(tasks)
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_reminder_email(self, faculty_id, config_id, workflow_id):
+    def send_reminder_email(self, faculty_id, config_id, workflow_id=None, reminder_template_id=None):
         try:
             data: FacultyData = FacultyData.query.filter_by(id=faculty_id).first()
             config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
                 id=config_id
             ).first()
-            workflow: EmailWorkflow = EmailWorkflow.query.filter_by(id=workflow_id).first()
+            workflow: EmailWorkflow = EmailWorkflow.query.filter_by(id=workflow_id).first() if workflow_id is not None else None
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if data is None or config is None or workflow is None:
+        if data is None or config is None:
             self.update_state(
                 "FAILURE", meta={"msg": "Could not load database records"}
             )
             raise Ignore()
+
+        # if no workflow was supplied (individual reminder case), create one now
+        if workflow is None:
+            if reminder_template_id is not None:
+                template = db.session.get(EmailTemplate, reminder_template_id)
+            else:
+                template = EmailTemplate.find_template_(
+                    EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass=config.project_class
+                )
+            workflow = EmailWorkflow.build_(
+                name=f"Confirmation reminder: {config.project_class.name}",
+                template=template,
+                defer=timedelta(hours=1),
+                pclasses=[config.project_class],
+            )
+            db.session.add(workflow)
+            try:
+                db.session.flush()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
 
         projects = list(data.projects_offered(config.project_class))
 

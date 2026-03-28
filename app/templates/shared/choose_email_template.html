@@ -1,0 +1,47 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $(document).ready(function () {
+            $('form select').each(function () {
+                $(this).select2({
+                    theme: 'bootstrap-5',
+                    selectionCssClass: 'select2--small',
+                    dropdownCssClass: 'select2--small',
+                    placeholder: 'Select a template...'
+                });
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block formtitle %}{{ title }}{% endblock %}
+
+{% block form_content %}
+    <form method="POST" action="{{ action }}">
+        {{ form.hidden_tag() }}
+        {% if message %}
+            <p class="mb-3">{{ message }}</p>
+        {% endif %}
+        {% for item in template_fields %}
+            {% if item.heading %}
+                <h6 class="mt-3 mb-1 text-secondary fw-semibold">{{ item.heading }}</h6>
+            {% endif %}
+            {{ wtf.render_field(item.field) }}
+        {% endfor %}
+        <div class="mt-3 d-flex gap-2">
+            {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+            {% if cancel_url %}
+                <a class="btn btn-outline-secondary" href="{{ cancel_url }}">Cancel</a>
+            {% endif %}
+        </div>
+    </form>
+{% endblock %}

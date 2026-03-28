@@ -1,6 +1,23 @@
 {% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $(document).ready(function () {
+            $('#marking_template').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select a template...'
+            });
+        });
+    </script>
+{% endblock %}
 
 {% block title %}
     Test catch-up of email notifications for {{ config.name }}
@@ -29,6 +46,7 @@
                                     recipients, but rather to a sink email address. This allows the
                                     outgoing emails to be audited to ensure they are correct.</p>
                                 {{ wtf.render_field(form.target_email) }}
+                                {{ wtf.render_field(form.marking_template) }}
                             </div>
                         </div>
                         <div class="row vertical-bottom">

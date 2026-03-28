@@ -68,6 +68,7 @@ from ..shared.forms.queries import (
     BuildConvenorRealName,
     BuildDegreeProgrammeName,
     BuildEmailTemplateLabelName,
+    BuildWorkflowTemplateLabel,
     BuildOfficeContactName,
     BuildPossibleApprovers,
     BuildPossibleOfficeContacts,
@@ -1649,6 +1650,16 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
                     "The maximum number of project types must be at least as large as the maximum number of group project types."
                 )
 
+        @staticmethod
+        def validate_pclasses_to_include(form, field):
+            pclasses = field.data or []
+            tenant_ids = {pc.tenant_id for pc in pclasses if pc is not None}
+            if len(tenant_ids) > 1:
+                raise ValidationError(
+                    "All selected project classes must belong to the same tenant. "
+                    "Please select only project classes from a single institution."
+                )
+
         include_matches = QuerySelectMultipleField(
             "When levelling workloads, include CATS from existing matches",
             query_factory=include_matches_query,
@@ -1908,6 +1919,19 @@ def PresentationAssessmentMixinFactory(
                 get_label=BuildSubmissionPeriodName,
             )
 
+        @staticmethod
+        def validate_submission_periods(form, field):
+            periods = field.data or []
+            tenant_ids = set()
+            for period in periods:
+                if period is not None and period.config is not None and period.config.project_class is not None:
+                    tenant_ids.add(period.config.project_class.tenant_id)
+            if len(tenant_ids) > 1:
+                raise ValidationError(
+                    "All selected submission periods must belong to project classes from the same tenant. "
+                    "Please select only submission periods from a single institution."
+                )
+
     return PresentationAssessmentMixin
 
 
@@ -2148,6 +2172,14 @@ def AvailabilityFormFactory(assessment: PresentationAssessment):
         if not assessment.skip_availability:
             # submit button: open feedback
             issue_requests = SubmitField("Issue availability requests")
+
+        # email template selector (query_factory injected by the view)
+        availability_template = QuerySelectField(
+            "Email template",
+            allow_blank=False,
+            get_label=BuildWorkflowTemplateLabel,
+            validators=[DataRequired(message="Please select an email template.")],
+        )
 
     return AvailabilityForm
 

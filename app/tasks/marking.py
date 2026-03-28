@@ -65,7 +65,8 @@ AssetDictionary = Dict[str, AssetCloudScratchContextManager]
 def register_marking_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def send_marking_emails(
-        self, record_id, cc_convenor, max_attachment, test_email, deadline, convenor_id
+            self, record_id, cc_convenor, max_attachment, test_email, deadline, convenor_id,
+            marking_template_id=None,
     ):
         try:
             record: SubmissionPeriodRecord = (
@@ -431,9 +432,12 @@ def register_marking_tasks(celery):
             db.session.add(supv_workflow)
 
         if markers_to_notify:
-            mark_template = EmailTemplate.find_template_(
-                EmailTemplate.MARKING_MARKER, pclass=pclass
-            )
+            if marking_template_id is not None:
+                mark_template = db.session.get(EmailTemplate, marking_template_id)
+            else:
+                mark_template = EmailTemplate.find_template_(
+                    EmailTemplate.MARKING_MARKER, pclass=pclass
+                )
             mark_workflow = EmailWorkflow.build_(
                 name=f"Marking examiner notification: {pclass.name} — {student.user.name}",
                 template=mark_template,

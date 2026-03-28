@@ -73,6 +73,8 @@ from ..shared.validators import (
 )
 from ..student.actions import store_selection
 from ..task_queue import register_task
+from ..shared.forms.forms import ChooseEmailTemplateForm
+from ..shared.forms.queries import GetWorkflowTemplates
 from .forms import (
     ChangeDeadlineFormFactory,
     GoLiveFormFactory,
@@ -99,6 +101,10 @@ def issue_confirm_requests(id):
 
     IssueFacultyConfirmRequestForm = IssueFacultyConfirmRequestFormFactory()
     form = IssueFacultyConfirmRequestForm(request.form)
+
+    # inject query factory for confirm_template field
+    _pclass_id = config.pclass_id
+    form.confirm_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass_id=_pclass_id)
 
     if form.is_submitted():
         if form.submit_button.data is True:
@@ -159,8 +165,12 @@ def issue_confirm_requests(id):
                 if deadline < now:
                     deadline = now + timedelta(weeks=2)
 
+                confirm_template = form.confirm_template.data
+                confirm_template_id = confirm_template.id if confirm_template is not None else None
+
                 issue.apply_async(
                     args=(task_id, id, current_user.id, deadline),
+                    kwargs=dict(confirm_template_id=confirm_template_id),
                     task_id=task_id,
                     link_error=issue_fail.si(task_id, current_user.id),
                 )
@@ -239,7 +249,7 @@ def outstanding_confirm_ajax(id):
     )
 
 
-@convenor.route("/confirmation_reminder/<int:id>")
+@convenor.route("/confirmation_reminder/<int:id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def confirmation_reminder(id):
     # id is a ProjectClassConfig
@@ -273,15 +283,36 @@ def confirmation_reminder(id):
         )
         return redirect(redirect_url())
 
-    celery = current_app.extensions["celery"]
-    email_task = celery.tasks["app.tasks.issue_confirm.reminder_email"]
+    form = ChooseEmailTemplateForm()
+    _pclass_id = config.pclass_id
+    form.template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass_id=_pclass_id)
 
-    email_task.apply_async((id, current_user.id))
+    if form.validate_on_submit():
+        template = form.template.data
+        template_id = template.id if template is not None else None
 
-    return redirect(redirect_url())
+        celery = current_app.extensions["celery"]
+        email_task = celery.tasks["app.tasks.issue_confirm.reminder_email"]
+        email_task.apply_async(args=(id, current_user.id), kwargs=dict(reminder_template_id=template_id))
+
+        return redirect(redirect_url())
+
+    if not form.is_submitted():
+        form.template.data = EmailTemplate.find_template_(EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass=config.project_class)
+
+    return render_template_context(
+        "shared/choose_email_template.html",
+        title="Send confirmation reminders",
+        action=url_for("convenor.confirmation_reminder", id=id),
+        message=f'Select the email template to use when sending confirmation reminders for "{config.name}".',
+        template_fields=[{"heading": None, "field": form.template}],
+        form=form,
+        cancel_url=redirect_url(),
+    )
 
 
-@convenor.route("/confirmation_reminder_individual/<int:fac_id>/<int:config_id>")
+@convenor.route("/confirmation_reminder_individual/<int:fac_id>/<int:config_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
 def confirmation_reminder_individual(fac_id, config_id):
     # id is a ProjectClassConfig
     config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(config_id)
@@ -314,16 +345,37 @@ def confirmation_reminder_individual(fac_id, config_id):
         )
         return redirect(redirect_url())
 
-    celery = current_app.extensions["celery"]
-    email_task = celery.tasks["app.tasks.issue_confirm.send_reminder_email"]
-    notify_task = celery.tasks["app.tasks.utilities.email_notification"]
+    form = ChooseEmailTemplateForm()
+    _pclass_id = config.pclass_id
+    form.template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass_id=_pclass_id)
 
-    tk = email_task.si(fac_id, config_id) | notify_task.s(
-        current_user.id, "Reminder email has been sent", "info"
+    if form.validate_on_submit():
+        template = form.template.data
+        template_id = template.id if template is not None else None
+
+        celery = current_app.extensions["celery"]
+        email_task = celery.tasks["app.tasks.issue_confirm.send_reminder_email"]
+        notify_task = celery.tasks["app.tasks.utilities.email_notification"]
+
+        tk = email_task.si(fac_id, config_id, reminder_template_id=template_id) | notify_task.s(
+            current_user.id, "Reminder email has been sent", "info"
+        )
+        tk.apply_async()
+
+        return redirect(redirect_url())
+
+    if not form.is_submitted():
+        form.template.data = EmailTemplate.find_template_(EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass=config.project_class)
+
+    return render_template_context(
+        "shared/choose_email_template.html",
+        title="Send confirmation reminder",
+        action=url_for("convenor.confirmation_reminder_individual", fac_id=fac_id, config_id=config_id),
+        message=f'Select the email template to use when sending a confirmation reminder for "{config.name}".',
+        template_fields=[{"heading": None, "field": form.template}],
+        form=form,
+        cancel_url=redirect_url(),
     )
-    tk.apply_async()
-
-    return redirect(redirect_url())
 
 
 @convenor.route("/show_unofferable")
@@ -854,6 +906,13 @@ def go_live(id):
     GoLiveForm = GoLiveFormFactory()
     form: GoLiveForm = GoLiveForm(request.form)
 
+    # inject query factories so template fields validate correctly
+    pclass_id = config.pclass_id
+    pclass = config.project_class
+    form.faculty_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.GO_LIVE_FACULTY, pclass_id=pclass_id)
+    form.selector_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.GO_LIVE_SELECTOR, pclass_id=pclass_id)
+    form.convenor_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.GO_LIVE_CONVENOR, pclass_id=pclass_id)
+
     if form.is_submitted():
         # schedule an asynchronous go-live task
         deadline = form.live_deadline.data
@@ -868,6 +927,10 @@ def go_live(id):
         notify_selectors = bool(form.notify_selectors.data)
         accommodate_matching = form.accommodate_matching.data
         full_CATS = form.full_CATS.data
+
+        faculty_template = form.faculty_template.data
+        selector_template = form.selector_template.data
+        convenor_template = form.convenor_template.data
 
         if deadline is None:
             flash(
@@ -887,6 +950,9 @@ def go_live(id):
                     if accommodate_matching is not None
                     else None,
                     full_CATS=full_CATS if full_CATS is not None else None,
+                    faculty_template_id=faculty_template.id if faculty_template is not None else None,
+                    selector_template_id=selector_template.id if selector_template is not None else None,
+                    convenor_template_id=convenor_template.id if convenor_template is not None else None,
                 )
             )
 
@@ -974,10 +1040,19 @@ def confirm_go_live(id):
     notify_selectors = bool(int(request.args.get("notify_selectors", 0)))
     accommodate_matching = request.args.get("accommodate_matching", None)
     full_CATS = request.args.get("full_CATS", None)
+    faculty_template_id = request.args.get("faculty_template_id", None)
+    selector_template_id = request.args.get("selector_template_id", None)
+    convenor_template_id = request.args.get("convenor_template_id", None)
     if accommodate_matching is not None:
         accommodate_matching = int(accommodate_matching)
     if full_CATS is not None:
         full_CATS = int(full_CATS)
+    if faculty_template_id is not None:
+        faculty_template_id = int(faculty_template_id)
+    if selector_template_id is not None:
+        selector_template_id = int(selector_template_id)
+    if convenor_template_id is not None:
+        convenor_template_id = int(convenor_template_id)
 
     if deadline is None:
         flash(
@@ -1002,6 +1077,9 @@ def confirm_go_live(id):
         deadline=deadline.isoformat(),
         accommodate_matching=accommodate_matching,
         full_CATS=full_CATS,
+        faculty_template_id=faculty_template_id,
+        selector_template_id=selector_template_id,
+        convenor_template_id=convenor_template_id,
     )
     message = (
         '<p>Please confirm that you wish to Go Live for project class "{name}" {yeara}&ndash;{yearb}, '
@@ -1058,10 +1136,19 @@ def perform_go_live(id):
     notify_selectors = bool(int(request.args.get("notify_selectors", 0)))
     accommodate_matching = request.args.get("accommodate_matching", None)
     full_CATS = request.args.get("full_CATS", None)
+    faculty_template_id = request.args.get("faculty_template_id", None)
+    selector_template_id = request.args.get("selector_template_id", None)
+    convenor_template_id = request.args.get("convenor_template_id", None)
     if accommodate_matching is not None:
         accommodate_matching = int(accommodate_matching)
     if full_CATS is not None:
         full_CATS = int(full_CATS)
+    if faculty_template_id is not None:
+        faculty_template_id = int(faculty_template_id)
+    if selector_template_id is not None:
+        selector_template_id = int(selector_template_id)
+    if convenor_template_id is not None:
+        convenor_template_id = int(convenor_template_id)
 
     if deadline is None:
         flash(
@@ -1100,6 +1187,9 @@ def perform_go_live(id):
                 notify_selectors,
                 accommodate_matching,
                 full_CATS,
+                faculty_template_id=faculty_template_id,
+                selector_template_id=selector_template_id,
+                convenor_template_id=convenor_template_id,
             ),
             golive_close.si(id, current_user.id),
         ).on_error(golive_fail.si(task_id, current_user.id))
@@ -1117,6 +1207,11 @@ def perform_go_live(id):
                 notify_selectors,
                 accommodate_matching,
                 full_CATS,
+            ),
+            kwargs=dict(
+                faculty_template_id=faculty_template_id,
+                selector_template_id=selector_template_id,
+                convenor_template_id=convenor_template_id,
             ),
             task_id=task_id,
             link_error=golive_fail.si(task_id, current_user.id),

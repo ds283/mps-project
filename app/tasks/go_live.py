@@ -52,6 +52,9 @@ def register_golive_tasks(celery):
         notify_selectors,
         accommodate_matching,
         full_CATS,
+            faculty_template_id=None,
+            selector_template_id=None,
+            convenor_template_id=None,
     ):
         progress_update(
             task_id, TaskRecord.RUNNING, 0, "Preparing to Go Live...", autocommit=True
@@ -282,7 +285,8 @@ def register_golive_tasks(celery):
         if not auto_close:
             if notify_faculty:
                 front_chain = front_chain | golive_notify_faculty.si(
-                    task_id, config_id, convenor_id, deadline
+                    task_id, config_id, convenor_id, deadline,
+                    faculty_template_id=faculty_template_id,
                 )
                 print("## email notifications to faculty enabled")
             else:
@@ -290,7 +294,8 @@ def register_golive_tasks(celery):
 
             if notify_selectors:
                 front_chain = front_chain | golive_notify_selectors.si(
-                    task_id, config_id, convenor_id, deadline
+                    task_id, config_id, convenor_id, deadline,
+                    selector_template_id=selector_template_id,
                 )
                 print("## email notifications to selectors enabled")
             else:
@@ -300,7 +305,8 @@ def register_golive_tasks(celery):
             print("## email notifications disabled by auto-close mode")
 
         seq = chain(
-            front_chain, golive_finalize.si(task_id, config_id, convenor_id, deadline)
+            front_chain,
+            golive_finalize.si(task_id, config_id, convenor_id, deadline, convenor_template_id=convenor_template_id),
         ).on_error(golive_fail.si(task_id, convenor_id))
 
         return self.replace(seq)
@@ -326,7 +332,7 @@ def register_golive_tasks(celery):
         )
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
-    def golive_notify_faculty(self, task_id, config_id, convenor_id, deadline):
+    def golive_notify_faculty(self, task_id, config_id, convenor_id, deadline, faculty_template_id=None):
         progress_update(
             task_id,
             TaskRecord.RUNNING,
@@ -379,9 +385,12 @@ def register_golive_tasks(celery):
             if user not in config.golive_notified and data.id not in faculty:
                 faculty.add(data.id)
 
-        template = EmailTemplate.find_template_(
-            EmailTemplate.GO_LIVE_FACULTY, pclass=config.project_class
-        )
+        if faculty_template_id is not None:
+            template = db.session.get(EmailTemplate, faculty_template_id)
+        else:
+            template = EmailTemplate.find_template_(
+                EmailTemplate.GO_LIVE_FACULTY, pclass=config.project_class
+            )
         workflow = EmailWorkflow.build_(
             name=f"Go Live faculty notifications: {config.project_class.name}",
             template=template,
@@ -426,7 +435,7 @@ def register_golive_tasks(celery):
         return self.replace(task)
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
-    def golive_notify_selectors(self, task_id, config_id, convenor_id, deadline):
+    def golive_notify_selectors(self, task_id, config_id, convenor_id, deadline, selector_template_id=None):
         progress_update(
             task_id,
             TaskRecord.RUNNING,
@@ -465,9 +474,12 @@ def register_golive_tasks(celery):
             ):
                 selectors.add(sel.id)
 
-        template = EmailTemplate.find_template_(
-            EmailTemplate.GO_LIVE_SELECTOR, pclass=config.project_class
-        )
+        if selector_template_id is not None:
+            template = db.session.get(EmailTemplate, selector_template_id)
+        else:
+            template = EmailTemplate.find_template_(
+                EmailTemplate.GO_LIVE_SELECTOR, pclass=config.project_class
+            )
         workflow = EmailWorkflow.build_(
             name=f"Go Live selector notifications: {config.project_class.name}",
             template=template,
@@ -670,7 +682,7 @@ def register_golive_tasks(celery):
         return 1
 
     @celery.task(bind=True, serializer="pickle", default_retry_delay=30)
-    def golive_finalize(self, task_id, config_id, convenor_id, deadline):
+    def golive_finalize(self, task_id, config_id, convenor_id, deadline, convenor_template_id=None):
         progress_update(
             task_id, TaskRecord.SUCCESS, 100, "Go Live complete", autocommit=False
         )
@@ -739,9 +751,12 @@ def register_golive_tasks(celery):
             for user in config.project_class.office_contacts:
                 recipients.add(user.email)
 
-            template = EmailTemplate.find_template_(
-                EmailTemplate.GO_LIVE_CONVENOR, pclass=config.project_class
-            )
+            if convenor_template_id is not None:
+                template = db.session.get(EmailTemplate, convenor_template_id)
+            else:
+                template = EmailTemplate.find_template_(
+                    EmailTemplate.GO_LIVE_CONVENOR, pclass=config.project_class
+                )
             workflow = EmailWorkflow.build_(
                 name=f"Go Live convenor summary: {config.project_class.name}",
                 template=template,

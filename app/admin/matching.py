@@ -37,6 +37,7 @@ import app.ajax as ajax
 
 from ..database import db
 from ..models import (
+    EmailTemplate,
     EnrollmentRecord,
     FacultyData,
     LiveProject,
@@ -49,6 +50,8 @@ from ..models import (
     TaskRecord,
     User,
 )
+from ..shared.forms.forms import ChooseEmailTemplateForm, ChoosePairedEmailTemplatesForm
+from ..shared.forms.queries import GetWorkflowTemplates
 from ..shared.context.global_context import render_template_context
 from ..shared.context.matching import (
     get_matching_dashboard_data,
@@ -2578,7 +2581,7 @@ def reassign_supervisor_roles(rec_id):
     )
 
 
-@admin.route("/publish_matching_selectors/<int:id>")
+@admin.route("/publish_matching_selectors/<int:id>", methods=["GET", "POST"])
 @roles_required("root")
 def publish_matching_selectors(id):
     record = MatchingAttempt.query.get_or_404(id)
@@ -2628,23 +2631,49 @@ def publish_matching_selectors(id):
         )
         return redirect(redirect_url())
 
-    task_id = register_task(
-        "Send matching to selectors",
-        owner=current_user,
-        description='Email details of match "{name}" to submitters'.format(
-            name=record.name
-        ),
+    # derive tenant_id from the matching's config_members
+    _tenant_id = None
+    _first_config = record.config_members.first()
+    if _first_config is not None and _first_config.project_class is not None:
+        _tenant_id = _first_config.project_class.tenant_id
+
+    # determine template type based on draft/final state
+    _template_type = EmailTemplate.MATCHING_FINAL_NOTIFY_STUDENTS if record.selected else EmailTemplate.MATCHING_DRAFT_NOTIFY_STUDENTS
+
+    form = ChooseEmailTemplateForm()
+    form.template.query_factory = lambda: GetWorkflowTemplates(_template_type, tenant_id=_tenant_id)
+
+    if form.validate_on_submit():
+        template = form.template.data
+        template_id = template.id if template is not None else None
+
+        task_id = register_task(
+            "Send matching to selectors",
+            owner=current_user,
+            description='Email details of match "{name}" to submitters'.format(name=record.name),
+        )
+
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.matching_emails.publish_to_selectors"]
+        task.apply_async(args=(id, current_user.id, task_id), kwargs=dict(selector_template_id=template_id), task_id=task_id)
+
+        return redirect(redirect_url())
+
+    if not form.is_submitted():
+        form.template.data = EmailTemplate.find_template_(_template_type, tenant=_tenant_id)
+
+    return render_template_context(
+        "shared/choose_email_template.html",
+        title="Email matching results to selectors",
+        action=url_for("admin.publish_matching_selectors", id=id),
+        message=f'Select the email template to use when emailing matching results to selectors for "{record.name}".',
+        template_fields=[{"heading": None, "field": form.template}],
+        form=form,
+        cancel_url=redirect_url(),
     )
 
-    celery = current_app.extensions["celery"]
-    task = celery.tasks["app.tasks.matching_emails.publish_to_selectors"]
 
-    task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
-
-    return redirect(redirect_url())
-
-
-@admin.route("/publish_matching_supervisors/<int:id>")
+@admin.route("/publish_matching_supervisors/<int:id>", methods=["GET", "POST"])
 @roles_required("root")
 def publish_matching_supervisors(id):
     record = MatchingAttempt.query.get_or_404(id)
@@ -2694,20 +2723,62 @@ def publish_matching_supervisors(id):
         )
         return redirect(redirect_url())
 
-    task_id = register_task(
-        "Send matching to supervisors",
-        owner=current_user,
-        description='Email details of match "{name}" to supervisors'.format(
-            name=record.name
-        ),
+    # derive tenant_id from the matching's config_members
+    _tenant_id = None
+    _first_config = record.config_members.first()
+    if _first_config is not None and _first_config.project_class is not None:
+        _tenant_id = _first_config.project_class.tenant_id
+
+    # determine template types based on draft/final state
+    if record.selected:
+        _notify_type = EmailTemplate.MATCHING_FINAL_NOTIFY_FACULTY
+        _unneeded_type = EmailTemplate.MATCHING_FINAL_UNNEEDED_FACULTY
+    else:
+        _notify_type = EmailTemplate.MATCHING_DRAFT_NOTIFY_FACULTY
+        _unneeded_type = EmailTemplate.MATCHING_DRAFT_UNNEEDED_FACULTY
+
+    form = ChoosePairedEmailTemplatesForm()
+    form.template_primary.query_factory = lambda: GetWorkflowTemplates(_notify_type, tenant_id=_tenant_id)
+    form.template_secondary.query_factory = lambda: GetWorkflowTemplates(_unneeded_type, tenant_id=_tenant_id)
+
+    if form.validate_on_submit():
+        notify_template = form.template_primary.data
+        unneeded_template = form.template_secondary.data
+        notify_template_id = notify_template.id if notify_template is not None else None
+        unneeded_template_id = unneeded_template.id if unneeded_template is not None else None
+
+        task_id = register_task(
+            "Send matching to supervisors",
+            owner=current_user,
+            description='Email details of match "{name}" to supervisors'.format(name=record.name),
+        )
+
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.matching_emails.publish_to_supervisors"]
+        task.apply_async(
+            args=(id, current_user.id, task_id),
+            kwargs=dict(notify_template_id=notify_template_id, unneeded_template_id=unneeded_template_id),
+            task_id=task_id,
+        )
+
+        return redirect(redirect_url())
+
+    if not form.is_submitted():
+        form.template_primary.data = EmailTemplate.find_template_(_notify_type, tenant=_tenant_id)
+        form.template_secondary.data = EmailTemplate.find_template_(_unneeded_type, tenant=_tenant_id)
+
+    return render_template_context(
+        "shared/choose_email_template.html",
+        title="Email matching results to supervisors",
+        action=url_for("admin.publish_matching_supervisors", id=id),
+        message=f'Select the email templates to use when emailing matching results to supervisors for "{record.name}".',
+        template_fields=[
+            {"heading": "Email to supervisors with assignments", "field": form.template_primary},
+            {"heading": "Email to supervisors with no assignments", "field": form.template_secondary},
+        ],
+        form=form,
+        cancel_url=redirect_url(),
     )
-
-    celery = current_app.extensions["celery"]
-    task = celery.tasks["app.tasks.matching_emails.publish_to_supervisors"]
-
-    task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
-
-    return redirect(redirect_url())
 
 
 @admin.route("/publish_match/<int:id>")

@@ -29,6 +29,7 @@ from app.convenor import convenor
 
 from ..database import db
 from ..models import (
+    EmailTemplate,
     EmailWorkflow,
     EmailWorkflowItem,
     EnrollmentRecord,
@@ -43,6 +44,7 @@ from ..models import (
     TransferableSkill,
     User,
 )
+from ..shared.forms.queries import GetWorkflowTemplates
 from ..shared.context.convenor_dashboard import (
     get_capacity_data,
     get_convenor_approval_data,
@@ -120,6 +122,13 @@ def status(id):
 
     issue_form = IssueFacultyConfirmRequestForm(request.form)
 
+    # inject query factories for template selectors
+    pclass_id = pclass.id
+    golive_form.faculty_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.GO_LIVE_FACULTY, pclass_id=pclass_id)
+    golive_form.selector_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.GO_LIVE_SELECTOR, pclass_id=pclass_id)
+    golive_form.convenor_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.GO_LIVE_CONVENOR, pclass_id=pclass_id)
+    issue_form.confirm_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass_id=pclass_id)
+
     # first time this page is displayed, populate the forms with sensible default data
     if request.method == "GET":
         predicted_deadline = date.today() + timedelta(weeks=6)
@@ -139,6 +148,12 @@ def status(id):
         golive_form.notify_selectors.data = True
 
         change_form.notify_convenor.data = True
+
+        # pre-select the default templates
+        golive_form.faculty_template.data = EmailTemplate.find_template_(EmailTemplate.GO_LIVE_FACULTY, pclass=pclass)
+        golive_form.selector_template.data = EmailTemplate.find_template_(EmailTemplate.GO_LIVE_SELECTOR, pclass=pclass)
+        golive_form.convenor_template.data = EmailTemplate.find_template_(EmailTemplate.GO_LIVE_CONVENOR, pclass=pclass)
+        issue_form.confirm_template.data = EmailTemplate.find_template_(EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass=pclass)
 
     data = get_convenor_dashboard_data(pclass, config)
     todo = get_convenor_todo_data(config)

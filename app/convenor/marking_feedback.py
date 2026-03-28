@@ -38,6 +38,7 @@ from ..faculty.forms import (
     SubmissionRoleResponseForm,
 )
 from ..models import (
+    EmailTemplate,
     EnrollmentRecord,
     FacultyData,
     FeedbackRecipe,
@@ -56,6 +57,7 @@ from ..models import (
     SupervisionEventTemplate,
     User,
 )
+from ..shared.forms.queries import GetWorkflowTemplates
 from ..shared.context.convenor_dashboard import (
     get_convenor_dashboard_data,
 )
@@ -232,6 +234,12 @@ def open_feedback(id):
 
     feedback_form = OpenFeedbackForm(request.form)
 
+    # inject query factory for marking_template field
+    _pclass_id = config.pclass_id
+    feedback_form.marking_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.MARKING_MARKER, pclass_id=_pclass_id)
+    if not feedback_form.is_submitted():
+        feedback_form.marking_template.data = EmailTemplate.find_template_(EmailTemplate.MARKING_MARKER, pclass=config.project_class)
+
     url = request.args.get("url", None)
     if url is None:
         url = redirect_url()
@@ -270,6 +278,8 @@ def open_feedback(id):
 
 
 def _test_notifications(deadline: datetime, feedback_form, id, url):
+    marking_template = feedback_form.marking_template.data
+    marking_template_id = marking_template.id if marking_template is not None else None
     return redirect(
         url_for(
             "convenor.test_notifications",
@@ -278,6 +288,7 @@ def _test_notifications(deadline: datetime, feedback_form, id, url):
             deadline=deadline.isoformat(),
             cc_me=int(feedback_form.cc_me.data),
             max_attachment=int(feedback_form.max_attachment.data),
+            marking_template_id=marking_template_id,
         )
     )
 
@@ -353,6 +364,8 @@ def _send_feedback_notifications_request(
             proj=config.name, period=period.display_name
         )
     )
+    marking_template = feedback_form.marking_template.data
+    marking_template_id = marking_template.id if marking_template is not None else None
     action_url = url_for(
         "convenor.do_send_notifications",
         id=id,
@@ -360,6 +373,7 @@ def _send_feedback_notifications_request(
         deadline=deadline.isoformat(),
         cc_me=int(feedback_form.cc_me.data),
         max_attachment=int(feedback_form.max_attachment.data),
+        marking_template_id=marking_template_id,
     )
     submit_label = "Issue unsent marking notifications"
 
@@ -405,6 +419,8 @@ def _open_feedback_request(config, deadline, feedback_form, id, period, url):
             deadline=deadline.strftime("%a %d %b %Y"),
         )
     )
+    marking_template = feedback_form.marking_template.data
+    marking_template_id = marking_template.id if marking_template is not None else None
     action_url = url_for(
         "convenor.do_open_feedback",
         id=id,
@@ -412,6 +428,7 @@ def _open_feedback_request(config, deadline, feedback_form, id, period, url):
         deadline=deadline.isoformat(),
         cc_me=int(feedback_form.cc_me.data),
         max_attachment=int(feedback_form.max_attachment.data),
+        marking_template_id=marking_template_id,
     )
     submit_label = "Open feedback and issue notifications"
 
@@ -517,10 +534,26 @@ def test_notifications(id):
         )
         return redirect(url)
 
+    # incoming marking_template_id from the open_feedback form (may be None)
+    incoming_template_id = request.args.get("marking_template_id", None)
+    if incoming_template_id is not None:
+        incoming_template_id = int(incoming_template_id)
+
     form = TestOpenFeedbackForm(request.form)
+
+    # inject query factory for marking_template
+    _pclass_id = config.pclass_id
+    form.marking_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.MARKING_MARKER, pclass_id=_pclass_id)
+    if not form.is_submitted():
+        if incoming_template_id is not None:
+            form.marking_template.data = db.session.get(EmailTemplate, incoming_template_id)
+        if form.marking_template.data is None:
+            form.marking_template.data = EmailTemplate.find_template_(EmailTemplate.MARKING_MARKER, pclass=config.project_class)
 
     if form.validate_on_submit():
         test_email = form.target_email.data
+        marking_template = form.marking_template.data
+        marking_template_id = marking_template.id if marking_template is not None else None
 
         return redirect(
             url_for(
@@ -531,6 +564,7 @@ def test_notifications(id):
                 cc_me=int(cc_me),
                 max_attachment=int(max_attachment),
                 test_email=str(test_email),
+                marking_template_id=marking_template_id,
             )
         )
 
@@ -596,6 +630,10 @@ def do_send_notifications(id):
         )
         return redirect(url)
 
+    marking_template_id = request.args.get("marking_template_id", None)
+    if marking_template_id is not None:
+        marking_template_id = int(marking_template_id)
+
     celery = current_app.extensions["celery"]
     marking_email = celery.tasks["app.tasks.marking.send_marking_emails"]
 
@@ -611,7 +649,8 @@ def do_send_notifications(id):
     seq = chain(
         init.si(task_id, tk_name),
         marking_email.si(
-            period.id, cc_me, max_attachment, test_email, deadline, current_user.id
+            period.id, cc_me, max_attachment, test_email, deadline, current_user.id,
+            marking_template_id=marking_template_id,
         ),
         final.si(task_id, tk_name, current_user.id),
     ).on_error(error.si(task_id, tk_name, current_user.id))
@@ -669,6 +708,10 @@ def do_open_feedback(id):
             "error",
         )
         return redirect(url)
+
+    marking_template_id = request.args.get("marking_template_id", None)
+    if marking_template_id is not None:
+        marking_template_id = int(marking_template_id)
 
     deadline = parser.parse(deadline).date()
 
@@ -728,6 +771,7 @@ def do_open_feedback(id):
             None,
             deadline.isoformat(),
             current_user.id,
+            marking_template_id=marking_template_id,
         ),
         final.si(task_id, tk_name, current_user.id),
     ).on_error(error.si(task_id, tk_name, current_user.id))

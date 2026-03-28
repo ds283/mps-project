@@ -26,6 +26,7 @@
             {{ date_field(feedback_form.feedback_deadline, 'feedback_datetimepicker') }}
             {{ wtf.render_field(feedback_form.max_attachment) }}
             {{ wtf.render_field(feedback_form.cc_me) }}
+            {{ wtf.render_field(feedback_form.marking_template) }}
             <div class="d-flex flex-row justify-content-end gap-2">
                 {{ submission_period_configure_button(period, config, dropup=true, small=true, margin=false) }}
                 {% if feedback_form.test_button is defined %}

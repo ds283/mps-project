@@ -10,7 +10,7 @@
 from typing import Iterable, List, Optional
 
 from flask_login import current_user
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 
 from ... import EmailTemplate
 from ...database import db
@@ -692,6 +692,48 @@ def GetActiveEmailTemplateLabels():
 
 def BuildEmailTemplateLabelName(label: EmailTemplateLabel):
     return label.name
+
+
+def GetWorkflowTemplates(template_type, pclass_id=None, tenant_id=None):
+    """
+    Return a query for all EmailTemplates of the given type available at the
+    appropriate scope. Includes inactive templates (per spec).
+    Scope: if pclass_id given, include pclass-level, tenant-level (for that pclass's tenant),
+    and global templates. If tenant_id given, include tenant-level and global. Otherwise global only.
+    """
+    q = db.session.query(EmailTemplate).filter(EmailTemplate.type == template_type)
+
+    if pclass_id is not None:
+        pclass = db.session.get(ProjectClass, pclass_id)
+        pclass_tenant_id = pclass.tenant_id if pclass is not None else None
+
+        conditions = [
+            EmailTemplate.pclass_id == pclass_id,
+            and_(EmailTemplate.pclass_id.is_(None), EmailTemplate.tenant_id.is_(None)),
+        ]
+        if pclass_tenant_id is not None:
+            conditions.append(
+                and_(
+                    EmailTemplate.pclass_id.is_(None),
+                    EmailTemplate.tenant_id == pclass_tenant_id,
+                )
+            )
+        q = q.filter(or_(*conditions))
+    elif tenant_id is not None:
+        q = q.filter(
+            or_(
+                and_(EmailTemplate.pclass_id.is_(None), EmailTemplate.tenant_id == tenant_id),
+                and_(EmailTemplate.pclass_id.is_(None), EmailTemplate.tenant_id.is_(None)),
+            )
+        )
+    else:
+        q = q.filter(EmailTemplate.pclass_id.is_(None), EmailTemplate.tenant_id.is_(None))
+
+    return q.order_by(
+        EmailTemplate.pclass_id.desc(),
+        EmailTemplate.tenant_id.desc(),
+        EmailTemplate.version.desc(),
+    )
 
 
 def BuildWorkflowTemplateLabel(template: EmailTemplate):

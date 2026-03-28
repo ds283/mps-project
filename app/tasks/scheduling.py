@@ -2195,7 +2195,7 @@ def register_scheduling_tasks(celery):
         return None
 
     @celery.task(bind=True, default_retry_delay=30)
-    def publish_to_submitters(self, id, user_id, task_id):
+    def publish_to_submitters(self, id, user_id, task_id, submitter_template_id=None):
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
         except SQLAlchemyError as e:
@@ -2226,7 +2226,7 @@ def register_scheduling_tasks(celery):
 
         task = chain(
             group(
-                publish_email_to_submitter.si(id, a_id, not bool(record.deployed))
+                publish_email_to_submitter.si(id, a_id, not bool(record.deployed), submitter_template_id=submitter_template_id)
                 for a_id in recipients
             ),
             notify.s(user_id, "{n} email notification{pl} issued", "info"),
@@ -2254,7 +2254,7 @@ def register_scheduling_tasks(celery):
         )
 
     @celery.task(bind=True, default_retry_delay=30)
-    def publish_email_to_submitter(self, schedule_id, attend_id, is_draft):
+    def publish_email_to_submitter(self, schedule_id, attend_id, is_draft, submitter_template_id=None):
         if isinstance(is_draft, str):
             is_draft = strtobool(is_draft)
 
@@ -2295,7 +2295,10 @@ def register_scheduling_tasks(celery):
             if is_draft
             else EmailTemplate.SCHEDULING_FINAL_NOTIFY_STUDENTS
         )
-        template = EmailTemplate.find_template_(template_type)
+        if submitter_template_id is not None:
+            template = db.session.get(EmailTemplate, submitter_template_id)
+        else:
+            template = EmailTemplate.find_template_(template_type)
         workflow = EmailWorkflow.build_(
             name=f"Scheduling student notification: {event.name} — {user.name}",
             template=template,
@@ -2328,7 +2331,7 @@ def register_scheduling_tasks(celery):
         return 1
 
     @celery.task(bind=True, default_retry_delay=30)
-    def publish_to_assessors(self, id, user_id, task_id):
+    def publish_to_assessors(self, id, user_id, task_id, notify_template_id=None, unneeded_template_id=None):
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
         except SQLAlchemyError as e:
@@ -2354,7 +2357,11 @@ def register_scheduling_tasks(celery):
 
         task = chain(
             group(
-                publish_email_to_assessor.si(id, a.id, not bool(record.deployed))
+                publish_email_to_assessor.si(
+                    id, a.id, not bool(record.deployed),
+                    notify_template_id=notify_template_id,
+                    unneeded_template_id=unneeded_template_id,
+                )
                 for a in record.owner.assessor_list.all()
             ),
             notify.s(user_id, "{n} email notification{pl} issued", "info"),
@@ -2382,7 +2389,7 @@ def register_scheduling_tasks(celery):
         )
 
     @celery.task(bind=True, default_retry_delay=30)
-    def publish_email_to_assessor(self, schedule_id, attend_id, is_draft):
+    def publish_email_to_assessor(self, schedule_id, attend_id, is_draft, notify_template_id=None, unneeded_template_id=None):
         if isinstance(is_draft, str):
             is_draft = strtobool(is_draft)
 
@@ -2430,7 +2437,11 @@ def register_scheduling_tasks(celery):
                 else EmailTemplate.SCHEDULING_FINAL_UNNEEDED_FACULTY
             )
 
-        template = EmailTemplate.find_template_(template_type)
+        _supplied_template_id = notify_template_id if len(slots) > 0 else unneeded_template_id
+        if _supplied_template_id is not None:
+            template = db.session.get(EmailTemplate, _supplied_template_id)
+        else:
+            template = EmailTemplate.find_template_(template_type)
         workflow = EmailWorkflow.build_(
             name=f"Scheduling assessor notification: {event.name} — {user.name}",
             template=template,

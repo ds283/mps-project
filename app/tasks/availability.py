@@ -40,7 +40,7 @@ from ..task_queue import progress_update, register_task
 
 def register_availability_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
-    def initialize(self, data_id, user_id, celery_id, deadline, skip_availability):
+    def initialize(self, data_id, user_id, celery_id, deadline, skip_availability, availability_template_id=None):
         self.update_state(
             state="STARTED",
             meta={
@@ -111,7 +111,7 @@ def register_availability_tasks(celery):
         else:
             assessor_tasks = group(
                 attach_assessment_assessor.s(data_id, a_id)
-                | issue_assessor_email.s(deadline)
+                | issue_assessor_email.s(deadline, availability_template_id=availability_template_id)
                 for a_id in assessor_ids
             )
 
@@ -387,7 +387,7 @@ def register_availability_tasks(celery):
         return 1
 
     @celery.task(bind=True, default_retry_delay=30)
-    def issue_assessor_email(self, a_record_id, deadline):
+    def issue_assessor_email(self, a_record_id, deadline, availability_template_id=None):
         if isinstance(deadline, str):
             deadline = parser.parse(deadline).date()
         else:
@@ -430,7 +430,10 @@ def register_availability_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        template = EmailTemplate.find_template_(EmailTemplate.SCHEDULING_AVAILABILITY_REQUEST)
+        if availability_template_id is not None:
+            template = db.session.get(EmailTemplate, availability_template_id)
+        else:
+            template = EmailTemplate.find_template_(EmailTemplate.SCHEDULING_AVAILABILITY_REQUEST)
         workflow = EmailWorkflow.build_(
             name=f"Scheduling availability request: {a_record.assessment.name}",
             template=template,
@@ -829,7 +832,7 @@ def register_availability_tasks(celery):
             raise self.retry()
 
     @celery.task(bind=True, default_retry_delay=30)
-    def reminder_email(self, assessment_id, user_id):
+    def reminder_email(self, assessment_id, user_id, reminder_template_id=None):
         self.update_state(
             state="STARTED",
             meta={
@@ -899,14 +902,14 @@ def register_availability_tasks(celery):
                 recipients.add(assessor.id)
 
         tasks = chain(
-            group(send_reminder_email.si(r) for r in recipients if r is not None),
+            group(send_reminder_email.si(r, reminder_template_id=reminder_template_id) for r in recipients if r is not None),
             notify.s(user_id, "{n} email notification{pl} issued", "info"),
         )
 
         return self.replace(tasks)
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_reminder_email(self, assessor_id):
+    def send_reminder_email(self, assessor_id, reminder_template_id=None):
         try:
             assessor: AssessorAttendanceData = (
                 db.session.query(AssessorAttendanceData)
@@ -959,7 +962,10 @@ def register_availability_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        template = EmailTemplate.find_template_(EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER)
+        if reminder_template_id is not None:
+            template = db.session.get(EmailTemplate, reminder_template_id)
+        else:
+            template = EmailTemplate.find_template_(EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER)
         workflow = EmailWorkflow.build_(
             name=f"Scheduling availability reminder: {assessor.assessment.name}",
             template=template,

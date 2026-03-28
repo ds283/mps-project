@@ -34,6 +34,7 @@ import app.ajax as ajax
 from ..database import db
 from ..models import (
     AssessorAttendanceData,
+    EmailTemplate,
     EnrollmentRecord,
     FacultyData,
     PresentationAssessment,
@@ -61,6 +62,8 @@ from ..shared.validators import (
 from ..task_queue import progress_update, register_task
 from . import admin
 from .actions import pair_slots
+from ..shared.forms.forms import ChooseEmailTemplateForm, ChoosePairedEmailTemplatesForm
+from ..shared.forms.queries import GetWorkflowTemplates
 from .forms import (
     CompareScheduleFormFactory,
     ImposeConstraintsScheduleFormFactory,
@@ -1297,7 +1300,7 @@ def unpublish_schedule(id):
     return redirect(redirect_url())
 
 
-@admin.route("/publish_schedule_submitters/<int:id>")
+@admin.route("/publish_schedule_submitters/<int:id>", methods=["GET", "POST"])
 @roles_required("root")
 def publish_schedule_submitters(id):
     record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
@@ -1331,23 +1334,49 @@ def publish_schedule_submitters(id):
         )
         return redirect(redirect_url())
 
-    task_id = register_task(
-        "Send schedule to submitters",
-        owner=current_user,
-        description='Email details of schedule "{name}" to submitters'.format(
-            name=record.name
-        ),
+    # derive tenant_id from the schedule's owner assessment
+    _tenant_id = None
+    _first_period = record.owner.submission_periods.first()
+    if _first_period is not None and _first_period.config is not None and _first_period.config.project_class is not None:
+        _tenant_id = _first_period.config.project_class.tenant_id
+
+    # determine template type based on deployed (final) vs not deployed (draft) state
+    _template_type = EmailTemplate.SCHEDULING_FINAL_NOTIFY_STUDENTS if record.deployed else EmailTemplate.SCHEDULING_DRAFT_NOTIFY_STUDENTS
+
+    form = ChooseEmailTemplateForm()
+    form.template.query_factory = lambda: GetWorkflowTemplates(_template_type, tenant_id=_tenant_id)
+
+    if form.validate_on_submit():
+        template = form.template.data
+        template_id = template.id if template is not None else None
+
+        task_id = register_task(
+            "Send schedule to submitters",
+            owner=current_user,
+            description='Email details of schedule "{name}" to submitters'.format(name=record.name),
+        )
+
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.scheduling.publish_to_submitters"]
+        task.apply_async(args=(id, current_user.id, task_id), kwargs=dict(submitter_template_id=template_id), task_id=task_id)
+
+        return redirect(redirect_url())
+
+    if not form.is_submitted():
+        form.template.data = EmailTemplate.find_template_(_template_type, tenant=_tenant_id)
+
+    return render_template_context(
+        "shared/choose_email_template.html",
+        title="Email schedule to submitters",
+        action=url_for("admin.publish_schedule_submitters", id=id),
+        message=f'Select the email template to use when emailing schedule details to submitters for "{record.name}".',
+        template_fields=[{"heading": None, "field": form.template}],
+        form=form,
+        cancel_url=redirect_url(),
     )
 
-    celery = current_app.extensions["celery"]
-    task = celery.tasks["app.tasks.scheduling.publish_to_submitters"]
 
-    task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
-
-    return redirect(redirect_url())
-
-
-@admin.route("/publish_schedule_assessors/<int:id>")
+@admin.route("/publish_schedule_assessors/<int:id>", methods=["GET", "POST"])
 @roles_required("root")
 def publish_schedule_assessors(id):
     record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
@@ -1383,20 +1412,62 @@ def publish_schedule_assessors(id):
         )
         return redirect(redirect_url())
 
-    task_id = register_task(
-        "Send draft schedule to assessors",
-        owner=current_user,
-        description='Email details of schedule "{name}" to assessors'.format(
-            name=record.name
-        ),
+    # derive tenant_id from the schedule's owner assessment
+    _tenant_id = None
+    _first_period = record.owner.submission_periods.first()
+    if _first_period is not None and _first_period.config is not None and _first_period.config.project_class is not None:
+        _tenant_id = _first_period.config.project_class.tenant_id
+
+    # determine template types based on deployed (final) vs not deployed (draft) state
+    if record.deployed:
+        _notify_type = EmailTemplate.SCHEDULING_FINAL_NOTIFY_FACULTY
+        _unneeded_type = EmailTemplate.SCHEDULING_FINAL_UNNEEDED_FACULTY
+    else:
+        _notify_type = EmailTemplate.SCHEDULING_DRAFT_NOTIFY_FACULTY
+        _unneeded_type = EmailTemplate.SCHEDULING_DRAFT_UNNEEDED_FACULTY
+
+    form = ChoosePairedEmailTemplatesForm()
+    form.template_primary.query_factory = lambda: GetWorkflowTemplates(_notify_type, tenant_id=_tenant_id)
+    form.template_secondary.query_factory = lambda: GetWorkflowTemplates(_unneeded_type, tenant_id=_tenant_id)
+
+    if form.validate_on_submit():
+        notify_template = form.template_primary.data
+        unneeded_template = form.template_secondary.data
+        notify_template_id = notify_template.id if notify_template is not None else None
+        unneeded_template_id = unneeded_template.id if unneeded_template is not None else None
+
+        task_id = register_task(
+            "Send schedule to assessors",
+            owner=current_user,
+            description='Email details of schedule "{name}" to assessors'.format(name=record.name),
+        )
+
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.scheduling.publish_to_assessors"]
+        task.apply_async(
+            args=(id, current_user.id, task_id),
+            kwargs=dict(notify_template_id=notify_template_id, unneeded_template_id=unneeded_template_id),
+            task_id=task_id,
+        )
+
+        return redirect(redirect_url())
+
+    if not form.is_submitted():
+        form.template_primary.data = EmailTemplate.find_template_(_notify_type, tenant=_tenant_id)
+        form.template_secondary.data = EmailTemplate.find_template_(_unneeded_type, tenant=_tenant_id)
+
+    return render_template_context(
+        "shared/choose_email_template.html",
+        title="Email schedule to assessors",
+        action=url_for("admin.publish_schedule_assessors", id=id),
+        message=f'Select the email templates to use when emailing schedule details to assessors for "{record.name}".',
+        template_fields=[
+            {"heading": "Email to assessors with slots", "field": form.template_primary},
+            {"heading": "Email to assessors with no slots", "field": form.template_secondary},
+        ],
+        form=form,
+        cancel_url=redirect_url(),
     )
-
-    celery = current_app.extensions["celery"]
-    task = celery.tasks["app.tasks.scheduling.publish_to_assessors"]
-
-    task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
-
-    return redirect(redirect_url())
 
 
 @admin.route("/deploy_schedule/<int:id>")

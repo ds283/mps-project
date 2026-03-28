@@ -38,7 +38,7 @@ from ..task_queue import progress_update
 
 def register_matching_email_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
-    def publish_to_selectors(self, match_id, user_id, task_id):
+    def publish_to_selectors(self, match_id, user_id, task_id, selector_template_id=None):
         try:
             record: MatchingAttempt = (
                 db.session.query(MatchingAttempt).filter_by(id=match_id).first()
@@ -71,7 +71,8 @@ def register_matching_email_tasks(celery):
         task = chain(
             group(
                 publish_email_to_selector.si(
-                    match_id, sel_id, not bool(record.selected)
+                    match_id, sel_id, not bool(record.selected),
+                    selector_template_id=selector_template_id,
                 )
                 for sel_id in recipients
             ),
@@ -125,7 +126,7 @@ def register_matching_email_tasks(celery):
         return 0
 
     @celery.task(bind=True, default_retry_delay=30)
-    def publish_email_to_selector(self, match_id, sel_id, is_draft):
+    def publish_email_to_selector(self, match_id, sel_id, is_draft, selector_template_id=None):
         if isinstance(is_draft, str):
             is_draft = strtobool(is_draft)
 
@@ -166,7 +167,10 @@ def register_matching_email_tasks(celery):
             if is_draft
             else EmailTemplate.MATCHING_FINAL_NOTIFY_STUDENTS
         )
-        template = EmailTemplate.find_template_(template_type, pclass=pclass)
+        if selector_template_id is not None:
+            template = db.session.get(EmailTemplate, selector_template_id)
+        else:
+            template = EmailTemplate.find_template_(template_type, pclass=pclass)
         workflow = EmailWorkflow.build_(
             name=f"Matching selector notification: {config.name} — {user.name}",
             template=template,
@@ -210,7 +214,7 @@ def register_matching_email_tasks(celery):
         return 1
 
     @celery.task(bind=True, default_retry_delay=30)
-    def publish_to_supervisors(self, match_id, user_id, task_id):
+    def publish_to_supervisors(self, match_id, user_id, task_id, notify_template_id=None, unneeded_template_id=None):
         try:
             record: MatchingAttempt = (
                 db.session.query(MatchingAttempt).filter_by(id=match_id).first()
@@ -243,7 +247,9 @@ def register_matching_email_tasks(celery):
         task = chain(
             group(
                 publish_email_to_supervisor.si(
-                    match_id, fac_id, not bool(record.selected)
+                    match_id, fac_id, not bool(record.selected),
+                    notify_template_id=notify_template_id,
+                    unneeded_template_id=unneeded_template_id,
                 )
                 for fac_id in recipients
             ),
@@ -297,7 +303,7 @@ def register_matching_email_tasks(celery):
         return 0
 
     @celery.task(bind=True, default_retry_delay=30)
-    def publish_email_to_supervisor(self, match_id, fac_id, is_draft):
+    def publish_email_to_supervisor(self, match_id, fac_id, is_draft, notify_template_id=None, unneeded_template_id=None):
         if isinstance(is_draft, str):
             is_draft = strtobool(is_draft)
 
@@ -370,9 +376,14 @@ def register_matching_email_tasks(celery):
                 else EmailTemplate.MATCHING_FINAL_UNNEEDED_FACULTY
             )
 
-        template = EmailTemplate.find_template_(
-            template_type, pclass=email_pclass, tenant=email_tenant
-        )
+        # use the explicitly supplied template if provided; otherwise fall back to find_template_()
+        _supplied_template_id = notify_template_id if len(matches) > 0 else unneeded_template_id
+        if _supplied_template_id is not None:
+            template = db.session.get(EmailTemplate, _supplied_template_id)
+        else:
+            template = EmailTemplate.find_template_(
+                template_type, pclass=email_pclass, tenant=email_tenant
+            )
         workflow = EmailWorkflow.build_(
             name=f"Matching supervisor notification: {record.name} — {user.name}",
             template=template,

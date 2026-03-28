@@ -23,6 +23,7 @@ from wtforms import (
     TextAreaField,
 )
 from wtforms.validators import (
+    DataRequired,
     Email,
     InputRequired,
     Length,
@@ -64,6 +65,7 @@ from ..shared.forms.queries import (
     BuildActiveFacultyName,
     BuildCanvasLoginUserName,
     BuildSupervisorName,
+    BuildWorkflowTemplateLabel,
     GetAccommodatableMatchings,
     GetActiveFaculty,
     GetAllPossibleSupervisors,
@@ -133,6 +135,28 @@ def GoLiveFormFactory(
             validators=[Optional()],
         )
 
+        # email template selectors (query_factory injected by the view)
+        faculty_template = QuerySelectField(
+            "Email template",
+            allow_blank=False,
+            get_label=BuildWorkflowTemplateLabel,
+            validators=[DataRequired(message="Please select an email template.")],
+        )
+
+        selector_template = QuerySelectField(
+            "Email template",
+            allow_blank=False,
+            get_label=BuildWorkflowTemplateLabel,
+            validators=[DataRequired(message="Please select an email template.")],
+        )
+
+        convenor_template = QuerySelectField(
+            "Email template",
+            allow_blank=False,
+            get_label=BuildWorkflowTemplateLabel,
+            validators=[DataRequired(message="Please select an email template.")],
+        )
+
     return GoLiveForm
 
 
@@ -179,6 +203,14 @@ def IssueFacultyConfirmRequestFormFactory(
         # submit button: issue requests
         submit_button = SubmitField(submit_label)
 
+        # email template selector (query_factory injected by the view)
+        confirm_template = QuerySelectField(
+            "Email template",
+            allow_blank=False,
+            get_label=BuildWorkflowTemplateLabel,
+            validators=[DataRequired(message="Please select an email template.")],
+        )
+
     return IssueFacultyConfirmRequestForm
 
 
@@ -223,6 +255,14 @@ def OpenFeedbackFormFactory(
         # submit button: open feedback
         submit_button = SubmitField(submit_label)
 
+        # email template selector (query_factory injected by the view)
+        marking_template = QuerySelectField(
+            "Email template",
+            allow_blank=False,
+            get_label=BuildWorkflowTemplateLabel,
+            validators=[DataRequired(message="Please select an email template.")],
+        )
+
     return OpenFeedbackForm
 
 
@@ -232,6 +272,14 @@ class TestOpenFeedbackForm(Form):
         "Target email address",
         validators=[InputRequired(), Email()],
         description="Enter an email address to which the test notification emails will be sent.",
+    )
+
+    # email template selector (query_factory injected by the view)
+    marking_template = QuerySelectField(
+        "Email template",
+        allow_blank=False,
+        get_label=BuildWorkflowTemplateLabel,
+        validators=[DataRequired(message="Please select an email template.")],
     )
 
     # submit button

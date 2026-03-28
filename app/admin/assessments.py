@@ -35,13 +35,16 @@ import app.ajax as ajax
 from ..database import db
 from ..models import (
     AssessorAttendanceData,
+    EmailTemplate,
     FacultyData,
     PresentationAssessment,
     PresentationSession,
     SubmissionRecord,
     SubmitterAttendanceData,
 )
+from ..shared.forms.queries import GetWorkflowTemplates
 from ..shared.context.global_context import render_template_context
+from ..shared.forms.forms import ChooseEmailTemplateForm
 from ..shared.conversions import is_integer
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import (
@@ -415,6 +418,15 @@ def initialize_assessment(id):
     AvailabilityForm = AvailabilityFormFactory(assessment)
     form: AvailabilityForm = AvailabilityForm(obj=assessment)
 
+    # derive tenant_id from the assessment's submission periods (single-tenant enforced by validator)
+    _tenant_id = None
+    _first_period = assessment.submission_periods.first()
+    if _first_period is not None and _first_period.config is not None and _first_period.config.project_class is not None:
+        _tenant_id = _first_period.config.project_class.tenant_id
+
+    # inject query factory for availability_template field
+    form.availability_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.SCHEDULING_AVAILABILITY_REQUEST, tenant_id=_tenant_id)
+
     if form.is_submitted():
         if hasattr(form, "issue_requests") and form.issue_requests.data:
             if assessment.skip_availability:
@@ -439,6 +451,9 @@ def initialize_assessment(id):
                     )
                     return redirect(return_url)
 
+                availability_template = form.availability_template.data
+                availability_template_id = availability_template.id if availability_template is not None else None
+
                 _do_initialize_assessment(
                     'Issue availability requests for "{name}"'.format(
                         name=assessment.name
@@ -447,6 +462,7 @@ def initialize_assessment(id):
                     assessment.id,
                     form.availability_deadline.data,
                     False,
+                    availability_template_id=availability_template_id,
                 )
 
             return redirect(return_url)
@@ -455,6 +471,7 @@ def initialize_assessment(id):
         if request.method == "GET":
             if form.availability_deadline.data is None:
                 form.availability_deadline.data = date.today() + timedelta(weeks=2)
+            form.availability_template.data = EmailTemplate.find_template_(EmailTemplate.SCHEDULING_AVAILABILITY_REQUEST, tenant=_tenant_id)
 
     if (
         PresentationAssessment.AVAILABILITY_NOT_REQUESTED
@@ -475,12 +492,14 @@ def _do_initialize_assessment(
     assessment_id: int,
     deadline: datetime,
     skip_availability: bool,
+        availability_template_id: int = None,
 ):
     uuid = register_task(title, owner=current_user, description=description)
     celery = current_app.extensions["celery"]
     availability_task = celery.tasks["app.tasks.availability.initialize"]
     availability_task.apply_async(
         args=(assessment_id, current_user.id, uuid, deadline, skip_availability),
+        kwargs=dict(availability_template_id=availability_template_id),
         task_id=uuid,
     )
 
@@ -553,7 +572,7 @@ def close_availability(id):
     return redirect(redirect_url())
 
 
-@admin.route("/availability_reminder/<int:id>")
+@admin.route("/availability_reminder/<int:id>", methods=["GET", "POST"])
 @roles_required("root")
 def availability_reminder(id):
     if not validate_using_assessment():
@@ -579,15 +598,40 @@ def availability_reminder(id):
         )
         return redirect(redirect_url())
 
-    celery = current_app.extensions["celery"]
-    email_task = celery.tasks["app.tasks.availability.reminder_email"]
+    # derive tenant_id from assessment's submission periods
+    _tenant_id = None
+    _first_period = assessment.submission_periods.first()
+    if _first_period is not None and _first_period.config is not None and _first_period.config.project_class is not None:
+        _tenant_id = _first_period.config.project_class.tenant_id
 
-    email_task.apply_async((id, current_user.id))
+    form = ChooseEmailTemplateForm()
+    form.template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER, tenant_id=_tenant_id)
 
-    return redirect(redirect_url())
+    if form.validate_on_submit():
+        template = form.template.data
+        template_id = template.id if template is not None else None
+
+        celery = current_app.extensions["celery"]
+        email_task = celery.tasks["app.tasks.availability.reminder_email"]
+        email_task.apply_async(args=(id, current_user.id), kwargs=dict(reminder_template_id=template_id))
+
+        return redirect(redirect_url())
+
+    if not form.is_submitted():
+        form.template.data = EmailTemplate.find_template_(EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER, tenant=_tenant_id)
+
+    return render_template_context(
+        "shared/choose_email_template.html",
+        title="Send availability reminders",
+        action=url_for("admin.availability_reminder", id=id),
+        message=f'Select the email template to use when sending availability reminders for "{assessment.name}".',
+        template_fields=[{"heading": None, "field": form.template}],
+        form=form,
+        cancel_url=redirect_url(),
+    )
 
 
-@admin.route("/availability_reminder_individual/<int:id>")
+@admin.route("/availability_reminder_individual/<int:id>", methods=["GET", "POST"])
 @roles_required("root")
 def availability_reminder_individual(id):
     if not validate_using_assessment():
@@ -614,16 +658,42 @@ def availability_reminder_individual(id):
         )
         return redirect(redirect_url())
 
-    celery = current_app.extensions["celery"]
-    email_task = celery.tasks["app.tasks.availability.send_reminder_email"]
-    notify_task = celery.tasks["app.tasks.utilities.email_notification"]
+    # derive tenant_id from assessment's submission periods
+    _tenant_id = None
+    _first_period = assessment.submission_periods.first()
+    if _first_period is not None and _first_period.config is not None and _first_period.config.project_class is not None:
+        _tenant_id = _first_period.config.project_class.tenant_id
 
-    tk = email_task.si(record.id) | notify_task.s(
-        current_user.id, "Reminder email has been sent", "info"
+    form = ChooseEmailTemplateForm()
+    form.template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER, tenant_id=_tenant_id)
+
+    if form.validate_on_submit():
+        template = form.template.data
+        template_id = template.id if template is not None else None
+
+        celery = current_app.extensions["celery"]
+        email_task = celery.tasks["app.tasks.availability.send_reminder_email"]
+        notify_task = celery.tasks["app.tasks.utilities.email_notification"]
+
+        tk = email_task.si(record.id, reminder_template_id=template_id) | notify_task.s(
+            current_user.id, "Reminder email has been sent", "info"
+        )
+        tk.apply_async()
+
+        return redirect(redirect_url())
+
+    if not form.is_submitted():
+        form.template.data = EmailTemplate.find_template_(EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER, tenant=_tenant_id)
+
+    return render_template_context(
+        "shared/choose_email_template.html",
+        title="Send availability reminder",
+        action=url_for("admin.availability_reminder_individual", id=id),
+        message=f'Select the email template to use when sending an availability reminder for "{assessment.name}".',
+        template_fields=[{"heading": None, "field": form.template}],
+        form=form,
+        cancel_url=redirect_url(),
     )
-    tk.apply_async()
-
-    return redirect(redirect_url())
 
 
 @admin.route("/reopen_availability/<int:id>")

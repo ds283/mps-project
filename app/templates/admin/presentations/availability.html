@@ -3,6 +3,7 @@
 
 {% from "icon_block.html" import icon_block %}
 {% from "datepicker.html" import import_datepicker %}
+{% from "select2.html" import import_select2 %}
 
 {% from "admin/presentations/availability/request.html" import issue_requests %}
 {% from "admin/presentations/availability/waiting.html" import waiting_responses %}
@@ -11,6 +12,7 @@
 {% block scripts %}
     {{ super() }}
     {{ import_datepicker() }}
+    {{ import_select2() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -19,6 +21,13 @@
             $('#datetimepicker1').datetimepicker({
                 format: 'DD/MM/YYYY',
                 allowInputToggle: true
+            });
+
+            $('#availability_template').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select a template...'
             });
         });
     </script>

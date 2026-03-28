@@ -3091,3 +3091,17 @@ def deactivate_supervisor(id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(redirect_url())
+
+
+@admin.route("/database_configuration")
+@roles_required("root")
+def database_configuration():
+    return render_template_context("admin/database_configuration.html")
+
+
+@admin.route("/project_components")
+@roles_accepted("admin", "root", "faculty", "edit_tags")
+def project_components():
+    if not validate_is_admin_or_convenor("edit_tags"):
+        return home_dashboard()
+    return render_template_context("admin/project_components.html")

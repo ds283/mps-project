@@ -1,0 +1,83 @@
+{% extends "base_app.html" %}
+
+{% block title %}Project components{% endblock %}
+
+{% block bodyblock %}
+    <div class="card border-primary mt-3 mb-3">
+        <div class="card-header bg-primary text-white">
+            <i class="fas fa-layer-group fa-fw"></i> Project components
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-4">
+                Manage the reference data items that appear as selectable attributes on
+                projects and in project browsing.
+            </p>
+            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+
+                <div class="col">
+                    <div class="card h-100 border-secondary">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-brain fa-fw text-primary"></i>
+                                Transferable skills
+                            </h5>
+                            <p class="card-text small text-muted">
+                                Define skill categories and individual skills that supervisors
+                                tag on projects to help students find matching opportunities.
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a href="{{ url_for('admin.edit_skills') }}"
+                               class="btn btn-sm btn-outline-primary">
+                                Manage &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="card h-100 border-secondary">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-user-tie fa-fw text-primary"></i>
+                                Supervisory team
+                            </h5>
+                            <p class="card-text small text-muted">
+                                Manage named supervisory roles (e.g. Director of Studies)
+                                assignable to members of a project's supervision team.
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a href="{{ url_for('admin.edit_supervisors') }}"
+                               class="btn btn-sm btn-outline-primary">
+                                Manage &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="card h-100 border-secondary">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-tags fa-fw text-primary"></i>
+                                Project tags
+                            </h5>
+                            <p class="card-text small text-muted">
+                                Create and organise freeform tags and tag groups that
+                                supervisors attach to projects for categorisation and discovery.
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a href="{{ url_for('admin.edit_project_tags') }}"
+                               class="btn btn-sm btn-outline-primary">
+                                Manage &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+{% endblock %}

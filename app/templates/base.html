@@ -441,16 +441,9 @@
                                         {% set needs_divider = false %}
                                     {% endif %}
                                     <div class="dropdown-header">Project components</div>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_skills') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Transferable skills&hellip;
-                                    </a>
                                     <a class="dropdown-item d-flex gap-2"
-                                       href="{{ url_for('admin.edit_supervisors') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Supervisory team&hellip;
-                                    </a>
-                                    <a class="dropdown-item d-flex gap-2"
-                                       href="{{ url_for('admin.edit_project_tags') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Project tags&hellip;
+                                       href="{{ url_for('admin.project_components') }}">
+                                        <i class="fas fa-layer-group fa-fw"></i> Reference data&hellip;
                                     </a>
                                     {% set needs_divider = true %}
                                 {% endif %}
@@ -529,29 +522,8 @@
                                     <div role="separator" class="dropdown-divider"></div>
                                     <div class="dropdown-header">Database configuration</div>
                                     <a class="dropdown-item d-flex gap-2"
-                                       href="{{ url_for('admin.edit_project_classes') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Project classes&hellip;
-                                    </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_groups') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Affiliations&hellip;
-                                    </a>
-                                    <a class="dropdown-item d-flex gap-2"
-                                       href="{{ url_for('admin.edit_degree_programmes') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Degree programmes&hellip;
-                                    </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_rooms') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Presentation venues&hellip;
-                                    </a>
-                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.edit_licenses') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Asset licenses&hellip;
-                                    </a>
-                                    <a class="dropdown-item d-flex gap-2"
-                                       href="{{ url_for('manage_users.edit_roles') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Role editor&hellip;
-                                    </a>
-                                    <a class="dropdown-item d-flex gap-2"
-                                       href="{{ url_for('admin.global_email_templates') }}">
-                                        <i class="fas fa-cogs fa-fw"></i> Global email templates&hellip;
+                                       href="{{ url_for('admin.database_configuration') }}">
+                                        <i class="fas fa-database fa-fw"></i> Reference data&hellip;
                                     </a>
                                 {% endif %}
                             </div>

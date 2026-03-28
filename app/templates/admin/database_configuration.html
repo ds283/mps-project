@@ -1,0 +1,167 @@
+{% extends "base_app.html" %}
+
+{% block title %}Database configuration{% endblock %}
+
+{% block bodyblock %}
+    <div class="card border-primary mt-3 mb-3">
+        <div class="card-header bg-primary text-white">
+            <i class="fas fa-database fa-fw"></i> Database configuration
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-4">
+                Manage the core reference data that underpins project classes, user roles,
+                degree structures, and system assets.
+            </p>
+            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+
+                <div class="col">
+                    <div class="card h-100 border-secondary">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-chalkboard-teacher fa-fw text-primary"></i>
+                                Project classes
+                            </h5>
+                            <p class="card-text small text-muted">
+                                Define project class types, timing, submission periods, and
+                                degree programme associations.
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a href="{{ url_for('admin.edit_project_classes') }}"
+                               class="btn btn-sm btn-outline-primary">
+                                Manage &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="card h-100 border-secondary">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-users fa-fw text-primary"></i>
+                                Affiliations
+                            </h5>
+                            <p class="card-text small text-muted">
+                                Manage research group affiliations associated with faculty members
+                                and used to filter project browsing.
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a href="{{ url_for('admin.edit_groups') }}"
+                               class="btn btn-sm btn-outline-primary">
+                                Manage &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="card h-100 border-secondary">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-graduation-cap fa-fw text-primary"></i>
+                                Degree programmes
+                            </h5>
+                            <p class="card-text small text-muted">
+                                Configure degree programmes, types, and levels, controlling
+                                which project classes students are eligible to join.
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a href="{{ url_for('admin.edit_degree_programmes') }}"
+                               class="btn btn-sm btn-outline-primary">
+                                Manage &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="card h-100 border-secondary">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-map-marker-alt fa-fw text-primary"></i>
+                                Presentation venues
+                            </h5>
+                            <p class="card-text small text-muted">
+                                Define the rooms and buildings available for scheduling
+                                presentation assessment sessions.
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a href="{{ url_for('admin.edit_rooms') }}"
+                               class="btn btn-sm btn-outline-primary">
+                                Manage &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="card h-100 border-secondary">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-file-contract fa-fw text-primary"></i>
+                                Asset licenses
+                            </h5>
+                            <p class="card-text small text-muted">
+                                Manage content license types applied to uploaded assets
+                                such as project reports and feedback documents.
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a href="{{ url_for('admin.edit_licenses') }}"
+                               class="btn btn-sm btn-outline-primary">
+                                Manage &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="card h-100 border-secondary">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-user-shield fa-fw text-primary"></i>
+                                Role editor
+                            </h5>
+                            <p class="card-text small text-muted">
+                                View and edit the security roles that control what actions
+                                each user account is permitted to perform.
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a href="{{ url_for('manage_users.edit_roles') }}"
+                               class="btn btn-sm btn-outline-primary">
+                                Manage &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="card h-100 border-secondary">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fas fa-envelope-open-text fa-fw text-primary"></i>
+                                Global email templates
+                            </h5>
+                            <p class="card-text small text-muted">
+                                Edit system-wide email templates used for automated notifications
+                                sent to students, supervisors, and administrators.
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a href="{{ url_for('admin.global_email_templates') }}"
+                               class="btn btn-sm btn-outline-primary">
+                                Manage &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+{% endblock %}

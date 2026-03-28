@@ -992,8 +992,14 @@ def create_custom_offer(sel_id, proj_id):
             db.session.add(offer)
             db.session.flush()
 
-            programme_name = sel.student.programme.full_name if sel.student.programme else "unknown"
-            academic_year = f"Year {sel.student.academic_year}" if sel.student.academic_year else "unknown"
+            programme_name = (
+                sel.student.programme.full_name if sel.student.programme else "unknown"
+            )
+            academic_year = (
+                f"Year {sel.student.academic_year}"
+                if sel.student.academic_year
+                else "unknown"
+            )
             html = (
                 f"<p>Custom offer created for project <strong>{proj.name}</strong> "
                 f"(project class <strong>{pclass.name}</strong>).</p>"
@@ -1005,7 +1011,8 @@ def create_custom_offer(sel_id, proj_id):
                 f"<p><em>This entry was created automatically.</em></p>"
             )
             create_auto_journal_entry(
-                sel.student, html,
+                sel.student,
+                html,
                 title=f"Custom offer created: {proj.name}",
                 project_class_config=config,
             )
@@ -1227,8 +1234,14 @@ def delete_custom_offer(offer_id):
     _offer_config = offer.liveproject.config
     _offer_student = offer.selector.student
 
-    programme_name = _offer_student.programme.full_name if _offer_student.programme else "unknown"
-    academic_year = f"Year {_offer_student.academic_year}" if _offer_student.academic_year else "unknown"
+    programme_name = (
+        _offer_student.programme.full_name if _offer_student.programme else "unknown"
+    )
+    academic_year = (
+        f"Year {_offer_student.academic_year}"
+        if _offer_student.academic_year
+        else "unknown"
+    )
     journal_html = (
         f"<p>Custom offer deleted for project <strong>{_offer_project_name}</strong> "
         f"(project class <strong>{_offer_pclass.name}</strong>).</p>"
@@ -1245,7 +1258,8 @@ def delete_custom_offer(offer_id):
         db.session.flush()
 
         create_auto_journal_entry(
-            _offer_student, journal_html,
+            _offer_student,
+            journal_html,
             title=f"Custom offer deleted: {_offer_project_name}",
             project_class_config=_offer_config,
         )
@@ -1278,7 +1292,11 @@ def reject_custom_offer_hint(hint_id):
         return redirect(redirect_url())
 
     _student = sel.student
-    _record_project_name = hint.submission_record.project.name if hint.submission_record and hint.submission_record.project else "unknown"
+    _record_project_name = (
+        hint.submission_record.project.name
+        if hint.submission_record and hint.submission_record.project
+        else "unknown"
+    )
 
     try:
         db.session.delete(hint)
@@ -1313,7 +1331,9 @@ def accept_custom_offer_hint(hint_id):
 
     # Resolve context from the previous supervision record
     record = hint.submission_record
-    prev_project_name = record.project.name if record and record.project else "unknown project"
+    prev_project_name = (
+        record.project.name if record and record.project else "unknown project"
+    )
     prev_sub_config = record.owner.config if record and record.owner else None
     prev_year_a = prev_sub_config.submit_year_a if prev_sub_config else "unknown"
     prev_year_b = prev_sub_config.submit_year_b if prev_sub_config else "unknown"
@@ -1327,13 +1347,17 @@ def accept_custom_offer_hint(hint_id):
     try:
         for lp in live_projects:
             # Skip if a CustomOffer for this (liveproject, selector) pair already exists
-            existing = db.session.query(CustomOffer).filter_by(liveproject_id=lp.id, selector_id=sel.id).first()
+            existing = (
+                db.session.query(CustomOffer)
+                .filter_by(liveproject_id=lp.id, selector_id=sel.id)
+                .first()
+            )
             if existing is not None:
                 continue
 
             comment = (
                 f"Offer generated from hint based on previous supervision: "
-                f"{prev_project_name} ({prev_year_a}\u2013{prev_year_b})."
+                f"{prev_project_name} ({prev_sub_config.abbreviation} {prev_year_a}\u2013{prev_year_b})."
             )
             offer = CustomOffer(
                 liveproject_id=lp.id,
@@ -1347,14 +1371,16 @@ def accept_custom_offer_hint(hint_id):
             db.session.add(offer)
             db.session.flush()
 
-            supervisor_name = lp.owner.user.name if lp.owner and lp.owner.user else "unknown"
+            supervisor_name = (
+                lp.owner.user.name if lp.owner and lp.owner.user else "unknown"
+            )
             journal_html = (
                 f"<p>Custom offer created for project <strong>{lp.name}</strong> "
                 f"(supervisor: <strong>{supervisor_name}</strong>, "
                 f"project class: <strong>{pclass.name}</strong>).</p>"
                 f"<ul>"
                 f"<li>Generated from hint based on previous supervision in "
-                f"{prev_year_a}\u2013{prev_year_b}: project <strong>{prev_project_name}</strong>.</li>"
+                f"{prev_year_a}\u2013{prev_year_b}: project <strong>{prev_project_name}</strong> ({prev_sub_config.abbreviation}).</li>"
                 f"<li>Accepted by: {current_user.name}</li>"
                 f"<li>Date/time: {now.strftime('%a %d %b %Y %H:%M:%S')}</li>"
                 f"</ul>"
@@ -1370,7 +1396,9 @@ def accept_custom_offer_hint(hint_id):
 
         db.session.delete(hint)
 
-        faculty_name = hint.faculty.user.name if hint.faculty and hint.faculty.user else "unknown"
+        faculty_name = (
+            hint.faculty.user.name if hint.faculty and hint.faculty.user else "unknown"
+        )
         log_db_commit(
             f"Accepted CustomOfferHint for {sel.student.user.name} in {config.name}: "
             f"created {offers_created} custom offer(s) for faculty {faculty_name}",

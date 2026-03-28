@@ -294,8 +294,13 @@
                                             <td class="small">{{ hint.selector.student.user.name }}</td>
                                             <td class="small">
                                                 {% if prev_sub_config %}
-                                                    {{ prev_sub_config.submit_year_a }}&ndash;
-                                                    {{ prev_sub_config.submit_year_b }}
+                                                    <div>
+                                                        {{ prev_sub_config.submit_year_a }}&ndash;
+                                                        {{ prev_sub_config.submit_year_b }}
+                                                    </div>
+                                                    <div class="text-muted">
+                                                        {{ prev_sub_config.abbreviation }}
+                                                    </div>
                                                 {% else %}
                                                     <span class="text-muted">Unknown</span>
                                                 {% endif %}

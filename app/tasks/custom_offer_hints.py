@@ -20,6 +20,7 @@ from ..models import (
     FacultyData,
     ProjectClassConfig,
     SelectingStudent,
+    StudentData,
     SubmissionRecord,
     SubmissionRole,
     SubmittingStudent,
@@ -48,6 +49,8 @@ def generate_hints_for_selector(
     Returns the number of new hints created.
     Raises SQLAlchemyError on database failure; the caller is responsible for rollback.
     """
+    student: StudentData = selector.student
+    suser: User = student.user
     student_id = selector.student_id
 
     # Find all previous supervisors for this student, in any project class, where the
@@ -58,7 +61,10 @@ def generate_hints_for_selector(
         .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
         .filter(
             SubmissionRole.role.in_(
-                [SubmissionRole.SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]
+                [
+                    SubmissionRole.ROLE_SUPERVISOR,
+                    SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                ]
             ),
             SubmittingStudent.student_id == student_id,
             SubmittingStudent.retired.is_(True),
@@ -77,8 +83,8 @@ def generate_hints_for_selector(
     for supervisor in retired_supervisors:
         supervisor: SubmissionRole
         record: SubmissionRecord = supervisor.submission
-        user: User = supervisor.user
-        fd: FacultyData = user.faculty_data
+        fuser: User = supervisor.user
+        fd: FacultyData = fuser.faculty_data
 
         if fd is not None:
             # Only create a hint if the faculty member has live projects in the current config
@@ -86,6 +92,9 @@ def generate_hints_for_selector(
                 config.live_projects.filter_by(owner_id=fd.id).count() > 0
             )
             if not has_live_projects:
+                print(
+                    f"@@ student {suser.name} has previous supervisor {fuser.name} (#{fd.id}), but this supervisor has no projects in the current cycle"
+                )
                 continue
 
             # Skip if a hint already exists for this (selector, submission_record) pair
@@ -96,6 +105,9 @@ def generate_hints_for_selector(
                 is not None
             )
             if exists:
+                print(
+                    f"@@ student {suser.name} has previous supervisor {fuser.name} (#{fd.id}), but a hint already exists for this (selector, submission_record) pair"
+                )
                 continue
 
             hint = CustomOfferHint(
@@ -105,6 +117,9 @@ def generate_hints_for_selector(
                 creation_timestamp=datetime.now(),
             )
             db.session.add(hint)
+            print(
+                f"@@ student {suser.name} has previous supervisor {fuser.name} (#{fd.id}), so creating a hint for this (selector, submission_record) pair"
+            )
             hints_created += 1
 
     if hints_created > 0:

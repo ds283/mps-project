@@ -755,4 +755,10 @@ def inject_liveproject(pid, pclass_id, type):
     ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
+    # Fire-and-forget: regenerate CustomOfferHints if selections are still live.
+    # Independent of the project_golive chain so hint failures don't affect injection status.
+    if inject_config.live and not inject_config.selection_closed:
+        hint_task = celery.tasks["app.tasks.custom_offer_hints.generate_hints_for_config"]
+        hint_task.apply_async(args=(inject_config.id,))
+
     return redirect(redirect_url())

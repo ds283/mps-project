@@ -18,6 +18,7 @@ from .backup import register_backup_tasks
 from .batch_create import register_batch_create_tasks
 from .canvas import register_canvas_tasks
 from .close_selection import register_close_selection_tasks
+from .custom_offer_hints import register_custom_offer_hint_tasks
 from .cloud_api_audit import register_cloud_api_audit_tasks
 from .email import register_email
 from .email_notifications import register_email_notification_tasks

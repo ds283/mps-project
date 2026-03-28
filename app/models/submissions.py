@@ -3007,3 +3007,42 @@ class CustomOffer(db.Model, EditingMetadataMixin, CustomOfferStatesMixin):
 
     # document reason/explanation for offer
     comment = db.Column(db.Text())
+
+
+class CustomOfferHint(db.Model, EditingMetadataMixin):
+    """
+    Hint suggesting that a CustomOffer should be made to a SelectingStudent, based on
+    a previous supervision relationship discovered from retired SubmissionRecord history.
+    Generated automatically after Go Live and after inject_liveproject.
+    """
+
+    __tablename__ = "custom_offer_hints"
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # SelectingStudent in the current live cycle
+    selector_id = db.Column(db.Integer(), db.ForeignKey("selecting_students.id"), index=True, nullable=False)
+    selector = db.relationship(
+        "SelectingStudent",
+        foreign_keys=[selector_id],
+        uselist=False,
+        backref=db.backref("custom_offer_hints", lazy="dynamic"),
+    )
+
+    # Retired SubmissionRecord that triggered this hint
+    submission_record_id = db.Column(db.Integer(), db.ForeignKey("submission_records.id"), nullable=False)
+    submission_record = db.relationship(
+        "SubmissionRecord",
+        foreign_keys=[submission_record_id],
+        uselist=False,
+        backref=db.backref("custom_offer_hints", lazy="dynamic"),
+    )
+
+    # Denormalized faculty owner id (from submission_record.project.owner_id at hint creation time).
+    # Avoids traversing the retired LiveProject chain at dashboard display time.
+    faculty_id = db.Column(db.Integer(), db.ForeignKey("faculty_data.id"), nullable=False, index=True)
+    faculty = db.relationship("FacultyData", foreign_keys=[faculty_id], uselist=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("selector_id", "submission_record_id", name="uq_custom_offer_hint_selector_record"),
+    )

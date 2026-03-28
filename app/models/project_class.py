@@ -853,6 +853,10 @@ class ProjectClassConfig(
     # golive timestamp
     golive_timestamp = db.Column(db.DateTime())
 
+    # track whether background CustomOfferHint generation has completed after Go Live
+    offer_hints_generated = db.Column(db.Boolean(), default=False)
+    offer_hints_generated_timestamp = db.Column(db.DateTime(), default=None, nullable=True)
+
     # golive record of email notifications
     golive_notified = db.relationship("User", secondary=golive_emails, lazy="dynamic")
 
@@ -1792,6 +1796,27 @@ class ProjectClassConfig(
 
         items = [_build_item(*p) for p in query]
         return [x for x in items if x is not None]
+
+    @property
+    def pending_custom_offer_hints(self):
+        """
+        Return all CustomOfferHints where the selector belongs to this config,
+        ordered by selector student last name then first name.
+        """
+        from .submissions import CustomOfferHint
+        from .live_projects import SelectingStudent
+        from .students import StudentData
+        from .users import User
+
+        return (
+            db.session.query(CustomOfferHint)
+            .join(SelectingStudent, SelectingStudent.id == CustomOfferHint.selector_id)
+            .filter(SelectingStudent.config_id == self.id, SelectingStudent.retired.is_(False))
+            .join(StudentData, StudentData.id == SelectingStudent.student_id)
+            .join(User, User.id == StudentData.id)
+            .order_by(User.last_name, User.first_name)
+            .all()
+        )
 
     @property
     def convenor_email(self):

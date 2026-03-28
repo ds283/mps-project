@@ -31,6 +31,7 @@ from ..database import db
 from ..models import (
     Bookmark,
     CustomOffer,
+    CustomOfferHint,
     FilterRecord,
     LiveProject,
     ProjectClass,
@@ -1258,6 +1259,128 @@ def delete_custom_offer(offer_id):
     except SQLAlchemyError as e:
         flash(
             "Could not delete custom offer due to a database error. Please contact a system administrator.",
+            "error",
+        )
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/reject_custom_offer_hint/<int:hint_id>")
+@roles_accepted("faculty", "admin", "root")
+def reject_custom_offer_hint(hint_id):
+    hint: CustomOfferHint = CustomOfferHint.query.get_or_404(hint_id)
+    sel: SelectingStudent = hint.selector
+    config: ProjectClassConfig = sel.config
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    _student = sel.student
+    _record_project_name = hint.submission_record.project.name if hint.submission_record and hint.submission_record.project else "unknown"
+
+    try:
+        db.session.delete(hint)
+        log_db_commit(
+            f"Rejected CustomOfferHint for {_student.user.name} "
+            f"(previous project: {_record_project_name}) in {config.name}",
+            user=current_user,
+            student=_student,
+            project_classes=config.project_class,
+        )
+    except SQLAlchemyError as e:
+        flash(
+            "Could not reject hint due to a database error. Please contact a system administrator.",
+            "error",
+        )
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/accept_custom_offer_hint/<int:hint_id>")
+@roles_accepted("faculty", "admin", "root")
+def accept_custom_offer_hint(hint_id):
+    hint: CustomOfferHint = CustomOfferHint.query.get_or_404(hint_id)
+    sel: SelectingStudent = hint.selector
+    config: ProjectClassConfig = sel.config
+    pclass: ProjectClass = config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    # Resolve context from the previous supervision record
+    record = hint.submission_record
+    prev_project_name = record.project.name if record and record.project else "unknown project"
+    prev_sub_config = record.owner.config if record and record.owner else None
+    prev_year_a = prev_sub_config.submit_year_a if prev_sub_config else "unknown"
+    prev_year_b = prev_sub_config.submit_year_b if prev_sub_config else "unknown"
+
+    # Find all LiveProjects owned by the hinted faculty member in the current config
+    live_projects = config.live_projects.filter_by(owner_id=hint.faculty_id).all()
+
+    offers_created = 0
+    now = datetime.now()
+
+    try:
+        for lp in live_projects:
+            # Skip if a CustomOffer for this (liveproject, selector) pair already exists
+            existing = db.session.query(CustomOffer).filter_by(liveproject_id=lp.id, selector_id=sel.id).first()
+            if existing is not None:
+                continue
+
+            comment = (
+                f"Offer generated from hint based on previous supervision: "
+                f"{prev_project_name} ({prev_year_a}\u2013{prev_year_b})."
+            )
+            offer = CustomOffer(
+                liveproject_id=lp.id,
+                selector_id=sel.id,
+                status=CustomOffer.OFFERED,
+                period_id=None,
+                comment=comment,
+                creator_id=current_user.id,
+                creation_timestamp=now,
+            )
+            db.session.add(offer)
+            db.session.flush()
+
+            supervisor_name = lp.owner.user.name if lp.owner and lp.owner.user else "unknown"
+            journal_html = (
+                f"<p>Custom offer created for project <strong>{lp.name}</strong> "
+                f"(supervisor: <strong>{supervisor_name}</strong>, "
+                f"project class: <strong>{pclass.name}</strong>).</p>"
+                f"<ul>"
+                f"<li>Generated from hint based on previous supervision in "
+                f"{prev_year_a}\u2013{prev_year_b}: project <strong>{prev_project_name}</strong>.</li>"
+                f"<li>Accepted by: {current_user.name}</li>"
+                f"<li>Date/time: {now.strftime('%a %d %b %Y %H:%M:%S')}</li>"
+                f"</ul>"
+                f"<p><em>This entry was created automatically.</em></p>"
+            )
+            create_auto_journal_entry(
+                sel.student,
+                journal_html,
+                title=f"Custom offer created (from hint): {lp.name}",
+                project_class_config=config,
+            )
+            offers_created += 1
+
+        db.session.delete(hint)
+
+        faculty_name = hint.faculty.user.name if hint.faculty and hint.faculty.user else "unknown"
+        log_db_commit(
+            f"Accepted CustomOfferHint for {sel.student.user.name} in {config.name}: "
+            f"created {offers_created} custom offer(s) for faculty {faculty_name}",
+            user=current_user,
+            student=sel.student,
+            project_classes=pclass,
+        )
+    except SQLAlchemyError as e:
+        flash(
+            "Could not accept hint due to a database error. Please contact a system administrator.",
             "error",
         )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

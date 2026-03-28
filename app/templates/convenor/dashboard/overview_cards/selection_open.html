@@ -269,6 +269,70 @@
                     {% endcall %}
                 </div>
             </div>
+            {% set hint_list = config.pending_custom_offer_hints %}
+            {% if hint_list %}
+                <div class="row mb-3">
+                    <div class="col">
+                        {% call(blk) dashboard_tile("Previous supervision hints", title_icon="lightbulb", icon_state=none, user_block_classes="w-100") %}
+                            {% if blk == 'body' %}
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                    <tr>
+                                        <th class="small" width="20%">Student</th>
+                                        <th class="small" width="15%">Prev. year</th>
+                                        <th class="small" width="30%">Previous project</th>
+                                        <th class="small" width="20%">Supervisor</th>
+                                        <th class="small" width="15%">Actions</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody class="table-group-divider">
+                                    {% for hint in hint_list %}
+                                        {% set record = hint.submission_record %}
+                                        {% set prev_proj = record.project if record else none %}
+                                        {% set prev_sub_config = record.owner.config if record and record.owner else none %}
+                                        <tr>
+                                            <td class="small">{{ hint.selector.student.user.name }}</td>
+                                            <td class="small">
+                                                {% if prev_sub_config %}
+                                                    {{ prev_sub_config.submit_year_a }}&ndash;
+                                                    {{ prev_sub_config.submit_year_b }}
+                                                {% else %}
+                                                    <span class="text-muted">Unknown</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="small">
+                                                {% if prev_proj %}{{ prev_proj.name }}
+                                                {% else %}<span class="text-muted">Unknown</span>{% endif %}
+                                            </td>
+                                            <td class="small">
+                                                {% if hint.faculty and hint.faculty.user %}
+                                                    {{ hint.faculty.user.name }}
+                                                {% else %}<span class="text-muted">Unknown</span>{% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-row gap-1">
+                                                    <a href="{{ url_for('convenor.accept_custom_offer_hint', hint_id=hint.id) }}"
+                                                       class="btn btn-sm btn-outline-success"
+                                                       title="Create custom offers for all current projects by this supervisor">Accept</a>
+                                                    <a href="{{ url_for('convenor.reject_custom_offer_hint', hint_id=hint.id) }}"
+                                                       class="btn btn-sm btn-outline-danger"
+                                                       title="Delete this hint">Reject</a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% elif blk == 'footer' %}
+                                <div class="small text-muted mt-2">
+                                    Hints are based on previous supervision history. Accepting creates custom offers for
+                                    all current projects by the supervisor.
+                                </div>
+                            {% endif %}
+                        {% endcall %}
+                    </div>
+                </div>
+            {% endif %}
             {% set popular_data = config.most_popular_projects() %}
             {% if popular_data is not none %}
                 <div class="row mb-3">

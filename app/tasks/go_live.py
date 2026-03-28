@@ -796,6 +796,11 @@ def register_golive_tasks(celery):
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
+        # Fire-and-forget: generate CustomOfferHints in the background.
+        # This does not block the Go Live chain or affect its success/failure state.
+        hint_task = celery.tasks["app.tasks.custom_offer_hints.generate_hints_for_config"]
+        hint_task.apply_async(args=(config_id,))
+
     @celery.task(bind=True, default_retry_delay=30)
     def golive_fail(self, task_id, convenor_id):
         progress_update(

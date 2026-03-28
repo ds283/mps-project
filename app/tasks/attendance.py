@@ -128,11 +128,7 @@ def register_attendance_tasks(celery):
                     db.session.flush()
 
                     workflow_id = workflow.id
-                    log_db_commit(
-                        f"Create attendance prompt email workflow for config {config.name}",
-                        endpoint=self.name,
-                        project_classes=[config.project_class],
-                    )
+                    db.session.commit()  # intentionally not logged: periodic attendance notification task
 
                     tasks = group(
                         check_event_for_attendance_prompt.si(event.id, workflow_id)

@@ -157,6 +157,27 @@ def student_journal_ajax(student_id):
         )
 
 
+@convenor.route("/view_journal_entry/<int:entry_id>")
+@roles_accepted(*_ROLES)
+def view_journal_entry(entry_id):
+    entry: StudentJournalEntry = StudentJournalEntry.query.get_or_404(entry_id)
+    student: StudentData = entry.student
+
+    if not _check_access(student):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", url_for("convenor.student_journal_inspector", student_id=student.id))
+    text = request.args.get("text", "Back to journal")
+
+    return render_template_context(
+        "convenor/journal/view_entry.html",
+        entry=entry,
+        student=student,
+        url=url,
+        text=text,
+    )
+
+
 @convenor.route("/add_journal_entry/<int:student_id>", methods=["GET", "POST"])
 @roles_accepted(*_ROLES)
 def add_journal_entry(student_id):
@@ -247,6 +268,7 @@ def edit_journal_entry(entry_id):
     if form.validate_on_submit():
         entry.title = form.title.data
         entry.entry = form.entry.data
+        entry.last_edit_timestamp = datetime.now()
         entry.project_classes = list(form.project_classes.data)
 
         try:

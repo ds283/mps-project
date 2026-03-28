@@ -43,11 +43,14 @@ _classes = """
 
 # language=jinja2
 _title = """
-{% if entry.title %}
-    <span class="text-primary fw-semibold">{{ entry.title }}</span>
-{% else %}
-    <span class="text-secondary"><em>Untitled</em></span>
-{% endif %}
+<a class="text-decoration-none"
+   href="{{ url_for('convenor.view_journal_entry', entry_id=entry.id, url=url_for('convenor.student_journal_inspector', student_id=student.id), text='Back to journal') }}">
+    {% if entry.title %}
+        <span class="fw-semibold">{{ entry.title }}</span>
+    {% else %}
+        <span class="text-secondary fst-italic">Untitled</span>
+    {% endif %}
+</a>
 {% if entry.entry %}
     <div class="small text-muted mt-1">{{ entry.entry | striptags | truncate(100) }}</div>
 {% endif %}
@@ -107,7 +110,7 @@ def journal_data(entries: List[StudentJournalEntry], student: StudentData):
             "timestamp": render_template(timestamp_templ, entry=e),
             "year": render_template(year_templ, entry=e),
             "classes": render_template(classes_templ, entry=e),
-            "title": render_template(title_templ, entry=e),
+            "title": render_template(title_templ, entry=e, student=student),
             "owner": render_template(owner_templ, entry=e),
             "actions": render_template(
                 menu_templ, entry=e, student=student, current_user=current_user

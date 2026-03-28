@@ -75,6 +75,11 @@ class StudentJournalEntry(db.Model):
     # Timestamp when the entry was created
     created_timestamp = db.Column(db.DateTime(), index=True, default=datetime.now)
 
+    # Timestamp for the last edit
+    last_edit_timestamp = db.Column(
+        db.DateTime(), index=True, default=None, nullable=True
+    )
+
     # The user who created this entry (nullable for auto-created entries)
     owner_id = db.Column(
         db.Integer(), db.ForeignKey("users.id"), default=None, nullable=True
@@ -88,7 +93,12 @@ class StudentJournalEntry(db.Model):
 
     # title for this journal entry
     title = db.Column(
-        EncryptedType(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), get_AES_key, AesEngine, "oneandzeroes"),
+        EncryptedType(
+            db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"),
+            get_AES_key,
+            AesEngine,
+            "oneandzeroes",
+        ),
         default=None,
         nullable=True,
     )

@@ -333,6 +333,28 @@ def register_canvas_tasks(celery):
             for sid in canvas_student_delete_list:
                 db.session.query(CanvasStudent).filter_by(id=sid).delete()
 
+            # notify convenors if new missing students were found
+            if len(c_add_list) > 0:
+                notify_users = set()
+                if config.project_class.convenor is not None:
+                    notify_users.add(config.project_class.convenor.user)
+                for fac in config.project_class.coconvenors.all():
+                    notify_users.add(fac.user)
+
+                n = len(c_add_list)
+                notify_msg = (
+                    "{n} student{plural} enrolled in Canvas for '{name}' {verb} not in the submitter list. "
+                    "Please review the Canvas missing students list on the convenor dashboard.".format(
+                        n=n,
+                        plural="s" if n != 1 else "",
+                        name=config.name,
+                        verb="are" if n != 1 else "is",
+                    )
+                )
+                for notify_user in notify_users:
+                    if notify_user is not None and notify_user.active:
+                        notify_user.post_message(notify_msg, "warning", autocommit=False)
+
             log_db_commit(
                 "Synchronize Canvas student list with submitter list",
                 project_classes=config.project_class,

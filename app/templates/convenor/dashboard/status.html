@@ -13,6 +13,7 @@
 {% from "convenor/dashboard/overview_cards/selection_closed.html" import selection_closed %}
 
 {% from "convenor/dashboard/overview_cards/period_status.html" import period_status %}
+{% from "convenor/dashboard/overview_cards/canvas_missing.html" import canvas_missing_card %}
 
 {% set rollover_in_progress = config.year < current_year %}
 
@@ -90,9 +91,13 @@
     {% set age_oldest_confirm_request = convenor_data['age_oldest_confirm_request'] %}
     {% set lifecycle = config.selector_lifecycle %}
     {% set show_confirmations = (lifecycle >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN) and (lifecycle <= config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
+    {% set missing_canvas_count = convenor_data.get('missing_canvas_count', 0) %}
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
+            {% if missing_canvas_count > 0 %}
+                {{ canvas_missing_card(config, pclass, missing_canvas_count) }}
+            {% endif %}
             {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and age_oldest_confirm_request is not none and age_oldest_confirm_request > 5 %}
                 <div class="alert alert-danger">
                     {% call icon_block("exclamation-circle") %}

@@ -3,6 +3,7 @@
 {% block tabblock %}
     {% set lifecycle = config.submitter_lifecycle %}
     {% set show_manual_enroll = (lifecycle <= config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY) %}
+    {% set missing_canvas_count = convenor_data.get('missing_canvas_count', 0) %}
     <ul class="nav nav-tabs dashboard-nav">
         <li class="nav-item">
             <a class="nav-link {% if subpane == 'list' %}active{% endif %}" href="{{ url_for('convenor.submitters', id=pclass.id) }}">
@@ -15,5 +16,16 @@
                 Manual enrolment
             </a>
         </li>
+        {% if config.canvas_enabled %}
+            <li class="nav-item">
+                <a class="nav-link {% if subpane == 'canvas_missing' %}active{% endif %}"
+                   href="{{ url_for('convenor.canvas_missing_students', id=pclass.id) }}">
+                    Canvas missing students
+                    {% if missing_canvas_count > 0 %}
+                        <span class="badge bg-warning text-dark rounded-pill">{{ missing_canvas_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+        {% endif %}
     </ul>
 {% endblock %}

@@ -100,6 +100,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
     sel_count = get_count(config.selecting_students.filter_by(retired=False))
     sub_count = get_count(config.submitting_students.filter_by(retired=False))
     live_count = get_count(config.live_projects)
+    missing_canvas_count = get_count(config.missing_canvas_students) if config.canvas_enabled else 0
 
     todos = build_convenor_tasks_query(
         config, status_filter="available", due_date_order=True
@@ -187,6 +188,7 @@ def get_convenor_dashboard_data(pclass: ProjectClass, config: ProjectClassConfig
         "custom_accepted": accepted_custom,
         "custom_declined": declined_custom,
         "marking_events": marking_events_count,
+        "missing_canvas_count": missing_canvas_count,
     }
 
 

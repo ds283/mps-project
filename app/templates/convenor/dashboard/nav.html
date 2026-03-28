@@ -72,6 +72,10 @@
                     <span id="submitter-count"
                           class="badge {% if pane == 'submitters' %}bg-light text-dark{% else %}bg-secondary{% endif %} rounded-pill">{{ sub_count }}</span>
                 {% endif %}
+                {% set missing_canvas_count = convenor_data.get('missing_canvas_count', 0) %}
+                {% if missing_canvas_count > 0 %}
+                    <span class="badge bg-warning text-dark rounded-pill">{{ missing_canvas_count }} Canvas</span>
+                {% endif %}
             </a>
         </li>
         {% if live_count is defined %}

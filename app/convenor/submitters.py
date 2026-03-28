@@ -29,6 +29,7 @@ from app.convenor import convenor
 
 from ..database import db
 from ..models import (
+    CanvasStudent,
     DegreeProgramme,
     DegreeType,
     FeedbackReport,
@@ -581,6 +582,99 @@ def enrol_submitter(sid, configid):
         student,
         old_config.id if old_config is not None else None,
         configid,
+        autocommit=True,
+    )
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/canvas_missing_students/<int:id>")
+@roles_accepted("faculty", "admin", "root")
+def canvas_missing_students(id):
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    config: ProjectClassConfig = pclass.most_recent_config
+    if config is None:
+        flash(
+            "Internal error: could not locate ProjectClassConfig. Please contact a system administrator.",
+            "error",
+        )
+        return redirect(redirect_url())
+
+    if not config.canvas_enabled:
+        flash(
+            "Canvas integration is not enabled for this project class.",
+            "error",
+        )
+        return redirect(redirect_url())
+
+    data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template_context(
+        "convenor/dashboard/canvas_missing.html",
+        pane="submitters",
+        subpane="canvas_missing",
+        pclass=pclass,
+        config=config,
+        convenor_data=data,
+    )
+
+
+@convenor.route("/canvas_missing_students_ajax/<int:id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def canvas_missing_students_ajax(id):
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
+
+    if not validate_is_convenor(pclass, message=False):
+        return jsonify({})
+
+    config: ProjectClassConfig = pclass.most_recent_config
+    if config is None:
+        return jsonify({})
+
+    if not config.canvas_enabled:
+        return jsonify({})
+
+    return ajax.convenor.canvas_missing_data(config)
+
+
+@convenor.route("/enrol_canvas_student/<int:cid>")
+@roles_accepted("faculty", "admin", "root")
+def enrol_canvas_student(cid):
+    cs: CanvasStudent = CanvasStudent.query.get_or_404(cid)
+
+    config: ProjectClassConfig = cs.config
+    pclass: ProjectClass = config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if cs.student_id is None:
+        flash(
+            "This Canvas student cannot be enrolled automatically because no matching student "
+            "record was found in the MPS database.",
+            "error",
+        )
+        return redirect(redirect_url())
+
+    if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
+        if not validate_is_administrator(message=False):
+            flash(
+                "Manual enrolment of submitters is only possible during normal project activity. "
+                "Please contact an administrator to perform this operation.",
+                "error",
+            )
+            return redirect(redirect_url())
+
+    old_config: ProjectClassConfig = pclass.get_config(config.year - 1)
+
+    add_blank_submitter(
+        cs.student,
+        old_config.id if old_config is not None else None,
+        config.id,
         autocommit=True,
     )
 

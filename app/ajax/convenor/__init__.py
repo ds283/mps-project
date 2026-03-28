@@ -46,4 +46,5 @@ from .todo_list import todo_list_data
 from .submission_period_units import submission_period_units_data
 from .supervision_event_templates import supervision_event_templates_data
 from .supervision_events import supervision_events_data
+from .canvas_missing import canvas_missing_data
 from .workload import faculty_workload_data

@@ -1,0 +1,30 @@
+{% from "icon_block.html" import icon_block %}
+
+{% macro canvas_missing_card(config, pclass, missing_canvas_count) %}
+    <div class="card border-warning mt-3 mb-3">
+        <div class="card-header bg-warning text-dark">
+            <strong>Canvas students not enrolled as submitters</strong>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                {% call icon_block("exclamation-circle") %}
+                    <div>
+                        {% if missing_canvas_count == 1 %}
+                            1 student enrolled in the linked Canvas module for
+                            <strong>{{ pclass.name }}</strong> is not in the submitter list.
+                        {% else %}
+                            {{ missing_canvas_count }} students enrolled in the linked Canvas module for
+                            <strong>{{ pclass.name }}</strong> are not in the submitter list.
+                        {% endif %}
+                    </div>
+                    <div class="mt-2">
+                        <a class="text-decoration-none"
+                           href="{{ url_for('convenor.canvas_missing_students', id=pclass.id) }}">
+                            Review and enrol &rarr;
+                        </a>
+                    </div>
+                {% endcall %}
+            </div>
+        </div>
+    </div>
+{% endmacro %}

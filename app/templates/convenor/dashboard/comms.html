@@ -22,10 +22,10 @@
                         {% set w = data.w %}
                         <tr>
                             <td>
-                                <div class="text-success">{{ w.name }}</div>
+                                <div class="text-primary">{{ w.name }}</div>
                                 {% if current_user.has_role('root') or current_user.has_role('admin') or current_user.has_role('email') %}
                                     <div class="mt-1">
-                                        <a class="text-decoration-none small"
+                                        <a class="text-decoration-none link-secondary small"
                                            href="{{ url_for('emailworkflow.workflow_items', id=w.id, url=url_for('convenor.comms', id=pclass.id), text='Comms dashboard') }}">
                                             <i class="fas fa-search fa-fw"></i> Inspect...
                                         </a>

@@ -8,7 +8,7 @@
     <div class="d-flex flex-row justify-content-start align-items-center mt-3 mb-3 gap-2 flex-wrap">
         {% if url %}
             <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
-                <i class="fas fa-arrow-left fa-fw"></i> {{ text or "Return" }}
+                <i class="fas fa-arrow-left fa-fw"></i> {{ text|capitalize or "Return" }}
             </a>
         {% endif %}
         {% if entry.owner is not none and entry.owner_id == current_user.id %}

@@ -19,7 +19,11 @@
                     url: $SCRIPT_ROOT + '/convenor/journal_ajax/{{ student.id }}',
                     type: 'POST',
                     data: function (args) {
-                        return {"args": JSON.stringify(args)};
+                        return {
+                            "args": JSON.stringify(args),
+                            "url": {{ url | tojson }},
+                            "text": {{ text | tojson }}
+                        };
                     }
                 },
                 "fnDrawCallback": function () {

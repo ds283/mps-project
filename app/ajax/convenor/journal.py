@@ -13,7 +13,7 @@ from flask import current_app, render_template
 from flask_security import current_user
 from jinja2 import Environment, Template
 
-from ...models import StudentData, StudentJournalEntry
+from ...models import StudentJournalEntry
 
 # language=jinja2
 _timestamp = """
@@ -44,7 +44,7 @@ _classes = """
 # language=jinja2
 _title = """
 <a class="text-decoration-none"
-   href="{{ url_for('convenor.view_journal_entry', entry_id=entry.id, url=url_for('convenor.student_journal_inspector', student_id=student.id), text='Back to journal') }}">
+   href="{{ url_for('convenor.view_journal_entry', entry_id=entry.id, url=return_url, text=return_text) }}">
     {% if entry.title %}
         <span class="fw-semibold">{{ entry.title }}</span>
     {% else %}
@@ -75,11 +75,11 @@ _menu = """
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         {% if entry.owner is not none and entry.owner_id == current_user.id %}
             <a class="dropdown-item d-flex gap-2"
-               href="{{ url_for('convenor.edit_journal_entry', entry_id=entry.id, url=url_for('convenor.student_journal_inspector', student_id=student.id)) }}">
+               href="{{ url_for('convenor.edit_journal_entry', entry_id=entry.id, url=return_url, text=return_text) }}">
                 <i class="fas fa-pencil-alt fa-fw"></i> Edit...
             </a>
             <a class="dropdown-item d-flex gap-2"
-               href="{{ url_for('convenor.delete_journal_entry', entry_id=entry.id, url=url_for('convenor.student_journal_inspector', student_id=student.id)) }}">
+               href="{{ url_for('convenor.delete_journal_entry', entry_id=entry.id, url=return_url) }}">
                 <i class="fas fa-trash fa-fw"></i> Delete
             </a>
         {% else %}
@@ -97,7 +97,7 @@ def _build_templ(template_str: str) -> Template:
     return env.from_string(template_str)
 
 
-def journal_data(entries: List[StudentJournalEntry], student: StudentData):
+def journal_data(entries: List[StudentJournalEntry], return_url: str = None, return_text: str = "Back to journal") -> list:
     timestamp_templ: Template = _build_templ(_timestamp)
     year_templ: Template = _build_templ(_year)
     classes_templ: Template = _build_templ(_classes)
@@ -110,10 +110,10 @@ def journal_data(entries: List[StudentJournalEntry], student: StudentData):
             "timestamp": render_template(timestamp_templ, entry=e),
             "year": render_template(year_templ, entry=e),
             "classes": render_template(classes_templ, entry=e),
-            "title": render_template(title_templ, entry=e, student=student),
+            "title": render_template(title_templ, entry=e, return_url=return_url, return_text=return_text),
             "owner": render_template(owner_templ, entry=e),
             "actions": render_template(
-                menu_templ, entry=e, student=student, current_user=current_user
+                menu_templ, entry=e, current_user=current_user, return_url=return_url, return_text=return_text
             ),
         }
 

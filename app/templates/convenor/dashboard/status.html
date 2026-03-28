@@ -126,8 +126,8 @@
                     </div>
                     <div>
                         <a class="btn btn-sm btn-outline-secondary"
-                           href="{{ url_for('admin.workflow_log', url=return_url, text=return_text) }}">Workflow log <i
-                                class="fas fa-arrow-right"></i></a>
+                           href="{{ url_for('admin.workflow_log', pclass_filter=pclass.id, url=return_url, text=return_text) }}">Workflow
+                            log <i class="fas fa-arrow-right"></i></a>
                     </div>
                 </div>
                 <div class="card mt-2 mb-2 card-body border-secondary">

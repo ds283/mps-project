@@ -1,0 +1,57 @@
+{% extends "base_app.html" %}
+
+{% block title %}Payloads – item #{{ item.id }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+            <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+        </a>
+        <h4 class="mb-0">
+            <i class="fas fa-code fa-fw me-1"></i>
+            Payloads &ndash; item #{{ item.id }}
+        </h4>
+    </div>
+
+    <div class="card border-primary mb-3">
+        <div class="card-header bg-primary text-white">
+            Subject payload
+        </div>
+        <div class="card-body p-0">
+            {% if subject_payload_content == '(empty)' %}
+                <div class="p-3"><span class="text-muted fst-italic">(empty)</span></div>
+            {% else %}
+                <pre class="mb-0 p-3"
+                     style="background: #1e1e1e; color: #d4d4d4; font-size: 0.85em; border-radius: 0 0 4px 4px; overflow-x: auto; max-height: 400px; overflow-y: auto;"><code>{{ subject_payload_content }}</code></pre>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card border-primary mb-3">
+        <div class="card-header bg-primary text-white">
+            Body payload
+        </div>
+        <div class="card-body p-0">
+            {% if body_payload_content == '(empty)' %}
+                <div class="p-3"><span class="text-muted fst-italic">(empty)</span></div>
+            {% else %}
+                <pre class="mb-0 p-3"
+                     style="background: #1e1e1e; color: #d4d4d4; font-size: 0.85em; border-radius: 0 0 4px 4px; overflow-x: auto; max-height: 600px; overflow-y: auto;"><code>{{ body_payload_content }}</code></pre>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card border-secondary mb-3">
+        <div class="card-header bg-secondary text-white">
+            Callbacks
+        </div>
+        <div class="card-body p-0">
+            {% if callbacks_content == '(empty)' %}
+                <div class="p-3"><span class="text-muted fst-italic">No callbacks configured</span></div>
+            {% else %}
+                <pre class="mb-0 p-3"
+                     style="background: #1e1e1e; color: #d4d4d4; font-size: 0.85em; border-radius: 0 0 4px 4px; overflow-x: auto; max-height: 400px; overflow-y: auto;"><code>{{ callbacks_content }}</code></pre>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

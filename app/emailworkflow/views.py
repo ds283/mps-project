@@ -161,7 +161,10 @@ def edit_workflow(id):
             from datetime import datetime
 
             workflow.last_edit_timestamp = datetime.now()
-            log_db_commit(f'Updated settings for email workflow "{workflow.name}"', user=current_user)
+            log_db_commit(
+                f'Updated settings for email workflow "{workflow.name}"',
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             flash("Could not update workflow due to a database error.", "error")
@@ -244,7 +247,9 @@ def pause_item(id):
 
     try:
         item.paused = True
-        log_db_commit(f'Paused email workflow item "{item.workflow.name}"', user=current_user)
+        log_db_commit(
+            f'Paused email workflow item "{item.workflow.name}"', user=current_user
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         flash("Could not pause item due to a database error.", "error")
@@ -271,7 +276,9 @@ def unpause_item(id):
 
     try:
         item.paused = False
-        log_db_commit(f'Unpaused email workflow item "{item.workflow.name}"', user=current_user)
+        log_db_commit(
+            f'Unpaused email workflow item "{item.workflow.name}"', user=current_user
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         flash("Could not unpause item due to a database error.", "error")
@@ -283,21 +290,23 @@ def unpause_item(id):
 # Item payload inspection
 # ---------------------------------------------------------------------------
 
-_PAYLOAD_KIND_LABELS = {
-    "subject_payload": "Subject payload",
-    "body_payload": "Body payload",
-    "subject_override": "Subject override",
-    "body_override": "Body override",
-}
+
+def _pretty_json(raw):
+    """Return a pretty-printed JSON string, or '(empty)' if raw is None/empty."""
+    try:
+        parsed = json.loads(raw) if raw else None
+        return (
+            json.dumps(parsed, indent=2, default=str)
+            if parsed is not None
+            else "(empty)"
+        )
+    except (ValueError, TypeError):
+        return raw or "(empty)"
 
 
-@emailworkflow.route("/item_payload/<int:id>/<string:kind>")
+@emailworkflow.route("/item_payloads/<int:id>")
 @roles_accepted(*_ROLES)
-def item_payload(id, kind):
-    if kind not in _PAYLOAD_KIND_LABELS:
-        flash(f'Unknown payload kind "{kind}".', "error")
-        return redirect(url_for("emailworkflow.email_workflows"))
-
+def item_payloads(id):
     item: EmailWorkflowItem = EmailWorkflowItem.query.get_or_404(id)
 
     url = request.args.get(
@@ -305,34 +314,97 @@ def item_payload(id, kind):
     )
     text = request.args.get("text", "Workflow items")
 
-    raw = getattr(item, kind)
-    label = _PAYLOAD_KIND_LABELS[kind]
-
-    # pretty-print JSON payloads; plain text for override fields
-    if kind in ("subject_payload", "body_payload"):
-        try:
-            parsed = json.loads(raw) if raw else None
-            content = (
-                json.dumps(parsed, indent=2, default=str)
-                if parsed is not None
-                else "(empty)"
-            )
-        except (ValueError, TypeError):
-            content = raw or "(empty)"
-        content_type = "json"
-    else:
-        content = raw or "(not set)"
-        content_type = "text"
-
     return render_template_context(
-        "emailworkflow/payload_view.html",
+        "emailworkflow/item_payloads.html",
         item=item,
-        label=label,
-        content=content,
-        content_type=content_type,
+        subject_payload_content=_pretty_json(item.subject_payload),
+        body_payload_content=_pretty_json(item.body_payload),
+        callbacks_content=_pretty_json(item.callbacks),
         url=url,
         text=text,
     )
+
+
+@emailworkflow.route("/item_overrides/<int:id>")
+@roles_accepted(*_ROLES)
+def item_overrides(id):
+    item: EmailWorkflowItem = EmailWorkflowItem.query.get_or_404(id)
+
+    url = request.args.get(
+        "url", url_for("emailworkflow.workflow_items", id=item.workflow_id)
+    )
+    text = request.args.get("text", "Workflow items")
+
+    return render_template_context(
+        "emailworkflow/item_overrides.html",
+        item=item,
+        url=url,
+        text=text,
+    )
+
+
+@emailworkflow.route("/confirm_delete_item/<int:id>")
+@roles_accepted(*_ROLES)
+def confirm_delete_item(id):
+    item: EmailWorkflowItem = EmailWorkflowItem.query.get_or_404(id)
+
+    url = request.args.get(
+        "url", url_for("emailworkflow.workflow_items", id=item.workflow_id)
+    )
+    text = request.args.get("text", "Workflow items")
+
+    if item.sent_timestamp is not None:
+        flash("Cannot delete an item that has already been sent.", "error")
+        return redirect(url)
+
+    recipients = item.recipient_addresses
+    recipient_str = ", ".join(recipients) if recipients else "(no recipients)"
+
+    title = f"Delete workflow item #{item.id}"
+    message = (
+        f"<p>You are about to delete workflow item <strong>#{item.id}</strong> "
+        f"(recipients: <em>{recipient_str}</em>) from workflow "
+        f"<strong>{item.workflow.name}</strong>.</p>"
+        f"<p>This action <strong>cannot be undone</strong>. "
+        f"If the item has not yet been sent, the email will never be delivered.</p>"
+    )
+
+    return render_template_context(
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=title,
+        action_url=url_for("emailworkflow.delete_item", id=id, url=url, text=text),
+        message=message,
+        submit_label="Delete item",
+    )
+
+
+@emailworkflow.route("/delete_item/<int:id>")
+@roles_accepted(*_ROLES)
+def delete_item(id):
+    item: EmailWorkflowItem = EmailWorkflowItem.query.get_or_404(id)
+
+    url = request.args.get("url", url_for("emailworkflow.email_workflows"))
+
+    if item.sent_timestamp is not None:
+        flash("Cannot delete an item that has already been sent.", "error")
+        return redirect(url)
+
+    workflow_id = item.workflow_id
+    workflow_name = item.workflow.name if item.workflow else f"#{workflow_id}"
+
+    try:
+        db.session.delete(item)
+        log_db_commit(
+            f'Deleted email workflow item #{id} from workflow "{workflow_name}"',
+            user=current_user,
+        )
+        flash(f"Workflow item #{id} has been deleted.", "info")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash("Could not delete item due to a database error.", "error")
+
+    return redirect(url)
 
 
 # ---------------------------------------------------------------------------

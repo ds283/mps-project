@@ -254,7 +254,7 @@ _item_name_col = """
         <span class="badge bg-warning text-dark">No recipients</span>
     {% endif %}
 </div>
-{% if item.subject_override or item.body_override %}
+{% if item.subject_override or item.body_override or item.callbacks_list %}
     <div class="mt-1 small">
         {% if item.subject_override %}
             <span class="badge bg-info text-dark me-1"
@@ -262,9 +262,14 @@ _item_name_col = """
                   title="Subject override is set">Subject&nbsp;override</span>
         {% endif %}
         {% if item.body_override %}
-            <span class="badge bg-info text-dark"
+            <span class="badge bg-info text-dark me-1"
                   data-bs-toggle="tooltip"
                   title="Body override is set">Body&nbsp;override</span>
+        {% endif %}
+        {% if item.callbacks_list %}
+            <span class="badge bg-secondary me-1"
+                  data-bs-toggle="tooltip"
+                  title="Callbacks configured">Callbacks</span>
         {% endif %}
     </div>
 {% endif %}
@@ -414,41 +419,32 @@ _item_menu = """
             <i class="fas fa-eye fa-fw"></i> Preview...
         </a>
         <div class="dropdown-divider"></div>
-        {% if item.sent_timestamp %}
-            <span class="dropdown-item d-flex gap-2 disabled">
-                <i class="fas fa-pause fa-fw"></i> Pause
-            </span>
-        {% elif item.paused %}
+        {% if item.paused %}
             <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('emailworkflow.unpause_item', id=item.id, url=return_url) }}">
                 <i class="fas fa-play fa-fw"></i> Unpause
             </a>
-        {% else %}
+            <div class="dropdown-divider"></div>
+        {% elif not item.sent_timestamp %}
             <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('emailworkflow.pause_item', id=item.id, url=return_url) }}">
                 <i class="fas fa-pause fa-fw"></i> Pause
             </a>
-        {% endif %}
-        <div class="dropdown-divider"></div>
-        <div class="dropdown-header">Inspect payloads</div>
-        <a class="dropdown-item d-flex gap-2"
-           href="{{ url_for('emailworkflow.item_payload', id=item.id, kind='subject_payload', url=return_url, text=return_text) }}">
-            <i class="fas fa-code fa-fw"></i> Subject payload
-        </a>
-        <a class="dropdown-item d-flex gap-2"
-           href="{{ url_for('emailworkflow.item_payload', id=item.id, kind='body_payload', url=return_url, text=return_text) }}">
-            <i class="fas fa-code fa-fw"></i> Body payload
-        </a>
-        {% if item.subject_override %}
-            <a class="dropdown-item d-flex gap-2"
-               href="{{ url_for('emailworkflow.item_payload', id=item.id, kind='subject_override', url=return_url, text=return_text) }}">
-                <i class="fas fa-pen fa-fw"></i> Subject override
+            <a class="dropdown-item d-flex gap-2 text-danger"
+               href="{{ url_for('emailworkflow.confirm_delete_item', id=item.id, url=return_url, text=return_text) }}">
+                <i class="fas fa-trash fa-fw"></i> Delete...
             </a>
-        {% endif %}
-        {% if item.body_override %}
+            <div class="dropdown-divider"></div>
+     {% endif %}
+        <div class="dropdown-header">Inspect content</div>
+        <a class="dropdown-item d-flex gap-2"
+           href="{{ url_for('emailworkflow.item_payloads', id=item.id, url=return_url, text=return_text) }}">
+            <i class="fas fa-code fa-fw"></i> Payloads...
+        </a>
+        {% if item.subject_override or item.body_override %}
             <a class="dropdown-item d-flex gap-2"
-               href="{{ url_for('emailworkflow.item_payload', id=item.id, kind='body_override', url=return_url, text=return_text) }}">
-                <i class="fas fa-pen fa-fw"></i> Body override
+               href="{{ url_for('emailworkflow.item_overrides', id=item.id, url=return_url, text=return_text) }}">
+                <i class="fas fa-pen fa-fw"></i> Overrides...
             </a>
         {% endif %}
     </div>

@@ -1,0 +1,47 @@
+{% extends "base_app.html" %}
+
+{% block title %}Overrides – item #{{ item.id }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+            <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+        </a>
+        <h4 class="mb-0">
+            <i class="fas fa-pen fa-fw me-1"></i>
+            Overrides &ndash; item #{{ item.id }}
+        </h4>
+    </div>
+
+    <div class="card border-info mb-3">
+        <div class="card-header bg-info text-dark">
+            Subject override
+        </div>
+        <div class="card-body p-0">
+            {% if item.subject_override %}
+                <div class="p-3">
+                    <pre class="mb-0"
+                         style="white-space: pre-wrap; word-wrap: break-word;">{{ item.subject_override|e }}</pre>
+                </div>
+            {% else %}
+                <div class="p-3"><span class="text-muted fst-italic">(not set)</span></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card border-info mb-3">
+        <div class="card-header bg-info text-dark">
+            Body override
+        </div>
+        <div class="card-body p-0">
+            {% if item.body_override %}
+                <div class="p-3">
+                    <pre class="mb-0"
+                         style="white-space: pre-wrap; word-wrap: break-word; max-height: 600px; overflow-y: auto;">{{ item.body_override|e }}</pre>
+                </div>
+            {% else %}
+                <div class="p-3"><span class="text-muted fst-italic">(not set)</span></div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

@@ -3,10 +3,12 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import date_field %}
 {% from "datepicker.html" import import_datepicker %}
+{% from "select2.html" import import_select2 %}
 
 {% block scripts %}
     {{ super() }}
     {{ import_datepicker() }}
+    {{ import_select2() }}
 
     <script>
         $(document).ready(function () {
@@ -18,6 +20,13 @@
             {% if workflow.send_time %}
                 $('#send_time_picker').datetimepicker('date', moment('{{ workflow.send_time.strftime("%d/%m/%Y %H:%M") }}', 'DD/MM/YYYY HH:mm'));
             {% endif %}
+
+            $('#template').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select an email template...'
+            });
         });
     </script>
 {% endblock %}
@@ -30,7 +39,7 @@
             <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
         </a>
         <h4 class="mb-0">
-            <i class="fas fa-cog fa-fw me-1"></i>
+            <i class="fas fa-pen fa-fw me-1"></i>
             Edit properties &ndash; <strong>{{ workflow.name }}</strong>
         </h4>
     </div>
@@ -56,8 +65,23 @@
                     </div>
                 </div>
                 <div class="mt-3">
-                    {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
-                    <a class="btn btn-outline-secondary ms-2" href="{{ url }}">Cancel</a>
+                    {{ wtf.render_field(form.template) }}
+                    <div class="form-text text-muted small">
+                        Current template: v{{ workflow.template.version }} &ndash; {{ workflow.template.subject }}
+                        ({{ workflow.template.type_name }})
+                    </div>
+                </div>
+                <div class="mt-3 d-flex flex-row flex-wrap justify-content-between align-items-end">
+                    <div class="d-flex flex-row flex-wrap justfy-content-start align-items-center gap-2">
+                        {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+                        <a class="btn btn-outline-secondary" href="{{ url }}">Cancel</a>
+                    </div>
+                    <div class="d-flex flex-row flex-wrap justify-content-end align-items-center gap-2">
+                        <a class="btn btn-outline-secondary btn-sm"
+                           href="{{ url_for('emailworkflow.clone_workflow_template', id=workflow.id, url=url, text=text) }}">
+                            <i class="fas fa-copy fa-fw"></i> Duplicate and edit template
+                        </a>
+                    </div>
                 </div>
             </form>
         </div>

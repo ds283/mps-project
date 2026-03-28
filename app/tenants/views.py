@@ -13,7 +13,6 @@ from functools import partial
 from flask import current_app, flash, jsonify, redirect, request, url_for
 from flask_login import current_user
 from flask_security import roles_required
-from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
 from .. import ajax
@@ -27,6 +26,7 @@ from ..tools import ServerSideSQLHandler
 from ..tools.ServerSideProcessing import FakeQuery, ServerSideInMemoryHandler
 from . import tenants
 from .forms import AddTenantForm, EditTenantForm
+from ..shared.email_templates import clone_email_template
 from ..shared.workflow_logging import log_db_commit
 
 
@@ -368,40 +368,13 @@ def duplicate_email_template(tenant_id, template_id):
         flash("This template does not belong to the specified tenant.", "error")
         return redirect(redirect_url())
 
-    max_version = (
-        db.session.query(func.max(EmailTemplate.version))
-        .filter(
-            EmailTemplate.type == template.type,
-            EmailTemplate.tenant_id == tenant_id,
-            EmailTemplate.pclass_id.is_(None),
-        )
-        .scalar()
-    )
-    new_version = (max_version or 0) + 1
-
-    now = datetime.now()
-    new_template = EmailTemplate(
-        active=False,
-        tenant_id=tenant_id,
-        pclass_id=None,
-        type=template.type,
-        subject=template.subject,
-        html_body=template.html_body,
-        comment=f"Duplicated from version {template.version}",
-        version=new_version,
-        last_used=None,
-        creator_id=current_user.id,
-        creation_timestamp=now,
-        last_edit_timestamp=None,
-        last_edit_id=None,
-    )
-    new_template.labels = list(template.labels)
+    new_template = clone_email_template(template, None, tenant_id, current_user)
 
     try:
         db.session.add(new_template)
         log_db_commit("Duplicated tenant email template", user=current_user)
         flash(
-            f"Successfully duplicated email template. New version is {new_version}.",
+            f"Successfully duplicated email template. New version is {new_template.version}.",
             "success",
         )
     except SQLAlchemyError as e:

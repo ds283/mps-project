@@ -12,6 +12,7 @@ from typing import Iterable, List, Optional
 from flask_login import current_user
 from sqlalchemy import or_
 
+from ... import EmailTemplate
 from ...database import db
 from ...models import (
     AssetLicense,
@@ -280,7 +281,7 @@ def AvailableProjectDescriptionClasses(project_id, desc_id):
             used_ids.c.project_class_id == pclass_ids.c.project_class_id,
             isouter=True,
         )
-        .filter(used_ids.c.project_class_id == None)
+        .filter(used_ids.c.project_class_id.is_(None))
         .subquery()
     )
 
@@ -342,7 +343,7 @@ def GetAutomatedMatchPClasses(year, base_id):
 
     pclasses = pclasses.join(
         p_members, p_members.c.id == ProjectClass.id, isouter=True
-    ).filter(p_members.c.id == None)
+    ).filter(p_members.c.id.is_(None))
 
     return pclasses
 
@@ -362,16 +363,16 @@ def GetMatchingAttempts(year, base_id):
 
     attempts = attempts.join(
         included, included.c.id == MatchingAttempt.id, isouter=True
-    ).filter(included.c.id == None)
+    ).filter(included.c.id.is_(None))
 
     return attempts
 
 
 def GetComparatorMatches(
-        year,
-        self_id: int,
-        pclasses: ProjectClassConfig | int | Iterable[int] | None,
-        is_root: bool,
+    year,
+    self_id: int,
+    pclasses: ProjectClassConfig | int | Iterable[int] | None,
+    is_root: bool,
 ):
     if pclasses is None:
         _pclasses = None
@@ -691,3 +692,29 @@ def GetActiveEmailTemplateLabels():
 
 def BuildEmailTemplateLabelName(label: EmailTemplateLabel):
     return label.name
+
+
+def BuildWorkflowTemplateLabel(template: EmailTemplate):
+    trimmed_subject = (
+        f"{template.subject[:50]}{'...' if len(template.subject) > 50 else ''}"
+    )
+    overrides = ""
+    if template.pclass is not None:
+        overrides = f"{template.pclass.abbreviation} override"
+    if template.tenant is not None:
+        if len(overrides) > 0:
+            overrides = f"{overrides}, {template.tenant.name} override"
+        else:
+            overrides = f"{template.tenant.name} override"
+
+    label = f"v{template.version} – {trimmed_subject}"
+    if len(overrides) > 0:
+        label += f" ({overrides})"
+
+    creator_annotation = f"created by {template.created_by.first_name} {template.created_by.last_name} {template.creation_timestamp.strftime('%d/%m/%Y')}"
+    if not template.active:
+        creator_annotation += " (inactive)"
+
+    label += f" [{creator_annotation}]"
+
+    return label

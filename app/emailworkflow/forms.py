@@ -11,6 +11,9 @@
 from flask_wtf import FlaskForm
 from wtforms import DateTimeField, IntegerField, SubmitField
 from wtforms.validators import DataRequired, NumberRange
+from wtforms_alchemy import QuerySelectField
+
+from app.shared.forms.queries import BuildWorkflowTemplateLabel
 
 
 class EditWorkflowForm(FlaskForm):
@@ -25,5 +28,11 @@ class EditWorkflowForm(FlaskForm):
             DataRequired(message="A maximum attachment size is required."),
             NumberRange(min=0, message="Attachment size must be non-negative."),
         ],
+    )
+    template = QuerySelectField(
+        "Email template",
+        allow_blank=False,
+        get_label=BuildWorkflowTemplateLabel,
+        validators=[DataRequired(message="Please select a template.")],
     )
     submit = SubmitField("Update")

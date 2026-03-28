@@ -9,6 +9,7 @@
 #
 
 import json
+from datetime import datetime
 
 from celery import chain
 from flask import current_app, flash, redirect, render_template_string, request, url_for
@@ -22,6 +23,7 @@ from ..database import db
 from ..models import EmailWorkflow, EmailWorkflowItem
 from ..models.emails import EmailTemplate
 from ..shared.context.global_context import render_template_context
+from ..shared.email_templates import clone_email_template
 from ..shared.workflow_logging import log_db_commit
 from ..task_queue import register_task
 from ..tasks.email_workflow import decode_email_payload
@@ -29,7 +31,7 @@ from ..tools.ServerSideProcessing import ServerSideSQLHandler
 from . import emailworkflow
 from .forms import EditWorkflowForm
 
-_ROLES = ("root", "admin", "email")
+_ROLES = ("root", "admin", "office", "email")
 
 
 # ---------------------------------------------------------------------------
@@ -215,13 +217,27 @@ def edit_workflow(id):
 
     form = EditWorkflowForm(obj=workflow)
 
+    # Restrict the template selector to the same type and scope as the current template
+    current_template = workflow.template
+    # allow the filter to find inactive templates
+    form.template.query_factory = lambda: (
+        db.session.query(EmailTemplate)
+        .filter(
+            EmailTemplate.type == current_template.type,
+            EmailTemplate.pclass_id == current_template.pclass_id,
+            EmailTemplate.tenant_id == current_template.tenant_id,
+        )
+        .order_by(EmailTemplate.version.desc())
+    )
+
     if form.validate_on_submit():
+        from datetime import datetime
+
         try:
             workflow.send_time = form.send_time.data
             workflow.max_attachment_size = form.max_attachment_size.data
+            workflow.template = form.template.data
             workflow.last_edit_id = current_user.id
-            from datetime import datetime
-
             workflow.last_edit_timestamp = datetime.now()
             log_db_commit(
                 f'Updated settings for email workflow "{workflow.name}"',
@@ -240,6 +256,89 @@ def edit_workflow(id):
         url=url,
         text=text,
     )
+
+
+@emailworkflow.route("/clone_workflow_template/<int:id>")
+@roles_accepted(*_ROLES)
+def clone_workflow_template(id):
+    workflow: EmailWorkflow = EmailWorkflow.query.get_or_404(id)
+
+    url = request.args.get("url", url_for("emailworkflow.email_workflows"))
+    text = request.args.get("text", "Email workflows")
+
+    if workflow.completed:
+        flash("Cannot clone the template of a completed workflow.", "error")
+        return redirect(
+            url_for("emailworkflow.edit_workflow", id=id, url=url, text=text)
+        )
+
+    # Build the back-URL so the template editor can return to this workflow's edit page
+    edit_url = url_for("emailworkflow.edit_workflow", id=id, url=url, text=text)
+
+    pclasses = list(workflow.pclasses.all())
+
+    if len(pclasses) == 1:
+        pclass_id = pclasses[0].id
+        tenant_id = None
+    elif len(pclasses) > 1:
+        tenants = set([p.tenant_id for p in pclasses])
+        if len(tenants) == 1:
+            pclass_id = None
+            tenant_id = tenants.pop()
+        else:
+            pclass_id = None
+            tenant_id = None
+    else:
+        pclass_id = None
+        tenant_id = None
+
+    new_template = clone_email_template(
+        workflow.template, pclass_id, tenant_id, current_user
+    )
+
+    try:
+        db.session.add(new_template)
+        workflow.template = new_template
+        workflow.last_edit_id = current_user.id
+        workflow.last_edit_timestamp = datetime.now()
+        log_db_commit(
+            f'Cloned email template for workflow "{workflow.name}" as version {new_template.version}',
+            user=current_user,
+        )
+        flash(
+            f"Template cloned as version {new_template.version}. You can now edit it below.",
+            "success",
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash("Could not clone the template due to a database error.", "error")
+        return redirect(edit_url)
+
+    # Redirect to the appropriate template editor with a back-link to this edit page
+    if pclass_id is not None:
+        return redirect(
+            url_for(
+                "convenor.edit_email_template",
+                pclass_id=pclass_id,
+                template_id=new_template.id,
+                url=edit_url,
+            )
+        )
+    elif tenant_id is not None:
+        return redirect(
+            url_for(
+                "tenants.edit_email_template",
+                tenant_id=tenant_id,
+                template_id=new_template.id,
+                url=edit_url,
+            )
+        )
+    else:
+        return redirect(
+            url_for(
+                "admin.edit_global_email_template", id=new_template.id, url=edit_url
+            )
+        )
 
 
 # ---------------------------------------------------------------------------

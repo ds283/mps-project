@@ -23,7 +23,6 @@ from flask import (
 from flask_security import current_user, roles_accepted
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.sql import func
 
 import app.ajax as ajax
 from app.convenor import convenor
@@ -36,6 +35,7 @@ from ..models import (
     ProjectClass,
 )
 from ..shared.context.global_context import render_template_context
+from ..shared.email_templates import clone_email_template
 from ..shared.utils import (
     redirect_url,
 )
@@ -344,44 +344,14 @@ def duplicate_email_template(pclass_id, template_id):
         flash("This template does not belong to the specified project class.", "error")
         return redirect(redirect_url())
 
-    # Find the highest version number for this template type and project class
-    max_version = (
-        db.session.query(func.max(EmailTemplate.version))
-        .filter(
-            EmailTemplate.type == template.type,
-            EmailTemplate.pclass_id == pclass_id,
-        )
-        .scalar()
-    )
-    new_version = (max_version or 0) + 1
-
-    # Create duplicate
-    now = datetime.now()
-    new_template = EmailTemplate(
-        active=False,  # duplicates start inactive
-        pclass_id=pclass_id,
-        tenant_id=None,
-        type=template.type,
-        subject=template.subject,
-        html_body=template.html_body,
-        comment=f"Duplicated from version {template.version}",
-        version=new_version,
-        creator_id=current_user.id,
-        creation_timestamp=now,
-        last_edit_timestamp=None,
-        last_edit_id=None,
-    )
+    new_template = clone_email_template(template, pclass_id, None, current_user)
 
     try:
         db.session.add(new_template)
         log_db_commit(
-            f"Duplicated email template as version {new_version} for project class '{pclass.name}'",
+            f"Duplicated email template as version {new_template.version} for project class '{pclass.name}'",
             user=current_user,
             project_classes=pclass,
-        )
-        flash(
-            f"Successfully duplicated email template. New version is {new_version}.",
-            "success",
         )
     except SQLAlchemyError as e:
         db.session.rollback()

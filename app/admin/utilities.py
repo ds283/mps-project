@@ -75,6 +75,7 @@ from ..shared.utils import (
     home_dashboard,
     redirect_url,
 )
+from ..shared.email_templates import clone_email_template
 from ..shared.workflow_logging import log_db_commit
 from ..task_queue import register_task
 from ..tools import ServerSideInMemoryHandler, ServerSideSQLHandler
@@ -1618,42 +1619,13 @@ def duplicate_global_email_template(id):
     """
     template: EmailTemplate = EmailTemplate.query.get_or_404(id)
 
-    # Find the highest existing version for this type/tenant/pclass combination
-    max_version = (
-        db.session.query(db.func.max(EmailTemplate.version))
-        .filter(
-            EmailTemplate.type == template.type,
-            EmailTemplate.tenant_id == template.tenant_id,
-            EmailTemplate.pclass_id == template.pclass_id,
-        )
-        .scalar()
-    )
-    new_version = (max_version or 0) + 1
-
-    new_template = EmailTemplate(
-        active=False,  # new duplicate starts inactive
-        tenant_id=template.tenant_id,
-        pclass_id=template.pclass_id,
-        type=template.type,
-        subject=template.subject,
-        html_body=template.html_body,
-        comment=template.comment,
-        version=new_version,
-        last_used=None,
-        creator_id=current_user.id,
-        creation_timestamp=datetime.now(),
-        last_edit_id=None,
-        last_edit_timestamp=None,
-    )
-
-    # copy labels
-    new_template.labels = list(template.labels)
+    new_template = clone_email_template(template, template.pclass_id, template.tenant_id, current_user)
 
     try:
         db.session.add(new_template)
-        log_db_commit(f"Duplicated global email template #{id} as new version #{new_version}", user=current_user)
+        log_db_commit(f"Duplicated global email template #{id} as new version #{new_template.version}", user=current_user)
         flash(
-            f"Email template duplicated successfully: new version is #{new_version}.",
+            f"Email template duplicated successfully: new version is #{new_template.version}.",
             "success",
         )
     except SQLAlchemyError as e:

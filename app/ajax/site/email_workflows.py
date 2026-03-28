@@ -143,15 +143,14 @@ _workflow_menu = """
                     <i class="fas fa-pause fa-fw"></i> Pause
                 </a>
             {% endif %}
-            <div class="dropdown-divider"></div>
-            <a class="dropdown-item d-flex gap-2 text-danger"
+            <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('emailworkflow.confirm_delete_workflow', id=w.id) }}">
-                <i class="fas fa-trash fa-fw"></i> Delete&hellip;
+                <i class="fas fa-trash fa-fw text-danger"></i> Delete&hellip;
             </a>
             <div class="dropdown-divider"></div>
             <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('emailworkflow.edit_workflow', id=w.id) }}">
-                <i class="fas fa-cog fa-fw"></i> Properties&hellip;
+                <i class="fas fa-pen fa-fw"></i> Edit&hellip;
             </a>
         {% endif %}
     </div>
@@ -432,9 +431,9 @@ _item_menu = """
                     <i class="fas fa-pause fa-fw"></i> Pause
                 </a>
             {% endif %}
-            <a class="dropdown-item d-flex gap-2 text-danger"
+            <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('emailworkflow.confirm_delete_item', id=item.id, url=return_url, text=return_text) }}">
-                <i class="fas fa-trash fa-fw"></i> Delete...
+                <i class="fas fa-trash fa-fw text-danger"></i> Delete...
             </a>
             <div class="dropdown-divider"></div>
         {% endif %}

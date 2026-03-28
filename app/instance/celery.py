@@ -10,13 +10,12 @@
 
 import os
 
-CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND")
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL")
-
-CELERY_ACCEPT_CONTENT = ["json", "pickle"]
-
-CELERY_CREATE_MISSING_QUEUES = True
-CELERY_DEFAULT_QUEUE = "default"
-CELERY_ROUTES = {"app.task.ping.ping": {"queue": "priority"}}
-
-CELERY_UNLOCK_MAX_RETRIES = 100
+CELERY = {
+    "result_backend": os.environ.get("CELERY_RESULT_BACKEND"),
+    "broker_url": os.environ.get("CELERY_BROKER_URL"),
+    "accept_content": ["json", "pickle"],
+    "task_create_missing_queues": True,
+    "task_default_queue": "default",
+    "task_routes": {"app.task.ping.ping": {"queue": "priority"}},
+    "chord_unlock_max_retries": 100,
+}

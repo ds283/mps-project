@@ -21,22 +21,23 @@ def limit_chord_unlock_tasks(sender, **kwargs):
     """
     task = sender.app.tasks["celery.chord_unlock"]
     if task.max_retries is None:
-        retries = getattr(sender.app.conf, "CHORD_UNLOCK_MAX_RETRIES", 100)
+        retries = getattr(sender.app.conf, "chord_unlock_max_retries", 100)
         print(f"@@ Setting max_retries for celery.chord_unlock to {retries}")
         task.max_retries = retries
 
 
 def make_celery(app):
+    celery_config = app.config["CELERY"]
     celery = Celery(
         app.import_name,
-        backend=app.config["CELERY_RESULT_BACKEND"],
-        broker=app.config["CELERY_BROKER_URL"],
+        backend=celery_config["result_backend"],
+        broker=celery_config["broker_url"],
         broker_transport_options={"ttl": True},
-        accept_content=app.config["CELERY_ACCEPT_CONTENT"],
+        accept_content=celery_config["accept_content"],
         beat_scheduler="app.sqlalchemy_scheduler:DatabaseScheduler",
     )
 
-    celery.conf.update(app.config)
+    celery.config_from_object(celery_config)
 
     class ContextTask(celery.Task):
         abstract = True

@@ -283,6 +283,8 @@ def confirmation_reminder(id):
         )
         return redirect(redirect_url())
 
+    url = request.args.get("url", redirect_url())
+
     form = ChooseEmailTemplateForm()
     _pclass_id = config.pclass_id
     form.template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass_id=_pclass_id)
@@ -295,7 +297,7 @@ def confirmation_reminder(id):
         email_task = celery.tasks["app.tasks.issue_confirm.reminder_email"]
         email_task.apply_async(args=(id, current_user.id), kwargs=dict(reminder_template_id=template_id))
 
-        return redirect(redirect_url())
+        return redirect(url)
 
     if not form.is_submitted():
         form.template.data = EmailTemplate.find_template_(EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass=config.project_class)
@@ -303,11 +305,11 @@ def confirmation_reminder(id):
     return render_template_context(
         "shared/choose_email_template.html",
         title="Send confirmation reminders",
-        action=url_for("convenor.confirmation_reminder", id=id),
+        action=url_for("convenor.confirmation_reminder", id=id, url=url),
         message=f'Select the email template to use when sending confirmation reminders for "{config.name}".',
         template_fields=[{"heading": None, "field": form.template}],
         form=form,
-        cancel_url=redirect_url(),
+        cancel_url=url,
     )
 
 
@@ -345,6 +347,8 @@ def confirmation_reminder_individual(fac_id, config_id):
         )
         return redirect(redirect_url())
 
+    url = request.args.get("url", redirect_url())
+
     form = ChooseEmailTemplateForm()
     _pclass_id = config.pclass_id
     form.template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass_id=_pclass_id)
@@ -362,7 +366,7 @@ def confirmation_reminder_individual(fac_id, config_id):
         )
         tk.apply_async()
 
-        return redirect(redirect_url())
+        return redirect(url)
 
     if not form.is_submitted():
         form.template.data = EmailTemplate.find_template_(EmailTemplate.PROJECT_CONFIRMATION_REMINDER, pclass=config.project_class)
@@ -370,11 +374,11 @@ def confirmation_reminder_individual(fac_id, config_id):
     return render_template_context(
         "shared/choose_email_template.html",
         title="Send confirmation reminder",
-        action=url_for("convenor.confirmation_reminder_individual", fac_id=fac_id, config_id=config_id),
+        action=url_for("convenor.confirmation_reminder_individual", fac_id=fac_id, config_id=config_id, url=url),
         message=f'Select the email template to use when sending a confirmation reminder for "{config.name}".',
         template_fields=[{"heading": None, "field": form.template}],
         form=form,
-        cancel_url=redirect_url(),
+        cancel_url=url,
     )
 
 

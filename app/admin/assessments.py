@@ -604,6 +604,8 @@ def availability_reminder(id):
     if _first_period is not None and _first_period.config is not None and _first_period.config.project_class is not None:
         _tenant_id = _first_period.config.project_class.tenant_id
 
+    url = request.args.get("url", redirect_url())
+
     form = ChooseEmailTemplateForm()
     form.template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER, tenant_id=_tenant_id)
 
@@ -615,7 +617,7 @@ def availability_reminder(id):
         email_task = celery.tasks["app.tasks.availability.reminder_email"]
         email_task.apply_async(args=(id, current_user.id), kwargs=dict(reminder_template_id=template_id))
 
-        return redirect(redirect_url())
+        return redirect(url)
 
     if not form.is_submitted():
         form.template.data = EmailTemplate.find_template_(EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER, tenant=_tenant_id)
@@ -623,11 +625,11 @@ def availability_reminder(id):
     return render_template_context(
         "shared/choose_email_template.html",
         title="Send availability reminders",
-        action=url_for("admin.availability_reminder", id=id),
+        action=url_for("admin.availability_reminder", id=id, url=url),
         message=f'Select the email template to use when sending availability reminders for "{assessment.name}".',
         template_fields=[{"heading": None, "field": form.template}],
         form=form,
-        cancel_url=redirect_url(),
+        cancel_url=url,
     )
 
 
@@ -664,6 +666,8 @@ def availability_reminder_individual(id):
     if _first_period is not None and _first_period.config is not None and _first_period.config.project_class is not None:
         _tenant_id = _first_period.config.project_class.tenant_id
 
+    url = request.args.get("url", redirect_url())
+
     form = ChooseEmailTemplateForm()
     form.template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER, tenant_id=_tenant_id)
 
@@ -680,7 +684,7 @@ def availability_reminder_individual(id):
         )
         tk.apply_async()
 
-        return redirect(redirect_url())
+        return redirect(url)
 
     if not form.is_submitted():
         form.template.data = EmailTemplate.find_template_(EmailTemplate.SCHEDULING_AVAILABILITY_REMINDER, tenant=_tenant_id)
@@ -688,11 +692,11 @@ def availability_reminder_individual(id):
     return render_template_context(
         "shared/choose_email_template.html",
         title="Send availability reminder",
-        action=url_for("admin.availability_reminder_individual", id=id),
+        action=url_for("admin.availability_reminder_individual", id=id, url=url),
         message=f'Select the email template to use when sending an availability reminder for "{assessment.name}".',
         template_fields=[{"heading": None, "field": form.template}],
         form=form,
-        cancel_url=redirect_url(),
+        cancel_url=url,
     )
 
 

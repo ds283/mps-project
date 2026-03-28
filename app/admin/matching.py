@@ -2640,6 +2640,8 @@ def publish_matching_selectors(id):
     # determine template type based on draft/final state
     _template_type = EmailTemplate.MATCHING_FINAL_NOTIFY_STUDENTS if record.selected else EmailTemplate.MATCHING_DRAFT_NOTIFY_STUDENTS
 
+    url = request.args.get("url", redirect_url())
+
     form = ChooseEmailTemplateForm()
     form.template.query_factory = lambda: GetWorkflowTemplates(_template_type, tenant_id=_tenant_id)
 
@@ -2657,7 +2659,7 @@ def publish_matching_selectors(id):
         task = celery.tasks["app.tasks.matching_emails.publish_to_selectors"]
         task.apply_async(args=(id, current_user.id, task_id), kwargs=dict(selector_template_id=template_id), task_id=task_id)
 
-        return redirect(redirect_url())
+        return redirect(url)
 
     if not form.is_submitted():
         form.template.data = EmailTemplate.find_template_(_template_type, tenant=_tenant_id)
@@ -2665,11 +2667,11 @@ def publish_matching_selectors(id):
     return render_template_context(
         "shared/choose_email_template.html",
         title="Email matching results to selectors",
-        action=url_for("admin.publish_matching_selectors", id=id),
+        action=url_for("admin.publish_matching_selectors", id=id, url=url),
         message=f'Select the email template to use when emailing matching results to selectors for "{record.name}".',
         template_fields=[{"heading": None, "field": form.template}],
         form=form,
-        cancel_url=redirect_url(),
+        cancel_url=url,
     )
 
 
@@ -2737,6 +2739,8 @@ def publish_matching_supervisors(id):
         _notify_type = EmailTemplate.MATCHING_DRAFT_NOTIFY_FACULTY
         _unneeded_type = EmailTemplate.MATCHING_DRAFT_UNNEEDED_FACULTY
 
+    url = request.args.get("url", redirect_url())
+
     form = ChoosePairedEmailTemplatesForm()
     form.template_primary.query_factory = lambda: GetWorkflowTemplates(_notify_type, tenant_id=_tenant_id)
     form.template_secondary.query_factory = lambda: GetWorkflowTemplates(_unneeded_type, tenant_id=_tenant_id)
@@ -2761,7 +2765,7 @@ def publish_matching_supervisors(id):
             task_id=task_id,
         )
 
-        return redirect(redirect_url())
+        return redirect(url)
 
     if not form.is_submitted():
         form.template_primary.data = EmailTemplate.find_template_(_notify_type, tenant=_tenant_id)
@@ -2770,14 +2774,14 @@ def publish_matching_supervisors(id):
     return render_template_context(
         "shared/choose_email_template.html",
         title="Email matching results to supervisors",
-        action=url_for("admin.publish_matching_supervisors", id=id),
+        action=url_for("admin.publish_matching_supervisors", id=id, url=url),
         message=f'Select the email templates to use when emailing matching results to supervisors for "{record.name}".',
         template_fields=[
             {"heading": "Email to supervisors with assignments", "field": form.template_primary},
             {"heading": "Email to supervisors with no assignments", "field": form.template_secondary},
         ],
         form=form,
-        cancel_url=redirect_url(),
+        cancel_url=url,
     )
 
 

@@ -458,6 +458,13 @@ def register_attendance_tasks(celery):
                 }
             ),
             recipient_list=[owner_user.email],
+            callbacks=[
+                {
+                    "task": "app.tasks.attendance.mark_attendance_prompt_sent",
+                    "args": [event_id],
+                    "kwargs": {},
+                }
+            ],
         )
         item.workflow = workflow
         db.session.add(item)
@@ -474,62 +481,29 @@ def register_attendance_tasks(celery):
         return None
 
     @celery.task(bind=True, default_retry_delay=30)
-    def mark_attendance_prompt_sent(self, result_data, event_id):
-        if "outcome" not in result_data:
-            print(
-                f"!! mark_attendance_prompt_sent: no outcome in result_data (result_data={result_data})"
-            )
-            msg = {"msg": "No outcome in result_data"}
-            self.update_state(state=states.FAILURE, meta=msg)
-            return msg
-
-        outcome = result_data["outcome"]
-        if outcome in ["unknown", "failure"]:
-            print(
-                f"!! mark_attendance_prompt_sent: outcome was unknown or failure (result_data={result_data})"
-            )
-            msg = {"msg": "Outcome was unknown or failure"}
-            self.update_state(state=states.FAILURE, meta=msg)
-            return msg
-
-        if outcome in ["no-store"]:
-            print(
-                f"!! mark_attendance_prompt_sent: outcome was marked no-store (result_data={result_data})"
-            )
-            msg = {"msg": "Outcome was marked no-store"}
-            self.update_state(state=states.SUCCESS, meta=msg)
-            return msg
-
+    def mark_attendance_prompt_sent(self, email_log_id: int, event_id: int):
         try:
             event: SupervisionEvent = (
                 db.session.query(SupervisionEvent).filter_by(id=event_id).first()
+            )
+            email_log: EmailLog = (
+                db.session.query(EmailLog).filter_by(id=email_log_id).first()
             )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if "key" not in result_data:
-            print(
-                f"!! mark_attendance_prompt_sent: no key in result_data (result_data={result_data})"
-            )
-            msg = {"msg": "No key in result_data"}
+        if event is None:
+            msg = {"msg": f"Could not load event #{event_id}"}
             self.update_state(state=states.FAILURE, meta=msg)
             return msg
 
-        key = result_data["key"]
-        email_log: EmailLog = (
-            db.session.query(EmailLog).filter(EmailLog.id == key).first()
-        )
-
         if email_log is None:
             print(
-                f"!! mark_attendance_prompt_sent: could not find email log with key {key}"
+                f"!! mark_attendance_prompt_sent: could not find email log with id {email_log_id}"
             )
-            msg = {"msg": f"Could not find email log with key {key}"}
-            self.update_state(
-                state=states.FAILURE,
-                meta=msg,
-            )
+            msg = {"msg": f"Could not find email log with id {email_log_id}"}
+            self.update_state(state=states.FAILURE, meta=msg)
             return msg
 
         owner: SubmissionRole = event.owner
@@ -541,7 +515,7 @@ def register_attendance_tasks(celery):
 
         try:
             log_db_commit(
-                f"Record sent attendance prompt email log for event #{event_id}",
+                f"Link attendance prompt for event #{event_id} to email logs",
                 endpoint=self.name,
                 project_classes=[config.project_class],
             )
@@ -549,7 +523,7 @@ def register_attendance_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        msg = {"msg": f"Marked attendance prompt sent for event #{event_id}"}
+        msg = {"msg": f"Linked attendance prompt for event #{event_id} to email logs"}
         self.update_state(
             state=states.SUCCESS,
             meta=msg,

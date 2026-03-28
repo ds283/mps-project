@@ -10,7 +10,8 @@
 
 import json
 
-from flask import flash, redirect, render_template_string, request, url_for
+from celery import chain
+from flask import current_app, flash, redirect, render_template_string, request, url_for
 from flask_security import current_user, roles_accepted
 from html2text import HTML2Text
 from sqlalchemy.exc import SQLAlchemyError
@@ -22,6 +23,7 @@ from ..models import EmailWorkflow, EmailWorkflowItem
 from ..models.emails import EmailTemplate
 from ..shared.context.global_context import render_template_context
 from ..shared.workflow_logging import log_db_commit
+from ..task_queue import register_task
 from ..tasks.email_workflow import decode_email_payload
 from ..tools.ServerSideProcessing import ServerSideSQLHandler
 from . import emailworkflow
@@ -137,6 +139,66 @@ def unpause_workflow(id):
         flash("Could not unpause workflow due to a database error.", "error")
 
     return redirect(url_for("emailworkflow.email_workflows"))
+
+
+@emailworkflow.route("/confirm_delete_workflow/<int:id>")
+@roles_accepted(*_ROLES)
+def confirm_delete_workflow(id):
+    workflow: EmailWorkflow = EmailWorkflow.query.get_or_404(id)
+
+    url = request.args.get("url", url_for("emailworkflow.email_workflows"))
+
+    item_count = workflow.items.count()
+
+    title = f'Delete workflow "{workflow.name}"'
+    message = (
+        f"<p>You are about to permanently delete workflow <strong>{workflow.name}</strong>, "
+        f"which contains <strong>{item_count}</strong> item(s).</p>"
+        f"<p>This action <strong>cannot be undone</strong>. "
+        f"All pending items will be removed and their emails will never be delivered. "
+        f"Any in-progress sends will be cancelled.</p>"
+    )
+
+    return render_template_context(
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=title,
+        action_url=url_for("emailworkflow.delete_workflow", id=id, url=url),
+        message=message,
+        submit_label="Delete workflow",
+    )
+
+
+@emailworkflow.route("/delete_workflow/<int:id>")
+@roles_accepted(*_ROLES)
+def delete_workflow(id):
+    workflow: EmailWorkflow = EmailWorkflow.query.get_or_404(id)
+
+    url = request.args.get("url", url_for("emailworkflow.email_workflows"))
+    workflow_name = workflow.name
+
+    tk_name = f'Delete email workflow "{workflow_name}"'
+    task_id = register_task(tk_name, owner=current_user, description=tk_name)
+
+    celery = current_app.extensions["celery"]
+    tk = celery.tasks["app.tasks.email_workflow.delete_email_workflow"]
+    init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
+    final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
+    error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
+
+    seq = chain(
+        init.si(task_id, tk_name),
+        tk.si(id),
+        final.si(task_id, tk_name, current_user.id),
+    ).on_error(error.si(task_id, tk_name, current_user.id))
+
+    seq.apply_async(task_id=task_id)
+
+    flash(
+        f'Workflow "{workflow_name}" is being deleted in the background.',
+        "info",
+    )
+    return redirect(url)
 
 
 @emailworkflow.route("/edit_workflow/<int:id>", methods=["GET", "POST"])

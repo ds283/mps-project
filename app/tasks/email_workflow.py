@@ -623,3 +623,77 @@ def register_email_workflow_tasks(celery, mail: Mail):
             f"cleanup_workflow_sends: cleaned {cleaned} item(s), revoked {revoked} task(s)"
         )
         return {"cleaned": cleaned, "revoked": revoked}
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def delete_email_workflow(self, workflow_id: int):
+        """
+        Task 4: Delete a single EmailWorkflow and all its items.
+        Any in-progress Celery send tasks for items belonging to the workflow
+        are revoked before the workflow is removed from the database.
+        """
+        from celery.states import PENDING, STARTED, RETRY
+
+        self.update_state(
+            state="STARTED",
+            meta={"msg": f"Deleting email workflow id={workflow_id}"},
+        )
+
+        try:
+            workflow: EmailWorkflow = (
+                db.session.query(EmailWorkflow).filter_by(id=workflow_id).first()
+            )
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if workflow is None:
+            print(
+                f"delete_email_workflow: workflow id={workflow_id} not found; nothing to do"
+            )
+            return {"outcome": "not-found", "workflow_id": workflow_id}
+
+        workflow_name = workflow.name
+
+        # Revoke any in-progress Celery send tasks before deleting.
+        try:
+            in_progress_items = (
+                db.session.query(EmailWorkflowItem)
+                .filter(
+                    EmailWorkflowItem.workflow_id == workflow_id,
+                    EmailWorkflowItem.celery_send_in_progress_task_id.is_not(None),
+                )
+                .all()
+            )
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        revoked = 0
+        for item in in_progress_items:
+            task_id = item.celery_send_in_progress_task_id
+            result = celery.AsyncResult(task_id)
+            if result.state in (PENDING, STARTED, RETRY):
+                celery.control.revoke(task_id, terminate=True)
+                print(
+                    f"delete_email_workflow: revoked in-progress send task {task_id} "
+                    f"for EmailWorkflowItem id={item.id}"
+                )
+                revoked += 1
+
+        # Delete the workflow; ORM cascade removes items and their attachments.
+        try:
+            db.session.delete(workflow)
+            log_db_commit(
+                f'Deleted email workflow "{workflow_name}" (id={workflow_id}) '
+                f"and all its items ({revoked} send task(s) revoked)",
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        print(
+            f'delete_email_workflow: deleted workflow "{workflow_name}" (id={workflow_id}), '
+            f"revoked {revoked} task(s)"
+        )
+        return {"outcome": "deleted", "workflow_id": workflow_id, "revoked": revoked}

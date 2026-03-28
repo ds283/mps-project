@@ -128,29 +128,30 @@ _workflow_menu = """
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
         <a class="dropdown-item d-flex gap-2"
            href="{{ url_for('emailworkflow.workflow_items', id=w.id, url=url_for('emailworkflow.email_workflows'), text='Email workflows') }}">
-            <i class="fas fa-search fa-fw"></i> Inspect...
+            <i class="fas fa-search fa-fw"></i> Inspect&hellip;
         </a>
-        <div class="dropdown-divider"></div>
-        {% if w.completed %}
-            <span class="dropdown-item d-flex gap-2 disabled">
-                <i class="fas fa-pause fa-fw"></i> Pause
-            </span>
-        {% elif w.paused %}
-            <a class="dropdown-item d-flex gap-2"
-               href="{{ url_for('emailworkflow.unpause_workflow', id=w.id) }}">
-                <i class="fas fa-play fa-fw"></i> Unpause
-            </a>
-        {% else %}
-            <a class="dropdown-item d-flex gap-2"
-               href="{{ url_for('emailworkflow.pause_workflow', id=w.id) }}">
-                <i class="fas fa-pause fa-fw"></i> Pause
-            </a>
-        {% endif %}
         {% if not w.completed %}
+            <div class="dropdown-divider"></div>
+            {% if w.paused %}
+                <a class="dropdown-item d-flex gap-2"
+                   href="{{ url_for('emailworkflow.unpause_workflow', id=w.id) }}">
+                    <i class="fas fa-play fa-fw"></i> Unpause
+                </a>
+            {% else %}
+                <a class="dropdown-item d-flex gap-2"
+                   href="{{ url_for('emailworkflow.pause_workflow', id=w.id) }}">
+                    <i class="fas fa-pause fa-fw"></i> Pause
+                </a>
+            {% endif %}
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item d-flex gap-2 text-danger"
+               href="{{ url_for('emailworkflow.confirm_delete_workflow', id=w.id) }}">
+                <i class="fas fa-trash fa-fw"></i> Delete&hellip;
+            </a>
             <div class="dropdown-divider"></div>
             <a class="dropdown-item d-flex gap-2"
                href="{{ url_for('emailworkflow.edit_workflow', id=w.id) }}">
-                <i class="fas fa-cog fa-fw"></i> Edit properties...
+                <i class="fas fa-cog fa-fw"></i> Properties&hellip;
             </a>
         {% endif %}
     </div>
@@ -419,27 +420,28 @@ _item_menu = """
             <i class="fas fa-eye fa-fw"></i> Preview...
         </a>
         <div class="dropdown-divider"></div>
-        {% if item.paused %}
-            <a class="dropdown-item d-flex gap-2"
-               href="{{ url_for('emailworkflow.unpause_item', id=item.id, url=return_url) }}">
-                <i class="fas fa-play fa-fw"></i> Unpause
-            </a>
-            <div class="dropdown-divider"></div>
-        {% elif not item.sent_timestamp %}
-            <a class="dropdown-item d-flex gap-2"
-               href="{{ url_for('emailworkflow.pause_item', id=item.id, url=return_url) }}">
-                <i class="fas fa-pause fa-fw"></i> Pause
-            </a>
+        {% if not item.sent_timestamp %}
+            {% if item.paused %}
+                <a class="dropdown-item d-flex gap-2"
+                   href="{{ url_for('emailworkflow.unpause_item', id=item.id, url=return_url) }}">
+                    <i class="fas fa-play fa-fw"></i> Unpause
+                </a>
+            {% else  %}
+                <a class="dropdown-item d-flex gap-2"
+                   href="{{ url_for('emailworkflow.pause_item', id=item.id, url=return_url) }}">
+                    <i class="fas fa-pause fa-fw"></i> Pause
+                </a>
+            {% endif %}
             <a class="dropdown-item d-flex gap-2 text-danger"
                href="{{ url_for('emailworkflow.confirm_delete_item', id=item.id, url=return_url, text=return_text) }}">
                 <i class="fas fa-trash fa-fw"></i> Delete...
             </a>
             <div class="dropdown-divider"></div>
-     {% endif %}
-        <div class="dropdown-header">Inspect content</div>
+        {% endif %}
+        <div class="dropdown-header">Show content</div>
         <a class="dropdown-item d-flex gap-2"
            href="{{ url_for('emailworkflow.item_payloads', id=item.id, url=return_url, text=return_text) }}">
-            <i class="fas fa-code fa-fw"></i> Payloads...
+            <i class="fas fa-code fa-fw"></i> Payloads&hellip;
         </a>
         {% if item.subject_override or item.body_override %}
             <a class="dropdown-item d-flex gap-2"

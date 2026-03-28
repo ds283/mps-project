@@ -18,7 +18,6 @@ from ..database import db
 from ..models import (
     CustomOfferHint,
     FacultyData,
-    LiveProject,
     ProjectClassConfig,
     SelectingStudent,
     SubmissionRecord,
@@ -30,14 +29,21 @@ from ..shared.workflow_logging import log_db_commit
 
 
 def generate_hints_for_selector(
-    selector: SelectingStudent, config: ProjectClassConfig
+    selector: SelectingStudent,
+    config: ProjectClassConfig,
+    restrict_to_faculty_id: int = None,
 ) -> int:
     """
     For a single SelectingStudent, examine retired SubmittingStudent instances from previous
-    cycles of the same pclass for the same StudentData.  For each SubmissionRecord where:
-      (a) the project has a faculty owner who has live projects in the current config, AND
+    cycles (of any project class) for the same StudentData.  For each SubmissionRecord where:
+      (a) a previous faculty member who had a supervision role, and has live projects in the current config, AND
       (b) no hint already exists for this (selector, submission_record) pair,
     create a CustomOfferHint.
+
+    If restrict_to_faculty_id is provided, only consider supervision history involving that
+    specific faculty member (identified by their FacultyData/User id).  This is used when
+    hints are being regenerated after a single LiveProject injection, to avoid recreating
+    hints for other faculty members whose hints were previously rejected.
 
     Returns the number of new hints created.
     Raises SQLAlchemyError on database failure; the caller is responsible for rollback.
@@ -46,7 +52,7 @@ def generate_hints_for_selector(
 
     # Find all previous supervisors for this student, in any project class, where the
     # parent SubmittingStudent has been retired (so these come from a previous academic cycle)
-    retired_supervisors = (
+    retired_supervisors_q = (
         db.session.query(SubmissionRole)
         .join(SubmissionRecord, SubmissionRecord.id == SubmissionRole.submission_id)
         .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id)
@@ -58,6 +64,13 @@ def generate_hints_for_selector(
             SubmittingStudent.retired.is_(True),
         )
     )
+
+    if restrict_to_faculty_id is not None:
+        retired_supervisors_q = retired_supervisors_q.filter(
+            SubmissionRole.user_id == restrict_to_faculty_id
+        )
+
+    retired_supervisors = retired_supervisors_q.all()
 
     hints_created = 0
 
@@ -102,11 +115,15 @@ def generate_hints_for_selector(
 
 def register_custom_offer_hint_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
-    def generate_hints_for_config(self, config_id):
+    def generate_hints_for_config(self, config_id, restrict_to_faculty_id=None):
         """
         Generate CustomOfferHints for all active (non-retired) SelectingStudents in
         the given ProjectClassConfig.  Called fire-and-forget after Go Live finalisation
         and after inject_liveproject completes (when the config is still live).
+
+        If restrict_to_faculty_id is provided, only hints relating to that specific faculty
+        member are generated.  This prevents previously-rejected hints from being
+        recreated when a single new LiveProject is injected during the selection period.
         """
         try:
             config: ProjectClassConfig = ProjectClassConfig.query.filter_by(
@@ -128,7 +145,9 @@ def register_custom_offer_hint_tasks(celery):
 
         for selector in selectors:
             try:
-                n = generate_hints_for_selector(selector, config)
+                n = generate_hints_for_selector(
+                    selector, config, restrict_to_faculty_id=restrict_to_faculty_id
+                )
                 total_hints += n
                 if n > 0:
                     log_db_commit(

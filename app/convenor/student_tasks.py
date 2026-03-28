@@ -755,10 +755,13 @@ def inject_liveproject(pid, pclass_id, type):
     ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
-    # Fire-and-forget: regenerate CustomOfferHints if selections are still live.
-    # Independent of the project_golive chain so hint failures don't affect injection status.
-    if inject_config.live and not inject_config.selection_closed:
+    # Fire-and-forget: generate CustomOfferHints for the newly-injected project's faculty owner,
+    # but only if selections are still live and the project has a specific faculty owner.
+    # Restricting to the injected project's owner avoids recreating hints for other faculty
+    # members whose hints may have been previously rejected by the convenor.
+    # Generic projects (owner_id=None) are skipped since there is no specific faculty to target.
+    if inject_config.live and not inject_config.selection_closed and project.owner_id is not None:
         hint_task = celery.tasks["app.tasks.custom_offer_hints.generate_hints_for_config"]
-        hint_task.apply_async(args=(inject_config.id,))
+        hint_task.apply_async(args=(inject_config.id,), kwargs={"restrict_to_faculty_id": project.owner_id})
 
     return redirect(redirect_url())

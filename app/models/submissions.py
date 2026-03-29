@@ -1617,7 +1617,10 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             role
             for role in self.roles
             if role.role
-               in [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]
+            in [
+                SubmissionRole.ROLE_SUPERVISOR,
+                SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+            ]
         ]
         if not supervisor_roles:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
@@ -1696,14 +1699,24 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             SubmitterReportWorkflowStates,
         )
 
-        closed_events = db.session.query(MarkingEvent).filter_by(period_id=self.period_id, closed=True).all()
+        closed_events = (
+            db.session.query(MarkingEvent)
+            .filter_by(period_id=self.period_id, closed=True)
+            .all()
+        )
         for event in closed_events:
             sr = (
-                self.submitter_reports.join(MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id)
+                self.submitter_reports.join(
+                    MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id
+                )
                 .filter(MarkingWorkflow.event_id == event.id)
                 .first()
             )
-            if sr is not None and sr.workflow_state >= SubmitterReportWorkflowStates.READY_TO_GENERATE_FEEDBACK:
+            if (
+                sr is not None
+                and sr.workflow_state
+                >= SubmitterReportWorkflowStates.READY_TO_GENERATE_FEEDBACK
+            ):
                 return True
 
         return False
@@ -2985,7 +2998,9 @@ class CustomOfferHint(db.Model, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # SelectingStudent in the current live cycle
-    selector_id = db.Column(db.Integer(), db.ForeignKey("selecting_students.id"), index=True, nullable=False)
+    selector_id = db.Column(
+        db.Integer(), db.ForeignKey("selecting_students.id"), index=True, nullable=False
+    )
     selector = db.relationship(
         "SelectingStudent",
         foreign_keys=[selector_id],
@@ -2994,7 +3009,9 @@ class CustomOfferHint(db.Model, EditingMetadataMixin):
     )
 
     # Retired SubmissionRecord that triggered this hint
-    submission_record_id = db.Column(db.Integer(), db.ForeignKey("submission_records.id"), nullable=False)
+    submission_record_id = db.Column(
+        db.Integer(), db.ForeignKey("submission_records.id"), nullable=False
+    )
     submission_record = db.relationship(
         "SubmissionRecord",
         foreign_keys=[submission_record_id],
@@ -3004,9 +3021,15 @@ class CustomOfferHint(db.Model, EditingMetadataMixin):
 
     # Denormalized faculty owner id (from submission_record.project.owner_id at hint creation time).
     # Avoids traversing the retired LiveProject chain at dashboard display time.
-    faculty_id = db.Column(db.Integer(), db.ForeignKey("faculty_data.id"), nullable=False, index=True)
+    faculty_id = db.Column(
+        db.Integer(), db.ForeignKey("faculty_data.id"), nullable=False, index=True
+    )
     faculty = db.relationship("FacultyData", foreign_keys=[faculty_id], uselist=False)
 
     __table_args__ = (
-        db.UniqueConstraint("selector_id", "submission_record_id", name="uq_custom_offer_hint_selector_record"),
+        db.UniqueConstraint(
+            "selector_id",
+            "submission_record_id",
+            name="uq_custom_offer_hint_selector_record",
+        ),
     )

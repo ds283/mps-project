@@ -1717,7 +1717,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         :return:
         """
 
-        # is there any presentation feedback available?
+        # is there any presentation feedback available? (legacy infrastructure)
         flag: bool = False
         if self.period.has_presentation and self.period.collect_presentation_feedback:
             allowed_roles = [
@@ -1729,7 +1729,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 if role.role in allowed_roles
             )
 
-        # otherwise, is there any feedback available from other supervision/marker roles?
+        # otherwise, is there any feedback available from other supervision/marker roles? (legacy infrastructure)
         if self.period.collect_project_feedback and self.period.closed:
             allowed_roles = [
                 SubmissionRole.ROLE_SUPERVISOR,
@@ -1742,7 +1742,29 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 if role.role in allowed_roles
             )
 
-        return flag
+        if flag:
+            return True
+
+        # new infrastructure: check for closed MarkingEvents with a SubmitterReport at a
+        # sufficiently advanced workflow state
+        from .markingevent import (
+            MarkingEvent,
+            MarkingWorkflow,
+            SubmitterReport,
+            SubmitterReportWorkflowStates,
+        )
+
+        closed_events = db.session.query(MarkingEvent).filter_by(period_id=self.period_id, closed=True).all()
+        for event in closed_events:
+            sr = (
+                self.submitter_reports.join(MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id)
+                .filter(MarkingWorkflow.event_id == event.id)
+                .first()
+            )
+            if sr is not None and sr.workflow_state >= SubmitterReportWorkflowStates.READY_TO_GENERATE_FEEDBACK:
+                return True
+
+        return False
 
     @property
     def has_feedback_to_push(self):

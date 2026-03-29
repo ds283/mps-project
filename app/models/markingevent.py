@@ -360,6 +360,7 @@ class SubmitterReportWorkflowStates:
     READY_TO_SIGN_OFF = 8
     READY_TO_GENERATE_FEEDBACK = 9
     READY_TO_PUSH_FEEDBACK = 10
+    COMPLETED = 11
 
 
 class SubmitterReport(db.Model, EditingMetadataMixin):

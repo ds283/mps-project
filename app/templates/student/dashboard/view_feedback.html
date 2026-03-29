@@ -1,12 +1,5 @@
 {% extends "base_app.html" %}
 
-{% from "mathjax.html" import import_mathjax %}
-
-{% block scripts %}
-    {{ super() }}
-    {{ import_mathjax() }}
-{% endblock %}
-
 {% block bodyblock %}
     <div class="row">
         <div class="col-1"></div>
@@ -19,135 +12,100 @@
                 </div>
             {% endif %}
 
-            {% if record.period.collect_project_feedback %}
-                {% if record.period.config.uses_supervisor_feedback %}
-                    {% for role in record.supervision_roles %}
-                    {% if role.submitted_feedback %}
-                        <div class="card mt-3 mb-3">
-                            <div class="card-header">Feedback from <strong>{{ role.user.name }}</strong></div>
-                            <div class="card-body">
-                                <span class="dashboard-subtitle">What was good?</span>
-                                {{ record.positive_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
-                                <hr class="intro-divider">
-                                <span class="dashboard-subtitle">Things to consider for next time</span>
-                                {{ record.improvement_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
-                            </div>
-                        </div>
-                    {% endif %}
-                    {% else %}
-                        <div class="card mt-3 mb-3 card-body bg-well">
-                            Feedback has not yet been recorded from the supervision team.
-                        </div>
-                    {% endif %}
-                {% endif %}
-
-            {% if record.uses_marker_feedback and preview %}
-                {% for role in record.marker_roles %}
-                {% if role.submitted_feedback %}
-                    <div class="card mt-3 mb-3">
-                        <div class="card-header">Feedback from the project marker on your report</div>
-                        <div class="card-body">
-                            <span class="dashboard-subtitle">What was good?</span>
-                            {{ record.positive_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
-                            <hr class="intro-divider">
-                            <span class="dashboard-subtitle">Things to consider for next time</span>
-                            {{ record.improvement_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
-                        </div>
-                    </div>
-                {% endif %}
-                    {% else %}
-                        <div class="card mt-3 mb-3 card-body bg-well">
-                            Feedback has not yet been recorded from the project examiners.
-                        </div>
-                    {% endif %}
-                {% endif %}
-            {% else %}
+            {% if event_data | length == 0 %}
                 <div class="card mt-3 mb-3">
-                    <div class="card-header">Feedback collection was disabled for this submission period</div>
-                    <div class="card-body">No feedback available.</div>
+                    <div class="card-header">Feedback</div>
+                    <div class="card-body">
+                        <span class="text-muted">No marking events are available for this submission period.</span>
+                    </div>
                 </div>
             {% endif %}
 
-            {% if record.uses_presentation_feedback %}
-                {% set ns = namespace(count=0) %}
-                {% for feedback in record.presentation_feedback %}
-                    {% if feedback.submitted or (feedback.positive or feedback.negative) and preview %}
-                        {% set ns.count = ns.count + 1 %}
-                        <div class="card mt-3 mb-3">
-                            <div class="card-header">
-                                Presentation assessment feedback from <strong>{{ feedback.assessor.user.name }}</strong>
-                            </div>
-                            <div class="card-body">
-                                <span class="dashboard-subtitle">What was good?</span>
-                                {{ feedback.positive|latextomarkdown|markdown|bclean|blinkify|safe }}
-                                <hr class="intro-divider">
-                                <span class="dashboard-subtitle">Things to consider for next time</span>
-                                {{ feedback.negative|latextomarkdown|markdown|bclean|blinkify|safe }}
-                            </div>
-                        </div>
-                    {% endif %}
-                {% endfor %}
-                {% if ns.count == 0 %}
-                    <div class="card mt-3 mb-3 card-body bg-well">
-                        Feedback has not yet been recorded from the assessed presentation.
-                    </div>
-                {% endif %}
-            {% endif %}
-
-            {% if record.student_feedback_submitted or (record.student_feedback and preview) %}
-                <div class="card border-success mt-3 mb-3">
+            {% for event, submitter_report in event_data %}
+                <div class="card mt-3 mb-3">
                     <div class="card-header">
-                        <div class="row vertical-align">
-                            <div class="col-6">
-                                My feedback
+                        <strong>{{ event.name }}</strong>
+                    </div>
+                    <div class="card-body">
+                        {% if submitter_report.workflow_state < READY_TO_GENERATE_FEEDBACK %}
+                            <div class="alert alert-secondary mb-0">
+                                <i class="fas fa-hourglass-half me-2"></i>
+                                Quality assurance for this event is still in progress. Feedback will be available once
+                                it is complete.
                             </div>
-                            <div class="col-6">
-                                <div class="float-end">
-                                    {% if record.acknowledge_feedback %}
-                                        <span class="badge bg-success">Acknowledged</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">Not yet acknowledged</span>
-                                    {% endif %}
-                                    {% if record.period.closed and not record.retired and not record.student_feedback_submitted %}
-                                        <a href="{{ url_for('student.edit_feedback', id=record.id, url=url_for('student.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-secondary btn-table-block">Edit</a>
-                                        {% if record.is_student_valid %}
-                                            <a href="{{ url_for('student.submit_feedback', id=record.id) }}" class="btn btn-sm btn-success btn-table-block">Submit</a>
+                        {% else %}
+                            {# Grade #}
+                            {% if submitter_report.grade is not none %}
+                                <div class="mb-3">
+                                    <span class="small text-muted fw-semibold me-2">Grade</span>
+                                    <span class="fw-bold text-success">{{ submitter_report.grade | round(1) }}%</span>
+                                </div>
+                            {% endif %}
+
+                            {# Feedback report downloads #}
+                            {% set feedback_reports = submitter_report.feedback_reports.all() %}
+                            {% if feedback_reports | length > 0 %}
+                                <div class="mb-3 d-flex flex-row flex-wrap gap-2 align-items-center">
+                                    <span class="small text-muted fw-semibold">Feedback report:</span>
+                                    {% for fr in feedback_reports %}
+                                        {% if fr.asset is not none %}
+                                            <a class="btn btn-sm btn-outline-primary"
+                                               href="{{ url_for('admin.download_generated_asset', asset_id=fr.asset_id) }}"
+                                               data-bs-toggle="tooltip" title="Download feedback report">
+                                                <i class="fas fa-file-pdf fa-fw"></i> Download
+                                                {% if feedback_reports | length > 1 %}{{ loop.index }}{% endif %}
+                                            </a>
                                         {% endif %}
-                                    {% endif %}
+                                    {% endfor %}
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        {{ record.student_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
-                    </div>
-                    {% if record.faculty_response_submitted %}
-                        <div class="card-footer">
-                            {{ record.faculty_response|latextomarkdown|markdown|bclean|blinkify|safe }}
-                        </div>
-                    {% endif %}
-                </div>
-            {% else %}
-                <div class="card border-success mt-3 mb-3">
-                    <div class="card-header">
-                        <div class="row vertical-align">
-                            <div class="col-6">
-                                My feedback
-                            </div>
-                            <div class="col-6">
-                                <div class="float-end">
-                                    {% if record.period.closed and not record.retired and not record.student_feedback_submitted %}
-                                        <a href="{{ url_for('student.edit_feedback', id=record.id, url=url_for('student.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-outline-secondary btn-table-block">Edit my feedback</a>
+                            {% endif %}
+
+                            {# Per-assessor feedback #}
+                            {% set ns = namespace(marker_count=0) %}
+                            {% set marking_reports = submitter_report.marking_reports.all() %}
+                            {% set has_any_feedback = marking_reports | selectattr('feedback_submitted') | list | length > 0 %}
+
+                            {% if has_any_feedback %}
+                                {% for mr in marking_reports %}
+                                    {% if mr.role.role != ROLE_MODERATOR and mr.feedback_submitted %}
+                                        {% if mr.role.role == ROLE_MARKER %}
+                                            {% set ns.marker_count = ns.marker_count + 1 %}
+                                            {% set assessor_label = "Feedback from Marker " ~ ns.marker_count %}
+                                        {% elif mr.role.role == ROLE_PRESENTATION_ASSESSOR %}
+                                            {% set assessor_label = "Presentation feedback from " ~ mr.role.user.name %}
+                                        {% else %}
+                                            {# ROLE_SUPERVISOR or ROLE_RESPONSIBLE_SUPERVISOR #}
+                                            {% set assessor_label = "Feedback from " ~ mr.role.user.name %}
+                                        {% endif %}
+                                        <div class="card mt-2 mb-2 border-secondary-subtle">
+                                            <div class="card-header bg-light">
+                                                {{ assessor_label }}
+                                            </div>
+                                            <div class="card-body">
+                                                {% if mr.feedback_positive %}
+                                                    <span class="dashboard-subtitle">What was good?</span>
+                                                    {{ mr.feedback_positive | safe }}
+                                                {% endif %}
+                                                {% if mr.feedback_positive and mr.feedback_improvement %}
+                                                    <hr class="intro-divider">
+                                                {% endif %}
+                                                {% if mr.feedback_improvement %}
+                                                    <span class="dashboard-subtitle">Suggestions for improvement</span>
+                                                    {{ mr.feedback_improvement | safe }}
+                                                {% endif %}
+                                            </div>
+                                        </div>
                                     {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-muted small">No individual feedback has been submitted for this
+                                    event.
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <span class="small">You have not yet entered any feedback.</span>
+                            {% endif %}
+                        {% endif %}
                     </div>
                 </div>
-            {% endif %}
+            {% endfor %}
 
             {% if text and url %}
                 <div>

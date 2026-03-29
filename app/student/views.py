@@ -33,6 +33,9 @@ from ..models import (
     EmailWorkflow,
     EmailWorkflowItem,
     LiveProject,
+    MarkingEvent,
+    MarkingReport,
+    MarkingWorkflow,
     MessageOfTheDay,
     PresentationAssessment,
     PresentationSession,
@@ -44,6 +47,8 @@ from ..models import (
     SkillGroup,
     StudentData,
     SubmissionRecord,
+    SubmitterReport,
+    SubmitterReportWorkflowStates,
     SubmittingStudent,
     TransferableSkill,
     User,
@@ -1286,18 +1291,33 @@ def view_feedback(id):
         )
         return redirect(url)
 
-    config = record.owner.config
-    period = config.get_period(record.submission_period)
+    period = record.period
 
-    preview = request.args.get("preview", None)
+    # Build list of (event, submitter_report) for closed MarkingEvents associated with this period
+    closed_events = MarkingEvent.query.filter_by(period_id=record.period_id, closed=True).all()
+    event_data = []
+    for event in closed_events:
+        sr = (
+            record.submitter_reports.join(MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id)
+            .filter(MarkingWorkflow.event_id == event.id)
+            .first()
+        )
+        if sr is not None:
+            event_data.append((event, sr))
 
     return render_template_context(
         "student/dashboard/view_feedback.html",
         record=record,
         period=period,
+        event_data=event_data,
+        READY_TO_GENERATE_FEEDBACK=SubmitterReportWorkflowStates.READY_TO_GENERATE_FEEDBACK,
+        ROLE_SUPERVISOR=MarkingReport.ROLE_SUPERVISOR,
+        ROLE_RESPONSIBLE_SUPERVISOR=MarkingReport.ROLE_RESPONSIBLE_SUPERVISOR,
+        ROLE_PRESENTATION_ASSESSOR=MarkingReport.ROLE_PRESENTATION_ASSESSOR,
+        ROLE_MARKER=MarkingReport.ROLE_MARKER,
+        ROLE_MODERATOR=MarkingReport.ROLE_MODERATOR,
         text=text,
         url=url,
-        preview=preview,
     )
 
 

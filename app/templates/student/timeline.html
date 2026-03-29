@@ -119,18 +119,6 @@
                                                         </div>
                                                         <div class="col-5">
                                                             {{ record.project.name }} (No. {{ record.project.number }})
-                                                            <div>
-                                                                {% if record.student_feedback_submitted and record.acknowledge_feedback %}
-                                                                    {% if is_student %}
-                                                                        <span class="badge bg-success"><i class="fas fa-check"></i> Your feedback acknowledged</span>
-                                                                    {% else %}
-                                                                        <span class="badge bg-success"><i class="fas fa-check"></i> Student feedback acknowledged</span>
-                                                                    {% endif %}
-                                                                {% endif %}
-                                                                {% if record.faculty_response_submitted %}
-                                                                    <span class="badge bg-success"><i class="fas fa-check"></i> Supervisor response</span>
-                                                                {% endif %}
-                                                            </div>
                                                         </div>
                                                         <div class="col-4">
                                                             <div style="text-align: right;" class="float-end">

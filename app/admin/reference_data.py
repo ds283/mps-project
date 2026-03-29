@@ -2710,9 +2710,6 @@ def regenerate_period_records(id):
                 feedback_sent=False,
                 feedback_push_id=None,
                 feedback_push_timestamp=None,
-                student_feedback=None,
-                student_feedback_submitted=None,
-                student_feedback_timestamp=None,
             )
             db.session.add(sub_record)
 

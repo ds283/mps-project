@@ -135,16 +135,6 @@
                                         <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-circle"></i> Feedback needed</span>
                                     {% endif %}
                                 {% endif %}
-                                {% if rec.student_feedback_submitted %} {# still want student feedback reported, even if not collecting project feedback #}
-                                    {% if not my_role.acknowledge_student %}
-                                        <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Acknowledgment needed</span>
-                                    {% endif %}
-                                    {% if not my_role.submitted_response %}
-                                        <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-circle"></i> Response needed</span>
-                                    {% else %}
-                                        <span class="badge bg-success"><i class="fas fa-check"></i> Response submitted</span>
-                                    {% endif %}
-                                {% endif %}
                             </div>
                             {% set supv_roles = rec.supervisor_roles %}
                             {% if supv_roles|length > 1 %}
@@ -191,21 +181,9 @@
                                                     {% endif %}
                                                 {% endif %}
                                                 {% if period.closed %}
-                                                    {% if rec.student_feedback_submitted and not my_role.acknowledge_student %}
-                                                        <a class="dropdown-item d-flex gap-2"
-                                                           href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i
-                                                                class="fas fa-pencil-alt fa-fw"></i> Respond to
-                                                            feedback...</a>
-                                                    {% elif rec.student_feedback_submitted and not my_role.submitted_response %}
-                                                        <a class="dropdown-item d-flex gap-2"
-                                                           href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i
-                                                                class="fas fa-pencil-alt fa-fw"></i> Respond to
-                                                            feedback...</a>
-                                                    {% else %}
-                                                        <a class="dropdown-item d-flex gap-2"
-                                                           href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i
-                                                                class="fas fa-search fa-fw"></i> View feedback...</a>
-                                                    {% endif %}
+                                                    <a class="dropdown-item d-flex gap-2"
+                                                       href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i
+                                                            class="fas fa-search fa-fw"></i> View feedback...</a>
                                                 {% endif %}
                                             {% endif %}
                                         </div>

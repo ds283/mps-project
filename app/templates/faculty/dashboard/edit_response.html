@@ -14,13 +14,6 @@
     <form action="{{ submit_url }}" method="POST" name="feedback_form">
         {{ form.hidden_tag() }}
 
-        <div class="card mt-3 mb-3">
-            <div class="card-header">Student feedback</div>
-            <div class="card-body">
-                {{ record.student_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
-            </div>
-        </div>
-
         {{ wtf.render_field(form.feedback) }}
 
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}

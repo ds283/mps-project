@@ -121,12 +121,6 @@
                                     <div class="d-flex flex-column justify-content-start align-items-start gap-1">
                                         <strong><a class="text-decoration-none" href="{{ url_for('student.submitter_view_project', sid=sub.id, pid=record.project.id, text='dashboard', url=url_for('student.dashboard')) }}">{{ record.project.name }}</a></strong>
                                         <div>
-                                            {% if record.student_feedback_submitted and record.acknowledge_feedback %}
-                                                <span class="badge bg-success"><i class="fas fa-check"></i> Your feedback acknowledged</span>
-                                            {% endif %}
-                                            {% if record.faculty_response_submitted %}
-                                                <span class="badge bg-success"><i class="fas fa-check"></i> Supervisor response</span>
-                                            {% endif %}
                                         </div>
                                     </div>
                                     <div class="d-flex flex-row justify-content-end align-items-start">

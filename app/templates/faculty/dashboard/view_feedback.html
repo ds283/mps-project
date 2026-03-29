@@ -97,61 +97,6 @@
                 </div>
             {% endif %}
 
-            {% if record.student_feedback_submitted %}
-                {% set supv_roles = record.supervisor_roles %}
-                <div class="card border-success mt-3 mb-3">
-                    <div class="card-header">
-                        <div class="d-flex flex-row justify-content-between align-items-center w-100">
-                            <div>Submitter feedback</div>
-                            <div class="d-flex flex-row justify-content-end align-items-center gap-2">
-                                {% if record.student_feedback_timestamp %}
-                                    <span class="small text-success me-2">Submitted at {{ record.student_feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        {{ record.student_feedback|latextomarkdown|markdown|bclean|blinkify|safe }}
-                    </div>
-                    {% for role in supv_roles %}
-                        <div class="card mt-1 mb-1">
-                            <div class="card-header">
-                                <div class="d-flex flex-row justify-content-between align-items-center w-100">
-                                    <div>Response from <i class="fas fa-user-circle"></i> {{ role.user.name }}</div>
-                                    <div class="d-flex flex-row justify-content-end align-items-center gap-2">
-                                        {% if role.submitted_response and role.response_timestamp %}
-                                            <span class="small text-success me-2">Response at {{ role.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                                        {% endif %}
-                                        {% if role.acknowledge_student %}
-                                            <span class="badge bg-success"><i
-                                                    class="fas fa-check"></i> Acknowledged</span>
-                                        {% endif %}
-                                        {% if role.acknowledge_student and not role.submitted_response %}
-                                            <a href="{{ url_for('faculty.edit_response', id=role.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}"
-                                               class="btn btn-sm btn-outline-secondary">Edit...</a>
-                                            {% if role.response_valid %}
-                                                <a href="{{ url_for('faculty.submit_response', id=role.id) }}"
-                                                   class="btn btn-sm btn-outline-success">Submit</a>
-                                            {% endif %}
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                            {% if not role.acknowledge_student %}
-                                <div class="card-footer">
-                                    <a href="{{ url_for('faculty.acknowledge_feedback', id=role.id) }}"
-                                       class="btn btn-sm btn-outline-primary">Acknowledge</a>
-                                </div>
-                            {% elif role.submitted_response or (role.response and preview) %}
-                                <div class="card-footer">
-                                    {{ record.faculty_response|latextomarkdown|markdown|bclean|blinkify|safe }}
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
             {% if text and url %}
                 <div>
                     <a class="text-decoration-none" href="{{ url }}">

@@ -2534,51 +2534,6 @@ def unsubmit_feedback(id):
     return redirect(redirect_url())
 
 
-@faculty.route("/acknowledge_feedback/<int:id>")
-@roles_required("faculty")
-def acknowledge_feedback(id):
-    # id is a SubmissionRecord instance
-    record: SubmissionRecord = SubmissionRecord.query.get_or_404(id)
-
-    if record.retired:
-        flash(
-            "It is not possible to acknowledge student feedback for submissions that have been retired.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if not validate_submission_supervisor(record):
-        return redirect(redirect_url())
-
-    if record.acknowledge_feedback:
-        return redirect(redirect_url())
-
-    period: SubmissionPeriodRecord = record.period
-
-    if not period.is_feedback_open and not period.closed:
-        flash(
-            "It is not possible to submit before the feedback period has opened.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    if not record.student_feedback_submitted:
-        flash(
-            "Cannot acknowledge student feedback because none has been submitted.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    record.acknowledge_feedback = True
-    log_db_commit(
-        f"Acknowledged student feedback for submission by {record.student_identifier['label']}",
-        user=current_user,
-        project_classes=period.config.project_class,
-    )
-
-    return redirect(redirect_url())
-
-
 @faculty.route("/view_feedback/<int:id>")
 @roles_required("faculty")
 def view_feedback(id):
@@ -2635,13 +2590,6 @@ def edit_response(id):
     if period.closed and role.submitted_response:
         flash(
             "It is not possible to edit your response once it has been submitted",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    if period.closed and not record.student_feedback_submitted:
-        flash(
-            "It is not possible to write a response to feedback from your student before they have submitted it.",
             "info",
         )
         return redirect(redirect_url())
@@ -2711,13 +2659,6 @@ def submit_response(id):
             "It is only possible to respond to feedback from the submitter when "
             "their own marks and feedback are available. "
             "Try again when this submission period is closed.",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    if period.closed and not record.student_feedback_submitted:
-        flash(
-            "It is not possible to respond to feedback from your student before they have submitted it.",
             "info",
         )
         return redirect(redirect_url())

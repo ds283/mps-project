@@ -505,7 +505,7 @@ class SubmissionRole(
         ):
             return SubmissionRole.FEEDBACK_NOT_REQUIRED
 
-        if not period.is_feedback_open or not sub.student_feedback_submitted:
+        if not period.is_feedback_open:
             return SubmissionRole.FEEDBACK_NOT_YET
 
         if self.submitted_response:
@@ -1188,32 +1188,9 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # timestamp when feedback was sent
     feedback_push_timestamp = db.Column(db.DateTime())
 
-    # STUDENT FEEDBACK
-
-    # free-form feedback field
-    student_feedback = db.Column(db.Text())
-
-    # student feedback submitted
-    student_feedback_submitted = db.Column(db.Boolean())
-
-    # student feedback timestamp
-    student_feedback_timestamp = db.Column(db.DateTime())
-
     # ROLES
 
     # 'roles' member created by back-reference from SubmissionRole
-
-    # faculty acknowledge
-    acknowledge_feedback = db.Column(db.Boolean())
-
-    # faculty response
-    faculty_response = db.Column(db.Text())
-
-    # faculty response submitted
-    faculty_response_submitted = db.Column(db.Boolean())
-
-    # faculty response timestamp
-    faculty_response_timestamp = db.Column(db.DateTime())
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1523,20 +1500,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return feedback.submitted
 
     @property
-    def is_student_valid(self):
-        if self.student_feedback is None or len(self.student_feedback) == 0:
-            return False
-
-        return True
-
-    @property
-    def is_response_valid(self):
-        if self.faculty_response is None or len(self.faculty_response) == 0:
-            return False
-
-        return True
-
-    @property
     def is_feedback_valid(self):
         return self.is_supervisor_feedback_valid or self.is_marker_feedback_valid
 
@@ -1650,27 +1613,19 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     @property
     def supervisor_response_state(self):
-        period = self.period
-
-        if (
-            not period.collect_project_feedback
-            or not period.config.project_class.publish
-        ):
+        supervisor_roles = [
+            role
+            for role in self.roles
+            if role.role
+               in [SubmissionRole.ROLE_SUPERVISOR, SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR]
+        ]
+        if not supervisor_roles:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
-        if not period.is_feedback_open or not self.student_feedback_submitted:
-            return SubmissionRecord.FEEDBACK_NOT_YET
-
-        if self.faculty_response_submitted:
-            return SubmissionRecord.FEEDBACK_SUBMITTED
-
-        if self.is_response_valid:
-            return SubmissionRecord.FEEDBACK_ENTERED
-
-        if not period.closed:
-            return SubmissionRecord.FEEDBACK_WAITING
-
-        return SubmissionRecord.FEEDBACK_LATE
+        states = [role._supervisor_response_state for role in supervisor_roles]
+        if any(s == SubmissionRecord.FEEDBACK_LATE for s in states):
+            return SubmissionRecord.FEEDBACK_LATE
+        return max(states)
 
     @property
     def feedback_submitted(self):

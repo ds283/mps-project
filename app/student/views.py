@@ -73,7 +73,7 @@ from ..shared.workflow_logging import log_db_commit
 from ..tools import ServerSideSQLHandler
 from . import student
 from .actions import store_selection
-from .forms import StudentFeedbackForm, StudentSettingsForm
+from .forms import StudentSettingsForm
 from .utils import (
     verify_open,
     verify_selector,
@@ -1319,115 +1319,6 @@ def view_feedback(id):
         text=text,
         url=url,
     )
-
-
-@student.route("/edit_feedback/<int:id>", methods=["GET", "POST"])
-@roles_accepted("student")
-def edit_feedback(id):
-    # id identifies a SubmissionRecord
-    record = SubmissionRecord.query.get_or_404(id)
-
-    if not verify_submission_record(record, message=True):
-        return redirect(redirect_url())
-
-    if record.retired:
-        flash(
-            "It is no longer possible to submit feedback for this submission because it belongs to a previous academic year.",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    config = record.owner.config
-    period = config.get_period(record.submission_period)
-
-    if not period.closed:
-        flash(
-            "It is only possible to give feedback to your supervisor once your own marks and feedback are available. "
-            "Try again when this submission period is closed.",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    if period.closed and record.student_feedback_submitted:
-        flash(
-            "It is not possible to edit your feedback once it has been submitted",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    form = StudentFeedbackForm(request.form)
-
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
-
-    if form.validate_on_submit():
-        record.student_feedback = form.feedback.data
-        log_db_commit(
-            f"Student {current_user.name} saved feedback draft for submission record #{record.id} in {config.project_class.name}",
-            user=current_user,
-            project_classes=config.project_class,
-        )
-
-        return redirect(url)
-
-    else:
-        if request.method == "GET":
-            form.feedback.data = record.student_feedback
-
-    return render_template_context(
-        "student/dashboard/edit_feedback.html",
-        form=form,
-        unique_id="stud-{id}".format(id=id),
-        submit_url=url_for("student.edit_feedback", id=id, url=url),
-        text="home dashboard",
-        url=home_dashboard_url(),
-    )
-
-
-@student.route("/submit_feedback/<int:id>")
-@roles_accepted("student")
-def submit_feedback(id):
-    # id identifies a SubmissionRecord
-    record = SubmissionRecord.query.get_or_404(id)
-
-    if not verify_submission_record(record, message=True):
-        return redirect(redirect_url())
-
-    if record.student_feedback_submitted:
-        return redirect(redirect_url())
-
-    if record.retired:
-        flash(
-            "It is no longer possible to submit feedback for this submission because it belongs to a previous academic year.",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    config = record.owner.config
-    period = config.get_period(record.submission_period)
-
-    if not period.closed:
-        flash(
-            "It is only possible to give feedback to your supervisor once your own marks and feedback are available. "
-            "Try again when this submission period is closed.",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    if not record.is_student_valid:
-        flash("Cannot submit your feedback because it is incomplete.", "info")
-        return redirect(redirect_url())
-
-    record.student_feedback_submitted = True
-    record.student_feedback_timestamp = datetime.now()
-    log_db_commit(
-        f"Student {current_user.name} submitted feedback for submission record #{record.id} in {config.project_class.name}",
-        user=current_user,
-        project_classes=config.project_class,
-    )
-
-    return redirect(redirect_url())
 
 
 @student.route("/set_availability/<int:assessment_id>/<int:submitter_id>")

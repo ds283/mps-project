@@ -978,9 +978,6 @@ def register_rollover_tasks(celery):
                             feedback_sent=False,
                             feedback_push_id=None,
                             feedback_push_timestamp=None,
-                            student_feedback=None,
-                            student_feedback_submitted=None,
-                            student_feedback_timestamp=None,
                         )
 
                         db.session.add(new_rec)
@@ -1164,9 +1161,6 @@ def register_rollover_tasks(celery):
                                     feedback_sent=False,
                                     feedback_push_id=None,
                                     feedback_push_timestamp=None,
-                                    student_feedback=None,
-                                    student_feedback_submitted=None,
-                                    student_feedback_timestamp=None,
                                 )
 
                                 db.session.add(new_rec)

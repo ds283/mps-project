@@ -12,7 +12,7 @@
         },
         {
           "key": "send",
-          "text": "Please check to indicate that your report accounts for any reasonable adjustments indicated. These may appear on an attached electronic sticker.",
+          "text": "Please check to indicate that your final assigned grade accounts for any reasonable adjustments indicated. These may appear on an attached electronic sticker.",
           "field_type": {
             "type": "boolean"
           }

@@ -14,7 +14,6 @@ from io import BytesIO
 from pathlib import Path
 
 import fitz
-from celery.exceptions import Ignore
 from dateutil.tz import tzutc, tzoffset
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
@@ -326,17 +325,16 @@ def register_process_report_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load SubmissionRecord instance from database"},
-            )
-            raise Ignore()
+            msg = "Could not load SubmissionRecord instance from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         asset: SubmittedAsset = record.report
 
         if asset is None:
-            self.update_state("FAILURE", meta={"msg": "A report has not been uploaded"})
-            raise Ignore()
+            msg = "A report has not been uploaded"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
         input_storage = AssetCloudAdapter(
@@ -346,10 +344,9 @@ def register_process_report_tasks(celery):
         )
 
         if not input_storage.exists():
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not find report in object store"}
-            )
-            raise Ignore()
+            msg = "Could not find report in object store"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # generate scratch names
         with ScratchFileManager() as output_path:
@@ -423,11 +420,9 @@ def register_process_report_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load SubmissionRecord instance from database"},
-            )
-            raise Ignore()
+            msg = "Could not load SubmissionRecord instance from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         record.celery_finished = True
         record.timestamp = datetime.now()
@@ -458,17 +453,14 @@ def register_process_report_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load SubmissionRecord instance from database"},
-            )
-            raise Ignore()
+            msg = "Could not load SubmissionRecord instance from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if user is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load User model from database"}
-            )
-            raise Ignore()
+            msg = "Could not load User model from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         user.post_message(
             "Errors occurred when processing uploaded report for submitter {name}".format(

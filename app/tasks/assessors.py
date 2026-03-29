@@ -12,7 +12,6 @@ from flask import current_app
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from celery.exceptions import Ignore
 
 from ..database import db
 from ..models import User, ProjectClassConfig, EnrollmentRecord, Project, LiveProject
@@ -32,11 +31,9 @@ def register_assessor_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load EnrollmentRecord record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load EnrollmentRecord record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
@@ -45,11 +42,9 @@ def register_assessor_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load User record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load User record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         faculty = record.owner
 
@@ -57,15 +52,14 @@ def register_assessor_tasks(celery):
                 record.marker_state != EnrollmentRecord.MARKER_ENROLLED
                 and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED
         ):
-            user.post_message(
+            err_msg = (
                 'Cannot attach {name} as an assessor for projects in class "{pclass}" because they '
                 "do not have an appropriate enrolment.".format(
                     name=faculty.user.name, pclass=record.pclass.name
-                ),
-                "error",
-                autocommit=True,
+                )
             )
-            raise Ignore()
+            user.post_message(err_msg, "error", autocommit=True)
+            raise Exception(err_msg)
 
         projects = (
             db.session.query(Project)
@@ -116,11 +110,9 @@ def register_assessor_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load EnrollmentRecord record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load EnrollmentRecord record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
@@ -129,11 +121,9 @@ def register_assessor_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load User record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load User record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         faculty = record.owner
 
@@ -141,15 +131,14 @@ def register_assessor_tasks(celery):
                 record.marker_state != EnrollmentRecord.MARKER_ENROLLED
                 and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED
         ):
-            user.post_message(
+            err_msg = (
                 'Cannot attach {name} as an assessor for projects in class "{pclass}" because they '
                 "do not have an appropriate enrolment.".format(
                     name=faculty.user.name, pclass=record.pclass.name
-                ),
-                "error",
-                autocommit=True,
+                )
             )
-            raise Ignore()
+            user.post_message(err_msg, "error", autocommit=True)
+            raise Exception(err_msg)
 
         projects = (
             db.session.query(LiveProject)

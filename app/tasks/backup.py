@@ -75,11 +75,9 @@ def register_backup_tasks(celery):
         # get backup object store
         object_store: ObjectStore = current_app.config.get("OBJECT_STORAGE_BACKUP")
         if object_store is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Backup ObjectStore bucket is not configured"},
-            )
-            raise Ignore()
+            msg = "Backup ObjectStore bucket is not configured"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # construct unique key for backup object
         now = datetime.now()
@@ -121,11 +119,9 @@ def register_backup_tasks(celery):
             )
 
             if not path.exists(SQL_scratch_path) or not path.isfile(SQL_scratch_path):
-                self.update_state(
-                    state="FAILURE",
-                    meta={"msg": "mysqldump failed or did not produce a readable file"},
-                )
-                raise Ignore()
+                msg = "mysqldump failed or did not produce a readable file"
+                current_app.logger.error(msg)
+                raise Exception(msg)
 
             self.update_state(
                 state="PROGRESS", meta={"msg": "Compressing mysqldump output"}
@@ -143,13 +139,9 @@ def register_backup_tasks(celery):
                 if not path.exists(archive_scratch_path) or not path.isfile(
                     archive_scratch_path
                 ):
-                    self.update_state(
-                        state="FAILURE",
-                        meta={
-                            "msg": "archive construction failed or did not produce a readable file"
-                        },
-                    )
-                    raise Ignore()
+                    msg = "archive construction failed or did not produce a readable file"
+                    current_app.logger.error(msg)
+                    raise Exception(msg)
 
                 # store details
                 uncompressed_size = SQL_scratch_path.stat().st_size

@@ -15,7 +15,6 @@ from functools import total_ordering
 from typing import Optional, Tuple, List
 
 from celery import group
-from celery.exceptions import Ignore
 from dateutil.parser import parse
 from flask import current_app, render_template_string
 from sqlalchemy import or_
@@ -1124,10 +1123,9 @@ def _perform_expiry_check(self, record_id, BatchType, BatchItemType):
         raise self.retry()
 
     if record is None:
-        self.update_state(
-            state="FAILURE", meta={"msg": "Could not load database records"}
-        )
-        raise Ignore()
+        msg = "Could not load database records"
+        current_app.logger.error(msg)
+        raise Exception(msg)
 
     # if imported successfully and not yet converted, don't expire
     if record.success and not record.converted:
@@ -1405,10 +1403,9 @@ def register_batch_create_tasks(celery):
             raise self.retry()
 
         if record is None or user is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         num_created = sum([1 for x in result_data if x == OUTCOME_CREATED])
         num_merged = sum([1 for x in result_data if x == OUTCOME_MERGED])
@@ -1449,10 +1446,9 @@ def register_batch_create_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         user.post_message(
             "Errors occurred during faculty account import", "error", autocommit=True
@@ -1859,10 +1855,9 @@ def register_batch_create_tasks(celery):
             raise self.retry()
 
         if record is None or user is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         num_created = sum([1 for x in result_data if x == OUTCOME_CREATED])
         num_merged = sum([1 for x in result_data if x == OUTCOME_MERGED])
@@ -1903,10 +1898,9 @@ def register_batch_create_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         user.post_message(
             "Errors occurred during student account import", "error", autocommit=True

@@ -11,7 +11,6 @@
 from email.utils import formataddr
 
 from celery import group
-from celery.exceptions import Ignore
 from flask import current_app, render_template_string
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -268,10 +267,9 @@ def register_services_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         record.post_message(
             'Email with subject "{subj}" successfully sent to all recipients'.format(
@@ -292,10 +290,9 @@ def register_services_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         record.post_message(
             'An error occurred and your email with subject "{subj}" was not sent '

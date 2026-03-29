@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 
 from celery import group
-from celery.exceptions import Ignore
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -50,11 +49,10 @@ def register_push_feedback_tasks(celery):
             raise self.retry()
 
         if period is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            print("!! push_period: ignored because cannot load SubmissionPeriodRecord")
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            print("!! push_period: failed because cannot load SubmissionPeriodRecord")
+            raise Exception(msg)
 
         # submitters is set of ids for SubmissionRecord instances
         submitters = set()
@@ -393,13 +391,12 @@ def register_push_feedback_tasks(celery):
             raise self.retry()
 
         if period is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
             print(
-                "!! notify_feedback_push: ignored because cannot load SubmissionPeriodRecord"
+                "!! notify_feedback_push: failed because cannot load SubmissionPeriodRecord"
             )
-            raise Ignore()
+            raise Exception(msg)
 
         config: ProjectClassConfig = period.config
 
@@ -410,11 +407,10 @@ def register_push_feedback_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load User record from database"}
-            )
-            print("!! notify_feedback_push: ignored because cannot load User")
-            raise Ignore()
+            msg = "Could not load User record from database"
+            current_app.logger.error(msg)
+            print("!! notify_feedback_push: failed because cannot load User")
+            raise Exception(msg)
 
         # result data should be a list of dicts
         push_submitter = 0

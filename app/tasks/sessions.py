@@ -9,7 +9,6 @@
 #
 
 from flask import current_app
-from celery.exceptions import Ignore
 
 from pymongo import MongoClient
 from datetime import datetime, timedelta
@@ -26,7 +25,7 @@ def register_session_tasks(celery):
         key_prefix = current_app.config["SESSION_KEY_PREFIX"]
 
         if mongo_url is None:
-            raise Ignore()
+            return
 
         print(
             "-- Entering sift_sessions maintenance cycle for MongoDB server-side sessions"

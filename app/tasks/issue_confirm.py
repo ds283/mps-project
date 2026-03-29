@@ -12,7 +12,6 @@ import re
 from datetime import datetime, timedelta
 
 from celery import chain, group
-from celery.exceptions import Ignore
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -188,10 +187,9 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         config.requests_issued = True
         config.request_deadline = deadline
@@ -226,10 +224,9 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if confirm_template_id is not None:
             template = db.session.get(EmailTemplate, confirm_template_id)
@@ -325,10 +322,9 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if convenor is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         convenor.post_message(
             "Issuing confirmation requests failed. Please contact a system administrator",
@@ -353,10 +349,9 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if data is None or config is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if not config.require_confirm:
             return None
@@ -388,10 +383,9 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if data is None or config is None or workflow is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         projects = list(data.projects_offered(config.project_class))
 
@@ -433,10 +427,9 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         recipients = set()
 
@@ -496,10 +489,9 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if data is None or config is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # if no workflow was supplied (individual reminder case), create one now
         if workflow is None:
@@ -566,10 +558,9 @@ def register_issue_confirm_tasks(celery):
         config: ProjectClassConfig = record.pclass.get_config(current_year)
 
         if record is None or config is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # if confirmations not required, nothing to do
         if not config.require_confirm:
@@ -621,10 +612,9 @@ def register_issue_confirm_tasks(celery):
         config: ProjectClassConfig = record.pclass.get_config(current_year)
 
         if record is None or config is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # if confirmations not required, nothing to do
         if not config.require_confirm:
@@ -667,10 +657,9 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if faculty is None or config is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
             # if confirmations not required, nothing to do
         if not config.require_confirm:
@@ -704,10 +693,9 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if record is None or current_user is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         project = record.parent
         owner = project.owner
@@ -770,10 +758,9 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if user is None or user.faculty_data is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         fac_data = user.faculty_data
 
@@ -816,10 +803,9 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if comment is None or project_approver is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         approvals_team = set()
         for m in project_approver.users:

@@ -12,7 +12,6 @@ from datetime import datetime, date, timedelta
 
 import holidays
 from celery import chain, group
-from celery.exceptions import Ignore
 from flask import current_app
 from numpy import is_busday
 from sqlalchemy import or_
@@ -195,10 +194,9 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # don't use .has_role() here since that can be confused by role masking
 
@@ -247,10 +245,9 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # create snapshot of notifications list; this is what we use *everywhere* to decide which notifications
         # to process, in order to avoid race conditions with other threads adding notifications to the database
@@ -344,10 +341,9 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # create snapshot of notifications list; this is what we use *everywhere* to decide which notifications
         # to process, in order to avoid race conditions with other threads adding notifications to the database
@@ -455,10 +451,9 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if notification is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         try:
             db.session.delete(notification)
@@ -490,10 +485,9 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         n_ids, cr_ids = reported_ids
 
@@ -529,10 +523,9 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if user is None or notification is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if notification.held:
             return
@@ -584,10 +577,9 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if not isinstance(n_ids, list):
             raise RuntimeError(
@@ -614,10 +606,9 @@ def register_email_notification_tasks(celery):
         if any(n is None for n in notifications) or any(
                 cr is None for cr in outstanding_crqs
         ):
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # if there are no notifications and no outstanding requests, then there is nothing to do;
         # this should have been weeded out
@@ -680,10 +671,9 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if notification is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         try:
             req = (
@@ -754,10 +744,9 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if user is None or notification is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         template = EmailTemplate.find_template_(EmailTemplate.NOTIFICATIONS_STUDENT_SINGLE)
         workflow = EmailWorkflow.build_(
@@ -798,10 +787,9 @@ def register_email_notification_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if not isinstance(n_ids, list):
             raise RuntimeError(
@@ -828,10 +816,9 @@ def register_email_notification_tasks(celery):
         if any(n is None for n in notifications) or any(
                 cr is None for cr in outstanding_crqs
         ):
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # if there are no notifications and no outstanding requests, then there is nothing to do;
         # this should have been weeded out

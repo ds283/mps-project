@@ -15,7 +15,6 @@ from typing import Dict, List, Optional
 import jinja2
 import markdown
 from celery import chain, group
-from celery.exceptions import Ignore
 from dateutil import parser
 from flask import current_app
 from pathvalidate import sanitize_filename
@@ -77,11 +76,9 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load SubmissionPeriodRecord from database"},
-            )
-            raise Ignore()
+            msg = "Could not load SubmissionPeriodRecord from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         print(
             '-- Send marking emails for project class "{proj}", submission period '
@@ -125,10 +122,9 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if convenor is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load User record from database"}
-            )
-            raise Ignore()
+            msg = "Could not load User record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # result data should be a list of dicts
         supv_sent = 0
@@ -382,10 +378,9 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load SubmissionRecord from database"}
-            )
-            raise Ignore()
+            msg = "Could not load SubmissionRecord from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # nothing to do if either (1) no project assigned, or (2) no report yet uploaded, or
         # (3) processed report not yet generated; SubmissionRecord instances in this position will
@@ -523,11 +518,9 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if period is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load SubmissionPeriodRecord from database"},
-            )
-            raise Ignore()
+            msg = "Could not load SubmissionPeriodRecord from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # set up a task group to perform conflation for each record associated with this period
         tasks = group(
@@ -739,11 +732,9 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if convenor is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load convenor User record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load convenor User record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         try:
             period: SubmissionPeriodRecord = (
@@ -754,10 +745,9 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if period is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load period record from database"}
-            )
-            raise Ignore()
+            msg = "Could not load period record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # result data should be a list of lists
         marks_conflated = 0
@@ -809,10 +799,9 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if recipe is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load recipe record from database"}
-            )
-            raise Ignore()
+            msg = "Could not load recipe record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         try:
             period: SubmissionPeriodRecord = (
@@ -823,10 +812,9 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if period is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load period record from database"}
-            )
-            raise Ignore()
+            msg = "Could not load period record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         convenor: Optional[User] = None
         if convenor_id is not None:
@@ -842,8 +830,8 @@ def register_marking_tasks(celery):
         if pclass not in recipe.project_classes:
             msg = f'Can not apply feedback recipe "{recipe.label}" to {period.display_name} because it is not available for use on projects of class "{pclass.name}"'
             report_error(msg, "generate_feedback_reports", convenor)
-            self.update_state("FAILURE", meta={"msg": msg})
-            raise Ignore()
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         tasks = group(
             generate_feedback_report.s(record.id, recipe_id, convenor_id)
@@ -868,10 +856,9 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load recipe record from database"}
-            )
-            raise Ignore()
+            msg = "Could not load recipe record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # if a feedback report has already been generated, do nothing
         if record.feedback_generated:
@@ -897,10 +884,9 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if recipe is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load recipe record from database"}
-            )
-            raise Ignore()
+            msg = "Could not load recipe record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         convenor: Optional[User] = None
         if convenor_id is not None:
@@ -1132,10 +1118,9 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if recipe is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load recipe record from database"}
-            )
-            raise Ignore()
+            msg = "Could not load recipe record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         try:
             period: SubmissionPeriodRecord = (
@@ -1146,10 +1131,9 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         if period is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load period record from database"}
-            )
-            raise Ignore()
+            msg = "Could not load period record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         convenor: Optional[User] = None
         if convenor_id is not None:

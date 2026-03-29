@@ -11,7 +11,6 @@
 from datetime import date, datetime, timedelta
 
 from celery import chain, group
-from celery.exceptions import Ignore
 from dateutil import parser
 from flask import current_app
 from sqlalchemy import and_, or_
@@ -356,10 +355,9 @@ def register_golive_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # build list of faculty that are enrolled as supervisors
         faculty = set()
@@ -459,10 +457,9 @@ def register_golive_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # build list of faculty that are enrolled as supervisors
         selectors = set()
@@ -533,10 +530,9 @@ def register_golive_tasks(celery):
             raise self.retry()
 
         if user is None or config is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         config.golive_notified.append(user)
 
@@ -573,10 +569,9 @@ def register_golive_tasks(celery):
             raise self.retry()
 
         if data is None or config is None or workflow is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # get live projects belonging to both this project class and this faculty member
         projects = config.live_projects.filter_by(owner_id=faculty_id).all()
@@ -644,10 +639,9 @@ def register_golive_tasks(celery):
             raise self.retry()
 
         if data is None or config is None or workflow is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load database records"}
-            )
-            raise Ignore()
+            msg = "Could not load database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         item = EmailWorkflowItem.build_(
             subject_payload=encode_email_payload({"name": config.project_class.name}),
@@ -849,11 +843,7 @@ def register_golive_tasks(celery):
         except KeyError as e:
             db.session.rollback()
             current_app.logger.exception("KeyError exception", exc_info=e)
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Database error: {msg}".format(msg=str(e))},
-            )
-            raise Ignore()
+            raise
 
     @celery.task(bind=True, default_retry_delay=30)
     def golive_close(self, config_id, convenor_id):

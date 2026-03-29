@@ -13,7 +13,6 @@ from urllib.parse import urljoin
 
 import requests
 from celery import group, chain
-from celery.exceptions import Ignore
 from flask import current_app
 from nameparser import HumanName
 from sqlalchemy import or_, func
@@ -146,11 +145,9 @@ def register_canvas_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state(
-                state="FAILED",
-                meta={"msg": "Could not read ProjectClassConfig from database"},
-            )
-            raise Ignore()
+            msg = "Could not read ProjectClassConfig from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # if canvas integration is not enabled, assume we can exit
         if not config.canvas_enabled:
@@ -478,11 +475,9 @@ def register_canvas_tasks(celery):
             raise self.retry()
 
         if period is None:
-            self.update_state(
-                state="FAILED",
-                meta={"msg": "Could not read SubmissionPeriodRecord from database"},
-            )
-            raise Ignore()
+            msg = "Could not read SubmissionPeriodRecord from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # if canvas integration is not enabled, assume we can exit
         if not period.canvas_enabled:
@@ -614,11 +609,9 @@ def register_canvas_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load SubmissionRecord instance from database"},
-            )
-            raise Ignore()
+            msg = "Could not load SubmissionRecord instance from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         period: SubmissionPeriodRecord = record.period
         submitter: SubmittingStudent = record.owner
@@ -833,7 +826,7 @@ def register_canvas_tasks(celery):
             except FileNotFoundError:
                 # silently ignore if cloud object cannot be found
                 pass
-            raise Ignore()
+            raise
 
         return {
             "asset_id": asset.id,
@@ -873,11 +866,9 @@ def register_canvas_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load SubmissionRecord instance from database"},
-            )
-            raise Ignore()
+            msg = "Could not load SubmissionRecord instance from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if asset is None:
             self.update_state(
@@ -932,7 +923,7 @@ def register_canvas_tasks(celery):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise Ignore()
+            raise
 
         process = celery.tasks["app.tasks.process_report.process"]
         finalize = celery.tasks["app.tasks.process_report.finalize"]
@@ -966,17 +957,14 @@ def register_canvas_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load SubmissionRecord instance from database"},
-            )
-            raise Ignore()
+            msg = "Could not load SubmissionRecord instance from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if user is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load User model from database"}
-            )
-            raise Ignore()
+            msg = "Could not load User model from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         user.post_message(
             "An error occurred when pulling the report for submitter {name} from Canvas".format(
@@ -1000,10 +988,9 @@ def register_canvas_tasks(celery):
         fail = len(data) - success
 
         if user is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load User model from database"}
-            )
-            raise Ignore()
+            msg = "Could not load User model from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         tag = "success" if fail == 0 else "danger"
 

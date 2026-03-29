@@ -10,7 +10,6 @@
 
 from flask import current_app
 
-from celery.exceptions import Ignore
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -27,10 +26,9 @@ def register_utility_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not load User record from database"}
-            )
-            raise Ignore()
+            msg = "Could not load User record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if not isinstance(sent_data, list):
             sent_data = [sent_data]

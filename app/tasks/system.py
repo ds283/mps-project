@@ -12,7 +12,6 @@ from ast import literal_eval
 from datetime import datetime
 
 from celery import group
-from celery.exceptions import Ignore
 from dateutil import parser
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
@@ -111,10 +110,9 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         record.finished = True
         record.celery_finished = True
@@ -141,10 +139,9 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         record.finished = True
         record.celery_finished = True
@@ -171,10 +168,9 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         record.celery_finished = True
         record.success = False
@@ -200,10 +196,9 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         try:
             user.post_message(
@@ -224,10 +219,9 @@ def register_system_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not read database records"}
-            )
-            raise Ignore()
+            msg = "Could not read database records"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         try:
             user.post_message(
@@ -334,10 +328,9 @@ def register_system_tasks(celery):
             timestamp = parser.parse(timestamp)
 
         if not isinstance(timestamp, datetime):
-            self.update_state(
-                "FAILURE", meta={"msg": "Could not decode timestamp parameter"}
-            )
-            raise Ignore()
+            msg = "Could not decode timestamp parameter"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         allowed_notifications = [
             Notification.USER_MESSAGE,

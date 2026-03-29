@@ -12,7 +12,6 @@ from flask import current_app
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from celery.exceptions import Ignore
 
 from ..database import db
 from ..models import (
@@ -46,11 +45,9 @@ def register_assessment_tasks(celery):
             raise self.retry()
 
         if submitter is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load SubmittingStudent record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load SubmittingStudent record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # find all assessments that are active this year and for which feedback is still open
         assessments = (

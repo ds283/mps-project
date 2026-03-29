@@ -13,7 +13,6 @@ from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
-from celery.exceptions import Ignore
 from flask import current_app, render_template_string
 from sqlalchemy import asc
 from sqlalchemy.exc import SQLAlchemyError
@@ -206,10 +205,9 @@ def register_workflow_log_tasks(celery):
         try:
             user: User = db.session.query(User).filter_by(id=user_id).first()
             if user is None:
-                self.update_state(
-                    state="FAILURE", meta={"msg": f"User #{user_id} not found"}
-                )
-                raise Ignore()
+                msg = f"User #{user_id} not found"
+                current_app.logger.error(msg)
+                raise Exception(msg)
         except SQLAlchemyError as e:
             current_app.logger.exception(
                 "SQLAlchemyError exception in export_workflow_log()", exc_info=e
@@ -308,10 +306,9 @@ def register_workflow_log_tasks(celery):
         try:
             user: User = db.session.query(User).filter_by(id=user_id).first()
             if user is None:
-                self.update_state(
-                    state="FAILURE", meta={"msg": f"User #{user_id} not found"}
-                )
-                raise Ignore()
+                msg = f"User #{user_id} not found"
+                current_app.logger.error(msg)
+                raise Exception(msg)
         except SQLAlchemyError as e:
             current_app.logger.exception(
                 "SQLAlchemyError exception in export_workflow_log_csv()", exc_info=e

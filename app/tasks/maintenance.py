@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Iterable, List, Mapping, Union
 
 from celery import group, states
-from celery.exceptions import Ignore
 from flask import current_app
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
@@ -330,7 +329,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore()
+            return
 
         if record.maintenance():
             try:
@@ -398,7 +397,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if pclass is None:
-            raise Ignore()
+            return
 
         if pclass.maintenance():
             try:
@@ -419,7 +418,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if project is None:
-            raise Ignore()
+            return
 
         if project.maintenance():
             try:
@@ -440,7 +439,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if project is None:
-            raise Ignore()
+            return
 
         if project.maintenance():
             try:
@@ -471,7 +470,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if desc is None:
-            raise Ignore()
+            return
 
         if desc.maintenance():
             try:
@@ -492,7 +491,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore()
+            return
 
         if record.maintenance():
             try:
@@ -513,7 +512,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore()
+            return
 
         if record.maintenance():
             try:
@@ -534,7 +533,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore()
+            return
 
         if not record.schedule.awaiting_upload:
             # can purge this record
@@ -557,7 +556,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore()
+            return
 
         if not record.matching.awaiting_upload:
             # can purge this record
@@ -767,7 +766,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore()
+            return
 
         # check if attached
         attached = (
@@ -808,7 +807,7 @@ def register_maintenance_tasks(celery):
 
         stripped_assets = [x for x in lost_assets if isinstance(x, Mapping)]
         if len(stripped_assets) == 0:
-            raise Ignore()
+            return
 
         template = EmailTemplate.find_template_(template_type)
         workflow = EmailWorkflow.build_(
@@ -862,7 +861,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore()
+            return
 
         if record.maintenance():
             try:
@@ -896,7 +895,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if asset is None:
-            raise Ignore()
+            return
 
         asset_type = RecordType.get_type()
 
@@ -937,7 +936,7 @@ def register_maintenance_tasks(celery):
 
                 try:
                     log_db_commit(
-                        f'Re-encrypted {asset_type} asset "{asset_name}" (id={rec_id})',
+                        f'Re-encrypted {asset_type} asset "{asset.name}" (id={rec_id})',
                         endpoint=self.name,
                     )
                     storage.delete()
@@ -974,7 +973,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore()
+            return
 
         object_store: ObjectStore = current_app.config.get("OBJECT_STORAGE_BACKUP")
 

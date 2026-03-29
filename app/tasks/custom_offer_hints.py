@@ -10,7 +10,6 @@
 
 from datetime import datetime
 
-from celery.exceptions import Ignore
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -149,11 +148,9 @@ def register_custom_offer_hint_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load ProjectClassConfig record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load ProjectClassConfig record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         selectors = config.selecting_students.filter_by(retired=False).all()
         total_hints = 0

@@ -13,7 +13,6 @@ from typing import List
 import holidays
 import humanize
 from celery import chain, group, states
-from celery.exceptions import Ignore
 from flask import current_app, url_for
 from numpy import is_busday
 from sqlalchemy.exc import SQLAlchemyError
@@ -541,7 +540,7 @@ def register_attendance_tasks(celery):
             raise self.retry()
 
         if workflow is None:
-            raise Ignore()
+            return
 
         if get_count(workflow.items) == 0:
             try:

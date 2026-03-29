@@ -13,7 +13,6 @@ from datetime import datetime
 from typing import List, Optional
 
 from celery import chord, group
-from celery.exceptions import Ignore
 from dateutil.relativedelta import relativedelta
 from flask import current_app
 from sqlalchemy import and_, or_
@@ -285,7 +284,7 @@ def register_rollover_tasks(celery):
                     autocommit=True,
                 )
 
-            raise Ignore()
+            raise Exception("Rollover failed because some database records could not be loaded")
 
         # if selector lifecycle is not ready to rollover, bail out
         if (
@@ -312,7 +311,7 @@ def register_rollover_tasks(celery):
                 "info",
                 autocommit=True,
             )
-            raise Ignore()
+            raise Exception("Selector lifecycle status is not yet ready for rollover")
 
         # if submitter lifecycle is not ready to rollover, bail out
         if (
@@ -339,7 +338,7 @@ def register_rollover_tasks(celery):
                 "info",
                 autocommit=True,
             )
-            raise Ignore()
+            raise Exception("Submitter lifecycle status is not yet ready for rollover")
 
         ## BUILD AND EXECUTE THE TASK CHAIN
         # The pipeline is split into a series of phase coordinator tasks, each of which
@@ -385,15 +384,9 @@ def register_rollover_tasks(celery):
                 match = config.allocated_match
 
                 if match is None:
-                    post_task_update_msg(
-                        self,
-                        task_id,
-                        "FAILURE",
-                        TaskRecord.FAILURE,
-                        100,
-                        f"Could not find allocated match for {config.name} {year}-{year + 1}",
-                    )
-                    raise Ignore()
+                    msg = f"Could not find allocated match for {config.name} {year}-{year + 1}"
+                    post_task_update_msg(self, task_id, "FAILURE", TaskRecord.FAILURE, 100, msg)
+                    raise Exception(msg)
 
             selector_list = list(config.selecting_students)
             if selector_list:
@@ -1289,9 +1282,9 @@ def register_rollover_tasks(celery):
             msg = "Could not compute academic year (new_config_id={nid}, old_config_id={oid}, sid={sid}, current_year={cyr}".format(
                 nid=new_config_id, oid=old_config_id, sid=sid, cyr=current_year
             )
-            self.update_state("FAILURE", meta=msg)
+            current_app.logger.error(msg)
             print(msg)
-            raise Ignore()
+            raise Exception(msg)
 
         # keep track of the selector id that was generated (if we generate one)
         # when submission is in the same cycle as selection, we can use this to link the

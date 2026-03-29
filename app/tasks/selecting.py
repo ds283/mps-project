@@ -10,7 +10,6 @@
 from typing import List
 
 from celery import states
-from celery.exceptions import Ignore
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -104,29 +103,19 @@ def register_selecting_tasks(celery):
             raise self.retry()
 
         if sel is None:
-            self.update_state(
-                "FAILURE",
-                meta={
-                    "msg": f"Could not load SelectingStudent id={sel_id} from database"
-                },
-            )
-            raise Ignore()
+            msg = f"Could not load SelectingStudent id={sel_id} from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if dest_config is None:
-            self.update_state(
-                "FAILURE",
-                meta={
-                    "msg": f"Could not load ProjectClassConfig id={dest_id} from database"
-                },
-            )
-            raise Ignore()
+            msg = f"Could not load ProjectClassConfig id={dest_id} from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if user is None:
-            self.update_date(
-                "FAILURE",
-                meta={"msg": f"Could not load User id={user_id} from database"},
-            )
-            raise Ignore()
+            msg = f"Could not load User id={user_id} from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # # detach any matches of which this selector is a part; they won't make sense after the move
         sel.remove_matches()

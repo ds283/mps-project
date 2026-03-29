@@ -11,7 +11,6 @@
 from datetime import datetime, date, timedelta
 
 from celery import group, chain
-from celery.exceptions import Ignore
 from dateutil import parser
 from flask import current_app
 from sqlalchemy import and_, or_
@@ -68,16 +67,10 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if assessment is None:
-            self.update_state(
-                "FAILURE",
-                meta={
-                    "msg": "Could not load PresentationAssessment record from database"
-                },
-            )
-            progress_update(
-                celery_id, TaskRecord.FAILURE, 100, "Database error", autocommit=True
-            )
-            raise Ignore()
+            msg = "Could not load PresentationAssessment record from database"
+            current_app.logger.error(msg)
+            progress_update(celery_id, TaskRecord.FAILURE, 100, "Database error", autocommit=True)
+            raise Exception(msg)
 
         # FIRST task is to build a list of faculty assessors
         # we bake this list into the PresentationAssessment record via a set of AssessorAttendanceData instances
@@ -190,7 +183,7 @@ def register_availability_tasks(celery):
             user = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise Ignore()
+            raise
 
         if not skip_availability and user is not None:
             user.post_message(
@@ -272,13 +265,9 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if assessment is None:
-            self.update_state(
-                "FAILURE",
-                meta={
-                    "msg": "Could not load PresentationAssessment record from database"
-                },
-            )
-            raise Ignore()
+            msg = "Could not load PresentationAssessment record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         try:
             if skip_availability:
@@ -321,23 +310,17 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if data is None:
-            self.update_state(
-                "FAILURE",
-                meta={
-                    "msg": "Could not load PresentationAssessment record from database"
-                },
-            )
-            raise Ignore()
+            msg = "Could not load PresentationAssessment record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if fd is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load FacultyData record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load FacultyData record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if not fd.user.active:
-            raise Ignore()
+            return
 
         # search for an existing record with this assessment id and assessor id, to avoid entering duplicates
         a_record = (
@@ -405,13 +388,9 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if a_record is None:
-            self.update_state(
-                "FAILURE",
-                meta={
-                    "msg": "Could not load AssessorAttendanceData record from database"
-                },
-            )
-            raise Ignore()
+            msg = "Could not load AssessorAttendanceData record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # avoid sending duplicate emails
         if a_record.request_email_sent:
@@ -480,23 +459,17 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if data is None:
-            self.update_state(
-                "FAILURE",
-                meta={
-                    "msg": "Could not load PresentationAssessment record from database"
-                },
-            )
-            raise Ignore()
+            msg = "Could not load PresentationAssessment record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if sd is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load SubmissionRecord record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load SubmissionRecord record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if not sd.owner.student.user.active:
-            raise Ignore()
+            return
 
         # search for existing record with this assessment_id and submitted_id, to avoid adding duplicates
         s_record = (
@@ -576,11 +549,9 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load EnrollmentRecord record from database"},
-            )
-            return Ignore()
+            msg = "Could not load EnrollmentRecord record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # find all assessments that are actively searching for availability
         assessments = (
@@ -688,11 +659,9 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load EnrollmentRecord record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load EnrollmentRecord record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # find all assessments that are actively searching for availability
         assessments = (
@@ -773,13 +742,9 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if data is None:
-            self.update_state(
-                "FAILURE",
-                meta={
-                    "msg": "Could not load PresentationAssessment record from database"
-                },
-            )
-            raise Ignore()
+            msg = "Could not load PresentationAssessment record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         self.update_state(
             state="STARTED",
@@ -853,13 +818,9 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if data is None:
-            self.update_state(
-                "FAILURE",
-                meta={
-                    "msg": "Could not load PresentationAssessment record from database"
-                },
-            )
-            raise Ignore()
+            msg = "Could not load PresentationAssessment record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         notify = celery.tasks["app.tasks.utilities.email_notification"]
 
@@ -921,33 +882,17 @@ def register_availability_tasks(celery):
             raise self.retry()
 
         if assessor is None:
-            self.update_status(
-                "FAILURE",
-                meta={
-                    "msg": "Could not load AssessorAttendanceData record from database"
-                },
-            )
-            raise Ignore()
+            msg = "Could not load AssessorAttendanceData record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         assessment: PresentationAssessment = assessor.assessment
 
         if assessment.skip_availability:
-            self.update_status(
-                "FAILURE",
-                meta={
-                    "msg": "Ignoring because availability collection has been skipped for this assessment"
-                },
-            )
-            raise Ignore()
+            return
 
         if assessment.availability_closed:
-            self.update_status(
-                "FAILURE",
-                meta={
-                    "msg": "Ignoring because availability collection has already been closed for this assessment"
-                },
-            )
-            raise Ignore()
+            return
 
         try:
             assessor.reminder_email_sent = True

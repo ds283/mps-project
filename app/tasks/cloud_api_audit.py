@@ -13,7 +13,6 @@ from datetime import datetime
 from io import BytesIO
 from os import path
 from pathlib import Path
-from tokenize import Ignore
 from typing import Type
 from urllib.parse import urlsplit, SplitResult
 
@@ -36,38 +35,28 @@ def register_cloud_api_audit_tasks(celery):
         # check if Cloud API auditing is currently enabled
         enabled = bool(int(current_app.config.get("OBJECT_STORAGE_AUDIT_API", 0)))
         if not enabled:
-            self.update_state(
-                state="FINISHED",
-                meta={"msg": "Cloud API auditing is currently disabled: did not run"},
-            )
-            raise Ignore()
+            return
 
         object_store: ObjectStore = current_app.config.get("OBJECT_STORAGE_TELEMETRY")
         if object_store is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Telemetry ObjectStore bucket is not configured"},
-            )
-            raise Ignore()
+            msg = "Telemetry ObjectStore bucket is not configured"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # find URI for the backend
         backend_uri = current_app.config.get("OBJECT_STORAGE_AUDIT_BACKEND_URI")
         if backend_uri is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "No backend storage specified for Cloud API audit"},
-            )
-            raise Ignore()
+            msg = "No backend storage specified for Cloud API audit"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # determine whether the specified URI scheme is supported
         elements: SplitResult = urlsplit(backend_uri)
         scheme = elements.scheme
         if scheme not in _audit_backends:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Unsupported Cloud API audit backend URI scheme"},
-            )
-            raise Ignore()
+            msg = "Unsupported Cloud API audit backend URI scheme"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         # get concrete backend implementation from cloud_object_store
         backend_type: Type[AuditBackend] = _audit_backends[scheme]

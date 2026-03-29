@@ -10,7 +10,6 @@
 from typing import Optional
 
 from celery import states
-from celery.exceptions import Ignore
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -53,26 +52,14 @@ def register_supervision_event_tasks(celery):
             raise self.retry()
 
         if period is None:
-            post_task_update_msg(
-                self,
-                task_id,
-                states.FAILURE,
-                TaskRecord.FAILURE,
-                0,
-                f"Could not load SubmissionPeriodRecord id={period_id} from the database",
-            )
-            raise Ignore()
+            msg = f"Could not load SubmissionPeriodRecord id={period_id} from the database"
+            post_task_update_msg(self, task_id, states.FAILURE, TaskRecord.FAILURE, 0, msg)
+            raise Exception(msg)
 
         if user is None:
-            post_task_update_msg(
-                self,
-                task_id,
-                states.FAILURE,
-                TaskRecord.FAILURE,
-                0,
-                f"Could not load User id={user_id} from the database",
-            )
-            raise Ignore()
+            msg = f"Could not load User id={user_id} from the database"
+            post_task_update_msg(self, task_id, states.FAILURE, TaskRecord.FAILURE, 0, msg)
+            raise Exception(msg)
 
         post_task_update_msg(
             self,

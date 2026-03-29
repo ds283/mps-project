@@ -20,7 +20,6 @@ from typing import Tuple, Dict, List
 import pulp
 import pulp.apis as pulp_apis
 from celery import group, chain
-from celery.exceptions import Ignore
 from distutils.util import strtobool
 from flask import current_app, render_template_string
 from sqlalchemy.exc import SQLAlchemyError
@@ -1192,14 +1191,9 @@ def _execute_from_solution(
     print('Processing PuLP solution from "{name}"'.format(name=file))
 
     if not path.exists(file):
-        progress_update(
-            record.celery_id,
-            TaskRecord.FAILURE,
-            100,
-            "Could not locate uploaded solution file",
-            autocommit=True,
-        )
-        raise Ignore
+        msg = "Could not locate uploaded solution file"
+        progress_update(record.celery_id, TaskRecord.FAILURE, 100, msg, autocommit=True)
+        raise Exception(msg)
 
     progress_update(
         record.celery_id,
@@ -1244,14 +1238,9 @@ def _execute_from_solution(
                 solver.readsol(file)
             )
         else:
-            progress_update(
-                record.celery_id,
-                TaskRecord.FAILURE,
-                100,
-                "Unknown solver",
-                autocommit=True,
-            )
-            raise Ignore()
+            msg = "Unknown solver"
+            progress_update(record.celery_id, TaskRecord.FAILURE, 100, msg, autocommit=True)
+            raise Exception(msg)
 
         if status != pulp.LpStatusInfeasible:
             prob.assignVarsVals(values)
@@ -1490,11 +1479,9 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load ScheduleAttempt record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load ScheduleAttempt record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         _create_slots(self, record)
 
@@ -1585,11 +1572,9 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None or old_record is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load ScheduleAttempt record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load ScheduleAttempt record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         _create_slots(self, record)
 
@@ -1699,17 +1684,14 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load owning User record"}
-            )
-            raise Ignore()
+            msg = "Could not load owning User record"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if record is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load ScheduleAttempt record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load ScheduleAttempt record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         _create_slots(self, record)
 
@@ -1839,23 +1821,19 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load owning User record"}
-            )
-            raise Ignore()
+            msg = "Could not load owning User record"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if asset is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load TemporaryAsset record"}
-            )
-            raise Ignore()
+            msg = "Could not load TemporaryAsset record"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load ScheduleAttempt record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load ScheduleAttempt record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
         storage = AssetCloudAdapter(
@@ -1951,11 +1929,9 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load ScheduleSlot record from database"},
-            )
-            raise Ignore
+            msg = "Could not load ScheduleSlot record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         try:
             record.talks = record.original_talks
@@ -1983,11 +1959,9 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load MatchingAttempt record from database"},
-            )
-            raise Ignore
+            msg = "Could not load MatchingAttempt record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         try:
             record.last_edit_id = None
@@ -2015,11 +1989,9 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load MatchingAttempt record from database"},
-            )
-            raise Ignore
+            msg = "Could not load MatchingAttempt record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         wg = group(revert_record.si(s.id) for s in record.slots.all())
         seq = chain(wg, revert_finalize.si(id))

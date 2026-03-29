@@ -20,7 +20,6 @@ from typing import List
 import pulp
 import pulp.apis as pulp_apis
 from celery import chain, group
-from celery.exceptions import Ignore
 from flask import current_app, render_template_string
 from pandas import DataFrame
 from sqlalchemy import and_, or_
@@ -3373,14 +3372,10 @@ def _execute_from_solution(
     print('Processing PuLP solution from "{name}"'.format(name=file))
 
     if not path.exists(file):
-        progress_update(
-            record.celery_id,
-            TaskRecord.FAILURE,
-            100,
-            "Could not locate uploaded solution file",
-            autocommit=True,
-        )
-        raise Ignore
+        msg = "Could not locate uploaded solution file"
+        current_app.logger.error(msg)
+        progress_update(record.celery_id, TaskRecord.FAILURE, 100, msg, autocommit=True)
+        raise Exception(msg)
 
     progress_update(
         record.celery_id,
@@ -3427,14 +3422,10 @@ def _execute_from_solution(
                 solver.readsol(file)
             )
         else:
-            progress_update(
-                record.celery_id,
-                TaskRecord.FAILURE,
-                100,
-                "Unknown solver",
-                autocommit=True,
-            )
-            raise Ignore()
+            msg = "Unknown solver"
+            current_app.logger.error(msg)
+            progress_update(record.celery_id, TaskRecord.FAILURE, 100, msg, autocommit=True)
+            raise Exception(msg)
 
         if status != pulp.LpStatusInfeasible:
             prob.assignVarsVals(values)
@@ -3752,11 +3743,9 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load MatchingAttempt record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load MatchingAttempt record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         with Timer() as create_time:
             data: InitializationData = _initialize(self, record)
@@ -3808,17 +3797,14 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load owning User record"}
-            )
-            raise Ignore()
+            msg = "Could not load owning User record"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if record is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load MatchingAttempt record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load MatchingAttempt record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         with Timer() as create_time:
             data: InitializationData = _initialize(self, record)
@@ -3913,23 +3899,19 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load owning User record"}
-            )
-            raise Ignore()
+            msg = "Could not load owning User record"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if asset is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load TemporaryAsset record"}
-            )
-            raise Ignore()
+            msg = "Could not load TemporaryAsset record"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load MatchingAttempt record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load MatchingAttempt record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
         storage = AssetCloudAdapter(
@@ -4001,18 +3983,14 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load ProjectClassConfig record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load ProjectClassConfig record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if user is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load User record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load User record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         with Timer() as create_time:
             enum_data: MarkerPopulationEnumeration = _enumerate_missing_markers(
@@ -4020,7 +3998,7 @@ def register_matching_tasks(celery):
             )
 
             if enum_data is None:
-                raise Ignore()
+                raise Exception("Marker enumeration failed: a project in this configuration has no active assessors")
 
             progress_update(
                 task_id,
@@ -4059,18 +4037,14 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load ProjectClassConfig record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load ProjectClassConfig record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if user is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load User record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load User record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         progress_update(
             task_id,
@@ -4174,11 +4148,9 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load MatchingRecord record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load MatchingRecord record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         try:
             record.project_id = record.original_project_id
@@ -4224,11 +4196,9 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load MatchingAttempt record from database"},
-            )
-            raise Ignore
+            msg = "Could not load MatchingAttempt record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         try:
             record.last_edit_id = None
@@ -4260,11 +4230,9 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load MatchingAttempt record from database"},
-            )
-            raise Ignore
+            msg = "Could not load MatchingAttempt record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         wg = group(revert_record.si(r.id) for r in record.records.all())
         seq = chain(wg, revert_finalize.si(id))
@@ -4503,34 +4471,29 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load owning User record"}
-            )
-            raise Ignore()
+            msg = "Could not load owning User record"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if config is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load ProjectClassConfig record"},
-            )
+            msg = "Could not load ProjectClassConfig record"
+            current_app.logger.error(msg)
             user.post_message(
                 "Populate selectors task failed due to a database error. Please contact a system administrator.",
                 "error",
                 autocommit=True,
             )
-            raise Ignore()
+            raise Exception(msg)
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load MatchingAttempt record from database"},
-            )
+            msg = "Could not load MatchingAttempt record from database"
+            current_app.logger.error(msg)
             user.post_message(
                 "Populate selectors task failed due to a database error. Please contact a system administrator.",
                 "error",
                 autocommit=True,
             )
-            raise Ignore()
+            raise Exception(msg)
 
         progress_update(
             task_id,
@@ -4543,16 +4506,9 @@ def register_matching_tasks(celery):
         year = get_current_year()
 
         if record.year != year:
-            self.update_state(
-                state="FAILURE", meta={"msg": "MatchingAttempt is not for current year"}
-            )
-            progress_update(
-                task_id,
-                TaskRecord.FAILURE,
-                100,
-                "Match is not for the current year",
-                autocommit=False,
-            )
+            msg = "MatchingAttempt is not for current year"
+            current_app.logger.error(msg)
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Match is not for the current year", autocommit=False)
             user.post_message(
                 "Submitters could not be populated because the selected matching is not for the "
                 "current academic year (current year={cyr}, "
@@ -4560,22 +4516,12 @@ def register_matching_tasks(celery):
                 "error",
                 autocommit=True,
             )
-            raise Ignore()
+            raise Exception(msg)
 
         if config.year != record.year:
-            self.update_state(
-                state="FAILURE",
-                meta={
-                    "msg": "ProjectClassConfig does not belong to same year as MatchingAttempt"
-                },
-            )
-            progress_update(
-                task_id,
-                TaskRecord.FAILURE,
-                100,
-                "Project configuration and matching were for different years",
-                autocommit=False,
-            )
+            msg = "ProjectClassConfig does not belong to same year as MatchingAttempt"
+            current_app.logger.error(msg)
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Project configuration and matching were for different years", autocommit=False)
             user.post_message(
                 "Submitters could not be populated because the selected matching does not belong "
                 "to the same academic year as the current project configuration (selected matching "
@@ -4584,93 +4530,55 @@ def register_matching_tasks(celery):
                 "error",
                 autocommit=True,
             )
-            raise Ignore()
+            raise Exception(msg)
 
         if config.select_in_previous_cycle:
-            self.update_state(
-                state="FAILURE",
-                Meta="ProjectClassConfig does not have select_in_previous_cycle",
-            )
-            progress_update(
-                task_id,
-                TaskRecord.FAILURE,
-                100,
-                "ProjectClassConfig does not have select_in_previous_cycle",
-                autocommit=False,
-            )
+            msg = "ProjectClassConfig does not have select_in_previous_cycle"
+            current_app.logger.error(msg)
+            progress_update(task_id, TaskRecord.FAILURE, 100, msg, autocommit=False)
             user.post_message(
                 "Submitters could not be populated because this project type is not configured to use selection in the same cycle as submission",
                 "error",
                 autocommit=True,
             )
-            raise Ignore()
+            raise Exception(msg)
 
         if not record.finished:
             if record.awaiting_upload:
-                self.update_state(
-                    state="FAILURE",
-                    meta={"msg": "MatchingAttempt still awaiting manual upload"},
-                )
-                progress_update(
-                    task_id,
-                    TaskRecord.FAILURE,
-                    100,
-                    "Match is still awaiting manual upload",
-                    autocommit=False,
-                )
+                msg = "MatchingAttempt still awaiting manual upload"
+                current_app.logger.error(msg)
+                progress_update(task_id, TaskRecord.FAILURE, 100, "Match is still awaiting manual upload", autocommit=False)
                 user.post_message(
                     "Submitters could not be populated because the selecting matching is still awaiting manual upload of a solution.",
                     "error",
                     autocommit=True,
                 )
             else:
-                self.update_state(
-                    state="FAILURE",
-                    meta={"msg": "Matching optimization has not yet terminated"},
-                )
-                progress_update(
-                    task_id,
-                    TaskRecord.FAILURE,
-                    100,
-                    "Matching optimization has not yet terminated",
-                    autocommit=False,
-                )
+                msg = "Matching optimization has not yet terminated"
+                current_app.logger.error(msg)
+                progress_update(task_id, TaskRecord.FAILURE, 100, msg, autocommit=False)
                 user.post_message(
                     "Submitters could not be populated because the matching optimization has not yet terminated.",
                     "error",
                     autocommit=True,
                 )
-            raise Ignore()
+            raise Exception(msg)
 
         if not record.solution_usable:
-            self.update_state(
-                state="FAILURE", meta={"msg": "MatchingAttempt solution is not usable"}
-            )
-            progress_update(
-                task_id,
-                TaskRecord.FAILURE,
-                100,
-                "Matching solution is not usable",
-                autocommit=False,
-            )
+            msg = "MatchingAttempt solution is not usable"
+            current_app.logger.error(msg)
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Matching solution is not usable", autocommit=False)
             user.post_message(
                 "Submitters could not be populated because the selecting matching solution is not usable.",
                 "error",
                 autocommit=True,
             )
-            raise Ignore()
+            raise Exception(msg)
 
         if not record.published:
-            self.update_state(
-                state="FAILURE", meta={"msg": "MatchingAttempt has not been published"}
-            )
-            progress_update(
-                task_id,
-                TaskRecord.FAILURE,
-                100,
-                "Matching has not yet been published to convenors",
-                autocommit=True,
-            )
+            msg = "MatchingAttempt has not been published"
+            current_app.logger.error(msg)
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Matching has not yet been published to convenors", autocommit=True)
             user.post_message(
                 "Submitters could not be populated because the selecting matching has not yet "
                 "been published to convenors. Please publish the match before attempting "
@@ -4678,7 +4586,7 @@ def register_matching_tasks(celery):
                 "error",
                 autocommit=True,
             )
-            raise Ignore()
+            raise Exception(msg)
 
         # pull out MatchingRecord instances that belong to this MatchingAttempt, and which correspond to
         # the specified ProjectClass(Config)
@@ -4788,31 +4696,24 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load owning User record"}
-            )
-            raise Ignore()
+            msg = "Could not load owning User record"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if config is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load ProjectClassConfig record"},
-            )
-            raise Ignore()
+            msg = "Could not load ProjectClassConfig record"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if record is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load MatchingAttempt record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load MatchingAttempt record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if data is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load MatchingRecord record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load MatchingRecord record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         needs_commit = False
 
@@ -5005,17 +4906,14 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         if user is None:
-            self.update_state(
-                state="FAILURE", meta={"msg": "Could not load owning User record"}
-            )
-            raise Ignore()
+            msg = "Could not load owning User record"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         if record is None:
-            self.update_state(
-                "FAILURE",
-                meta={"msg": "Could not load MatchingAttempt record from database"},
-            )
-            raise Ignore()
+            msg = "Could not load MatchingAttempt record from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         self.update_state("STARTED", meta={"msg": "Writing .xlsx report"})
         progress_update(

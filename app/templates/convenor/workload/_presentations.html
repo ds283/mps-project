@@ -1,25 +1,11 @@
-{% from "convenor/workload/_macros.html" import feedback_state_tag %}
 {% macro student_entry(rec, show_period) %}
     {% set r = rec.submission %}
     {% set sub = r.owner %}
-    {% set config = sub.config %}
-    {% set pclass = config.project_class %}
     {% set user = sub.student.user %}
     <div>
-        <div class="dropdown">
-            <a class="small text-decoration-none link-secondary dropdown-toggle" data-bs-toggle="dropdown"
-               role="button" href="" aria-haspopup="true" aria-expanded="false">
-                {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ user.name }}
-            </a>
-            <div class="dropdown-menu dropdown-menu-dark mx-0 border-0">
-                {% set disabled = not pclass.publish %}
-                <a class="dropdown-item d-flex gap-2 {% if disabled %}disabled{% endif %}"
-                   {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>
-                    <i class="fas fa-comments fa-fw"></i> Show feedback
-                </a>
-            </div>
-        </div>
-        {{ feedback_state_tag(rec, rec.feedback_state, 'Feedback') }}
+        <span class="small text-secondary">
+            {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ user.name }}
+        </span>
     </div>
 {% endmacro %}
 {% if recs|length >= 1 %}

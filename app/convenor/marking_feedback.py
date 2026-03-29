@@ -35,7 +35,6 @@ from app.convenor import convenor
 from ..database import db
 from ..faculty.forms import (
     SubmissionRoleFeedbackForm,
-    SubmissionRoleResponseForm,
 )
 from ..models import (
     EmailTemplate,
@@ -43,6 +42,9 @@ from ..models import (
     FacultyData,
     FeedbackRecipe,
     LiveProject,
+    MarkingEvent,
+    MarkingReport,
+    MarkingWorkflow,
     MatchingRecord,
     MatchingRole,
     ProjectClass,
@@ -52,18 +54,19 @@ from ..models import (
     SubmissionPeriodUnit,
     SubmissionRecord,
     SubmissionRole,
+    SubmissionRoleTypesMixin,
+    SubmitterReport,
     SubmittingStudent,
     SupervisionEvent,
     SupervisionEventTemplate,
     User,
 )
-from ..shared.forms.queries import GetWorkflowTemplates
 from ..shared.context.convenor_dashboard import (
     get_convenor_dashboard_data,
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
-from ..shared.workflow_logging import log_db_commit
+from ..shared.forms.queries import GetWorkflowTemplates
 from ..shared.utils import (
     build_submitters_data,
     get_current_year,
@@ -74,6 +77,7 @@ from ..shared.validators import (
     validate_is_convenor,
     validate_project_class,
 )
+from ..shared.workflow_logging import log_db_commit
 from ..task_queue import register_task
 from ..tools import ServerSideInMemoryHandler, ServerSideSQLHandler
 from .forms import (
@@ -236,9 +240,13 @@ def open_feedback(id):
 
     # inject query factory for marking_template field
     _pclass_id = config.pclass_id
-    feedback_form.marking_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.MARKING_MARKER, pclass_id=_pclass_id)
+    feedback_form.marking_template.query_factory = lambda: GetWorkflowTemplates(
+        EmailTemplate.MARKING_MARKER, pclass_id=_pclass_id
+    )
     if not feedback_form.is_submitted():
-        feedback_form.marking_template.data = EmailTemplate.find_template_(EmailTemplate.MARKING_MARKER, pclass=config.project_class)
+        feedback_form.marking_template.data = EmailTemplate.find_template_(
+            EmailTemplate.MARKING_MARKER, pclass=config.project_class
+        )
 
     url = request.args.get("url", None)
     if url is None:
@@ -543,17 +551,25 @@ def test_notifications(id):
 
     # inject query factory for marking_template
     _pclass_id = config.pclass_id
-    form.marking_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.MARKING_MARKER, pclass_id=_pclass_id)
+    form.marking_template.query_factory = lambda: GetWorkflowTemplates(
+        EmailTemplate.MARKING_MARKER, pclass_id=_pclass_id
+    )
     if not form.is_submitted():
         if incoming_template_id is not None:
-            form.marking_template.data = db.session.get(EmailTemplate, incoming_template_id)
+            form.marking_template.data = db.session.get(
+                EmailTemplate, incoming_template_id
+            )
         if form.marking_template.data is None:
-            form.marking_template.data = EmailTemplate.find_template_(EmailTemplate.MARKING_MARKER, pclass=config.project_class)
+            form.marking_template.data = EmailTemplate.find_template_(
+                EmailTemplate.MARKING_MARKER, pclass=config.project_class
+            )
 
     if form.validate_on_submit():
         test_email = form.target_email.data
         marking_template = form.marking_template.data
-        marking_template_id = marking_template.id if marking_template is not None else None
+        marking_template_id = (
+            marking_template.id if marking_template is not None else None
+        )
 
         return redirect(
             url_for(
@@ -649,7 +665,12 @@ def do_send_notifications(id):
     seq = chain(
         init.si(task_id, tk_name),
         marking_email.si(
-            period.id, cc_me, max_attachment, test_email, deadline, current_user.id,
+            period.id,
+            cc_me,
+            max_attachment,
+            test_email,
+            deadline,
+            current_user.id,
             marking_template_id=marking_template_id,
         ),
         final.si(task_id, tk_name, current_user.id),
@@ -1558,11 +1579,31 @@ def view_feedback():
         period: SubmissionPeriodRecord = rec.period
         form.selector.data = period
 
+    # Build list of (event, submitter_report) for all MarkingEvents associated with this period
+    all_events = MarkingEvent.query.filter_by(period_id=rec.period_id).all()
+    event_data = []
+    for event in all_events:
+        sr = (
+            rec.submitter_reports.join(
+                MarkingWorkflow, SubmitterReport.workflow_id == MarkingWorkflow.id
+            )
+            .filter(MarkingWorkflow.event_id == event.id)
+            .first()
+        )
+        if sr is not None:
+            event_data.append((event, sr))
+
     return render_template_context(
         "convenor/dashboard/view_feedback.html",
         submitter=submitter,
         record=rec,
         form=form,
+        event_data=event_data,
+        ROLE_SUPERVISOR=SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+        ROLE_RESPONSIBLE_SUPERVISOR=SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+        ROLE_PRESENTATION_ASSESSOR=SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR,
+        ROLE_MARKER=SubmissionRoleTypesMixin.ROLE_MARKER,
+        ROLE_MODERATOR=SubmissionRoleTypesMixin.ROLE_MODERATOR,
         text=text,
         url=url,
     )
@@ -2342,9 +2383,11 @@ def deassign_project(id):
 @convenor.route("/edit_feedback/<int:id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def edit_feedback(id):
-    # id is a SubmissionRole instance
-    role: SubmissionRole = SubmissionRole.query.get_or_404(id)
-    record: SubmissionRecord = role.submission
+    # id is a MarkingReport instance
+    report: MarkingReport = MarkingReport.query.get_or_404(id)
+    sr: SubmitterReport = report.submitter_report
+    record: SubmissionRecord = sr.record
+    pclass = sr.workflow.event.pclass
 
     if record.retired:
         flash(
@@ -2353,15 +2396,7 @@ def edit_feedback(id):
         )
         return redirect(redirect_url())
 
-    # check is convenor for the project's class
-    if not validate_is_convenor(record.project.config.project_class):
-        return redirect(redirect_url())
-
-    if not record.period.collect_project_feedback:
-        flash(
-            "This operation is not permitted. Feedback collection has been disabled for this submission period.",
-            "info",
-        )
+    if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
     period: SubmissionPeriodRecord = record.period
@@ -2372,17 +2407,17 @@ def edit_feedback(id):
         url = redirect_url()
 
     if form.validate_on_submit():
-        role.positive_feedback = form.positive_feedback.data
-        role.improvements_feedback = form.improvement_feedback.data
+        report.feedback_positive = form.positive_feedback.data
+        report.feedback_improvement = form.improvement_feedback.data
 
-        if role.submitted_feedback:
-            role.feedback_timestamp = datetime.now()
+        if report.feedback_submitted:
+            report.feedback_timestamp = datetime.now()
 
         try:
             log_db_commit(
-                f'Saved feedback for role {role.role_name} on submission {record.id} for "{period.display_name}" in "{record.project.config.name}"',
+                f'Saved feedback for MarkingReport #{report.id} on submission {record.id} for "{period.display_name}" in "{pclass.name}"',
                 user=current_user,
-                project_classes=record.project.config.project_class,
+                project_classes=pclass,
             )
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -2396,19 +2431,19 @@ def edit_feedback(id):
 
     else:
         if request.method == "GET":
-            form.positive_feedback.data = role.positive_feedback
-            form.improvement_feedback.data = role.improvements_feedback
+            form.positive_feedback.data = report.feedback_positive
+            form.improvement_feedback.data = report.feedback_improvement
 
     return render_template_context(
         "faculty/dashboard/edit_feedback.html",
         form=form,
         title="Edit feedback",
-        unique_id="role-{id}".format(id=id),
+        unique_id=f"report-{id}",
         formtitle='Edit feedback for <i class="fas fa-user-circle"></i> '
         "<strong>{name}</strong>".format(name=record.student_identifier["label"]),
         submit_url=url_for("convenor.edit_feedback", id=id, url=url),
         period=period,
-        record=role,
+        record=report,
         dont_show_warnings=True,
     )
 
@@ -2416,9 +2451,11 @@ def edit_feedback(id):
 @convenor.route("/submit_feedback/<int:id>")
 @roles_accepted("faculty", "admin", "root")
 def submit_feedback(id):
-    # id is a SubmissionRole instance
-    role: SubmissionRole = SubmissionRole.query.get_or_404(id)
-    record: SubmissionRecord = role.submission
+    # id is a MarkingReport instance
+    report: MarkingReport = MarkingReport.query.get_or_404(id)
+    sr: SubmitterReport = report.submitter_report
+    record: SubmissionRecord = sr.record
+    pclass = sr.workflow.event.pclass
 
     if record.retired:
         flash(
@@ -2427,45 +2464,29 @@ def submit_feedback(id):
         )
         return redirect(redirect_url())
 
-    # check is convenor for the project's class
-    if not validate_is_convenor(record.project.config.project_class):
+    if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if not record.period.collect_project_feedback:
+    if report.feedback_submitted:
+        return redirect(redirect_url())
+
+    if not report.feedback_positive and not report.feedback_improvement:
         flash(
-            "This operation is not permitted. Feedback collection has been disabled for this submission period.",
-            "info",
+            "Feedback is empty — please enter feedback before submitting.",
+            "warning",
         )
         return redirect(redirect_url())
 
     period: SubmissionPeriodRecord = record.period
 
-    if not period.is_feedback_open:
-        flash(
-            "This operation is not permitted. It is not possible to submit before the feedback period has opened.",
-            "warning",
-        )
-        return redirect(redirect_url())
-
-    if not role.feedback_valid:
-        flash(
-            "It is not yet possible to submit this feedback because it is incomplete. Please ensure that you "
-            "have provided responses for each category.",
-            "warning",
-        )
-        return redirect(redirect_url())
-
-    if role.submitted_feedback:
-        return redirect(redirect_url())
-
     try:
-        role.submitted_feedback = True
-        role.feedback_timestamp = datetime.now()
+        report.feedback_submitted = True
+        report.feedback_timestamp = datetime.now()
 
         log_db_commit(
-            f'Submitted feedback for role {role.role_name} on submission {record.id} for "{period.display_name}" in "{record.project.config.name}"',
+            f'Submitted feedback for MarkingReport #{report.id} on submission {record.id} for "{period.display_name}" in "{pclass.name}"',
             user=current_user,
-            project_classes=record.project.config.project_class,
+            project_classes=pclass,
         )
     except SQLAlchemyError as e:
         db.session.rollback()
@@ -2481,9 +2502,12 @@ def submit_feedback(id):
 @convenor.route("/unsubmit_feedback/<int:id>")
 @roles_accepted("faculty", "admin", "root")
 def unsubmit_feedback(id):
-    # id is a SubmissionRole instance
-    role: SubmissionRole = SubmissionRole.query.get_or_404(id)
-    record: SubmissionRecord = role.submission
+    # id is a MarkingReport instance
+    report: MarkingReport = MarkingReport.query.get_or_404(id)
+    sr: SubmitterReport = report.submitter_report
+    record: SubmissionRecord = sr.record
+    pclass = sr.workflow.event.pclass
+    event = sr.workflow.event
 
     if record.retired:
         flash(
@@ -2492,152 +2516,32 @@ def unsubmit_feedback(id):
         )
         return redirect(redirect_url())
 
-    # check is convenor for the project's class
-    if not validate_is_convenor(record.project.config.project_class):
+    if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    if not record.period.collect_project_feedback:
+    if event.closed:
         flash(
-            "This operation is not permitted. Feedback collection has been disabled for this submission period.",
-            "info",
+            "This operation is not permitted. It is not possible to unsubmit feedback after the marking event has been closed.",
+            "error",
         )
         return redirect(redirect_url())
 
     period: SubmissionPeriodRecord = record.period
 
-    if period.closed:
-        flash(
-            "This operation is not permitted. It is not possible to unsubmit after the feedback period has closed.",
-            "error",
-        )
-        return redirect(redirect_url())
-
     try:
-        role.submitted_feedback = False
-        role.feedback_timestamp = None
+        report.feedback_submitted = False
+        report.feedback_timestamp = None
 
         log_db_commit(
-            f'Unsubmitted feedback for role {role.role_name} on submission {record.id} for "{period.display_name}" in "{record.project.config.name}"',
+            f'Unsubmitted feedback for MarkingReport #{report.id} on submission {record.id} for "{period.display_name}" in "{pclass.name}"',
             user=current_user,
-            project_classes=record.project.config.project_class,
+            project_classes=pclass,
         )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash(
             "Could not unsubmit feedback due to a database error. Please contact a system administrator.",
-            "error",
-        )
-
-    return redirect(redirect_url())
-
-
-@convenor.route("/edit_response/<int:id>", methods=["GET", "POST"])
-@roles_accepted("faculty", "admin", "root")
-def edit_response(id):
-    # id identifies a SubmissionRole instance
-    role: SubmissionRole = SubmissionRecord.query.get_or_404(id)
-    record: SubmissionRecord = role.submission
-
-    if record.retired:
-        flash(
-            "It is not possible to edit a response to the submitted for submissions that have been retired.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    # check is convenor for the project's class
-    if not validate_is_convenor(record.project.config.project_class):
-        return redirect(redirect_url())
-
-    if not record.student_feedback_submitted:
-        flash(
-            "This operation is not permitted. "
-            "It is not possible to write a response to feedback from the student before "
-            "they have submitted it.",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    form = SubmissionRoleResponseForm(request.form)
-
-    url = request.args.get("url", None)
-    if url is None:
-        url = redirect_url()
-
-    if form.validate_on_submit():
-        record.faculty_response = form.feedback.data
-        log_db_commit(
-            f'Saved faculty response for submission {record.id} in "{record.project.config.name}"',
-            user=current_user,
-            project_classes=record.project.config.project_class,
-        )
-
-        return redirect(url)
-
-    else:
-        if request.method == "GET":
-            form.feedback.data = record.faculty_response
-
-    return render_template_context(
-        "faculty/dashboard/edit_response.html",
-        form=form,
-        record=record,
-        submit_url=url_for("convenor.edit_response", id=id, url=url),
-        url=url,
-    )
-
-
-@convenor.route("/submit_response/<int:id>")
-@roles_accepted("faculty", "admin", "root")
-def submit_response(id):
-    # id identifies a SubmissionRole instance
-    role: SubmissionRole = SubmissionRecord.query.get_or_404(id)
-    record: SubmissionRecord = role.submission
-
-    if record.retired:
-        flash(
-            "It is not possible to edit a response to the submitted for submissions that have been retired.",
-            "error",
-        )
-        return redirect(redirect_url())
-
-    # check is convenor for the project's class
-    if not validate_is_convenor(record.project.config.project_class):
-        return redirect(redirect_url())
-
-    if role.submitted_response:
-        return redirect(redirect_url())
-
-    if not record.student_feedback_submitted:
-        flash(
-            "This operation is not permitted. It is not possible to respond to feedback from the student before they have submitted it.",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    if not role.response_valid:
-        flash(
-            "This response cannot be submitted because it is incomplete. Please ensure that you have provided responses for each category.",
-            "info",
-        )
-        return redirect(redirect_url())
-
-    try:
-        role.submitted_response = True
-        role.response_timestamp = datetime.now()
-
-        log_db_commit(
-            "Submitted faculty response to student feedback",
-            user=current_user,
-            student=record.owner.student,
-            project_classes=record.project.config.project_class,
-        )
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-        flash(
-            "Could not submit response due to a database error. Please contact a system administrator.",
             "error",
         )
 

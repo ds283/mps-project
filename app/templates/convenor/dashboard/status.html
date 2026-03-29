@@ -12,7 +12,6 @@
 {% from "convenor/dashboard/overview_cards/selection_open.html" import selection_open %}
 {% from "convenor/dashboard/overview_cards/selection_closed.html" import selection_closed %}
 
-{% from "convenor/dashboard/overview_cards/period_status.html" import period_status %}
 {% from "convenor/dashboard/overview_cards/canvas_missing.html" import canvas_missing_card %}
 
 {% set rollover_in_progress = config.year < current_year %}
@@ -95,6 +94,8 @@
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
+
+            {# [A] ALERT BANNERS #}
             {% if missing_canvas_count > 0 %}
                 {{ canvas_missing_card(config, pclass, missing_canvas_count) }}
             {% endif %}
@@ -118,158 +119,401 @@
                     {% endcall %}
                 </div>
             {% endif %}
+
+            {# [B] LIFECYCLE ACTION CARD — primary CTA #}
+            {% if pclass.publish %}
+                {% if lifecycle == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+                    {{ issue_confirmations(config, issue_form) }}
+                {% elif lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                    {{ waiting_confirmations(config, issue_form, approval_data) }}
+                {% elif lifecycle == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
+                    {{ golive(config, golive_form, approval_data) }}
+                {% elif lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                    {{ selection_open(config, change_form, convenor_data, current_time) }}
+                {% elif lifecycle == config.SELECTOR_LIFECYCLE_READY_MATCHING or lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
+                    {{ selection_closed(config, rollover_in_progress, convenor_data) }}
+                {% else %}
+                    <div class="card border-danger mt-3 mb-3">
+                        <div class="card-header bg-danger text-white">Error</div>
+                        <div class="card-body">
+                            <strong>Error:</strong>
+                            Unknown project lifecycle state {{ lifecycle }}
+                        </div>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-danger mt-1 mb-2">
+                    {% call icon_block("exclamation-triangle") %}
+                        <strong>This project class is not published, so its administration options are limited.</strong>
+                    {% endcall %}
+                </div>
+            {% endif %}
+
+            {# [C] LIFECYCLE STEPPER — compact read-only progress strip #}
+            {% if pclass.publish %}
+                <div class="card border-0 bg-light mt-2 mb-2 py-2 px-3">
+                    <div class="d-flex flex-row align-items-start justify-content-between">
+
+                        {# Step 1: Issue Confirmations #}
+                        {% set s1_done   = lifecycle > config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+                        {% set s1_active = lifecycle == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+                        <div class="d-flex flex-column align-items-center" style="min-width:90px">
+                            <i class="fas fa-lg mb-1
+                               {% if s1_done %}fa-check-circle text-success
+                               {% elif s1_active %}fa-dot-circle text-primary
+                               {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
+                            <span class="small text-center
+                               {% if s1_active %}fw-semibold text-primary{% elif s1_done %}text-success{% else %}text-secondary{% endif %}">
+                                Issue<br>Confirmations
+                            </span>
+                        </div>
+
+                        {# Connector 1→2 #}
+                        <div class="flex-grow-1 border-top border-2 {% if s1_done %}border-success{% else %}border-secondary{% endif %}"
+                             style="margin-top:0.6rem"></div>
+
+                        {# Step 2: Await Confirmations #}
+                        {% set s2_done   = lifecycle > config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                        {% set s2_active = lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                        <div class="d-flex flex-column align-items-center" style="min-width:90px">
+                            <i class="fas fa-lg mb-1
+                               {% if s2_done %}fa-check-circle text-success
+                               {% elif s2_active %}fa-dot-circle text-primary
+                               {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
+                            <span class="small text-center
+                               {% if s2_active %}fw-semibold text-primary{% elif s2_done %}text-success{% else %}text-secondary{% endif %}">
+                                Await<br>Confirmations
+                            </span>
+                        </div>
+
+                        {# Connector 2→3 #}
+                        <div class="flex-grow-1 border-top border-2 {% if s2_done %}border-success{% else %}border-secondary{% endif %}"
+                             style="margin-top:0.6rem"></div>
+
+                        {# Step 3: Go Live #}
+                        {% set s3_done   = lifecycle > config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
+                        {% set s3_active = lifecycle == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
+                        <div class="d-flex flex-column align-items-center" style="min-width:90px">
+                            <i class="fas fa-lg mb-1
+                               {% if s3_done %}fa-check-circle text-success
+                               {% elif s3_active %}fa-dot-circle text-primary
+                               {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
+                            <span class="small text-center
+                               {% if s3_active %}fw-semibold text-primary{% elif s3_done %}text-success{% else %}text-secondary{% endif %}">
+                                Go Live
+                            </span>
+                        </div>
+
+                        {# Connector 3→4 #}
+                        <div class="flex-grow-1 border-top border-2 {% if s3_done %}border-success{% else %}border-secondary{% endif %}"
+                             style="margin-top:0.6rem"></div>
+
+                        {# Step 4: Selections Open #}
+                        {% set s4_done   = lifecycle > config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                        {% set s4_active = lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                        <div class="d-flex flex-column align-items-center" style="min-width:90px">
+                            <i class="fas fa-lg mb-1
+                               {% if s4_done %}fa-check-circle text-success
+                               {% elif s4_active %}fa-dot-circle text-primary
+                               {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
+                            <span class="small text-center
+                               {% if s4_active %}fw-semibold text-primary{% elif s4_done %}text-success{% else %}text-secondary{% endif %}">
+                                Selections<br>Open
+                            </span>
+                        </div>
+
+                        {# Connector 4→5 #}
+                        <div class="flex-grow-1 border-top border-2 {% if s4_done %}border-success{% else %}border-secondary{% endif %}"
+                             style="margin-top:0.6rem"></div>
+
+                        {# Step 5: Closed / Matching #}
+                        {% set s5_active = lifecycle == config.SELECTOR_LIFECYCLE_READY_MATCHING or lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
+                        {% set s5_done   = lifecycle > config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
+                        <div class="d-flex flex-column align-items-center" style="min-width:90px">
+                            <i class="fas fa-lg mb-1
+                               {% if s5_done %}fa-check-circle text-success
+                               {% elif s5_active %}fa-dot-circle text-primary
+                               {% else %}fa-circle text-secondary opacity-50{% endif %}"></i>
+                            <span class="small text-center
+                               {% if s5_active %}fw-semibold text-primary{% elif s5_done %}text-success{% else %}text-secondary{% endif %}">
+                                Closed /<br>Matching
+                            </span>
+                        </div>
+
+                    </div>
+                </div>
+            {% endif %}
+
+            {# [D] CONFIGURATION ACCORDION — collapsed by default #}
             <div class="card mt-3 mb-3 card-body border-primary bg-well">
-                <div class="d-flex flex-row flex-wrap justify-content-between align-items-start mb-4">
+                <div class="d-flex flex-row flex-wrap justify-content-between align-items-start mb-2">
                     <div class="dashboard-project-title align-self-start me-2">
                         {{ pclass.name }}
                         {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}
                     </div>
-                    <div>
+                    <div class="d-flex flex-row flex-wrap justify-content-end align-items-center gap-2">
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="{{ url_for('convenor.inspect_marking_schemes', pclass_id=config.pclass_id) }}">Marking
+                            schemes&hellip;</a>
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="{{ url_for('convenor.email_templates', pclass_id=config.pclass_id, url=return_url, text=return_text) }}">Email
+                            templates&hellip;</a>
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Configure&hellip;</a>
                         <a class="btn btn-sm btn-outline-secondary"
                            href="{{ url_for('admin.workflow_log', pclass_filter=pclass.id, url=return_url, text=return_text) }}">Workflow
                             log <i class="fas fa-arrow-right"></i></a>
+                        <button class="btn btn-sm btn-outline-secondary"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#config-detail-panel"
+                                aria-expanded="false"
+                                aria-controls="config-detail-panel">
+                            <i class="fas fa-cog me-1"></i> Settings <i class="fas fa-chevron-down ms-1"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="card mt-2 mb-2 card-body border-secondary">
-                    {% call icon_block("cogs", icon_classes="pt-2 text-primary") %}
-                        <div class="d-flex flex-row flex-wrap justify-content-between align-items-start w-100">
-                            <div class="text-primary fw-semibold fs-5">Configuration</div>
-                            <div class="d-flex flex-row flex-wrap justify-content-end align-items-start gap-2">
-                                <a class="btn btn-sm btn-outline-secondary"
-                                   href="{{ url_for('convenor.inspect_marking_schemes', pclass_id=config.pclass_id) }}">Marking
-                                    schemes&hellip;</a>
-                                <a class="btn btn-sm btn-outline-secondary"
-                                   href="{{ url_for('convenor.email_templates', pclass_id=config.pclass_id, url=return_url, text=return_text) }}">Edit
-                                    email templates&hellip;</a>
-                                <a class="btn btn-sm btn-outline-secondary"
-                                   href="{{ url_for('convenor.edit_project_config', pid=config.id) }}">Configure&hellip;
-                                </a>
+
+                <div class="collapse" id="config-detail-panel">
+                    <div class="card mt-2 mb-2 card-body border-secondary">
+                        {% call icon_block("cogs", icon_classes="pt-2 text-primary") %}
+                            <div class="d-flex flex-row flex-wrap justify-content-between align-items-start w-100">
+                                <div class="text-primary fw-semibold fs-5">Configuration</div>
                             </div>
-                        </div>
-                        <div class="row mt-2 g-2">
-                            <div class="col-md-4">
-                                <div class="card border-0">
-                                    <div class="card-body p-2">
-                                        <h6 class="card-subtitle text-primary mb-2">Per-cycle settings</h6>
-                                        <ul class=" list-unstyled mb-0 small">
-                                            {% if config.uses_supervisor %}
-                                                <li><i class="fas fa-check-circle text-success"></i> Uses supervisors
-                                                </li>
-                                            {% endif %}
-                                            {% if config.uses_marker %}
-                                                <li><i class="fas fa-check-circle text-success"></i> Uses markers</li>
-                                            {% endif %}
-                                            {% if config.uses_moderator %}
-                                                <li><i class="fas fa-check-circle text-success"></i> Uses moderators
-                                                </li>
-                                            {% endif %}
-                                            {% if config.uses_presentations %}
-                                                <li><i class="fas fa-check-circle text-success"></i> Uses presentations
-                                                </li>
-                                            {% endif %}
-                                            {% if config.display_marker %}
-                                                <li><i class="fas fa-check-circle text-success"></i> Show marker
-                                                    assignments on faculty dashboards
-                                                </li>
-                                            {% endif %}
-                                            {% if config.display_presentations %}
-                                                <li><i class="fas fa-check-circle text-success"></i> Show presentation
-                                                    assessor assignments on faculty dashboards
-                                                </li>
-                                            {% endif %}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card border-0">
-                                    <div class="card-body p-2">
-                                        <h6 class="card-subtitle text-primary mb-2">Project selection</h6>
-                                        <ul class="list-unstyled mb-0 small">
-                                            <li><strong>Initial choices:</strong> {{ config.initial_choices }}</li>
-                                            <li><strong>Switch choices:</strong> {{ config.switch_choices }}</li>
-                                            <li><strong>Max per supervisor:</strong> {{ config.faculty_maximum }}</li>
-                                            <li>
-                                                <strong>Availability:</strong> {{ 'Open to all' if config.selection_open_to_all else 'By invitation' }}
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card border-0">
-                                    <div class="card-body p-2">
-                                        <h6 class="card-subtitle text-primary mb-2">Academic settings</h6>
-                                        <ul class="list-unstyled mb-0 small">
-                                            <li><strong>Start year:</strong>
-                                                Y{{ config.start_year }} {{ pclass._level_text(config.student_level) }}
-                                            </li>
-                                            <li><strong>Extent:</strong> {{ config.extent }}
-                                                year{{ 's' if config.extent != 1 else '' }}</li>
-                                            {% if config.full_CATS %}
-                                                <li>
-                                                    <div class="d-flex flex-column justify-content-start align-items-start gap-1">
-                                                        <div><strong>Max CATS:</strong> {{ config.full_CATS }}</div>
-                                                        <div class="small text-muted">
-                                                            This is used to define when a supervisor is regarded as
-                                                            <strong>full</strong>
-                                                            when accommodating another matching.
-                                                        </div>
-                                                    </div>
-                                                </li>
-                                            {% endif %}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card border-0">
-                                    <div class="card-body p-2">
-                                        <h6 class="card-subtitle text-primary mb-2">Workflows</h6>
-                                        <ul class=" list-unstyled mb-0 small">
-                                            {% if config.require_confirm %}
-                                                <li><i class="fas fa-check-circle text-success"></i> Requires project
-                                                    confirmation
-                                                </li>
-                                            {% endif %}
-                                            {% if config.do_matching %}
-                                                <li><i class="fas fa-check-circle text-success"></i> Use automated
-                                                    matching
-                                                </li>
-                                            {% endif %}
-                                            {% if config.skip_matching %}
-                                                <li><i class="fas fa-times-circle text-warning"></i> Skip matching this
-                                                    cycle
-                                                </li>
-                                            {% endif %}
-                                            {% if config.requests_skipped %}
-                                                <li><i class="fas fa-times-circle text-warning"></i> Skip confirmation
-                                                    requests this cycle
-                                                </li>
-                                            {% endif %}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            {% if config.main_config.enable_canvas_sync %}
+                            <div class="row mt-2 g-2">
                                 <div class="col-md-4">
                                     <div class="card border-0">
                                         <div class="card-body p-2">
-                                            <h6 class="card-subtitle text-primary mb-2">Canvas integration</h6>
-                                            <ul class="list-unstyled mb-0 small">
-                                                {% if config.canvas_enabled %}
-                                                    <li><i class="fas fa-check-circle text-success"></i> Canvas
-                                                        integration enabled
+                                            <h6 class="card-subtitle text-primary mb-2">Per-cycle settings</h6>
+                                            <ul class=" list-unstyled mb-0 small">
+                                                {% if config.uses_supervisor %}
+                                                    <li><i class="fas fa-check-circle text-success"></i> Uses
+                                                        supervisors
                                                     </li>
-                                                {% else %}
-                                                    {% if not config.canvas_module_id %}
-                                                        <li><i class="fas fa-exclamation-triangle text-warning"></i>
-                                                            Canvas module ID not set
+                                                {% endif %}
+                                                {% if config.uses_marker %}
+                                                    <li><i class="fas fa-check-circle text-success"></i> Uses markers
+                                                    </li>
+                                                {% endif %}
+                                                {% if config.uses_moderator %}
+                                                    <li><i class="fas fa-check-circle text-success"></i> Uses moderators
+                                                    </li>
+                                                {% endif %}
+                                                {% if config.uses_presentations %}
+                                                    <li><i class="fas fa-check-circle text-success"></i> Uses
+                                                        presentations
+                                                    </li>
+                                                {% endif %}
+                                                {% if config.display_marker %}
+                                                    <li><i class="fas fa-check-circle text-success"></i> Show marker
+                                                        assignments on faculty dashboards
+                                                    </li>
+                                                {% endif %}
+                                                {% if config.display_presentations %}
+                                                    <li><i class="fas fa-check-circle text-success"></i> Show
+                                                        presentation
+                                                        assessor assignments on faculty dashboards
+                                                    </li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-0">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-subtitle text-primary mb-2">Project selection</h6>
+                                            <ul class="list-unstyled mb-0 small">
+                                                <li><strong>Initial choices:</strong> {{ config.initial_choices }}</li>
+                                                <li><strong>Switch choices:</strong> {{ config.switch_choices }}</li>
+                                                <li><strong>Max per supervisor:</strong> {{ config.faculty_maximum }}
+                                                </li>
+                                                <li>
+                                                    <strong>Availability:</strong> {{ 'Open to all' if config.selection_open_to_all else 'By invitation' }}
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-0">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-subtitle text-primary mb-2">Academic settings</h6>
+                                            <ul class="list-unstyled mb-0 small">
+                                                <li><strong>Start year:</strong>
+                                                    Y{{ config.start_year }} {{ pclass._level_text(config.student_level) }}
+                                                </li>
+                                                <li><strong>Extent:</strong> {{ config.extent }}
+                                                    year{{ 's' if config.extent != 1 else '' }}</li>
+                                                {% if config.full_CATS %}
+                                                    <li>
+                                                        <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+                                                            <div><strong>Max CATS:</strong> {{ config.full_CATS }}</div>
+                                                            <div class="small text-muted">
+                                                                This is used to define when a supervisor is regarded as
+                                                                <strong>full</strong>
+                                                                when accommodating another matching.
+                                                            </div>
+                                                        </div>
+                                                    </li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-0">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-subtitle text-primary mb-2">Workflows</h6>
+                                            <ul class=" list-unstyled mb-0 small">
+                                                {% if config.require_confirm %}
+                                                    <li><i class="fas fa-check-circle text-success"></i> Requires
+                                                        project
+                                                        confirmation
+                                                    </li>
+                                                {% endif %}
+                                                {% if config.do_matching %}
+                                                    <li><i class="fas fa-check-circle text-success"></i> Use automated
+                                                        matching
+                                                    </li>
+                                                {% endif %}
+                                                {% if config.skip_matching %}
+                                                    <li><i class="fas fa-times-circle text-warning"></i> Skip matching
+                                                        this
+                                                        cycle
+                                                    </li>
+                                                {% endif %}
+                                                {% if config.requests_skipped %}
+                                                    <li><i class="fas fa-times-circle text-warning"></i> Skip
+                                                        confirmation
+                                                        requests this cycle
+                                                    </li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% if config.main_config.enable_canvas_sync %}
+                                    <div class="col-md-4">
+                                        <div class="card border-0">
+                                            <div class="card-body p-2">
+                                                <h6 class="card-subtitle text-primary mb-2">Canvas integration</h6>
+                                                <ul class="list-unstyled mb-0 small">
+                                                    {% if config.canvas_enabled %}
+                                                        <li><i class="fas fa-check-circle text-success"></i> Canvas
+                                                            integration enabled
+                                                        </li>
+                                                    {% else %}
+                                                        {% if not config.canvas_module_id %}
+                                                            <li><i class="fas fa-exclamation-triangle text-warning"></i>
+                                                                Canvas module ID not set
+                                                            </li>
+                                                        {% endif %}
+                                                        {% if not config.canvas_login %}
+                                                            <li><i class="fas fa-exclamation-triangle text-warning"></i>
+                                                                Canvas login not set
+                                                            </li>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                <div class="col-md-4">
+                                    <div class="card border-0">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-subtitle text-primary mb-2">CATS allocations</h6>
+                                            <ul class="list-unstyled mb-0 small">
+                                                {% if config.uses_supervisor %}
+                                                    <li>
+                                                        <strong>Supervision:</strong> <span
+                                                            class="text-primary">{{ config.CATS_supervision }} CATS</span>
+                                                        {%- if config.CATS_supervision != pclass.CATS_supervision -%}
+                                                            <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
+                                                        {%- endif -%}
+                                                    </li>
+                                                {% endif %}
+                                                {% if config.uses_marker %}
+                                                    <li>
+                                                        <strong>Marking:</strong> <span
+                                                            class="text-primary">{{ config.CATS_marking }} CATS</span>
+                                                        {%- if config.CATS_marking != pclass.CATS_marking -%}
+                                                            <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
+                                                        {%- endif -%}
+                                                    </li>
+                                                {% endif %}
+                                                {% if config.uses_moderator %}
+                                                    <li>
+                                                        <strong>Moderation:</strong> <span
+                                                            class="text-primary">{{ config.CATS_moderation }} CATS</span>
+                                                        {%- if config.CATS_moderation != pclass.CATS_moderation -%}
+                                                            <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
+                                                        {%- endif -%}
+                                                    </li>
+                                                {% endif %}
+                                                {% if config.uses_presentations %}
+                                                    <li>
+                                                        <strong>Presentation:</strong> <span
+                                                            class="text-primary">{{ config.CATS_presentation }} CATS</span>
+                                                        {%- if config.CATS_presentation != pclass.CATS_presentation -%}
+                                                            <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
+                                                        {%- endif -%}
+                                                    </li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endcall %}
+                    </div>
+                    <div class="card mt-2 mb-2 card-body border-secondary">
+                        {% call icon_block("history", icon_classes="pt-2 text-primary") %}
+                            <div class="text-primary fw-semibold fs-5">Lifecycle events</div>
+                            <div class="row mt-2 g-2">
+                                <div class="col-md-4">
+                                    <div class="card border-0">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-subtitle text-primary mb-2">Project confirmation
+                                                requests</h6>
+                                            <ul class="list-unstyled mb-0 small">
+                                                {% if config.requests_issued %}
+                                                    <li><i class="fas fa-check-circle text-success"></i> <strong>Requests
+                                                        issued</strong></li>
+                                                    {% if config.requests_issued_by %}
+                                                        <li class="ms-3 text-muted">
+                                                            <i class="fas fa-user me-1"></i>{{ config.requests_issued_by.name }}
+                                                            {% if config.requests_timestamp %}at
+                                                                {{ config.requests_timestamp.strftime("%d/%m/%Y %H:%M") }}
+                                                            {% endif %}
                                                         </li>
                                                     {% endif %}
-                                                    {% if not config.canvas_login %}
-                                                        <li><i class="fas fa-exclamation-triangle text-warning"></i>
-                                                            Canvas login not set
+                                                {% elif config.requests_skipped %}
+                                                    <li><i class="fas fa-forward text-warning"></i> <strong>Requests
+                                                        skipped</strong></li>
+                                                    {% if config.requests_skipped_by %}
+                                                        <li class="ms-3 text-muted">
+                                                            <i class="fas fa-user me-1"></i> {{ config.requests_skipped_by.name }}
+                                                            {% if config.requests_skipped_timestamp %}as
+                                                                {{ config.requests_skipped_timestamp.strftime("%d/%m/%Y %H:%M") }}
+                                                            {% endif %}
+                                                        </li>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <li><i class="fas fa-circle text-secondary"></i> Not yet issued</li>
+                                                {% endif %}
+                                                {% if config.requests_issued and not config.requests_skipped %}
+                                                    {% set outstanding_count = config.confirmation_required.count() %}
+                                                    {% if outstanding_count > 0 %}
+                                                        <li class="mt-1"><strong>Outstanding confirmations:</strong>
+                                                            <span
+                                                                    class="badge bg-warning text-dark">{{ outstanding_count }}</span>
+                                                        </li>
+                                                    {% else %}
+                                                        <li class="mt-1"><i
+                                                                class="fas fa-check-circle text-success"></i>
+                                                            All confirmations received
                                                         </li>
                                                     {% endif %}
                                                 {% endif %}
@@ -277,223 +521,173 @@
                                         </div>
                                     </div>
                                 </div>
-                            {% endif %}
-                            <div class="col-md-4">
-                                <div class="card border-0">
-                                    <div class="card-body p-2">
-                                        <h6 class="card-subtitle text-primary mb-2">CATS allocations</h6>
-                                        <ul class="list-unstyled mb-0 small">
-                                            {% if config.uses_supervisor %}
-                                                <li>
-                                                    <strong>Supervision:</strong> <span
-                                                        class="text-primary">{{ config.CATS_supervision }} CATS</span>
-                                                    {%- if config.CATS_supervision != pclass.CATS_supervision -%}
-                                                        <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
-                                                    {%- endif -%}
-                                                </li>
-                                            {% endif %}
-                                            {% if config.uses_marker %}
-                                                <li>
-                                                    <strong>Marking:</strong> <span
-                                                        class="text-primary">{{ config.CATS_marking }} CATS</span>
-                                                    {%- if config.CATS_marking != pclass.CATS_marking -%}
-                                                        <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
-                                                    {%- endif -%}
-                                                </li>
-                                            {% endif %}
-                                            {% if config.uses_moderator %}
-                                                <li>
-                                                    <strong>Moderation:</strong> <span
-                                                        class="text-primary">{{ config.CATS_moderation }} CATS</span>
-                                                    {%- if config.CATS_moderation != pclass.CATS_moderation -%}
-                                                        <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
-                                                    {%- endif -%}
-                                                </li>
-                                            {% endif %}
-                                            {% if config.uses_presentations %}
-                                                <li>
-                                                    <strong>Presentation:</strong> <span
-                                                        class="text-primary">{{ config.CATS_presentation }} CATS</span>
-                                                    {%- if config.CATS_presentation != pclass.CATS_presentation -%}
-                                                        <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
-                                                    {%- endif -%}
-                                                </li>
-                                            {% endif %}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    {% endcall %}
-                </div>
-                <div class="card mt-2 mb-2 card-body border-secondary">
-                    {% call icon_block("history", icon_classes="pt-2 text-primary") %}
-                        <div class="text-primary fw-semibold fs-5">Lifecycle events</div>
-                        <div class="row mt-2 g-2">
-                            <div class="col-md-4">
-                                <div class="card border-0">
-                                    <div class="card-body p-2">
-                                        <h6 class="card-subtitle text-primary mb-2">Project confirmation requests</h6>
-                                        <ul class="list-unstyled mb-0 small">
-                                            {% if config.requests_issued %}
-                                                <li><i class="fas fa-check-circle text-success"></i> <strong>Requests
-                                                    issued</strong></li>
-                                                {% if config.requests_issued_by %}
-                                                    <li class="ms-3 text-muted">
-                                                        <i class="fas fa-user me-1"></i>{{ config.requests_issued_by.name }}
-                                                        {% if config.requests_timestamp %}at
-                                                            {{ config.requests_timestamp.strftime("%d/%m/%Y %H:%M") }}
-                                                        {% endif %}
-                                                    </li>
-                                                {% endif %}
-                                            {% elif config.requests_skipped %}
-                                                <li><i class="fas fa-forward text-warning"></i> <strong>Requests
-                                                    skipped</strong></li>
-                                                {% if config.requests_skipped_by %}
-                                                    <li class="ms-3 text-muted">
-                                                        <i class="fas fa-user me-1"></i> {{ config.requests_skipped_by.name }}
-                                                        {% if config.requests_skipped_timestamp %}as
-                                                            {{ config.requests_skipped_timestamp.strftime("%d/%m/%Y %H:%M") }}
-                                                        {% endif %}
-                                                    </li>
-                                                {% endif %}
-                                            {% else %}
-                                                <li><i class="fas fa-circle text-secondary"></i> Not yet issued</li>
-                                            {% endif %}
-                                            {% if config.requests_issued and not config.requests_skipped %}
-                                                {% set outstanding_count = config.confirmation_required.count() %}
-                                                {% if outstanding_count > 0 %}
-                                                    <li class="mt-1"><strong>Outstanding confirmations:</strong> <span
-                                                            class="badge bg-warning text-dark">{{ outstanding_count }}</span>
-                                                    </li>
+                                <div class="col-md-4">
+                                    <div class="card border-0">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-subtitle text-primary mb-2">Go live to selectors</h6>
+                                            <ul class="list-unstyled mb-0 small">
+                                                {% if config.live %}
+                                                    <li><i class="fas fa-check-circle text-success"></i>
+                                                        <strong>Live</strong></li>
+                                                    {% if config.golive_by %}
+                                                        <li class="ms-3 text-muted">
+                                                            <i class="fas fa-user me-1"></i> {{ config.golive_by.name }}
+                                                            {% if config.golive_timestamp %}at
+                                                                {{ config.golive_timestamp.strftime("%d/%m/%Y %H:%M") }}
+                                                            {% endif %}
+                                                        </li>
+                                                    {% endif %}
+                                                    {% if config.live_deadline %}
+                                                        <li class="mt-1">
+                                                            <strong>Deadline:</strong> {{ config.live_deadline.strftime("%d/%m/%Y") }}
+                                                        </li>
+                                                    {% endif %}
                                                 {% else %}
-                                                    <li class="mt-1"><i class="fas fa-check-circle text-success"></i>
-                                                        All confirmations received
-                                                    </li>
+                                                    <li><i class="fas fa-circle text-secondary"></i> Not yet live</li>
                                                 {% endif %}
-                                            {% endif %}
-                                        </ul>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card border-0">
-                                    <div class="card-body p-2">
-                                        <h6 class="card-subtitle text-primary mb-2">Go live to selectors</h6>
-                                        <ul class="list-unstyled mb-0 small">
-                                            {% if config.live %}
-                                                <li><i class="fas fa-check-circle text-success"></i>
-                                                    <strong>Live</strong></li>
-                                                {% if config.golive_by %}
+                                <div class="col-md-4">
+                                    <div class="card border-0">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-subtitle text-primary mb-2">Selections</h6>
+                                            <ul class="list-unstyled mb-0 small">
+                                                {% if config.selection_closed %}
+                                                    <li><i class="fas fa-check-circle text-success"></i> <strong>Selections
+                                                        closed</strong></li>
+                                                    {% if config.closed_by %}
+                                                        <li class="ms-3 text-muted">
+                                                            <i class="fas fa-user me-1"></i> {{ config.closed_by.name }}
+                                                            {% if config.closed_timestamp %}at
+                                                                {{ config.closed_timestamp.strftime("%d/%m/%Y %H:%M") }}
+                                                            {% endif %}
+                                                        </li>
+                                                    {% endif %}
+                                                {% elif config.live %}
+                                                    <li><i class="fas fa-clock text-info"></i> Selections open</li>
+                                                {% else %}
+                                                    <li><i class="fas fa-circle text-secondary"></i> Not yet opened</li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-0">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-subtitle text-primary mb-2">Selector matching</h6>
+                                            <ul class="list-unstyled mb-0 small">
+                                                {% if config.skip_matching %}
+                                                    <li><i class="fas fa-forward text-warning"></i> Skip matching this
+                                                        cycle
+                                                    </li>
+                                                {% endif %}
+                                                {% if config.accommodate_matching %}
+                                                    <li><i class="fas fa-check-circle text-success"></i> Accommodating
+                                                        existing matching
+                                                    </li>
                                                     <li class="ms-3 text-muted">
-                                                        <i class="fas fa-user me-1"></i> {{ config.golive_by.name }}
-                                                        {% if config.golive_timestamp %}at
-                                                            {{ config.golive_timestamp.strftime("%d/%m/%Y %H:%M") }}
-                                                        {% endif %}
+                                                        Match: {{ config.accommodate_matching.name }}</li>
+                                                {% endif %}
+                                                {% if not config.skip_matching and not config.accommodate_matching %}
+                                                    <li><i class="fas fa-circle text-secondary"></i> No special matching
+                                                        configuration
                                                     </li>
                                                 {% endif %}
-                                                {% if config.live_deadline %}
-                                                    <li class="mt-1">
-                                                        <strong>Deadline:</strong> {{ config.live_deadline.strftime("%d/%m/%Y") }}
-                                                    </li>
-                                                {% endif %}
-                                            {% else %}
-                                                <li><i class="fas fa-circle text-secondary"></i> Not yet live</li>
-                                            {% endif %}
-                                        </ul>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="card border-0">
-                                    <div class="card-body p-2">
-                                        <h6 class="card-subtitle text-primary mb-2">Selections</h6>
-                                        <ul class="list-unstyled mb-0 small">
-                                            {% if config.selection_closed %}
-                                                <li><i class="fas fa-check-circle text-success"></i> <strong>Selections
-                                                    closed</strong></li>
-                                                {% if config.closed_by %}
-                                                    <li class="ms-3 text-muted">
-                                                        <i class="fas fa-user me-1"></i> {{ config.closed_by.name }}
-                                                        {% if config.closed_timestamp %}at
-                                                            {{ config.closed_timestamp.strftime("%d/%m/%Y %H:%M") }}
-                                                        {% endif %}
-                                                    </li>
-                                                {% endif %}
-                                            {% elif config.live %}
-                                                <li><i class="fas fa-clock text-info"></i> Selections open</li>
-                                            {% else %}
-                                                <li><i class="fas fa-circle text-secondary"></i> Not yet opened</li>
-                                            {% endif %}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card border-0">
-                                    <div class="card-body p-2">
-                                        <h6 class="card-subtitle text-primary mb-2">Selector matching</h6>
-                                        <ul class="list-unstyled mb-0 small">
-                                            {% if config.skip_matching %}
-                                                <li><i class="fas fa-forward text-warning"></i> Skip matching this cycle
-                                                </li>
-                                            {% endif %}
-                                            {% if config.accommodate_matching %}
-                                                <li><i class="fas fa-check-circle text-success"></i> Accommodating
-                                                    existing matching
-                                                </li>
-                                                <li class="ms-3 text-muted">
-                                                    Match: {{ config.accommodate_matching.name }}</li>
-                                            {% endif %}
-                                            {% if not config.skip_matching and not config.accommodate_matching %}
-                                                <li><i class="fas fa-circle text-secondary"></i> No special matching
-                                                    configuration
-                                                </li>
-                                            {% endif %}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    {% endcall %}
-                </div>
-                <div class="card mt-2 mb-2 card-body border-secondary">
-                    {% for p in config.periods %}
-                        <li class="list-group-item list-group-item-light">
-                            <div class="d-flex flex-row flex-wrap justify-content-between align-items-start mb-2 w-100">
-                                <div class="dashboard-period-title">{{ p.display_name|safe }}</div>
-                                <div class="d-flex flex-row flex-wrap justify-content-end align-items-center gap-2">
-                                    {% if p.submission_period <= config.submission_period %}
-                                        {% set validation_messages = p.validate %}
-                                        {% if validation_messages is not none and validation_messages|length > 0 %}
-                                            <div>
-                                                <div class="large-warning-triangle"><i
-                                                        class="fas fa-exclamation-triangle text-danger"></i></div>
-                                                <a class="text-decoration-none" href="#submitter_card_{{ loop.index }}">Validation
-                                                    errors&hellip;</a>
-                                            </div>
-                                        {% endif %}
-                                    {% endif %}
-                                    <div>
-                                        {{ submission_period_configure_button(p, config, small=true, margin=false, disable=(p.is_feedback_open or p.closed)) }}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-2">
-                                {{ period_status(p, return_url=url_for('convenor.status', id=pclass.id), return_text='convenor dashboard') }}
-                            </div>
-                        </li>
-                    {% else %}
-                        <li class="list-group-item">
-                            {% call icon_block('ban') %}
-                                <strong>No configured submission periods</strong>
-                            {% endcall %}
-                        </li>
-                    {% endfor %}
+                        {% endcall %}
+                    </div>
                 </div>
             </div>
 
-            {# offer rollover of academic year if available #}
+            {# [E] COMPACT SUBMISSION PERIOD SUMMARY — lightweight table #}
+            <div class="card mt-2 mb-2 border-secondary">
+                <div class="card-header d-flex flex-row justify-content-between align-items-center py-2">
+                    <span class="fw-semibold text-secondary">
+                        <i class="fas fa-layer-group me-1"></i> Submission periods
+                    </span>
+                    <a class="btn btn-xs btn-outline-secondary"
+                       href="{{ url_for('convenor.periods', id=pclass.id) }}">
+                        Full detail <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body p-2">
+                    {% if config.periods|list|length > 0 %}
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th class="small" style="width:34%">Period</th>
+                                <th class="small" style="width:20%">Start</th>
+                                <th class="small" style="width:20%">Hand-in</th>
+                                <th class="small" style="width:18%">Status</th>
+                                <th class="small" style="width:8%"></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for p in config.periods %}
+                                {% set is_current = (p.submission_period == config.submission_period) %}
+                                <tr class="{% if is_current %}table-primary{% endif %}">
+                                    <td class="small align-middle">
+                                        {% if is_current %}<strong>{{ p.display_name|safe }}</strong>
+                                        {% else %}{{ p.display_name|safe }}{% endif %}
+                                    </td>
+                                    <td class="small align-middle text-muted">
+                                        {% if p.start_date %}{{ p.start_date.strftime("%d %b %Y") }}{% else %}
+                                            &ndash;{% endif %}
+                                    </td>
+                                    <td class="small align-middle text-muted">
+                                        {% if p.hand_in_date %}{{ p.hand_in_date.strftime("%d %b %Y") }}{% else %}
+                                            &ndash;{% endif %}
+                                    </td>
+                                    <td class="align-middle">
+                                        {% if p.closed %}
+                                            <span class="badge bg-secondary">Closed</span>
+                                        {% elif p.is_feedback_open %}
+                                            <span class="badge bg-primary text-white">Feedback open</span>
+                                        {% elif is_current %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-secondary border">Upcoming</span>
+                                        {% endif %}
+                                        {% if p.submission_period <= config.submission_period %}
+                                            {% set msgs = p.validate %}
+                                            {% if msgs is not none and msgs|length > 0 %}
+                                                <i class="fas fa-exclamation-triangle text-danger ms-1"
+                                                   title="Validation warnings — see Periods tab for detail"></i>
+                                            {% endif %}
+                                        {% endif %}
+                                        {# EXTENSIBILITY HOOK — MarkingEvent summary badge:
+                                             Replace the stub below when marking_event_card.html is ready.
+                                             Suggested: show badge like <span class="badge bg-info">N open</span>
+                                             or <span class="badge bg-success">Done</span>
+                                        #}
+                                    </td>
+                                    <td class="small align-middle text-end">
+                                        {{ submission_period_configure_button(p, config, small=true, margin=false, disable=(p.is_feedback_open or p.closed)) }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="p-2">
+                            {% call icon_block('ban') %}
+                                <strong>No configured submission periods</strong>
+                            {% endcall %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# [F] CONDITIONAL CARDS: rollover, proposed matches/schedules, upcoming tasks #}
+
+            {# Offer rollover of academic year if available #}
             {% if config.rollover_ready(current_year) %}
                 {{ rollover_card(current_year, pclass, config) }}
             {% elif config.year < current_year %}
@@ -569,7 +763,7 @@
                 {% endif %}
             {% endif %}
 
-            {% if top_to_dos is defined and top_do_dos is not none and top_to_dos|length > 0 %}
+            {% if top_to_dos is defined and top_to_dos is not none and top_to_dos|length > 0 %}
                 <div class="card border-secondary mt-3 mb-3">
                     {% set pl = 's' %}{% if num_to_dos == 1 %}{% set pl = '' %}{% endif %}
                     <div class="card-header bg-warning">Upcoming tasks (<strong>{{ num_to_dos }}</strong> task{{ pl }}
@@ -699,37 +893,6 @@
                 </div>
             {% endif %}
 
-            {% if pclass.publish %}
-                {# SELECTING #}
-                {# provide summary #}
-
-                {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-                    {{ issue_confirmations(config, issue_form) }}
-                {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                    {# if we get here then we can assume requests have been issued because of the outermost if #}
-                    {{ waiting_confirmations(config, issue_form, approval_data) }}
-                {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-                    {{ golive(config, golive_form, approval_data) }}
-                {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                    {{ selection_open(config, change_form, convenor_data, current_time) }}
-                {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
-                    {{ selection_closed(config, rollover_in_progress, convenor_data) }}
-                {% else %}
-                    <div class="card border-danger mt-3 mb-3">
-                        <div class="card-header bg-danger text-white">Error</div>
-                        <div class="card-body">
-                            <strong>Error:</strong>
-                            Unknown project lifecycle state {{ state }}
-                        </div>
-                    </div>
-                {% endif %}
-            {% else %}
-                <div class="alert alert-danger mt-1 mb-2">
-                    {% call icon_block("exclamation-triangle") %}
-                        <strong>This project class is not published, so its administration options are limited.</strong>
-                    {% endcall %}
-                </div>
-            {% endif %}
         </div>
         <div class="col-1"></div>
     </div>

@@ -2,6 +2,7 @@
 
 {% from "icon_block.html" import icon_block %}
 {% from "convenor/dashboard/overview_cards/submitter_card.html" import submitter_card %}
+{% from "macros.html" import submission_period_configure_button %}
 {% from "datepicker.html" import import_datepicker %}
 
 {% block scripts %}
@@ -25,10 +26,56 @@
         <div class="col-1"></div>
         <div class="col-10">
             {% if pclass.publish %}
-                {# SUBMITTING #}
                 {% for n in range(config.number_submissions) %}
-                    <a id="submitter_card_{{ loop.index }}"></a>
-                    {{ submitter_card(config, n, today, feedback_form)  }}
+                    {% set period = config.get_period(n+1) %}
+                    {% set is_current = (n+1 == config.submission_period) %}
+
+                    {# Anchor for deep-linking from status.html compact period table #}
+                    <a id="period_section_{{ loop.index }}"></a>
+
+                    <div class="card mt-3 mb-3 {% if is_current %}border-primary{% else %}border-secondary{% endif %}">
+                        <div class="card-header d-flex flex-row justify-content-between align-items-center py-2
+                             {% if is_current %}bg-primary text-white{% endif %}">
+                            <span class="fw-semibold">
+                                {% if period %}{{ period.display_name|safe }}{% else %}Period {{ n+1 }}{% endif %}
+                            </span>
+                            {% if period %}
+                                {{ submission_period_configure_button(period, config, small=true, margin=false,
+                                   disable=(period.is_feedback_open or period.closed)) }}
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+
+                            {# === SUB-SECTION 1: Submitter card (anchor preserved for existing deep-links) === #}
+                            <a id="submitter_card_{{ loop.index }}"></a>
+                            {{ submitter_card(config, n, today, feedback_form) }}
+
+                            {# === SUB-SECTION 2: MarkingEvent summary ===
+                                 EXTENSIBILITY HOOK — insert here when marking_event_card.html is ready:
+                                 {% from "convenor/dashboard/overview_cards/marking_event_card.html"
+                                    import marking_event_summary %}
+                                 {% if period and period.marking_events|list|length > 0 %}
+                                     <div class="mt-3">
+                                         <h6 class="text-secondary"><i class="fas fa-calendar-check me-1"></i> Marking Events</h6>
+                                         {{ marking_event_summary(period) }}
+                                     </div>
+                                 {% endif %}
+                            #}
+
+                            {# === SUB-SECTION 3: MarkingWorkflow summary ===
+                                 EXTENSIBILITY HOOK — insert here when marking_workflow_card.html is ready:
+                                 {% from "convenor/dashboard/overview_cards/marking_workflow_card.html"
+                                    import marking_workflow_summary %}
+                                 {% if period and period.marking_workflows|list|length > 0 %}
+                                     <div class="mt-3">
+                                         <h6 class="text-secondary"><i class="fas fa-project-diagram me-1"></i> Marking Workflows</h6>
+                                         {{ marking_workflow_summary(period) }}
+                                     </div>
+                                 {% endif %}
+                            #}
+
+                        </div>
+                    </div>
                 {% endfor %}
             {% else %}
                 <div class="alert alert-danger mt-1 mb-2">

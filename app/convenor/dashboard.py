@@ -336,6 +336,12 @@ def periods(id):
 
     feedback_form = OpenFeedbackForm(request.form)
 
+    # inject query factory for marking_template QuerySelectField
+    _pclass_id = config.pclass_id
+    feedback_form.marking_template.query_factory = lambda: GetWorkflowTemplates(
+        EmailTemplate.MARKING_MARKER, pclass_id=_pclass_id
+    )
+
     # first time this page is displayed, populate the forms with sensible default data
     if request.method == "GET":
         if period is not None and period.feedback_deadline is not None:
@@ -344,6 +350,9 @@ def periods(id):
             feedback_form.feedback_deadline.data = date.today() + timedelta(weeks=3)
 
         feedback_form.max_attachment.data = 2
+        feedback_form.marking_template.data = EmailTemplate.find_template_(
+            EmailTemplate.MARKING_MARKER, pclass=config.project_class
+        )
 
     data = get_convenor_dashboard_data(pclass, config)
 

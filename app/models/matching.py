@@ -1520,6 +1520,14 @@ class MatchingRecord(db.Model):
     # if this project is an alternative, record its priority, or None if it is not an alternative
     priority = db.Column(db.Integer(), nullable=True, default=None)
 
+    # keep copies of the original alternative fields so that revert_record() can restore them exactly
+    original_alternative = db.Column(db.Boolean(), nullable=False, default=False)
+    original_parent_id = db.Column(
+        db.Integer(), db.ForeignKey("live_projects.id"), nullable=True, default=None
+    )
+    original_parent = db.relationship("LiveProject", foreign_keys=[original_parent_id], uselist=False)
+    original_priority = db.Column(db.Integer(), nullable=True, default=None)
+
     # PERSONNEL
 
     # for submissions, the relationship between SubmissionRole and SubmissionRecord is handled by placing
@@ -1552,17 +1560,6 @@ class MatchingRecord(db.Model):
         cascade="all, delete, delete-orphan",
         backref=db.backref("original_role_for", lazy="dynamic"),
     )
-
-    # TODO: Remove these fields
-
-    # OLD FIELDS, TO BE REMOVED
-
-    # assigned second marker, or none if second markers are not used
-    marker_id = db.Column(db.Integer(), db.ForeignKey("faculty_data.id"))
-    marker = db.relationship("FacultyData", foreign_keys=[marker_id], uselist=False)
-
-    # keep copy of original marker assignment, can use later to revert
-    original_marker_id = db.Column(db.Integer(), db.ForeignKey("faculty_data.id"))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

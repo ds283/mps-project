@@ -28,7 +28,7 @@ from .associations import (
 )
 from .config import get_AES_key
 from .defaults import DEFAULT_STRING_LENGTH
-from .matching import MatchingAttempt, MatchingRecord, _MatchingRecord_is_valid
+from .matching import MatchingAttempt, MatchingRecord, MatchingRole, _MatchingRecord_is_valid
 from .model_mixins import ColouredLabelMixin, EditingMetadataMixin, _get_current_year
 from .projects import (
     _Project_is_offerable,
@@ -943,13 +943,21 @@ def _FacultyData_delete_cache(faculty_id):
 
     marker_records = (
         db.session.query(MatchingRecord)
-        .join(MatchingAttempt, MatchingAttempt.id == MatchingRecord.matching_attempt)
-        .filter(MatchingAttempt.year == year, MatchingRecord.marker_id == faculty_id)
+        .join(MatchingAttempt, MatchingAttempt.id == MatchingRecord.matching_id)
+        .filter(
+            MatchingAttempt.year == year,
+            MatchingRecord.roles.any(
+                and_(
+                    MatchingRole.user_id == faculty_id,
+                    MatchingRole.role == MatchingRole.ROLE_MARKER,
+                )
+            ),
+        )
     )
 
     superv_records = (
         db.session.query(MatchingRecord)
-        .join(MatchingAttempt, MatchingAttempt.id == MatchingRecord.matching_attempt)
+        .join(MatchingAttempt, MatchingAttempt.id == MatchingRecord.matching_id)
         .filter(MatchingAttempt.year == year)
         .join(LiveProject, LiveProject.id == MatchingRecord.project_id)
         .filter(LiveProject.owner_id == faculty_id)
@@ -1436,13 +1444,21 @@ def _delete_EnrollmentRecord_cache(faculty_id):
 
     marker_records = (
         db.session.query(MatchingRecord)
-        .join(MatchingAttempt, MatchingAttempt.id == MatchingRecord.matching_attempt)
-        .filter(MatchingAttempt.year == year, MatchingRecord.marker_id == faculty_id)
+        .join(MatchingAttempt, MatchingAttempt.id == MatchingRecord.matching_id)
+        .filter(
+            MatchingAttempt.year == year,
+            MatchingRecord.roles.any(
+                and_(
+                    MatchingRole.user_id == faculty_id,
+                    MatchingRole.role == MatchingRole.ROLE_MARKER,
+                )
+            ),
+        )
     )
 
     superv_records = (
         db.session.query(MatchingRecord)
-        .join(MatchingAttempt, MatchingAttempt.id == MatchingRecord.matching_attempt)
+        .join(MatchingAttempt, MatchingAttempt.id == MatchingRecord.matching_id)
         .filter(MatchingAttempt.year == year)
         .join(LiveProject, LiveProject.id == MatchingRecord.project_id)
         .filter(LiveProject.owner_id == faculty_id)

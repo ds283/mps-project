@@ -165,6 +165,28 @@ PuLPProblem = namedtuple(
     ],
 )
 
+MarkerPopulationEnumeration = namedtuple(
+    "MarkerPopulationEnumeration",
+    [
+        "number_markers",  # int: total unique eligible markers
+        "marker_to_number",  # Dict[FacultyData, int]
+        "number_to_marker",  # Dict[int, FacultyData]
+        "CATS_dict",  # Dict[int, float]: current CATS workload per marker index
+        "number_submitters",  # int: total submissions still needing markers
+        "submit_to_number",  # Dict[SubmissionRecord, int]
+        "number_to_submit",  # Dict[int, SubmissionRecord]
+        "valence",  # Dict[int, int]: how many MORE markers each submission still needs
+    ],
+)
+
+MarkerPuLPProblem = namedtuple(
+    "MarkerPuLPProblem",
+    [
+        "problem",  # pulp.LpProblem
+        "Y",  # decision-variable dict Y[(i, j)] binary
+    ],
+)
+
 
 _match_success = """
 <div><strong>Matching task {{ name }} has completed successfully.</strong></div>
@@ -1310,27 +1332,29 @@ def _compute_existing_mark_CATS(record, fac_data):
 
 
 def _enumerate_missing_markers(self, config, task_id, user: User):
-    mark_dict = {}
-    mark_CATS_dict = {}
-    submit_dict = {}
+    number_to_marker = {}
+    marker_to_number = {}
+    CATS_dict = {}
 
-    inverse_mark_dict = {}
-    inverse_submit_dict = {}
+    number_to_submit = {}
+    submit_to_number = {}
+    valence = {}
 
-    number_markers = 0
-    number_submitters = 0
+    num_markers = 0
+    num_submitters = 0
 
     progress_update(
         task_id,
         TaskRecord.RUNNING,
         10,
-        "Enumerating submission records with missing records...",
+        "Enumerating submission records with missing markers...",
         autocommit=True,
     )
 
     # loop through all submissions in all periods to capture all those with missing markers
     for period in config.periods:
-        period: SubmissionRecord
+        period: SubmissionPeriodRecord
+        markers_needed = period.number_markers
 
         for sub in period.submissions:
             sub: SubmissionRecord
@@ -1339,19 +1363,26 @@ def _enumerate_missing_markers(self, config, task_id, user: User):
             if sub.project is None:
                 continue
 
-            # do nothing if marker already assigned
-            if sub.marker is not None:
+            # check how many marker SubmissionRole instances are already present
+            existing_markers = len(sub.marker_roles)
+
+            # do nothing if enough markers are already assigned
+            if existing_markers >= markers_needed:
                 continue
 
+            # number of additional markers still required for this submission
+            additional_needed = markers_needed - existing_markers
+
             # store this submission record in the submitter dictionary
-            if sub in inverse_submit_dict:
+            if sub in submit_to_number:
                 raise RuntimeError(
                     "Non-unique submitter when enumerating missing markers"
                 )
 
-            submit_dict[number_submitters] = sub
-            inverse_submit_dict[sub] = number_submitters
-            number_submitters += 1
+            number_to_submit[num_submitters] = sub
+            submit_to_number[sub] = num_submitters
+            valence[num_submitters] = additional_needed
+            num_submitters += 1
 
             # loop through markers in the assessor pool for this project
             # note - LiveProject.assessor_list will only return a list of assessors who are
@@ -1375,23 +1406,26 @@ def _enumerate_missing_markers(self, config, task_id, user: User):
                 self.update_state(
                     "FAILURE", meta={"msg": "LiveProject did not have active assessors"}
                 )
-                raise Ignore()
+                return None
 
             for marker in assessors:
                 marker: FacultyData
 
-                if marker not in inverse_mark_dict:
-                    mark_dict[number_markers] = marker
-                    inverse_mark_dict[marker] = number_markers
-                    mark_CATS_dict[number_markers] = sum(marker.CATS_assignment(config))
-                    number_markers += 1
+                if marker not in marker_to_number:
+                    number_to_marker[num_markers] = marker
+                    marker_to_number[marker] = num_markers
+                    CATS_dict[num_markers] = sum(marker.CATS_assignment(config))
+                    num_markers += 1
 
-    return (
-        mark_dict,
-        inverse_mark_dict,
-        submit_dict,
-        inverse_submit_dict,
-        mark_CATS_dict,
+    return MarkerPopulationEnumeration(
+        number_markers=num_markers,
+        marker_to_number=marker_to_number,
+        number_to_marker=number_to_marker,
+        CATS_dict=CATS_dict,
+        number_submitters=num_submitters,
+        submit_to_number=submit_to_number,
+        number_to_submit=number_to_submit,
+        valence=valence,
     )
 
 
@@ -2742,6 +2776,10 @@ def _store_PuLP_solution(
             markers_needed = markers_per_period.pop(this_period)
             custom_offers_per_period.pop(this_period, None)
 
+            is_alternative = alt_data is not None
+            alt_parent_id = None if alt_data is None else alt_data["project"].id
+            alt_priority = None if alt_data is None else alt_data["priority"]
+
             data_rec = MatchingRecord(
                 matching_id=record.id,
                 selector_id=data.selector_data.number_to_selector[i],
@@ -2749,9 +2787,12 @@ def _store_PuLP_solution(
                 original_project_id=proj_id,
                 submission_period=this_period,
                 rank=rk,
-                alternative=False if alt_data is None else True,
-                parent_id=None if alt_data is None else alt_data["project"].id,
-                priority=None if alt_data is None else alt_data["priority"],
+                alternative=is_alternative,
+                parent_id=alt_parent_id,
+                priority=alt_priority,
+                original_alternative=is_alternative,
+                original_parent_id=alt_parent_id,
+                original_priority=alt_priority,
             )
             db.session.add(data_rec)
             db.session.flush()
@@ -2846,16 +2887,21 @@ def _store_PuLP_solution(
             db.session.flush()
 
 
-def _create_marker_PuLP_problem(mark_dict, submit_dict, mark_CATS_dict, config):
+def _create_marker_PuLP_problem(
+    enum_data: MarkerPopulationEnumeration,
+    config: ProjectClassConfig,
+) -> MarkerPuLPProblem:
     # capture number of CATS assigned per marking task
     CATS_per_assignment = _floatify(config.CATS_marking)
+
+    number_markers = enum_data.number_markers
+    number_submitters = enum_data.number_submitters
 
     # generate PuLP problem
     prob: pulp.LpProblem = pulp.LpProblem("populate_marker", pulp.LpMinimize)
 
     # generate decision variables for marker assignment
-    number_markers = len(mark_dict)
-    number_submitters = len(submit_dict)
+    # Y[(i, j)] = 1 if marker i is assigned to submission j
     Y = _pulp_dicts(
         "Y",
         itertools.product(range(number_markers), range(number_submitters)),
@@ -2872,19 +2918,18 @@ def _create_marker_PuLP_problem(mark_dict, submit_dict, mark_CATS_dict, config):
 
     # OBJECTIVE FUNCTION
 
-    # maximization problem is to assign everyone while keeping difference between max and min CATS
-    # small, and keeping max_assigned small
+    # minimisation: keep difference between max and min CATS small, and keep max_assigned small
     prob += 10.0 * (max_CATS - min_CATS) + 5.0 * max_assigned
 
     for i in range(number_markers):
         # max_CATS and min_CATS should bracket the CATS workload of all faculty
         prob += (
-            mark_CATS_dict[i]
+            enum_data.CATS_dict[i]
             + CATS_per_assignment * sum(Y[(i, j)] for j in range(number_submitters))
             <= max_CATS
         )
         prob += (
-            mark_CATS_dict[i]
+            enum_data.CATS_dict[i]
             + CATS_per_assignment * sum(Y[(i, j)] for j in range(number_submitters))
             >= min_CATS
         )
@@ -2892,25 +2937,26 @@ def _create_marker_PuLP_problem(mark_dict, submit_dict, mark_CATS_dict, config):
         # max_assigned should relax to total assigned
         prob += sum(Y[(i, j)] for j in range(number_submitters)) <= max_assigned
 
-    # CONSTRAINT: EXACTLY ONE MARKER ASSIGNED PER SUBMITTER
+    # CONSTRAINT: CORRECT NUMBER OF MARKERS ASSIGNED PER SUBMITTER
+    # valence[j] is the number of additional marker slots still needed for submission j
 
     for j in range(number_submitters):
-        prob += sum(Y[(i, j)] for i in range(number_markers)) == 1
+        prob += sum(Y[(i, j)] for i in range(number_markers)) == enum_data.valence[j]
 
     # CONSTRAINT: MARKERS CAN ONLY BE ASSIGNED TO PROJECTS FOR WHICH THEY ARE IN THE ASSESSOR POOL
 
     for j in range(number_submitters):
-        sub: SubmissionRecord = submit_dict[j]
+        sub: SubmissionRecord = enum_data.number_to_submit[j]
 
         for i in range(number_markers):
-            marker: FacultyData = mark_dict[i]
+            marker: FacultyData = enum_data.number_to_marker[i]
 
             if sub.is_in_assessor_pool(marker.id):
                 prob += Y[(i, j)] <= 1
             else:
                 prob += Y[(i, j)] == 0
 
-    return prob, Y
+    return MarkerPuLPProblem(problem=prob, Y=Y)
 
 
 def _initialize(
@@ -3412,7 +3458,12 @@ def _execute_from_solution(
     )
 
 
-def _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user: User):
+def _execute_marker_problem(
+    task_id,
+    pulp_problem: MarkerPuLPProblem,
+    enum_data: MarkerPopulationEnumeration,
+    user: User,
+):
     print("Solving PuLP problem to populate markers")
 
     progress_update(
@@ -3424,7 +3475,7 @@ def _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user: User
     )
 
     with Timer() as solve_time:
-        status = prob.solve(
+        status = pulp_problem.problem.solve(
             pulp_apis.PULP_CBC_CMD(msg=True, timeLimit=3600, gapRel=0.25)
         )
 
@@ -3438,22 +3489,31 @@ def _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user: User
 
     if state == "Optimal":
         try:
-            number_markers = len(mark_dict)
-            number_submitters = len(submit_dict)
+            number_markers = enum_data.number_markers
+            number_submitters = enum_data.number_submitters
 
             number_populated = 0
+            now = datetime.now()
 
             for j in range(number_submitters):
-                sub: SubmissionRecord = submit_dict[j]
+                sub: SubmissionRecord = enum_data.number_to_submit[j]
+                period: SubmissionPeriodRecord = sub.period
 
                 for i in range(number_markers):
-                    Y[(i, j)].round()
-                    if pulp.value(Y[(i, j)]) == 1:
-                        marker: FacultyData = mark_dict[i]
+                    pulp_problem.Y[(i, j)].round()
+                    if pulp.value(pulp_problem.Y[(i, j)]) == 1:
+                        marker: FacultyData = enum_data.number_to_marker[i]
 
-                        sub.marker_id = marker.id
+                        role = SubmissionRole.build_(
+                            role=SubmissionRole.ROLE_MARKER,
+                            submission_id=sub.id,
+                            user_id=marker.user_id,
+                            weight=1.0 / float(period.number_markers),
+                            creator_id=user.id,
+                            creation_timestamp=now,
+                        )
+                        db.session.add(role)
                         number_populated += 1
-                        break
 
             log_db_commit(
                 f"Stored {number_populated} marker assignments from PuLP solution",
@@ -3955,13 +4015,12 @@ def register_matching_tasks(celery):
             raise Ignore()
 
         with Timer() as create_time:
-            (
-                mark_dict,
-                inverse_mark_dict,
-                submit_dict,
-                inverse_submit_dict,
-                mark_CATS_dict,
-            ) = _enumerate_missing_markers(self, config, task_id, user)
+            enum_data: MarkerPopulationEnumeration = _enumerate_missing_markers(
+                self, config, task_id, user
+            )
+
+            if enum_data is None:
+                raise Ignore()
 
             progress_update(
                 task_id,
@@ -3971,13 +4030,13 @@ def register_matching_tasks(celery):
                 autocommit=True,
             )
 
-            prob, Y = _create_marker_PuLP_problem(
-                mark_dict, submit_dict, mark_CATS_dict, config
+            pulp_problem: MarkerPuLPProblem = _create_marker_PuLP_problem(
+                enum_data, config
             )
 
         print(" -- creation complete in time {t}".format(t=create_time.interval))
 
-        return _execute_marker_problem(task_id, prob, Y, mark_dict, submit_dict, user)
+        return _execute_marker_problem(task_id, pulp_problem, enum_data, user)
 
     @celery.task(bind=True, default_retry_delay=30)
     def remove_markers(self, config_id, user_id, task_id):
@@ -4107,7 +4166,9 @@ def register_matching_tasks(celery):
         )
 
         try:
-            record = db.session.query(MatchingRecord).filter_by(id=id).first()
+            record: MatchingRecord = (
+                db.session.query(MatchingRecord).filter_by(id=id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -4121,10 +4182,23 @@ def register_matching_tasks(celery):
 
         try:
             record.project_id = record.original_project_id
-            record.marker_id = record.original_marker_id
             record.rank = record.selector.project_rank(record.original_project_id)
+            record.alternative = record.original_alternative
+            record.parent_id = record.original_parent_id
+            record.priority = record.original_priority
+
+            # revert roles to the set captured at the time the optimizer ran
+            for role in record.roles.all():
+                db.session.delete(role)
+            db.session.flush()
+
+            for orig_role in record.original_roles.all():
+                orig_role: MatchingRole
+                new_role = MatchingRole(user_id=orig_role.user_id, role=orig_role.role)
+                record.roles.append(new_role)
+
             log_db_commit(
-                f"Reverted matching record #{record.id} to original project and marker assignments",
+                f"Reverted matching record #{record.id} to original project and role assignments",
                 user=None,
                 endpoint=self.name,
             )
@@ -4195,7 +4269,7 @@ def register_matching_tasks(celery):
         wg = group(revert_record.si(r.id) for r in record.records.all())
         seq = chain(wg, revert_finalize.si(id))
 
-        seq.apply_async()
+        return self.replace(seq)
 
     @celery.task(bind=True, default_retry_delay=30)
     def duplicate(self, id, new_name, current_id):
@@ -4217,7 +4291,7 @@ def register_matching_tasks(celery):
                 state="FAILURE",
                 meta={"msg": "Could not load MatchingAttempt record from database"},
             )
-            raise Ignore
+            return {"msg": "Could not load MatchingAttempt record from database"}
 
         # encapsulate the whole duplication process in a single transaction, so the process is as close to
         # atomic as we can make it
@@ -4295,9 +4369,9 @@ def register_matching_tasks(celery):
                     alternative=old_record.alternative,
                     parent_id=old_record.parent_id,
                     priority=old_record.priority,
-                    # TODO: remove marker_id and original_marker_id fields from MatchingRecord (they have now been replaced by MatchingRole instances)
-                    marker_id=old_record.marker_id,
-                    original_marker_id=old_record.marker_id,
+                    original_alternative=old_record.alternative,
+                    original_parent_id=old_record.parent_id,
+                    original_priority=old_record.priority,
                 )
                 db.session.add(new_record)
 

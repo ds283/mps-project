@@ -267,7 +267,6 @@ def add_blank_submitter(
             retired=False,
             owner_id=submitter.id,
             project_id=None,
-            marker_id=None,
             selection_config_id=selecting_config_id,
             matching_record_id=None,
             report_id=None,

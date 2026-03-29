@@ -2553,7 +2553,12 @@ class SubmissionPeriodRecord(db.Model):
         if not self.config.uses_marker:
             return True
 
-        return self.submissions.filter_by(marker_id=None).first() is None
+        for sub in self.submissions:
+            if sub.project is None:
+                continue
+            if len(sub.marker_roles) < self.number_markers:
+                return False
+        return True
 
     @property
     def all_supervisors_assigned(self):

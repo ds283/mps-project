@@ -1203,19 +1203,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # 'roles' member created by back-reference from SubmissionRole
 
-    # TODO: Remove the fields below
-
-    # OLD FIELDS, TO BE REMOVED
-
-    # assigned marker
-    marker_id = db.Column(db.Integer(), db.ForeignKey("faculty_data.id"), default=None)
-    marker = db.relationship(
-        "FacultyData",
-        foreign_keys=[marker_id],
-        uselist=False,
-        backref=db.backref("marking_records", lazy="dynamic"),
-    )
-
     # faculty acknowledge
     acknowledge_feedback = db.Column(db.Boolean())
 

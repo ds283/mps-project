@@ -357,7 +357,7 @@ def validate_submission_marker(record):
     :param record:
     :return:
     """
-    if record.marker_id == current_user.id:
+    if any(role.user_id == current_user.id for role in record.get_roles("marker")):
         return True
 
     flash("Only markers can perform this operation", "error")

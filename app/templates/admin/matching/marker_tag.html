@@ -22,7 +22,7 @@
                         {% set disabled = false %}
                         {% if fac.id == marker.id %}{% set disabled = true %}{% endif %}
                         <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}"
-                           {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=fac.id) }}"{% endif %}>
+                           {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=fac.id, old_mid=marker.id) }}"{% endif %}>
                             {{ fac.user.name }}
                         </a>
                     {% endfor %}
@@ -56,7 +56,7 @@
                 {% set assessor_list = r.project.assessor_list %}
                 {% for marker in assessor_list %}
                     {% set disabled = false %}
-                    {% if marker.id == r.marker_id %}{% set disabled = true %}{% endif %}
+                    {% if marker.id in r.marker_role_ids %}{% set disabled = true %}{% endif %}
                     <a class="dropdown-item d-flex gap-2 small {% if disabled %}disabled{% endif %}"
                        {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=marker.id) }}"{% endif %}>
                         {{ marker.user.name }}

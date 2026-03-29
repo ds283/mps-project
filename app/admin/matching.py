@@ -1596,6 +1596,9 @@ def insert_matching_record(src_id, attempt_id):
             alternative=source_record.alternative,
             parent_id=source_record.parent_id,
             priority=source_record.priority,
+            original_alternative=source_record.alternative,
+            original_parent_id=source_record.parent_id,
+            original_priority=source_record.priority,
         )
         db.session.add(new_record)
         db.session.flush()
@@ -2401,6 +2404,9 @@ def reassign_match_project(id, pid):
             if adjust:
                 record.project_id = project.id
                 record.rank = record.selector.project_rank(project.id)
+                record.alternative = False
+                record.parent_id = None
+                record.priority = None
 
                 record.matching_attempt.last_edit_id = current_user.id
                 record.matching_attempt.last_edit_timestamp = datetime.now()
@@ -2471,7 +2477,26 @@ def reassign_match_marker(id, mid):
         )
 
     elif count == 1:
-        record.marker_id = mid
+        # old_mid identifies the specific marker role being replaced (for multi-marker records);
+        # if absent, all existing ROLE_MARKER roles are replaced
+        old_mid = request.args.get("old_mid", None, type=int)
+
+        if old_mid is not None:
+            to_remove = record.roles.filter(
+                MatchingRole.user_id == old_mid,
+                MatchingRole.role == MatchingRole.ROLE_MARKER,
+            ).all()
+        else:
+            to_remove = record.roles.filter(
+                MatchingRole.role == MatchingRole.ROLE_MARKER,
+            ).all()
+
+        for role in to_remove:
+            db.session.delete(role)
+        db.session.flush()
+
+        new_role = MatchingRole(user_id=mid, role=MatchingRole.ROLE_MARKER)
+        record.roles.append(new_role)
 
         record.matching_attempt.last_edit_id = current_user.id
         record.matching_attempt.last_edit_timestamp = datetime.now()

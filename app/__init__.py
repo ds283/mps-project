@@ -136,7 +136,7 @@ def configure_logging(app: Flask):
     from logging import DEBUG, INFO, Formatter, basicConfig
     from logging.handlers import RotatingFileHandler
 
-    basicConfig(level=DEBUG)
+    basicConfig(level=INFO)
 
     log_file = app.config.get("LOG_FILE")
     if log_file is not None:

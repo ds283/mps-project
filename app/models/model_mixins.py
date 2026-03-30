@@ -917,30 +917,32 @@ class AssetDownloadDataMixin:
     target_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
 
-def AssetMixinFactory(acl_name, acr_name):
-    class AssetMixin:
-        # timestamp
-        timestamp = db.Column(db.DateTime(), index=True)
+class BaseAssetMixin:
+    # timestamp
+    timestamp = db.Column(db.DateTime(), index=True)
 
-        # unique filename
-        unique_name = db.Column(
-            db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"),
-            nullable=False,
-            unique=True,
-        )
+    # unique filename
+    unique_name = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"),
+        nullable=False,
+        unique=True,
+    )
 
-        # raw filesize (not compressed, not encrypted)
-        filesize = db.Column(db.Integer())
+    # raw filesize (not compressed, not encrypted)
+    filesize = db.Column(db.Integer())
 
-        # has this asset been marked as lost by a maintenance task?
-        lost = db.Column(db.Boolean(), nullable=False, default=False)
+    # has this asset been marked as lost by a maintenance task?
+    lost = db.Column(db.Boolean(), nullable=False, default=False)
 
-        # has this asset been marked as unattached by a maintenance task?
-        unattached = db.Column(db.Boolean(), nullable=False, default=False)
+    # has this asset been marked as unattached by a maintenance task?
+    unattached = db.Column(db.Boolean(), nullable=False, default=False)
 
-        # bucket associated with this asset
-        bucket = db.Column(db.Integer(), nullable=False, default=buckets.ASSETS_BUCKET)
+    # bucket associated with this asset
+    bucket = db.Column(db.Integer(), nullable=False, default=buckets.ASSETS_BUCKET)
 
+
+def InstrumentedAssetMixinFactory(acl_name, acr_name):
+    class AssetMixin(BaseAssetMixin):
         # optional comment
         comment = db.Column(db.Text())
 

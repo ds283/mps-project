@@ -11,6 +11,8 @@
 from datetime import datetime
 from typing import Optional, Union
 
+from sqlalchemy.ext.declarative import declared_attr
+
 from ..database import db
 from ..shared.sqlalchemy import get_count
 from .associations import (
@@ -22,15 +24,80 @@ from .associations import (
     temporary_acr,
 )
 from .defaults import DEFAULT_STRING_LENGTH
-from .model_mixins import AssetDownloadDataMixin, AssetExpiryMixin, AssetMixinFactory
+from .model_mixins import (
+    AssetDownloadDataMixin,
+    AssetExpiryMixin,
+    BaseAssetMixin,
+    InstrumentedAssetMixinFactory,
+)
 from .users import User
+
+
+class TemporaryAsset(
+    db.Model,
+    AssetExpiryMixin,
+    InstrumentedAssetMixinFactory(temporary_acl, temporary_acr),
+):
+    """
+    Track temporary uploaded assets
+    """
+
+    __tablename__ = "temporary_assets"
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+    @classmethod
+    def get_type(cls):
+        return "TemporaryAsset"
+
+
+class ThumbnailAsset(
+    db.Model,
+    BaseAssetMixin,
+):
+    """
+    Track an asset that is a thumbnail of a SubmittedAsset or GeneratedAsset
+    """
+
+    __tablename__ = "thumbnail_assets"
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+
+class AssetThumbnailMixin:
+    # (optional) thumbnail asset; if None, no thumbnail exists
+    thumbnail_id = db.Column(
+        db.Integer(), db.ForeignKey("thumbnail_assets.id"), default=None
+    )
+
+    @declared_attr
+    def thumbnail(cls):
+        return db.relationship(
+            "ThumbnailAsset",
+            foreign_keys=[cls.thumbnail_id],
+        )
+
+    # thumbnail error state
+    # set by background task that generates the thumbnails; if an error condition exists, then this prevents repeated attempts to generate the
+    # thumbnail
+    thumbnail_error = db.Column(db.Boolean(), default=False, nullable=False)
+
+    # thumbnail error message
+    thumbnail_error_message = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")
+    )
+
+    # could consider setting an explicit timestamp, but that is really captured by the ThumbnailAsset timestamp
 
 
 class GeneratedAsset(
     db.Model,
     AssetExpiryMixin,
     AssetDownloadDataMixin,
-    AssetMixinFactory(generated_acl, generated_acr),
+    InstrumentedAssetMixinFactory(generated_acl, generated_acr),
+    AssetThumbnailMixin,
 ):
     """
     Track generated assets
@@ -77,28 +144,12 @@ class GeneratedAsset(
         return "generated"
 
 
-class TemporaryAsset(
-    db.Model, AssetExpiryMixin, AssetMixinFactory(temporary_acl, temporary_acr)
-):
-    """
-    Track temporary uploaded assets
-    """
-
-    __tablename__ = "temporary_assets"
-
-    # primary key id
-    id = db.Column(db.Integer(), primary_key=True)
-
-    @classmethod
-    def get_type(cls):
-        return "TemporaryAsset"
-
-
 class SubmittedAsset(
     db.Model,
     AssetExpiryMixin,
     AssetDownloadDataMixin,
-    AssetMixinFactory(submitted_acl, submitted_acr),
+    InstrumentedAssetMixinFactory(submitted_acl, submitted_acr),
+    AssetThumbnailMixin,
 ):
     """
     Track submitted assets: these may be uploaded project reports, but they can be other things too,
@@ -258,10 +309,10 @@ class DownloadCentreItem(db.Model):
 
     @classmethod
     def _build(
-            cls,
-            asset: GeneratedAsset,
-            user: Union[int, User],
-            description: Optional[str] = None,
+        cls,
+        asset: GeneratedAsset,
+        user: Union[int, User],
+        description: Optional[str] = None,
     ):
         if asset is None:
             raise RuntimeError(f"asset must not be None in DownloadCentreItem._build")

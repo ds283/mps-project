@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, get_template_attribute, url_for
+from flask import get_template_attribute, render_template_string, url_for
 
 import app.shared.cloud_object_store.bucket_types as buckets
 
@@ -59,6 +59,21 @@ _target = """
         {% if unattached %}
             <span class="badge bg-danger"><i class="fas fa-skull-crossbones"></i> Unattached</span>
         {% endif %}
+    </div>
+    {% if thumbnail_error %}
+        <div class="badge bg-danger mb-1 d-block"
+              tabindex="0"
+              data-bs-toggle="popover"
+              data-bs-placement="right"
+              data-bs-title="Thumbnail error"
+              data-bs-content="{{ thumbnail_error_message|e }}">
+            <i class="fas fa-exclamation-triangle fa-fw"></i> Thumbnail error
+        </div>
+    {% elif (not thumbnail_url) and asset_type in ('GeneratedAsset', 'SubmittedAsset') %}
+        <div class="badge bg-secondary mb-1 d-block">
+            <i class="fas fa-clock fa-fw"></i> Thumbnails pending
+        </div>
+    {% endif %}
     </div>
 </div>
 """
@@ -119,23 +134,16 @@ _bucket = """
 
 # language=jinja2
 _mimetype_with_thumbnail = """
+<div>
+    {% if mimetype %}
+        {{ mimetype }}
+    {% else %}
+        <span class="text-muted fst-italic">Unknown</span>
+    {% endif %}
+</div>
 {% if thumbnail_url %}
-    <img src="{{ thumbnail_url }}" class="img-thumbnail mb-1 d-block" style="max-width:60px; max-height:60px;" alt="Preview">
-{% elif thumbnail_error %}
-    <span class="badge bg-danger mb-1 d-block"
-          tabindex="0"
-          data-bs-toggle="popover"
-          data-bs-placement="right"
-          data-bs-title="Thumbnail error"
-          data-bs-content="{{ thumbnail_error_message|e }}">
-        <i class="fas fa-exclamation-triangle fa-fw"></i> Error
-    </span>
-{% elif asset_type in ('GeneratedAsset', 'SubmittedAsset') %}
-    <span class="badge bg-secondary mb-1 d-block">
-        <i class="fas fa-clock fa-fw"></i> Pending
-    </span>
+    <div class="mt-2"><img src="{{ thumbnail_url }}" class="img-thumbnail mb-1 d-block" style="max-width:60px; max-height:60px;" alt="Preview"></div>
 {% endif %}
-{{ mimetype if mimetype else '<span class="text-muted fst-italic">Unknown</span>' }}
 """
 
 # language=jinja2
@@ -264,14 +272,15 @@ def _build_row(asset, asset_type: str, simple_label, truncate):
         number_downloads=number_downloads,
         asset=asset,
         truncate=truncate,
+        thumbnail_error=thumbnail_error,
+        thumbnail_error_message=thumbnail_error_message,
+        thumbnail_url=thumbnail_url,
     )
     mimetype_html = render_template_string(
         _mimetype_with_thumbnail,
         asset_type=asset_type,
         mimetype=mimetype,
         thumbnail_url=thumbnail_url,
-        thumbnail_error=thumbnail_error,
-        thumbnail_error_message=thumbnail_error_message,
     )
     license_html = render_template_string(
         _license, license=license_obj, simple_label=simple_label

@@ -190,6 +190,28 @@ def create_app():
             release=site_revision,
         )
 
+    from logging.config import dictConfig
+
+    print("-- configurating loglevel=DEBUG")
+    dictConfig(
+        {
+            "version": 1,
+            "formatters": {
+                "default": {
+                    "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
+                }
+            },
+            "handlers": {
+                "wsgi": {
+                    "class": "logging.StreamHandler",
+                    "stream": "ext://flask.logging.wsgi_errors_stream",
+                    "formatter": "default",
+                }
+            },
+            "root": {"level": "DEBUG", "handlers": ["wsgi"]},
+        }
+    )
+
     print(f'-- using instance folder "{instance_folder}"', file=stderr)
     app = Flask(
         __name__, instance_relative_config=True, instance_path=str(instance_folder)
@@ -455,7 +477,11 @@ def create_app():
 
         user.last_active = datetime.now()
         try:
-            log_db_commit("Record last-active timestamp on user login", user=user, endpoint="login")
+            log_db_commit(
+                "Record last-active timestamp on user login",
+                user=user,
+                endpoint="login",
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 

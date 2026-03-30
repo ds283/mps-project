@@ -133,10 +133,10 @@ def read_configuration(app: Flask, config_name: str):
 
 
 def configure_logging(app: Flask):
-    from logging import INFO, Formatter, basicConfig
+    from logging import DEBUG, INFO, Formatter, basicConfig
     from logging.handlers import RotatingFileHandler
 
-    basicConfig(level=INFO)
+    basicConfig(level=DEBUG)
 
     log_file = app.config.get("LOG_FILE")
     if log_file is not None:
@@ -189,28 +189,6 @@ def create_app():
             traces_sample_rate=sentry_trace,
             release=site_revision,
         )
-
-    from logging.config import dictConfig
-
-    print("-- configurating loglevel=DEBUG")
-    dictConfig(
-        {
-            "version": 1,
-            "formatters": {
-                "default": {
-                    "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
-                }
-            },
-            "handlers": {
-                "wsgi": {
-                    "class": "logging.StreamHandler",
-                    "stream": "ext://flask.logging.wsgi_errors_stream",
-                    "formatter": "default",
-                }
-            },
-            "root": {"level": "DEBUG", "handlers": ["wsgi"]},
-        }
-    )
 
     print(f'-- using instance folder "{instance_folder}"', file=stderr)
     app = Flask(

@@ -30,6 +30,10 @@ _name = """
     {% elif item.asset.comment %}
         <div class="text-muted small mt-1">{{ item.asset.comment }}</div>
     {% endif %}
+    {% if item.asset.small_thumbnail and not item.asset.small_thumbnail.lost %}
+        <img src="{{ url_for('documents.serve_thumbnail', asset_type='GeneratedAsset', asset_id=item.asset.id, size='small') }}"
+             class="img-thumbnail mt-2" style="max-width:60px; max-height:60px;" alt="Preview">
+    {% endif %}
 {% else %}
     <div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Asset missing</div>
 {% endif %}

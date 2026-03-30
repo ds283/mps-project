@@ -124,13 +124,25 @@ by working within the "migration" service defined by the Docker docker-compose.y
 the normal `flask db migrate -m "description"` command to generate a migration, and `flask db upgrade` to perform
 an upgrade, will work.
 
-## Coding Conventions
+## Implementation policies
 
-### Database instrumentation
-
-Changes to the database, apart from periodic maintenance tasks, are instrumented using the log_db_commit()
-function defined in `app/shared/workflow_logging.py`. When making changes to any function that calls log_db_commit(),
-update the human-readable summary of the transaction if needed.
+- Inspector views that are lists should use a Datatables based front end backed by an AJAX endpoint. Implement an AJAX
+  row formatted in @app/ajax/convneor.
+- Use the ServerSideSQLHandler pattern where possible to provide sorting, searching, and pagination in the AJAX
+  endpoints. Use ServerSideInMemoryHandler where it is not possible to build a single SQL query that will satisfy
+  all requirements.
+- Do not use separate "display" and "sortstring" fields in Datatables rows when ServerSideSQLHandler is used.
+  These do not format correctly and are not needed. ServerSideSQLHandler will handle and sorting required.
+- Use the select2() library to render QuerySelectField and QueryMultipleSelectField fields. Use the
+  `select2-small` value for the `selectionCssClasss` and `dropdownCssClass` properties.
+- Changes to the database are instrumented using the log_db_commit() function defined in
+  `app/shared/workflow_logging.py`. These are intended to log user-initiated workflow events, or actions taken
+  by background tasks when an audit log may be needed. Exclude periodic maintenance tasks or low-level activity
+  that would generate a lot of noise.
+- Access to object buckets goes through the ObjectStore abstraction. This is defined in
+  @app/shared/cloud-object-store/base.py. Interactions with the bucket should STRICTLY use only the
+  methods defined in this class.
+- When defining add/edit WTForms, share as much configuration as possible using mixins
 
 ### SQLAlchemty string columns
 

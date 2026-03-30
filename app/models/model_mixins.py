@@ -914,9 +914,7 @@ class AssetDownloadDataMixin:
     )
 
     # target filename
-
-
-target_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
+    target_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
 
 class BaseAssetMixin:
@@ -1030,82 +1028,28 @@ def InstrumentedAssetMixinFactory(acl_name, acr_name):
 
             return role_obj
 
-        def _debug_asset_info(self):
-            import app.shared.cloud_object_store.bucket_types as _buckets
-
-            _BUCKET_NAMES = {
-                _buckets.ASSETS_BUCKET: "assets",
-                _buckets.BACKUP_BUCKET: "backup",
-                _buckets.TELEMETRY_BUCKET: "telemetry",
-                _buckets.FEEDBACK_BUCKET: "feedback",
-                _buckets.PROJECT_BUCKET: "project",
-                _buckets.SUPERVISION_ASSETS_BUCKET: "supervision_assets",
-                _buckets.THUMBNAILS_BUCKET: "thumbnails",
-                _buckets.INITDB_BUCKET: "initdb",
-            }
-
-            target = getattr(self, "target_name", None) or "<no target_name>"
-            bucket_id = getattr(self, "bucket", None)
-            bucket = _BUCKET_NAMES.get(bucket_id, f"unknown({bucket_id})")
-            acl_users = [u.name for u in self.access_control_list]
-            acl_roles = [r.name for r in self.access_control_roles]
-            return target, bucket, acl_users, acl_roles
-
-        def _debug_user_info(self, user_):
-            user_roles = [r.name for r in user_.roles]
-            mask_roles = [r.name for r in user_.mask_roles]
-            return user_roles, mask_roles
-
         def has_access(self, user):
             from flask import current_app
 
             user_ = self._get_user(user)
-            target, bucket, acl_users, acl_roles = self._debug_asset_info()
-            user_roles, mask_roles = self._debug_user_info(user_)
-
-            current_app.logger.debug(
-                f"has_access: asset={type(self).__name__} target_name={target!r} bucket={bucket} "
-                f"acl_users={acl_users} acl_roles={acl_roles} "
-                f"checking user={user_.name!r} user_roles={user_roles} mask_roles={mask_roles}"
-            )
 
             if self.has_role_access(user_):
-                current_app.logger.debug(f"has_access: GRANTED via role for user={user_.name!r}")
                 return True
 
-            acl_result = self.in_user_acl(user_)
-            current_app.logger.debug(
-                f"has_access: user ACL check={acl_result} -> {'GRANTED' if acl_result else 'DENIED'} for user={user_.name!r}"
-            )
-            return acl_result
+            return self.in_user_acl(user_)
 
         def has_role_access(self, user):
-            from flask import current_app
-
             user_ = self._get_user(user)
-            target, bucket, acl_users, acl_roles = self._debug_asset_info()
-            user_roles, mask_roles = self._debug_user_info(user_)
-
-            current_app.logger.debug(
-                f"has_role_access: asset={type(self).__name__} target_name={target!r} bucket={bucket} "
-                f"acl_roles={acl_roles} "
-                f"checking user={user_.name!r} user_roles={user_roles} mask_roles={mask_roles}"
-            )
 
             # admin and root users always have access
             if user_.has_role("root") or user_.has_role("admin"):
-                current_app.logger.debug(f"has_role_access: GRANTED (root/admin) for user={user_.name!r}")
                 return True
 
             # test whether the current user has any other roles in access_control_roles
             for role in self.access_control_roles:
                 if user_.has_role(role):
-                    current_app.logger.debug(
-                        f"has_role_access: GRANTED via role={role.name!r} for user={user_.name!r}"
-                    )
                     return True
 
-            current_app.logger.debug(f"has_role_access: DENIED for user={user_.name!r}")
             return False
 
         def get_eligible_roles(self, user):

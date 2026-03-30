@@ -346,7 +346,7 @@ def upload_submitter_report(sid):
     config: ProjectClassConfig = record.owner.config
     pclass: ProjectClass = config.project_class
     if not is_uploadable(
-            record, message=True, allow_student=False, allow_faculty=False
+        record, message=True, allow_student=False, allow_faculty=False
     ):
         return redirect(redirect_url())
 
@@ -496,7 +496,7 @@ def pull_report_from_canvas(rid):
 
     # check is convenor for the project's class, or has suitable admin/root privileges
     if not is_uploadable(
-            record, message=True, allow_student=False, allow_faculty=False
+        record, message=True, allow_student=False, allow_faculty=False
     ):
         return redirect(redirect_url())
 
@@ -1408,8 +1408,6 @@ def serve_thumbnail(asset_type, asset_id, size):
     if not parent.has_access(current_user):
         abort(403)
 
-    print(f'-- serve_thumbnail() access GRANTED, asset_type={asset_type}, size={size}')
-
     if size == "small":
         thumbnail: ThumbnailAsset = parent.small_thumbnail
     elif size == "medium":
@@ -1430,11 +1428,8 @@ def serve_thumbnail(asset_type, asset_id, size):
         audit_data=f"documents.serve_thumbnail ({asset_type} #{asset_id}, {size})",
     )
 
-    print(f'-- thumbnail URL = "{url}"')
-
     r = http_requests.get(url, stream=True)
     if not r.ok:
-        print(f'-- HTTP request to {url} failed with error code {r.status_code}')
         abort(r.status_code)
 
     content_type = thumbnail.mimetype or "image/jpeg"

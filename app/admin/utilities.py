@@ -365,16 +365,9 @@ def download_generated_asset(asset_id):
 
     filename = request.args.get("filename", None)
 
-    BUCKET_MAP = {
-        buckets.ASSETS_BUCKET: current_app.config.get("OBJECT_STORAGE_ASSETS"),
-        buckets.BACKUP_BUCKET: current_app.config.get("OBJECT_STORAGE_BACKUP"),
-        buckets.INITDB_BUCKET: current_app.config.get("OBJECT_STORAGE_INITDB"),
-        buckets.TELEMETRY_BUCKET: current_app.config.get("OBJECT_STORAGE_TELEMETRY"),
-        buckets.FEEDBACK_BUCKET: current_app.config.get("OBJECT_STORAGE_FEEDBACK"),
-        buckets.PROJECT_BUCKET: current_app.config.get("OBJECT_STORAGE_PROJECT"),
-    }
+    bucket_map = bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
 
-    if asset.bucket not in BUCKET_MAP:
+    if asset.bucket not in bucket_map:
         flash(
             f"This object is stored in a bucket (type={asset.bucket}) which is not part of the configured storage. "
             f"Please contact a system administrator.",
@@ -411,7 +404,7 @@ def download_generated_asset(asset_id):
         )
         return redirect(redirect_url())
 
-    object_store = BUCKET_MAP[asset.bucket]
+    object_store = bucket_map[asset.bucket]
     storage = AssetCloudAdapter(
         asset,
         object_store,
@@ -468,16 +461,9 @@ def download_submitted_asset(asset_id):
 
     filename = request.args.get("filename", None)
 
-    BUCKET_MAP = {
-        buckets.ASSETS_BUCKET: current_app.config.get("OBJECT_STORAGE_ASSETS"),
-        buckets.BACKUP_BUCKET: current_app.config.get("OBJECT_STORAGE_BACKUP"),
-        buckets.INITDB_BUCKET: current_app.config.get("OBJECT_STORAGE_INITDB"),
-        buckets.TELEMETRY_BUCKET: current_app.config.get("OBJECT_STORAGE_TELEMETRY"),
-        buckets.FEEDBACK_BUCKET: current_app.config.get("OBJECT_STORAGE_FEEDBACK"),
-        buckets.PROJECT_BUCKET: current_app.config.get("OBJECT_STORAGE_PROJECT"),
-    }
+    bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
 
-    if asset.bucket not in BUCKET_MAP:
+    if asset.bucket not in bucket_map:
         flash(
             f"This object is stored in a bucket (type={asset.bucket}) which is not part of the configured storage. "
             f"Please contact a system administrator.",
@@ -505,7 +491,7 @@ def download_submitted_asset(asset_id):
         )
         return redirect(redirect_url())
 
-    object_store = BUCKET_MAP[asset.bucket]
+    object_store = bucket_map[asset.bucket]
     storage = AssetCloudAdapter(
         asset,
         current_app.config["OBJECT_STORAGE_ASSETS"],

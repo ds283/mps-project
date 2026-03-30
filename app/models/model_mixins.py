@@ -1029,23 +1029,23 @@ def InstrumentedAssetMixinFactory(acl_name, acr_name):
             return role_obj
 
         def has_access(self, user):
-            user_obj = self._get_user(user)
+            user_ = self._get_user(user)
 
-            if self.has_role_access(user_obj):
+            if self.has_role_access(user_):
                 return True
 
-            return self.in_user_acl(user_obj)
+            return self.in_user_acl(user_)
 
         def has_role_access(self, user):
-            user_obj = self._get_user(user)
+            user_ = self._get_user(user)
 
             # admin and root users always have access
-            if user_obj.has_role("root") or user_obj.has_role("admin"):
+            if user_.has_role("root") or user_.has_role("admin"):
                 return True
 
-            # test whether current user has any other roles in access_control_roles
+            # test whether the current user has any other roles in access_control_roles
             for role in self.access_control_roles:
-                if user_obj.has_role(role):
+                if user_.has_role(role):
                     return True
 
             return False
@@ -1053,7 +1053,7 @@ def InstrumentedAssetMixinFactory(acl_name, acr_name):
         def get_eligible_roles(self, user):
             from .users import Role
 
-            user_obj = self._get_user(user)
+            user_ = self._get_user(user)
 
             role_list = []
 
@@ -1064,11 +1064,11 @@ def InstrumentedAssetMixinFactory(acl_name, acr_name):
             )
 
             for r in key_roles:
-                if user_obj.has_role(r) and r not in role_list:
+                if user_.has_role(r) and r not in role_list:
                     role_list.append(r)
 
             for r in self.access_control_roles:
-                if user_obj.has_role(r) and r not in role_list:
+                if user_.has_role(r) and r not in role_list:
                     role_list.append(r)
 
             return role_list
@@ -1084,30 +1084,30 @@ def InstrumentedAssetMixinFactory(acl_name, acr_name):
             return get_count(self.access_control_roles.filter_by(id=role_id)) > 0
 
         def grant_user(self, user):
-            user_obj = self._get_user(user)
+            user_ = self._get_user(user)
 
-            if user_obj is not None and user_obj not in self.access_control_list:
-                self.access_control_list.append(user_obj)
+            if user_ is not None and user_ not in self.access_control_list:
+                self.access_control_list.append(user_)
 
         def revoke_user(self, user):
-            user_obj = self._get_user(user)
+            user_ = self._get_user(user)
 
-            if user_obj is not None:
-                while user_obj in self.access_control_list:
-                    self.access_control_list.remove(user_obj)
+            if user_ is not None:
+                while user_ in self.access_control_list:
+                    self.access_control_list.remove(user_)
 
         def grant_role(self, role):
-            role_obj = self._get_role(role)
+            role_ = self._get_role(role)
 
-            if role_obj is not None and role_obj not in self.access_control_roles:
-                self.access_control_roles.append(role_obj)
+            if role_ is not None and role_ not in self.access_control_roles:
+                self.access_control_roles.append(role_)
 
         def revoke_role(self, role):
-            role_obj = self._get_role(role)
+            role_ = self._get_role(role)
 
-            if role_obj is not None:
-                while role_obj in self.access_control_roles:
-                    self.access_control_roles.remove(role_obj)
+            if role_ is not None:
+                while role_ in self.access_control_roles:
+                    self.access_control_roles.remove(role_)
 
         def grant_roles(self, roles):
             if not isinstance(roles, Iterable):

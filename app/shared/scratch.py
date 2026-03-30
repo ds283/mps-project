@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import shutil
 from pathlib import Path
 from typing import Iterable, Tuple, Union
 from uuid import uuid4
@@ -29,6 +30,30 @@ class ScratchFileManager:
 
     def __exit__(self, t, v, tb):
         self._path.unlink(missing_ok=True)
+
+    @property
+    def path(self) -> Path:
+        return self._path
+
+
+class ScratchFolderManager:
+    """
+    Context manager for a temporary directory inside the app's scratch folder.
+    The directory and all its contents are deleted when the context exits.
+    Intended as a cache directory for tools such as preview-generator that
+    need a writable folder but must not accumulate files on the container filesystem.
+    """
+
+    def __init__(self):
+        scratch = Path(current_app.config.get("SCRATCH_FOLDER"))
+        self._path: Path = scratch / str(uuid4())
+        self._path.mkdir(parents=True, exist_ok=True)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, tb):
+        shutil.rmtree(self._path, ignore_errors=True)
 
     @property
     def path(self) -> Path:

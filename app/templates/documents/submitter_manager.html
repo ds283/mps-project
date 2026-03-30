@@ -13,6 +13,10 @@
     {% set has_access = asset.has_access(current_user.id) %}
     <tr>
         <td style="word-wrap: break-word;">
+            {% if asset.small_thumbnail and not asset.small_thumbnail.lost %}
+                <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
+                     class="img-thumbnail mb-1" style="max-width:80px; max-height:80px;" alt="Preview">
+            {% endif %}
             <div>
                 {% if label %}
                     <div class="d-flex w-100 align-items-start justify-content-start">

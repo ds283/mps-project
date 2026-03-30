@@ -63,6 +63,7 @@ from ..shared.timer import Timer
 from ..shared.utils import get_current_year
 from ..shared.workflow_logging import log_db_commit
 from ..task_queue import progress_update
+from .thumbnails import dispatch_thumbnail_task
 
 FALLBACK_DEFAULT_SUPERVISOR_CATS = 35
 FALLBACK_DEFAULT_MARKER_CATS = 3
@@ -3654,6 +3655,8 @@ def _write_LP_file(record: MatchingAttempt, prob, user):
         db.session.add(asset)
         db.session.flush()
 
+        dispatch_thumbnail_task(asset)
+
         # add this asset to the user's download centre
         download_item: DownloadCentreItem = DownloadCentreItem._build(
             asset=asset,
@@ -4419,6 +4422,8 @@ def register_matching_tasks(celery):
                     db.session.add(new_asset)
                     db.session.flush()
 
+                    dispatch_thumbnail_task(new_asset)
+
                     download_item: DownloadCentreItem = DownloadCentreItem._build(
                         asset=new_asset,
                         user=current_id,
@@ -4974,6 +4979,8 @@ def register_matching_tasks(celery):
             asset.grant_user(user)
             db.session.add(asset)
             db.session.flush()
+
+            dispatch_thumbnail_task(asset)
 
             # add this asset to the user's download centre
             download_item: DownloadCentreItem = DownloadCentreItem._build(

@@ -54,9 +54,10 @@ from ..shared.asset_tools import (
 )
 from ..shared.scratch import ScratchFileManager, ScratchGroupManager
 from ..shared.security import validate_nonce
-from ..task_queue import register_task
 from ..shared.workflow_logging import log_db_commit
+from ..task_queue import register_task
 from .shared.utils import report_error, report_info
+from .thumbnails import dispatch_thumbnail_task
 
 AssetDictionary = Dict[str, AssetCloudScratchContextManager]
 
@@ -64,8 +65,14 @@ AssetDictionary = Dict[str, AssetCloudScratchContextManager]
 def register_marking_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def send_marking_emails(
-            self, record_id, cc_convenor, max_attachment, test_email, deadline, convenor_id,
-            marking_template_id=None,
+        self,
+        record_id,
+        cc_convenor,
+        max_attachment,
+        test_email,
+        deadline,
+        convenor_id,
+        marking_template_id=None,
     ):
         try:
             record: SubmissionPeriodRecord = (
@@ -1046,6 +1053,8 @@ def register_marking_tasks(celery):
                         "SQLAlchemyError exception", exc_info=e
                     )
                     raise self.retry()
+
+                dispatch_thumbnail_task(new_asset)
 
                 new_report = FeedbackReport(
                     asset=new_asset,

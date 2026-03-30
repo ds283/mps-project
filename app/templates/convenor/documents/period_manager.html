@@ -50,6 +50,10 @@
             <span id="ranking" class="badge bg-primary">#{{ attachment.rank_order }}</span>
         </td>
         <td>
+            {% if asset.small_thumbnail and not asset.small_thumbnail.lost %}
+                <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
+                     class="img-thumbnail mb-1" style="max-width:80px; max-height:80px;" alt="Preview">
+            {% endif %}
             <div>
                 {% if asset.target_name %}
                     <strong>{{ asset.target_name }}</strong>

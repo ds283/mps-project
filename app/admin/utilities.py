@@ -63,11 +63,13 @@ from ..models import (
     TemporaryAsset,
     User,
 )
+from ..models.assets import ThumbnailAsset
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
     create_new_backup_labels,
 )
 from ..shared.context.global_context import render_template_context
+from ..shared.email_templates import clone_email_template
 from ..shared.forms.queries import ScheduleSessionQuery
 from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count
@@ -75,9 +77,12 @@ from ..shared.utils import (
     home_dashboard,
     redirect_url,
 )
-from ..shared.email_templates import clone_email_template
 from ..shared.workflow_logging import log_db_commit
 from ..task_queue import register_task
+from ..tasks.thumbnails import (
+    dispatch_force_regenerate_thumbnail_task,
+    dispatch_thumbnail_task,
+)
 from ..tools import ServerSideInMemoryHandler, ServerSideSQLHandler
 from ..tools.ServerSideProcessing import FakeQuery
 from . import admin
@@ -393,7 +398,9 @@ def download_generated_asset(asset_id):
 
     try:
         db.session.add(record)
-        log_db_commit(f"Logged download of generated asset #{asset_id}", user=current_user)
+        log_db_commit(
+            f"Logged download of generated asset #{asset_id}", user=current_user
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -485,7 +492,9 @@ def download_submitted_asset(asset_id):
 
     try:
         db.session.add(record)
-        log_db_commit(f"Logged download of submitted asset #{asset_id}", user=current_user)
+        log_db_commit(
+            f"Logged download of submitted asset #{asset_id}", user=current_user
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -612,7 +621,10 @@ def edit_backup(backup_id):
             backup.unlock_date = form.unlock_date.data
 
         try:
-            log_db_commit(f"Saved labels and settings for backup record #{backup_id}", user=current_user)
+            log_db_commit(
+                f"Saved labels and settings for backup record #{backup_id}",
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemy exception", exc_info=e)
@@ -692,7 +704,10 @@ def upload_schedule(schedule_id):
 
                     try:
                         db.session.add(asset)
-                        log_db_commit(f"Uploaded offline schedule solution for schedule #{schedule_id}", user=current_user)
+                        log_db_commit(
+                            f"Uploaded offline schedule solution for schedule #{schedule_id}",
+                            user=current_user,
+                        )
                     except SQLAlchemyError as e:
                         db.session.rollback()
                         flash(
@@ -794,7 +809,10 @@ def upload_match(match_id):
 
                     try:
                         db.session.add(asset)
-                        log_db_commit(f"Uploaded offline match solution for match #{match_id}", user=current_user)
+                        log_db_commit(
+                            f"Uploaded offline match solution for match #{match_id}",
+                            user=current_user,
+                        )
                     except SQLAlchemyError as e:
                         db.session.rollback()
                         flash(
@@ -1065,7 +1083,13 @@ def inspect_assets():
     View to inspect all GeneratedAsset, TemporaryAsset, and SubmittedAsset records
     :return:
     """
-    return render_template_context("admin/inspect_assets.html")
+    has_thumbnail_errors = (
+        db.session.query(GeneratedAsset).filter_by(thumbnail_error=True).count()
+        + db.session.query(SubmittedAsset).filter_by(thumbnail_error=True).count()
+    ) > 0
+    return render_template_context(
+        "admin/inspect_assets.html", has_thumbnail_errors=has_thumbnail_errors
+    )
 
 
 @admin.route("/assets_ajax", methods=["POST"])
@@ -1156,7 +1180,10 @@ def asset_remove_expiry(asset_type, asset_id):
     asset.expiry = None
 
     try:
-        log_db_commit(f"Removed expiry date from {asset_type} asset #{asset_id}", user=current_user)
+        log_db_commit(
+            f"Removed expiry date from {asset_type} asset #{asset_id}",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1193,7 +1220,9 @@ def asset_add_expiry(asset_type, asset_id):
     asset.expiry = datetime.now() + timedelta(days=7)
 
     try:
-        log_db_commit(f"Added expiry date to {asset_type} asset #{asset_id}", user=current_user)
+        log_db_commit(
+            f"Added expiry date to {asset_type} asset #{asset_id}", user=current_user
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1202,6 +1231,100 @@ def asset_add_expiry(asset_type, asset_id):
             "error",
         )
 
+    return redirect(redirect_url())
+
+
+_THUMBNAIL_ASSET_TYPES = {
+    "GeneratedAsset": GeneratedAsset,
+    "SubmittedAsset": SubmittedAsset,
+}
+
+
+@admin.route("/asset_regenerate_thumbnail/<string:asset_type>/<int:asset_id>")
+@roles_required("admin", "root")
+def asset_regenerate_thumbnail(asset_type, asset_id):
+    """
+    Dispatch a Celery task to force-regenerate the thumbnail for a GeneratedAsset or SubmittedAsset.
+    Clears any existing error state, deletes old thumbnail records/files, and re-generates.
+    """
+    if asset_type not in _THUMBNAIL_ASSET_TYPES:
+        flash(f"Unknown asset type '{asset_type}'.", "error")
+        return redirect(redirect_url())
+
+    model_class = _THUMBNAIL_ASSET_TYPES[asset_type]
+    asset = model_class.query.get_or_404(asset_id)
+
+    dispatch_force_regenerate_thumbnail_task(asset)
+    flash("Thumbnail regeneration has been queued.", "success")
+    return redirect(redirect_url())
+
+
+@admin.route("/asset_clear_thumbnail_error/<string:asset_type>/<int:asset_id>")
+@roles_required("admin", "root")
+def asset_clear_thumbnail_error(asset_type, asset_id):
+    """
+    Clear the thumbnail error flag and message for a GeneratedAsset or SubmittedAsset.
+    """
+    if asset_type not in _THUMBNAIL_ASSET_TYPES:
+        flash(f"Unknown asset type '{asset_type}'.", "error")
+        return redirect(redirect_url())
+
+    model_class = _THUMBNAIL_ASSET_TYPES[asset_type]
+    asset = model_class.query.get_or_404(asset_id)
+
+    asset.thumbnail_error = False
+    asset.thumbnail_error_message = None
+
+    try:
+        log_db_commit(
+            f"Cleared thumbnail error for {asset_type} id #{asset_id}",
+            user=current_user,
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash(
+            "Could not clear thumbnail error because of a database error. Please contact a system administrator.",
+            "error",
+        )
+
+    return redirect(redirect_url())
+
+
+@admin.route("/generate_all_thumbnails")
+@roles_required("admin", "root")
+def generate_all_thumbnails():
+    """
+    Clear thumbnail error state for all GeneratedAsset and SubmittedAsset records,
+    then dispatch the thumbnail_maintenance Celery task to regenerate any missing thumbnails.
+    """
+    try:
+        db.session.query(GeneratedAsset).update(
+            {"thumbnail_error": False, "thumbnail_error_message": None}
+        )
+        db.session.query(SubmittedAsset).update(
+            {"thumbnail_error": False, "thumbnail_error_message": None}
+        )
+        log_db_commit(
+            "Cleared all thumbnail errors prior to maintenance run", user=current_user
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash(
+            "Could not clear thumbnail errors because of a database error. Please contact a system administrator.",
+            "error",
+        )
+        return redirect(redirect_url())
+
+    celery = current_app.extensions["celery"]
+    maintenance_task = celery.tasks["app.tasks.maintenance.thumbnail_maintenance"]
+    maintenance_task.apply_async()
+
+    flash(
+        "Thumbnail maintenance task has been queued. Missing thumbnails will be regenerated shortly.",
+        "success",
+    )
     return redirect(redirect_url())
 
 
@@ -1252,6 +1375,8 @@ def upload_feedback_asset():
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 return redirect(url)
 
+            dispatch_thumbnail_task(asset)
+
             tag_list = create_new_template_tags(form)
 
             feedback_asset = FeedbackAsset(
@@ -1267,7 +1392,10 @@ def upload_feedback_asset():
 
             try:
                 db.session.add(feedback_asset)
-                log_db_commit(f"Uploaded feedback asset '{feedback_asset.label}'", user=current_user)
+                log_db_commit(
+                    f"Uploaded feedback asset '{feedback_asset.label}'",
+                    user=current_user,
+                )
             except SQLAlchemyError as e:
                 db.session.rollback()
                 flash(
@@ -1518,7 +1646,10 @@ def edit_global_email_template(id):
         template.last_edit_timestamp = datetime.now()
 
         try:
-            log_db_commit(f"Edited global email template #{id} '{template.subject}'", user=current_user)
+            log_db_commit(
+                f"Edited global email template #{id} '{template.subject}'",
+                user=current_user,
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1552,7 +1683,10 @@ def activate_global_email_template(id):
     template.active = True
 
     try:
-        log_db_commit(f"Activated global email template #{id} '{template.subject}'", user=current_user)
+        log_db_commit(
+            f"Activated global email template #{id} '{template.subject}'",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1597,7 +1731,10 @@ def deactivate_global_email_template(id):
     template.active = False
 
     try:
-        log_db_commit(f"Deactivated global email template #{id} '{template.subject}'", user=current_user)
+        log_db_commit(
+            f"Deactivated global email template #{id} '{template.subject}'",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1619,11 +1756,16 @@ def duplicate_global_email_template(id):
     """
     template: EmailTemplate = EmailTemplate.query.get_or_404(id)
 
-    new_template = clone_email_template(template, template.pclass_id, template.tenant_id, current_user)
+    new_template = clone_email_template(
+        template, template.pclass_id, template.tenant_id, current_user
+    )
 
     try:
         db.session.add(new_template)
-        log_db_commit(f"Duplicated global email template #{id} as new version #{new_template.version}", user=current_user)
+        log_db_commit(
+            f"Duplicated global email template #{id} as new version #{new_template.version}",
+            user=current_user,
+        )
         flash(
             f"Email template duplicated successfully: new version is #{new_template.version}.",
             "success",
@@ -1725,7 +1867,10 @@ def perform_delete_global_email_template(id):
 
     try:
         db.session.delete(template)
-        log_db_commit(f"Deleted global email template #{id} '{template.subject}'", user=current_user)
+        log_db_commit(
+            f"Deleted global email template #{id} '{template.subject}'",
+            user=current_user,
+        )
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

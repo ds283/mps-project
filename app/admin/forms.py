@@ -1220,6 +1220,10 @@ class ScheduledTaskMixin:
             "app.tasks.workflow_log.prune_workflow_log",
             "Prune workflow log",
         ),
+        (
+            "app.tasks.maintenance.thumbnail_maintenance",
+            "Thumbnail maintenance — check for missing/lost thumbnails",
+        ),
         ("celery.backend_cleanup", "Periodic Celery backend cleanup"),
     ]
 

@@ -12,6 +12,8 @@ from datetime import datetime, timedelta
 from functools import partial
 
 from celery import chain, chord
+import requests as http_requests
+
 from flask import (
     redirect,
     url_for,
@@ -21,12 +23,15 @@ from flask import (
     jsonify,
     abort,
     session,
+    Response,
+    stream_with_context,
 )
 from flask_security import login_required, roles_accepted, current_user
 from sqlalchemy import or_, and_
 from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
+import app.shared.cloud_object_store.bucket_types as buckets
 from . import documents
 from .forms import (
     UploadReportForm,
@@ -51,10 +56,12 @@ from ..models import (
     AssetLicense,
     SubmittingStudent,
     FeedbackReport,
+    ThumbnailAsset,
 )
 from ..shared.security import validate_nonce
 from ..shared.workflow_logging import log_db_commit
 from ..shared.asset_tools import AssetUploadManager
+from ..tasks.thumbnails import dispatch_thumbnail_task
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
 from ..shared.utils import redirect_url
@@ -387,6 +394,8 @@ def upload_submitter_report(sid):
                 return redirect(
                     url_for("documents.submitter_documents", sid=record.sid)
                 )
+
+            dispatch_thumbnail_task(asset)
 
             # attach this asset as the uploaded report
             record.report_id = asset.id
@@ -955,6 +964,8 @@ def upload_submitter_attachment(sid):
                     )
                 )
 
+            dispatch_thumbnail_task(asset)
+
             # generate attachment record
             attachment = SubmissionAttachment(
                 parent_id=record.id,
@@ -1375,3 +1386,55 @@ def download_log_ajax(attach_type, attach_id):
         return jsonify({})
 
     return ajax.documents.download_log(asset.downloads.all())
+
+
+_THUMBNAIL_ASSET_TYPES = {
+    "GeneratedAsset": GeneratedAsset,
+    "SubmittedAsset": SubmittedAsset,
+}
+
+
+@documents.route("/thumbnail/<string:asset_type>/<int:asset_id>/<string:size>")
+@login_required
+def serve_thumbnail(asset_type, asset_id, size):
+    if asset_type not in _THUMBNAIL_ASSET_TYPES:
+        abort(404)
+
+    model_class = _THUMBNAIL_ASSET_TYPES[asset_type]
+    parent = db.session.query(model_class).filter_by(id=asset_id).first()
+    if parent is None:
+        abort(404)
+
+    if not parent.has_access(current_user):
+        abort(403)
+
+    if size == "small":
+        thumbnail: ThumbnailAsset = parent.small_thumbnail
+    elif size == "medium":
+        thumbnail: ThumbnailAsset = parent.medium_thumbnail
+    else:
+        abort(404)
+
+    if thumbnail is None or thumbnail.lost:
+        abort(404)
+
+    bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
+    thumbnails_store = bucket_map.get(buckets.THUMBNAILS_BUCKET)
+    if thumbnails_store is None:
+        abort(503)
+
+    url = thumbnails_store.get_url(
+        thumbnail.unique_name,
+        audit_data=f"documents.serve_thumbnail ({asset_type} #{asset_id}, {size})",
+    )
+
+    r = http_requests.get(url, stream=True)
+    if not r.ok:
+        abort(r.status_code)
+
+    content_type = thumbnail.mimetype or "image/jpeg"
+    return Response(
+        stream_with_context(r.iter_content(chunk_size=8192)),
+        content_type=content_type,
+        headers={"Cache-Control": "private, max-age=3600"},
+    )

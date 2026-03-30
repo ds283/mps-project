@@ -327,6 +327,7 @@ def create_app():
     tasks.register_supervision_event_tasks(celery)
     tasks.register_attendance_tasks(celery)
     tasks.register_workflow_log_tasks(celery)
+    tasks.register_thumbnail_tasks(celery)
 
     use_pyinstrument = app.config.get("PROFILE_PYINSTRUMENT")
     if use_pyinstrument:

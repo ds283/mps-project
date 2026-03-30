@@ -43,4 +43,5 @@ from .system import register_system_tasks
 from .test import register_test_tasks
 from .user_launch import register_user_launch_tasks
 from .utilities import register_utility_tasks
+from .thumbnails import register_thumbnail_tasks
 from .workflow_log import register_workflow_log_tasks

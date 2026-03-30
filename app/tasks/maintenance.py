@@ -18,6 +18,7 @@ from flask import current_app
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
+import app.shared.cloud_object_store.bucket_types as buckets
 import app.shared.cloud_object_store.encryption_types as encryptions
 
 from ..database import db
@@ -49,6 +50,7 @@ from ..models import (
     SubmittingStudent,
     TemplateTag,
     TemporaryAsset,
+    ThumbnailAsset,
     User,
 )
 from ..models.emails import encode_email_payload
@@ -61,6 +63,7 @@ from ..shared.cloud_object_store import ObjectStore
 from ..shared.security import validate_nonce
 from ..shared.utils import get_count, get_current_year
 from ..shared.workflow_logging import log_db_commit
+from .thumbnails import dispatch_thumbnail_task
 
 
 def register_maintenance_tasks(celery):
@@ -621,10 +624,17 @@ def register_maintenance_tasks(celery):
         temporary_records = _collect_all_assets(self, TemporaryAsset)
         submitted_records = _collect_all_assets(self, SubmittedAsset)
 
+        try:
+            thumbnail_records = db.session.query(ThumbnailAsset).all()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
         tasks = (
             [asset_test_lost.s(r.id, GeneratedAsset) for r in generated_records]
             + [asset_test_lost.s(r.id, TemporaryAsset) for r in temporary_records]
             + [asset_test_lost.s(r.id, SubmittedAsset) for r in submitted_records]
+            + [thumbnail_test_lost.s(r.id) for r in thumbnail_records]
         )
 
         return self.replace(
@@ -642,6 +652,9 @@ def register_maintenance_tasks(celery):
         tasks = [
             asset_test_attached.si(r.id, SubmittedAsset) for r in submitted_records
         ]
+
+        # also find and delete orphaned ThumbnailAsset records (those not referenced by any parent)
+        thumbnail_cleanup_unattached.delay()
 
         return self.replace(
             group(*tasks)
@@ -695,6 +708,23 @@ def register_maintenance_tasks(celery):
             pass
 
         try:
+            # remove thumbnail assets before deleting the parent
+            thumbnails_store = bucket_map.get(buckets.THUMBNAILS_BUCKET)
+            for thumb_attr in ("small_thumbnail", "medium_thumbnail"):
+                thumbnail: ThumbnailAsset = getattr(record, thumb_attr, None)
+                if thumbnail is not None and thumbnails_store is not None:
+                    try:
+                        thumb_adapter = AssetCloudAdapter(
+                            thumbnail,
+                            thumbnails_store,
+                            audit_data=f'maintenance.asset_test_expiry thumbnail cleanup (record type="{asset_type}", record id #{id})',
+                        )
+                        thumb_adapter.delete()
+                    except FileNotFoundError:
+                        pass
+                    db.session.delete(thumbnail)
+                    setattr(record, f"{thumb_attr}_id", None)
+
             # remove any user download centre items for this asset
             if hasattr(record, "download_centre_items"):
                 for item in record.download_centre_items:
@@ -786,6 +816,114 @@ def register_maintenance_tasks(celery):
             f'** Detected unattached {asset_type} object "{asset_name}" (id={record.id})'
         )
         return {"type": f"{asset_type}", "id": record.id, "name": asset_name}
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def thumbnail_test_lost(self, thumbnail_id):
+        """
+        Check whether a ThumbnailAsset's physical file exists. If missing, mark lost=True.
+        Returns a dict for the lost-asset report if the file is missing.
+        """
+        try:
+            thumbnail: ThumbnailAsset = (
+                db.session.query(ThumbnailAsset).filter_by(id=thumbnail_id).first()
+            )
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if thumbnail is None:
+            return
+
+        bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
+        thumbnails_store = bucket_map.get(buckets.THUMBNAILS_BUCKET)
+        if thumbnails_store is None:
+            return
+
+        storage = AssetCloudAdapter(
+            thumbnail,
+            thumbnails_store,
+            audit_data=f"maintenance.thumbnail_test_lost (thumbnail id #{thumbnail_id})",
+        )
+
+        if storage.exists():
+            return
+
+        print(
+            f'** Detected lost ThumbnailAsset "{thumbnail.unique_name}" (id={thumbnail.id})'
+        )
+
+        try:
+            thumbnail.lost = True
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return {
+            "type": "ThumbnailAsset",
+            "id": thumbnail.id,
+            "name": thumbnail.unique_name,
+        }
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def thumbnail_cleanup_unattached(self):
+        """
+        Find ThumbnailAsset records not referenced by any GeneratedAsset or SubmittedAsset,
+        delete their physical files, and remove them from the database.
+        """
+        from sqlalchemy import text
+
+        orphan_query = text(
+            """
+            SELECT id FROM thumbnail_assets
+            WHERE id NOT IN (SELECT small_thumbnail_id FROM generated_assets WHERE small_thumbnail_id IS NOT NULL)
+              AND id NOT IN (SELECT medium_thumbnail_id FROM generated_assets WHERE medium_thumbnail_id IS NOT NULL)
+              AND id NOT IN (SELECT small_thumbnail_id FROM submitted_assets WHERE small_thumbnail_id IS NOT NULL)
+              AND id NOT IN (SELECT medium_thumbnail_id FROM submitted_assets WHERE medium_thumbnail_id IS NOT NULL)
+            """
+        )
+
+        try:
+            result = db.session.execute(orphan_query)
+            orphan_ids = [row[0] for row in result]
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if not orphan_ids:
+            return
+
+        bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
+        thumbnails_store = bucket_map.get(buckets.THUMBNAILS_BUCKET)
+
+        for thumbnail_id in orphan_ids:
+            try:
+                thumbnail: ThumbnailAsset = (
+                    db.session.query(ThumbnailAsset).filter_by(id=thumbnail_id).first()
+                )
+                if thumbnail is None:
+                    continue
+
+                if thumbnails_store is not None:
+                    try:
+                        adapter = AssetCloudAdapter(
+                            thumbnail,
+                            thumbnails_store,
+                            audit_data=f"maintenance.thumbnail_cleanup_unattached (thumbnail id #{thumbnail_id})",
+                        )
+                        adapter.delete()
+                    except FileNotFoundError:
+                        pass
+
+                print(
+                    f'** Deleted orphaned ThumbnailAsset "{thumbnail.unique_name}" (id={thumbnail.id})'
+                )
+                db.session.delete(thumbnail)
+                db.session.commit()
+
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     @celery.task(bind=True, default_retry_delay=30)
     def issue_asset_report(
@@ -1093,3 +1231,70 @@ def register_maintenance_tasks(celery):
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def thumbnail_maintenance(self):
+        """
+        Check all GeneratedAsset and SubmittedAsset records for missing or lost thumbnails,
+        and dispatch generate_thumbnails tasks as needed.
+        """
+        self.update_state(state=states.STARTED)
+
+        bucket_map = current_app.config.get("OBJECT_STORAGE_BUCKETS")
+        thumbnails_store = bucket_map.get(buckets.THUMBNAILS_BUCKET)
+
+        def _delete_thumbnail(thumbnail: ThumbnailAsset) -> None:
+            if thumbnails_store is not None:
+                try:
+                    adapter = AssetCloudAdapter(
+                        thumbnail,
+                        thumbnails_store,
+                        audit_data="maintenance.thumbnail_maintenance",
+                    )
+                    adapter.delete()
+                except FileNotFoundError:
+                    pass
+            db.session.delete(thumbnail)
+
+        def _check_asset(asset) -> None:
+            if asset.thumbnail_error:
+                return
+
+            needs_regeneration = False
+
+            if asset.small_thumbnail is None or asset.small_thumbnail.lost:
+                if asset.small_thumbnail is not None and asset.small_thumbnail.lost:
+                    _delete_thumbnail(asset.small_thumbnail)
+                    asset.small_thumbnail_id = None
+                needs_regeneration = True
+
+            if asset.medium_thumbnail is None or asset.medium_thumbnail.lost:
+                if asset.medium_thumbnail is not None and asset.medium_thumbnail.lost:
+                    _delete_thumbnail(asset.medium_thumbnail)
+                    asset.medium_thumbnail_id = None
+                needs_regeneration = True
+
+            if needs_regeneration:
+                dispatch_thumbnail_task(asset)
+
+        try:
+            generated_assets = db.session.query(GeneratedAsset).all()
+            submitted_assets = db.session.query(SubmittedAsset).all()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        for asset in generated_assets:
+            _check_asset(asset)
+
+        for asset in submitted_assets:
+            _check_asset(asset)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        self.update_state(state=states.SUCCESS)

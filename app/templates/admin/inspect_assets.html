@@ -93,18 +93,25 @@
                 This view shows all <strong>GeneratedAsset</strong>, <strong>TemporaryAsset</strong>, and
                 <strong>SubmittedAsset</strong> records currently held in the database.
             </p>
+            {% if has_thumbnail_errors %}
+                <div class="mb-3">
+                    <a href="{{ url_for('admin.generate_all_thumbnails') }}" class="btn btn-warning">
+                        <i class="fas fa-images fa-fw me-1"></i> Generate missing thumbnails
+                    </a>
+                </div>
+            {% endif %}
             <table id="assets-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
-                    <th width="16%"> Target name</th>
+                    <th width="18%"> Target name</th>
                     <th width="10%"> Timestamp</th>
                     <th width="10%"> License</th>
                     <th width="10%"> Expiry</th>
-                    <th width="11%"> MIME type</th>
+                    <th width="14%"> MIME type</th>
                     <th width="10%"> File size</th>
                     <th width="10%"> Bucket</th>
-                    <th width="13%"> Comment</th>
-                    <th width="10%"> Actions</th>
+                    <th width="10%"> Comment</th>
+                    <th width="8%"> Actions</th>
                 </tr>
                 </thead>
             </table>

@@ -65,6 +65,9 @@ class ThumbnailAsset(
     # primary key id
     id = db.Column(db.Integer(), primary_key=True)
 
+    # MIME type of the thumbnail (always image/jpeg in practice)
+    mimetype = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), default=None)
+
 
 class AssetThumbnailMixin:
     # (optional) thumbnail asset at small 200x200 size; if None, no thumbnail exists

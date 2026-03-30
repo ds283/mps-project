@@ -49,6 +49,7 @@ from ..shared.validators import (
 )
 from ..shared.workflow_logging import log_db_commit
 from ..student.actions import store_selection
+from ..tasks.thumbnails import dispatch_thumbnail_task
 from .forms import (
     CustomCATSLimitForm,
 )
@@ -101,8 +102,8 @@ def force_convert_bookmarks(sel_id):
         return redirect(redirect_url())
 
     if (
-            sel.config.selector_lifecycle
-            < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
+        sel.config.selector_lifecycle
+        < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
     ):
         flash(
             "Forced conversion of bookmarks can be performed only after project selection is open.",
@@ -289,8 +290,8 @@ def submission_period_documents(pid):
 
     state = config.submitter_lifecycle
     deletable = (current_user.has_role("root") or current_user.has_role("admin")) or (
-            not record.closed
-            and (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
+        not record.closed
+        and (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
     )
     return render_template_context(
         "convenor/documents/period_manager.html",
@@ -496,13 +497,13 @@ def upload_period_attachment(pid):
 
                 object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
                 with AssetUploadManager(
-                        asset,
-                        data=attachment_file.stream.read(),
-                        storage=object_store,
-                        audit_data=f"upload_period_attachment (period id #{pid})",
-                        length=attachment_file.content_length,
-                        mimetype=attachment_file.content_type,
-                        validate_nonce=validate_nonce,
+                    asset,
+                    data=attachment_file.stream.read(),
+                    storage=object_store,
+                    audit_data=f"upload_period_attachment (period id #{pid})",
+                    length=attachment_file.content_length,
+                    mimetype=attachment_file.content_type,
+                    validate_nonce=validate_nonce,
                 ) as upload_mgr:
                     pass
 
@@ -523,6 +524,8 @@ def upload_period_attachment(pid):
                         text=text,
                     )
                 )
+
+            dispatch_thumbnail_task(asset)
 
             # generate attachment record
             attachment = PeriodAttachment(

@@ -37,6 +37,7 @@ from ..shared.security import validate_nonce
 from ..shared.asset_tools import AssetUploadManager, AssetCloudAdapter
 from ..shared.utils import get_main_config
 from ..shared.workflow_logging import log_db_commit
+from .thumbnails import dispatch_thumbnail_task
 
 
 def _URL_query(session: requests.Session, URL, **kwargs):
@@ -811,6 +812,7 @@ def register_canvas_tasks(celery):
 
         try:
             db.session.add(asset)
+            db.session.flush()
             log_db_commit(
                 "Save downloaded Canvas submission asset to database",
                 user=user_id,
@@ -827,6 +829,8 @@ def register_canvas_tasks(celery):
                 # silently ignore if cloud object cannot be found
                 pass
             raise
+
+        dispatch_thumbnail_task(asset)
 
         return {
             "asset_id": asset.id,

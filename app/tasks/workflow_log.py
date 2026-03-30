@@ -31,6 +31,7 @@ from ..shared.asset_tools import AssetUploadManager
 from ..shared.excel import _normalize_excel_sheet_name
 from ..shared.scratch import ScratchFileManager
 from ..shared.security import validate_nonce
+from .thumbnails import dispatch_thumbnail_task
 
 
 def register_workflow_log_tasks(celery):
@@ -269,6 +270,8 @@ def register_workflow_log_tasks(celery):
                 db.session.add(asset)
                 db.session.flush()
 
+                dispatch_thumbnail_task(asset)
+
                 download_item = DownloadCentreItem._build(
                     asset=asset, user=user, description="Workflow log export"
                 )
@@ -368,6 +371,8 @@ def register_workflow_log_tasks(celery):
                 asset.grant_user(user)
                 db.session.add(asset)
                 db.session.flush()
+
+                dispatch_thumbnail_task(asset)
 
                 download_item = DownloadCentreItem._build(
                     asset=asset, user=user, description="Workflow log CSV export"

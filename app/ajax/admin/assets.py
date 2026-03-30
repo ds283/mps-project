@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, get_template_attribute
+from flask import render_template_string, get_template_attribute, url_for
 
 import app.shared.cloud_object_store.bucket_types as buckets
 
@@ -118,6 +118,27 @@ _bucket = """
 """
 
 # language=jinja2
+_mimetype_with_thumbnail = """
+{% if thumbnail_url %}
+    <img src="{{ thumbnail_url }}" class="img-thumbnail mb-1 d-block" style="max-width:60px; max-height:60px;" alt="Preview">
+{% elif thumbnail_error %}
+    <span class="badge bg-danger mb-1 d-block"
+          tabindex="0"
+          data-bs-toggle="popover"
+          data-bs-placement="right"
+          data-bs-title="Thumbnail error"
+          data-bs-content="{{ thumbnail_error_message|e }}">
+        <i class="fas fa-exclamation-triangle fa-fw"></i> Error
+    </span>
+{% elif asset_type in ('GeneratedAsset', 'SubmittedAsset') %}
+    <span class="badge bg-secondary mb-1 d-block">
+        <i class="fas fa-clock fa-fw"></i> Pending
+    </span>
+{% endif %}
+{{ mimetype if mimetype else '<span class="text-muted fst-italic">Unknown</span>' }}
+"""
+
+# language=jinja2
 _menu_generated = """
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -134,6 +155,15 @@ _menu_generated = """
         {% else %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.asset_add_expiry', asset_type='generated', asset_id=asset.id) }}">
                 <i class="fas fa-calendar-times fa-fw"></i> Expire in 7 days
+            </a>
+        {% endif %}
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.asset_regenerate_thumbnail', asset_type='GeneratedAsset', asset_id=asset.id) }}">
+            <i class="fas fa-sync-alt fa-fw"></i> Regenerate thumbnail
+        </a>
+        {% if asset.thumbnail_error %}
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.asset_clear_thumbnail_error', asset_type='GeneratedAsset', asset_id=asset.id) }}">
+                <i class="fas fa-times-circle fa-fw"></i> Clear thumbnail error
             </a>
         {% endif %}
     </div>
@@ -157,6 +187,15 @@ _menu_submitted = """
         {% else %}
             <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.asset_add_expiry', asset_type='submitted', asset_id=asset.id) }}">
                 <i class="fas fa-calendar-times fa-fw"></i> Expire in 7 days
+            </a>
+        {% endif %}
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.asset_regenerate_thumbnail', asset_type='SubmittedAsset', asset_id=asset.id) }}">
+            <i class="fas fa-sync-alt fa-fw"></i> Regenerate thumbnail
+        </a>
+        {% if asset.thumbnail_error %}
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('admin.asset_clear_thumbnail_error', asset_type='SubmittedAsset', asset_id=asset.id) }}">
+                <i class="fas fa-times-circle fa-fw"></i> Clear thumbnail error
             </a>
         {% endif %}
     </div>
@@ -201,6 +240,19 @@ def _build_row(asset, asset_type: str, simple_label, truncate):
     unattached = getattr(asset, "unattached", False)
     number_downloads = getattr(asset, "number_downloads", None)
 
+    thumbnail_error = getattr(asset, "thumbnail_error", False)
+    thumbnail_error_message = getattr(asset, "thumbnail_error_message", None)
+    small_thumbnail = getattr(asset, "small_thumbnail", None)
+    if small_thumbnail is not None and not small_thumbnail.lost:
+        thumbnail_url = url_for(
+            "documents.serve_thumbnail",
+            asset_type=asset_type,
+            asset_id=asset.id,
+            size="small",
+        )
+    else:
+        thumbnail_url = None
+
     target_html = render_template_string(
         _target,
         target_name=target_name,
@@ -212,6 +264,14 @@ def _build_row(asset, asset_type: str, simple_label, truncate):
         number_downloads=number_downloads,
         asset=asset,
         truncate=truncate,
+    )
+    mimetype_html = render_template_string(
+        _mimetype_with_thumbnail,
+        asset_type=asset_type,
+        mimetype=mimetype,
+        thumbnail_url=thumbnail_url,
+        thumbnail_error=thumbnail_error,
+        thumbnail_error_message=thumbnail_error_message,
     )
     license_html = render_template_string(
         _license, license=license_obj, simple_label=simple_label
@@ -245,9 +305,7 @@ def _build_row(asset, asset_type: str, simple_label, truncate):
         "timestamp": timestamp_html,
         "license": license_html,
         "expiry": expiry_html,
-        "mimetype": mimetype
-        if mimetype
-        else '<div class="text-secondary"><i class="fas fa-ban"></i> None</div>',
+        "mimetype": mimetype_html,
         "target_name": target_html,
         "filesize": human_size
         if human_size

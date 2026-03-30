@@ -31,6 +31,7 @@ from ..shared.security import validate_nonce
 from ..shared.workflow_logging import log_db_commit
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.scratch import ScratchFileManager
+from .thumbnails import dispatch_thumbnail_task
 
 _title_label_size = 24
 _subtitle_label_size = 18
@@ -389,6 +390,8 @@ def register_process_report_tasks(celery):
                             "SQLAlchemyError exception", exc_info=e
                         )
                         raise self.retry()
+
+                    dispatch_thumbnail_task(new_asset)
 
                     # attach asset to the SubmissionRecord
                     record.processed_report_id = new_asset.id

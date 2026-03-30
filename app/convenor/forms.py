@@ -43,18 +43,21 @@ from ..models import (
     ConvenorGenericTask,
     FacultyData,
     LiveProject,
+    MarkingScheme,
+    MarkingWorkflow,
     Project,
     ProjectClass,
     ProjectClassConfig,
+    Role,
     SubmissionPeriodRecord,
     SubmissionPeriodUnit,
     SubmissionRecord,
     SubmissionRole,
     SupervisionEventTemplate,
     Tenant,
+    User,
 )
 from ..shared.forms.mixins import (
-    FeedbackMixin,
     PeriodPresentationsMixin,
     PeriodSelectorMixinFactory,
     SaveChangesMixin,
@@ -1016,6 +1019,113 @@ class EditMarkingSchemeForm(Form, MarkingSchemeMixin, SaveChangesMixin):
         ],
         description="Unique name for this marking scheme",
     )
+
+
+# ---- MarkingEvent forms ----
+
+
+class MarkingEventMixin:
+    name = StringField(
+        "Name",
+        validators=[
+            InputRequired(message="A name is required"),
+            Length(max=DEFAULT_STRING_LENGTH),
+        ],
+        description="Name for this marking event. Must be unique within the submission period.",
+    )
+
+
+class AddMarkingEventForm(Form, MarkingEventMixin):
+    submit = SubmitField("Add marking event")
+
+
+class EditMarkingEventForm(Form, MarkingEventMixin, SaveChangesMixin):
+    pass
+
+
+# ---- MarkingWorkflow forms ----
+
+# Role choices for MarkingWorkflow: ROLE_SUPERVISOR covers both supervisor types
+WORKFLOW_ROLE_CHOICES = [
+    (MarkingWorkflow.ROLE_SUPERVISOR, "Supervisor"),
+    (MarkingWorkflow.ROLE_MARKER, "Marker"),
+    (MarkingWorkflow.ROLE_PRESENTATION_ASSESSOR, "Presentation assessor"),
+    (MarkingWorkflow.ROLE_MODERATOR, "Moderator"),
+    (MarkingWorkflow.ROLE_EXAM_BOARD, "Exam board member"),
+    (MarkingWorkflow.ROLE_EXTERNAL_EXAMINER, "External examiner"),
+]
+
+
+def MarkingWorkflowFormFactory(pclass, scheme_locked=False):
+    """
+    Build Add/Edit form classes for MarkingWorkflow bound to a specific ProjectClass.
+
+    scheme_locked should be True when any MarkingReport for the workflow has distributed=True
+    or a non-empty report field, meaning the scheme can no longer be changed.
+    """
+
+    def get_schemes():
+        return MarkingScheme.query.filter_by(pclass_id=pclass.id).order_by(MarkingScheme.name).all()
+
+    def get_notify_users():
+        return (
+            db.session.query(User)
+            .join(User.roles)
+            .filter(
+                User.tenants.any(id=pclass.tenant_id),
+                Role.name.in_(["faculty", "office", "exam_board", "external_examiner"]),
+            )
+            .order_by(User.last_name, User.first_name)
+            .all()
+        )
+
+    class MarkingWorkflowMixin:
+        name = StringField(
+            "Name",
+            validators=[
+                InputRequired(message="A name is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+            ],
+            description="Name for this workflow. Must be unique within the parent marking event.",
+        )
+
+        scheme = QuerySelectField(
+            "Marking scheme",
+            query_factory=get_schemes,
+            get_label="name",
+            allow_blank=True,
+            blank_text="— No scheme —",
+            render_kw={"disabled": True} if scheme_locked else {},
+        )
+
+        notify_on_moderation_required = QuerySelectMultipleField(
+            "Notify on moderation required",
+            query_factory=get_notify_users,
+            get_label=lambda u: u.name,
+            description="Users to notify when an out-of-tolerance situation requires moderation.",
+        )
+
+        notify_on_validation_failure = QuerySelectMultipleField(
+            "Notify on validation failure",
+            query_factory=get_notify_users,
+            get_label=lambda u: u.name,
+            description="Users to notify when a marking report fails validation.",
+        )
+
+    class AddMarkingWorkflowForm(Form, MarkingWorkflowMixin):
+        role = SelectField(
+            "Role",
+            choices=WORKFLOW_ROLE_CHOICES,
+            coerce=int,
+            description="The assessor role this workflow targets.",
+        )
+
+        submit = SubmitField("Add workflow")
+
+    class EditMarkingWorkflowForm(Form, MarkingWorkflowMixin, SaveChangesMixin):
+        pass
+
+    return AddMarkingWorkflowForm, EditMarkingWorkflowForm
 
 
 def _build_journal_pclass_config_query(user):

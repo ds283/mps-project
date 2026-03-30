@@ -31,6 +31,8 @@ from ...models import (
     FeedbackAsset,
     FeedbackRecipe,
     FHEQ_Level,
+    MarkingEvent,
+    MarkingWorkflow,
     MatchingAttempt,
     Module,
     PresentationAssessment,
@@ -780,6 +782,52 @@ def unique_or_original_supervision_event_template(unit_id, form, field):
         return
 
     return globally_unique_supervision_event_template(unit_id, form, field)
+
+
+def make_unique_marking_event_in_period(period_id, event=None):
+    """
+    Return a WTForms validator that checks MarkingEvent.name is unique within a
+    SubmissionPeriodRecord. If event is provided, the event's own current name is
+    allowed (edit case).
+    """
+
+    def validator(form, field):
+        if event is not None and field.data == event.name:
+            return
+        existing = (
+            db.session.query(MarkingEvent)
+            .filter(MarkingEvent.period_id == period_id, MarkingEvent.name == field.data)
+            .first()
+        )
+        if existing is not None:
+            raise ValidationError(
+                f'"{field.data}" is already used for a marking event in this submission period'
+            )
+
+    return validator
+
+
+def make_unique_marking_workflow_in_event(event_id, workflow=None):
+    """
+    Return a WTForms validator that checks MarkingWorkflow.name is unique within a
+    MarkingEvent. If workflow is provided, the workflow's own current name is
+    allowed (edit case).
+    """
+
+    def validator(form, field):
+        if workflow is not None and field.data == workflow.name:
+            return
+        existing = (
+            db.session.query(MarkingWorkflow)
+            .filter(MarkingWorkflow.event_id == event_id, MarkingWorkflow.name == field.data)
+            .first()
+        )
+        if existing is not None:
+            raise ValidationError(
+                f'"{field.data}" is already used for a marking workflow in this event'
+            )
+
+    return validator
 
 
 def valid_json(form, field):

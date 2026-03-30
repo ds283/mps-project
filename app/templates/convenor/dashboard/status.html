@@ -662,11 +662,18 @@
                                                    title="Validation warnings — see Periods tab for detail"></i>
                                             {% endif %}
                                         {% endif %}
-                                        {# EXTENSIBILITY HOOK — MarkingEvent summary badge:
-                                             Replace the stub below when marking_event_card.html is ready.
-                                             Suggested: show badge like <span class="badge bg-info">N open</span>
-                                             or <span class="badge bg-success">Done</span>
-                                        #}
+                                        {% set me_total = p.marking_events.count() %}
+                                        {% if me_total > 0 %}
+                                            {% set me_open = p.marking_events.filter_by(closed=False).count() %}
+                                            <a href="{{ url_for('convenor.period_marking_events_inspector', period_id=p.id) }}"
+                                               class="text-decoration-none ms-1" title="Marking events">
+                                                {% if me_open > 0 %}
+                                                    <span class="badge bg-success">{{ me_open }} open event{{ 's' if me_open != 1 }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">{{ me_total }} event{{ 's' if me_total != 1 }} closed</span>
+                                                {% endif %}
+                                            </a>
+                                        {% endif %}
                                     </td>
                                     <td class="small align-middle text-end">
                                         {{ submission_period_configure_button(p, config, small=true, margin=false, disable=(p.is_feedback_open or p.closed)) }}

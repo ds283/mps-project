@@ -8,8 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app, get_template_attribute, render_template, url_for
-from jinja2 import Template
+from flask import current_app, get_template_attribute, render_template
 from markupsafe import escape
 
 from ...shared.forms.wtf_validators import parse_schema
@@ -463,6 +462,125 @@ _marking_scheme_menu = """
     </div>
 </div>
 """
+
+
+# language=jinja2
+_period_marking_event_status = """
+{% if event.closed %}
+    <span class="badge bg-secondary">Closed</span>
+{% else %}
+    <span class="badge bg-success">Open</span>
+{% endif %}
+"""
+
+# language=jinja2
+_period_marking_event_menu = """
+<div class="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        Actions
+    </button>
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id, url=url, text=text) }}">
+            <i class="fas fa-search fa-fw"></i> Inspect workflows&hellip;
+        </a>
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_marking_event', event_id=event.id, url=url, text=text) }}">
+            <i class="fas fa-pencil-alt fa-fw"></i> Edit&hellip;
+        </a>
+        {% if not event.closed %}
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item d-flex gap-2 text-warning" href="{{ url_for('convenor.close_marking_event_confirm', event_id=event.id, url=url, text=text) }}">
+                <i class="fas fa-lock fa-fw"></i> Close event&hellip;
+            </a>
+        {% endif %}
+        {% if can_delete %}
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item d-flex gap-2 text-danger" href="{{ url_for('convenor.delete_marking_event', event_id=event.id, url=url, text=text) }}">
+                <i class="fas fa-trash fa-fw"></i> Delete&hellip;
+            </a>
+        {% endif %}
+    </div>
+</div>
+"""
+
+# language=jinja2
+_event_marking_workflow_menu = """
+<div class="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        Actions
+    </button>
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.submitter_reports_inspector', workflow_id=workflow.id, url=url, text=text) }}">
+            <i class="fas fa-user-graduate fa-fw"></i> Submitter reports&hellip;
+        </a>
+        <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.marking_reports_inspector', workflow_id=workflow.id, url=url, text=text) }}">
+            <i class="fas fa-marker fa-fw"></i> Marking reports&hellip;
+        </a>
+        {% if can_edit %}
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_marking_workflow', workflow_id=workflow.id, url=url, text=text) }}">
+                <i class="fas fa-pencil-alt fa-fw"></i> Edit&hellip;
+            </a>
+            <a class="dropdown-item d-flex gap-2 text-danger" href="{{ url_for('convenor.delete_marking_workflow', workflow_id=workflow.id, url=url, text=text) }}">
+                <i class="fas fa-trash fa-fw"></i> Delete&hellip;
+            </a>
+        {% endif %}
+    </div>
+</div>
+"""
+
+
+def period_marking_event_data(url, text, can_delete, events):
+    """Format a MarkingEvent row for the per-period CRUD inspector DataTable"""
+
+    env = current_app.jinja_env
+
+    period_tmpl = env.from_string(_marking_event_period)
+    name_tmpl = env.from_string(_marking_event_name)
+    workflows_tmpl = env.from_string(_marking_event_workflows)
+    status_tmpl = env.from_string(_period_marking_event_status)
+    menu_tmpl = env.from_string(_period_marking_event_menu)
+
+    small_swatch = get_template_attribute("swatch.html", "small_swatch")
+
+    return [
+        {
+            "period": render_template(period_tmpl, event=event),
+            "name": render_template(name_tmpl, event=event, small_swatch=small_swatch),
+            "workflows": render_template(workflows_tmpl, event=event),
+            "status": render_template(status_tmpl, event=event),
+            "menu": render_template(
+                menu_tmpl, event=event, pclass=event.pclass, url=url, text=text, can_delete=can_delete
+            ),
+        }
+        for event in events
+    ]
+
+
+def event_marking_workflow_data(url, text, can_edit, workflows):
+    """Format a MarkingWorkflow row for the per-event CRUD inspector DataTable"""
+
+    env = current_app.jinja_env
+
+    name_tmpl = env.from_string(_marking_workflow_name)
+    scheme_tmpl = env.from_string(_marking_workflow_scheme)
+    attachments_tmpl = env.from_string(_marking_workflow_attachments)
+    reports_tmpl = env.from_string(_marking_workflow_reports)
+    distribution_tmpl = env.from_string(_marking_workflow_distribution)
+    feedback_tmpl = env.from_string(_marking_workflow_feedback)
+    menu_tmpl = env.from_string(_event_marking_workflow_menu)
+
+    return [
+        {
+            "name": render_template(name_tmpl, workflow=workflow),
+            "scheme": render_template(scheme_tmpl, workflow=workflow),
+            "attachments": render_template(attachments_tmpl, workflow=workflow),
+            "reports": render_template(reports_tmpl, workflow=workflow),
+            "distribution": render_template(distribution_tmpl, workflow=workflow),
+            "feedback": render_template(feedback_tmpl, workflow=workflow),
+            "menu": render_template(menu_tmpl, workflow=workflow, url=url, text=text, can_edit=can_edit),
+        }
+        for workflow in workflows
+    ]
 
 
 def marking_scheme_data(url, text, schemes):

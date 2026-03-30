@@ -1,0 +1,50 @@
+{% macro marking_event_summary(period, config) %}
+    {% set events = period.marking_events.all() %}
+    <div class="mt-2 mb-2 card border-secondary p-3">
+        <div class="d-flex flex-row w-100 justify-content-between align-items-center mb-2">
+            <div class="fs-6 fw-semibold text-secondary">
+                <i class="fas fa-calendar-check me-1"></i> Marking events
+            </div>
+            <div class="d-flex flex-row flex-wrap justify-content-end align-items-center gap-2">
+                {% if events|length > 0 %}
+                    <a href="{{ url_for('convenor.period_marking_events_inspector', period_id=period.id) }}"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-search"></i> Inspect&hellip;
+                    </a>
+                {% endif %}
+                <a href="{{ url_for('convenor.add_marking_event', period_id=period.id) }}"
+                   class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-plus"></i> Add event&hellip;
+                </a>
+            </div>
+        </div>
+        {% if events|length == 0 %}
+            <span class="text-muted small">No marking events defined for this period.</span>
+        {% else %}
+            <div class="list-group border-0 list-group-flush">
+                {% for event in events %}
+                    <div class="list-group-item px-0 py-1">
+                        <div class="d-flex flex-row flex-wrap w-100 justify-content-between align-items-center gap-2">
+                            <div>
+                                <span class="fw-semibold">{{ event.name }}</span>
+                                {% if event.closed %}
+                                    <span class="badge bg-secondary ms-1">Closed</span>
+                                {% else %}
+                                    <span class="badge bg-success ms-1">Open</span>
+                                {% endif %}
+                                {% set wf_count = event.workflows.count() %}
+                                {% if wf_count > 0 %}
+                                    <span class="small text-muted ms-1">{{ wf_count }} workflow{{ 's' if wf_count != 1 }}</span>
+                                {% endif %}
+                            </div>
+                            <a href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id) }}"
+                               class="btn btn-xs btn-outline-secondary">
+                                <i class="fas fa-search fa-fw"></i> Workflows&hellip;
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+{% endmacro %}

@@ -1,0 +1,33 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import edit_data %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {{ formtitle|safe }}
+{% endblock %}
+
+{% block form_content %}
+    {% if event %}
+        <form action="{{ url_for('convenor.edit_marking_event', event_id=event.id, url=url, text=text) }}"
+              method="POST" name="edit_marking_event_form">
+    {% else %}
+        <form action="{{ url_for('convenor.add_marking_event', period_id=period.id, url=url, text=text) }}"
+              method="POST" name="add_marking_event_form">
+    {% endif %}
+
+{{ form.hidden_tag() }}
+{{ wtf.render_field(form.name) }}
+{{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+
+</form>
+{% endblock %}
+
+{% block footer %}
+    {% if event %}{{ edit_data(event) }}{% endif %}
+    {{ super() }}
+{% endblock %}

@@ -146,7 +146,10 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
         db.Integer(), db.ForeignKey("submission_periods.id"), nullable=False
     )
     period = db.relationship(
-        "SubmissionPeriodRecord", foreign_keys=[period_id], uselist=False
+        "SubmissionPeriodRecord",
+        foreign_keys=[period_id],
+        uselist=False,
+        backref=db.backref("marking_events", lazy="dynamic"),
     )
 
     # name of this event; unique within the parent SubmissionPeriodRecord
@@ -511,7 +514,7 @@ class MarkingReport(db.Model, EditingMetadataMixin):
         "EmailLog", secondary=marking_distribution_to_email_log, lazy="dynamic"
     )
 
-    # has the report been submitted?
+    # has this marking report been submitted?
     report_submitted = db.Column(db.Boolean(), default=False, nullable=False)
 
     # if this report is from a supervisor rather than a responsible supervisor, has it been signed off by the responsible supervisor?

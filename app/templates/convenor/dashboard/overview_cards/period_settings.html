@@ -1,5 +1,6 @@
 {% from "macros.html" import submission_period_configure_button %}
 {% from "convenor/dashboard/overview_cards/period_status.html" import period_status %}
+{% from "convenor/dashboard/overview_cards/marking_event_card.html" import marking_event_summary %}
 
 {% macro period_settings(config, period, return_url=none, return_text=none) %}
     <div class="mt-2 mb-2 card border-secondary p-3">
@@ -51,46 +52,34 @@
                 {% for unit in units %}
                     <div class="list-group-item px-0 py-1">
                         <div class="d-flex flex-row flex-wrap w-100 justify-content-between align-items-center gap-2">
-                            <div>
+                            <div class="small">
                                 <span class="fw-semibold">{{ unit.name if unit.name else '(unnamed unit)' }}</span>
                                 {% if unit.start_date or unit.end_date %}
-                                    <span class="text-muted">
+                                    <span class="text-muted ms-1">
                                         {% if unit.start_date %}{{ unit.start_date.strftime("%d %b %Y") }}{% endif %}
                                         {% if unit.start_date and unit.end_date %}&ndash;{% endif %}
                                         {% if unit.end_date %}{{ unit.end_date.strftime("%d %b %Y") }}{% endif %}
                                     </span>
                                 {% endif %}
                                 {% set num_templates = unit.number_templates %}
-                                {% if num_templates == 1 %}
-                                    <span class="text-muted small"><em>1 template</em></span>
-                                {% elif num_templates > 1 %}
-                                    <span class="text-muted small"><em>{{ num_templates }} templates</em></span>
-                                {% endif %}
                                 {% set num_events = unit.number_events %}
-                                {% if num_events == 1 %}
-                                    <span class="text-muted small"><em>1 event</em></span>
-                                {% elif num_events > 1 %}
-                                    <span class="text-muted small"><em>{{ num_events }} events</em></span>
+                                {% if num_templates > 0 or num_events > 0 %}
+                                    <span class="text-muted ms-1">&middot;
+                                        {% if num_templates > 0 %}{{ num_templates }} template{{ 's' if num_templates != 1 }}{% endif %}
+                                        {% if num_templates > 0 and num_events > 0 %}, {% endif %}
+                                        {% if num_events > 0 %}{{ num_events }} event{{ 's' if num_events != 1 }}{% endif %}
+                                    </span>
                                 {% endif %}
                             </div>
-                            <div class="dropdown">
-                                <button class="btn btn-xs btn-outline-secondary dropdown-toggle" type="button"
-                                        data-bs-toggle="dropdown" aria-expanded="false">
-                                    Actions
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li>
-                                        <a class="dropdown-item"
-                                           href="{{ url_for('convenor.edit_period_unit', unit_id=unit.id, url=url_for('convenor.periods', id=config.pclass_id)) }}">
-                                            <i class="fas fa-pencil-alt fa-fw me-1"></i> Edit&hellip;
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
+                            <a href="{{ url_for('convenor.edit_period_unit', unit_id=unit.id, url=url_for('convenor.periods', id=config.pclass_id)) }}"
+                               class="btn btn-xs btn-outline-secondary">
+                                <i class="fas fa-pencil-alt fa-fw"></i> Edit
+                            </a>
                         </div>
                     </div>
                 {% endfor %}
             </div>
         {% endif %}
     </div>
+    {{ marking_event_summary(period, config) }}
 {% endmacro %}

@@ -2,6 +2,7 @@
 
 {% from "icon_block.html" import icon_block %}
 {% from "convenor/dashboard/overview_cards/submitter_card.html" import submitter_card %}
+{% from "convenor/dashboard/overview_cards/marking_event_card.html" import marking_event_summary %}
 {% from "macros.html" import submission_period_configure_button %}
 {% from "datepicker.html" import import_datepicker %}
 
@@ -50,29 +51,10 @@
                             <a id="submitter_card_{{ loop.index }}"></a>
                             {{ submitter_card(config, n, today, feedback_form) }}
 
-                            {# === SUB-SECTION 2: MarkingEvent summary ===
-                                 EXTENSIBILITY HOOK — insert here when marking_event_card.html is ready:
-                                 {% from "convenor/dashboard/overview_cards/marking_event_card.html"
-                                    import marking_event_summary %}
-                                 {% if period and period.marking_events|list|length > 0 %}
-                                     <div class="mt-3">
-                                         <h6 class="text-secondary"><i class="fas fa-calendar-check me-1"></i> Marking Events</h6>
-                                         {{ marking_event_summary(period) }}
-                                     </div>
-                                 {% endif %}
-                            #}
-
-                            {# === SUB-SECTION 3: MarkingWorkflow summary ===
-                                 EXTENSIBILITY HOOK — insert here when marking_workflow_card.html is ready:
-                                 {% from "convenor/dashboard/overview_cards/marking_workflow_card.html"
-                                    import marking_workflow_summary %}
-                                 {% if period and period.marking_workflows|list|length > 0 %}
-                                     <div class="mt-3">
-                                         <h6 class="text-secondary"><i class="fas fa-project-diagram me-1"></i> Marking Workflows</h6>
-                                         {{ marking_workflow_summary(period) }}
-                                     </div>
-                                 {% endif %}
-                            #}
+                            {# === SUB-SECTION 2: MarkingEvent summary === #}
+                            {% if period %}
+                                {{ marking_event_summary(period, config) }}
+                            {% endif %}
 
                         </div>
                     </div>

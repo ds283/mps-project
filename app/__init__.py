@@ -317,6 +317,7 @@ def create_app():
     tasks.register_selecting_tasks(celery)
     tasks.register_session_tasks(celery)
     tasks.register_marking_tasks(celery)
+    tasks.register_markingevent_tasks(celery)
     tasks.register_services_tasks(celery)
     tasks.register_process_report_tasks(celery)
     tasks.register_canvas_tasks(celery)

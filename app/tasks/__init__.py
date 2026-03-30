@@ -28,6 +28,7 @@ from .go_live import register_golive_tasks
 from .issue_confirm import register_issue_confirm_tasks
 from .maintenance import register_maintenance_tasks
 from .marking import register_marking_tasks
+from .markingevent import register_markingevent_tasks
 from .matching import register_matching_tasks
 from .matching_emails import register_matching_email_tasks
 from .popularity import register_popularity_tasks

@@ -1,0 +1,160 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "macros.html" import edit_data %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#scheme').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: '— No scheme —'
+            });
+            $('#notify_on_moderation_required').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select users to notify&hellip;'
+            });
+            $('#notify_on_validation_failure').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select users to notify&hellip;'
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {{ formtitle|safe }}
+{% endblock %}
+
+{% block form_content %}
+    {% if workflow %}
+        <form action="{{ url_for('convenor.edit_marking_workflow', workflow_id=workflow.id, url=url, text=text) }}"
+              method="POST" name="edit_marking_workflow_form">
+    {% else %}
+        <form action="{{ url_for('convenor.add_marking_workflow', event_id=event.id, url=url, text=text) }}"
+              method="POST" name="add_marking_workflow_form">
+    {% endif %}
+
+{{ form.hidden_tag() }}
+{{ wtf.render_field(form.name) }}
+
+{% if not workflow %}
+    {{ wtf.render_field(form.role) }}
+{% else %}
+    <div class="mb-3">
+        <label class="form-label fw-semibold">Role</label>
+        <div class="form-control-plaintext text-muted">{{ workflow.role_as_str }}
+            <span class="small">(cannot be changed after creation)</span>
+        </div>
+    </div>
+{% endif %}
+
+<div class="mb-3">
+    <label class="form-label fw-semibold" for="scheme">{{ form.scheme.label.text }}</label>
+    {% if form.scheme.description %}
+        <div class="form-text text-muted mb-1">{{ form.scheme.description }}</div>
+    {% endif %}
+    {% if scheme_locked %}
+        <div class="alert alert-secondary small mb-2">
+            <i class="fas fa-lock fa-fw me-1"></i>
+            The marking scheme cannot be changed because marking reports have already been distributed
+            or report data has been submitted.
+        </div>
+    {% endif %}
+    {{ form.scheme(id='scheme', class='form-select') }}
+    {% if form.scheme.errors %}
+        {% for error in form.scheme.errors %}
+            <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+<div class="card mt-3 mb-3 card-body bg-well">
+    <p class="form-group-heading text-secondary fw-semibold mb-3">Notifications</p>
+    <div class="mb-3">
+        <label class="form-label fw-semibold" for="notify_on_moderation_required">
+            {{ form.notify_on_moderation_required.label.text }}
+        </label>
+        {% if form.notify_on_moderation_required.description %}
+            <div class="form-text text-muted mb-1">{{ form.notify_on_moderation_required.description }}</div>
+        {% endif %}
+        {{ form.notify_on_moderation_required(id='notify_on_moderation_required', class='form-select') }}
+    </div>
+    <div class="mb-3">
+        <label class="form-label fw-semibold" for="notify_on_validation_failure">
+            {{ form.notify_on_validation_failure.label.text }}
+        </label>
+        {% if form.notify_on_validation_failure.description %}
+            <div class="form-text text-muted mb-1">{{ form.notify_on_validation_failure.description }}</div>
+        {% endif %}
+        {{ form.notify_on_validation_failure(id='notify_on_validation_failure', class='form-select') }}
+    </div>
+</div>
+
+{{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+
+</form>
+
+{# Attachments section — only shown when editing an existing workflow #}
+{% if workflow %}
+    <hr class="my-4">
+    <div class="card border-secondary mt-3 mb-3">
+        <div class="card-header bg-secondary text-white d-flex flex-row justify-content-between align-items-center">
+            <span><i class="fas fa-paperclip fa-fw me-1"></i> Attachments</span>
+            <a href="{{ url_for('convenor.add_workflow_attachment', workflow_id=workflow.id, url=request.url, text='Edit workflow') }}"
+               class="btn btn-sm btn-outline-light">
+                <i class="fas fa-plus fa-fw"></i> Add attachment&hellip;
+            </a>
+        </div>
+        <div class="card-body">
+            {% set attachments = workflow.attachments %}
+            {% if attachments|length == 0 %}
+                <span class="text-muted small">No attachments associated with this workflow.</span>
+            {% else %}
+                <div class="list-group list-group-flush">
+                    {% for att in attachments %}
+                        <div class="list-group-item d-flex flex-row justify-content-between align-items-center px-0 py-2">
+                            <div>
+                                <i class="fas fa-paperclip fa-fw me-1 text-secondary"></i>
+                                {% if att.attachment %}
+                                    <span class="fw-semibold">{{ att.attachment.filename }}</span>
+                                {% else %}
+                                    <span class="text-muted fst-italic">Unknown attachment</span>
+                                {% endif %}
+                                {% if att.description %}
+                                    <span class="small text-muted ms-2">{{ att.description }}</span>
+                                {% endif %}
+                            </div>
+                            <a href="{{ url_for('convenor.remove_workflow_attachment', workflow_id=workflow.id, attachment_id=att.id, url=request.url) }}"
+                               class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-times fa-fw"></i> Remove
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block footer %}
+    {% if workflow %}{{ edit_data(workflow) }}{% endif %}
+    {{ super() }}
+{% endblock %}

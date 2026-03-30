@@ -89,6 +89,28 @@
         </div>
     </div>
 
+    {# Workflow state summary #}
+    {% set total = workflow.submitter_reports.count() %}
+    {% if total > 0 %}
+        <div class="card border-secondary mb-3">
+            <div class="card-header bg-secondary text-white small">
+                <i class="fas fa-chart-bar fa-fw me-1"></i> State summary
+            </div>
+            <div class="card-body py-2">
+                <div class="d-flex flex-row flex-wrap gap-2">
+                    {% for state_val, state_label in state_labels %}
+                        {% set count = state_counts.get(state_val, 0) %}
+                        {% if count > 0 %}
+                            <span class="badge {% if state_val == 999 %}bg-secondary{% elif state_val == 11 %}bg-success{% else %}bg-primary{% endif %} py-2 px-3">
+                                {{ state_label }}: {{ count }}
+                            </span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white">Submitter reports</div>
         <div class="card-body">

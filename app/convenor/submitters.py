@@ -34,15 +34,18 @@ from ..models import (
     DegreeType,
     FeedbackReport,
     GeneratedAsset,
+    MarkingReport,
     ProjectClass,
     ProjectClassConfig,
     StudentData,
     SubmissionPeriodRecord,
     SubmissionRecord,
     SubmissionRole,
+    SubmitterReport,
     SubmittingStudent,
     User,
 )
+from ..models.submissions import SubmissionRoleTypesMixin
 from ..shared.context.convenor_dashboard import (
     get_convenor_dashboard_data,
 )
@@ -1121,6 +1124,10 @@ def perform_delete_role(role_id):
         url = url_for("convenor.edit_roles", sub_id=sub.id, record_id=record.id)
 
     try:
+        # Sync: remove any MarkingReports linked to this role before deleting it
+        for mr in db.session.query(MarkingReport).filter_by(role_id=role.id).all():
+            db.session.delete(mr)
+
         db.session.delete(role)
 
         log_db_commit(
@@ -1186,6 +1193,42 @@ def add_role(record_id):
 
         try:
             db.session.add(role)
+            db.session.flush()  # materialise role.id before creating MarkingReports
+
+            # Sync: for each active (non-closed) MarkingWorkflow in this period,
+            # create a MarkingReport if the new role matches the workflow's target role.
+            _supervisor_roles = frozenset(
+                {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
+            )
+            for event in period.marking_events.filter_by(closed=False).all():
+                for workflow in event.workflows.all():
+                    wf_role = workflow.role
+                    if wf_role in _supervisor_roles:
+                        matches = role.role in _supervisor_roles
+                    else:
+                        matches = role.role == wf_role
+
+                    if matches:
+                        sr = db.session.query(SubmitterReport).filter_by(
+                            record_id=record.id, workflow_id=workflow.id
+                        ).first()
+                        if sr is not None:
+                            mr = MarkingReport(
+                                role_id=role.id,
+                                submitter_report_id=sr.id,
+                                report="{}",
+                                distributed=False,
+                                report_submitted=False,
+                                feedback_submitted=False,
+                                grade=None,
+                                feedback_positive=None,
+                                feedback_improvement=None,
+                                signed_off_id=None,
+                                signed_off_timestamp=None,
+                                feedback_timestamp=None,
+                            )
+                            db.session.add(mr)
+
             log_db_commit(
                 "Added new submission role to submission record",
                 user=current_user,

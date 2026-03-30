@@ -25,7 +25,6 @@ from weasyprint.text.fonts import FontConfiguration
 from ..database import db
 from ..models import (
     AssetLicense,
-    EmailTemplate,
     EmailWorkflow,
     EmailWorkflowItem,
     EmailWorkflowItemAttachment,
@@ -34,18 +33,22 @@ from ..models import (
     FeedbackReport,
     GeneratedAsset,
     LiveProject,
+    MarkingEvent,
+    MarkingReport,
+    MarkingWorkflow,
     PeriodAttachment,
     ProjectClass,
     ProjectClassConfig,
     StudentData,
-    SubmissionAttachment,
     SubmissionPeriodRecord,
     SubmissionRecord,
     SubmissionRole,
-    SubmittedAsset,
     SubmittingStudent,
+    SubmitterReport,
     User,
 )
+from ..models.markingevent import SubmitterReportWorkflowStates
+from ..models.submissions import SubmissionRoleTypesMixin
 from ..models.emails import encode_email_payload
 from ..shared.asset_tools import (
     AssetCloudAdapter,
@@ -55,64 +58,139 @@ from ..shared.asset_tools import (
 from ..shared.scratch import ScratchFileManager, ScratchGroupManager
 from ..shared.security import validate_nonce
 from ..shared.workflow_logging import log_db_commit
-from ..task_queue import register_task
 from .shared.utils import report_error, report_info
 from .thumbnails import dispatch_thumbnail_task
 
 AssetDictionary = Dict[str, AssetCloudScratchContextManager]
 
 
+_SUPERVISOR_ROLES = frozenset(
+    {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
+)
+
+
 def register_marking_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def send_marking_emails(
         self,
-        record_id,
-        cc_convenor,
-        max_attachment,
-        test_email,
-        deadline,
-        convenor_id,
-        marking_template_id=None,
+        workflow_id: int,
+        cc_convenor: bool,
+        max_attachment: int,
+        test_user_id: Optional[int],
+        convenor_id: Optional[int],
+        deadline: Optional[str] = None,
     ):
+        """
+        Dispatch marking notification emails for all undistributed MarkingReport instances
+        in a single MarkingWorkflow.
+        """
         try:
-            record: SubmissionPeriodRecord = (
-                db.session.query(SubmissionPeriodRecord).filter_by(id=record_id).first()
-            )
+            workflow: MarkingWorkflow = db.session.query(MarkingWorkflow).filter_by(id=workflow_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if record is None:
-            msg = "Could not load SubmissionPeriodRecord from database"
+        if workflow is None:
+            msg = f"Could not load MarkingWorkflow id={workflow_id} from database"
             current_app.logger.error(msg)
             raise Exception(msg)
 
-        print(
-            '-- Send marking emails for project class "{proj}", submission period '
-            '"{period}"'.format(proj=record.config.name, period=record.display_name)
-        )
-        print(
-            "-- configuration: CC convenor = {cc}, max attachment total = {max} Mb".format(
-                cc=cc_convenor, max=max_attachment
+        if workflow.template is None:
+            current_app.logger.warning(
+                f"send_marking_emails: MarkingWorkflow id={workflow_id} has no email template assigned; skipping"
             )
-        )
+            return
 
+        # Resolve test email address from user id
+        test_email: Optional[str] = None
+        if test_user_id is not None:
+            try:
+                test_user: User = db.session.query(User).filter_by(id=test_user_id).first()
+                if test_user is not None:
+                    test_email = test_user.email
+            except SQLAlchemyError:
+                pass
+
+        # Resolve deadline: use passed value, then workflow effective_deadline, then today
+        if deadline is None and workflow.effective_deadline is not None:
+            deadline = workflow.effective_deadline.isoformat()
+
+        # Find SubmitterReports that are READY_TO_DISTRIBUTE (or later) with undistributed MarkingReports
+        eligible_ids = []
+        for sr in workflow.submitter_reports:
+            if sr.workflow_state < SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE:
+                continue
+            if any(not mr.distributed for mr in sr.marking_reports):
+                eligible_ids.append(sr.id)
+
+        if not eligible_ids:
+            return
+
+        print(
+            f"-- send_marking_emails: workflow={workflow.name!r}, "
+            f"{len(eligible_ids)} submitter report(s) to notify"
+        )
         if test_email is not None:
-            print(
-                "-- working in test mode: emails being sent to sink={email}".format(
-                    email=test_email
-                )
-            )
-
-        print(
-            "-- supplied deadline is {deadline}".format(
-                deadline=parser.parse(deadline).date()
-            )
-        )
+            print(f"-- working in test mode: emails being sent to sink={test_email}")
 
         email_group = group(
-            dispatch_emails.s(s.id, cc_convenor, max_attachment, test_email, deadline)
-            for s in record.submissions
+            dispatch_emails.s(sr_id, cc_convenor, max_attachment, test_email, deadline)
+            for sr_id in eligible_ids
+        ) | notify_dispatch.s(convenor_id)
+
+        return self.replace(email_group)
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def send_marking_event_emails(
+        self,
+        event_id: int,
+        cc_convenor: bool,
+        max_attachment: int,
+        test_user_id: Optional[int],
+        convenor_id: Optional[int],
+    ):
+        """
+        Dispatch marking notification emails for all workflows in a MarkingEvent that
+        have undistributed reports and an assigned template.
+        """
+        try:
+            event: MarkingEvent = db.session.query(MarkingEvent).filter_by(id=event_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if event is None:
+            msg = f"Could not load MarkingEvent id={event_id} from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
+
+        # Resolve test email address from user id
+        test_email: Optional[str] = None
+        if test_user_id is not None:
+            try:
+                test_user: User = db.session.query(User).filter_by(id=test_user_id).first()
+                if test_user is not None:
+                    test_email = test_user.email
+            except SQLAlchemyError:
+                pass
+
+        eligible_pairs = []  # (sr_id, deadline_str)
+        for workflow in event.workflows:
+            if workflow.template is None:
+                continue
+            deadline_str = workflow.effective_deadline.isoformat() if workflow.effective_deadline else None
+            for sr in workflow.submitter_reports:
+                if sr.workflow_state < SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE:
+                    continue
+                if any(not mr.distributed for mr in sr.marking_reports):
+                    eligible_pairs.append((sr.id, deadline_str))
+
+        if not eligible_pairs:
+            return
+
+        email_group = group(
+            dispatch_emails.s(sr_id, cc_convenor, max_attachment, test_email, deadline_str)
+            for sr_id, deadline_str in eligible_pairs
         ) | notify_dispatch.s(convenor_id)
 
         return self.replace(email_group)
@@ -133,118 +211,80 @@ def register_marking_tasks(celery):
             current_app.logger.error(msg)
             raise Exception(msg)
 
-        # result data should be a list of dicts
-        supv_sent = 0
-        mark_sent = 0
-
+        total_sent = 0
         if result_data is not None:
             if isinstance(result_data, list):
-                for group_result in result_data:
-                    if group_result is not None:
-                        if isinstance(group_result, list):
-                            for result in group_result:
-                                if isinstance(result, dict):
-                                    if "supervisor" in result:
-                                        supv_sent += result["supervisor"]
-                                    if "marker" in result:
-                                        mark_sent += result["marker"]
-                                else:
-                                    raise RuntimeError(
-                                        "Expected individual group results to be dictionaries"
-                                    )
-                        else:
-                            raise RuntimeError(
-                                "Expected record result data to be a list"
-                            )
-            else:
-                raise RuntimeError("Expected group result data to be a list")
+                for item in result_data:
+                    if isinstance(item, dict) and "sent" in item:
+                        total_sent += item["sent"]
+            elif isinstance(result_data, dict) and "sent" in result_data:
+                total_sent += result_data["sent"]
 
-        supv_plural = "s"
-        mark_plural = "s"
-        if supv_sent == 1:
-            supv_plural = ""
-        if mark_sent == 1:
-            mark_plural = ""
-
+        plural = "s" if total_sent != 1 else ""
         report_info(
-            f"Dispatched {supv_sent} notification{supv_plural} to project supervisors, and {mark_sent} notification{mark_plural} to examiners",
+            f"Dispatched {total_sent} marking notification{plural} to assessors",
             "notify_dispatch",
             convenor,
         )
 
     def _collect_marking_attachments(
         record: SubmissionRecord,
-        asset: GeneratedAsset,
+        workflow: MarkingWorkflow,
         report_name: str,
-        role: str,
     ) -> List[EmailWorkflowItemAttachment]:
+        """
+        Build the attachment list for a marking notification email.
+
+        If workflow.requires_report is True and the record has a processed_report, the report
+        is included as the first attachment. All documents explicitly assigned to the workflow
+        via workflow.attachments are then appended unconditionally.
+        """
         attachments = []
 
-        # add the processed report
-        attachments.append(
-            EmailWorkflowItemAttachment.build_(
-                name=report_name,
-                description="student's submitted report",
-                generated_asset=asset,
+        # Optionally add the processed report
+        if workflow.requires_report and record.processed_report is not None:
+            attachments.append(
+                EmailWorkflowItemAttachment.build_(
+                    name=report_name,
+                    description="student's submitted report",
+                    generated_asset=record.processed_report,
+                )
             )
-        )
 
-        # add period-level attachments
-        for attachment in record.period.ordered_attachments:
-            attachment: PeriodAttachment
-            if (role == "marker" and attachment.include_marker_emails) or (
-                role == "supervisor" and attachment.include_supervisor_emails
-            ):
-                attachments.append(
-                    EmailWorkflowItemAttachment.build_(
-                        name=str(
-                            attachment.attachment.target_name
-                            or attachment.attachment.unique_name
-                        ),
-                        description=attachment.description or "",
-                        submitted_asset=attachment.attachment,
-                    )
+        # Add all explicitly assigned workflow-level attachments
+        for pa in workflow.attachments:
+            pa: PeriodAttachment
+            attachments.append(
+                EmailWorkflowItemAttachment.build_(
+                    name=str(pa.attachment.target_name or pa.attachment.unique_name),
+                    description=pa.description or "",
+                    submitted_asset=pa.attachment,
                 )
-
-        # add submission-level attachments
-        for attachment in record.ordered_attachments:
-            attachment: SubmissionAttachment
-            if (role == "marker" and attachment.include_marker_emails) or (
-                role == "supervisor" and attachment.include_supervisor_emails
-            ):
-                attachments.append(
-                    EmailWorkflowItemAttachment.build_(
-                        name=str(
-                            attachment.attachment.target_name
-                            or attachment.attachment.unique_name
-                        ),
-                        description=attachment.description or "",
-                        submitted_asset=attachment.attachment,
-                    )
-                )
+            )
 
         return attachments
 
     def _build_supervisor_item(
         role: SubmissionRole,
         record: SubmissionRecord,
+        workflow: MarkingWorkflow,
         config: ProjectClassConfig,
         pclass: ProjectClass,
         submitter: SubmittingStudent,
         student: StudentData,
         period: SubmissionPeriodRecord,
-        asset: GeneratedAsset,
         deadline: date,
         supervisors: List[SubmissionRole],
         markers: List[SubmissionRole],
-        test_email: str,
+        test_email: Optional[str],
         cc_convenor: bool,
     ) -> EmailWorkflowItem:
-        if hasattr(asset, "filename"):
-            filename_path: Path = Path(asset.filename)
+        asset = record.processed_report
+        if asset is not None:
+            filename_path = Path(asset.target_name if hasattr(asset, "target_name") else asset.filename)
+            extension = filename_path.suffix.lower()
         else:
-            filename_path: Path = Path(asset.target_name)
-        extension: str = filename_path.suffix.lower()
+            extension = ".pdf"
         report_name = str(
             Path(
                 "{year}_{abbv}_candidate_{number}".format(
@@ -256,14 +296,9 @@ def register_marking_tasks(celery):
         )
 
         user: User = role.user
-        print(
-            '-- preparing email to supervisor "{name}" for submitter '
-            '"{sub_name}"'.format(name=user.name, sub_name=student.user.name)
-        )
+        print(f'-- preparing email to supervisor "{user.name}" for submitter "{student.user.name}"')
 
-        attachments = _collect_marking_attachments(
-            record, asset, report_name, role="supervisor"
-        )
+        attachments = _collect_marking_attachments(record, workflow, report_name)
 
         recipient = test_email if test_email is not None else user.email
         recipient_list = [recipient]
@@ -301,23 +336,24 @@ def register_marking_tasks(celery):
     def _build_marker_item(
         role: SubmissionRole,
         record: SubmissionRecord,
+        workflow: MarkingWorkflow,
         config: ProjectClassConfig,
         pclass: ProjectClass,
         submitter: SubmittingStudent,
         student: StudentData,
         period: SubmissionPeriodRecord,
-        asset: GeneratedAsset,
         deadline: date,
         supervisors: List[SubmissionRole],
         markers: List[SubmissionRole],
-        test_email: str,
+        test_email: Optional[str],
         cc_convenor: bool,
     ) -> EmailWorkflowItem:
-        if hasattr(asset, "filename"):
-            filename_path: Path = Path(asset.filename)
+        asset = record.processed_report
+        if asset is not None:
+            filename_path = Path(asset.target_name if hasattr(asset, "target_name") else asset.filename)
+            extension = filename_path.suffix.lower()
         else:
-            filename_path: Path = Path(asset.target_name)
-        extension: str = filename_path.suffix.lower()
+            extension = ".pdf"
         report_name = str(
             Path(
                 "{year}_{abbv}_candidate_{number}".format(
@@ -329,15 +365,9 @@ def register_marking_tasks(celery):
         )
 
         user: User = role.user
-        print(
-            '-- preparing email to marker "{name}" for submitter "{sub_name}"'.format(
-                name=user.name, sub_name=student.user.name
-            )
-        )
+        print(f'-- preparing email to marker "{user.name}" for submitter "{student.user.name}"')
 
-        attachments = _collect_marking_attachments(
-            record, asset, report_name, role="marker"
-        )
+        attachments = _collect_marking_attachments(record, workflow, report_name)
 
         recipient = test_email if test_email is not None else user.email
         recipient_list = [recipient]
@@ -374,135 +404,100 @@ def register_marking_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def dispatch_emails(
-        self, record_id, cc_convenor, max_attachment, test_email, deadline
+        self,
+        submitter_report_id: int,
+        cc_convenor: bool,
+        max_attachment: int,
+        test_email: Optional[str],
+        deadline: Optional[str],
     ):
+        """
+        Send marking notification emails for all undistributed MarkingReport instances
+        belonging to a single SubmitterReport.
+        """
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
+            sr: SubmitterReport = db.session.query(SubmitterReport).filter_by(id=submitter_report_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if record is None:
-            msg = "Could not load SubmissionRecord from database"
+        if sr is None:
+            msg = f"Could not load SubmitterReport id={submitter_report_id} from database"
             current_app.logger.error(msg)
             raise Exception(msg)
 
-        # nothing to do if either (1) no project assigned, or (2) no report yet uploaded, or
-        # (3) processed report not yet generated; SubmissionRecord instances in this position will
-        # need to have marking emails sent later
-        if record.project is None or record.processed_report is None:
-            return
+        record: SubmissionRecord = sr.record
+        workflow: MarkingWorkflow = sr.workflow
 
-        asset: GeneratedAsset = record.processed_report
+        # Skip if no project assigned
+        if record.project is None:
+            return {"sent": 0}
+
+        # Skip if report required but not yet processed
+        if workflow.requires_report and record.processed_report is None:
+            return {"sent": 0}
+
         period: SubmissionPeriodRecord = record.period
         config: ProjectClassConfig = period.config
         pclass: ProjectClass = config.project_class
         submitter: SubmittingStudent = record.owner
         student: StudentData = submitter.student
 
+        # Resolve deadline
+        deadline_date: date
+        if deadline is not None:
+            deadline_date = parser.parse(deadline).date()
+        elif workflow.effective_deadline is not None:
+            deadline_date = workflow.effective_deadline.date()
+        else:
+            deadline_date = date.today()
+
         supervisors: List[SubmissionRole] = record.supervisor_roles
         markers: List[SubmissionRole] = record.marker_roles
 
-        deadline: date = parser.parse(deadline).date()
+        undistributed: List[MarkingReport] = [mr for mr in sr.marking_reports if not mr.distributed]
+        if not undistributed:
+            return {"sent": 0}
 
-        supervisors_to_notify: List[SubmissionRole] = [
-            r for r in supervisors if not r.marking_distributed
-        ]
-        markers_to_notify: List[SubmissionRole] = [
-            r for r in markers if not r.marking_distributed
-        ]
-
-        if not supervisors_to_notify and not markers_to_notify:
-            return None
-
-        supv_workflow = None
-        mark_workflow = None
-
-        if supervisors_to_notify:
-            supv_template = EmailTemplate.find_template_(
-                EmailTemplate.MARKING_SUPERVISOR, pclass=pclass
-            )
-            supv_workflow = EmailWorkflow.build_(
-                name=f"Marking supervisor notification: {pclass.name} — {student.user.name}",
-                template=supv_template,
-                defer=timedelta(minutes=15),
-                pclasses=[pclass],
-                max_attachment_size=max_attachment,
-            )
-            db.session.add(supv_workflow)
-
-        if markers_to_notify:
-            if marking_template_id is not None:
-                mark_template = db.session.get(EmailTemplate, marking_template_id)
-            else:
-                mark_template = EmailTemplate.find_template_(
-                    EmailTemplate.MARKING_MARKER, pclass=pclass
-                )
-            mark_workflow = EmailWorkflow.build_(
-                name=f"Marking examiner notification: {pclass.name} — {student.user.name}",
-                template=mark_template,
-                defer=timedelta(minutes=15),
-                pclasses=[pclass],
-                max_attachment_size=max_attachment,
-            )
-            db.session.add(mark_workflow)
-
+        # Create one EmailWorkflow for this batch
+        email_wf = EmailWorkflow.build_(
+            name=f"Marking notification: {workflow.name} — {student.user.name}",
+            template=workflow.template,
+            defer=timedelta(minutes=15),
+            pclasses=[pclass],
+            max_attachment_size=max_attachment,
+        )
+        db.session.add(email_wf)
         db.session.flush()
 
-        for role in supervisors_to_notify:
-            filtered_supervisors: List[SubmissionRole] = [
-                x for x in supervisors if x.id != role.id
-            ]
-            item = _build_supervisor_item(
-                role,
-                record,
-                config,
-                pclass,
-                submitter,
-                student,
-                period,
-                asset,
-                deadline,
-                filtered_supervisors,
-                markers,
-                test_email,
-                cc_convenor,
-            )
-            item.workflow = supv_workflow
-            db.session.add(item)
-            if test_email is None:
-                role.marking_distributed = True
+        sent = 0
+        for mr in undistributed:
+            role: SubmissionRole = mr.role
+            is_supervisor = role.role in _SUPERVISOR_ROLES
 
-        for role in markers_to_notify:
-            filtered_markers: List[SubmissionRole] = [
-                x for x in markers if x.id != role.id
-            ]
-            item = _build_marker_item(
-                role,
-                record,
-                config,
-                pclass,
-                submitter,
-                student,
-                period,
-                asset,
-                deadline,
-                supervisors,
-                filtered_markers,
-                test_email,
-                cc_convenor,
-            )
-            item.workflow = mark_workflow
+            if is_supervisor:
+                filtered_supervisors = [r for r in supervisors if r.id != role.id]
+                item = _build_supervisor_item(
+                    role, record, workflow, config, pclass, submitter, student,
+                    period, deadline_date, filtered_supervisors, markers, test_email, cc_convenor,
+                )
+            else:
+                filtered_markers = [r for r in markers if r.id != role.id]
+                item = _build_marker_item(
+                    role, record, workflow, config, pclass, submitter, student,
+                    period, deadline_date, supervisors, filtered_markers, test_email, cc_convenor,
+                )
+
+            item.workflow = email_wf
             db.session.add(item)
             if test_email is None:
-                role.marking_distributed = True
+                mr.distributed = True
+            sent += 1
 
         try:
             log_db_commit(
-                f"Distributed marking notifications for {student.user.name} ({pclass.name}): "
-                f"{len(supervisors_to_notify)} supervisor(s), {len(markers_to_notify)} examiner(s) notified",
+                f"Distributed {sent} marking notification(s) for {student.user.name} "
+                f"({pclass.name}, workflow={workflow.name!r})",
                 student=student,
                 project_classes=pclass,
                 endpoint=self.name,
@@ -512,7 +507,7 @@ def register_marking_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        return None
+        return {"sent": sent}
 
     @celery.task(bind=True, default_retry_delay=30)
     def conflate_marks_for_period(self, period_id: int, convenor_id: Optional[int]):

@@ -1,7 +1,16 @@
 {% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
-{% from "macros.html" import edit_data %}
+{% from "macros.html" import edit_data, date_field %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        $(document).ready(function () {
+            $('#deadline').datetimepicker({format: 'DD/MM/YYYY HH:mm', useCurrent: true, showTodayButton: true});
+        });
+    </script>
+{% endblock %}
 
 {% block title %}
     {{ title }}
@@ -22,6 +31,7 @@
 
 {{ form.hidden_tag() }}
 {{ wtf.render_field(form.name) }}
+{{ date_field(form.deadline, 'deadline') }}
 {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
 </form>

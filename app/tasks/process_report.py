@@ -33,6 +33,13 @@ from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.scratch import ScratchFileManager
 from .thumbnails import dispatch_thumbnail_task
 
+
+def _dispatch_advance_marking_workflow(record_id: int) -> None:
+    """Fire-and-forget dispatch of advance_marking_workflow after report processing completes."""
+    celery = current_app.extensions["celery"]
+    task = celery.tasks["app.tasks.markingevent.advance_marking_workflow"]
+    task.apply_async(args=[record_id])
+
 _title_label_size = 24
 _subtitle_label_size = 18
 _sticker_text_size = 18
@@ -444,6 +451,9 @@ def register_process_report_tasks(celery):
 
         self.update_state(state="SUCCESS")
 
+        # Advance any SubmitterReport instances that are now unblocked
+        _dispatch_advance_marking_workflow(record_id)
+
     @celery.task(bind=True, default_retry_delay=30)
     def error(self, record_id, user_id):
         try:
@@ -472,6 +482,19 @@ def register_process_report_tasks(celery):
             "danger",
             autocommit=True,
         )
+
+        # Mark the record so that report_processing_failed is detectable downstream
+        record.celery_failed = True
+        try:
+            log_db_commit(
+                f"Marked report processing failure for submission record id={record_id}",
+                student=record.owner.student,
+                project_classes=record.owner.config.project_class,
+                endpoint=self.name,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         # raise exception to flag the error
         raise RuntimeError("Errors occurred when processing uploaded report")

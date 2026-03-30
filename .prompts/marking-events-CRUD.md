@@ -3,7 +3,7 @@
 This task is intended to provide access to the main inspector view for MarkingEvent instances, and to provide the
 basic database CRUD functionality to manage them.
 
-General implementation paterns:
+General implementation patterns:
 
 - Views that provide lists (of MarkingEvent, MarkingWorkflow, PeriodAttachment, etc.) should use a Datatables
   based front end backed by an AJAX endpoint. Implement an AJAX row formatted in @app/ajax/convneor.

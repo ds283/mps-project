@@ -90,7 +90,7 @@ from .forms import (
     EditSupervisionEventTemplateFormFactory,
     ManualAssignFormFactory,
     OpenFeedbackFormFactory,
-    TestOpenFeedbackForm,
+    TestOpenFeedbackFormFactory,
 )
 
 
@@ -547,6 +547,7 @@ def test_notifications(id):
     if incoming_template_id is not None:
         incoming_template_id = int(incoming_template_id)
 
+    TestOpenFeedbackForm = TestOpenFeedbackFormFactory(config.project_class)
     form = TestOpenFeedbackForm(request.form)
 
     # inject query factory for marking_template
@@ -565,7 +566,7 @@ def test_notifications(id):
             )
 
     if form.validate_on_submit():
-        test_email = form.target_email.data
+        test_user_id = form.test_target.data.id
         marking_template = form.marking_template.data
         marking_template_id = (
             marking_template.id if marking_template is not None else None
@@ -579,7 +580,7 @@ def test_notifications(id):
                 deadline=deadline,
                 cc_me=int(cc_me),
                 max_attachment=int(max_attachment),
-                test_email=str(test_email),
+                test_user_id=int(test_user_id),
                 marking_template_id=marking_template_id,
             )
         )
@@ -632,7 +633,9 @@ def do_send_notifications(id):
 
     cc_me = bool(int(request.args.get("cc_me", 0)))
     max_attachment = int(request.args.get("max_attachment", 2))
-    test_email = request.args.get("test_email", None)
+    test_user_id = request.args.get("test_user_id", None)
+    if test_user_id is not None:
+        test_user_id = int(test_user_id)
     url = request.args.get("url", None)
     if url is None:
         url = url_for("convenor.status", id=config.pclass_id)
@@ -646,35 +649,40 @@ def do_send_notifications(id):
         )
         return redirect(url)
 
-    marking_template_id = request.args.get("marking_template_id", None)
-    if marking_template_id is not None:
-        marking_template_id = int(marking_template_id)
-
     celery = current_app.extensions["celery"]
-    marking_email = celery.tasks["app.tasks.marking.send_marking_emails"]
+    send_event_emails = celery.tasks["app.tasks.marking.send_marking_event_emails"]
 
     tk_name = "Dispatch marking notifications"
     tk_description = "Dispatch emails with reports and marking instructions"
 
     init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
     final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
-    error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
+    error_task = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
-    seq = chain(
-        init.si(task_id, tk_name),
-        marking_email.si(
-            period.id,
-            cc_me,
-            max_attachment,
-            test_email,
-            deadline,
-            current_user.id,
-            marking_template_id=marking_template_id,
-        ),
-        final.si(task_id, tk_name, current_user.id),
-    ).on_error(error.si(task_id, tk_name, current_user.id))
+    # dispatch send_marking_event_emails for each MarkingEvent attached to the current period
+    events: list[MarkingEvent] = period.marking_events.all() if period is not None else []
+
+    if not events:
+        flash("No marking events are associated with this submission period.", "warning")
+        return redirect(url)
+
+    # build a chain: init → send_event_emails for each event → final
+    steps = [init.si(task_id, tk_name)]
+    for event in events:
+        steps.append(
+            send_event_emails.si(
+                event.id,
+                cc_me,
+                max_attachment,
+                test_user_id,
+                current_user.id,
+            )
+        )
+    steps.append(final.si(task_id, tk_name, current_user.id))
+
+    seq = chain(*steps).on_error(error_task.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 
     return redirect(url)

@@ -12,25 +12,25 @@
 
         function sendAjax(ranking, period_id) {
             $.ajax({
-               url: $SCRIPT_ROOT + "/convenor/update_period_attachments",
-               type: "POST",
-               data: JSON.stringify({ranking: ranking, period_id: period_id}),
-               contentType: "application/json; charset=utf-8"
+                url: $SCRIPT_ROOT + "/convenor/update_period_attachments",
+                type: "POST",
+                data: JSON.stringify({ranking: ranking, period_id: period_id}),
+                contentType: "application/json; charset=utf-8"
             });
         }
 
         Sortable.create(document.getElementById("period-attachments"), {
             handle: '.drag-handle',
             animation: 150,
-            onSort: function(e) {
+            onSort: function (e) {
                 const items = e.to.children;
                 let result = [];
-                for (let i=0; i < items.length; i++) {
+                for (let i = 0; i < items.length; i++) {
                     // push id onto ranking list
                     result.push($(items[i]).attr("id"));
 
                     rspan = $(items[i]).find('#ranking');
-                    rspan.html("#" + (i+1));
+                    rspan.html("#" + (i + 1));
                 }
                 sendAjax(result, {{ record.id }});
             }
@@ -50,32 +50,41 @@
             <span id="ranking" class="badge bg-primary">#{{ attachment.rank_order }}</span>
         </td>
         <td>
-            {% if asset.small_thumbnail and not asset.small_thumbnail.lost %}
-                <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
-                     class="img-thumbnail mb-1" style="max-width:80px; max-height:80px;" alt="Preview">
-            {% endif %}
-            <div>
-                {% if asset.target_name %}
-                    <strong>{{ asset.target_name }}</strong>
-                {% else %}
-                    <strong>{{ asset.unique_name }}</strong>
-                {% endif %}
-            </div>
-            {% if attachment and attachment.description and attachment.description|length > 0 %}
-                <div class="mt-2 small text-muted">
-                    <i class="fas fa-paperclip"></i> {{ attachment.description }}
+            <div class="d-flex flex-row flex-wrap justify-content-between align-items-start gap-2">
+                <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+                    <div>
+                        {% if asset.target_name %}
+                            <strong>{{ asset.target_name }}</strong>
+                        {% else %}
+                            <strong>{{ asset.unique_name }}</strong>
+                        {% endif %}
+                    </div>
+                    {% if attachment and attachment.description and attachment.description|length > 0 %}
+                        <div class="mt-2 small text-muted">
+                            <i class="fas fa-paperclip"></i> {{ attachment.description }}
+                        </div>
+                    {% endif %}
+                    <div>
+                        {% if attachment.publish_to_students %}
+                            <span class="badge bg-info"><i class="fas fa-eye"></i> Publish</span>
+                        {% endif %}
+                        {% if attachment.include_marker_emails %}
+                            <span class="badge bg-info"><i class="fas fa-envelope"></i> Marker</span>
+                        {% endif %}
+                        {% if attachment.include_supervisor_emails %}
+                            <span class="badge bg-info"><i class="fas fa-envelope"></i> Supervisor</span>
+                        {% endif %}
+                    </div>
                 </div>
-            {% endif %}
-            <div>
-                {% if attachment.publish_to_students %}
-                    <span class="badge bg-info"><i class="fas fa-eye"></i> Publish</span>
-                {% endif %}
-                {% if attachment.include_marker_emails %}
-                    <span class="badge bg-info"><i class="fas fa-envelope"></i> Marker</span>
-                {% endif %}
-                {% if attachment.include_supervisor_emails %}
-                    <span class="badge bg-info"><i class="fas fa-envelope"></i> Supervisor</span>
-                {% endif %}
+                <div>
+                    {% if asset.medium_thumbnail and not asset.medium_thumbnail.lost %}
+                        <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='medium') }}"
+                             class="img-thumbnail mb-1" style="max-width:250px; max-height:250px;" alt="Preview">
+                    {% elif asset.small_thumbnail and not asset.small_thumbnail.lost %}
+                        <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
+                             class="img-thumbnail mb-1" style="max-width:150px; max-height:150px;" alt="Preview">
+                    {% endif %}
+                </div>
             </div>
         </td>
         <td>
@@ -100,36 +109,45 @@
             {% endif %}
         </td>
         <td>
-            <div style="text-align: right;" class="float-end">
+            <div class="d-flex flex-row justify-content-end align-items-center">
                 <div class="dropdown">
-                    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown">
                         Actions
                     </button>
                     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
                         {% set has_access = asset.has_access(current_user.id) %}
                         {# no need to check whether user is admin, because anyone accessing this view must be an admin user #}
                         {% if edit_url is not none %}
-                            <a class="dropdown-item d-flex gap-2" href="{{ edit_url }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit</a>
+                            <a class="dropdown-item d-flex gap-2" href="{{ edit_url }}"><i
+                                    class="fas fa-pencil-alt fa-fw"></i> Edit</a>
                         {% else %}
                             <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-pencil-alt fa-fw"></i> Edit</a>
                         {% endif %}
                         {% if has_access and download_url is not none %}
-                            <a class="dropdown-item d-flex gap-2" href="{{ download_url }}"><i class="fas fa-cloud-download-alt fa-fw"></i> Download</a>
+                            <a class="dropdown-item d-flex gap-2" href="{{ download_url }}"><i
+                                    class="fas fa-cloud-download-alt fa-fw"></i> Download</a>
                         {% else %}
-                            <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-cloud-download-alt fa-fw"></i> Download</a>
+                            <a class="dropdown-item d-flex gap-2 disabled"><i
+                                    class="fas fa-cloud-download-alt fa-fw"></i> Download</a>
                         {% endif %}
                         {% if acl_url is not none %}
-                            <a class="dropdown-item d-flex gap-2" href="{{ acl_url }}"><i class="fas fa-check-square fa-fw"></i> Access control...</a>
+                            <a class="dropdown-item d-flex gap-2" href="{{ acl_url }}"><i
+                                    class="fas fa-check-square fa-fw"></i> Access control&hellip;</a>
                         {% else %}
-                            <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-check-square fa-fw"></i> Access control...</a>
+                            <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-check-square fa-fw"></i>
+                                Access control&hellip;</a>
                         {% endif %}
                         {% if log_url is not none %}
-                            <a class="dropdown-item d-flex gap-2" href="{{ log_url }}"><i class="fas fa-address-book fa-fw"></i> Download log...</a>
+                            <a class="dropdown-item d-flex gap-2" href="{{ log_url }}"><i
+                                    class="fas fa-address-book fa-fw"></i> Download log&hellip;</a>
                         {% else %}
-                            <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-address-book fa-fw"></i> Download log...</a>
+                            <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-address-book fa-fw"></i>
+                                Download log&hellip;</a>
                         {% endif %}
                         {% if deletable and delete_url is not none %}
-                            <a class="dropdown-item d-flex gap-2" href="{{ delete_url }}"><i class="fas fa-trash fa-fw"></i> Remove</a>
+                            <a class="dropdown-item d-flex gap-2" href="{{ delete_url }}"><i
+                                    class="fas fa-trash fa-fw"></i> Remove</a>
                         {% else %}
                             <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-trash fa-fw"></i> Remove</a>
                         {% endif %}
@@ -150,7 +168,8 @@
     {% endif %}
 
     <div class="card border-primary mt-3 mb-3">
-        <div class="card-header bg-primary text-white">Manage documents for <strong>{{ record.display_name }}</strong></div>
+        <div class="card-header bg-primary text-white">Manage documents for <strong>{{ record.display_name }}</strong>
+        </div>
         <div class="card-body">
             <div class="card mt-3 mb-3 card-body bg-well">
                 {% if record.has_attachments %}
@@ -158,25 +177,25 @@
                     <hr class="intro-divider">
                     <table class="table table-striped">
                         <thead>
-                            <tr>
-                                <th width="5%"></th>
-                                <th width="40%">Document</th>
-                                <th width="30%">Attributes</th>
-                                <th width="10%">License</th>
-                                <th width="15%"></th>
-                            </tr>
+                        <tr>
+                            <th width="5%"></th>
+                            <th width="40%">Document</th>
+                            <th width="30%">Attributes</th>
+                            <th width="10%">License</th>
+                            <th width="15%"></th>
+                        </tr>
                         </thead>
                         <tbody id="period-attachments">
-                            {% for attachment in record.ordered_attachments %}
-                                {% set asset = attachment.attachment %}
-                                {{ asset_line(asset, attachment,
+                        {% for attachment in record.ordered_attachments %}
+                            {% set asset = attachment.attachment %}
+                            {{ asset_line(asset, attachment,
                                               download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
                                               delete_url=url_for('convenor.delete_period_attachment', aid=attachment.id),
                                               edit_url=url_for('convenor.edit_period_attachment', aid=attachment.id, url=url_for('convenor.submission_period_documents', pid=record.id, url=url, text=text), text='submission period document manager'),
                                               acl_url=url_for('documents.attachment_acl', attach_type=0, attach_id=attachment.id, url=url_for('convenor.submission_period_documents', pid=record.id, url=url, text=text), text='submission period document manager'),
                                               log_url=url_for('documents.attachment_download_log', attach_type=0, attach_id=attachment.id, url=url_for('convenor.submission_period_documents', pid=record.id, url=url, text=text), text='submission period document manager'),
                                               deletable=deletable) }}
-                            {% endfor %}
+                        {% endfor %}
                         </tbody>
                     </table>
                 {% else %}
@@ -184,7 +203,8 @@
                 {% endif %}
                 <hr class="into-divider">
                 <div style="text-align: center;">
-                    <a href="{{ url_for('convenor.upload_period_attachment', pid=record.id, url=url, text=text) }}" class="btn btn-secondary btn-lg">
+                    <a href="{{ url_for('convenor.upload_period_attachment', pid=record.id, url=url, text=text) }}"
+                       class="btn btn-secondary btn-lg">
                         <i class="fas fa-plus"></i>
                         Upload new attachment
                     </a>

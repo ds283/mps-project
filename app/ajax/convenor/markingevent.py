@@ -70,6 +70,10 @@ _marking_event_menu = """
 _marking_workflow_name = """
 <div class="fw-semibold">{{ workflow.name }}</div>
 <div class="small text-muted mt-1">Role: {{ workflow.role_as_str }}</div>
+{% set deadline = workflow.effective_deadline %}
+{% if deadline is not none %}
+    <div class="small text-muted mt-1"><i class="fas fa-clock fa-fw"></i> Deadline: {{ deadline.strftime("%d/%m/%Y") }}</div>
+{% endif %}
 """
 
 # language=jinja2
@@ -100,9 +104,13 @@ _marking_workflow_attachments = """
 _marking_workflow_reports = """
 {% set submitter_count = workflow.number_submitter_reports %}
 {% set marking_count = workflow.number_marking_reports %}
+{% set failure_count = workflow.number_processing_failures %}
 <div class="small">
     <div><i class="fas fa-user-graduate"></i> <strong>{{ submitter_count }}</strong> submitter report{{ 's' if submitter_count != 1 else '' }}</div>
     <div class="mt-1"><i class="fas fa-marker"></i> <strong>{{ marking_count }}</strong> marking report{{ 's' if marking_count != 1 else '' }}</div>
+    {% if failure_count > 0 %}
+        <div class="mt-1"><span class="badge bg-danger">{{ failure_count }} processing failure{{ 's' if failure_count != 1 else '' }}</span></div>
+    {% endif %}
 </div>
 """
 
@@ -110,13 +118,23 @@ _marking_workflow_reports = """
 _marking_workflow_distribution = """
 {% set total = workflow.number_marking_reports %}
 {% set distributed = workflow.number_marking_reports_distributed %}
-{% set not_distributed = total - distributed %}
+{% set not_distributed = workflow.number_marking_reports_undistributed %}
+{% set failure_count = workflow.number_processing_failures %}
 <div class="small">
     {% if distributed > 0 %}
         <div class="text-success"><i class="fas fa-check-circle"></i> {{ distributed }} distributed</div>
     {% endif %}
     {% if not_distributed > 0 %}
-        <div class="text-danger"><i class="fas fa-times-circle"></i> {{ not_distributed }} not distributed</div>
+        <div class="mt-1"><span class="badge bg-warning text-dark">{{ not_distributed }} not distributed</span></div>
+        <div class="mt-1">
+            <a href="{{ url_for('convenor.send_marking_emails_for_workflow', workflow_id=workflow.id) }}"
+               class="btn btn-xs btn-outline-secondary">
+                <i class="fas fa-envelope fa-fw"></i> Send notifications
+            </a>
+        </div>
+    {% endif %}
+    {% if failure_count > 0 %}
+        <div class="mt-1"><span class="badge bg-danger">{{ failure_count }} processing failure{{ 's' if failure_count != 1 else '' }}</span></div>
     {% endif %}
     {% if total == 0 %}
         <span class="badge bg-secondary">No reports</span>
@@ -174,6 +192,15 @@ _submitter_report_project = """
     {% endif %}
 {% else %}
     <span class="badge bg-warning text-dark">No project</span>
+{% endif %}
+{% if report.record.report_processing_failed %}
+    <div class="mt-1">
+        <span class="badge bg-danger">Processing failed</span>
+        <a href="{{ url_for('convenor.restart_report_processing', record_id=report.record.id) }}"
+           class="btn btn-xs btn-outline-danger ms-1">
+            <i class="fas fa-redo fa-fw"></i> Restart
+        </a>
+    </div>
 {% endif %}
 """
 

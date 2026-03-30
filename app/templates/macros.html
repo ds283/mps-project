@@ -436,6 +436,23 @@
     {% endif %}
 {% endmacro %}
 
+{% macro render_convenor_actions(actions) %}
+    {% from "icon_block.html" import icon_block %}
+    {% for action in actions %}
+        <div class="alert alert-{{ action.severity }} d-flex justify-content-between align-items-center mb-2">
+            <div>
+                {% call icon_block("exclamation-circle") %}
+                    <strong>{{ action.title }}</strong>
+                    <div class="mt-1 small">{{ action.description }}</div>
+                {% endcall %}
+            </div>
+            {% if action.action_url %}
+                <a href="{{ action.action_url }}" class="btn btn-sm btn-{{ action.severity }} ms-3 flex-shrink-0">{{ action.action_label }}</a>
+            {% endif %}
+        </div>
+    {% endfor %}
+{% endmacro %}
+
 {% macro render_formatted_project(item, show_hint=true) %}
     {% set payload = item.format_project(show_hint=true) %}
     {% if 'tag' in payload %}

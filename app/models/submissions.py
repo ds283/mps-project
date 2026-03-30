@@ -1100,6 +1100,9 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # is the celery processing task finished?
     celery_finished = db.Column(db.Boolean(), default=False)
 
+    # did the celery processing task fail? (set by the error handler in the process_report chain)
+    celery_failed = db.Column(db.Boolean(), default=False)
+
     # timestamp for generation of report
     timestamp = db.Column(db.DateTime())
 
@@ -1204,6 +1207,11 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         self._validated = False
         self._errors = False
         self._warnings = False
+
+    @property
+    def report_processing_failed(self) -> bool:
+        """True if the report was uploaded but processing crashed without generating a processed_report."""
+        return self.report is not None and self.processed_report is None and bool(self.celery_failed)
 
     @property
     def submission_period(self):

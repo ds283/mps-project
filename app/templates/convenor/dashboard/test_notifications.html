@@ -15,6 +15,12 @@
                 dropdownCssClass: 'select2--small',
                 placeholder: 'Select a template...'
             });
+            $('#test_target').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select a recipient...'
+            });
         });
     </script>
 {% endblock %}
@@ -45,7 +51,7 @@
                                 <p>In the test-phase, notifications are not issued to their intended
                                     recipients, but rather to a sink email address. This allows the
                                     outgoing emails to be audited to ensure they are correct.</p>
-                                {{ wtf.render_field(form.target_email) }}
+                                {{ wtf.render_field(form.test_target) }}
                                 {{ wtf.render_field(form.marking_template) }}
                             </div>
                         </div>

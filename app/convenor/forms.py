@@ -269,24 +269,63 @@ def OpenFeedbackFormFactory(
     return OpenFeedbackForm
 
 
-class TestOpenFeedbackForm(Form):
-    # capture destinations for test emails
-    target_email = StringField(
-        "Target email address",
-        validators=[InputRequired(), Email()],
-        description="Enter an email address to which the test notification emails will be sent.",
-    )
+def TestOpenFeedbackFormFactory(pclass):
+    """
+    Build the test-notifications form, scoped to users who can receive test emails for the given
+    project class: convenors/co-convenors, admins on an overlapping tenant, and root users.
+    """
+    _convenor_ids = set()
+    if pclass.convenor is not None:
+        _convenor_ids.add(pclass.convenor.id)
+    for fd in pclass.coconvenors.all():
+        _convenor_ids.add(fd.id)
 
-    # email template selector (query_factory injected by the view)
-    marking_template = QuerySelectField(
-        "Email template",
-        allow_blank=False,
-        get_label=BuildWorkflowTemplateLabel,
-        validators=[DataRequired(message="Please select an email template.")],
-    )
+    def get_test_targets():
+        users = (
+            db.session.query(User)
+            .join(User.roles)
+            .filter(
+                User.active.is_(True),
+                User.tenants.any(id=pclass.tenant_id),
+                Role.name.in_(["faculty", "admin", "root"]),
+            )
+            .distinct()
+            .order_by(User.last_name, User.first_name)
+            .all()
+        )
+        # Keep only convenors/co-convenors, admins, and root users
+        filtered = []
+        for u in users:
+            roles = {r.name for r in u.roles}
+            if u.id in _convenor_ids:
+                filtered.append(u)
+            elif "admin" in roles or "root" in roles:
+                filtered.append(u)
+        return filtered
 
-    # submit button
-    submit_button = SubmitField("Perform test")
+    class TestOpenFeedbackForm(Form):
+        # role-filtered user selector for test email sink
+        test_target = QuerySelectField(
+            "Send test to",
+            query_factory=get_test_targets,
+            get_label=lambda u: f"{u.name} <{u.email}>",
+            allow_blank=False,
+            validators=[DataRequired(message="Please select a recipient for the test notification.")],
+            description="Select a recipient for the test notification emails.",
+        )
+
+        # email template selector (query_factory injected by the view)
+        marking_template = QuerySelectField(
+            "Email template",
+            allow_blank=False,
+            get_label=BuildWorkflowTemplateLabel,
+            validators=[DataRequired(message="Please select an email template.")],
+        )
+
+        # submit button
+        submit_button = SubmitField("Perform test")
+
+    return TestOpenFeedbackForm
 
 
 class CustomCATSLimitForm(Form, SaveChangesMixin):
@@ -1034,6 +1073,13 @@ class MarkingEventMixin:
         description="Name for this marking event. Must be unique within the submission period.",
     )
 
+    deadline = DateTimeField(
+        "Deadline",
+        format="%Y-%m-%d %H:%M",
+        validators=[Optional()],
+        description="Optional global marking deadline for this event. Individual workflows may have earlier sub-deadlines.",
+    )
+
 
 class AddMarkingEventForm(Form, MarkingEventMixin):
     submit = SubmitField("Add marking event")
@@ -1056,12 +1102,15 @@ WORKFLOW_ROLE_CHOICES = [
 ]
 
 
-def MarkingWorkflowFormFactory(pclass, scheme_locked=False):
+def MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=None):
     """
     Build Add/Edit form classes for MarkingWorkflow bound to a specific ProjectClass.
 
     scheme_locked should be True when any MarkingReport for the workflow has distributed=True
     or a non-empty report field, meaning the scheme can no longer be changed.
+
+    event should be the parent MarkingEvent when editing/adding, used to validate that a
+    workflow deadline is not later than the event deadline.
     """
 
     def get_schemes():
@@ -1112,6 +1161,8 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False):
         )
         return sorted(users, key=lambda u: (_group_order[get_group(u)], u.last_name or "", u.first_name or ""))
 
+    _event = event  # capture for use in validators
+
     class MarkingWorkflowMixin:
         name = StringField(
             "Name",
@@ -1131,6 +1182,13 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False):
             render_kw={"disabled": True} if scheme_locked else {},
         )
 
+        deadline = DateTimeField(
+            "Workflow deadline",
+            format="%Y-%m-%d %H:%M",
+            validators=[Optional()],
+            description="Optional sub-deadline for this workflow. If set, must be on or before the event deadline.",
+        )
+
         notify_on_moderation_required = GroupedQuerySelectMultipleField(
             "Notify on moderation required",
             query_factory=get_notify_users,
@@ -1147,12 +1205,27 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False):
             description="Users to notify when a marking report fails validation.",
         )
 
+        def validate_deadline(self, field):
+            if field.data is not None and _event is not None and _event.deadline is not None:
+                if field.data > _event.deadline:
+                    raise ValidationError(
+                        "Workflow deadline cannot be later than the event deadline "
+                        f"({_event.deadline.strftime('%Y-%m-%d %H:%M')})."
+                    )
+
     class AddMarkingWorkflowForm(Form, MarkingWorkflowMixin):
         role = SelectField(
             "Role",
             choices=WORKFLOW_ROLE_CHOICES,
             coerce=int,
             description="The assessor role this workflow targets.",
+        )
+
+        requires_report = BooleanField(
+            "Requires report",
+            default=True,
+            description="If checked, SubmitterReport instances will not be ready to distribute until the student's "
+            "processed report is available. The report will also be attached to outgoing notification emails.",
         )
 
         submit = SubmitField("Add workflow")

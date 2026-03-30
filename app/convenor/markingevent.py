@@ -11,6 +11,8 @@
 from datetime import datetime
 from functools import partial
 
+from celery import chain as celery_chain
+
 from flask import current_app, flash, jsonify, redirect, request, url_for
 from flask_login import current_user
 from flask_security import roles_accepted
@@ -21,6 +23,7 @@ import app.ajax as ajax
 
 from ..database import db
 from ..models import (
+    EmailTemplate,
     LiveMarkingScheme,
     MarkingEvent,
     MarkingReport,
@@ -56,6 +59,29 @@ from .forms import (
     EditMarkingSchemeForm,
     MarkingWorkflowFormFactory,
 )
+
+
+def _assign_workflow_template(workflow: MarkingWorkflow, pclass: ProjectClass) -> None:
+    """
+    Auto-assign an email template to a MarkingWorkflow based on its role.
+    Called at workflow creation time. Only assigns for ROLE_MARKER, ROLE_SUPERVISOR, and
+    ROLE_RESPONSIBLE_SUPERVISOR; other roles are left without a template.
+    """
+    from ..models.submissions import SubmissionRoleTypesMixin
+
+    supervisor_roles = frozenset(
+        {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
+    )
+    if workflow.role == SubmissionRoleTypesMixin.ROLE_MARKER:
+        template_type = EmailTemplate.MARKING_MARKER
+    elif workflow.role in supervisor_roles:
+        template_type = EmailTemplate.MARKING_SUPERVISOR
+    else:
+        return  # no template for other roles
+
+    template = EmailTemplate.find_template_(template_type, pclass=pclass)
+    if template is not None:
+        workflow.template = template
 
 
 @convenor.route("/marking_events_inspector/<int:pclass_id>")
@@ -691,6 +717,7 @@ def add_marking_event(period_id):
             period_id=period_id,
             name=form.name.data,
             closed=False,
+            deadline=form.deadline.data,
             creator_id=current_user.id,
             creation_timestamp=datetime.now(),
         )
@@ -749,6 +776,7 @@ def edit_marking_event(event_id):
 
     if form.validate_on_submit():
         event.name = form.name.data
+        event.deadline = form.deadline.data
         event.last_edit_id = current_user.id
         event.last_edit_timestamp = datetime.now()
 
@@ -963,6 +991,9 @@ def event_marking_workflows_inspector(event_id):
 
     can_edit = not event.closed
 
+    event_url = url_for("convenor.send_marking_emails_for_event", event_id=event_id)
+    actions = event.get_convenor_actions(event_url=event_url)
+
     return render_template_context(
         "convenor/markingevent/event_marking_workflows_inspector.html",
         event=event,
@@ -970,6 +1001,7 @@ def event_marking_workflows_inspector(event_id):
         url=url,
         text=text,
         can_edit=can_edit,
+        actions=actions,
     )
 
 
@@ -1024,7 +1056,7 @@ def add_marking_workflow(event_id):
     )
     text = request.args.get("text", "Marking workflows")
 
-    AddWorkflowForm, _ = MarkingWorkflowFormFactory(pclass, scheme_locked=False)
+    AddWorkflowForm, _ = MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=event)
     form = AddWorkflowForm(request.form)
     form.name.validators.append(make_unique_marking_workflow_in_event(event_id))
 
@@ -1054,11 +1086,16 @@ def add_marking_workflow(event_id):
                 name=form.name.data,
                 role=form.role.data,
                 scheme_id=scheme_id,
+                requires_report=form.requires_report.data,
+                deadline=form.deadline.data,
                 creator_id=current_user.id,
                 creation_timestamp=datetime.now(),
             )
             workflow.notify_on_moderation_required = list(form.notify_on_moderation_required.data)
             workflow.notify_on_validation_failure = list(form.notify_on_validation_failure.data)
+
+            # Auto-assign email template based on role
+            _assign_workflow_template(workflow, pclass)
 
             db.session.add(workflow)
             db.session.flush()
@@ -1127,13 +1164,14 @@ def edit_marking_workflow(workflow_id):
         for mr in sr.marking_reports.all()
     )
 
-    _, EditWorkflowForm = MarkingWorkflowFormFactory(pclass, scheme_locked=scheme_locked)
+    _, EditWorkflowForm = MarkingWorkflowFormFactory(pclass, scheme_locked=scheme_locked, event=event)
     form = EditWorkflowForm(obj=workflow)
     form.name.validators.append(make_unique_marking_workflow_in_event(event.id, workflow=workflow))
 
     if form.validate_on_submit():
         try:
             workflow.name = form.name.data
+            workflow.deadline = form.deadline.data
             workflow.last_edit_id = current_user.id
             workflow.last_edit_timestamp = datetime.now()
 
@@ -1402,3 +1440,131 @@ def remove_workflow_attachment(workflow_id, attachment_id):
         )
 
     return redirect(url)
+
+
+@convenor.route("/restart_report_processing/<int:record_id>")
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def restart_report_processing(record_id):
+    """Restart the report processing chain for a SubmissionRecord whose processing failed."""
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(record_id)
+    pclass: ProjectClass = record.period.config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if not record.report_processing_failed:
+        flash("Report processing has not failed for this submission, or no report has been uploaded.", "info")
+        return redirect(redirect_url())
+
+    try:
+        # Expire the old generated asset if present (shouldn't be, but be safe)
+        if record.processed_report is not None:
+            record.processed_report_id = None
+
+        # Reset state flags so the process chain can run cleanly
+        record.celery_started = False
+        record.celery_finished = False
+        record.celery_failed = False
+        record.timestamp = None
+
+        db.session.flush()
+
+        # Re-dispatch the processing chain
+        celery = current_app.extensions["celery"]
+        process_task = celery.tasks["app.tasks.process_report.process"]
+        finalize_task = celery.tasks["app.tasks.process_report.finalize"]
+        error_task = celery.tasks["app.tasks.process_report.error"]
+
+        work = celery_chain(
+            process_task.si(record.id),
+            finalize_task.si(record.id),
+        ).on_error(error_task.si(record.id, current_user.id))
+
+        record.celery_started = True
+        log_db_commit(
+            f"Restarted report processing for submission record id={record_id}",
+            user=current_user,
+            project_classes=pclass,
+        )
+        work.apply_async()
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash(
+            "Could not restart report processing due to a database error. Please contact a system administrator.",
+            "error",
+        )
+        return redirect(redirect_url())
+
+    flash("Report processing has been restarted.", "success")
+    return redirect(redirect_url())
+
+
+@convenor.route("/send_marking_emails_for_workflow/<int:workflow_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def send_marking_emails_for_workflow(workflow_id):
+    """Dispatch marking notification emails for all undistributed MarkingReports in a workflow."""
+    workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if event.closed:
+        flash("Cannot send notifications for a closed marking event.", "error")
+        return redirect(redirect_url())
+
+    try:
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.marking.send_marking_emails"]
+        task.apply_async(
+            kwargs={
+                "workflow_id": workflow_id,
+                "cc_convenor": True,
+                "max_attachment": 10,
+                "test_user_id": None,
+                "convenor_id": current_user.id,
+            }
+        )
+        flash(f'Marking notifications for workflow "{workflow.name}" have been queued.', "success")
+    except Exception as e:
+        current_app.logger.exception("Error dispatching send_marking_emails", exc_info=e)
+        flash("Could not dispatch marking notifications. Please contact a system administrator.", "error")
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/send_marking_emails_for_event/<int:event_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def send_marking_emails_for_event(event_id):
+    """Dispatch marking notification emails for all eligible workflows in a MarkingEvent."""
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if event.closed:
+        flash("Cannot send notifications for a closed marking event.", "error")
+        return redirect(redirect_url())
+
+    try:
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.marking.send_marking_event_emails"]
+        task.apply_async(
+            kwargs={
+                "event_id": event_id,
+                "cc_convenor": True,
+                "max_attachment": 10,
+                "test_user_id": None,
+                "convenor_id": current_user.id,
+            }
+        )
+        flash(f'Marking notifications for event "{event.name}" have been queued.', "success")
+    except Exception as e:
+        current_app.logger.exception("Error dispatching send_marking_event_emails", exc_info=e)
+        flash("Could not dispatch marking notifications. Please contact a system administrator.", "error")
+
+    return redirect(redirect_url())

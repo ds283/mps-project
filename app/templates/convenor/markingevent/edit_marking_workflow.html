@@ -1,7 +1,7 @@
 {% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
-{% from "macros.html" import edit_data %}
+{% from "macros.html" import edit_data, date_field %}
 {% from "select2.html" import import_select2 %}
 
 {% block scripts %}
@@ -30,6 +30,7 @@
                 dropdownCssClass: 'select2--small',
                 placeholder: 'Select users to notify...'
             });
+            $('#deadline').datetimepicker({format: 'DD/MM/YYYY HH:mm', useCurrent: true, showTodayButton: true});
         });
     </script>
 {% endblock %}
@@ -56,10 +57,18 @@
 
 {% if not workflow %}
     {{ wtf.render_field(form.role) }}
+    {{ wtf.render_field(form.requires_report) }}
 {% else %}
     <div class="mb-3">
         <label class="form-label fw-semibold">Role</label>
         <div class="form-control-plaintext text-muted">{{ workflow.role_as_str }}
+            <span class="small">(cannot be changed after creation)</span>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label fw-semibold">Requires report</label>
+        <div class="form-control-plaintext text-muted">
+            {% if workflow.requires_report %}Yes{% else %}No{% endif %}
             <span class="small">(cannot be changed after creation)</span>
         </div>
     </div>
@@ -84,6 +93,8 @@
         {% endfor %}
     {% endif %}
 </div>
+
+{{ date_field(form.deadline, 'deadline') }}
 
 <div class="card mt-3 mb-3 card-body bg-well">
     <p class="form-group-heading text-secondary fw-semibold mb-3">Notifications</p>

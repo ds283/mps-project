@@ -8,6 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 import json
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Optional
 
 from ..database import db
 from .defaults import DEFAULT_STRING_LENGTH
@@ -17,6 +20,17 @@ from .project_class import ProjectClass, ProjectClassConfig
 from .students import StudentData
 from .submissions import SubmissionRoleTypesMixin
 from .users import User
+
+
+@dataclass
+class ConvenorAction:
+    """A single call-to-action item surfaced to the convenor on a MarkingEvent inspector."""
+
+    severity: str  # "warning", "danger", "info", "success"
+    title: str
+    description: str
+    action_url: Optional[str] = None
+    action_label: Optional[str] = None
 
 
 class MarkingSchemeMixin:
@@ -158,6 +172,9 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
     # has this event been closed?
     closed = db.Column(db.Boolean(), default=False, nullable=False)
 
+    # global marking deadline for this event; individual workflows may have earlier sub-deadlines
+    deadline = db.Column(db.DateTime(), nullable=True)
+
     __table_args__ = (db.UniqueConstraint("period_id", "name"),)
 
     # convenience accessors
@@ -168,6 +185,57 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
     @property
     def pclass(self) -> ProjectClass:
         return self.period.config.project_class
+
+    def get_convenor_actions(self, event_url: Optional[str] = None) -> list:
+        """
+        Return a list of ConvenorAction items representing outstanding actions for this event.
+        Extend this method as the SubmitterReport workflow grows to surface new CTA items.
+        """
+        actions = []
+
+        # Check for SubmitterReports in READY_TO_DISTRIBUTE state with undistributed MarkingReports
+        ready_count = 0
+        for workflow in self.workflows:
+            for sr in workflow.submitter_reports:
+                if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE:
+                    undistributed = sum(1 for mr in sr.marking_reports if not mr.distributed)
+                    if undistributed > 0:
+                        ready_count += undistributed
+
+        if ready_count > 0:
+            actions.append(
+                ConvenorAction(
+                    severity="warning",
+                    title="Reports ready to distribute",
+                    description=f"{ready_count} marking notification{'s' if ready_count != 1 else ''} "
+                    f"ready to send to assessors.",
+                    action_url=event_url,
+                    action_label="Send notifications",
+                )
+            )
+
+        # Check for report processing failures
+        failed_count = 0
+        for workflow in self.workflows:
+            if workflow.requires_report:
+                for sr in workflow.submitter_reports:
+                    if sr.record.report_processing_failed:
+                        failed_count += 1
+                        break  # count per-workflow, not per-report
+
+        if failed_count > 0:
+            actions.append(
+                ConvenorAction(
+                    severity="danger",
+                    title="Report processing failures",
+                    description=f"{failed_count} submission{'s' if failed_count != 1 else ''} "
+                    f"could not have their report processed. Please restart processing.",
+                    action_url=None,
+                    action_label=None,
+                )
+            )
+
+        return actions
 
 
 # association table of PeriodAttachment instances that should be included with each workflow
@@ -257,6 +325,24 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
         backref=db.backref("marking_workflows", lazy="dynamic"),
     )
 
+    # should this workflow wait for the student's processed report before SubmitterReport instances
+    # move to READY_TO_DISTRIBUTE? Set at creation time only; not editable afterwards.
+    requires_report = db.Column(db.Boolean(), default=True, nullable=False)
+
+    # optional sub-deadline for this workflow; if set, must be <= event.deadline
+    deadline = db.Column(db.DateTime(), nullable=True)
+
+    # email template to use when sending marking notifications for this workflow;
+    # auto-assigned at creation time based on the workflow role
+    template_id = db.Column(
+        db.Integer(), db.ForeignKey("email_templates.id"), nullable=True
+    )
+    template = db.relationship(
+        "EmailTemplate",
+        foreign_keys=[template_id],
+        uselist=False,
+    )
+
     # attachments (already uploaded by the convenor as SubmissionPeriod attachments)
     # that should be included with this workflow
     attachments = db.relationship(
@@ -298,6 +384,11 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
     def roleid_as_str(self) -> str:
         return self._role_id.get(self.role, "unknown")
 
+    @property
+    def effective_deadline(self) -> Optional[datetime]:
+        """Returns the workflow's own deadline if set, otherwise falls back to the event deadline."""
+        return self.deadline if self.deadline is not None else self.event.deadline
+
     # convenience accessors
     @property
     def number_submitter_reports(self) -> int:
@@ -312,10 +403,21 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
         return self.marking_reports.filter(MarkingReport.distributed.is_(True)).count()
 
     @property
+    def number_marking_reports_undistributed(self) -> int:
+        return self.marking_reports.filter(MarkingReport.distributed.is_(False)).count()
+
+    @property
     def number_marking_reports_with_feedback(self) -> int:
         return self.marking_reports.filter(
             MarkingReport.feedback_submitted.is_(True)
         ).count()
+
+    @property
+    def number_processing_failures(self) -> int:
+        """Count of SubmitterReports whose SubmissionRecord has report_processing_failed == True."""
+        if not self.requires_report:
+            return 0
+        return sum(1 for sr in self.submitter_reports if sr.record.report_processing_failed)
 
 
 # association table of SubmitterReport to EmailLog, to track feedback emails

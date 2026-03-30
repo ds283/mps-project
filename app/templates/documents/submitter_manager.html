@@ -12,62 +12,74 @@
                     log_url=none, deletable=false, allow_student=false, is_editable=none, admin_rights=false) %}
     {% set has_access = asset.has_access(current_user.id) %}
     <tr>
-        <td style="word-wrap: break-word;">
-            {% if asset.small_thumbnail and not asset.small_thumbnail.lost %}
-                <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
-                     class="img-thumbnail mb-1" style="max-width:80px; max-height:80px;" alt="Preview">
-            {% endif %}
-            <div>
-                {% if label %}
-                    <div class="d-flex w-100 align-items-start justify-content-start">
-                        <i class="fas fa-file-alt me-2 mt-1 text-muted"></i>
-                        <span class="text-muted">{{ label }}</span>
+        <td>
+            <div class="d-flex flex-row flex-wrap justify-content-between align-items-start gap-2">
+                <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+                    <div>
+                        {% if label %}
+                            <div>
+                                <i class="fas fa-file-alt me-2 mt-1 text-muted"></i>
+                                <span class="text-muted">{{ label }}</span>
+                            </div>
+                        {% endif %}
+                        {% if has_access and download_url is not none %}
+                            {% if asset.target_name %}
+                                <strong><a class="text-decoration-none"
+                                           href="{{ download_url }}">{{ asset.target_name }}</a></strong>
+                            {% else %}
+                                <strong><a class="text-decoration-none"
+                                           href="{{ download_url }}">{{ asset.unique_name }}</a></strong>
+                            {% endif %}
+                        {% else %}
+                            {% if asset.target_name %}
+                                <strong>{{ asset.target_name }}</strong>
+                            {% else %}
+                                <strong>{{ asset.unique_name }}</strong>
+                            {% endif %}
+                        {% endif %}
                     </div>
-                {% endif %}
-                {% if has_access and download_url is not none %}
-                    {% if asset.target_name %}
-                        <strong><a class="text-decoration-none" href="{{ download_url }}">{{ asset.target_name }}</a></strong>
-                    {% else %}
-                        <strong><a class="text-decoration-none" href="{{ download_url }}">{{ asset.unique_name }}</a></strong>
+                    {% if attachment and attachment.type is defined and attachment.type is not none %}
+                        <div>
+                            <strong>{{ attachment.type_label() }}</strong>
+                        </div>
                     {% endif %}
-                {% else %}
-                    {% if asset.target_name %}
-                        <strong>{{ asset.target_name }}</strong>
-                    {% else %}
-                        <strong>{{ asset.unique_name }}</strong>
+                    {% if attachment and attachment.description is defined and attachment.description|length > 0 %}
+                        <div class="small text-muted">
+                            <i class="fas fa-paperclip"></i> {{ attachment.description }}
+                        </div>
                     {% endif %}
-                {% endif %}
-            </div>
-            {% if attachment and attachment.type is defined and attachment.type is not none %}
-                <div class="mt-1">
-                    <strong>{{ attachment.type_label() }}</strong>
+                    {% if admin_rights %}
+                        <div>
+                            {% if attachment and attachment.publish_to_students is defined and attachment.publish_to_students %}
+                                <span class="badge bg-info"><i class="fas fa-eye"></i> Publish</span>
+                            {% endif %}
+                            {% if attachment and attachment.include_marker_emails is defined and attachment.include_marker_emails %}
+                                <span class="badge bg-info"><i class="fas fa-envelope"></i> Marker</span>
+                            {% endif %}
+                            {% if attachment and attachment.include_supervisor_emails is defined and attachment.include_supervisor_emails %}
+                                <span class="badge bg-info"><i class="fas fa-envelope"></i> Supervisor</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
                 </div>
-            {% endif %}
-            {% if attachment and attachment.description is defined and attachment.description|length > 0 %}
-                <div class="mt-1 small text-muted">
-                    <i class="fas fa-paperclip"></i> {{ attachment.description }}
-                </div>
-            {% endif %}
-            {% if admin_rights %}
                 <div>
-                    {% if attachment and attachment.publish_to_students is defined and attachment.publish_to_students %}
-                        <span class="badge bg-info"><i class="fas fa-eye"></i> Publish</span>
-                    {% endif %}
-                    {% if attachment and attachment.include_marker_emails is defined and attachment.include_marker_emails %}
-                        <span class="badge bg-info"><i class="fas fa-envelope"></i> Marker</span>
-                    {% endif %}
-                    {% if attachment and attachment.include_supervisor_emails is defined and attachment.include_supervisor_emails %}
-                        <span class="badge bg-info"><i class="fas fa-envelope"></i> Supervisor</span>
+                    {% if asset.medium_thumbnail and not asset.medium_thumbnail.lost %}
+                        <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='medium') }}"
+                             class="img-thumbnail mb-1" style="max-width:250px; max-height:250px;" alt="Preview">
+                    {% elif asset.small_thumbnail and not asset.small_thumbnail.lost %}
+                        <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
+                             class="img-thumbnail mb-1" style="max-width:150px; max-height:150px;" alt="Preview">
                     {% endif %}
                 </div>
-            {% endif %}
+            </div>
         </td>
         <td>
             <div>
                 <span class="text-primary">{{ asset.human_file_size }}</span>
                 {% if admin_rights %}
                     <span class="text-muted">|</span>
-                    <i class="fas fa-cloud text-muted small"></i> <span class="text-muted small">Downloads: <strong>{{ asset.number_downloads }}</strong></span>
+                    <i class="fas fa-cloud text-muted small"></i>
+                    <span class="text-muted small">Downloads: <strong>{{ asset.number_downloads }}</strong></span>
                 {% endif %}
             </div>
             <div class="text-muted small mt-1">
@@ -92,9 +104,10 @@
             {% endif %}
         </td>
         <td>
-            <div style="text-align: right;" class="float-end">
+            <div class="d-flex flex-row justify-content-end align-items-center">
                 <div class="dropdown">
-                    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown">
                         Actions
                     </button>
                     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
@@ -106,35 +119,45 @@
                         {% if has_access or editable or deletable %}
                             {% if editable %}
                                 {% if edit_url is not none %}
-                                    <a class="dropdown-item d-flex gap-2" href="{{ edit_url }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit</a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ edit_url }}"><i
+                                            class="fas fa-pencil-alt fa-fw"></i> Edit</a>
                                 {% else %}
-                                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-pencil-alt fa-fw"></i> Edit</a>
+                                    <a class="dropdown-item d-flex gap-2 disabled"><i
+                                            class="fas fa-pencil-alt fa-fw"></i> Edit</a>
                                 {% endif %}
                             {% endif %}
                             {% if has_access %}
                                 {% if download_url is not none %}
-                                    <a class="dropdown-item d-flex gap-2" href="{{ download_url }}"><i class="fas fa-cloud-download-alt fa-fw"></i> Download</a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ download_url }}"><i
+                                            class="fas fa-cloud-download-alt fa-fw"></i> Download</a>
                                 {% else %}
-                                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-cloud-download-alt fa-fw"></i> Download</a>
+                                    <a class="dropdown-item d-flex gap-2 disabled"><i
+                                            class="fas fa-cloud-download-alt fa-fw"></i> Download</a>
                                 {% endif %}
                             {% endif %}
                             {% if admin_rights %}
                                 {% if acl_url is not none %}
-                                    <a class="dropdown-item d-flex gap-2" href="{{ acl_url }}"><i class="fas fa-check-square fa-fw"></i> Access control...</a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ acl_url }}"><i
+                                            class="fas fa-check-square fa-fw"></i> Access control...</a>
                                 {% else %}
-                                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-check-square fa-fw"></i> Access control...</a>
+                                    <a class="dropdown-item d-flex gap-2 disabled"><i
+                                            class="fas fa-check-square fa-fw"></i> Access control...</a>
                                 {% endif %}
                                 {% if log_url is not none %}
-                                    <a class="dropdown-item d-flex gap-2" href="{{ log_url }}"><i class="fas fa-address-book fa-fw"></i> Download log...</a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ log_url }}"><i
+                                            class="fas fa-address-book fa-fw"></i> Download log...</a>
                                 {% else %}
-                                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-address-book fa-fw"></i> Download log...</a>
+                                    <a class="dropdown-item d-flex gap-2 disabled"><i
+                                            class="fas fa-address-book fa-fw"></i> Download log...</a>
                                 {% endif %}
                             {% endif %}
                             {% if deletable %}
                                 {% if delete_url is not none %}
-                                    <a class="dropdown-item d-flex gap-2" href="{{ delete_url }}"><i class="fas fa-trash fa-fw"></i> Remove</a>
+                                    <a class="dropdown-item d-flex gap-2" href="{{ delete_url }}"><i
+                                            class="fas fa-trash fa-fw"></i> Remove</a>
                                 {% else %}
-                                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-trash fa-fw"></i> Remove</a>
+                                    <a class="dropdown-item d-flex gap-2 disabled"><i class="fas fa-trash fa-fw"></i>
+                                        Remove</a>
                                 {% endif %}
                             {% endif %}
                         {% else %}
@@ -158,7 +181,8 @@
     {% endif %}
 
     {% if form.selector is defined %}
-        <form action="{{ url_for('documents.submitter_documents', sub_id=submitter.id, url=url, text=text) }}" method="POST" name="selector_form">
+        <form action="{{ url_for('documents.submitter_documents', sub_id=submitter.id, url=url, text=text) }}"
+              method="POST" name="selector_form">
             {{ form.hidden_tag() }}
             <span class="form-text"><strong>Select submission period to review</strong></span>
             {{ on_click_selector_field(form.selector) }}
@@ -166,7 +190,8 @@
     {% endif %}
 
     <div class="card border-primary mt-3 mb-3">
-        <div class="card-header bg-primary text-white">Manage documents for <i class="fas fa-user-circle"></i> <strong>{{ unformatted_label(record.student_identifier) }}</strong> {{ record.period.display_name }}</div>
+        <div class="card-header bg-primary text-white">Manage documents for <i class="fas fa-user-circle"></i>
+            <strong>{{ unformatted_label(record.student_identifier) }}</strong> {{ record.period.display_name }}</div>
         <div class="card-body">
             {% if admin_rights %}
                 {% if period.closed %}
@@ -174,7 +199,8 @@
                         {% call icon_block("exclamation-circle") %}
                             <div>
                                 <strong>
-                                    You are viewing documents for the submission period "{{ record.period.display_name }}",
+                                    You are viewing documents for the submission period
+                                    "{{ record.period.display_name }}",
                                     for which feedback has already been closed. Please make edits only with great care.
                                 </strong>
                             </div>
@@ -207,7 +233,8 @@
                         <div class="mt-1 mb-1">
                             {% call icon_block("info-circle") %}
                                 <div>
-                                    <div><strong>The following documents have been provided by the convenor.</strong></div>
+                                    <div><strong>The following documents have been provided by the convenor.</strong>
+                                    </div>
                                     <div class="mt-1">
                                         They may include mark schemes
                                         or other general information. Please ensure that you review them carefully.
@@ -218,19 +245,19 @@
                     {% endif %}
                     <table class="table table-striped">
                         <thead>
-                            <tr>
-                                <th width="40%">Document</th>
-                                <th width="30%">Attributes</th>
-                                <th width="15%">License</th>
-                                <th width="15%"></th>
-                            </tr>
+                        <tr>
+                            <th width="40%">Document</th>
+                            <th width="30%">Attributes</th>
+                            <th width="15%">License</th>
+                            <th width="15%"></th>
+                        </tr>
                         </thead>
                         <tbody>
-                            {% for attachment in period.attachments %}
-                                {% set asset = attachment.attachment %}
-                                {# students can only see assets that are published to them #}
-                                {% if not is_student or attachment.publish_to_students %}
-                                    {{ asset_line(asset, attachment,
+                        {% for attachment in period.attachments %}
+                            {% set asset = attachment.attachment %}
+                            {# students can only see assets that are published to them #}
+                            {% if not is_student or attachment.publish_to_students %}
+                                {{ asset_line(asset, attachment,
                                                   download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
                                                   delete_url=url_for('convenor.delete_period_attachment', aid=attachment.id, url=url, text=text),
                                                   edit_url=url_for('convenor.edit_period_attachment', aid=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
@@ -238,8 +265,8 @@
                                                   log_url=url_for('documents.attachment_download_log', attach_type=0, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                                   deletable=deletable, allow_student=false,
                                                   is_editable=is_editable, admin_rights=admin_rights) }}
-                                {% endif %}
-                            {% endfor %}
+                            {% endif %}
+                        {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -288,48 +315,49 @@
                     {% set passet = record.processed_report %}
                     <table class="table table-striped">
                         <thead>
-                            <tr>
-                                <th width="40%">Document</th>
-                                <th width="30%">Attributes</th>
-                                <th width="15%">License</th>
-                                <th width="15%"></th>
-                            </tr>
+                        <tr>
+                            <th width="40%">Document</th>
+                            <th width="30%">Attributes</th>
+                            <th width="15%">License</th>
+                            <th width="15%"></th>
+                        </tr>
                         </thead>
                         <tbody>
-                            {{ asset_line(asset, none, label='Uploaded report',
+                        {{ asset_line(asset, none, label='Uploaded report',
                                           download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
                                           delete_url=url_for('documents.delete_submitter_report', sid=record.id, url=url, text=text),
                                           edit_url=url_for('documents.edit_submitter_report', sid=record.id, url=url, text=text),
                                           acl_url=url_for('documents.attachment_acl', attach_type=2, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                           log_url=url_for('documents.attachment_download_log', attach_type=2, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                           deletable=deletable, allow_student=false, is_editable=is_editable, admin_rights=admin_rights) }}
-                            {% if passet %}
-                                {{ asset_line(passet, none, label='Processed report',
+                        {% if passet %}
+                            {{ asset_line(passet, none, label='Processed report',
                                               download_url=url_for('admin.download_generated_asset', asset_id=passet.id),
                                               acl_url=url_for('documents.attachment_acl', attach_type=3, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                               log_url=url_for('documents.attachment_download_log', attach_type=3, attach_id=record.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                               deletable=false, allow_student=false, is_editable=none, admin_rights=admin_rights) }}
-                            {% else %}
-                                <tr>
-                                    <td>
-                                        {% if record.celery_started %}
-                                            {% if not record.celery_finished %}
-                                                <span class="text-muted">Generation of processed report in progress...</span>
-                                            {% else %}
-                                                <span class="text-danger">Processed report did not generate</span>
-                                            {% endif %}
+                        {% else %}
+                            <tr>
+                                <td>
+                                    {% if record.celery_started %}
+                                        {% if not record.celery_finished %}
+                                            <span class="text-muted">Generation of processed report in progress...</span>
                                         {% else %}
-                                            <span class="text-muted">Waiting to generate processed report...</span>
-                                            {% if admin_rights %}
-                                                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('documents.generate_processed_report', sid=record.id) }}">Generate</a>
-                                            {% endif %}
+                                            <span class="text-danger">Processed report did not generate</span>
                                         {% endif %}
-                                    </td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                            {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Waiting to generate processed report...</span>
+                                        {% if admin_rights %}
+                                            <a class="btn btn-sm btn-outline-secondary"
+                                               href="{{ url_for('documents.generate_processed_report', sid=record.id) }}">Generate</a>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        {% endif %}
                         </tbody>
                     </table>
                 {% else %}
@@ -338,8 +366,10 @@
                             <div><strong>No report has been uploaded for this submission.</strong></div>
                             {% if report_uploadable and record.period.canvas_enabled and record.canvas_submission_available %}
                                 <div class="mt-1">
-                                    A matching submission has been made to the Canvas assignment for this submission period.
-                                    <a href="{{ url_for('documents.pull_report_from_canvas', rid=record.id, url=url) }}" class="link-success text-decoration-none">Pull report from Canvas...</a>
+                                    A matching submission has been made to the Canvas assignment for this submission
+                                    period.
+                                    <a href="{{ url_for('documents.pull_report_from_canvas', rid=record.id, url=url) }}"
+                                       class="link-success text-decoration-none">Pull report from Canvas...</a>
                                 </div>
                             {% endif %}
                         {% endcall %}
@@ -347,7 +377,8 @@
                     {% if report_uploadable %}
                         <hr class="intro-divider">
                         <div class="d-flex flex-row justify-content-center">
-                            <a href="{{ url_for('documents.upload_submitter_report', sid=record.id, url=url, text=text) }}" class="btn btn-secondary btn-lg">
+                            <a href="{{ url_for('documents.upload_submitter_report', sid=record.id, url=url, text=text) }}"
+                               class="btn btn-secondary btn-lg">
                                 <i class="fas fa-plus"></i>
                                 Upload report
                             </a>
@@ -369,22 +400,22 @@
                 {% if record.attachments.first() %}
                     <table class="table table-striped">
                         <thead>
-                            <tr>
-                                <th width="40%">Document</th>
-                                <th width="30%">Attributes</th>
-                                <th width="15%">License</th>
-                                <th width="15%"></th>
-                            </tr>
+                        <tr>
+                            <th width="40%">Document</th>
+                            <th width="30%">Attributes</th>
+                            <th width="15%">License</th>
+                            <th width="15%"></th>
+                        </tr>
                         </thead>
                         <tbody>
-                            {% for attachment in record.attachments %}
-                                {% set asset = attachment.attachment %}
-                                {# students can only see attachments they have uploaded themselves, or which they are able to download #}
-                                {# no matter whether the student is on an access control list or not, students can (currently) only view/download #}
-                                {# attachments that have EXPLICITLY been published #}
-                                {% if (is_student and attachment.publish_to_students) or (not is_student) %}
-                                    {% if current_user.id == attachment.uploaded_id or asset.has_access(current_user.id) %}
-                                        {{ asset_line(asset, attachment,
+                        {% for attachment in record.attachments %}
+                            {% set asset = attachment.attachment %}
+                            {# students can only see attachments they have uploaded themselves, or which they are able to download #}
+                            {# no matter whether the student is on an access control list or not, students can (currently) only view/download #}
+                            {# attachments that have EXPLICITLY been published #}
+                            {% if (is_student and attachment.publish_to_students) or (not is_student) %}
+                                {% if current_user.id == attachment.uploaded_id or asset.has_access(current_user.id) %}
+                                    {{ asset_line(asset, attachment,
                                                       download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
                                                       delete_url=url_for('documents.delete_submitter_attachment', aid=attachment.id, url=url, text=text),
                                                       edit_url=url_for('documents.edit_submitter_attachment', aid=attachment.id, url=url, text=text),
@@ -392,9 +423,9 @@
                                                       log_url=url_for('documents.attachment_download_log', attach_type=1, attach_id=attachment.id, url=url_for('documents.submitter_documents', sid=record.id, url=url, text=text), text='document manager'),
                                                       deletable=deletable, allow_student=true, is_editable=is_editable,
                                                       admin_rights=admin_rights) }}
-                                    {% endif %}
                                 {% endif %}
-                            {% endfor %}
+                            {% endif %}
+                        {% endfor %}
                         </tbody>
                     </table>
                 {% else %}
@@ -407,7 +438,8 @@
                 {% if attachment_uploadable %}
                     <hr class="into-divider">
                     <div style="text-align: center;">
-                        <a href="{{ url_for('documents.upload_submitter_attachment', sid=record.id, url=url, text=text) }}" class="btn btn-secondary btn-lg">
+                        <a href="{{ url_for('documents.upload_submitter_attachment', sid=record.id, url=url, text=text) }}"
+                           class="btn btn-secondary btn-lg">
                             <i class="fas fa-plus"></i>
                             Upload new attachment
                         </a>

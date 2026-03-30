@@ -14,7 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import MarkingReport, MarkingWorkflow, SubmitterReport
 from ..models.markingevent import SubmitterReportWorkflowStates
-from ..models.submissions import SubmissionRoleTypesMixin
+from ..models.submissions import SubmissionRecord, SubmissionRoleTypesMixin
 from ..shared.workflow_logging import log_db_commit
 
 _SUPERVISOR_ROLES = frozenset(
@@ -55,10 +55,20 @@ def register_markingevent_tasks(celery):
 
         try:
             for record in period.submissions.all():
+                # Determine the correct initial state:
+                # - requires_report=False: ready immediately (no asset check needed)
+                # - requires_report=True: ready only if both report and processed_report already exist
+                if not workflow.requires_report:
+                    initial_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                elif record.report is not None and record.processed_report is not None:
+                    initial_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                else:
+                    initial_state = SubmitterReportWorkflowStates.NOT_READY
+
                 sr = SubmitterReport(
                     record_id=record.id,
                     workflow_id=workflow.id,
-                    workflow_state=SubmitterReportWorkflowStates.NOT_READY,
+                    workflow_state=initial_state,
                     grade=None,
                     grade_generated_by_id=None,
                     grade_generated_timestamp=None,
@@ -110,3 +120,53 @@ def register_markingevent_tasks(celery):
                 "SQLAlchemyError in initialize_marking_workflow", exc_info=e
             )
             raise self.retry()
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def advance_marking_workflow(self, record_id):
+        """
+        Advance any SubmitterReport instances for a SubmissionRecord from NOT_READY to
+        READY_TO_DISTRIBUTE, where the preconditions for the associated MarkingWorkflow are met.
+
+        Called by the process_report.finalize task after successful report processing.
+        """
+        try:
+            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if record is None:
+            current_app.logger.error(
+                f"advance_marking_workflow: SubmissionRecord id={record_id} not found in database"
+            )
+            return
+
+        advanced = 0
+        try:
+            for sr in record.submitter_reports.all():
+                if sr.workflow_state != SubmitterReportWorkflowStates.NOT_READY:
+                    continue
+
+                workflow = sr.workflow
+                if workflow.requires_report:
+                    # Only advance when both report and processed_report are present
+                    if record.report is None or record.processed_report is None:
+                        continue
+
+                sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                advanced += 1
+
+            if advanced > 0:
+                log_db_commit(
+                    f"Advanced {advanced} SubmitterReport(s) to READY_TO_DISTRIBUTE "
+                    f"for SubmissionRecord id={record_id}",
+                    endpoint=self.name,
+                )
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception(
+                "SQLAlchemyError in advance_marking_workflow", exc_info=e
+            )
+            raise self.retry()
+

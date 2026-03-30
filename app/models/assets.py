@@ -67,16 +67,28 @@ class ThumbnailAsset(
 
 
 class AssetThumbnailMixin:
-    # (optional) thumbnail asset; if None, no thumbnail exists
-    thumbnail_id = db.Column(
+    # (optional) thumbnail asset at small 200x200 size; if None, no thumbnail exists
+    small_thumbnail_id = db.Column(
         db.Integer(), db.ForeignKey("thumbnail_assets.id"), default=None
     )
 
     @declared_attr
-    def thumbnail(cls):
+    def small_thumbnail(cls):
         return db.relationship(
             "ThumbnailAsset",
-            foreign_keys=[cls.thumbnail_id],
+            foreign_keys=[cls.small_thumbnail_id],
+        )
+
+    # (optional) thumbnail asset at medium 400x400 size; if None, no thumbnail exists
+    medium_thumbnail_id = db.Column(
+        db.Integer(), db.ForeignKey("thumbnail_assets.id"), default=None
+    )
+
+    @declared_attr
+    def medium_thumbnail(cls):
+        return db.relationship(
+            "ThumbnailAsset",
+            foreign_keys=[cls.medium_thumbnail_id],
         )
 
     # thumbnail error state

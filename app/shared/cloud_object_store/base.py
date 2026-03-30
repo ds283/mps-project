@@ -138,6 +138,11 @@ class Driver:
             "The head() method should be implemented by concrete Driver instances"
         )
 
+    def get_url(self, key: PathLike) -> str:
+        raise NotImplementedError(
+            "The get_url() method should be implemented by concrete Driver instances"
+        )
+
 
 class ObjectStore:
     def __init__(self, uri: PathLike, database_key: int, data: Dict):
@@ -413,3 +418,30 @@ class ObjectStore:
                 )
 
         return data
+
+    def get_url(self, key: PathLike, audit_data: str) -> str:
+        if self.encrypted:
+            raise RuntimeError(
+                "ObjectStore: you cannot use get_url() with an encrypted object store. "
+                "The URL bypasses decryption; download the object using get() instead."
+            )
+
+        if self.compressed:
+            raise RuntimeError(
+                "ObjectStore: you cannot use get_url() with a compressed object store. "
+                "The URL bypasses decompression; download the object using get() instead."
+            )
+
+        url = self._driver.get_url(_as_path(key))
+
+        # generate audit record if auditing is enabled
+        if self._audit and self._audit_backend is not None:
+            self._audit_backend.store_audit_record(
+                "get_url",
+                audit_data,
+                driver=self._driver_name,
+                bucket=self._bucket_name,
+                host_uri=self._host_uri,
+            )
+
+        return url

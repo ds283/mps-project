@@ -110,3 +110,7 @@ class GoogleCloudStorageDriver:
         data.mimetype = blob.content_type
 
         return data
+
+    def get_url(self, key: Path) -> str:
+        blob: Blob = self._bucket.blob(str(key))
+        return blob.public_url

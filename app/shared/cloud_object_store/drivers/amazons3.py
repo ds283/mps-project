@@ -47,7 +47,7 @@ class AmazonS3CloudStorageDriver:
         )
 
         if "endpoint_url" in data:
-            self._endpoint_url = data["endpoint_url"]
+            self._endpoint_url = data["endpoint_url"].rstrip("/")
         else:
             self._endpoint_url = None
 
@@ -171,3 +171,8 @@ class AmazonS3CloudStorageDriver:
         data.mimetype = response["ContentType"]
 
         return data
+
+    def get_url(self, key: Path) -> str:
+        if self._endpoint_url is not None:
+            return f"{self._endpoint_url}/{self._bucket_name}/{str(key)}"
+        return f"https://{self._bucket_name}.s3.amazonaws.com/{str(key)}"

@@ -148,3 +148,8 @@ class LocalFileSystemDriver:
         data.mimetype, _ = guess_type(str(abs_path))
 
         return data
+
+    def get_url(self, key: Path) -> str:
+        raise NotImplementedError(
+            "The get_url() method is not supported for the LocalFileSystem driver"
+        )

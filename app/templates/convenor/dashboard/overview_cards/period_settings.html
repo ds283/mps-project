@@ -1,13 +1,11 @@
 {% from "macros.html" import submission_period_configure_button %}
 {% from "convenor/dashboard/overview_cards/period_status.html" import period_status %}
-{% from "convenor/dashboard/overview_cards/marking_event_card.html" import marking_event_summary %}
 
 {% macro period_settings(config, period, return_url=none, return_text=none) %}
     <div class="mt-2 mb-2 card border-secondary p-3">
         <div class="d-flex flex-column justify-content-start align-items-start gap-2">
             <div class="d-flex flex-row w-100 justify-content-between align-items-center mb-2">
                 <div class="fs-6 fw-semibold text-secondary"><i class="fas fa-sliders-h fa-lg me-1"></i> Settings</div>
-                <div>{{ submission_period_configure_button(period, config, small=true, margin=false) }}</div>
             </div>
             <div>{{ period_status(period, return_url=return_url, return_text=return_text) }}</div>
         </div>
@@ -81,5 +79,4 @@
             </div>
         {% endif %}
     </div>
-    {{ marking_event_summary(period, config) }}
 {% endmacro %}

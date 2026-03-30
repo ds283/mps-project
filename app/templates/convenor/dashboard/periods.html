@@ -2,7 +2,6 @@
 
 {% from "icon_block.html" import icon_block %}
 {% from "convenor/dashboard/overview_cards/submitter_card.html" import submitter_card %}
-{% from "convenor/dashboard/overview_cards/marking_event_card.html" import marking_event_summary %}
 {% from "macros.html" import submission_period_configure_button %}
 {% from "datepicker.html" import import_datepicker %}
 
@@ -50,11 +49,6 @@
                             {# === SUB-SECTION 1: Submitter card (anchor preserved for existing deep-links) === #}
                             <a id="submitter_card_{{ loop.index }}"></a>
                             {{ submitter_card(config, n, today, feedback_form) }}
-
-                            {# === SUB-SECTION 2: MarkingEvent summary === #}
-                            {% if period %}
-                                {{ marking_event_summary(period, config) }}
-                            {% endif %}
 
                         </div>
                     </div>

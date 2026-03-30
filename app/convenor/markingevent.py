@@ -184,17 +184,15 @@ def marking_workflow_ajax(event_id):
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
     pclass: ProjectClass = event.period.config.project_class
 
-    # Get URL parameters from the request
-    from flask import request
-
-    url = request.args.get("url", "")
-    text = request.args.get("text", "")
-
     # validate that the user has convenor access privileges
     if not validate_is_convenor(
         pclass, allow_roles=["office", "external_examiner", "exam_board"], message=False
     ):
         return jsonify({"error": "Access denied"}), 403
+
+    # Use the current inspector page as the return URL for row-level action links
+    url = url_for("convenor.marking_workflow_inspector", event_id=event_id)
+    text = "Marking workflows"
 
     base_query = db.session.query(MarkingWorkflow).filter(
         MarkingWorkflow.event_id == event_id
@@ -989,9 +987,11 @@ def event_marking_workflows_ajax(event_id):
     ):
         return jsonify({"error": "Access denied"}), 403
 
-    url = request.args.get("url", "")
-    text = request.args.get("text", "")
     can_edit = not event.closed
+
+    # Use the current inspector page as the return URL for row-level action links
+    url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
+    text = "Marking workflows"
 
     base_query = db.session.query(MarkingWorkflow).filter(MarkingWorkflow.event_id == event_id)
 

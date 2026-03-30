@@ -31,7 +31,7 @@ from wtforms.validators import (
     Optional,
     ValidationError,
 )
-from wtforms_alchemy import QuerySelectField, QuerySelectMultipleField
+from wtforms_alchemy import GroupedQuerySelectMultipleField, QuerySelectField, QuerySelectMultipleField
 
 from ..database import db
 from ..faculty.forms import ProjectMixinFactory
@@ -1067,17 +1067,50 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False):
     def get_schemes():
         return MarkingScheme.query.filter_by(pclass_id=pclass.id).order_by(MarkingScheme.name).all()
 
+    # Pre-compute the set of convenor/co-convenor user IDs for this pclass
+    _convenor_ids = set()
+    if pclass.convenor is not None:
+        _convenor_ids.add(pclass.convenor.id)
+    for fd in pclass.coconvenors.all():
+        _convenor_ids.add(fd.id)
+
+    _group_order = {
+        "Co-convenors": 0,
+        "Administrators": 1,
+        "Professional Services": 2,
+        "Exam board": 3,
+        "External examiners": 4,
+        "Faculty": 5,
+    }
+
+    def get_group(user: User) -> str:
+        if user.id in _convenor_ids:
+            return "Co-convenors"
+        if user.has_role("admin") or user.has_role("root"):
+            return "Administrators"
+        if user.has_role("office"):
+            return "Professional Services"
+        if user.has_role("exam_board"):
+            return "Exam board"
+        if user.has_role("external_examiner"):
+            return "External examiners"
+        return "Faculty"
+
     def get_notify_users():
-        return (
+        users = (
             db.session.query(User)
             .join(User.roles)
             .filter(
+                User.active.is_(True),
+                ~User.roles.any(Role.name == "student"),
                 User.tenants.any(id=pclass.tenant_id),
-                Role.name.in_(["faculty", "office", "exam_board", "external_examiner"]),
+                Role.name.in_(["faculty", "office", "exam_board", "external_examiner", "admin", "root"]),
             )
+            .distinct()
             .order_by(User.last_name, User.first_name)
             .all()
         )
+        return sorted(users, key=lambda u: (_group_order[get_group(u)], u.last_name or "", u.first_name or ""))
 
     class MarkingWorkflowMixin:
         name = StringField(
@@ -1098,17 +1131,19 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False):
             render_kw={"disabled": True} if scheme_locked else {},
         )
 
-        notify_on_moderation_required = QuerySelectMultipleField(
+        notify_on_moderation_required = GroupedQuerySelectMultipleField(
             "Notify on moderation required",
             query_factory=get_notify_users,
             get_label=lambda u: u.name,
+            get_group=get_group,
             description="Users to notify when an out-of-tolerance situation requires moderation.",
         )
 
-        notify_on_validation_failure = QuerySelectMultipleField(
+        notify_on_validation_failure = GroupedQuerySelectMultipleField(
             "Notify on validation failure",
             query_factory=get_notify_users,
             get_label=lambda u: u.name,
+            get_group=get_group,
             description="Users to notify when a marking report fails validation.",
         )
 
@@ -1121,6 +1156,10 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False):
         )
 
         submit = SubmitField("Add workflow")
+
+        def validate_scheme(self, field):
+            if field.data is None:
+                raise ValidationError("A marking scheme must be selected.")
 
     class EditMarkingWorkflowForm(Form, MarkingWorkflowMixin, SaveChangesMixin):
         pass

@@ -1029,12 +1029,12 @@ def InstrumentedAssetMixinFactory(acl_name, acr_name):
             return role_obj
 
         def has_access(self, user):
-            user_id = self._get_userid(user)
+            user_obj = self._get_user(user)
 
-            if self.has_role_access(user_id):
+            if self.has_role_access(user_obj):
                 return True
 
-            return self.in_user_acl(user)
+            return self.in_user_acl(user_obj)
 
         def has_role_access(self, user):
             user_obj = self._get_user(user)

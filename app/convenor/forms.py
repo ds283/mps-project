@@ -1321,3 +1321,16 @@ class ConfirmDeleteWithReasonForm(Form):
         validators=[InputRequired(message="A reason for deletion is required")],
     )
     submit = SubmitField("Delete")
+
+
+class ResolveTurnitinForm(Form):
+    """Convenor review form for SubmitterReports with high Turnitin similarity scores."""
+
+    comment = TextAreaField(
+        "Resolution comment",
+        render_kw={"rows": 5},
+        validators=[DataRequired(), Length(min=10, max=5000)],
+        description="Explain your decision regarding this Turnitin similarity score. "
+        "This comment will be retained for inspection by the exam board or an external examiner.",
+    )
+    submit = SubmitField("Confirm resolution")

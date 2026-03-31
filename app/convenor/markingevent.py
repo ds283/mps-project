@@ -40,7 +40,7 @@ from ..models import (
     SubmittingStudent,
     User,
 )
-from ..models.markingevent import SubmitterReportWorkflowStates
+from ..models.markingevent import ConvenorAction, SubmitterReportWorkflowStates
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
@@ -58,6 +58,7 @@ from .forms import (
     EditMarkingEventForm,
     EditMarkingSchemeForm,
     MarkingWorkflowFormFactory,
+    ResolveTurnitinForm,
     TestMarkingEventFormFactory,
 )
 
@@ -276,6 +277,7 @@ def submitter_reports_inspector(workflow_id):
         (SubmitterReportWorkflowStates.REPORTS_OUT_OF_TOLERANCE, "Reports out of tolerance"),
         (SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED, "Needs moderator assigned"),
         (SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT, "Awaiting moderator report"),
+        (SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION, "Requires convenor intervention"),
         (SubmitterReportWorkflowStates.READY_TO_GENERATE_GRADE, "Ready to generate grade"),
         (SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, "Ready to sign off"),
         (SubmitterReportWorkflowStates.READY_TO_GENERATE_FEEDBACK, "Ready to generate feedback"),
@@ -334,6 +336,72 @@ def submitter_reports_ajax(workflow_id):
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(ajax.convenor.submitter_report_data)
+
+
+@convenor.route("/resolve_turnitin/<int:submitter_report_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def resolve_turnitin_issue(submitter_report_id):
+    """
+    GET:  Display Turnitin score details and a comment form for the convenor to record
+          their review decision for a SubmitterReport with similarity score >= 25%.
+    POST: Set turnitin_resolved=True, record the comment, timestamp and resolving user,
+          then transition the SubmitterReport from REQUIRES_CONVENOR_INTERVENTION back to
+          READY_TO_DISTRIBUTE if it is currently in that blocking state.
+
+    NOTE: A SubmitterReport in REQUIRES_CONVENOR_INTERVENTION cannot proceed to
+    AWAITING_GRADING_REPORTS or any subsequent state until this resolution is recorded.
+    """
+    sr: SubmitterReport = SubmitterReport.query.get_or_404(submitter_report_id)
+    workflow: MarkingWorkflow = sr.workflow
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass, allow_roles=["office"]):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url",
+        url_for("convenor.submitter_reports_inspector", workflow_id=workflow.id),
+    )
+    text = request.args.get("text", "Submitter reports")
+
+    form = ResolveTurnitinForm(request.form)
+
+    if form.validate_on_submit():
+        try:
+            sr.turnitin_resolved = True
+            sr.turnitin_resolved_comment = form.comment.data
+            sr.turnitin_resolved_timestamp = datetime.utcnow()
+            sr.turnitin_resolved_id = current_user.id
+
+            # Unblock the workflow if the report is currently held in REQUIRES_CONVENOR_INTERVENTION
+            if sr.workflow_state == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION:
+                sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+
+            log_db_commit(
+                f"Convenor resolved Turnitin concern for SubmitterReport id={sr.id} "
+                f"(student: {sr.student.user.name}, workflow: {workflow.name})",
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError in resolve_turnitin_issue", exc_info=e)
+            flash("A database error occurred. Please try again.", "danger")
+            return redirect(url)
+
+        flash("Turnitin resolution recorded successfully.", "success")
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/markingevent/resolve_turnitin.html",
+        form=form,
+        report=sr,
+        workflow=workflow,
+        event=event,
+        pclass=pclass,
+        url=url,
+        text=text,
+    )
 
 
 @convenor.route("/marking_reports_inspector/<int:workflow_id>")
@@ -994,6 +1062,45 @@ def event_marking_workflows_inspector(event_id):
 
     event_url = url_for("convenor.send_marking_emails_for_event", event_id=event_id)
     actions = event.get_convenor_actions(event_url=event_url)
+
+    # Add per-workflow Turnitin CTAs for unresolved high-similarity scores.
+    # Computed here (not in the model) so that url_for() can be called without
+    # introducing routing knowledge into the model layer.
+    # Only surface these CTAs while the event is still open.
+    if not event.closed:
+        for workflow in event.workflows:
+            unresolved = (
+                db.session.query(SubmitterReport)
+                .join(SubmissionRecord, SubmissionRecord.id == SubmitterReport.record_id)
+                .filter(
+                    SubmitterReport.workflow_id == workflow.id,
+                    SubmissionRecord.turnitin_score >= 25,
+                    SubmitterReport.turnitin_resolved == False,  # noqa: E712
+                )
+                .count()
+            )
+            if unresolved > 0:
+                workflow_url = url_for(
+                    "convenor.submitter_reports_inspector",
+                    workflow_id=workflow.id,
+                    url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
+                    text="Marking workflows",
+                )
+                n = unresolved
+                actions.append(
+                    ConvenorAction(
+                        severity="warning",
+                        title=f"Turnitin review required: {workflow.name}",
+                        description=(
+                            f"{n} submitter report{'s' if n != 1 else ''} in this workflow "
+                            f"{'have' if n != 1 else 'has'} a Turnitin similarity score \u226525% "
+                            f"and require{'s' if n == 1 else ''} convenor review before marking "
+                            f"can proceed."
+                        ),
+                        action_url=workflow_url,
+                        action_label="Review Turnitin scores",
+                    )
+                )
 
     return render_template_context(
         "convenor/markingevent/event_marking_workflows_inspector.html",

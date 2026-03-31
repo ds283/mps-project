@@ -49,19 +49,42 @@ _year = """
 # language=jinja2
 _records = """
 {% macro turnitin_info(r) %}
-    {% if r.turnitin_outcome is not none or r.turnitin_score is not none %}
+    {# turnitin_outcome is a legacy Canvas LMS field not used in current Turnitin outputs; hidden from display #}
+    {% if r.turnitin_score is not none %}
         <div class="mt-1 d-flex flex-row flex-wrap justify-content-start align-items-center gap-2">
             <span class="small text-muted fw-semibold">Turnitin</span>
-            {% if r.turnitin_outcome is not none %}
-                <span class="badge bg-secondary small">{{ r.turnitin_outcome }}</span>
-            {% endif %}
             {% if r.turnitin_score is not none %}
+                {# 5-tier colour scale per current Turnitin documentation:
+                   0% = green (no match), 1-24% = blue (low), 25-49% = yellow (medium),
+                   50-74% = orange (high), 75-100% = red (very high) #}
+                {% if r.turnitin_score == 0 %}
+                    {% set score_class = "text-success" %}
+                    {% set badge_class = "bg-success" %}
+                    {% set score_label = "No match" %}
+                {% elif r.turnitin_score < 25 %}
+                    {% set score_class = "text-primary" %}
+                    {% set badge_class = "bg-primary" %}
+                    {% set score_label = "Low" %}
+                {% elif r.turnitin_score < 50 %}
+                    {% set score_class = "text-warning" %}
+                    {% set badge_class = "bg-warning text-dark" %}
+                    {% set score_label = "Medium" %}
+                {% elif r.turnitin_score < 75 %}
+                    {% set score_class = "" %}
+                    {% set badge_class = "bg-warning text-dark" %}
+                    {% set score_label = "High" %}
+                {% else %}
+                    {% set score_class = "text-danger" %}
+                    {% set badge_class = "bg-danger" %}
+                    {% set score_label = "Very high" %}
+                {% endif %}
                 <span class="small">
-                    Similarity: 
-                    <strong class="{% if r.turnitin_score >= 30 %}text-danger{% elif r.turnitin_score >= 15 %}text-warning{% else %}text-success{% endif %}">
+                    Similarity:
+                    <strong class="{{ score_class }}"{% if r.turnitin_score >= 50 and r.turnitin_score < 75 %} style="color: #fd7e14"{% endif %}>
                         {{ r.turnitin_score }}%
                     </strong>
                 </span>
+                <span class="badge {{ badge_class }} small">{{ score_label }}</span>
             {% endif %}
             {% if r.turnitin_web_overlap is not none %}
                 <span class="small text-muted">Web: {{ r.turnitin_web_overlap }}%</span>

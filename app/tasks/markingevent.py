@@ -58,10 +58,20 @@ def register_markingevent_tasks(celery):
                 # Determine the correct initial state:
                 # - requires_report=False: ready immediately (no asset check needed)
                 # - requires_report=True: ready only if both report and processed_report already exist
+                # NOTE: If the SubmissionRecord has turnitin_score >= 25 and the SubmitterReport
+                # has turnitin_resolved=False, the state must be REQUIRES_CONVENOR_INTERVENTION
+                # rather than READY_TO_DISTRIBUTE. The SubmitterReport cannot proceed past
+                # REQUIRES_CONVENOR_INTERVENTION until the convenor resolves the Turnitin concern.
                 if not workflow.requires_report:
-                    initial_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                    if record.turnitin_score is not None and record.turnitin_score >= 25:
+                        initial_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                    else:
+                        initial_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
                 elif record.report is not None and record.processed_report is not None:
-                    initial_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                    if record.turnitin_score is not None and record.turnitin_score >= 25:
+                        initial_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                    else:
+                        initial_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
                 else:
                     initial_state = SubmitterReportWorkflowStates.NOT_READY
 
@@ -153,13 +163,20 @@ def register_markingevent_tasks(celery):
                     if record.report is None or record.processed_report is None:
                         continue
 
-                sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                # NOTE: If turnitin_score >= 25 and turnitin_resolved=False, transition to
+                # REQUIRES_CONVENOR_INTERVENTION instead of READY_TO_DISTRIBUTE.
+                # The SubmitterReport cannot proceed past REQUIRES_CONVENOR_INTERVENTION until
+                # the convenor resolves the Turnitin concern via convenor.resolve_turnitin_issue.
+                if record.turnitin_score is not None and record.turnitin_score >= 25 and not sr.turnitin_resolved:
+                    sr.workflow_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                else:
+                    sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
                 advanced += 1
 
             if advanced > 0:
                 log_db_commit(
-                    f"Advanced {advanced} SubmitterReport(s) to READY_TO_DISTRIBUTE "
-                    f"for SubmissionRecord id={record_id}",
+                    f"Advanced {advanced} SubmitterReport(s) to READY_TO_DISTRIBUTE or "
+                    f"REQUIRES_CONVENOR_INTERVENTION for SubmissionRecord id={record_id}",
                     endpoint=self.name,
                 )
 

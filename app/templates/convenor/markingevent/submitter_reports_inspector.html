@@ -102,7 +102,7 @@
                     {% for state_val, state_label in state_labels %}
                         {% set count = state_counts.get(state_val, 0) %}
                         {% if count > 0 %}
-                            <span class="badge {% if state_val == 999 %}bg-secondary{% elif state_val == 11 %}bg-success{% else %}bg-primary{% endif %} py-2 px-3">
+                            <span class="badge {% if state_val == 999 %}bg-secondary{% elif state_val == 12 %}bg-success{% else %}bg-primary{% endif %} py-2 px-3">
                                 {{ state_label }}: {{ count }}
                             </span>
                         {% endif %}

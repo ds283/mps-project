@@ -244,24 +244,42 @@ _submitter_report_feedback = """
 # language=jinja2
 _submitter_report_turnitin = """
 {% set rec = report.record %}
-{% if rec is not none and (rec.turnitin_outcome is not none or rec.turnitin_score is not none) %}
+{% if rec is not none and rec.turnitin_score is not none %}
+    {# turnitin_outcome is a legacy Canvas LMS field not used in current Turnitin outputs; hidden from display #}
     <div class="d-flex flex-column gap-1">
-        {% if rec.turnitin_score is not none %}
-            <div class="d-flex flex-row align-items-center gap-2">
-                <span class="fw-semibold {% if rec.turnitin_score >= 30 %}text-danger{% elif rec.turnitin_score >= 15 %}text-dark{% else %}text-success{% endif %}">
-                    {{ rec.turnitin_score }}%
-                </span>
-                <span class="badge {% if rec.turnitin_score >= 30 %}bg-danger{% elif rec.turnitin_score >= 15 %}bg-warning text-dark{% else %}bg-success{% endif %} small">
-                    {% if rec.turnitin_score >= 30 %}High{% elif rec.turnitin_score >= 15 %}Medium{% else %}Low{% endif %}
-                </span>
-            </div>
+        {# 5-tier colour scale per current Turnitin documentation:
+           0% = green (no match), 1-24% = blue (low), 25-49% = yellow (medium),
+           50-74% = orange (high), 75-100% = red (very high) #}
+        {% if rec.turnitin_score == 0 %}
+            {% set score_class = "text-success" %}
+            {% set badge_class = "bg-success" %}
+            {% set score_label = "No match" %}
+        {% elif rec.turnitin_score < 25 %}
+            {% set score_class = "text-primary" %}
+            {% set badge_class = "bg-primary" %}
+            {% set score_label = "Low" %}
+        {% elif rec.turnitin_score < 50 %}
+            {% set score_class = "text-warning" %}
+            {% set badge_class = "bg-warning text-dark" %}
+            {% set score_label = "Medium" %}
+        {% elif rec.turnitin_score < 75 %}
+            {% set score_class = "" %}
+            {% set badge_class = "bg-warning text-dark" %}
+            {% set score_label = "High" %}
+        {% else %}
+            {% set score_class = "text-danger" %}
+            {% set badge_class = "bg-danger" %}
+            {% set score_label = "Very high" %}
         {% endif %}
-        {% if rec.turnitin_outcome is not none %}
-            <div class="small text-muted">{{ rec.turnitin_outcome }}</div>
-        {% endif %}
+        <div class="d-flex flex-row align-items-center gap-2">
+            <span class="fw-semibold {{ score_class }}"{% if rec.turnitin_score >= 50 and rec.turnitin_score < 75 %} style="color: #fd7e14"{% endif %}>
+                {{ rec.turnitin_score }}%
+            </span>
+            <span class="badge {{ badge_class }} small">{{ score_label }}</span>
+        </div>
         {% set has_breakdown = rec.turnitin_web_overlap is not none or rec.turnitin_publication_overlap is not none or rec.turnitin_student_overlap is not none %}
         {% if has_breakdown %}
-            <div class="d-flex flex-row flex-wrap gap-2 mt-1">
+            <div class="d-flex flex-row flex-wrap gap-2">
                 {% if rec.turnitin_web_overlap is not none %}
                     <span class="small text-muted" data-bs-toggle="tooltip" title="Web sources">
                         <i class="fas fa-globe fa-fw"></i> {{ rec.turnitin_web_overlap }}%
@@ -278,6 +296,28 @@ _submitter_report_turnitin = """
                     </span>
                 {% endif %}
             </div>
+        {% endif %}
+        {# Resolution status: shown for all reports with a turnitin score #}
+        {% if report.turnitin_resolved %}
+            <div class="mt-1">
+                <span class="badge bg-success"><i class="fas fa-check-circle"></i> Resolved</span>
+                {% if report.turnitin_resolved_by is not none %}
+                    <span class="small text-muted ms-1">by {{ report.turnitin_resolved_by.name }}</span>
+                {% endif %}
+            </div>
+        {% elif rec.turnitin_score >= 25 %}
+            <div class="mt-1"><span class="badge bg-danger">Requires attention</span></div>
+            <div class="mt-1">
+                <a href="{{ url_for('convenor.resolve_turnitin_issue',
+                           submitter_report_id=report.id,
+                           url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id),
+                           text='Submitter reports') }}"
+                   class="btn btn-xs btn-outline-danger">
+                    <i class="fas fa-gavel fa-fw"></i> Resolve&hellip;
+                </a>
+            </div>
+        {% else %}
+            <div class="mt-1"><span class="badge bg-success">Passing</span></div>
         {% endif %}
     </div>
 {% else %}

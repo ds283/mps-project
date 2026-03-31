@@ -200,8 +200,13 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
         ready_count = 0
         for workflow in self.workflows:
             for sr in workflow.submitter_reports:
-                if sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE:
-                    undistributed = sum(1 for mr in sr.marking_reports if not mr.distributed)
+                if (
+                    sr.workflow_state
+                    == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                ):
+                    undistributed = sum(
+                        1 for mr in sr.marking_reports if not mr.distributed
+                    )
                     if undistributed > 0:
                         ready_count += undistributed
 
@@ -420,7 +425,9 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
         """Count of SubmitterReports whose SubmissionRecord has report_processing_failed == True."""
         if not self.requires_report:
             return 0
-        return sum(1 for sr in self.submitter_reports if sr.record.report_processing_failed)
+        return sum(
+            1 for sr in self.submitter_reports if sr.record.report_processing_failed
+        )
 
 
 # association table of SubmitterReport to EmailLog, to track feedback emails
@@ -464,11 +471,19 @@ class SubmitterReportWorkflowStates:
     REPORTS_OUT_OF_TOLERANCE = 4
     NEEDS_MODERATOR_ASSIGNED = 5
     AWAITING_MODERATOR_REPORT = 6
-    READY_TO_GENERATE_GRADE = 7
-    READY_TO_SIGN_OFF = 8
-    READY_TO_GENERATE_FEEDBACK = 9
-    READY_TO_PUSH_FEEDBACK = 10
-    COMPLETED = 11
+    # REQUIRES_CONVENOR_INTERVENTION: blocking state.
+    # A SubmitterReport enters this state when turnitin_score >= 25 and turnitin_resolved=False,
+    # because the convenor must review the Turnitin similarity report before marking can proceed.
+    # It CANNOT be advanced to AWAITING_GRADING_REPORTS or any subsequent state until
+    # turnitin_resolved is set to True by a convenor (via the convenor.resolve_turnitin_issue view).
+    # Resolution transitions the report back to READY_TO_DISTRIBUTE.
+    # Also used for other convenor-intervention scenarios that may be added in future.
+    REQUIRES_CONVENOR_INTERVENTION = 7
+    READY_TO_GENERATE_GRADE = 8
+    READY_TO_SIGN_OFF = 9
+    READY_TO_GENERATE_FEEDBACK = 10
+    READY_TO_PUSH_FEEDBACK = 11
+    COMPLETED = 12
 
 
 class SubmitterReport(db.Model, EditingMetadataMixin):
@@ -549,6 +564,28 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     # feedback emails
     feedback_emails = db.relationship(
         "EmailLog", secondary=submitter_feedback_to_email_log, lazy="dynamic"
+    )
+
+    # TURNITIN REVIEW
+    # NOTE: A SubmitterReport with turnitin_score >= 25 and turnitin_resolved=False
+    # MUST be placed in REQUIRES_CONVENOR_INTERVENTION state and cannot advance to
+    # AWAITING_GRADING_REPORTS (or any subsequent state) until this field is set True.
+
+    # has the turnitin score been reviewed and resolved by a convenor?
+    turnitin_resolved = db.Column(db.Boolean(), default=False, nullable=False)
+
+    # optional comment entered by the convenor explaining their review decision
+    turnitin_resolved_comment = db.Column(db.Text(), nullable=True)
+
+    # timestamp when the resolution was recorded
+    turnitin_resolved_timestamp = db.Column(db.DateTime(), nullable=True)
+
+    # which user resolved the turnitin issue?
+    turnitin_resolved_id = db.Column(
+        db.Integer(), db.ForeignKey("users.id"), nullable=True
+    )
+    turnitin_resolved_by = db.relationship(
+        "User", foreign_keys=[turnitin_resolved_id], uselist=False
     )
 
     # convenience accessors

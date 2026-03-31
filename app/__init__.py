@@ -168,7 +168,7 @@ def create_app():
     sentry_endpoint = os.environ.get("SENTRY_ENDPOINT")
     sentry_trace = 0.0
     try:
-        float(os.environ.get("SENTRY_TRACE"))
+        sentry_trace = float(os.environ.get("SENTRY_TRACE", 0.0))
     except ValueError:
         pass
     sentry_env = os.environ.get("SENTRY_ENVIRONMENT")

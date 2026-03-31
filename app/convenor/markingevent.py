@@ -57,6 +57,7 @@ from .forms import (
     AddMarkingSchemeForm,
     EditMarkingEventForm,
     EditMarkingSchemeForm,
+    EnterTurnitinScoreForm,
     MarkingWorkflowFormFactory,
     ResolveTurnitinForm,
     TestMarkingEventFormFactory,
@@ -115,7 +116,7 @@ def marking_events_inspector(pclass_id):
     data = get_convenor_dashboard_data(pclass, config)
 
     return render_template_context(
-        "convenor/markingevent/marking_events_inspector.html",
+        "convenor/markingevent/assessment_archive_inspector.html",
         pane="assessment_archive",
         pclass=pclass,
         config=config,
@@ -165,8 +166,10 @@ def marking_events_ajax(pclass_id):
         "name": {"order": MarkingEvent.name, "search": MarkingEvent.name},
     }
 
+    from ..ajax.archive.marking_events import marking_event_data as archive_marking_event_data
+
     with ServerSideSQLHandler(request, base_query, columns) as handler:
-        return handler.build_payload(ajax.convenor.marking_event_data)
+        return handler.build_payload(archive_marking_event_data)
 
 
 @convenor.route("/marking_workflow_inspector/<int:event_id>")
@@ -398,6 +401,90 @@ def resolve_turnitin_issue(submitter_report_id):
         report=sr,
         workflow=workflow,
         event=event,
+        pclass=pclass,
+        url=url,
+        text=text,
+    )
+
+
+@convenor.route("/refetch_turnitin_from_canvas/<int:record_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def refetch_turnitin_from_canvas(record_id):
+    """Queue a Celery task to re-fetch the Turnitin similarity data for a SubmissionRecord from Canvas."""
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(record_id)
+    period: SubmissionPeriodRecord = record.period
+    pclass: ProjectClass = period.config.project_class
+
+    if not validate_is_convenor(pclass, allow_roles=["office"]):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", url_for("convenor.marking_events_inspector", pclass_id=pclass.id))
+
+    if not record.canvas_turnitin_refetchable:
+        flash("Canvas integration is not available for this submission record.", "warning")
+        return redirect(url)
+
+    try:
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.canvas.fetch_turnitin_data_for_record"]
+        task.apply_async(args=[record_id])
+        flash("Turnitin re-fetch from Canvas has been queued.", "success")
+    except Exception as e:
+        current_app.logger.exception("Error queuing fetch_turnitin_data_for_record", exc_info=e)
+        flash("Could not queue Turnitin re-fetch. Please contact a system administrator.", "error")
+
+    return redirect(url)
+
+
+@convenor.route("/enter_turnitin_score/<int:record_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def enter_turnitin_score(record_id):
+    """Manually enter a Turnitin similarity score for a SubmissionRecord."""
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(record_id)
+    period: SubmissionPeriodRecord = record.period
+    pclass: ProjectClass = period.config.project_class
+
+    if not validate_is_convenor(pclass, allow_roles=["office"]):
+        return redirect(redirect_url())
+
+    url = request.args.get("url", url_for("convenor.marking_events_inspector", pclass_id=pclass.id))
+    text = request.args.get("text", "Marking events")
+
+    form = EnterTurnitinScoreForm(request.form)
+
+    if form.validate_on_submit():
+        try:
+            record.turnitin_score = form.turnitin_score.data
+            record.turnitin_web_overlap = form.turnitin_web_overlap.data
+            record.turnitin_publication_overlap = form.turnitin_publication_overlap.data
+            record.turnitin_student_overlap = form.turnitin_student_overlap.data
+
+            log_db_commit(
+                f"Convenor manually entered Turnitin score={record.turnitin_score} "
+                f"for SubmissionRecord id={record.id}",
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError in enter_turnitin_score", exc_info=e)
+            flash("A database error occurred. Please try again.", "danger")
+            return redirect(url)
+
+        flash("Turnitin score recorded successfully.", "success")
+        return redirect(url)
+
+    # Pre-populate form with existing values if any
+    if request.method == "GET":
+        form.turnitin_score.data = record.turnitin_score
+        form.turnitin_web_overlap.data = record.turnitin_web_overlap
+        form.turnitin_publication_overlap.data = record.turnitin_publication_overlap
+        form.turnitin_student_overlap.data = record.turnitin_student_overlap
+
+    return render_template_context(
+        "convenor/markingevent/enter_turnitin_score.html",
+        form=form,
+        record=record,
+        period=period,
         pclass=pclass,
         url=url,
         text=text,
@@ -1061,14 +1148,23 @@ def event_marking_workflows_inspector(event_id):
     can_edit = not event.closed
 
     event_url = url_for("convenor.send_marking_emails_for_event", event_id=event_id)
-    actions = event.get_convenor_actions(event_url=event_url)
+    open_event_url = url_for("convenor.open_marking_event", event_id=event_id) if not event.open else None
+    actions = event.get_convenor_actions(event_url=event_url, open_event_url=open_event_url)
 
-    # Add per-workflow Turnitin CTAs for unresolved high-similarity scores.
+    # Add per-workflow Turnitin CTAs for unresolved high-similarity scores and missing data.
     # Computed here (not in the model) so that url_for() can be called without
     # introducing routing knowledge into the model layer.
     # Only surface these CTAs while the event is still open.
     if not event.closed:
         for workflow in event.workflows:
+            workflow_url = url_for(
+                "convenor.submitter_reports_inspector",
+                workflow_id=workflow.id,
+                url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
+                text="Marking workflows",
+            )
+
+            # CTA for unresolved high similarity scores
             unresolved = (
                 db.session.query(SubmitterReport)
                 .join(SubmissionRecord, SubmissionRecord.id == SubmitterReport.record_id)
@@ -1080,12 +1176,6 @@ def event_marking_workflows_inspector(event_id):
                 .count()
             )
             if unresolved > 0:
-                workflow_url = url_for(
-                    "convenor.submitter_reports_inspector",
-                    workflow_id=workflow.id,
-                    url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
-                    text="Marking workflows",
-                )
                 n = unresolved
                 actions.append(
                     ConvenorAction(
@@ -1099,6 +1189,32 @@ def event_marking_workflows_inspector(event_id):
                         ),
                         action_url=workflow_url,
                         action_label="Review Turnitin scores",
+                    )
+                )
+
+            # CTA for missing Turnitin data
+            missing = (
+                db.session.query(SubmitterReport)
+                .join(SubmissionRecord, SubmissionRecord.id == SubmitterReport.record_id)
+                .filter(
+                    SubmitterReport.workflow_id == workflow.id,
+                    SubmissionRecord.turnitin_score == None,  # noqa: E711
+                )
+                .count()
+            )
+            if missing > 0:
+                n = missing
+                actions.append(
+                    ConvenorAction(
+                        severity="secondary",
+                        title=f"Missing Turnitin data: {workflow.name}",
+                        description=(
+                            f"{n} submitter report{'s' if n != 1 else ''} in this workflow "
+                            f"{'are' if n != 1 else 'is'} missing Turnitin similarity data. "
+                            f"You can re-fetch from Canvas or enter scores manually."
+                        ),
+                        action_url=workflow_url,
+                        action_label="Review submitter reports",
                     )
                 )
 
@@ -1607,6 +1723,47 @@ def restart_report_processing(record_id):
 
     flash("Report processing has been restarted.", "success")
     return redirect(redirect_url())
+
+
+@convenor.route("/dispatch_marking_report/<int:report_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def dispatch_marking_report(report_id):
+    """Dispatch (or re-send) the marking notification email for a single MarkingReport."""
+    report: MarkingReport = MarkingReport.query.get_or_404(report_id)
+    sr: SubmitterReport = report.submitter_report
+    workflow: MarkingWorkflow = sr.workflow
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if not event.open or event.closed:
+        flash("Marking notifications can only be dispatched while the event is open.", "error")
+        return redirect(redirect_url())
+
+    force = request.args.get("resend", "false").lower() == "true"
+
+    deadline_str = None
+    if workflow.effective_deadline is not None:
+        deadline_str = workflow.effective_deadline.isoformat()
+
+    try:
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.marking.dispatch_single_email"]
+        task.apply_async(
+            args=[report_id, True, 10, None, deadline_str, force],
+        )
+        if force:
+            flash(f"Marking notification re-send for {report.user.name} has been queued.", "success")
+        else:
+            flash(f"Marking notification for {report.user.name} has been queued.", "success")
+    except Exception as e:
+        current_app.logger.exception("Error dispatching dispatch_single_email", exc_info=e)
+        flash("Could not dispatch marking notification. Please contact a system administrator.", "error")
+
+    url = request.args.get("url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id))
+    return redirect(url)
 
 
 @convenor.route("/send_marking_emails_for_workflow/<int:workflow_id>", methods=["POST"])

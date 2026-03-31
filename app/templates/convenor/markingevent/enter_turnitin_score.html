@@ -1,0 +1,111 @@
+{% extends "base_app.html" %}
+
+{% from "icon_block.html" import icon_block %}
+
+{% block title %}Enter Turnitin score –
+    {{ record.owner.student.user.name if record.owner and record.owner.student else 'Unknown student' }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="d-flex align-items-center mt-3 mb-2 gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+            <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+        </a>
+        <h4 class="mb-0">
+            <i class="fas fa-keyboard fa-fw me-1"></i>
+            Enter Turnitin score:
+            <strong>{{ record.owner.student.user.name if record.owner and record.owner.student else 'Unknown student' }}</strong>
+        </h4>
+    </div>
+
+    <div class="alert alert-secondary mb-3">
+        {% call icon_block("info-circle") %}
+            <div>
+                Use this form to manually record a Turnitin similarity score when Canvas data is unavailable
+                or incorrect. All fields except the overall similarity score are optional.
+            </div>
+        {% endcall %}
+    </div>
+
+    {# Submission context card #}
+    <div class="card border-secondary mb-3">
+        <div class="card-header bg-secondary text-white small">
+            <i class="fas fa-info-circle fa-fw me-1"></i> Submission details
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0 small">
+                <dt class="col-sm-3 text-muted">Student</dt>
+                <dd class="col-sm-9">{{ record.owner.student.user.name if record.owner and record.owner.student else '&mdash;'|safe }}</dd>
+                <dt class="col-sm-3 text-muted">Project</dt>
+                <dd class="col-sm-9">
+                    {% if record.project is not none %}
+                        {{ record.project.name }}
+                    {% else %}
+                        <span class="text-muted fst-italic">No project assigned</span>
+                    {% endif %}
+                </dd>
+                <dt class="col-sm-3 text-muted">Period</dt>
+                <dd class="col-sm-9">{{ period.display_name }}</dd>
+            </dl>
+        </div>
+    </div>
+
+    {# Manual entry form #}
+    <div class="card border-primary mb-3">
+        <div class="card-header bg-primary text-white">
+            <i class="fas fa-edit fa-fw me-1"></i> Turnitin similarity data
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() if form.hidden_tag is defined }}
+                <div class="mb-3">
+                    {{ form.turnitin_score.label(class="form-label fw-semibold") }}
+                    {{ form.turnitin_score(class="form-control" + (" is-invalid" if form.turnitin_score.errors else ""), style="max-width:12rem;") }}
+                    {% if form.turnitin_score.description %}
+                        <div class="form-text text-muted">{{ form.turnitin_score.description }}</div>
+                    {% endif %}
+                    {% for error in form.turnitin_score.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <hr>
+                <p class="text-muted small mb-2">Breakdown by source type (all optional):</p>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        {{ form.turnitin_web_overlap.label(class="form-label") }}
+                        {{ form.turnitin_web_overlap(class="form-control" + (" is-invalid" if form.turnitin_web_overlap.errors else "")) }}
+                        {% if form.turnitin_web_overlap.description %}
+                            <div class="form-text text-muted">{{ form.turnitin_web_overlap.description }}</div>
+                        {% endif %}
+                        {% for error in form.turnitin_web_overlap.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.turnitin_publication_overlap.label(class="form-label") }}
+                        {{ form.turnitin_publication_overlap(class="form-control" + (" is-invalid" if form.turnitin_publication_overlap.errors else "")) }}
+                        {% if form.turnitin_publication_overlap.description %}
+                            <div class="form-text text-muted">{{ form.turnitin_publication_overlap.description }}</div>
+                        {% endif %}
+                        {% for error in form.turnitin_publication_overlap.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.turnitin_student_overlap.label(class="form-label") }}
+                        {{ form.turnitin_student_overlap(class="form-control" + (" is-invalid" if form.turnitin_student_overlap.errors else "")) }}
+                        {% if form.turnitin_student_overlap.description %}
+                            <div class="form-text text-muted">{{ form.turnitin_student_overlap.description }}</div>
+                        {% endif %}
+                        {% for error in form.turnitin_student_overlap.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a class="btn btn-outline-secondary" href="{{ url }}">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

@@ -25,6 +25,7 @@ from weasyprint.text.fonts import FontConfiguration
 from ..database import db
 from ..models import (
     AssetLicense,
+    EmailLog,
     EmailWorkflow,
     EmailWorkflowItem,
     EmailWorkflowItemAttachment,
@@ -43,13 +44,13 @@ from ..models import (
     SubmissionPeriodRecord,
     SubmissionRecord,
     SubmissionRole,
-    SubmittingStudent,
     SubmitterReport,
+    SubmittingStudent,
     User,
 )
+from ..models.emails import encode_email_payload
 from ..models.markingevent import SubmitterReportWorkflowStates
 from ..models.submissions import SubmissionRoleTypesMixin
-from ..models.emails import encode_email_payload
 from ..shared.asset_tools import (
     AssetCloudAdapter,
     AssetCloudScratchContextManager,
@@ -278,6 +279,7 @@ def register_marking_tasks(celery):
         markers: List[SubmissionRole],
         test_email: Optional[str],
         cc_convenor: bool,
+            marking_report_id: Optional[int] = None,
     ) -> EmailWorkflowItem:
         asset = record.processed_report
         if asset is not None:
@@ -305,6 +307,16 @@ def register_marking_tasks(celery):
         if test_email is None and cc_convenor:
             recipient_list.append(config.convenor_email)
 
+        callbacks = None
+        if marking_report_id is not None and test_email is None:
+            callbacks = [
+                {
+                    "task": "app.tasks.marking.link_distribution_email",
+                    "args": [marking_report_id],
+                    "kwargs": {},
+                }
+            ]
+
         return EmailWorkflowItem.build_(
             subject_payload=encode_email_payload(
                 {
@@ -331,6 +343,7 @@ def register_marking_tasks(celery):
             recipient_list=recipient_list,
             reply_to=[pclass.convenor_email],
             attachments=attachments,
+            callbacks=callbacks,
         )
 
     def _build_marker_item(
@@ -347,6 +360,7 @@ def register_marking_tasks(celery):
         markers: List[SubmissionRole],
         test_email: Optional[str],
         cc_convenor: bool,
+            marking_report_id: Optional[int] = None,
     ) -> EmailWorkflowItem:
         asset = record.processed_report
         if asset is not None:
@@ -374,6 +388,16 @@ def register_marking_tasks(celery):
         if test_email is None and cc_convenor:
             recipient_list.append(config.convenor_email)
 
+        callbacks = None
+        if marking_report_id is not None and test_email is None:
+            callbacks = [
+                {
+                    "task": "app.tasks.marking.link_distribution_email",
+                    "args": [marking_report_id],
+                    "kwargs": {},
+                }
+            ]
+
         return EmailWorkflowItem.build_(
             subject_payload=encode_email_payload(
                 {
@@ -400,6 +424,7 @@ def register_marking_tasks(celery):
             recipient_list=recipient_list,
             reply_to=[pclass.convenor_email],
             attachments=attachments,
+            callbacks=callbacks,
         )
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -480,12 +505,14 @@ def register_marking_tasks(celery):
                 item = _build_supervisor_item(
                     role, record, workflow, config, pclass, submitter, student,
                     period, deadline_date, filtered_supervisors, markers, test_email, cc_convenor,
+                    marking_report_id=mr.id,
                 )
             else:
                 filtered_markers = [r for r in markers if r.id != role.id]
                 item = _build_marker_item(
                     role, record, workflow, config, pclass, submitter, student,
                     period, deadline_date, supervisors, filtered_markers, test_email, cc_convenor,
+                    marking_report_id=mr.id,
                 )
 
             item.workflow = email_wf
@@ -508,6 +535,145 @@ def register_marking_tasks(celery):
             raise self.retry()
 
         return {"sent": sent}
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def link_distribution_email(self, email_log_id: int, marking_report_id: int):
+        """
+        Callback invoked after a distribution email is successfully sent.
+        Links the newly created EmailLog record to the MarkingReport.distribution_emails collection.
+        Follows the pattern established by mark_attendance_prompt_sent() in app/tasks/attendance.py.
+        The email_log_id is prepended to args automatically by the EmailWorkflowItem callback mechanism.
+        """
+        try:
+            mr: MarkingReport = db.session.query(MarkingReport).filter_by(id=marking_report_id).first()
+            email_log: EmailLog = db.session.query(EmailLog).filter_by(id=email_log_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if mr is None:
+            msg = f"link_distribution_email: could not find MarkingReport #{marking_report_id}"
+            current_app.logger.error(msg)
+            return
+
+        if email_log is None:
+            msg = f"link_distribution_email: could not find EmailLog #{email_log_id}"
+            current_app.logger.error(msg)
+            return
+
+        mr.distribution_emails.append(email_log)
+
+        try:
+            log_db_commit(
+                f"Linked distribution email #{email_log_id} to MarkingReport #{marking_report_id}",
+                endpoint=self.name,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def dispatch_single_email(
+            self,
+            marking_report_id: int,
+            cc_convenor: bool,
+            max_attachment: int,
+            test_email: Optional[str],
+            deadline: Optional[str],
+            force: bool = False,
+    ):
+        """
+        Send a marking notification email for a single MarkingReport.
+        If force=True, send even if already distributed (re-send).
+        """
+        try:
+            mr: MarkingReport = db.session.query(MarkingReport).filter_by(id=marking_report_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if mr is None:
+            msg = f"Could not load MarkingReport id={marking_report_id} from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
+
+        if mr.distributed and not force:
+            return {"sent": 0}
+
+        sr: SubmitterReport = mr.submitter_report
+        record: SubmissionRecord = sr.record
+        workflow: MarkingWorkflow = sr.workflow
+
+        if record.project is None:
+            return {"sent": 0}
+
+        if workflow.requires_report and record.processed_report is None:
+            return {"sent": 0}
+
+        period: SubmissionPeriodRecord = record.period
+        config: ProjectClassConfig = period.config
+        pclass: ProjectClass = config.project_class
+        submitter: SubmittingStudent = record.owner
+        student: StudentData = submitter.student
+
+        deadline_date: date
+        if deadline is not None:
+            deadline_date = parser.parse(deadline).date()
+        elif workflow.effective_deadline is not None:
+            deadline_date = workflow.effective_deadline.date()
+        else:
+            deadline_date = date.today()
+
+        supervisors: List[SubmissionRole] = record.supervisor_roles
+        markers: List[SubmissionRole] = record.marker_roles
+        role: SubmissionRole = mr.role
+        is_supervisor = role.role in _SUPERVISOR_ROLES
+
+        email_wf = EmailWorkflow.build_(
+            name=f"Marking notification (single): {workflow.name} — {student.user.name}",
+            template=workflow.template,
+            defer=timedelta(minutes=15),
+            pclasses=[pclass],
+            max_attachment_size=max_attachment,
+        )
+        db.session.add(email_wf)
+        db.session.flush()
+
+        if is_supervisor:
+            filtered_supervisors = [r for r in supervisors if r.id != role.id]
+            item = _build_supervisor_item(
+                role, record, workflow, config, pclass, submitter, student,
+                period, deadline_date, filtered_supervisors, markers, test_email, cc_convenor,
+                marking_report_id=mr.id,
+            )
+        else:
+            filtered_markers = [r for r in markers if r.id != role.id]
+            item = _build_marker_item(
+                role, record, workflow, config, pclass, submitter, student,
+                period, deadline_date, supervisors, filtered_markers, test_email, cc_convenor,
+                marking_report_id=mr.id,
+            )
+
+        item.workflow = email_wf
+        db.session.add(item)
+        if test_email is None:
+            mr.distributed = True
+
+        try:
+            log_db_commit(
+                f"Dispatched single marking notification for {student.user.name} "
+                f"({pclass.name}, workflow={workflow.name!r}, force={force})",
+                student=student,
+                project_classes=pclass,
+                endpoint=self.name,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        return {"sent": 1}
 
     @celery.task(bind=True, default_retry_delay=30)
     def conflate_marks_for_period(self, period_id: int, convenor_id: Optional[int]):

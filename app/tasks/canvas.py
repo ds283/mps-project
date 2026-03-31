@@ -12,29 +12,29 @@ from datetime import datetime, timedelta
 from urllib.parse import urljoin
 
 import requests
-from celery import group, chain
+from celery import chain, group
 from flask import current_app
 from nameparser import HumanName
-from sqlalchemy import or_, func
+from sqlalchemy import func, or_
 from sqlalchemy.exc import SQLAlchemyError
 from url_normalize import url_normalize
 
 from ..database import db
 from ..models import (
+    AssetLicense,
+    CanvasStudent,
+    MainConfig,
     ProjectClass,
     ProjectClassConfig,
+    StudentData,
     SubmissionPeriodRecord,
     SubmissionRecord,
-    SubmittingStudent,
-    CanvasStudent,
-    StudentData,
-    User,
     SubmittedAsset,
-    AssetLicense,
-    MainConfig,
+    SubmittingStudent,
+    User,
 )
+from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.security import validate_nonce
-from ..shared.asset_tools import AssetUploadManager, AssetCloudAdapter
 from ..shared.utils import get_main_config
 from ..shared.workflow_logging import log_db_commit
 from .thumbnails import dispatch_thumbnail_task
@@ -351,7 +351,9 @@ def register_canvas_tasks(celery):
                 )
                 for notify_user in notify_users:
                     if notify_user is not None and notify_user.active:
-                        notify_user.post_message(notify_msg, "warning", autocommit=False)
+                        notify_user.post_message(
+                            notify_msg, "warning", autocommit=False
+                        )
 
             log_db_commit(
                 "Synchronize Canvas student list with submitter list",
@@ -1006,8 +1008,124 @@ def register_canvas_tasks(celery):
             if len(msg) > 0:
                 msg = msg + " "
             msg = (
-                    msg
-                    + "Some reports could not be pulled automatically, and may require manual intervention."
+                msg
+                + "Some reports could not be pulled automatically, and may require manual intervention."
             )
 
         user.post_message(msg, tag, autocommit=True)
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def fetch_turnitin_data_for_record(self, rid):
+        """Re-fetch Turnitin similarity data from Canvas for a single SubmissionRecord."""
+        main_config: MainConfig = get_main_config()
+        API_root = main_config.canvas_root_API
+
+        if API_root is None:
+            current_app.logger.warning(
+                "Canvas API integration is not enabled; skipping Turnitin re-fetch"
+            )
+            return
+
+        try:
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=rid).first()
+            )
+        except SQLAlchemyError as e:
+            current_app.logger.exception(
+                "SQLAlchemyError in fetch_turnitin_data_for_record", exc_info=e
+            )
+            raise self.retry()
+
+        if record is None:
+            current_app.logger.error(
+                f"fetch_turnitin_data_for_record: SubmissionRecord id={rid} not found"
+            )
+            return
+
+        period: SubmissionPeriodRecord = record.period
+        submitter: SubmittingStudent = record.owner
+
+        if submitter is None or submitter.canvas_user_id is None:
+            current_app.logger.warning(
+                f"fetch_turnitin_data_for_record: no Canvas user id for record id={rid}"
+            )
+            return
+
+        if not period.canvas_enabled:
+            current_app.logger.warning(
+                f"fetch_turnitin_data_for_record: Canvas not enabled for period id={period.id}"
+            )
+            return
+
+        config: ProjectClassConfig = submitter.config
+
+        session = requests.Session()
+        session.headers.update(
+            {
+                "Authorization": "Bearer {token}".format(
+                    token=config.canvas_login.canvas_API_token
+                )
+            }
+        )
+
+        API_URL = url_normalize(
+            urljoin(
+                API_root,
+                "courses/{course_id}/assignments/{assign_id}/submissions/{user_id}".format(
+                    course_id=period.canvas_module_id,
+                    assign_id=period.canvas_assignment_id,
+                    user_id=submitter.canvas_user_id,
+                ),
+            )
+        )
+        response = session.get(API_URL)
+        if not response.ok:
+            current_app.logger.warning(
+                f"fetch_turnitin_data_for_record: Canvas API returned {response.status_code} for record id={rid}"
+            )
+            return
+
+        data = response.json()
+
+        similarity_score = None
+        web_overlap = None
+        publication_overlap = None
+        student_overlap = None
+        turnitin_outcome = None
+
+        if "turnitin_data" in data:
+            turnitin_attachments = data["turnitin_data"]
+            if len(turnitin_attachments) >= 1:
+                key = next(iter(turnitin_attachments))
+                turnitin_data = turnitin_attachments[key]
+                if turnitin_data.get("status") == "scored":
+                    similarity_score = turnitin_data.get("similarity_score")
+                    web_overlap = turnitin_data.get("web_overlap")
+                    publication_overlap = turnitin_data.get("publication_overlap")
+                    student_overlap = turnitin_data.get("student_overlap")
+                    turnitin_outcome = turnitin_data.get("state")
+
+        if similarity_score is None:
+            current_app.logger.info(
+                f"fetch_turnitin_data_for_record: no scored Turnitin data available in Canvas for record id={rid}"
+            )
+            return
+
+        try:
+            record.turnitin_score = similarity_score
+            record.turnitin_web_overlap = web_overlap
+            record.turnitin_publication_overlap = publication_overlap
+            record.turnitin_student_overlap = student_overlap
+            record.turnitin_outcome = turnitin_outcome
+
+            log_db_commit(
+                f"Re-fetched Turnitin data from Canvas for SubmissionRecord id={rid}: score={similarity_score}",
+                project_classes=config.project_class if config is not None else None,
+                endpoint=self.name,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception(
+                "SQLAlchemyError in fetch_turnitin_data_for_record", exc_info=e
+            )
+            raise self.retry()

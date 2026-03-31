@@ -70,20 +70,20 @@
                         <div class="d-flex flex-row gap-2">
                             {% if not event.open and not event.closed %}
                                 <a href="{{ url_for('convenor.open_marking_event', event_id=event.id, url=url) }}"
-                                   class="btn btn-sm btn-outline-success">
+                                   class="btn btn-sm btn-light">
                                     <i class="fas fa-play fa-fw"></i> Open event&hellip;
+                                </a>
+                            {% endif %}
+                            {% if event.open and not event.closed %}
+                                <a href="{{ url_for('convenor.close_marking_event_confirm', event_id=event.id, url=url, text=text) }}"
+                                   class="btn btn-sm btn-warning">
+                                    <i class="fas fa-lock fa-fw"></i> Close event&hellip;
                                 </a>
                             {% endif %}
                             <a href="{{ url_for('convenor.edit_marking_event', event_id=event.id, url=request.url, text='Marking workflows') }}"
                                class="btn btn-sm btn-outline-light">
                                 <i class="fas fa-pencil-alt fa-fw"></i> Edit event
                             </a>
-                            {% if event.open and not event.closed %}
-                                <a href="{{ url_for('convenor.close_marking_event_confirm', event_id=event.id, url=url, text=text) }}"
-                                   class="btn btn-sm btn-outline-warning">
-                                    <i class="fas fa-lock fa-fw"></i> Close event&hellip;
-                                </a>
-                            {% endif %}
                         </div>
                     {% endif %}
                 </div>

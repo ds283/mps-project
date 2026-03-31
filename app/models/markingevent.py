@@ -189,7 +189,9 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
     def pclass(self) -> ProjectClass:
         return self.period.config.project_class
 
-    def get_convenor_actions(self, event_url: Optional[str] = None) -> list:
+    def get_convenor_actions(
+        self, event_url: Optional[str] = None, open_event_url: Optional[str] = None
+    ) -> list:
         """
         Return a list of ConvenorAction items representing outstanding actions for this event.
         Extend this method as the SubmitterReport workflow grows to surface new CTA items.
@@ -211,16 +213,28 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
                         ready_count += undistributed
 
         if ready_count > 0:
-            actions.append(
-                ConvenorAction(
-                    severity="warning",
-                    title="Reports ready to distribute",
-                    description=f"{ready_count} marking notification{'s' if ready_count != 1 else ''} "
-                    f"ready to send to assessors.",
-                    action_url=event_url,
-                    action_label="Send notifications",
+            if self.open:
+                actions.append(
+                    ConvenorAction(
+                        severity="warning",
+                        title="Reports ready to distribute",
+                        description=f"{ready_count} marking notification{'s' if ready_count != 1 else ''} "
+                        f"ready to send to assessors.",
+                        action_url=event_url,
+                        action_label="Send notifications",
+                    )
                 )
-            )
+            else:
+                actions.append(
+                    ConvenorAction(
+                        severity="warning",
+                        title="Ready to open marking event",
+                        description=f"{ready_count} marking notification{'s' if ready_count != 1 else ''} "
+                        f"ready. Open this event to trigger distribution.",
+                        action_url=open_event_url,
+                        action_label="Open event\u2026",
+                    )
+                )
 
         # Check for report processing failures
         failed_count = 0

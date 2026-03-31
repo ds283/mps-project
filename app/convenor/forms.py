@@ -1334,3 +1334,29 @@ class ResolveTurnitinForm(Form):
         "This comment will be retained for inspection by the exam board or an external examiner.",
     )
     submit = SubmitField("Confirm resolution")
+
+
+class EnterTurnitinScoreForm(Form):
+    """Form for convenors to manually enter a Turnitin similarity score when Canvas data is unavailable."""
+
+    turnitin_score = IntegerField(
+        "Overall similarity score (%)",
+        validators=[InputRequired(message="A similarity score is required"), NumberRange(min=0, max=100)],
+        description="Enter the overall Turnitin similarity score as a percentage (0–100).",
+    )
+    turnitin_web_overlap = IntegerField(
+        "Web overlap (%)",
+        validators=[Optional(), NumberRange(min=0, max=100)],
+        description="Internet sources overlap percentage (leave blank if unavailable).",
+    )
+    turnitin_publication_overlap = IntegerField(
+        "Publication overlap (%)",
+        validators=[Optional(), NumberRange(min=0, max=100)],
+        description="Publication sources overlap percentage (leave blank if unavailable).",
+    )
+    turnitin_student_overlap = IntegerField(
+        "Student paper overlap (%)",
+        validators=[Optional(), NumberRange(min=0, max=100)],
+        description="Student papers overlap percentage (leave blank if unavailable).",
+    )
+    submit = SubmitField("Save Turnitin data")

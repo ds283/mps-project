@@ -125,13 +125,17 @@ _marking_workflow_distribution = """
         <div class="text-success"><i class="fas fa-check-circle"></i> {{ distributed }} distributed</div>
     {% endif %}
     {% if not_distributed > 0 %}
-        <div class="text-danger"><i class="fas fa-exclamation-circle"></i> {{ not_distributed }} not distributed</div>
-        <div class="mt-1">
-            <a href="{{ url_for('convenor.send_marking_emails_for_workflow', workflow_id=workflow.id) }}"
-               class="btn btn-xs btn-outline-secondary">
-                <i class="fas fa-envelope fa-fw"></i> Send notifications
-            </a>
-        </div>
+        {% if workflow.event.open and not workflow.event.closed %}
+            <div class="text-danger"><i class="fas fa-exclamation-circle"></i> {{ not_distributed }} not distributed</div>
+            <div class="mt-1">
+                <a href="{{ url_for('convenor.send_marking_emails_for_workflow', workflow_id=workflow.id) }}"
+                   class="btn btn-xs btn-outline-secondary">
+                    <i class="fas fa-envelope fa-fw"></i> Send notifications
+                </a>
+            </div>
+        {% else %}
+            <div class="text-muted"><i class="fas fa-clock fa-fw"></i> {{ not_distributed }} pending opening</div>
+        {% endif %}
     {% endif %}
     {% if failure_count > 0 %}
         <div class="mt-1"><span class="badge bg-danger">{{ failure_count }} processing failure{{ 's' if failure_count != 1 else '' }}</span></div>
@@ -193,6 +197,24 @@ _submitter_report_project = """
 {% else %}
     <span class="badge bg-warning text-dark">No project</span>
 {% endif %}
+{% set asset = report.record.processed_report %}
+{% if asset is not none %}
+    <div class="mt-2">
+        {% if asset.medium_thumbnail is not none and not asset.medium_thumbnail.lost %}
+            <img src="{{ url_for('documents.serve_thumbnail', asset_type='GeneratedAsset', asset_id=asset.id, size='medium') }}"
+                 class="img-thumbnail mb-1" style="max-width:200px; max-height:200px;" alt="Preview">
+        {% elif asset.small_thumbnail is not none and not asset.small_thumbnail.lost %}
+            <img src="{{ url_for('documents.serve_thumbnail', asset_type='GeneratedAsset', asset_id=asset.id, size='small') }}"
+                 class="img-thumbnail mb-1" style="max-width:150px; max-height:150px;" alt="Preview">
+        {% endif %}
+        <div class="mt-1">
+            <a href="{{ url_for('admin.download_generated_asset', asset_id=asset.id) }}"
+               class="btn btn-xs btn-outline-secondary" data-bs-toggle="tooltip" title="Download processed report">
+                <i class="fas fa-file-pdf fa-fw"></i> Report
+            </a>
+        </div>
+    </div>
+{% endif %}
 {% if report.record.report_processing_failed %}
     <div class="mt-1">
         <span class="badge bg-danger">Processing failed</span>
@@ -202,6 +224,50 @@ _submitter_report_project = """
         </a>
     </div>
 {% endif %}
+"""
+
+# language=jinja2
+_submitter_report_actions = """
+{% set rec = report.record %}
+<div class="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        Actions
+    </button>
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        {# Turnitin: resolve (only shown when score >= 25) #}
+        {% if rec is not none and rec.turnitin_score is not none and rec.turnitin_score >= 25 %}
+            <a class="dropdown-item d-flex gap-2"
+               href="{{ url_for('convenor.resolve_turnitin_issue',
+                                submitter_report_id=report.id,
+                                url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id),
+                                text='Submitter reports') }}">
+                <i class="fas fa-gavel fa-fw"></i>
+                {% if report.turnitin_resolved %}Re-review Turnitin&hellip;{% else %}Resolve Turnitin&hellip;{% endif %}
+            </a>
+        {% endif %}
+        {# Turnitin: re-fetch from Canvas or enter manually (only when score is missing) #}
+        {% if rec is not none and rec.turnitin_score is none %}
+            {% if rec.canvas_turnitin_refetchable %}
+                <form method="POST"
+                      action="{{ url_for('convenor.refetch_turnitin_from_canvas',
+                                         record_id=rec.id,
+                                         url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id)) }}"
+                      style="display:contents">
+                    <button class="dropdown-item d-flex gap-2" type="submit">
+                        <i class="fas fa-sync fa-fw"></i> Re-fetch Turnitin from Canvas
+                    </button>
+                </form>
+            {% endif %}
+            <a class="dropdown-item d-flex gap-2"
+               href="{{ url_for('convenor.enter_turnitin_score',
+                                record_id=rec.id,
+                                url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id),
+                                text='Submitter reports') }}">
+                <i class="fas fa-keyboard fa-fw"></i> Enter Turnitin score&hellip;
+            </a>
+        {% endif %}
+    </div>
+</div>
 """
 
 # language=jinja2
@@ -380,6 +446,104 @@ _marking_report_signoff = """
 {% endif %}
 """
 
+# language=jinja2
+_mr_emails_offcanvas = """
+{# Offcanvas: distribution email history for a single MarkingReport.
+   Extensible: add further sections (e.g. feedback emails) below the distribution emails section. #}
+<div class="offcanvas offcanvas-start text-bg-light" tabindex="-1"
+     id="mr_emails_{{ report.id }}" aria-labelledby="mr_emails_label_{{ report.id }}">
+    <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title" id="mr_emails_label_{{ report.id }}">
+            <i class="fas fa-envelope fa-fw me-1"></i> {{ report.user.name }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body small">
+        {# Section: distribution emails #}
+        <h6 class="text-primary border-bottom pb-1 mb-2">
+            <i class="fas fa-paper-plane fa-fw me-1"></i> Distribution emails
+        </h6>
+        {% set emails = report.distribution_emails.all() %}
+        {% if emails %}
+            <table class="table table-sm table-borderless">
+                <thead class="text-muted">
+                    <tr>
+                        <th>Subject</th>
+                        <th>Sent</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for email in emails %}
+                        <tr>
+                            <td>{{ email.subject or "(no subject)" }}</td>
+                            <td class="text-nowrap">{{ email.send_date.strftime("%d/%m/%Y %H:%M") if email.send_date else "&mdash;"|safe }}</td>
+                            <td>
+                                <a href="{{ url_for('admin.display_email', id=email.id,
+                                           url=url_for('convenor.marking_reports_inspector',
+                                                       workflow_id=report.submitter_report.workflow_id),
+                                           text='Marking reports') }}"
+                                   class="btn btn-xs btn-outline-secondary"
+                                   data-bs-toggle="tooltip" title="View email">
+                                    <i class="fas fa-eye fa-fw"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-muted fst-italic">No distribution emails recorded.</p>
+        {% endif %}
+        {# Future sections can be appended here #}
+    </div>
+</div>
+"""
+
+# language=jinja2
+_marking_report_actions = """
+{% set event = report.submitter_report.workflow.event %}
+<div class="dropdown">
+    <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        Actions
+    </button>
+    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        {% if event.open and not event.closed %}
+            {% if not report.distributed %}
+                <form method="POST"
+                      action="{{ url_for('convenor.dispatch_marking_report', report_id=report.id,
+                                 url=url_for('convenor.marking_reports_inspector',
+                                             workflow_id=report.submitter_report.workflow_id)) }}"
+                      style="display:contents">
+                    <button class="dropdown-item d-flex gap-2" type="submit">
+                        <i class="fas fa-envelope fa-fw"></i> Dispatch email
+                    </button>
+                </form>
+            {% else %}
+                <form method="POST"
+                      action="{{ url_for('convenor.dispatch_marking_report', report_id=report.id,
+                                 resend='true',
+                                 url=url_for('convenor.marking_reports_inspector',
+                                             workflow_id=report.submitter_report.workflow_id)) }}"
+                      style="display:contents">
+                    <button class="dropdown-item d-flex gap-2" type="submit">
+                        <i class="fas fa-redo fa-fw"></i> Re-send email
+                    </button>
+                </form>
+            {% endif %}
+        {% endif %}
+        {% if report.distribution_emails.count() > 0 %}
+            <button class="dropdown-item d-flex gap-2" type="button"
+                    data-bs-toggle="offcanvas" data-bs-target="#mr_emails_{{ report.id }}"
+                    aria-controls="mr_emails_{{ report.id }}">
+                <i class="fas fa-envelope-open fa-fw"></i> View emails ({{ report.distribution_emails.count() }})
+            </button>
+        {% endif %}
+    </div>
+</div>
+{{ offcanvas }}
+"""
+
 
 def marking_event_data(events):
     """Format a MarkingEvent row for DataTables"""
@@ -442,6 +606,7 @@ def submitter_report_data(reports):
     signoff_tmpl = env.from_string(_submitter_report_signoff)
     feedback_tmpl = env.from_string(_submitter_report_feedback)
     turnitin_tmpl = env.from_string(_submitter_report_turnitin)
+    actions_tmpl = env.from_string(_submitter_report_actions)
 
     return [
         {
@@ -451,6 +616,7 @@ def submitter_report_data(reports):
             "signoff": render_template(signoff_tmpl, report=report),
             "feedback": render_template(feedback_tmpl, report=report),
             "turnitin": render_template(turnitin_tmpl, report=report),
+            "actions": render_template(actions_tmpl, report=report),
         }
         for report in reports
     ]
@@ -466,6 +632,8 @@ def marking_report_data(reports):
     grade_tmpl = env.from_string(_marking_report_grade)
     status_tmpl = env.from_string(_marking_report_status)
     signoff_tmpl = env.from_string(_marking_report_signoff)
+    offcanvas_tmpl = env.from_string(_mr_emails_offcanvas)
+    actions_tmpl = env.from_string(_marking_report_actions)
 
     return [
         {
@@ -474,6 +642,11 @@ def marking_report_data(reports):
             "grade": render_template(grade_tmpl, report=report),
             "status": render_template(status_tmpl, report=report),
             "signoff": render_template(signoff_tmpl, report=report),
+            "actions": render_template(
+                actions_tmpl,
+                report=report,
+                offcanvas=render_template(offcanvas_tmpl, report=report),
+            ),
         }
         for report in reports
     ]
@@ -580,9 +753,17 @@ _marking_scheme_menu = """
 # language=jinja2
 _period_marking_event_status = """
 {% if event.closed %}
-    <span class="badge bg-secondary">Closed</span>
+    <span class="badge bg-secondary">Finished</span>
+{% elif event.open %}
+    <span class="badge bg-success">Marking and feedback in progress</span>
 {% else %}
-    <span class="badge bg-success">Open</span>
+    <span class="badge bg-primary">Pending</span>
+    <div class="mt-2">
+        <a href="{{ url_for('convenor.open_marking_event', event_id=event.id) }}"
+           class="btn btn-xs btn-outline-primary">
+            <i class="fas fa-play fa-fw"></i> Open event&hellip;
+        </a>
+    </div>
 {% endif %}
 """
 
@@ -596,6 +777,12 @@ _period_marking_event_menu = """
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.event_marking_workflows_inspector', event_id=event.id, url=url, text=text) }}">
             <i class="fas fa-search fa-fw"></i> Inspect workflows&hellip;
         </a>
+        {% if not event.open and not event.closed %}
+            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.open_marking_event', event_id=event.id) }}">
+                <i class="fas fa-play fa-fw"></i> Open event&hellip;
+            </a>
+            <div class="dropdown-divider"></div>
+        {% endif %}
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_marking_event', event_id=event.id, url=url, text=text) }}">
             <i class="fas fa-pencil-alt fa-fw"></i> Edit&hellip;
         </a>

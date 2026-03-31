@@ -1209,6 +1209,11 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         )
 
     @property
+    def canvas_turnitin_refetchable(self) -> bool:
+        """True if a Canvas Turnitin re-fetch is possible for this submission record."""
+        return self.period.canvas_enabled and self.owner is not None and self.owner.canvas_user_id is not None
+
+    @property
     def submission_period(self):
         return self.period.submission_period
 

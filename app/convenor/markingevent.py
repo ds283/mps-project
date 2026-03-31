@@ -33,19 +33,24 @@ from ..models import (
     ProjectClass,
     ProjectClassConfig,
     StudentData,
+    SubmissionAttachment,
     SubmissionPeriodRecord,
     SubmissionRecord,
     SubmissionRole,
+    SubmittedAsset,
     SubmitterReport,
     SubmittingStudent,
     User,
 )
 from ..models.markingevent import ConvenorAction, SubmitterReportWorkflowStates
+from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
+from ..shared.security import validate_nonce
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 from ..shared.workflow_logging import log_db_commit
+from ..tasks.thumbnails import dispatch_thumbnail_task
 from ..tools.ServerSideProcessing import ServerSideSQLHandler
 from ..shared.forms.wtf_validators import (
     make_unique_marking_event_in_period,
@@ -458,6 +463,49 @@ def enter_turnitin_score(record_id):
             record.turnitin_web_overlap = form.turnitin_web_overlap.data
             record.turnitin_publication_overlap = form.turnitin_publication_overlap.data
             record.turnitin_student_overlap = form.turnitin_student_overlap.data
+
+            similarity_file = request.files.get("similarity_report")
+            if similarity_file and similarity_file.filename:
+                with db.session.no_autoflush:
+                    asset = SubmittedAsset(
+                        timestamp=datetime.now(),
+                        uploaded_id=current_user.id,
+                        expiry=None,
+                        target_name=similarity_file.filename,
+                        license=None,
+                    )
+                    object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+                    with AssetUploadManager(
+                        asset,
+                        data=similarity_file.stream.read(),
+                        storage=object_store,
+                        audit_data=f"enter_turnitin_score: similarity report upload (record id #{record.id})",
+                        length=similarity_file.content_length,
+                        mimetype=similarity_file.content_type,
+                        validate_nonce=validate_nonce,
+                    ):
+                        pass
+
+                db.session.add(asset)
+                db.session.flush()
+
+                dispatch_thumbnail_task(asset)
+
+                attachment = SubmissionAttachment(
+                    parent_id=record.id,
+                    attachment_id=asset.id,
+                    description="Turnitin similarity report",
+                    type=SubmissionAttachment.ATTACHMENT_SIMILARITY_REPORT,
+                    publish_to_students=False,
+                    include_marker_emails=False,
+                    include_supervisor_emails=False,
+                )
+                db.session.add(attachment)
+
+                asset.grant_user(current_user)
+                for role in record.roles:
+                    asset.grant_user(role.user)
+                asset.grant_roles(["office", "convenor", "moderator", "exam_board", "external_examiner"])
 
             log_db_commit(
                 f"Convenor manually entered Turnitin score={record.turnitin_score} "

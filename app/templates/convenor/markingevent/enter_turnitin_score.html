@@ -55,7 +55,7 @@
             <i class="fas fa-edit fa-fw me-1"></i> Turnitin similarity data
         </div>
         <div class="card-body">
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
                 {{ form.hidden_tag() if form.hidden_tag is defined }}
                 <div class="mb-3">
                     {{ form.turnitin_score.label(class="form-label fw-semibold") }}
@@ -99,6 +99,21 @@
                         {% for error in form.turnitin_student_overlap.errors %}
                             <div class="invalid-feedback">{{ error }}</div>
                         {% endfor %}
+                    </div>
+                </div>
+                <hr>
+                <p class="text-muted small mb-2">Similarity report document (optional):</p>
+                <div class="mb-3">
+                    <label class="btn btn-secondary btn-sm" for="similarity-report-selector">
+                        <input id="similarity-report-selector" type="file" name="similarity_report"
+                               style="display: none;"
+                               onchange="$('#similarity-report-name').text(this.files[0] ? this.files[0].name : '')">
+                        <i class="fas fa-upload fa-fw"></i> Select report file...
+                    </label>
+                    <span class="badge bg-secondary ms-1" id="similarity-report-name"></span>
+                    <div class="form-text text-muted">
+                        Optionally upload the Turnitin similarity report document. It will be attached to this
+                        submission as a similarity report and will not be published to the student.
                     </div>
                 </div>
                 <div class="d-flex gap-2">

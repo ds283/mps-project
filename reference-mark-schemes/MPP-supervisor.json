@@ -1,0 +1,73 @@
+{
+  "scheme": [
+    {
+      "title": "Preamble",
+      "fields": [
+        {
+          "key": "conflict",
+          "text": "Please check to indicate that you have no conflict of interest in marking this report.",
+          "field_type": {
+            "type": "boolean"
+          }
+        },
+        {
+          "key": "send",
+          "text": "Please check to indicate that your final assigned grade accounts for any reasonable adjustments indicated. These may appear on an attached electronic sticker.",
+          "field_type": {
+            "type": "boolean"
+          }
+        }
+      ]
+    },
+    {
+      "title": "Marking report",
+      "fields": [
+        {
+          "key": "understanding",
+          "text": "Understanding of scientific principles",
+          "field_type": {
+            "type": "number",
+            "min": 0,
+            "max": 10
+          }
+        },
+        {
+          "key": "time",
+          "text": "Conscientiousness and time management",
+          "field_type": {
+            "type": "number",
+            "min": 0,
+            "max": 10
+          }
+        },
+        {
+          "key": "technical",
+          "text": "Technical skills",
+          "field_type": {
+            "type": "number",
+            "min": 0,
+            "max": 10
+          }
+        },
+        {
+          "key": "student",
+          "text": "Student's contribution",
+          "field_type": {
+            "type": "number",
+            "min": 0,
+            "max": 10
+          }
+        }
+      ]
+    }
+  ],
+  "validation": [
+    {
+      "test": "not conflict",
+      "action": [
+        "prevent_submit"
+      ]
+    }
+  ],
+  "conflation_rule": "2.5*(understanding + time + technical + student)"
+}

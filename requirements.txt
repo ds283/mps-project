@@ -46,7 +46,7 @@ Flask-Debug-API==0.1.0
 Flask-DebugToolbar==0.16.0
 flask-healthz==1.0.1
 Flask-HTMLmin==3.0.0
-Flask-HTTPAuth==4.8.0
+Flask-HTTPAuth==4.8.1
 Flask-Limiter==4.1.1
 Flask-Login==0.6.3
 Flask-Mailman==1.1.1

@@ -231,14 +231,6 @@ class SubmissionRole(
 
     # MARKING WORKFLOW
 
-    # has the report been distributed to the user owning this role, for marking?
-    marking_distributed = db.Column(db.Boolean(), default=False)
-
-    # if an external marking link (e.g. to a Qualtrics form, Google form, etc.) is needed, it can be held here
-    external_marking_url = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin")
-    )
-
     # returned mark, interpreted as out of 100%
     grade = db.Column(db.Integer(), default=None)
 
@@ -310,8 +302,6 @@ class SubmissionRole(
             "regular_meeting_weekday": None,
             "regular_meeting_time": None,
             "regular_meeting_location": None,
-            "marking_distributed": False,
-            "external_marking_url": None,
             "grade": None,
             "weight": 1.0,
             "justification": None,

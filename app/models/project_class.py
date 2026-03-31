@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from .submissions import SubmissionRecord, SubmissionRole
 
 from flask_security import current_user
-from sqlalchemy import and_, or_, orm
+from sqlalchemy import and_, orm
 from sqlalchemy.event import listens_for
 from sqlalchemy.orm import validates
 from sqlalchemy.sql import func
@@ -2455,36 +2455,6 @@ class SubmissionPeriodRecord(db.Model):
                     SubmissionRecord.report_id == None,
                     SubmissionRecord.canvas_submission_available.is_(True),
                     SubmittingStudent.canvas_user_id != None,
-                )
-            )
-        )
-
-    @property
-    def number_reports_to_email(self):
-        from .submissions import SubmissionRecord, SubmissionRole
-
-        return get_count(
-            self.submissions.filter(
-                and_(
-                    SubmissionRecord.report_id != None,
-                    SubmissionRecord.processed_report_id != None,
-                    SubmissionRecord.roles.any(
-                        or_(
-                            and_(
-                                SubmissionRole.role.in_(
-                                    [
-                                        SubmissionRole.ROLE_SUPERVISOR,
-                                        SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-                                    ]
-                                ),
-                                ~SubmissionRole.marking_distributed,
-                            ),
-                            and_(
-                                SubmissionRole.role == SubmissionRole.ROLE_MARKER,
-                                ~SubmissionRole.marking_distributed,
-                            ),
-                        )
-                    ),
                 )
             )
         )

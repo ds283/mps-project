@@ -1290,12 +1290,6 @@ def edit_role(role_id):
             SubmissionRole.ROLE_SUPERVISOR,
             SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
         ]:
-            role.marking_distributed = form.marking_distributed.data
-            role.external_marking_url = (
-                form.external_marking_url.data
-                if form.external_marking_url.data
-                else None
-            )
             role.grade = form.grade.data
             role.weight = form.weight.data
             role.justification = (

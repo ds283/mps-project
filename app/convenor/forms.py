@@ -617,17 +617,6 @@ class EditConvenorGenericTask(
 class EditSubmissionRoleForm(Form, SaveChangesMixin):
     role = SelectField("Role type", choices=SubmissionRole.role_choices, coerce=int)
 
-    marking_distributed = BooleanField(
-        "Marking distributed",
-        description="Select if the marking materials have been distributed to this person.",
-    )
-
-    external_marking_url = StringField(
-        "External marking URL",
-        validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
-        description="Optional. If an external marking link (e.g. to a Qualtrics or Google form) is needed, enter it here.",
-    )
-
     grade = IntegerField(
         "Grade",
         validators=[

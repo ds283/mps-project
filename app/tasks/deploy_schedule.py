@@ -73,7 +73,6 @@ def register_deploy_schedule_tasks(celery):
                         user_id=assessor.id,
                         schedule_slot_id=slot.id,
                         mute=False,
-                        marking_distributed=False,
                         weight=1.0,
                     )
                     db.session.add(role)

@@ -125,7 +125,7 @@ _marking_workflow_distribution = """
         <div class="text-success"><i class="fas fa-check-circle"></i> {{ distributed }} distributed</div>
     {% endif %}
     {% if not_distributed > 0 %}
-        <div class="mt-1"><span class="badge bg-warning text-dark">{{ not_distributed }} not distributed</span></div>
+        <div class="text-danger"><i class="fas fa-exclamation-circle"></i> {{ not_distributed }} not distributed</div>
         <div class="mt-1">
             <a href="{{ url_for('convenor.send_marking_emails_for_workflow', workflow_id=workflow.id) }}"
                class="btn btn-xs btn-outline-secondary">
@@ -576,7 +576,12 @@ def period_marking_event_data(url, text, can_delete, events):
             "workflows": render_template(workflows_tmpl, event=event),
             "status": render_template(status_tmpl, event=event),
             "menu": render_template(
-                menu_tmpl, event=event, pclass=event.pclass, url=url, text=text, can_delete=can_delete
+                menu_tmpl,
+                event=event,
+                pclass=event.pclass,
+                url=url,
+                text=text,
+                can_delete=can_delete,
             ),
         }
         for event in events
@@ -604,7 +609,9 @@ def event_marking_workflow_data(url, text, can_edit, workflows):
             "reports": render_template(reports_tmpl, workflow=workflow),
             "distribution": render_template(distribution_tmpl, workflow=workflow),
             "feedback": render_template(feedback_tmpl, workflow=workflow),
-            "menu": render_template(menu_tmpl, workflow=workflow, url=url, text=text, can_edit=can_edit),
+            "menu": render_template(
+                menu_tmpl, workflow=workflow, url=url, text=text, can_edit=can_edit
+            ),
         }
         for workflow in workflows
     ]

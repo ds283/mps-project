@@ -447,8 +447,6 @@ def edit_period_record(pid):
         record.start_date = edit_form.start_date.data
         record.hand_in_date = edit_form.hand_in_date.data
 
-        record.collect_project_feedback = edit_form.collect_project_feedback.data
-
         if hasattr(edit_form, "canvas_module_id"):
             record.canvas_module_id = edit_form.canvas_module_id.data
         if hasattr(edit_form, "canvas_assignment_id"):
@@ -495,9 +493,6 @@ def edit_period_presentation(pid):
 
         if record.has_presentation:
             record.lecture_capture = edit_form.lecture_capture.data
-            record.collect_presentation_feedback = (
-                edit_form.collect_presentation_feedback.data
-            )
             record.number_assessors = edit_form.number_assessors.data
             record.max_group_size = edit_form.max_group_size.data
             record.morning_session = edit_form.morning_session.data

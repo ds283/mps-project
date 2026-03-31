@@ -998,10 +998,7 @@ class ScheduleSlot(db.Model, SubmissionFeedbackStatesMixin):
         if period is None:
             return ScheduleSlot.FEEDBACK_NOT_REQUIRED
 
-        if (
-            not period.collect_presentation_feedback
-            or not period.config.project_class.publish
-        ):
+        if not period.config.project_class.publish:
             return ScheduleSlot.FEEDBACK_NOT_REQUIRED
 
         count = get_count(self.assessors.filter_by(id=faculty_id))

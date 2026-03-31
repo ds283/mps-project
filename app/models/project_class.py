@@ -541,8 +541,6 @@ class ProjectClass(
                     number_moderators=1 if self.uses_moderator else 0,
                     start_date=None,
                     has_presentation=self.uses_presentations,
-                    collect_presentation_feedback=True,
-                    collect_project_feedback=True,
                     creator_id=current_user.id,
                     creation_timestamp=datetime.now(),
                 )
@@ -679,12 +677,6 @@ class SubmissionPeriodDefinition(db.Model, EditingMetadataMixin):
 
     # talk format
     talk_format = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
-
-    # use platform to collect presentation feedback?
-    collect_presentation_feedback = db.Column(db.Boolean(), default=True)
-
-    # use platform to collect project feedback online?
-    collect_project_feedback = db.Column(db.Boolean(), default=True)
 
     def display_name(self, year):
         if isinstance(year, int):
@@ -1530,8 +1522,6 @@ class ProjectClassConfig(
                 start_date=t.start_date,
                 has_presentation=t.has_presentation,
                 lecture_capture=t.lecture_capture,
-                collect_presentation_feedback=t.collect_presentation_feedback,
-                collect_project_feedback=t.collect_project_feedback,
                 number_assessors=t.number_assessors,
                 max_group_size=t.max_group_size,
                 morning_session=t.morning_session,
@@ -1539,10 +1529,6 @@ class ProjectClassConfig(
                 talk_format=t.talk_format,
                 retired=False,
                 submission_period=self.submission_period,
-                feedback_open=False,
-                feedback_id=None,
-                feedback_timestamp=None,
-                feedback_deadline=None,
                 closed=False,
                 closed_id=None,
                 closed_timestamp=None,
@@ -2044,31 +2030,10 @@ class SubmissionPeriodRecord(db.Model):
     # talk format
     talk_format = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
-    # FEEDBACK COLLECTION
-
-    # use platform to collect presentation feedback?
-    collect_presentation_feedback = db.Column(db.Boolean(), default=True)
-
-    # use platform to collect project feedback?
-    collect_project_feedback = db.Column(db.Boolean(), default=True)
-
     # LIFECYCLE DATA
 
     # retired flag, set by rollover code
     retired = db.Column(db.Boolean(), index=True)
-
-    # has feedback been opened in this period
-    feedback_open = db.Column(db.Boolean())
-
-    # who opened feedback?
-    feedback_id = db.Column(db.Integer(), db.ForeignKey("users.id"))
-    feedback_by = db.relationship("User", uselist=False, foreign_keys=[feedback_id])
-
-    # feedback opened timestamp
-    feedback_timestamp = db.Column(db.DateTime())
-
-    # deadline for feedback to be submitted
-    feedback_deadline = db.Column(db.DateTime())
 
     # has this period been closed?
     closed = db.Column(db.Boolean())
@@ -2129,18 +2094,8 @@ class SubmissionPeriodRecord(db.Model):
                 if not self.canvas_assignment_id:
                     messages.append("Canvas assignment identifier not set")
 
-        if self.collect_project_feedback:
-            messages.append("Collect project feedback")
-        else:
-            messages.append("Do not collect project feedback")
-
         if self.has_presentation:
             messages.append("Has presentation")
-
-            if self.collect_presentation_feedback:
-                messages.append("Collect presentation feedback")
-            else:
-                messages.append("Do not collect presentation feedback")
 
         return messages
 
@@ -2172,20 +2127,6 @@ class SubmissionPeriodRecord(db.Model):
             )
 
         return "Submission Period #{n}".format(n=self.submission_period)
-
-    @property
-    def time_to_feedback_deadline(self):
-        if self.feedback_deadline is None:
-            return "<invalid>"
-
-        feedback_deadline_date: date = self.feedback_deadline.date()
-        today: date = date.today()
-
-        if today > feedback_deadline_date:
-            return "in the past"
-
-        delta = feedback_deadline_date - today
-        return format_readable_time(delta)
 
     @property
     def has_attachments(self):
@@ -2342,15 +2283,15 @@ class SubmissionPeriodRecord(db.Model):
 
     @property
     def uses_supervisor_feedback(self):
-        return self.collect_project_feedback and self.config.uses_supervisor
+        return self.config.uses_supervisor
 
     @property
     def uses_marker_feedback(self):
-        return self.collect_project_feedback and self.config.uses_marker
+        return self.config.uses_marker
 
     @property
     def uses_presentation_feedback(self):
-        return self.has_presentation and self.collect_presentation_feedback
+        return self.has_presentation
 
     @property
     def submitter_list(self):

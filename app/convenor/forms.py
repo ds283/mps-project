@@ -364,8 +364,6 @@ def PeriodRecordMixinFactory(enable_canvas=True):
             "this is used to show students how much time remains.",
         )
 
-        collect_project_feedback = BooleanField("Collect project feedback online")
-
         if enable_canvas:
             canvas_module_id = IntegerField(
                 "Canvas module identifier",

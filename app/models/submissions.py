@@ -401,10 +401,7 @@ class SubmissionRole(
 
         period: SubmissionPeriodRecord = self.submission.period
 
-        if (
-            not period.collect_project_feedback
-            or not period.config.project_class.publish
-        ):
+        if not period.config.project_class.publish:
             return SubmissionRole.FEEDBACK_NOT_REQUIRED
 
         return self._internal_feedback_state
@@ -416,10 +413,7 @@ class SubmissionRole(
 
         period: SubmissionPeriodRecord = self.submission.period
 
-        if (
-            not period.collect_project_feedback
-            or not period.config.project_class.publish
-        ):
+        if not period.config.project_class.publish:
             return SubmissionRole.FEEDBACK_NOT_REQUIRED
 
         return self._internal_feedback_state
@@ -499,10 +493,7 @@ class SubmissionRole(
         sub: SubmissionRecord = self.submission
         period: SubmissionPeriodRecord = sub.period
 
-        if (
-            not period.collect_project_feedback
-            or not period.config.project_class.publish
-        ):
+        if not period.config.project_class.publish:
             return SubmissionRole.FEEDBACK_NOT_REQUIRED
 
         if not period.is_feedback_open:
@@ -1166,7 +1157,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # LIFECYCLE DATA
 
-    # FEEDBACK FOR STUDENT
+    # TODO: THE FIELDS BELOW ARE NOW OBSOLETE AND SHOULD EVENTUALLY BE REMOVED
 
     # has a feedback report geen generated?
     feedback_generated = db.Column(db.Boolean(), default=False)
@@ -1211,7 +1202,11 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     @property
     def report_processing_failed(self) -> bool:
         """True if the report was uploaded but processing crashed without generating a processed_report."""
-        return self.report is not None and self.processed_report is None and bool(self.celery_failed)
+        return (
+            self.report is not None
+            and self.processed_report is None
+            and bool(self.celery_failed)
+        )
 
     @property
     def submission_period(self):
@@ -1514,10 +1509,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     def _feedback_state(self, valid, submitted):
         period = self.period
 
-        if (
-            not period.collect_project_feedback
-            or not period.config.project_class.publish
-        ):
+        if not period.config.project_class.publish:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
         if not period.is_feedback_open:
@@ -1583,10 +1575,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         return any(states)
 
     def presentation_feedback_state(self, faculty_id):
-        if (
-            not self.period.has_presentation
-            or not self.period.collect_presentation_feedback
-        ):
+        if not self.period.has_presentation:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
         if not self.period.config.project_class.publish:
@@ -1644,24 +1633,21 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         Determines whether any feedback is available, irrespective of whether it is visible to the student
         :return:
         """
-        if self.period.has_presentation and self.period.collect_presentation_feedback:
+        if self.period.has_presentation:
             for feedback in self.presentation_feedback:
                 if feedback.submitted:
                     return True
 
-        if self.period.collect_project_feedback:
-            allowed_roles = [
-                SubmissionRole.ROLE_SUPERVISOR,
-                SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-                SubmissionRole.ROLE_MARKER,
-            ]
-            return any(
-                role.submitted_feedback
-                for role in self.roles
-                if role.role in allowed_roles
-            )
-
-        return False
+        allowed_roles = [
+            SubmissionRole.ROLE_SUPERVISOR,
+            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+            SubmissionRole.ROLE_MARKER,
+        ]
+        return any(
+            role.submitted_feedback
+            for role in self.roles
+            if role.role in allowed_roles
+        )
 
     @property
     def has_feedback(self):
@@ -1672,7 +1658,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
         # is there any presentation feedback available? (legacy infrastructure)
         flag: bool = False
-        if self.period.has_presentation and self.period.collect_presentation_feedback:
+        if self.period.has_presentation:
             allowed_roles = [
                 SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
             ]
@@ -1683,7 +1669,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             )
 
         # otherwise, is there any feedback available from other supervision/marker roles? (legacy infrastructure)
-        if self.period.collect_project_feedback and self.period.closed:
+        if self.period.closed:
             allowed_roles = [
                 SubmissionRole.ROLE_SUPERVISOR,
                 SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
@@ -1746,10 +1732,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     @property
     def can_assign_feedback(self):
-        if (
-            not self.period.has_presentation
-            or not self.period.collect_presentation_feedback
-        ):
+        if not self.period.has_presentation:
             return False
 
         slot = self.schedule_slot

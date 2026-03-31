@@ -31,36 +31,18 @@
         <div class="text-secondary small mt-2">
             {% if p.closed %}
                 <div><i class="fas fa-lock"></i> Feedback closed</div>
-                <ul>
-                    {% if p.feedback_id %}
-                        <li>
-                            Feedback opened by <i class="fas fa-user-circle"></i> {{ p.feedback_by.name }}
-                            {% if p.feedback_timestamp %}
-                                at {{ p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-                            {% endif %}
-                        </li>
-                    {% endif %}
-                    {% if p.closed_id %}
+                {% if p.closed_id %}
+                    <ul>
                         <li>
                             Feedback closed by <i class="fas fa-user-circle"></i> {{ p.closed_by.name }}
                             {% if p.closed_timestamp %}
                                 at {{ p.closed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
                             {% endif %}
                         </li>
-                    {% endif %}
-                </ul>
+                    </ul>
+                {% endif %}
             {% else %}
                 <div><i class="fas fa-lock-open"></i> Feedback open</div>
-                <ul>
-                    {% if p.feedback_id %}
-                        <li>
-                            Feedback opened by <i class="fas fa-user-circle"></i> {{ p.feedback_by.name }}
-                            {% if p.feedback_timestamp %}
-                                at {{ p.feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-                            {% endif %}
-                        </li>
-                    {% endif %}
-                </ul>
             {% endif %}
         </div>
     {% endif %}

@@ -63,31 +63,11 @@
                     </div>
                 {% else %}
                     {% if period.is_feedback_open %}
-                        {% if period.collect_project_feedback %}
-                            {% if not is_sabbatical or not is_exempt %}
-                                <div class="alert alert-warning mt-1 mb-2">
-                                    {% call icon_block("info-circle") %}
-                                        <div><strong>Marking and feedback for this submission period is now underway.</strong></div>
-                                        <div class="mt-1">Please enter feedback for each project you supervise or assess.</div>
-                                        {% if period.feedback_deadline %}
-                                            <div class="mt-1">
-                                                The project convenor has set a deadline of
-                                                <strong>{{ period.feedback_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
-                                                <strong>{{ period.time_to_feedback_deadline }}</strong> from now.
-                                            </div>
-                                        {% endif %}
-                                    {% endcall %}
-                                </div>
-                            {% endif %}
-                        {% else %}
+                        {% if not is_sabbatical or not is_exempt %}
                             <div class="alert alert-warning mt-1 mb-2">
-                                {% call icon_block("info-block") %}
+                                {% call icon_block("info-circle") %}
                                     <div><strong>Marking and feedback for this submission period is now underway.</strong></div>
-                                    <div class="mt-1">
-                                        These are not being collected on <strong>mpsprojects.sussex.ac.uk</strong>
-                                        for this submission period.
-                                        Please follow the convenor's instructions for each project you supervise or assess.
-                                    </div>
+                                    <div class="mt-1">Please enter feedback for each project you supervise or assess.</div>
                                 {% endcall %}
                             </div>
                         {% endif %}

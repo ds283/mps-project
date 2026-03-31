@@ -942,7 +942,6 @@ class PeriodDefinitionMixin:
                 "This project class uses moderators. This number of moderators should be 1 or greater."
             )
 
-    collect_project_feedback = BooleanField("Collect project feedback online")
 
 
 def AddPeriodDefinitionFormFactory(pclass: ProjectClass):

@@ -102,7 +102,7 @@ def register_attendance_tasks(celery):
                         SupervisionEvent.attendance.is_(None),
                         SupervisionEvent.mute.is_(False),
                         SupervisionEvent.prompt_sent_timestamp.is_(None),
-                        SubmissionPeriodRecord.feedback_open.is_(False),
+                        ~SubmissionPeriodRecord.marking_events.any(open=True, closed=False),
                         SubmissionPeriodRecord.closed.is_(False),
                         SubmissionRole.mute.is_(False),
                         SubmissionRole.prompt_after_event.is_(True),
@@ -220,7 +220,7 @@ def register_attendance_tasks(celery):
             )
             return msg
 
-        if period.feedback_open:
+        if period.is_feedback_open:
             msg = {
                 "msg": f"Event #{event_id} {event_label} for {student_name} belongs to a submission period that has been opened for feedback"
             }

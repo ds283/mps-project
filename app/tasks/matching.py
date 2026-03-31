@@ -4066,7 +4066,7 @@ def register_matching_tasks(celery):
 
             # ignore periods that are retired, closed, or have open feedback; the markers for these
             # cannot be changed
-            if period.retired or period.closed or period.feedback_open:
+            if period.retired or period.closed or period.is_feedback_open:
                 period_data.update({"action": "ignore"})
                 payload.update(period_data)
                 continue

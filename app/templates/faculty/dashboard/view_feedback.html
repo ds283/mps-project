@@ -23,8 +23,7 @@
             {% set period = record.period %}
             {% set config = period.config %}
 
-            {% if period.collect_project_feedback %}
-                {% for role in record.roles %}
+            {% for role in record.roles %}
                     <div class="card mt-3 mb-3">
                         <div class="card-header">
                             <div class="d-flex flex-row justify-content-between align-items-center w-100">
@@ -88,14 +87,7 @@
                             {% endif %}
                         </div>
                     </div>
-                {% endfor %}
-            {% else %}
-                <div class="alert alert-info">
-                    {% call icon_block("info-circle") %}
-                        <div><strong>Collection of project feedback is disabled for this submission.</strong></div>
-                    {% endcall %}
-                </div>
-            {% endif %}
+            {% endfor %}
 
             {% if text and url %}
                 <div>

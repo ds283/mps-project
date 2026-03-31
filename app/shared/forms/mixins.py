@@ -277,7 +277,6 @@ class PeriodPresentationsMixin:
         ],
     )
 
-    collect_presentation_feedback = BooleanField("Collect presentation feedback online")
 
 
 def PeriodSelectorMixinFactory(config: ProjectClassConfig, is_admin: bool):

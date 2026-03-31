@@ -17,11 +17,6 @@ from app.models import SubmissionPeriodDefinition
 _presentation = """
 {% if p.has_presentation %}
     <span class="badge bg-success"><i class="fas fa-check"></i> Required</span>
-    {% if p.collect_presentation_feedback %}
-        <span class="badge bg-success"><i class="fas fa-check"></i> Collect feedback</span>
-    {% else %}
-        <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Do not collect feedback</span>
-    {% endif %}
     <span class="badge bg-primary">Assessors per group = {{ p.number_assessors }}</span>
     <span class="badge bg-primary">Max group size = {{ p.max_group_size }}</span> 
     {% if p.lecture_capture %}
@@ -69,11 +64,6 @@ _name = """
         <span class="badge bg-info">Start: {{ p.start_date.strftime("%a %d %b %Y") }}</span>
     </div>
 {% endif %}
-{% if p.collect_project_feedback %}
-    <div>
-        <span class="badge bg-info"><i class="fas fa-check"></i> Collect feedback</span>
-    </div>
-{% endif %}  
 """
 
 

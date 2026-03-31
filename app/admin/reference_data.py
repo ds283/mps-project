@@ -2266,8 +2266,6 @@ def add_pclass():
                         start_date=t.start_date,
                         has_presentation=t.has_presentation,
                         lecture_capture=t.lecture_capture,
-                        collect_presentation_feedback=t.collect_presentation_feedback,
-                        collect_project_feedback=t.collect_project_feedback,
                         number_assessors=t.number_assessors,
                         max_group_size=t.max_group_size,
                         morning_session=t.morning_session,
@@ -2275,10 +2273,6 @@ def add_pclass():
                         talk_format=t.talk_format,
                         retired=False,
                         submission_period=t.period,
-                        feedback_open=False,
-                        feedback_id=None,
-                        feedback_timestamp=None,
-                        feedback_deadline=None,
                         closed=False,
                         closed_id=None,
                         closed_timestamp=None,
@@ -2637,8 +2631,6 @@ def regenerate_period_records(id):
         c.start_date = t.start_date
         c.has_presentation = t.has_presentation
         c.lecture_capture = t.lecture_capture
-        c.collect_presentation_feedback = t.collect_presentation_feedback
-        c.collect_project_feedback = t.collect_project_feedback
         c.number_assessors = t.number_assessors
         c.max_group_size = t.max_group_size
         c.morning_session = t.morning_session
@@ -2657,8 +2649,6 @@ def regenerate_period_records(id):
             start_date=t.start_date,
             has_presentation=t.has_presentation,
             lecture_capture=t.lecture_capture,
-            collect_presentation_feedback=t.collect_presentation_feedback,
-            collect_project_feedback=t.collect_project_feedback,
             number_assessors=t.number_assessors,
             max_group_size=t.max_group_size,
             morning_session=t.morning_session,
@@ -2666,10 +2656,6 @@ def regenerate_period_records(id):
             talk_format=t.talk_format,
             retired=False,
             submission_period=t.period,
-            feedback_open=False,
-            feedback_id=None,
-            feedback_timestamp=None,
-            feedback_deadline=None,
             closed=False,
             closed_id=None,
             closed_timestamp=None,
@@ -2764,8 +2750,6 @@ def add_period_definition(id):
                 has_presentation=True,
                 lecture_capture=form.lecture_capture.data,
                 number_assessors=form.number_assessors.data,
-                collect_presentation_feedback=form.collect_presentation_feedback.data,
-                collect_project_feedback=form.collect_project_feedback.data,
                 max_group_size=form.max_group_size.data,
                 morning_session=form.morning_session.data,
                 afternoon_session=form.afternoon_session.data,
@@ -2785,8 +2769,6 @@ def add_period_definition(id):
                 has_presentation=False,
                 lecture_capture=False,
                 number_assessors=None,
-                collect_presentation_feedback=False,
-                collect_project_feedback=True,
                 max_group_size=None,
                 morning_session=None,
                 afternoon_session=None,
@@ -2841,8 +2823,6 @@ def edit_period_definition(id):
 
         if pd.has_presentation:
             pd.lecture_capture = form.lecture_capture.data
-            pd.collect_presentation_feedback = form.collect_presentation_feedback.data
-            pd.collect_project_feedback = form.collect_project_feedback.data
             pd.number_assessors = form.number_assessors.data
             pd.max_group_size = form.max_group_size.data
             pd.morning_session = form.morning_session.data
@@ -2851,8 +2831,6 @@ def edit_period_definition(id):
 
         else:
             pd.lecture_capture = False
-            pd.collect_presentation_feedback = False
-            pd.collect_project_feedback = True
             pd.number_assessors = None
             pd.max_group_size = None
             pd.morning_session = None

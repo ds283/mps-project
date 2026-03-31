@@ -62,10 +62,6 @@
             <hr class="intro-divider">
         {% endif %}
 
-        <div class="mt-2">
-            {{ wtf.render_field(form.collect_project_feedback) }}
-        </div>
-
         <div class="mt-4">
             {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
         </div>

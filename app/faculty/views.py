@@ -2324,13 +2324,6 @@ def edit_feedback(id):
 
     period: SubmissionPeriodRecord = record.period
 
-    if not period.collect_project_feedback:
-        flash(
-            "This operation is not permitted. Feedback collection has been disabled for this submission period.",
-            "info",
-        )
-        return redirect(redirect_url())
-
     if not period.is_feedback_open:
         flash(
             "It is not yet possible to edit feedback for this submission because the convenor has not "
@@ -2416,13 +2409,6 @@ def submit_feedback(id):
     record: SubmissionRecord = role.submission
     period: SubmissionPeriodRecord = record.period
 
-    if not period.collect_project_feedback:
-        flash(
-            "This operation is not permitted. Feedback collection has been disabled for this submission period.",
-            "info",
-        )
-        return redirect(redirect_url())
-
     if not period.is_feedback_open:
         flash(
             "It is not yet possible to submit feedback for this submission because the convenor has not "
@@ -2491,13 +2477,6 @@ def unsubmit_feedback(id):
 
     record: SubmissionRecord = role.submission
     period: SubmissionPeriodRecord = record.period
-
-    if not period.collect_project_feedback:
-        flash(
-            "This operation is not permitted. Feedback collection has been disabled for this submission period.",
-            "info",
-        )
-        return redirect(redirect_url())
 
     if not role.submitted_feedback:
         flash(

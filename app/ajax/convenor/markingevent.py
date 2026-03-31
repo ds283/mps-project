@@ -242,6 +242,50 @@ _submitter_report_feedback = """
 """
 
 # language=jinja2
+_submitter_report_turnitin = """
+{% set rec = report.record %}
+{% if rec is not none and (rec.turnitin_outcome is not none or rec.turnitin_score is not none) %}
+    <div class="d-flex flex-column gap-1">
+        {% if rec.turnitin_score is not none %}
+            <div class="d-flex flex-row align-items-center gap-2">
+                <span class="fw-semibold {% if rec.turnitin_score >= 30 %}text-danger{% elif rec.turnitin_score >= 15 %}text-dark{% else %}text-success{% endif %}">
+                    {{ rec.turnitin_score }}%
+                </span>
+                <span class="badge {% if rec.turnitin_score >= 30 %}bg-danger{% elif rec.turnitin_score >= 15 %}bg-warning text-dark{% else %}bg-success{% endif %} small">
+                    {% if rec.turnitin_score >= 30 %}High{% elif rec.turnitin_score >= 15 %}Medium{% else %}Low{% endif %}
+                </span>
+            </div>
+        {% endif %}
+        {% if rec.turnitin_outcome is not none %}
+            <div class="small text-muted">{{ rec.turnitin_outcome }}</div>
+        {% endif %}
+        {% set has_breakdown = rec.turnitin_web_overlap is not none or rec.turnitin_publication_overlap is not none or rec.turnitin_student_overlap is not none %}
+        {% if has_breakdown %}
+            <div class="d-flex flex-row flex-wrap gap-2 mt-1">
+                {% if rec.turnitin_web_overlap is not none %}
+                    <span class="small text-muted" data-bs-toggle="tooltip" title="Web sources">
+                        <i class="fas fa-globe fa-fw"></i> {{ rec.turnitin_web_overlap }}%
+                    </span>
+                {% endif %}
+                {% if rec.turnitin_publication_overlap is not none %}
+                    <span class="small text-muted" data-bs-toggle="tooltip" title="Publications">
+                        <i class="fas fa-book fa-fw"></i> {{ rec.turnitin_publication_overlap }}%
+                    </span>
+                {% endif %}
+                {% if rec.turnitin_student_overlap is not none %}
+                    <span class="small text-muted" data-bs-toggle="tooltip" title="Student papers">
+                        <i class="fas fa-user-graduate fa-fw"></i> {{ rec.turnitin_student_overlap }}%
+                    </span>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+{% else %}
+    <span class="badge bg-light text-muted border">No data</span>
+{% endif %}
+"""
+
+# language=jinja2
 _marking_report_marker = """
 <div class="fw-semibold">{{ report.user.name }}</div>
 <div class="small text-muted mt-1">{{ report.role.role_as_str }}</div>
@@ -357,6 +401,7 @@ def submitter_report_data(reports):
     grade_tmpl = env.from_string(_submitter_report_grade)
     signoff_tmpl = env.from_string(_submitter_report_signoff)
     feedback_tmpl = env.from_string(_submitter_report_feedback)
+    turnitin_tmpl = env.from_string(_submitter_report_turnitin)
 
     return [
         {
@@ -365,6 +410,7 @@ def submitter_report_data(reports):
             "grade": render_template(grade_tmpl, report=report),
             "signoff": render_template(signoff_tmpl, report=report),
             "feedback": render_template(feedback_tmpl, report=report),
+            "turnitin": render_template(turnitin_tmpl, report=report),
         }
         for report in reports
     ]

@@ -102,6 +102,7 @@ class MarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
               is used it should be the only action.
             * "email": generate an email to the convenor (and possibly other users) to with a notification of the validation failure.
             * "web": show this validation failure to the convenor in the web interface
+        - "message": string representing a message to display if this validation fails
 
     NOTES
     The validation "test" and "conflation_rule" fields should be valid Python expressions that evaluate to a boolean and a float

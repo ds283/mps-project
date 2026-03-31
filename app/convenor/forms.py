@@ -31,7 +31,11 @@ from wtforms.validators import (
     Optional,
     ValidationError,
 )
-from wtforms_alchemy import GroupedQuerySelectMultipleField, QuerySelectField, QuerySelectMultipleField
+from wtforms_alchemy import (
+    GroupedQuerySelectMultipleField,
+    QuerySelectField,
+    QuerySelectMultipleField,
+)
 
 from ..database import db
 from ..faculty.forms import ProjectMixinFactory
@@ -310,7 +314,11 @@ def TestOpenFeedbackFormFactory(pclass):
             query_factory=get_test_targets,
             get_label=lambda u: f"{u.name} <{u.email}>",
             allow_blank=False,
-            validators=[DataRequired(message="Please select a recipient for the test notification.")],
+            validators=[
+                DataRequired(
+                    message="Please select a recipient for the test notification."
+                )
+            ],
             description="Select a recipient for the test notification emails.",
         )
 
@@ -1075,7 +1083,7 @@ class MarkingEventMixin:
 
     deadline = DateTimeField(
         "Deadline",
-        format="%Y-%m-%d %H:%M",
+        format="%d/%m/%Y %H:%M",
         validators=[Optional()],
         description="Optional global marking deadline for this event. Individual workflows may have earlier sub-deadlines.",
     )
@@ -1114,7 +1122,11 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=None):
     """
 
     def get_schemes():
-        return MarkingScheme.query.filter_by(pclass_id=pclass.id).order_by(MarkingScheme.name).all()
+        return (
+            MarkingScheme.query.filter_by(pclass_id=pclass.id)
+            .order_by(MarkingScheme.name)
+            .all()
+        )
 
     # Pre-compute the set of convenor/co-convenor user IDs for this pclass
     _convenor_ids = set()
@@ -1153,13 +1165,29 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=None):
                 User.active.is_(True),
                 ~User.roles.any(Role.name == "student"),
                 User.tenants.any(id=pclass.tenant_id),
-                Role.name.in_(["faculty", "office", "exam_board", "external_examiner", "admin", "root"]),
+                Role.name.in_(
+                    [
+                        "faculty",
+                        "office",
+                        "exam_board",
+                        "external_examiner",
+                        "admin",
+                        "root",
+                    ]
+                ),
             )
             .distinct()
             .order_by(User.last_name, User.first_name)
             .all()
         )
-        return sorted(users, key=lambda u: (_group_order[get_group(u)], u.last_name or "", u.first_name or ""))
+        return sorted(
+            users,
+            key=lambda u: (
+                _group_order[get_group(u)],
+                u.last_name or "",
+                u.first_name or "",
+            ),
+        )
 
     _event = event  # capture for use in validators
 
@@ -1184,7 +1212,7 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=None):
 
         deadline = DateTimeField(
             "Workflow deadline",
-            format="%Y-%m-%d %H:%M",
+            format="%d/%m/%Y %H:%M",
             validators=[Optional()],
             description="Optional sub-deadline for this workflow. If set, must be on or before the event deadline.",
         )
@@ -1206,7 +1234,11 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=None):
         )
 
         def validate_deadline(self, field):
-            if field.data is not None and _event is not None and _event.deadline is not None:
+            if (
+                field.data is not None
+                and _event is not None
+                and _event.deadline is not None
+            ):
                 if field.data > _event.deadline:
                     raise ValidationError(
                         "Workflow deadline cannot be later than the event deadline "

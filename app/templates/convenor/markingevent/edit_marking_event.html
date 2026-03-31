@@ -2,12 +2,20 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, date_field %}
+{% from "datepicker.html" import import_datepicker %}
 
 {% block scripts %}
     {{ super() }}
+    {{ import_datepicker() }}
+
     <script>
         $(document).ready(function () {
-            $('#deadline').datetimepicker({format: 'DD/MM/YYYY HH:mm', useCurrent: true, showTodayButton: true});
+            $('#deadline').datetimepicker({
+                format: 'DD/MM/YYYY HH:mm',
+                useCurrent: true,
+                showTodayButton: true,
+                sideBySide: true
+            });
         });
     </script>
 {% endblock %}

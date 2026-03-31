@@ -69,7 +69,6 @@ from .forms import (
     ChangeDeadlineFormFactory,
     GoLiveFormFactory,
     IssueFacultyConfirmRequestFormFactory,
-    OpenFeedbackFormFactory,
 )
 
 
@@ -306,61 +305,12 @@ def periods(id):
         )
         return redirect(redirect_url())
 
-    # BUILD FORMS
-
-    # 1. Open feedback
-    if period is not None and period.is_feedback_open:
-        OpenFeedbackForm = OpenFeedbackFormFactory(
-            submit_label="Change deadline",
-            datebox_label="The current deadline for feedback is",
-            include_send_button=True,
-            include_test_button=True,
-            include_close_button=False,
-        )
-    else:
-        if period.collect_project_feedback:
-            OpenFeedbackForm = OpenFeedbackFormFactory(
-                submit_label="Open feedback and email markers",
-                datebox_label="Deadline",
-                include_send_button=False,
-                include_test_button=True,
-                include_close_button=True,
-            )
-        else:
-            OpenFeedbackForm = OpenFeedbackFormFactory(
-                submit_label="Close period",
-                include_send_button=False,
-                include_test_button=False,
-                include_close_button=False,
-            )
-
-    feedback_form = OpenFeedbackForm(request.form)
-
-    # inject query factory for marking_template QuerySelectField
-    _pclass_id = config.pclass_id
-    feedback_form.marking_template.query_factory = lambda: GetWorkflowTemplates(
-        EmailTemplate.MARKING_MARKER, pclass_id=_pclass_id
-    )
-
-    # first time this page is displayed, populate the forms with sensible default data
-    if request.method == "GET":
-        if period is not None and period.feedback_deadline is not None:
-            feedback_form.feedback_deadline.data = period.feedback_deadline
-        else:
-            feedback_form.feedback_deadline.data = date.today() + timedelta(weeks=3)
-
-        feedback_form.max_attachment.data = 2
-        feedback_form.marking_template.data = EmailTemplate.find_template_(
-            EmailTemplate.MARKING_MARKER, pclass=config.project_class
-        )
-
     data = get_convenor_dashboard_data(pclass, config)
 
     return render_template_context(
         "convenor/dashboard/periods.html",
         pane="overview",
         subpane="periods",
-        feedback_form=feedback_form,
         pclass=pclass,
         config=config,
         convenor_data=data,

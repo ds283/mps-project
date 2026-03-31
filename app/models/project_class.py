@@ -2197,7 +2197,7 @@ class SubmissionPeriodRecord(db.Model):
 
     @property
     def is_feedback_open(self):
-        return self.feedback_open
+        return self.marking_events.filter_by(open=True, closed=False).count() > 0
 
     @property
     def time_to_hand_in(self):

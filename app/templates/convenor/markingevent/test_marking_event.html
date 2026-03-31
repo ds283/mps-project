@@ -1,0 +1,54 @@
+{% extends "base_form.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#test_target').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select a recipient...'
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {{ formtitle|safe }}
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('convenor.test_marking_event', event_id=event.id, url=url) }}"
+          method="POST" name="test_marking_event_form">
+
+        {{ form.hidden_tag() }}
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold" for="test_target">{{ form.test_target.label.text }}</label>
+            {% if form.test_target.description %}
+                <div class="form-text text-muted mb-1">{{ form.test_target.description }}</div>
+            {% endif %}
+            {{ form.test_target(id='test_target', class='form-select') }}
+            {% if form.test_target.errors %}
+                {% for error in form.test_target.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        {{ wtf.render_field(form.submit_button, button_map={'submit_button': 'primary'}) }}
+
+    </form>
+{% endblock %}

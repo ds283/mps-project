@@ -3,21 +3,12 @@
 {% from "icon_block.html" import icon_block %}
 {% from "convenor/dashboard/overview_cards/submitter_card.html" import submitter_card %}
 {% from "macros.html" import submission_period_configure_button %}
-{% from "datepicker.html" import import_datepicker %}
 
 {% block scripts %}
     {{ super() }}
-    {{ import_datepicker() }}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
-
-        $(document).ready(function () {
-            $('#feedback_datetimepicker').datetimepicker({
-                format: 'DD/MM/YYYY',
-                allowInputToggle: true
-            });
-        });
     </script>
 {% endblock %}
 
@@ -48,7 +39,7 @@
 
                             {# === SUB-SECTION 1: Submitter card (anchor preserved for existing deep-links) === #}
                             <a id="submitter_card_{{ loop.index }}"></a>
-                            {{ submitter_card(config, n, today, feedback_form) }}
+                            {{ submitter_card(config, n, today) }}
 
                         </div>
                     </div>

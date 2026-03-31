@@ -58,6 +58,7 @@ from .forms import (
     EditMarkingEventForm,
     EditMarkingSchemeForm,
     MarkingWorkflowFormFactory,
+    TestMarkingEventFormFactory,
 )
 
 
@@ -1568,3 +1569,166 @@ def send_marking_emails_for_event(event_id):
         flash("Could not dispatch marking notifications. Please contact a system administrator.", "error")
 
     return redirect(redirect_url())
+
+
+@convenor.route("/open_marking_event/<int:event_id>")
+@roles_accepted("faculty", "admin", "root")
+def open_marking_event(event_id):
+    """Show a confirmation page for opening a MarkingEvent and distributing marking emails."""
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if event.closed:
+        flash("Cannot open a marking event that has already been closed.", "error")
+        return redirect(redirect_url())
+
+    if event.open:
+        flash("This marking event is already open.", "info")
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    title = f'Open marking event "{event.name}"'
+    panel_title = f"Open marking event <strong>{event.name}</strong>"
+    action_url = url_for("convenor.do_open_marking_event", event_id=event_id, url=url)
+    test_url = url_for("convenor.test_marking_event", event_id=event_id, url=url)
+    workflow_count = event.workflows.count()
+    message = (
+        f"<p>Are you sure you wish to open the marking event <strong>{event.name}</strong>?</p>"
+        f"<p>Marking notification emails will be dispatched for all {workflow_count} "
+        f"workflow{'s' if workflow_count != 1 else ''} in this event, where reports are "
+        f"already available. Further notifications can be sent later for reports uploaded "
+        f"after this point.</p>"
+        f"<p>To send a test distribution first, "
+        f'<a href="{test_url}">click here to run a test</a>.</p>'
+        f"<p>This action cannot be undone.</p>"
+    )
+    submit_label = "Open event and send notifications"
+
+    return render_template_context(
+        "admin/danger_confirm.html",
+        title=title,
+        panel_title=panel_title,
+        action_url=action_url,
+        message=message,
+        submit_label=submit_label,
+    )
+
+
+@convenor.route("/do_open_marking_event/<int:event_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def do_open_marking_event(event_id):
+    """Set event.open = True and dispatch marking emails for all workflows."""
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if event.closed:
+        flash("Cannot open a marking event that has already been closed.", "error")
+        return redirect(redirect_url())
+
+    if event.open:
+        flash("This marking event is already open.", "info")
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    event.open = True
+    event.last_edit_id = current_user.id
+    event.last_edit_timestamp = datetime.now()
+
+    try:
+        log_db_commit(
+            f'Opened marking event "{event.name}" for period "{event.period.display_name}"',
+            user=current_user,
+            project_classes=pclass,
+        )
+    except SQLAlchemyError as e:
+        flash("Could not open marking event due to a database error. Please contact a system administrator.", "error")
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
+        return redirect(url)
+
+    try:
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.marking.send_marking_event_emails"]
+        task.apply_async(
+            kwargs={
+                "event_id": event_id,
+                "cc_convenor": True,
+                "max_attachment": 10,
+                "test_user_id": None,
+                "convenor_id": current_user.id,
+            }
+        )
+        flash(f'Marking event "{event.name}" has been opened and notification emails have been queued.', "success")
+    except Exception as e:
+        current_app.logger.exception("Error dispatching send_marking_event_emails", exc_info=e)
+        flash("Marking event was opened but notifications could not be dispatched. Please contact a system administrator.", "error")
+
+    return redirect(url)
+
+
+@convenor.route("/test_marking_event/<int:event_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def test_marking_event(event_id):
+    """Show a form to select a test recipient, then dispatch a test distribution for a MarkingEvent."""
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    if event.closed:
+        flash("Cannot send test notifications for a closed marking event.", "error")
+        return redirect(redirect_url())
+
+    url = request.args.get("url", None)
+    if url is None:
+        url = redirect_url()
+
+    TestMarkingEventForm = TestMarkingEventFormFactory(pclass)
+    form = TestMarkingEventForm(request.form)
+
+    if form.validate_on_submit():
+        test_user_id = form.test_target.data.id
+        try:
+            celery = current_app.extensions["celery"]
+            task = celery.tasks["app.tasks.marking.send_marking_event_emails"]
+            task.apply_async(
+                kwargs={
+                    "event_id": event_id,
+                    "cc_convenor": True,
+                    "max_attachment": 10,
+                    "test_user_id": test_user_id,
+                    "convenor_id": current_user.id,
+                }
+            )
+            flash(
+                f'Test notifications for marking event "{event.name}" have been queued '
+                f"to {form.test_target.data.name}.",
+                "success",
+            )
+        except Exception as e:
+            current_app.logger.exception("Error dispatching test send_marking_event_emails", exc_info=e)
+            flash("Could not dispatch test notifications. Please contact a system administrator.", "error")
+
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/markingevent/test_marking_event.html",
+        event=event,
+        form=form,
+        url=url,
+        title=f'Test notifications for "{event.name}"',
+        formtitle=f"Send test notifications for marking event <strong>{event.name}</strong>",
+    )

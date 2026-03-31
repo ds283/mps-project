@@ -29,8 +29,10 @@
                                 <span class="fw-semibold">{{ event.name }}</span>
                                 {% if event.closed %}
                                     <span class="badge bg-secondary ms-1">Closed</span>
+                                {% elif event.open %}
+                                    <span class="badge bg-success ms-1">Active</span>
                                 {% else %}
-                                    <span class="badge bg-success ms-1">Open</span>
+                                    <span class="badge bg-primary ms-1">Pending</span>
                                 {% endif %}
                                 {% set wf_count = event.workflows.count() %}
                                 {% if wf_count > 0 %}

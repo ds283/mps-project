@@ -68,14 +68,22 @@
                     <span><i class="fas fa-info-circle fa-fw me-1"></i> Event summary</span>
                     {% if can_edit %}
                         <div class="d-flex flex-row gap-2">
+                            {% if not event.open and not event.closed %}
+                                <a href="{{ url_for('convenor.open_marking_event', event_id=event.id, url=url) }}"
+                                   class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-play fa-fw"></i> Open event&hellip;
+                                </a>
+                            {% endif %}
                             <a href="{{ url_for('convenor.edit_marking_event', event_id=event.id, url=request.url, text='Marking workflows') }}"
                                class="btn btn-sm btn-outline-light">
                                 <i class="fas fa-pencil-alt fa-fw"></i> Edit event
                             </a>
-                            <a href="{{ url_for('convenor.close_marking_event_confirm', event_id=event.id, url=url, text=text) }}"
-                               class="btn btn-sm btn-outline-warning">
-                                <i class="fas fa-lock fa-fw"></i> Close event&hellip;
-                            </a>
+                            {% if event.open and not event.closed %}
+                                <a href="{{ url_for('convenor.close_marking_event_confirm', event_id=event.id, url=url, text=text) }}"
+                                   class="btn btn-sm btn-outline-warning">
+                                    <i class="fas fa-lock fa-fw"></i> Close event&hellip;
+                                </a>
+                            {% endif %}
                         </div>
                     {% endif %}
                 </div>
@@ -91,8 +99,10 @@
                                 <dd class="col-sm-7">
                                     {% if event.closed %}
                                         <span class="badge bg-secondary">Closed</span>
+                                    {% elif event.open %}
+                                        <span class="badge bg-success">Active</span>
                                     {% else %}
-                                        <span class="badge bg-success">Open</span>
+                                        <span class="badge bg-primary">Pending</span>
                                     {% endif %}
                                 </dd>
                             </dl>

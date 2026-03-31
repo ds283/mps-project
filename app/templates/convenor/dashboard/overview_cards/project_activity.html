@@ -1,5 +1,3 @@
-{% import "bootstrap/form.html" as wtf %}
-{% from "macros.html" import date_field %}
 {% from "icon_block.html" import icon_block %}
 
 {% macro report_status(period) %}
@@ -69,39 +67,4 @@
     {% endif %}
 {% endmacro %}
 
-{% macro project_activity_form(config, period, feedback_form) %}
-    <div class="card border-secondary p-3">
-        {% if period.collect_project_feedback %}
-            <div class="fs-6 fw-semibold text-secondary">Open for feedback</div>
-            <form action="{{ url_for('convenor.open_feedback', id=config.id) }}" method="POST" name="feedback-form">
-                {{ feedback_form.hidden_tag() }}
-                {{ date_field(feedback_form.feedback_deadline, 'feedback_datetimepicker') }}
-                {{ wtf.render_field(feedback_form.max_attachment) }}
-                {{ wtf.render_field(feedback_form.cc_me) }}
-                {{ wtf.render_field(feedback_form.marking_template) }}
-                <div class="d-flex flex-row justify-content-end gap-2">
-                    {% if feedback_form.test_button is defined %}
-                        {{ wtf.render_field(feedback_form.test_button, button_map={'test_button': 'outline-secondary'}, button_size='sm') }}
-                    {% endif %}
-                    {% if feedback_form.send_notifications is defined %}
-                        {{ wtf.render_field(feedback_form.send_notifications, button_map={'send_notifications': 'outline-secondary'}, button_size='sm') }}
-                    {% endif %}
-                    {% if feedback_form.close_button is defined %}
-                        {{ wtf.render_field(feedback_form.close_button, button_map={'close_button': 'outline-secondary'}, button_size='sm') }}
-                    {% endif %}
-                    {{ wtf.render_field(feedback_form.submit_button, button_map={'submit_button': 'outline-danger'}, button_size='sm') }}
-                </div>
-            </form>
-        {% else %}
-            <div class="d-flex flex-row justify-content-end gap-2">
-                <form action="{{ url_for('convenor.open_feedback', id=config.id) }}" method="POST" name="feedback-form">
-                    {% if feedback_form.close_button is defined %}
-                        {{ wtf.render_field(feedback_form.close_button, button_map={'close_button': 'outline-success'}, button_size='sm') }}
-                    {% else %}
-                        {{ wtf.render_field(feedback_form.submit_button, button_map={'submit_button': 'outline-success'},  button_size='sm') }}
-                    {% endif %}
-                </form>
-            </div>
-        {% endif %}
-    </div>
-{% endmacro %}
+

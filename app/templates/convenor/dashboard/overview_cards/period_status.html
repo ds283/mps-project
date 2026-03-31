@@ -27,7 +27,7 @@
             <i class="fas fa-search"></i> Inspect units&hellip;
         </a>
     </div>
-    {% if p.feedback_open %}
+    {% if p.is_feedback_open %}
         <div class="text-secondary small mt-2">
             {% if p.closed %}
                 <div><i class="fas fa-lock"></i> Feedback closed</div>

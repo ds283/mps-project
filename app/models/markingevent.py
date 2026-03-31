@@ -169,6 +169,9 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
     # name of this event; unique within the parent SubmissionPeriodRecord
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
+    # has this event been formally opened (marking distribution triggered)?
+    open = db.Column(db.Boolean(), default=False, nullable=False)
+
     # has this event been closed?
     closed = db.Column(db.Boolean(), default=False, nullable=False)
 

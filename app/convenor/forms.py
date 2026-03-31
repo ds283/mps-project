@@ -221,62 +221,10 @@ def IssueFacultyConfirmRequestFormFactory(
     return IssueFacultyConfirmRequestForm
 
 
-def OpenFeedbackFormFactory(
-    submit_label="Open feedback period",
-    datebox_label="Deadline",
-    include_send_button=False,
-    include_test_button=False,
-    include_close_button=False,
-):
-    class OpenFeedbackForm(Form):
-        # deadline for feedback
-        feedback_deadline = DateTimeField(
-            datebox_label, format="%d/%m/%Y", validators=[InputRequired()]
-        )
-
-        # CC emails to convenor?
-        cc_me = BooleanField("CC myself in notification emails")
-
-        # maximum size of attachments
-        max_attachment = IntegerField(
-            "Maximum total size of attachments, measured in Mb",
-            validators=[InputRequired()],
-            description="Documents with a total size larger than this will not be sent as "
-            "attachments, but "
-            "as download links to the original documents hosted on this site. "
-            "Only authorized users can download files.",
-        )
-
-        # submit button: test
-        if include_test_button:
-            test_button = SubmitField("Test notifications")
-
-        # if already open, include a 'send notifications' button
-        if include_send_button:
-            send_notifications = SubmitField("Send notifications")
-
-        # direct close button
-        if include_close_button:
-            close_button = SubmitField("Close without notifications")
-
-        # submit button: open feedback
-        submit_button = SubmitField(submit_label)
-
-        # email template selector (query_factory injected by the view)
-        marking_template = QuerySelectField(
-            "Email template",
-            allow_blank=False,
-            get_label=BuildWorkflowTemplateLabel,
-            validators=[DataRequired(message="Please select an email template.")],
-        )
-
-    return OpenFeedbackForm
-
-
-def TestOpenFeedbackFormFactory(pclass):
+def TestMarkingEventFormFactory(pclass):
     """
-    Build the test-notifications form, scoped to users who can receive test emails for the given
-    project class: convenors/co-convenors, admins on an overlapping tenant, and root users.
+    Build the test-notifications form for a MarkingEvent, scoped to users who can receive test
+    emails: convenors/co-convenors, admins on an overlapping tenant, and root users.
     """
     _convenor_ids = set()
     if pclass.convenor is not None:
@@ -307,7 +255,7 @@ def TestOpenFeedbackFormFactory(pclass):
                 filtered.append(u)
         return filtered
 
-    class TestOpenFeedbackForm(Form):
+    class TestMarkingEventForm(Form):
         # role-filtered user selector for test email sink
         test_target = QuerySelectField(
             "Send test to",
@@ -322,18 +270,10 @@ def TestOpenFeedbackFormFactory(pclass):
             description="Select a recipient for the test notification emails.",
         )
 
-        # email template selector (query_factory injected by the view)
-        marking_template = QuerySelectField(
-            "Email template",
-            allow_blank=False,
-            get_label=BuildWorkflowTemplateLabel,
-            validators=[DataRequired(message="Please select an email template.")],
-        )
-
         # submit button
-        submit_button = SubmitField("Perform test")
+        submit_button = SubmitField("Send test notifications")
 
-    return TestOpenFeedbackForm
+    return TestMarkingEventForm
 
 
 class CustomCATSLimitForm(Form, SaveChangesMixin):

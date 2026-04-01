@@ -318,14 +318,14 @@ def submitter_reports_inspector(workflow_id):
         #     "Ready to generate grade",
         # ),
         (SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, "Ready to sign off"),
-        (
-            SubmitterReportWorkflowStates.READY_TO_GENERATE_FEEDBACK,
-            "Ready to generate feedback",
-        ),
-        (
-            SubmitterReportWorkflowStates.READY_TO_PUSH_FEEDBACK,
-            "Ready to push feedback",
-        ),
+        # (
+        #     SubmitterReportWorkflowStates.READY_TO_GENERATE_FEEDBACK,
+        #     "Ready to generate feedback",
+        # ),
+        # (
+        #     SubmitterReportWorkflowStates.READY_TO_PUSH_FEEDBACK,
+        #     "Ready to push feedback",
+        # ),
         (SubmitterReportWorkflowStates.COMPLETED, "Completed"),
     ]
 
@@ -856,7 +856,9 @@ def edit_marking_scheme(scheme_id):
     text = request.args.get("text", "Marking schemes")
 
     form = EditMarkingSchemeForm(obj=scheme)
-    form.name.validators.append(make_unique_marking_scheme_in_pclass(pclass.id, name=scheme.name))
+    form.name.validators.append(
+        make_unique_marking_scheme_in_pclass(pclass.id, name=scheme.name)
+    )
 
     if form.validate_on_submit():
         scheme.name = form.name.data
@@ -1064,9 +1066,7 @@ def edit_marking_event(event_id):
     form.name.validators.append(
         make_unique_marking_event_in_period(period.id, name=event.name)
     )
-    form.targets.validators.append(
-        make_valid_marking_targets(fiducial)
-    )
+    form.targets.validators.append(make_valid_marking_targets(fiducial))
 
     if form.validate_on_submit():
         event.name = form.name.data

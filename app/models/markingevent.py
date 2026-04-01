@@ -139,7 +139,9 @@ class LiveMarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
     id = db.Column(db.Integer(), primary_key=True)
 
     # name copied from the parent MarkingScheme at snapshot time; not required to be globally unique
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=False)
+    name = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=False
+    )
 
     # parent marking scheme
     parent_id = db.Column(
@@ -368,7 +370,10 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
     # The unique constraint enforces the 1-to-1 relationship: each LiveMarkingScheme snapshot
     # belongs to exactly one MarkingWorkflow.
     scheme_id = db.Column(
-        db.Integer(), db.ForeignKey("live_marking_schemes.id"), nullable=True, unique=True
+        db.Integer(),
+        db.ForeignKey("live_marking_schemes.id"),
+        nullable=True,
+        unique=True,
     )
     scheme = db.relationship(
         "LiveMarkingScheme",
@@ -615,8 +620,8 @@ class SubmitterReportWorkflowStates:
     REQUIRES_CONVENOR_INTERVENTION = 7
     # READY_TO_GENERATE_GRADE = 8
     READY_TO_SIGN_OFF = 9
-    READY_TO_GENERATE_FEEDBACK = 10
-    READY_TO_PUSH_FEEDBACK = 11
+    # READY_TO_GENERATE_FEEDBACK = 10
+    # READY_TO_PUSH_FEEDBACK = 11
     COMPLETED = 12
 
 

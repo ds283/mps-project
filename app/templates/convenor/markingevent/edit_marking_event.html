@@ -19,32 +19,34 @@
                 sideBySide: true
             });
 
-            const targetsEditor = CodeMirror.fromTextArea(document.getElementById("targets-editor"), {
-                mode: {name: "javascript", json: true},
-                lineNumbers: true,
-                matchBrackets: true,
-                autoCloseBrackets: true,
-                lint: true,
-                gutters: [
-                    "CodeMirror-lint-markers",
-                    "CodeMirror-linenumbers",
-                    "CodeMirror-foldgutter"
-                ],
-                foldGutter: true,
-                lineWrapping: false,
-                tabSize: 2,
-                indentWithTabs: false,
-            });
+            {% if form.targets %}
+                const targetsEditor = CodeMirror.fromTextArea(document.getElementById("targets-editor"), {
+                    mode: {name: "javascript", json: true},
+                    lineNumbers: true,
+                    matchBrackets: true,
+                    autoCloseBrackets: true,
+                    lint: true,
+                    gutters: [
+                        "CodeMirror-lint-markers",
+                        "CodeMirror-linenumbers",
+                        "CodeMirror-foldgutter"
+                    ],
+                    foldGutter: true,
+                    lineWrapping: false,
+                    tabSize: 2,
+                    indentWithTabs: false,
+                });
 
-            document.getElementById("targets-format-btn").addEventListener("click", () => {
-                try {
-                    const raw = targetsEditor.getValue();
-                    const formatted = JSON.stringify(JSON.parse(raw), null, 2);
-                    targetsEditor.setValue(formatted);
-                } catch (e) {
-                    alert("Invalid JSON: " + e.message);
-                }
-            });
+                document.getElementById("targets-format-btn").addEventListener("click", () => {
+                    try {
+                        const raw = targetsEditor.getValue();
+                        const formatted = JSON.stringify(JSON.parse(raw), null, 2);
+                        targetsEditor.setValue(formatted);
+                    } catch (e) {
+                        alert("Invalid JSON: " + e.message);
+                    }
+                });
+            {% endif %}
         });
     </script>
 
@@ -78,24 +80,26 @@
 {{ wtf.render_field(form.name) }}
 {{ date_field(form.deadline, 'deadline') }}
 
-<div class="card mt-3 mb-3 card-body bg-well">
-    <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline">
-        <div class="form-group-heading text-secondary fw-semibold mb-3">Targets</div>
-        <button type="button" id="targets-format-btn" class="btn btn-sm btn-secondary">Format JSON</button>
+{% if form.targets %}
+    <div class="card mt-3 mb-3 card-body bg-well">
+        <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline">
+            <div class="form-group-heading text-secondary fw-semibold mb-3">Targets</div>
+            <button type="button" id="targets-format-btn" class="btn btn-sm btn-secondary">Format JSON</button>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">{{ form.targets.label.text }}</label>
+            {% if form.targets.description %}
+                <div class="form-text text-muted mb-2">{{ form.targets.description }}</div>
+            {% endif %}
+            {{ form.targets(id='targets-editor', class='form-control', style='font-family: monospace; font-size: 0.875rem;') }}
+            {% if form.targets.errors %}
+                {% for error in form.targets.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            {% endif %}
+        </div>
     </div>
-    <div class="mb-3">
-        <label class="form-label fw-semibold">{{ form.targets.label.text }}</label>
-        {% if form.targets.description %}
-            <div class="form-text text-muted mb-2">{{ form.targets.description }}</div>
-        {% endif %}
-        {{ form.targets(id='targets-editor', class='form-control', style='font-family: monospace; font-size: 0.875rem;') }}
-        {% if form.targets.errors %}
-            {% for error in form.targets.errors %}
-                <div class="invalid-feedback d-block">{{ error }}</div>
-            {% endfor %}
-        {% endif %}
-    </div>
-</div>
+{% endif %}
 
 {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 

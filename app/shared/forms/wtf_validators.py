@@ -784,7 +784,7 @@ def unique_or_original_supervision_event_template(unit_id, form, field):
     return globally_unique_supervision_event_template(unit_id, form, field)
 
 
-def make_unique_marking_event_in_period(period_id, event=None):
+def make_unique_marking_event_in_period(period_id, name=None):
     """
     Return a WTForms validator that checks MarkingEvent.name is unique within a
     SubmissionPeriodRecord. If event is provided, the event's own current name is
@@ -792,7 +792,7 @@ def make_unique_marking_event_in_period(period_id, event=None):
     """
 
     def validator(form, field):
-        if event is not None and field.data == event.name:
+        if name is not None and field.data == name:
             return
         existing = (
             db.session.query(MarkingEvent)
@@ -809,7 +809,7 @@ def make_unique_marking_event_in_period(period_id, event=None):
     return validator
 
 
-def make_unique_marking_workflow_in_event(event_id, workflow=None):
+def make_unique_marking_workflow_in_event(event_id, name=None):
     """
     Return a WTForms validator that checks MarkingWorkflow.name is unique within a
     MarkingEvent. If workflow is provided, the workflow's own current name is
@@ -817,7 +817,7 @@ def make_unique_marking_workflow_in_event(event_id, workflow=None):
     """
 
     def validator(form, field):
-        if workflow is not None and field.data == workflow.name:
+        if name is not None and field.data == name:
             return
         existing = (
             db.session.query(MarkingWorkflow)
@@ -834,7 +834,7 @@ def make_unique_marking_workflow_in_event(event_id, workflow=None):
     return validator
 
 
-def make_unique_marking_workflow_key_in_event(event_id, workflow=None):
+def make_unique_marking_workflow_key_in_event(event_id, key=None):
     """
     Return a WTForms validator that checks MarkingWorkflow.key is unique within a
     MarkingEvent. If workflow is provided, the workflow's own current key is
@@ -842,7 +842,7 @@ def make_unique_marking_workflow_key_in_event(event_id, workflow=None):
     """
 
     def validator(form, field):
-        if workflow is not None and field.data == workflow.key:
+        if key is not None and field.data == key:
             return
         existing = (
             db.session.query(MarkingWorkflow)
@@ -885,7 +885,14 @@ _FIDUCIAL_VALUES = {
 }
 
 # Safe builtins exposed to eval() when checking marking-scheme expressions
-_SAFE_BUILTINS = {"abs": abs, "min": min, "max": max, "round": round, "len": len, "sum": sum}
+_SAFE_BUILTINS = {
+    "abs": abs,
+    "min": min,
+    "max": max,
+    "round": round,
+    "len": len,
+    "sum": sum,
+}
 
 
 class SchemaValidationError(Exception):
@@ -924,31 +931,43 @@ def parse_schema(data) -> dict:
 
     # "conflation_rule" is required and must be a string
     if not isinstance(data.get("conflation_rule"), str):
-        raise SchemaValidationError("'conflation_rule' is required and must be a string")
+        raise SchemaValidationError(
+            "'conflation_rule' is required and must be a string"
+        )
 
     # "scheme" is required and must be a list of section blocks
     scheme = data.get("scheme")
     if not isinstance(scheme, list):
-        raise SchemaValidationError("'scheme' is required and must be a list of section blocks")
+        raise SchemaValidationError(
+            "'scheme' is required and must be a list of section blocks"
+        )
 
     # Pass 1: structural validation; build fiducial value dictionary
     fiducial: dict = {}
 
     for block_idx, block in enumerate(scheme):
         if not isinstance(block, dict):
-            raise SchemaValidationError(f"Section block {block_idx} must be a JSON object")
+            raise SchemaValidationError(
+                f"Section block {block_idx} must be a JSON object"
+            )
         if not isinstance(block.get("title"), str):
-            raise SchemaValidationError(f"Section block {block_idx} is missing a 'title' string")
+            raise SchemaValidationError(
+                f"Section block {block_idx} is missing a 'title' string"
+            )
 
         # Optional description
         description = block.get("description")
         if description is not None and not isinstance(description, str):
-            raise SchemaValidationError(f"Section block {block_idx}: 'description' must be a string")
+            raise SchemaValidationError(
+                f"Section block {block_idx}: 'description' must be a string"
+            )
 
         # Required fields list
         fields = block.get("fields")
         if not isinstance(fields, list):
-            raise SchemaValidationError(f"Section block {block_idx} ('{block.get('title')}'): 'fields' must be a list")
+            raise SchemaValidationError(
+                f"Section block {block_idx} ('{block.get('title')}'): 'fields' must be a list"
+            )
         for field_idx, field in enumerate(fields):
             if not isinstance(field, dict):
                 raise SchemaValidationError(
@@ -989,12 +1008,18 @@ def parse_schema(data) -> dict:
             raise SchemaValidationError("'validation' must be a list")
         for item_idx, test_item in enumerate(validation):
             if not isinstance(test_item, dict):
-                raise SchemaValidationError(f"Validation item {item_idx} must be a JSON object")
+                raise SchemaValidationError(
+                    f"Validation item {item_idx} must be a JSON object"
+                )
             if not isinstance(test_item.get("test"), str):
-                raise SchemaValidationError(f"Validation item {item_idx}: 'test' must be a string")
+                raise SchemaValidationError(
+                    f"Validation item {item_idx}: 'test' must be a string"
+                )
             action = test_item.get("action")
             if not isinstance(action, list):
-                raise SchemaValidationError(f"Validation item {item_idx}: 'action' must be a list")
+                raise SchemaValidationError(
+                    f"Validation item {item_idx}: 'action' must be a list"
+                )
             if not all(a in _VALID_VALIDATION_ACTIONS for a in action):
                 invalid = [a for a in action if a not in _VALID_VALIDATION_ACTIONS]
                 raise SchemaValidationError(
@@ -1013,7 +1038,9 @@ def parse_schema(data) -> dict:
     try:
         result = eval(data["conflation_rule"], eval_ns)
     except Exception as exc:
-        raise SchemaValidationError(f"'conflation_rule' raised an error during evaluation: {exc}")
+        raise SchemaValidationError(
+            f"'conflation_rule' raised an error during evaluation: {exc}"
+        )
     if not isinstance(result, (int, float)):
         raise SchemaValidationError(
             f"'conflation_rule' must evaluate to a number, but got {type(result).__name__}"
@@ -1065,13 +1092,19 @@ def parse_targets(data) -> dict:
         raise SchemaValidationError("targets must be a JSON object (dict)")
     for k, v in data.items():
         if not isinstance(k, str) or not k.isidentifier():
-            raise SchemaValidationError(f"Target key {k!r} must be a valid Python identifier")
+            raise SchemaValidationError(
+                f"Target key {k!r} must be a valid Python identifier"
+            )
         if not isinstance(v, str):
-            raise SchemaValidationError(f"Target value for key {k!r} must be a string expression")
+            raise SchemaValidationError(
+                f"Target value for key {k!r} must be a string expression"
+            )
         try:
             compile(v, "<targets>", "eval")
         except SyntaxError as exc:
-            raise SchemaValidationError(f"Target expression for key {k!r} has a syntax error: {exc}")
+            raise SchemaValidationError(
+                f"Target expression for key {k!r} has a syntax error: {exc}"
+            )
     return data
 
 

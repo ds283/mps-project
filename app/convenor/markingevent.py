@@ -999,7 +999,7 @@ def add_marking_event(period_id):
             name=form.name.data,
             closed=False,
             deadline=form.deadline.data,
-            targets=form.targets.data or None,
+            targets="{}",
             creator_id=current_user.id,
             creation_timestamp=datetime.now(),
         )
@@ -1055,7 +1055,7 @@ def edit_marking_event(event_id):
 
     form = EditMarkingEventForm(obj=event)
     form.name.validators.append(
-        make_unique_marking_event_in_period(period.id, event=event)
+        make_unique_marking_event_in_period(period.id, name=event.name)
     )
 
     if form.validate_on_submit():
@@ -1561,11 +1561,18 @@ def edit_marking_workflow(workflow_id):
         pclass, scheme_locked=scheme_locked, event=event
     )
     form = EditWorkflowForm(obj=workflow)
+
+    # Don't validate `scheme` if the mark scheme is locked
+    # The browser typically doesn't pass back its value in the form, so validation fails.
+    # We achieve this by a monkey patch
+    if scheme_locked:
+        setattr(form.scheme, "pre_validate", lambda field: None)
+
     form.name.validators.append(
-        make_unique_marking_workflow_in_event(event.id, workflow=workflow)
+        make_unique_marking_workflow_in_event(event.id, name=workflow.name)
     )
     form.key.validators.append(
-        make_unique_marking_workflow_key_in_event(event.id, workflow=workflow)
+        make_unique_marking_workflow_key_in_event(event.id, key=workflow.key)
     )
 
     # On GET, pre-populate scheme with the parent MarkingScheme (not the LiveMarkingScheme snapshot),
@@ -1585,8 +1592,14 @@ def edit_marking_workflow(workflow_id):
             if not scheme_locked:
                 new_scheme = form.scheme.data  # a MarkingScheme or None
                 if new_scheme is not None:
-                    if workflow.scheme is None or new_scheme.id != workflow.scheme.parent_id:
-                        # Scheme has changed — create a new LiveMarkingScheme snapshot
+                    if (
+                        workflow.scheme is None
+                        or new_scheme.id != workflow.scheme.parent_id
+                    ):
+                        # Scheme has changed — replace the LiveMarkingScheme snapshot.
+                        # Delete the old snapshot first to avoid a unique-constraint violation
+                        # on scheme_id and to prevent orphaned rows.
+                        old_live = workflow.scheme
                         live = LiveMarkingScheme(
                             parent_id=new_scheme.id,
                             name=new_scheme.name,
@@ -1599,12 +1612,18 @@ def edit_marking_workflow(workflow_id):
                             creator_id=current_user.id,
                             creation_timestamp=datetime.now(),
                         )
+                        workflow.scheme_id = None
+                        if old_live is not None:
+                            db.session.delete(old_live)
                         db.session.add(live)
                         db.session.flush()
                         workflow.scheme_id = live.id
                     # else: same scheme selected — leave existing LiveMarkingScheme in place
                 else:
+                    old_live = workflow.scheme
                     workflow.scheme_id = None
+                    if old_live is not None:
+                        db.session.delete(old_live)
 
             workflow.notify_on_moderation_required = list(
                 form.notify_on_moderation_required.data

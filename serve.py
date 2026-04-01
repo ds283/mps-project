@@ -17,6 +17,7 @@ from waitress import serve
 from app import create_app
 from app.database import db
 from initdb import (
+    cleanup_orphaned_live_marking_schemes,
     import_attendance_data,
     import_examiner_data,
     import_supervisor_data,
@@ -96,6 +97,9 @@ with app.app_context():
 
     # db.session.commit()
     # migrate_to_marking_events(app)
+
+    db.session.commit()
+    cleanup_orphaned_live_marking_schemes(app)
 
 
 if __name__ == "__main__":

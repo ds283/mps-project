@@ -34,11 +34,6 @@ class ConvenorAction:
 
 
 class MarkingSchemeMixin:
-    # name of this marking scheme
-    name = db.Column(
-        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True
-    )
-
     # HTML-formatted title to be displayed on the marking form
     title = db.Column(db.Text(), nullable=False)
 
@@ -66,6 +61,7 @@ class MarkingSchemeMixin:
 class MarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
     """
     Represents a marking scheme to be used as part of a marking workflow.
+
     The mark scheme defines what questions are asked. This is encoded in a JSON-serialized schema.
     Each schema should contain a "scheme" and "conflation_rule" element, and may optionally also
     contain a "validation" element.
@@ -115,6 +111,9 @@ class MarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
+    # name must be unique across all MarkingScheme instances
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
+
     # project class this marking scheme is for
     pclass_id = db.Column(
         db.Integer(), db.ForeignKey("project_classes.id"), nullable=False
@@ -126,13 +125,19 @@ class LiveMarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
     """
     Duplicates a MarkingScheme.
     Gives a permanent record of the marking scheme used for any particular MarkingEvent, so that subsequent changes to the marking scheme
-    don't mean that we lose an understanding of the schema
+    don't mean that we lose an understanding of the schema.
+    Each LiveMarkingScheme is owned by exactly one MarkingWorkflow (enforced by the unique constraint on
+    MarkingWorkflow.scheme_id). The name is copied from the parent MarkingScheme at snapshot time and is
+    not required to be globally unique.
     """
 
     __tablename__ = "live_marking_schemes"
 
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
+
+    # name copied from the parent MarkingScheme at snapshot time; not required to be globally unique
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=False)
 
     # parent marking scheme
     parent_id = db.Column(
@@ -342,7 +347,9 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
 
     # key for this workflow; must be a valid Python identifier and unique within the parent MarkingEvent.
     # Used to identify this workflow's contribution when computing aggregated marks via the MarkingEvent.targets expressions.
-    key = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
+    key = db.Column(
+        db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True
+    )
 
     __table_args__ = (
         db.UniqueConstraint("event_id", "name"),
@@ -355,9 +362,11 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
 
     # mark scheme to use for this workflow.
     # The scheme should NOT be empty, but we allow nullable for backwards compatibility with
-    # old cycles where no marking scheme existed
+    # old cycles where no marking scheme existed.
+    # The unique constraint enforces the 1-to-1 relationship: each LiveMarkingScheme snapshot
+    # belongs to exactly one MarkingWorkflow.
     scheme_id = db.Column(
-        db.Integer(), db.ForeignKey("live_marking_schemes.id"), nullable=True
+        db.Integer(), db.ForeignKey("live_marking_schemes.id"), nullable=True, unique=True
     )
     scheme = db.relationship(
         "LiveMarkingScheme",

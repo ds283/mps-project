@@ -31,6 +31,7 @@ from app.models import (
     EmailTemplateTypesMixin,
     EnrollmentRecord,
     FacultyData,
+    LiveMarkingScheme,
     LiveProject,
     MarkingEvent,
     MarkingReport,
@@ -1895,3 +1896,36 @@ def migrate_to_marking_events(app):
         f"** migrate_to_marking_events: complete — "
         + ", ".join(f"{k} {v[0]} added/{v[1]} skipped" for k, v in counts.items())
     )
+
+
+def cleanup_orphaned_live_marking_schemes(app):
+    """
+    One-time migration: delete any LiveMarkingScheme rows that are not referenced by any
+    MarkingWorkflow.scheme_id.  These are orphans produced by the old edit-workflow code that
+    overwrote scheme_id without first deleting the superseded snapshot.
+    """
+    with app.app_context():
+        # Find all LiveMarkingScheme IDs that are referenced by at least one MarkingWorkflow
+        referenced_ids = {
+            row[0]
+            for row in db.session.query(MarkingWorkflow.scheme_id).filter(MarkingWorkflow.scheme_id.isnot(None)).all()
+        }
+
+        orphans = db.session.query(LiveMarkingScheme).filter(~LiveMarkingScheme.id.in_(referenced_ids)).all()
+        count = len(orphans)
+
+        if count == 0:
+            print("** cleanup_orphaned_live_marking_schemes: no orphans found")
+            return
+
+        for orphan in orphans:
+            db.session.delete(orphan)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            app.logger.exception("SQLAlchemyError in cleanup_orphaned_live_marking_schemes", exc_info=e)
+            return
+
+        print(f"** cleanup_orphaned_live_marking_schemes: removed {count} orphaned LiveMarkingScheme row(s)")

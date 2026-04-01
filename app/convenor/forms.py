@@ -1017,20 +1017,18 @@ class MarkingEventMixin:
         description="Optional global marking deadline for this event. Individual workflows may have earlier sub-deadlines.",
     )
 
-    targets = TextAreaField(
-        "Targets",
-        validators=[Optional(), valid_marking_targets],
-        description="JSON dict mapping target names (Python identifiers) to conflation expressions. "
-        "Each expression may reference the key fields of the constituent marking workflows.",
-    )
-
 
 class AddMarkingEventForm(Form, MarkingEventMixin):
     submit = SubmitField("Add marking event")
 
 
 class EditMarkingEventForm(Form, MarkingEventMixin, SaveChangesMixin):
-    pass
+    targets = TextAreaField(
+        "Targets",
+        validators=[Optional(), valid_marking_targets],
+        description="JSON dict mapping target names to a conflation rule. Each target name should be a valid Python identifier."
+        "The conflation rules may reference the key fields of the constituent marking workflows.",
+    )
 
 
 # ---- MarkingWorkflow forms ----
@@ -1362,8 +1360,14 @@ def AssignModeratorFormFactory(pclass_id):
                 (EnrollmentRecord.owner_id == User.id)
                 & (EnrollmentRecord.pclass_id == pclass_id)
                 & (
-                    (EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
-                    | (EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+                    (
+                        EnrollmentRecord.supervisor_state
+                        == EnrollmentRecord.SUPERVISOR_ENROLLED
+                    )
+                    | (
+                        EnrollmentRecord.marker_state
+                        == EnrollmentRecord.MARKER_ENROLLED
+                    )
                 ),
             )
             .filter(User.active.is_(True))
@@ -1404,7 +1408,10 @@ class EnterTurnitinScoreForm(Form):
 
     turnitin_score = IntegerField(
         "Overall similarity score (%)",
-        validators=[InputRequired(message="A similarity score is required"), NumberRange(min=0, max=100)],
+        validators=[
+            InputRequired(message="A similarity score is required"),
+            NumberRange(min=0, max=100),
+        ],
         description="Enter the overall Turnitin similarity score as a percentage (0–100).",
     )
     turnitin_web_overlap = IntegerField(

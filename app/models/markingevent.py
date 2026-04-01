@@ -122,7 +122,7 @@ class MarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
     pclass = db.relationship("ProjectClass", foreign_keys=[pclass_id], uselist=False)
 
 
-class LiveMarkingScheme(db.Model, MarkingSchemeMixin):
+class LiveMarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
     """
     Duplicates a MarkingScheme.
     Gives a permanent record of the marking scheme used for any particular MarkingEvent, so that subsequent changes to the marking scheme
@@ -179,7 +179,18 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
     # global marking deadline for this event; individual workflows may have earlier sub-deadlines
     deadline = db.Column(db.DateTime(), nullable=True)
 
+    # JSON dict mapping target names (Python identifiers) to conflation expressions.
+    # Each expression may reference the key fields of constituent MarkingWorkflows and should evaluate to a float.
+    # Form: { "target_name": "conflation_expression", ... }
+    targets = db.Column(db.Text(), nullable=True)
+
     __table_args__ = (db.UniqueConstraint("period_id", "name"),)
+
+    @property
+    def targets_as_dict(self) -> dict:
+        if not self.targets:
+            return {}
+        return json.loads(self.targets)
 
     # convenience accessors
     @property
@@ -329,7 +340,14 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
     # globally unique
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
-    __table_args__ = (db.UniqueConstraint("event_id", "name"),)
+    # key for this workflow; must be a valid Python identifier and unique within the parent MarkingEvent.
+    # Used to identify this workflow's contribution when computing aggregated marks via the MarkingEvent.targets expressions.
+    key = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint("event_id", "name"),
+        db.UniqueConstraint("event_id", "key"),
+    )
 
     # role that this workflow targets. All SubmissionRole instances that belong to the ProjectClassConfig for the parent MarkingEvent
     # and have this role will be assigned to this workflow

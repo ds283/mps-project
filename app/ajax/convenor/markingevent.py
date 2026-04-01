@@ -51,6 +51,14 @@ _marking_event_workflows = """
 {% else %}
     <span class="badge bg-secondary">None</span>
 {% endif %}
+{% set targets = event.targets_as_dict %}
+{% if targets %}
+    <hr class="my-2">
+    <div class="small text-muted fw-semibold mb-1">Targets</div>
+    {% for name, expr in targets.items() %}
+        <div class="small font-monospace mt-1"><span class="text-primary">{{ name }}</span> = {{ expr }}</div>
+    {% endfor %}
+{% endif %}
 """
 
 # language=jinja2
@@ -70,6 +78,9 @@ _marking_event_menu = """
 # language=jinja2
 _marking_workflow_name = """
 <div class="fw-semibold">{{ workflow.name }}</div>
+{% if workflow.key %}
+    <div class="small font-monospace mt-1 text-muted">key: <span class="text-primary">{{ workflow.key }}</span></div>
+{% endif %}
 <div class="small text-muted mt-1">Role: {{ workflow.role_as_str }}</div>
 {% set deadline = workflow.effective_deadline %}
 {% if deadline is not none %}
@@ -81,6 +92,16 @@ _marking_workflow_name = """
 _marking_workflow_scheme = """
 {% if workflow.scheme is not none %}
     <div class="text-success"><i class="fas fa-check-circle"></i> {{ workflow.scheme.name }}</div>
+    {% if workflow.scheme.creation_timestamp is not none
+         and workflow.scheme.parent is not none
+         and workflow.scheme.parent.last_edit_timestamp is not none
+         and workflow.scheme.creation_timestamp < workflow.scheme.parent.last_edit_timestamp %}
+        <div class="mt-1">
+            <span class="badge bg-warning text-dark">
+                <i class="fas fa-exclamation-triangle fa-fw"></i> Scheme has been updated
+            </span>
+        </div>
+    {% endif %}
 {% else %}
     <span class="badge bg-warning text-dark">No scheme</span>
 {% endif %}

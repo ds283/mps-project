@@ -87,6 +87,8 @@ from ..shared.forms.wtf_validators import (
     unique_or_original_submission_unit,
     unique_or_original_supervision_event_template,
     valid_marking_schema,
+    valid_marking_targets,
+    valid_python_identifier,
 )
 from ..shared.utils import get_current_year
 
@@ -1015,6 +1017,13 @@ class MarkingEventMixin:
         description="Optional global marking deadline for this event. Individual workflows may have earlier sub-deadlines.",
     )
 
+    targets = TextAreaField(
+        "Targets",
+        validators=[Optional(), valid_marking_targets],
+        description="JSON dict mapping target names (Python identifiers) to conflation expressions. "
+        "Each expression may reference the key fields of the constituent marking workflows.",
+    )
+
 
 class AddMarkingEventForm(Form, MarkingEventMixin):
     submit = SubmitField("Add marking event")
@@ -1126,6 +1135,17 @@ def MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=None):
                 Length(max=DEFAULT_STRING_LENGTH),
             ],
             description="Name for this workflow. Must be unique within the parent marking event.",
+        )
+
+        key = StringField(
+            "Key",
+            validators=[
+                InputRequired(message="A key is required"),
+                Length(max=DEFAULT_STRING_LENGTH),
+                valid_python_identifier,
+            ],
+            description="Must be a valid Python identifier, unique within the parent marking event. "
+            "Used in conflation expressions defined on the marking event.",
         )
 
         scheme = QuerySelectField(

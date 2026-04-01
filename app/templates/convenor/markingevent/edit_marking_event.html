@@ -3,10 +3,12 @@
 {% import "bootstrap/form.html" as wtf %}
 {% from "macros.html" import edit_data, date_field %}
 {% from "datepicker.html" import import_datepicker %}
+{% from "codemirror-v5-json.html" import import_codemirror_v5_json %}
 
 {% block scripts %}
     {{ super() }}
     {{ import_datepicker() }}
+    {{ import_codemirror_v5_json() }}
 
     <script>
         $(document).ready(function () {
@@ -16,8 +18,43 @@
                 showTodayButton: true,
                 sideBySide: true
             });
+
+            const targetsEditor = CodeMirror.fromTextArea(document.getElementById("targets-editor"), {
+                mode: {name: "javascript", json: true},
+                lineNumbers: true,
+                matchBrackets: true,
+                autoCloseBrackets: true,
+                lint: true,
+                gutters: [
+                    "CodeMirror-lint-markers",
+                    "CodeMirror-linenumbers",
+                    "CodeMirror-foldgutter"
+                ],
+                foldGutter: true,
+                lineWrapping: false,
+                tabSize: 2,
+                indentWithTabs: false,
+            });
+
+            document.getElementById("targets-format-btn").addEventListener("click", () => {
+                try {
+                    const raw = targetsEditor.getValue();
+                    const formatted = JSON.stringify(JSON.parse(raw), null, 2);
+                    targetsEditor.setValue(formatted);
+                } catch (e) {
+                    alert("Invalid JSON: " + e.message);
+                }
+            });
         });
     </script>
+
+    <style>
+        .CodeMirror {
+            height: 250px;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+        }
+    </style>
 {% endblock %}
 
 {% block title %}
@@ -40,6 +77,26 @@
 {{ form.hidden_tag() }}
 {{ wtf.render_field(form.name) }}
 {{ date_field(form.deadline, 'deadline') }}
+
+<div class="card mt-3 mb-3 card-body bg-well">
+    <div class="d-flex flex-row flex-wrap justify-content-between align-items-baseline">
+        <div class="form-group-heading text-secondary fw-semibold mb-3">Targets</div>
+        <button type="button" id="targets-format-btn" class="btn btn-sm btn-secondary">Format JSON</button>
+    </div>
+    <div class="mb-3">
+        <label class="form-label fw-semibold">{{ form.targets.label.text }}</label>
+        {% if form.targets.description %}
+            <div class="form-text text-muted mb-2">{{ form.targets.description }}</div>
+        {% endif %}
+        {{ form.targets(id='targets-editor', class='form-control', style='font-family: monospace; font-size: 0.875rem;') }}
+        {% if form.targets.errors %}
+            {% for error in form.targets.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
 {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
 </form>

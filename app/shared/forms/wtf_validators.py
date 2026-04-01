@@ -834,6 +834,31 @@ def make_unique_marking_workflow_in_event(event_id, workflow=None):
     return validator
 
 
+def make_unique_marking_workflow_key_in_event(event_id, workflow=None):
+    """
+    Return a WTForms validator that checks MarkingWorkflow.key is unique within a
+    MarkingEvent. If workflow is provided, the workflow's own current key is
+    allowed (edit case).
+    """
+
+    def validator(form, field):
+        if workflow is not None and field.data == workflow.key:
+            return
+        existing = (
+            db.session.query(MarkingWorkflow)
+            .filter(
+                MarkingWorkflow.event_id == event_id, MarkingWorkflow.key == field.data
+            )
+            .first()
+        )
+        if existing is not None:
+            raise ValidationError(
+                f'"{field.data}" is already used as a key for a marking workflow in this event'
+            )
+
+    return validator
+
+
 def valid_json(form, field):
     try:
         json_obj = json.loads(field.data)
@@ -841,6 +866,12 @@ def valid_json(form, field):
         raise ValidationError("Unexpected text encoding")
     except json.JSONDecodeError:
         raise ValidationError("Could not translate to a valid JSON object")
+
+
+def valid_python_identifier(form, field):
+    """WTForms validator: checks that field.data is a valid Python identifier."""
+    if not field.data or not field.data.isidentifier():
+        raise ValidationError(f'"{field.data}" is not a valid Python identifier')
 
 
 _VALID_MARKING_FIELD_TYPES = {"boolean", "text", "number", "percent"}
@@ -1016,6 +1047,47 @@ def valid_marking_schema(form, field):
 
     try:
         parse_schema(data)
+    except SchemaValidationError as exc:
+        raise ValidationError(str(exc))
+
+
+def parse_targets(data) -> dict:
+    """
+    Validate the structure of a deserialized targets dict.
+    `data` should be a Python object obtained from json.loads().
+    Returns the validated targets dict on success, or raises SchemaValidationError.
+
+    Expected layout: a dict where:
+        - each key is a string and a valid Python identifier
+        - each value is a string containing a syntactically valid Python expression
+    """
+    if not isinstance(data, dict):
+        raise SchemaValidationError("targets must be a JSON object (dict)")
+    for k, v in data.items():
+        if not isinstance(k, str) or not k.isidentifier():
+            raise SchemaValidationError(f"Target key {k!r} must be a valid Python identifier")
+        if not isinstance(v, str):
+            raise SchemaValidationError(f"Target value for key {k!r} must be a string expression")
+        try:
+            compile(v, "<targets>", "eval")
+        except SyntaxError as exc:
+            raise SchemaValidationError(f"Target expression for key {k!r} has a syntax error: {exc}")
+    return data
+
+
+def valid_marking_targets(form, field):
+    """WTForms validator: checks that the field contains valid JSON conforming to the targets layout."""
+    if not field.data:
+        return
+    try:
+        data = json.loads(field.data)
+    except TypeError:
+        raise ValidationError("Unexpected text encoding in targets")
+    except json.JSONDecodeError:
+        raise ValidationError("Targets field is not valid JSON")
+
+    try:
+        parse_targets(data)
     except SchemaValidationError as exc:
         raise ValidationError(str(exc))
 

@@ -61,6 +61,7 @@
 
 {{ form.hidden_tag() }}
 {{ wtf.render_field(form.name) }}
+{{ wtf.render_field(form.key) }}
 
 {% if not workflow %}
     {{ wtf.render_field(form.role) }}

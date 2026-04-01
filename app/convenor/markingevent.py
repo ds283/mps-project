@@ -48,6 +48,7 @@ from ..shared.context.global_context import render_template_context
 from ..shared.forms.wtf_validators import (
     make_unique_marking_event_in_period,
     make_unique_marking_workflow_in_event,
+    make_unique_marking_workflow_key_in_event,
 )
 from ..shared.security import validate_nonce
 from ..shared.utils import redirect_url
@@ -998,6 +999,7 @@ def add_marking_event(period_id):
             name=form.name.data,
             closed=False,
             deadline=form.deadline.data,
+            targets=form.targets.data or None,
             creator_id=current_user.id,
             creation_timestamp=datetime.now(),
         )
@@ -1059,6 +1061,7 @@ def edit_marking_event(event_id):
     if form.validate_on_submit():
         event.name = form.name.data
         event.deadline = form.deadline.data
+        event.targets = form.targets.data or None
         event.last_edit_id = current_user.id
         event.last_edit_timestamp = datetime.now()
 
@@ -1437,6 +1440,7 @@ def add_marking_workflow(event_id):
     )
     form = AddWorkflowForm(request.form)
     form.name.validators.append(make_unique_marking_workflow_in_event(event_id))
+    form.key.validators.append(make_unique_marking_workflow_key_in_event(event_id))
 
     if form.validate_on_submit():
         scheme_id = None
@@ -1454,6 +1458,8 @@ def add_marking_workflow(event_id):
                     uses_standard_feedback=source.uses_standard_feedback,
                     uses_tolerance=source.uses_tolerance,
                     marker_tolerance=source.marker_tolerance,
+                    creator_id=current_user.id,
+                    creation_timestamp=datetime.now(),
                 )
                 db.session.add(live)
                 db.session.flush()
@@ -1462,6 +1468,7 @@ def add_marking_workflow(event_id):
             workflow = MarkingWorkflow(
                 event_id=event_id,
                 name=form.name.data,
+                key=form.key.data,
                 role=form.role.data,
                 scheme_id=scheme_id,
                 requires_report=form.requires_report.data,
@@ -1557,32 +1564,45 @@ def edit_marking_workflow(workflow_id):
     form.name.validators.append(
         make_unique_marking_workflow_in_event(event.id, workflow=workflow)
     )
+    form.key.validators.append(
+        make_unique_marking_workflow_key_in_event(event.id, workflow=workflow)
+    )
+
+    # On GET, pre-populate scheme with the parent MarkingScheme (not the LiveMarkingScheme snapshot),
+    # so it matches the choices in the QuerySelectField.
+    if request.method == "GET":
+        form.scheme.data = workflow.scheme.parent if workflow.scheme else None
 
     if form.validate_on_submit():
         try:
             workflow.name = form.name.data
+            workflow.key = form.key.data
             workflow.deadline = form.deadline.data
             workflow.last_edit_id = current_user.id
             workflow.last_edit_timestamp = datetime.now()
 
             # Update scheme if not locked
             if not scheme_locked:
-                if form.scheme.data is not None:
-                    source = form.scheme.data
-                    # Always create a new LiveMarkingScheme snapshot on scheme change
-                    live = LiveMarkingScheme(
-                        parent_id=source.id,
-                        name=source.name,
-                        title=source.title,
-                        rubric=source.rubric,
-                        schema=source.schema,
-                        uses_standard_feedback=source.uses_standard_feedback,
-                        uses_tolerance=source.uses_tolerance,
-                        marker_tolerance=source.marker_tolerance,
-                    )
-                    db.session.add(live)
-                    db.session.flush()
-                    workflow.scheme_id = live.id
+                new_scheme = form.scheme.data  # a MarkingScheme or None
+                if new_scheme is not None:
+                    if workflow.scheme is None or new_scheme.id != workflow.scheme.parent_id:
+                        # Scheme has changed — create a new LiveMarkingScheme snapshot
+                        live = LiveMarkingScheme(
+                            parent_id=new_scheme.id,
+                            name=new_scheme.name,
+                            title=new_scheme.title,
+                            rubric=new_scheme.rubric,
+                            schema=new_scheme.schema,
+                            uses_standard_feedback=new_scheme.uses_standard_feedback,
+                            uses_tolerance=new_scheme.uses_tolerance,
+                            marker_tolerance=new_scheme.marker_tolerance,
+                            creator_id=current_user.id,
+                            creation_timestamp=datetime.now(),
+                        )
+                        db.session.add(live)
+                        db.session.flush()
+                        workflow.scheme_id = live.id
+                    # else: same scheme selected — leave existing LiveMarkingScheme in place
                 else:
                     workflow.scheme_id = None
 

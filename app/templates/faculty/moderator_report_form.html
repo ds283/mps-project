@@ -1,0 +1,219 @@
+{% extends "base_app.html" %}
+
+{% from "tinymce.html" import import_tinymce %}
+
+{% block title %}Moderator report – {{ record.student_identifier['label'] }}{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+
+            <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+                    <i class="fas fa-arrow-left fa-fw"></i> Return
+                </a>
+                <h4 class="mb-0">
+                    <i class="fas fa-gavel fa-fw me-1"></i>
+                    Moderator report &mdash; {{ record.student_identifier['label'] }}
+                </h4>
+            </div>
+
+            {# Context card #}
+            <div class="card border-secondary mb-3">
+                <div class="card-header bg-secondary text-white">
+                    <i class="fas fa-info-circle fa-fw me-1"></i> Submission context
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-3 text-muted">Workflow</dt>
+                        <dd class="col-sm-9">{{ workflow.name }}</dd>
+                        <dt class="col-sm-3 text-muted">Project class</dt>
+                        <dd class="col-sm-9">{{ pclass.name }}</dd>
+                        <dt class="col-sm-3 text-muted">Moderator</dt>
+                        <dd class="col-sm-9">{{ mod_report.user.name }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            {# Student report download #}
+            {% if record.report or record.processed_report %}
+                <div class="card border-primary mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-file-pdf fa-fw me-1"></i> Student report
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-row align-items-center gap-3">
+                            {%- set display_asset = record.processed_report if record.processed_report else record.report -%}
+                            {% if display_asset.small_thumbnail and not display_asset.small_thumbnail.lost %}
+                                <img src="{{ url_for('documents.serve_thumbnail', asset_type=display_asset.get_type(), asset_id=display_asset.id, size='small') }}"
+                                     class="img-thumbnail" style="max-width:150px; max-height:150px;"
+                                     alt="Report preview">
+                            {% else %}
+                                <div class="d-flex align-items-center justify-content-center bg-light border rounded"
+                                     style="width:70px; height:90px;">
+                                    <i class="fas fa-file-pdf fa-2x text-muted"></i>
+                                </div>
+                            {% endif %}
+                            <div>
+                                <div class="fw-semibold mb-1">{{ display_asset.target_name or display_asset.filename or "Student report" }}</div>
+                                {% if record.processed_report %}
+                                    <a class="btn btn-sm btn-outline-primary"
+                                       href="{{ url_for('admin.download_generated_asset', asset_id=record.processed_report.id) }}">
+                                        <i class="fas fa-download fa-fw"></i> Download report
+                                    </a>
+                                {% elif record.report %}
+                                    <a class="btn btn-sm btn-outline-primary"
+                                       href="{{ url_for('admin.download_submitted_asset', asset_id=record.report.id) }}">
+                                        <i class="fas fa-download fa-fw"></i> Download report
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# Workflow attachments #}
+            {% if workflow.attachments %}
+                <div class="card border-secondary mb-3">
+                    <div class="card-header bg-secondary text-white">
+                        <i class="fas fa-paperclip fa-fw me-1"></i> Attachments
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-row flex-wrap gap-3">
+                            {% for pa in workflow.attachments %}
+                                {%- set asset = pa.attachment -%}
+                                <div class="card border" style="width:180px;">
+                                    <div class="card-body p-2 text-center">
+                                        {% if asset.small_thumbnail and not asset.small_thumbnail.lost %}
+                                            <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
+                                                 class="img-thumbnail mb-2" style="max-width:80px; max-height:80px;"
+                                                 alt="">
+                                        {% else %}
+                                            <i class="fas fa-paperclip fa-2x text-muted mb-2"></i>
+                                        {% endif %}
+                                        <div class="small fw-semibold text-truncate mb-1" title="{{ asset.target_name or asset.filename }}">
+                                            {{ asset.target_name or asset.filename or "Attachment" }}
+                                        </div>
+                                        <a class="btn btn-xs btn-outline-secondary"
+                                           href="{{ url_for('documents.download_submitted_attachment', asset_id=asset.id) }}">
+                                            <i class="fas fa-download fa-fw"></i> Download
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# Existing marking reports (read-only) #}
+            {% if marking_reports %}
+                <div class="card border-dark mb-3">
+                    <div class="card-header bg-dark text-white">
+                        <i class="fas fa-marker fa-fw me-1"></i> Marking reports to review
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Marker</th>
+                                    <th>Role</th>
+                                    <th class="text-center">Grade</th>
+                                    <th>Feedback</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mr in marking_reports %}
+                                    <tr>
+                                        <td>{{ mr.user.name }}</td>
+                                        <td>{{ mr.role.role_as_str }}</td>
+                                        <td class="text-center">
+                                            {% if mr.grade is not none %}
+                                                <strong class="text-danger fs-5">{{ "%.1f"|format(mr.grade) }}%</strong>
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if mr.feedback_submitted and mr.feedback_positive %}
+                                                <div class="small"><strong class="text-success">Strengths:</strong> {{ mr.feedback_positive|striptags|truncate(200) }}</div>
+                                            {% endif %}
+                                            {% if mr.feedback_submitted and mr.feedback_improvement %}
+                                                <div class="small mt-1"><strong class="text-secondary">Improvement:</strong> {{ mr.feedback_improvement|striptags|truncate(200) }}</div>
+                                            {% endif %}
+                                            {% if not mr.feedback_submitted %}
+                                                <span class="text-muted fst-italic small">Feedback not yet submitted</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# Moderator report form #}
+            <div class="card border-primary mb-3">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-gavel fa-fw me-1"></i> Your moderator report
+                </div>
+                <div class="card-body">
+                    {% if mod_report.report_submitted %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle fa-fw me-1"></i>
+                            You have already submitted this moderator report
+                            {% if mod_report.submitted_timestamp %}
+                                on {{ mod_report.submitted_timestamp.strftime("%a %d %b %Y at %H:%M") }}
+                            {% endif %}.
+                        </div>
+                    {% endif %}
+                    <form method="POST">
+                        {{ form.hidden_tag() if form.hidden_tag is defined }}
+                        <div class="mb-3">
+                            {{ form.grade.label(class="form-label fw-semibold") }}
+                            {{ form.grade(class="form-control" + (" is-invalid" if form.grade.errors else ""), style="max-width: 12rem") }}
+                            {% for error in form.grade.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.report.label(class="form-label fw-semibold") }}
+                            {{ form.report(class="form-control tinymce" + (" is-invalid" if form.report.errors else ""), rows=8) }}
+                            {% if form.report.description %}
+                                <div class="form-text text-muted">{{ form.report.description }}</div>
+                            {% endif %}
+                            {% for error in form.report.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="d-flex gap-2">
+                            {{ form.submit(class="btn btn-primary") }}
+                            <a class="btn btn-outline-secondary" href="{{ url }}">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_tinymce() }}
+    <script>
+        $(document).ready(function () {
+            tinymce.init({
+                selector: 'textarea.tinymce',
+                plugins: 'lists link',
+                toolbar: 'undo redo | bold italic | bullist numlist | link',
+                menubar: false,
+                height: 300,
+            });
+        });
+    </script>
+{% endblock %}

@@ -36,6 +36,26 @@
                 </a>
             </li>
         {% endif %}
+        {% if pending_sign_off_reports is defined and pending_sign_off_reports and pending_sign_off_reports|length > 0 %}
+            <li class="nav-item">
+                <a class="nav-link {% if pane_is_signoff %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard', pane='signoff') }}">
+                    <i class="fas fa-signature fa-fw"></i>
+                    Sign-off
+                    <span class="badge rounded-pill {% if pane_is_signoff %}bg-light text-dark{% else %}bg-warning text-dark{% endif %}">{{ pending_sign_off_reports|length }}</span>
+                </a>
+            </li>
+        {% endif %}
+        {% if pending_moderator_reports is defined and pending_moderator_reports and pending_moderator_reports|length > 0 %}
+            <li class="nav-item">
+                <a class="nav-link {% if pane_is_moderation %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard', pane='moderation') }}">
+                    <i class="fas fa-gavel fa-fw"></i>
+                    Moderation
+                    <span class="badge rounded-pill {% if pane_is_moderation %}bg-light text-dark{% else %}bg-secondary{% endif %}">{{ pending_moderator_reports|length }}</span>
+                </a>
+            </li>
+        {% endif %}
         {%- set approve_total = approvals_data.get('total') -%}
         {%- set user_num_rejected = approvals_data.get('approval_user_rejected') -%}
         {%- set project_num_rejected = approvals_data.get('approval_project_rejected') -%}
@@ -208,6 +228,85 @@
                     </div>
                 </div>
             {% endif %}
+            {% if pane == 'signoff' and pending_sign_off_reports is defined and pending_sign_off_reports %}
+                <div class="card mt-3 mb-3 border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <i class="fas fa-signature fa-fw me-1"></i>
+                        <strong>Marking reports awaiting your sign-off</strong>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mt-2 mb-3 small">
+                            The following marking reports have been submitted by supervisors and require
+                            your sign-off as responsible supervisor before the grade can be processed.
+                        </p>
+                        <div class="d-flex flex-column gap-3">
+                            {% for report in pending_sign_off_reports %}
+                                {%- set workflow = report.workflow -%}
+                                {%- set rec = report.submitter_report.record -%}
+                                <div class="card border-secondary">
+                                    <div class="card-body py-2 px-3">
+                                        <div class="d-flex flex-row justify-content-between align-items-center flex-wrap gap-2">
+                                            <div>
+                                                <div class="fw-semibold">{{ rec.student_identifier['label'] }}</div>
+                                                <div class="small text-muted">
+                                                    {{ workflow.event.pclass.name }} &mdash; {{ workflow.name }}
+                                                    &mdash; submitted by <strong>{{ report.user.name }}</strong>
+                                                    {% if report.grade_submitted_timestamp %}
+                                                        on {{ report.grade_submitted_timestamp.strftime("%a %d %b %Y") }}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <a class="btn btn-sm btn-warning text-dark"
+                                               href="{{ url_for('faculty.view_marking_report', report_id=report.id, url=url_for('faculty.dashboard', pane='signoff')) }}">
+                                                <i class="fas fa-signature fa-fw"></i> Review &amp; sign off
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if pane == 'moderation' and pending_moderator_reports is defined and pending_moderator_reports %}
+                <div class="card mt-3 mb-3 border-secondary">
+                    <div class="card-header bg-secondary text-white">
+                        <i class="fas fa-gavel fa-fw me-1"></i>
+                        <strong>Pending moderation reports</strong>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mt-2 mb-3 small">
+                            You have been assigned as moderator for the following submissions.
+                            Please review the marking reports and submit your recommended grade.
+                        </p>
+                        <div class="d-flex flex-column gap-3">
+                            {% for mod_report in pending_moderator_reports %}
+                                {%- set sr = mod_report.submitter_report -%}
+                                {%- set workflow = sr.workflow -%}
+                                {%- set rec = sr.record -%}
+                                <div class="card border-secondary">
+                                    <div class="card-body py-2 px-3">
+                                        <div class="d-flex flex-row justify-content-between align-items-center flex-wrap gap-2">
+                                            <div>
+                                                <div class="fw-semibold">{{ rec.student_identifier['label'] }}</div>
+                                                <div class="small text-muted">
+                                                    {{ workflow.event.pclass.name }} &mdash; {{ workflow.name }}
+                                                </div>
+                                            </div>
+                                            <a class="btn btn-sm btn-secondary"
+                                               href="{{ url_for('faculty.moderator_report_form', mod_report_id=mod_report.id, url=url_for('faculty.dashboard', pane='moderation')) }}">
+                                                <i class="fas fa-gavel fa-fw"></i> Submit moderator report
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
             {% if is_root and pane == 'system' %}
                 <div class="card mt-3 mb-3 card-body bg-well">
                     {{ admin_dashboard_card(root_dash_data) }}

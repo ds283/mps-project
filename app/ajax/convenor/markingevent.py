@@ -11,6 +11,7 @@
 from flask import current_app, get_template_attribute, render_template
 from markupsafe import escape
 
+from ...models.markingevent import SubmitterReportWorkflowStates
 from ...shared.forms.wtf_validators import parse_schema
 
 # language=jinja2
@@ -229,11 +230,30 @@ _submitter_report_project = """
 # language=jinja2
 _submitter_report_actions = """
 {% set rec = report.record %}
+{% set state = report.workflow_state %}
+{% if state == NEEDS_MODERATOR_ASSIGNED %}
+    <a class="btn btn-danger btn-sm full-width-button mb-2"
+       href="{{ url_for('convenor.assign_moderator', submitter_report_id=report.id,
+                url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id),
+                text='Submitter reports') }}">
+        <i class="fas fa-user-plus fa-fw"></i> Assign moderator
+    </a>
+{% endif %}
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        {# Moderator assignment: shown for NEEDS_MODERATOR_ASSIGNED and AWAITING_MODERATOR_REPORT #}
+        {% if state in (NEEDS_MODERATOR_ASSIGNED, AWAITING_MODERATOR_REPORT) %}
+            <a class="dropdown-item d-flex gap-2"
+               href="{{ url_for('convenor.assign_moderator', submitter_report_id=report.id,
+                        url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id),
+                        text='Submitter reports') }}">
+                <i class="fas fa-user-plus fa-fw"></i> Assign moderator&hellip;
+            </a>
+            <div class="dropdown-divider"></div>
+        {% endif %}
         {# Turnitin: resolve (only shown when score >= 25) #}
         {% if rec is not none and rec.turnitin_score is not none and rec.turnitin_score >= 25 %}
             <a class="dropdown-item d-flex gap-2"
@@ -392,9 +412,63 @@ _submitter_report_turnitin = """
 """
 
 # language=jinja2
+_submitter_report_reports = """
+{%- set marking_reports = report.marking_reports.all() -%}
+{%- set moderator_reports = report.moderator_reports.all() -%}
+<div class="d-flex flex-column gap-2">
+    {% for mr in marking_reports %}
+        <div class="small">
+            <div class="fw-semibold">{{ mr.user.name }}</div>
+            <div class="text-muted">{{ mr.role.role_as_str }}</div>
+            {% if mr.grade is not none %}
+                <span class="text-primary fw-semibold">{{ "%.1f"|format(mr.grade) }}%</span>
+            {% endif %}
+            {% if mr.report_submitted %}
+                <span class="badge bg-success ms-1">Submitted</span>
+            {% else %}
+                <span class="badge bg-secondary ms-1">Pending</span>
+            {% endif %}
+            {% if mr.signed_off_id is not none %}
+                <span class="badge bg-light text-dark border ms-1"><i class="fas fa-check-double"></i> Signed off</span>
+            {% endif %}
+        </div>
+    {% endfor %}
+    {% if moderator_reports %}
+        <hr class="my-1">
+        {% for mod_report in moderator_reports %}
+            <div class="small">
+                <div class="text-muted fst-italic">Moderator: {{ mod_report.user.name }}</div>
+                {% if mod_report.report_submitted %}
+                    {% if mod_report.grade is not none %}
+                        <span class="text-danger fw-semibold">{{ "%.1f"|format(mod_report.grade) }}%</span>
+                    {% endif %}
+                    <span class="badge bg-success ms-1">Submitted</span>
+                    <form method="POST"
+                          action="{{ url_for('convenor.accept_moderator_grade', mod_report_id=mod_report.id, workflow_id=report.workflow_id) }}"
+                          class="d-inline ms-1">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-xs btn-outline-success" type="submit">
+                            <i class="fas fa-check fa-fw"></i> Accept
+                        </button>
+                    </form>
+                {% else %}
+                    <span class="badge bg-secondary">Pending</span>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+"""
+
+# language=jinja2
 _marking_report_marker = """
 <div class="fw-semibold">{{ report.user.name }}</div>
 <div class="small text-muted mt-1">{{ report.role.role_as_str }}</div>
+{% if report.weight is not none %}
+    <div class="mt-1 small">
+        <i class="fas fa-balance-scale fa-fw"></i> Weight: <strong>{{ report.weight }}</strong>
+    </div>
+{% endif %}
 {{ offcanvas|safe }}
 """
 
@@ -421,21 +495,25 @@ _marking_report_grade = """
 
 # language=jinja2
 _marking_report_status = """
-<div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-1">
+<div class="d-flex flex-column justify-content-start align-items-start gap-1 small">
     {% if report.distributed %}
-        <span class="badge bg-success">Distributed</span>
+        <span class="text-success fw-semibold"><i class="fas fa-check-circle"></i> Distributed to marker</span>
     {% else %}
-        <span class="badge bg-danger">Not distributed</span>
+        <span class="text-danger fst-italic"><i class="fas fa-hourglass-half"></i> Awaiting distribution</span>
     {% endif %}
     {% if report.report_submitted %}
-        <span class="badge bg-success">Report</span>
+        <span class="text-success"><i
+                class="fas fa-check-circle"></i> Report submitted</span>
     {% else %}
-        <span class="badge bg-warning text-dark">Report pending</span>
+        <span class="text-secondary fst-italic"><i
+                class="fas fa-hourglass-half"></i> Awaiting report</span>
     {% endif %}
     {% if report.feedback_submitted %}
-        <span class="badge bg-success">Feedback</span>
+        <span class="text-success"><i
+                class="fas fa-comment"></i> Feedback submitted</span>
     {% else %}
-        <span class="badge bg-secondary">Feedback pending</span>
+        <span class="text-secondary fst-italic"><i
+                class="fas fa-hourglass-half"></i> Awaiting feedback</span>
     {% endif %}
 </div>
 """
@@ -443,13 +521,14 @@ _marking_report_status = """
 # language=jinja2
 _marking_report_signoff = """
 {% if report.signed_off_by is not none %}
-    <div class="text-success"><i class="fas fa-check-circle"></i> Signed off</div>
+    <div class="small text-success fw-semibold"><i class="fas fa-check-circle"></i> Signed off</div>
     <div class="small text-muted mt-1">by {{ report.signed_off_by.user.name }}</div>
     {% if report.signed_off_timestamp is not none %}
         <div class="small text-muted">{{ report.signed_off_timestamp.strftime("%d/%m/%Y") }}</div>
     {% endif %}
 {% else %}
-    <span class="badge bg-secondary">Not signed off</span>
+        <span class="text-secondary fst-italic small"><i
+                class="fas fa-hourglass-half"></i> Awaiting signoff</span>
 {% endif %}
 """
 
@@ -522,6 +601,11 @@ _marking_report_actions = """
            href="{{ url_for('faculty.marking_form', report_id=report.id,
                      url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}">
             <i class="fas fa-pen fa-fw"></i> {% if report.report_submitted %}Edit{% else %}View{% endif %} report&hellip;
+        </a>
+        <a class="dropdown-item d-flex gap-2"
+           href="{{ url_for('convenor.marking_report_properties', report_id=report.id,
+                     url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}">
+            <i class="fas fa-sliders-h fa-fw"></i> Edit properties&hellip;
         </a>
         {% if report.grade_submitted_timestamp is not none %}
             <form method="POST"
@@ -627,21 +711,28 @@ def submitter_report_data(reports):
 
     student_tmpl = env.from_string(_submitter_report_student)
     project_tmpl = env.from_string(_submitter_report_project)
+    reports_tmpl = env.from_string(_submitter_report_reports)
     grade_tmpl = env.from_string(_submitter_report_grade)
     signoff_tmpl = env.from_string(_submitter_report_signoff)
     feedback_tmpl = env.from_string(_submitter_report_feedback)
     turnitin_tmpl = env.from_string(_submitter_report_turnitin)
     actions_tmpl = env.from_string(_submitter_report_actions)
 
+    state_ctx = {
+        "NEEDS_MODERATOR_ASSIGNED": SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+        "AWAITING_MODERATOR_REPORT": SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT,
+    }
+
     return [
         {
             "student": render_template(student_tmpl, report=report),
             "project": render_template(project_tmpl, report=report),
+            "reports": render_template(reports_tmpl, report=report),
             "grade": render_template(grade_tmpl, report=report),
             "signoff": render_template(signoff_tmpl, report=report),
             "feedback": render_template(feedback_tmpl, report=report),
             "turnitin": render_template(turnitin_tmpl, report=report),
-            "actions": render_template(actions_tmpl, report=report),
+            "actions": render_template(actions_tmpl, report=report, **state_ctx),
         }
         for report in reports
     ]

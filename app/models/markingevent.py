@@ -478,12 +478,102 @@ submitter_report_to_feedback_report = db.Table(
 
 
 class SubmitterReportWorkflowStates:
+    """
+    Lifecycle states for SubmitterReport instances.
+
+    STATE MACHINE
+    =============
+
+    NOT_READY (999)
+        Initial state. The SubmitterReport is waiting for the student's uploaded report to be
+        processed (if the MarkingWorkflow has requires_report=True). Transitions to
+        READY_TO_DISTRIBUTE once the report is available, or immediately if requires_report=False.
+
+    READY_TO_DISTRIBUTE (0)
+        All preconditions are met. The convenor can now distribute marking assignments to
+        assessors (sends notification emails, sets MarkingReport.distributed=True). Transitions
+        to AWAITING_GRADING_REPORTS once distribution emails have been sent.
+
+    AWAITING_GRADING_REPORTS (1)
+        One or more MarkingReport instances are awaiting submission by their assessor.
+        Each assessor has a 24-hour editing window after submitting their grade; the window is
+        managed by the close_marking_window Celery task scheduled via DatabaseSchedulerEntry.
+        Once all MarkingReport.report_submitted flags are True, the state advances (see below).
+
+    --- After all grading reports are submitted ---
+
+    AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF (2)
+        One or more MarkingReport instances (from ROLE_SUPERVISOR assessors) are awaiting
+        sign-off by ROLE_RESPONSIBLE_SUPERVISOR staff. Responsible supervisors are linked via
+        the marking_report_to_responsible_supervisors association table. Each sign-off removes
+        the supervisor from the collection; when all sign-offs are received the state re-evaluates.
+        Transitions to AWAITING_FEEDBACK or to the tolerance check (see below).
+
+    AWAITING_FEEDBACK (3)
+        All MarkingReport instances are signed off, but one or more are still awaiting feedback
+        (feedback_submitted=False). Once all feedback is submitted, re-evaluates via the
+        tolerance check (see below).
+
+    --- Tolerance check ---
+
+    If the MarkingWorkflow's LiveMarkingScheme does NOT use tolerance (uses_tolerance=False),
+    or if no scheme is configured:
+        READY_TO_SIGN_OFF (9)
+            A weighted average grade has been computed and stored in SubmitterReport.grade.
+            The SubmitterReport is awaiting final sign-off by a convenor or senior staff.
+            Continues to READY_TO_GENERATE_FEEDBACK after sign-off.
+
+    If the MarkingScheme DOES use tolerance (uses_tolerance=True):
+        SubmitterReport.out_of_tolerance is set to True. Moderation emails are sent to users in
+        MarkingWorkflow.notify_on_moderation_required, deferred to 9am the following morning.
+
+        NEEDS_MODERATOR_ASSIGNED (5)
+            No ROLE_MODERATOR SubmissionRole exists for the parent SubmissionRecord.
+            The convenor must use the inspector to select a moderator. Once selected, a new
+            SubmissionRole with ROLE_MODERATOR is created, a ModeratorReport is generated, and
+            the state advances to AWAITING_MODERATOR_REPORT.
+
+        AWAITING_MODERATOR_REPORT (6)
+            A ModeratorReport has been created for the assigned moderator. Awaiting the
+            moderator's grade and justification. Once submitted:
+              - If SubmitterReport.grade is None: the moderator's grade is copied in and the
+                state advances to READY_TO_SIGN_OFF.
+              - If SubmitterReport.grade is already set (a prior moderator has graded):
+                transitions to REQUIRES_CONVENOR_INTERVENTION.
+
+    REQUIRES_CONVENOR_INTERVENTION (7)
+        Blocking state used in two scenarios:
+          1. Turnitin: turnitin_score >= 25 and turnitin_resolved=False. The convenor must
+             review the Turnitin report and record a resolution before marking can proceed.
+             Resolution transitions back to READY_TO_DISTRIBUTE.
+          2. Conflicting moderation: multiple ModeratorReport instances have been submitted with
+             different grades. The convenor must accept one via the Accept button in the inspector.
+             Accepting transitions to READY_TO_SIGN_OFF.
+
+    --- Post-grading lifecycle (not yet fully implemented) ---
+
+    READY_TO_GENERATE_FEEDBACK (10)
+        Grade has been signed off. Feedback documents can now be generated.
+
+    READY_TO_PUSH_FEEDBACK (11)
+        Feedback documents generated and ready to be released to the student.
+
+    COMPLETED (12)
+        Feedback has been pushed to the student. The lifecycle for this SubmitterReport is done.
+
+    TURNITIN OVERRIDE
+    =================
+    At any point, if a SubmissionRecord's turnitin_score >= 25 and the SubmitterReport's
+    turnitin_resolved=False, the SubmitterReport must be in REQUIRES_CONVENOR_INTERVENTION and
+    cannot advance until turnitin_resolved is set True by a convenor.
+    """
+
     NOT_READY = 999
     READY_TO_DISTRIBUTE = 0
     AWAITING_GRADING_REPORTS = 1
     AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF = 2
     AWAITING_FEEDBACK = 3
-    REPORTS_OUT_OF_TOLERANCE = 4
+    # REPORTS_OUT_OF_TOLERANCE = 4
     NEEDS_MODERATOR_ASSIGNED = 5
     AWAITING_MODERATOR_REPORT = 6
     # REQUIRES_CONVENOR_INTERVENTION: blocking state.
@@ -494,7 +584,7 @@ class SubmitterReportWorkflowStates:
     # Resolution transitions the report back to READY_TO_DISTRIBUTE.
     # Also used for other convenor-intervention scenarios that may be added in future.
     REQUIRES_CONVENOR_INTERVENTION = 7
-    READY_TO_GENERATE_GRADE = 8
+    # READY_TO_GENERATE_GRADE = 8
     READY_TO_SIGN_OFF = 9
     READY_TO_GENERATE_FEEDBACK = 10
     READY_TO_PUSH_FEEDBACK = 11
@@ -603,6 +693,10 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
         "User", foreign_keys=[turnitin_resolved_id], uselist=False
     )
 
+    # flag set when the MarkingReport grades are out of tolerance and moderation is required.
+    # Set by _check_tolerance_and_grade(); cleared if a convenor resets the workflow state.
+    out_of_tolerance = db.Column(db.Boolean(), default=False, nullable=False)
+
     # convenience accessors
     @property
     def submitter(self) -> SubmittingStudent:
@@ -612,6 +706,24 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     def student(self) -> StudentData:
         return self.record.owner.student
 
+
+# association table linking MarkingReport instances (for ROLE_SUPERVISOR) to the
+# ROLE_RESPONSIBLE_SUPERVISOR SubmissionRole instances that must sign them off
+marking_report_to_responsible_supervisors = db.Table(
+    "marking_report_to_responsible_supervisors",
+    db.Column(
+        "marking_report_id",
+        db.Integer(),
+        db.ForeignKey("marking_reports.id"),
+        primary_key=True,
+    ),
+    db.Column(
+        "submission_role_id",
+        db.Integer(),
+        db.ForeignKey("submission_roles.id"),
+        primary_key=True,
+    ),
+)
 
 # association table of MarkingReport to EmailLog, to track distribution emails
 marking_distribution_to_email_log = db.Table(
@@ -699,6 +811,11 @@ class MarkingReport(db.Model, EditingMetadataMixin):
     # when was the grade generated?
     grade_submitted_timestamp = db.Column(db.DateTime(), nullable=True)
 
+    # weight assigned to this marking report when computing the weighted average grade.
+    # Initialised from the parent SubmissionRole.weight when the MarkingReport is created,
+    # but can be edited independently via the properties editor.
+    weight = db.Column(db.Numeric(8, 3), nullable=True)
+
     # FEEDBACK TO STUDENT
 
     # positive feedback: what was good?
@@ -744,4 +861,73 @@ class MarkingReport(db.Model, EditingMetadataMixin):
 
     @property
     def user(self) -> User:
+        return self.role.user
+
+    # ROLE_RESPONSIBLE_SUPERVISOR instances pending sign-off for this (supervisor) report.
+    # Populated by close_marking_window when the 24-hour editing window closes.
+    # Entries are removed as each responsible supervisor approves the report.
+    responsible_supervisors = db.relationship(
+        "SubmissionRole",
+        secondary=marking_report_to_responsible_supervisors,
+        lazy="dynamic",
+        backref=db.backref("pending_sign_off_reports", lazy="dynamic"),
+    )
+
+
+class ModeratorReport(db.Model, EditingMetadataMixin):
+    """
+    Represents the moderation report produced by a ROLE_MODERATOR for an out-of-tolerance
+    SubmitterReport. Captures the moderator's recommended grade and written justification.
+    """
+
+    __tablename__ = "moderator_reports"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # owning SubmissionRole (with ROLE_MODERATOR)
+    role_id = db.Column(
+        db.Integer(), db.ForeignKey("submission_roles.id"), nullable=False
+    )
+    role = db.relationship(
+        "SubmissionRole",
+        foreign_keys=[role_id],
+        uselist=False,
+        backref=db.backref("moderator_reports", lazy="dynamic"),
+    )
+
+    # parent SubmitterReport
+    submitter_report_id = db.Column(
+        db.Integer(), db.ForeignKey("submitter_reports.id"), nullable=False
+    )
+    submitter_report = db.relationship(
+        "SubmitterReport",
+        foreign_keys=[submitter_report_id],
+        uselist=False,
+        backref=db.backref("moderator_reports", lazy="dynamic"),
+    )
+
+    # numerical grade recommended by the moderator (percentage, 2 d.p.)
+    grade = db.Column(db.Numeric(6, 2), nullable=True)
+
+    # written justification / moderation report
+    report = db.Column(db.Text(), nullable=True)
+
+    # submission state
+    report_submitted = db.Column(db.Boolean(), default=False, nullable=False)
+    submitted_timestamp = db.Column(db.DateTime(), nullable=True)
+
+    @property
+    def workflow(self):
+        """Convenience accessor to the parent MarkingWorkflow."""
+        return self.submitter_report.workflow
+
+    @property
+    def student(self) -> StudentData:
+        """Convenience accessor to the student."""
+        return self.submitter_report.student
+
+    @property
+    def user(self) -> User:
+        """Convenience accessor to the moderator's User record."""
         return self.role.user

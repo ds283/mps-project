@@ -59,9 +59,11 @@ from . import convenor
 from .forms import (
     AddMarkingEventForm,
     AddMarkingSchemeForm,
+    AssignModeratorFormFactory,
     EditMarkingEventForm,
     EditMarkingSchemeForm,
     EnterTurnitinScoreForm,
+    MarkingReportPropertiesForm,
     MarkingWorkflowFormFactory,
     ResolveTurnitinForm,
     TestMarkingEventFormFactory,
@@ -2261,4 +2263,151 @@ def clear_marking_grade(report_id):
     url = request.args.get(
         "url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id)
     )
+    return redirect(url)
+
+
+@convenor.route("/marking_report_properties/<int:report_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def marking_report_properties(report_id):
+    """
+    Edit the editable properties of a MarkingReport (currently: weight).
+    Accessible to convenors, admins, and root users.
+    """
+    report: MarkingReport = MarkingReport.query.get_or_404(report_id)
+    workflow: MarkingWorkflow = report.submitter_report.workflow
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id)
+    )
+
+    form = MarkingReportPropertiesForm(obj=report)
+
+    if form.validate_on_submit():
+        report.weight = form.weight.data
+
+        try:
+            log_db_commit(
+                f"Updated properties for MarkingReport #{report.id} (workflow: {workflow.name}): "
+                f"weight={report.weight}",
+                user=current_user,
+                project_classes=pclass,
+            )
+            flash("Marking report properties updated.", "success")
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not save marking report properties due to a database error.", "error")
+
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/markingevent/marking_report_properties.html",
+        form=form,
+        report=report,
+        workflow=workflow,
+        pclass=pclass,
+        url=url,
+    )
+
+
+@convenor.route("/assign-moderator/<int:submitter_report_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def assign_moderator(submitter_report_id):
+    from ..models.submissions import SubmissionRoleTypesMixin
+    from ..tasks.markingevent import _assign_moderator, advance_submitter_report
+
+    sr = db.session.query(SubmitterReport).filter_by(id=submitter_report_id).first_or_404()
+    workflow = sr.workflow
+    pclass = workflow.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = request.args.get(
+        "url", url_for("convenor.submitter_reports_inspector", workflow_id=workflow.id)
+    )
+
+    form = AssignModeratorFormFactory(pclass.id)()
+
+    if form.validate_on_submit():
+        user = form.moderator.data
+        record = sr.record
+
+        new_role = SubmissionRole(
+            submission_id=record.id,
+            user_id=user.id,
+            role=SubmissionRoleTypesMixin.ROLE_MODERATOR,
+        )
+        db.session.add(new_role)
+        db.session.flush()
+
+        _assign_moderator(sr, new_role)
+        advance_submitter_report(sr)
+
+        try:
+            log_db_commit(
+                f"Assigned moderator {user.name} to SubmitterReport #{sr.id} "
+                f"(workflow: {workflow.name}, student: {sr.student.user.name})",
+                user=current_user,
+                project_classes=pclass,
+            )
+            flash(f"Moderator {user.name} assigned successfully.", "success")
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not assign moderator due to a database error.", "error")
+            return redirect(url)
+
+        return redirect(url)
+
+    return render_template_context(
+        "convenor/markingevent/assign_moderator.html",
+        form=form,
+        sr=sr,
+        workflow=workflow,
+        pclass=pclass,
+        url=url,
+    )
+
+
+@convenor.route("/accept-moderator-grade/<int:mod_report_id>/<int:workflow_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def accept_moderator_grade(mod_report_id, workflow_id):
+    from datetime import datetime
+
+    from ..models.markingevent import ModeratorReport, SubmitterReportWorkflowStates
+
+    mod_report = db.session.query(ModeratorReport).filter_by(id=mod_report_id).first_or_404()
+    sr = mod_report.submitter_report
+    workflow = sr.workflow
+    pclass = workflow.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    sr.grade = mod_report.grade
+    sr.grade_generated_by_id = current_user.id
+    sr.grade_generated_timestamp = datetime.now()
+    sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
+
+    url = url_for("convenor.submitter_reports_inspector", workflow_id=workflow_id)
+
+    try:
+        log_db_commit(
+            f"Accepted moderator grade {mod_report.grade} for SubmitterReport #{sr.id} "
+            f"(workflow: {workflow.name}, student: {sr.student.user.name})",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash("Moderator grade accepted.", "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not accept moderator grade due to a database error.", "error")
+
     return redirect(url)

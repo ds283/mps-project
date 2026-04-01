@@ -1325,6 +1325,60 @@ class ResolveTurnitinForm(Form):
     submit = SubmitField("Confirm resolution")
 
 
+def AssignModeratorFormFactory(pclass_id):
+    """
+    Build a form for selecting a moderator from among enrolled faculty for the given pclass.
+    Eligible users are those active with supervisor_state=SUPERVISOR_ENROLLED or
+    marker_state=MARKER_ENROLLED in an EnrollmentRecord for the specified pclass.
+    """
+    from ..models import EnrollmentRecord
+
+    def get_eligible_users():
+        return (
+            db.session.query(User)
+            .join(User.faculty_data)
+            .join(
+                EnrollmentRecord,
+                (EnrollmentRecord.owner_id == User.id)
+                & (EnrollmentRecord.pclass_id == pclass_id)
+                & (
+                    (EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+                    | (EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+                ),
+            )
+            .filter(User.active.is_(True))
+            .order_by(User.last_name, User.first_name)
+            .all()
+        )
+
+    class AssignModeratorForm(Form):
+        moderator = QuerySelectField(
+            "Moderator",
+            query_factory=get_eligible_users,
+            get_label=lambda u: f"{u.name} ({u.email})",
+            allow_blank=False,
+            render_kw={
+                "data-theme": "bootstrap-5",
+            },
+        )
+        submit = SubmitField("Assign moderator")
+
+    return AssignModeratorForm
+
+
+class MarkingReportPropertiesForm(Form):
+    """Form for convenors to edit the properties of a MarkingReport instance."""
+
+    weight = DecimalField(
+        "Weight",
+        validators=[Optional(), NumberRange(min=0)],
+        places=3,
+        description="Weight assigned to this marking report when computing the weighted average grade. "
+        "Leave blank to assign no weight (the report will contribute equally with weight 1).",
+    )
+    submit = SubmitField("Save changes")
+
+
 class EnterTurnitinScoreForm(Form):
     """Form for convenors to manually enter a Turnitin similarity score when Canvas data is unavailable."""
 

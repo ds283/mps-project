@@ -37,6 +37,7 @@ from ..models import (
     MarkingEvent,
     MarkingReport,
     MarkingWorkflow,
+    ModeratorReport,
     MessageOfTheDay,
     Module,
     PresentationAssessment,
@@ -1966,6 +1967,35 @@ def dashboard():
         if include:
             messages.append(message)
 
+    # Find MarkingReports requiring sign-off by this user (ROLE_RESPONSIBLE_SUPERVISOR)
+    from ..models.markingevent import marking_report_to_responsible_supervisors
+
+    pending_sign_off_reports = (
+        db.session.query(MarkingReport)
+        .join(
+            marking_report_to_responsible_supervisors,
+            marking_report_to_responsible_supervisors.c.marking_report_id == MarkingReport.id,
+        )
+        .filter(
+            marking_report_to_responsible_supervisors.c.submission_role_id.in_(
+                db.session.query(SubmissionRole.id).filter(SubmissionRole.user_id == current_user.id)
+            ),
+            MarkingReport.signed_off_id.is_(None),
+        )
+        .all()
+    )
+
+    # Find pending moderator reports for this user
+    pending_moderator_reports = (
+        db.session.query(ModeratorReport)
+        .join(SubmissionRole, SubmissionRole.id == ModeratorReport.role_id)
+        .filter(
+            SubmissionRole.user_id == current_user.id,
+            ModeratorReport.report_submitted.is_(False),
+        )
+        .all()
+    )
+
     # Find pending marking reports for this user (distributed but not yet closed)
     from sqlalchemy import and_
 
@@ -1994,6 +2024,10 @@ def dashboard():
     if pane is None:
         if current_user.has_role("root"):
             pane = "system"
+        elif pending_sign_off_reports:
+            pane = "signoff"
+        elif pending_moderator_reports:
+            pane = "moderation"
         elif pending_marking_reports:
             pane = "marking"
         elif len(enrolments) > 0:
@@ -2022,6 +2056,12 @@ def dashboard():
 
     elif pane == "marking":
         pass  # always valid if pending_marking_reports is non-empty
+
+    elif pane == "signoff":
+        pass  # always valid if pending_sign_off_reports is non-empty
+
+    elif pane == "moderation":
+        pass  # always valid if pending_moderator_reports is non-empty
 
     else:
         if pane not in enrolment_panes:
@@ -2060,11 +2100,15 @@ def dashboard():
         pane_is_system=pane == "system",
         pane_is_approve=pane == "approve",
         pane_is_marking=pane == "marking",
+        pane_is_signoff=pane == "signoff",
+        pane_is_moderation=pane == "moderation",
         pane_is_enrollment=pane in enrolment_panes,
         is_user_approver=current_user.has_role("user_approver"),
         is_project_approver=current_user.has_role("project_approver"),
         today=date.today(),
         pending_marking_reports=pending_marking_reports,
+        pending_sign_off_reports=pending_sign_off_reports,
+        pending_moderator_reports=pending_moderator_reports,
     )
 
 
@@ -3540,6 +3584,11 @@ def marking_form(report_id):
                 report.grade_submitted_by_id = current_user.id
                 report.grade_submitted_timestamp = datetime.now()
 
+                # Schedule close_marking_window to fire 24 hours from now
+                from ..tasks.markingevent import schedule_close_marking_window
+
+                schedule_close_marking_window(report)
+
                 try:
                     log_db_commit(
                         f"Submitted marking report for {record.student_identifier['label']} "
@@ -3662,9 +3711,24 @@ def view_marking_report(report_id):
     period: SubmissionPeriodRecord = record.period
     pclass: ProjectClass = workflow.event.pclass
 
+    from ..models.markingevent import marking_report_to_responsible_supervisors
+
     is_allowed, is_elevated = _can_access_marking_form(report)
     is_role_owner = report.role.user_id == current_user.id
-    if not is_allowed and not (is_role_owner and report.report_submitted):
+    is_responsible_supervisor = (
+        db.session.query(SubmissionRole)
+        .join(
+            marking_report_to_responsible_supervisors,
+            marking_report_to_responsible_supervisors.c.submission_role_id == SubmissionRole.id,
+        )
+        .filter(
+            marking_report_to_responsible_supervisors.c.marking_report_id == report.id,
+            SubmissionRole.user_id == current_user.id,
+        )
+        .count()
+        > 0
+    )
+    if not is_allowed and not (is_role_owner and report.report_submitted) and not is_responsible_supervisor:
         flash("You do not have permission to view this marking report.", "error")
         return redirect(redirect_url())
 
@@ -3693,6 +3757,175 @@ def view_marking_report(report_id):
         pclass=pclass,
         field_values=field_values,
         validation_failures=validation_failures,
+        is_elevated=is_elevated,
+        is_responsible_supervisor=is_responsible_supervisor,
+        url=url,
+    )
+
+
+@faculty.route("/approve_marking_report/<int:report_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def approve_marking_report(report_id):
+    """
+    Sign off a MarkingReport on behalf of a ROLE_RESPONSIBLE_SUPERVISOR.
+    The signing user must appear in report.responsible_supervisors.
+    """
+    from datetime import datetime
+
+    from ..models.markingevent import marking_report_to_responsible_supervisors
+    from ..tasks.markingevent import advance_submitter_report
+
+    report: MarkingReport = MarkingReport.query.get_or_404(report_id)
+
+    # Find this user's role in the responsible_supervisors collection
+    current_role = (
+        db.session.query(SubmissionRole)
+        .join(
+            marking_report_to_responsible_supervisors,
+            marking_report_to_responsible_supervisors.c.submission_role_id == SubmissionRole.id,
+        )
+        .filter(
+            marking_report_to_responsible_supervisors.c.marking_report_id == report.id,
+            SubmissionRole.user_id == current_user.id,
+        )
+        .first()
+    )
+    if current_role is None:
+        flash("You do not have permission to approve this marking report.", "error")
+        return redirect(redirect_url())
+
+    report.signed_off_id = current_role.id
+    report.signed_off_timestamp = datetime.now()
+    report.responsible_supervisors.remove(current_role)
+
+    sr = report.submitter_report
+    advance_submitter_report(sr)
+
+    try:
+        log_db_commit(
+            f"Responsible supervisor {current_user.name} signed off MarkingReport #{report.id} "
+            f"(workflow: {sr.workflow.name}, student: {sr.student.user.name})",
+            user=current_user,
+            project_classes=sr.workflow.pclass,
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not approve marking report due to a database error.", "error")
+        return redirect(url_for("faculty.view_marking_report", report_id=report.id))
+
+    return redirect(url_for("faculty.thankyou_signoff"))
+
+
+@faculty.route("/thankyou_signoff")
+@roles_accepted("faculty", "admin", "root")
+def thankyou_signoff():
+    dashboard_url = url_for("faculty.dashboard", pane="signoff")
+    return render_template_context("faculty/thankyou_signoff.html", dashboard_url=dashboard_url)
+
+
+@faculty.route("/thankyou_moderator_report")
+@roles_accepted("faculty", "admin", "root")
+def thankyou_moderator_report():
+    dashboard_url = url_for("faculty.dashboard", pane="moderation")
+    return render_template_context("faculty/thankyou_moderator_report.html", dashboard_url=dashboard_url)
+
+
+@faculty.route("/moderator_report_form/<int:mod_report_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def moderator_report_form(mod_report_id):
+    """
+    Display and process the moderator report form for a single ModeratorReport.
+    Accessible only to the assigned moderator (or elevated users).
+    """
+    from datetime import datetime
+
+    from flask_wtf import FlaskForm
+    from wtforms import DecimalField, SubmitField, TextAreaField
+    from wtforms.validators import InputRequired, NumberRange, Optional as WTFOptional
+
+    from ..models.markingevent import SubmitterReportWorkflowStates
+    from ..tasks.markingevent import advance_submitter_report
+
+    mod_report: ModeratorReport = ModeratorReport.query.get_or_404(mod_report_id)
+    sr = mod_report.submitter_report
+    workflow = sr.workflow
+    pclass = workflow.event.pclass
+    record: SubmissionRecord = sr.record
+
+    is_elevated = current_user.has_role("admin") or current_user.has_role("root") or (
+        current_user.faculty_data is not None and current_user.faculty_data.is_convenor_for(pclass)
+    )
+    is_owner = mod_report.role.user_id == current_user.id
+
+    if not is_elevated and not is_owner:
+        flash("You do not have permission to access this moderator report.", "error")
+        return redirect(redirect_url())
+
+    url = request.args.get("url", url_for("faculty.dashboard", pane="moderation"))
+
+    class ModeratorReportForm(FlaskForm):
+        grade = DecimalField(
+            "Recommended grade (%)",
+            places=1,
+            validators=[InputRequired("Please enter a recommended grade."), NumberRange(min=0, max=100)],
+        )
+        report = TextAreaField(
+            "Justification",
+            validators=[WTFOptional()],
+            description="Explain your recommended grade, noting any significant discrepancies between the markers.",
+        )
+        submit = SubmitField("Submit moderator report")
+
+    form = ModeratorReportForm(request.form)
+
+    if form.validate_on_submit():
+        mod_report.grade = form.grade.data
+        mod_report.report = form.report.data
+        mod_report.report_submitted = True
+        mod_report.submitted_timestamp = datetime.now()
+
+        if sr.grade is None:
+            sr.grade = mod_report.grade
+            sr.grade_generated_by_id = current_user.id
+            sr.grade_generated_timestamp = datetime.now()
+            sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
+        else:
+            sr.workflow_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+
+        advance_submitter_report(sr)
+
+        try:
+            log_db_commit(
+                f"Moderator {current_user.name} submitted moderator report for SubmitterReport #{sr.id} "
+                f"(workflow: {workflow.name}, student: {sr.student.user.name}, grade: {mod_report.grade})",
+                user=current_user,
+                project_classes=pclass,
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not submit moderator report due to a database error.", "error")
+            return redirect(url_for("faculty.moderator_report_form", mod_report_id=mod_report_id))
+
+        return redirect(url_for("faculty.thankyou_moderator_report"))
+
+    # Pre-populate grade if already set
+    if request.method == "GET" and mod_report.grade is not None:
+        form.grade.data = mod_report.grade
+        form.report.data = mod_report.report
+
+    marking_reports = sr.marking_reports.all()
+
+    return render_template_context(
+        "faculty/moderator_report_form.html",
+        form=form,
+        mod_report=mod_report,
+        sr=sr,
+        workflow=workflow,
+        pclass=pclass,
+        record=record,
+        marking_reports=marking_reports,
         is_elevated=is_elevated,
         url=url,
     )
@@ -3756,7 +3989,14 @@ def edit_marking_feedback(report_id):
     if form.validate_on_submit():
         report.feedback_positive = form.feedback_positive.data or ""
         report.feedback_improvement = form.feedback_improvement.data or ""
+        if len(report.feedback_positive) > 0 and len(report.feedback_improvement) > 0:
+            report.feedback_submitted = True
         report.feedback_timestamp = datetime.now()
+
+        # Re-evaluate the parent SubmitterReport lifecycle state
+        from ..tasks.markingevent import advance_submitter_report
+
+        advance_submitter_report(submitter_report)
 
         try:
             log_db_commit(

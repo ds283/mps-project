@@ -1023,7 +1023,7 @@ class AddMarkingEventForm(Form, MarkingEventMixin):
 class EditMarkingEventForm(Form, MarkingEventMixin, SaveChangesMixin):
     targets = TextAreaField(
         "Targets",
-        validators=[InputRequired()],  # we append a parse check after construction
+        validators=[Optional()],  # we append a parse check after construction
         description="JSON dict mapping target names to a conflation rule. Each target name should be a valid Python identifier."
         "The conflation rules may reference the key fields of the constituent marking workflows.",
     )

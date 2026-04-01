@@ -12,7 +12,6 @@ from datetime import datetime
 from functools import partial
 
 from celery import chain as celery_chain
-
 from flask import current_app, flash, jsonify, redirect, request, url_for
 from flask_login import current_user
 from flask_security import roles_accepted
@@ -46,16 +45,16 @@ from ..models.markingevent import ConvenorAction, SubmitterReportWorkflowStates
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
+from ..shared.forms.wtf_validators import (
+    make_unique_marking_event_in_period,
+    make_unique_marking_workflow_in_event,
+)
 from ..shared.security import validate_nonce
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 from ..shared.workflow_logging import log_db_commit
 from ..tasks.thumbnails import dispatch_thumbnail_task
 from ..tools.ServerSideProcessing import ServerSideSQLHandler
-from ..shared.forms.wtf_validators import (
-    make_unique_marking_event_in_period,
-    make_unique_marking_workflow_in_event,
-)
 from . import convenor
 from .forms import (
     AddMarkingEventForm,
@@ -78,7 +77,10 @@ def _assign_workflow_template(workflow: MarkingWorkflow, pclass: ProjectClass) -
     from ..models.submissions import SubmissionRoleTypesMixin
 
     supervisor_roles = frozenset(
-        {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
+        {
+            SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+            SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+        }
     )
     if workflow.role == SubmissionRoleTypesMixin.ROLE_MARKER:
         template_type = EmailTemplate.MARKING_MARKER
@@ -171,7 +173,9 @@ def marking_events_ajax(pclass_id):
         "name": {"order": MarkingEvent.name, "search": MarkingEvent.name},
     }
 
-    from ..ajax.archive.marking_events import marking_event_data as archive_marking_event_data
+    from ..ajax.archive.marking_events import (
+        marking_event_data as archive_marking_event_data,
+    )
 
     with ServerSideSQLHandler(request, base_query, columns) as handler:
         return handler.build_payload(archive_marking_event_data)
@@ -279,17 +283,44 @@ def submitter_reports_inspector(workflow_id):
     state_labels = [
         (SubmitterReportWorkflowStates.NOT_READY, "Not ready"),
         (SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE, "Ready to distribute"),
-        (SubmitterReportWorkflowStates.AWAITING_GRADING_REPORTS, "Awaiting grading reports"),
-        (SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF, "Awaiting supervisor sign-off"),
+        (
+            SubmitterReportWorkflowStates.AWAITING_GRADING_REPORTS,
+            "Awaiting grading reports",
+        ),
+        (
+            SubmitterReportWorkflowStates.AWAITING_RESPONSIBLE_SUPERVISOR_SIGNOFF,
+            "Awaiting supervisor sign-off",
+        ),
         (SubmitterReportWorkflowStates.AWAITING_FEEDBACK, "Awaiting feedback"),
-        (SubmitterReportWorkflowStates.REPORTS_OUT_OF_TOLERANCE, "Reports out of tolerance"),
-        (SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED, "Needs moderator assigned"),
-        (SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT, "Awaiting moderator report"),
-        (SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION, "Requires convenor intervention"),
-        (SubmitterReportWorkflowStates.READY_TO_GENERATE_GRADE, "Ready to generate grade"),
+        (
+            SubmitterReportWorkflowStates.REPORTS_OUT_OF_TOLERANCE,
+            "Reports out of tolerance",
+        ),
+        (
+            SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
+            "Needs moderator assigned",
+        ),
+        (
+            SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT,
+            "Awaiting moderator report",
+        ),
+        (
+            SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+            "Requires convenor intervention",
+        ),
+        (
+            SubmitterReportWorkflowStates.READY_TO_GENERATE_GRADE,
+            "Ready to generate grade",
+        ),
         (SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, "Ready to sign off"),
-        (SubmitterReportWorkflowStates.READY_TO_GENERATE_FEEDBACK, "Ready to generate feedback"),
-        (SubmitterReportWorkflowStates.READY_TO_PUSH_FEEDBACK, "Ready to push feedback"),
+        (
+            SubmitterReportWorkflowStates.READY_TO_GENERATE_FEEDBACK,
+            "Ready to generate feedback",
+        ),
+        (
+            SubmitterReportWorkflowStates.READY_TO_PUSH_FEEDBACK,
+            "Ready to push feedback",
+        ),
         (SubmitterReportWorkflowStates.COMPLETED, "Completed"),
     ]
 
@@ -383,7 +414,10 @@ def resolve_turnitin_issue(submitter_report_id):
             sr.turnitin_resolved_id = current_user.id
 
             # Unblock the workflow if the report is currently held in REQUIRES_CONVENOR_INTERVENTION
-            if sr.workflow_state == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION:
+            if (
+                sr.workflow_state
+                == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+            ):
                 sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
 
             log_db_commit(
@@ -393,7 +427,9 @@ def resolve_turnitin_issue(submitter_report_id):
             )
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError in resolve_turnitin_issue", exc_info=e)
+            current_app.logger.exception(
+                "SQLAlchemyError in resolve_turnitin_issue", exc_info=e
+            )
             flash("A database error occurred. Please try again.", "danger")
             return redirect(url)
 
@@ -423,10 +459,14 @@ def refetch_turnitin_from_canvas(record_id):
     if not validate_is_convenor(pclass, allow_roles=["office"]):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.marking_events_inspector", pclass_id=pclass.id))
+    url = request.args.get(
+        "url", url_for("convenor.marking_events_inspector", pclass_id=pclass.id)
+    )
 
     if not record.canvas_turnitin_refetchable:
-        flash("Canvas integration is not available for this submission record.", "warning")
+        flash(
+            "Canvas integration is not available for this submission record.", "warning"
+        )
         return redirect(url)
 
     try:
@@ -435,8 +475,13 @@ def refetch_turnitin_from_canvas(record_id):
         task.apply_async(args=[record_id])
         flash("Turnitin re-fetch from Canvas has been queued.", "success")
     except Exception as e:
-        current_app.logger.exception("Error queuing fetch_turnitin_data_for_record", exc_info=e)
-        flash("Could not queue Turnitin re-fetch. Please contact a system administrator.", "error")
+        current_app.logger.exception(
+            "Error queuing fetch_turnitin_data_for_record", exc_info=e
+        )
+        flash(
+            "Could not queue Turnitin re-fetch. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(url)
 
@@ -452,7 +497,9 @@ def enter_turnitin_score(record_id):
     if not validate_is_convenor(pclass, allow_roles=["office"]):
         return redirect(redirect_url())
 
-    url = request.args.get("url", url_for("convenor.marking_events_inspector", pclass_id=pclass.id))
+    url = request.args.get(
+        "url", url_for("convenor.marking_events_inspector", pclass_id=pclass.id)
+    )
     text = request.args.get("text", "Marking events")
 
     form = EnterTurnitinScoreForm(request.form)
@@ -505,7 +552,15 @@ def enter_turnitin_score(record_id):
                 asset.grant_user(current_user)
                 for role in record.roles:
                     asset.grant_user(role.user)
-                asset.grant_roles(["office", "convenor", "moderator", "exam_board", "external_examiner"])
+                asset.grant_roles(
+                    [
+                        "office",
+                        "convenor",
+                        "moderator",
+                        "exam_board",
+                        "external_examiner",
+                    ]
+                )
 
             log_db_commit(
                 f"Convenor manually entered Turnitin score={record.turnitin_score} "
@@ -514,7 +569,9 @@ def enter_turnitin_score(record_id):
             )
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError in enter_turnitin_score", exc_info=e)
+            current_app.logger.exception(
+                "SQLAlchemyError in enter_turnitin_score", exc_info=e
+            )
             flash("A database error occurred. Please try again.", "danger")
             return redirect(url)
 
@@ -863,12 +920,12 @@ def period_marking_events_inspector(period_id):
     period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
     pclass: ProjectClass = period.config.project_class
 
-    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"]):
+    if not validate_is_convenor(
+        pclass, allow_roles=["office", "external_examiner", "exam_board"]
+    ):
         return redirect(redirect_url())
 
-    url = request.args.get(
-        "url", url_for("convenor.periods", id=pclass.id)
-    )
+    url = request.args.get("url", url_for("convenor.periods", id=pclass.id))
     text = request.args.get("text", "Submission periods")
 
     can_delete = _can_delete_marking_event(pclass)
@@ -901,7 +958,9 @@ def period_marking_events_ajax(period_id):
     text = request.args.get("text", "Submission periods")
     can_delete = _can_delete_marking_event(pclass)
 
-    base_query = db.session.query(MarkingEvent).filter(MarkingEvent.period_id == period_id)
+    base_query = db.session.query(MarkingEvent).filter(
+        MarkingEvent.period_id == period_id
+    )
 
     columns = {
         "name": {"order": MarkingEvent.name, "search": MarkingEvent.name},
@@ -957,7 +1016,9 @@ def add_marking_event(period_id):
                 "error",
             )
 
-        return redirect(url_for("convenor.period_marking_events_inspector", period_id=period_id))
+        return redirect(
+            url_for("convenor.period_marking_events_inspector", period_id=period_id)
+        )
 
     return render_template_context(
         "convenor/markingevent/edit_marking_event.html",
@@ -1014,7 +1075,9 @@ def edit_marking_event(event_id):
                 "error",
             )
 
-        return redirect(url_for("convenor.period_marking_events_inspector", period_id=period.id))
+        return redirect(
+            url_for("convenor.period_marking_events_inspector", period_id=period.id)
+        )
 
     return render_template_context(
         "convenor/markingevent/edit_marking_event.html",
@@ -1041,7 +1104,8 @@ def delete_marking_event(event_id):
         return redirect(redirect_url())
 
     url = request.args.get(
-        "url", url_for("convenor.period_marking_events_inspector", period_id=event.period_id)
+        "url",
+        url_for("convenor.period_marking_events_inspector", period_id=event.period_id),
     )
     text = request.args.get("text", "Marking events")
 
@@ -1049,12 +1113,15 @@ def delete_marking_event(event_id):
         "admin/danger_confirm.html",
         title="Delete marking event",
         panel_title="Delete marking event",
-        message=f'<p>Are you sure you want to permanently delete the marking event '
-                f'<strong>"{event.name}"</strong>?</p>'
-                f'<p class="text-danger">This will also delete all associated workflows, '
-                f'submitter reports, and marking reports. This action cannot be undone.</p>',
+        message=f"<p>Are you sure you want to permanently delete the marking event "
+        f'<strong>"{event.name}"</strong>?</p>'
+        f'<p class="text-danger">This will also delete all associated workflows, '
+        f"submitter reports, and marking reports. This action cannot be undone.</p>",
         action_url=url_for(
-            "convenor.confirm_delete_marking_event", event_id=event_id, url=url, text=text
+            "convenor.confirm_delete_marking_event",
+            event_id=event_id,
+            url=url,
+            text=text,
         ),
         submit_label="Delete marking event",
     )
@@ -1121,7 +1188,8 @@ def close_marking_event_confirm(event_id):
         return redirect(redirect_url())
 
     url = request.args.get(
-        "url", url_for("convenor.period_marking_events_inspector", period_id=event.period_id)
+        "url",
+        url_for("convenor.period_marking_events_inspector", period_id=event.period_id),
     )
     text = request.args.get("text", "Marking events")
 
@@ -1129,12 +1197,14 @@ def close_marking_event_confirm(event_id):
         "admin/danger_confirm.html",
         title="Close marking event",
         panel_title="Close marking event",
-        message=f'<p>Are you sure you want to close the marking event '
-                f'<strong>"{event.name}"</strong>?</p>'
-                f'<p class="text-danger">Closing a marking event is a one-time operation. '
-                f'Once closed, it cannot be reopened and no further changes can be made '
-                f'to its workflows or reports.</p>',
-        action_url=url_for("convenor.close_marking_event", event_id=event_id, url=url, text=text),
+        message=f"<p>Are you sure you want to close the marking event "
+        f'<strong>"{event.name}"</strong>?</p>'
+        f'<p class="text-danger">Closing a marking event is a one-time operation. '
+        f"Once closed, it cannot be reopened and no further changes can be made "
+        f"to its workflows or reports.</p>",
+        action_url=url_for(
+            "convenor.close_marking_event", event_id=event_id, url=url, text=text
+        ),
         submit_label="Close marking event",
     )
 
@@ -1200,19 +1270,28 @@ def event_marking_workflows_inspector(event_id):
     event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
     pclass: ProjectClass = event.pclass
 
-    if not validate_is_convenor(pclass, allow_roles=["office", "external_examiner", "exam_board"]):
+    if not validate_is_convenor(
+        pclass, allow_roles=["office", "external_examiner", "exam_board"]
+    ):
         return redirect(redirect_url())
 
     url = request.args.get(
-        "url", url_for("convenor.period_marking_events_inspector", period_id=event.period_id)
+        "url",
+        url_for("convenor.period_marking_events_inspector", period_id=event.period_id),
     )
     text = request.args.get("text", "Marking events")
 
     can_edit = not event.closed
 
     event_url = url_for("convenor.send_marking_emails_for_event", event_id=event_id)
-    open_event_url = url_for("convenor.open_marking_event", event_id=event_id) if not event.open else None
-    actions = event.get_convenor_actions(event_url=event_url, open_event_url=open_event_url)
+    open_event_url = (
+        url_for("convenor.open_marking_event", event_id=event_id)
+        if not event.open
+        else None
+    )
+    actions = event.get_convenor_actions(
+        event_url=event_url, open_event_url=open_event_url
+    )
 
     # Add per-workflow Turnitin CTAs for unresolved high-similarity scores and missing data.
     # Computed here (not in the model) so that url_for() can be called without
@@ -1223,14 +1302,18 @@ def event_marking_workflows_inspector(event_id):
             workflow_url = url_for(
                 "convenor.submitter_reports_inspector",
                 workflow_id=workflow.id,
-                url=url_for("convenor.event_marking_workflows_inspector", event_id=event_id),
+                url=url_for(
+                    "convenor.event_marking_workflows_inspector", event_id=event_id
+                ),
                 text="Marking workflows",
             )
 
             # CTA for unresolved high similarity scores
             unresolved = (
                 db.session.query(SubmitterReport)
-                .join(SubmissionRecord, SubmissionRecord.id == SubmitterReport.record_id)
+                .join(
+                    SubmissionRecord, SubmissionRecord.id == SubmitterReport.record_id
+                )
                 .filter(
                     SubmitterReport.workflow_id == workflow.id,
                     SubmissionRecord.turnitin_score >= 25,
@@ -1258,7 +1341,9 @@ def event_marking_workflows_inspector(event_id):
             # CTA for missing Turnitin data
             missing = (
                 db.session.query(SubmitterReport)
-                .join(SubmissionRecord, SubmissionRecord.id == SubmitterReport.record_id)
+                .join(
+                    SubmissionRecord, SubmissionRecord.id == SubmitterReport.record_id
+                )
                 .filter(
                     SubmitterReport.workflow_id == workflow.id,
                     SubmissionRecord.turnitin_score == None,  # noqa: E711
@@ -1312,7 +1397,9 @@ def event_marking_workflows_ajax(event_id):
     url = url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
     text = "Marking workflows"
 
-    base_query = db.session.query(MarkingWorkflow).filter(MarkingWorkflow.event_id == event_id)
+    base_query = db.session.query(MarkingWorkflow).filter(
+        MarkingWorkflow.event_id == event_id
+    )
 
     columns = {
         "name": {"order": MarkingWorkflow.name, "search": MarkingWorkflow.name},
@@ -1343,7 +1430,9 @@ def add_marking_workflow(event_id):
     )
     text = request.args.get("text", "Marking workflows")
 
-    AddWorkflowForm, _ = MarkingWorkflowFormFactory(pclass, scheme_locked=False, event=event)
+    AddWorkflowForm, _ = MarkingWorkflowFormFactory(
+        pclass, scheme_locked=False, event=event
+    )
     form = AddWorkflowForm(request.form)
     form.name.validators.append(make_unique_marking_workflow_in_event(event_id))
 
@@ -1378,8 +1467,12 @@ def add_marking_workflow(event_id):
                 creator_id=current_user.id,
                 creation_timestamp=datetime.now(),
             )
-            workflow.notify_on_moderation_required = list(form.notify_on_moderation_required.data)
-            workflow.notify_on_validation_failure = list(form.notify_on_validation_failure.data)
+            workflow.notify_on_moderation_required = list(
+                form.notify_on_moderation_required.data
+            )
+            workflow.notify_on_validation_failure = list(
+                form.notify_on_validation_failure.data
+            )
 
             # Auto-assign email template based on role
             _assign_workflow_template(workflow, pclass)
@@ -1397,7 +1490,9 @@ def add_marking_workflow(event_id):
 
             # Dispatch Celery task to create SubmitterReport/MarkingReport instances
             celery = current_app.extensions["celery"]
-            init_task = celery.tasks["app.tasks.markingevent.initialize_marking_workflow"]
+            init_task = celery.tasks[
+                "app.tasks.markingevent.initialize_marking_workflow"
+            ]
             init_task.apply_async(args=(workflow_id,))
 
         except SQLAlchemyError as e:
@@ -1408,7 +1503,9 @@ def add_marking_workflow(event_id):
                 "error",
             )
 
-        return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event_id))
+        return redirect(
+            url_for("convenor.event_marking_workflows_inspector", event_id=event_id)
+        )
 
     return render_template_context(
         "convenor/markingevent/edit_marking_workflow.html",
@@ -1451,9 +1548,13 @@ def edit_marking_workflow(workflow_id):
         for mr in sr.marking_reports.all()
     )
 
-    _, EditWorkflowForm = MarkingWorkflowFormFactory(pclass, scheme_locked=scheme_locked, event=event)
+    _, EditWorkflowForm = MarkingWorkflowFormFactory(
+        pclass, scheme_locked=scheme_locked, event=event
+    )
     form = EditWorkflowForm(obj=workflow)
-    form.name.validators.append(make_unique_marking_workflow_in_event(event.id, workflow=workflow))
+    form.name.validators.append(
+        make_unique_marking_workflow_in_event(event.id, workflow=workflow)
+    )
 
     if form.validate_on_submit():
         try:
@@ -1483,8 +1584,12 @@ def edit_marking_workflow(workflow_id):
                 else:
                     workflow.scheme_id = None
 
-            workflow.notify_on_moderation_required = list(form.notify_on_moderation_required.data)
-            workflow.notify_on_validation_failure = list(form.notify_on_validation_failure.data)
+            workflow.notify_on_moderation_required = list(
+                form.notify_on_moderation_required.data
+            )
+            workflow.notify_on_validation_failure = list(
+                form.notify_on_validation_failure.data
+            )
 
             log_db_commit(
                 f'Saved changes to marking workflow "{workflow.name}" in event "{event.name}" '
@@ -1500,7 +1605,9 @@ def edit_marking_workflow(workflow_id):
                 "error",
             )
 
-        return redirect(url_for("convenor.event_marking_workflows_inspector", event_id=event.id))
+        return redirect(
+            url_for("convenor.event_marking_workflows_inspector", event_id=event.id)
+        )
 
     return render_template_context(
         "convenor/markingevent/edit_marking_workflow.html",
@@ -1540,12 +1647,15 @@ def delete_marking_workflow(workflow_id):
         "admin/danger_confirm.html",
         title="Delete marking workflow",
         panel_title="Delete marking workflow",
-        message=f'<p>Are you sure you want to permanently delete the marking workflow '
-                f'<strong>"{workflow.name}"</strong>?</p>'
-                f'<p class="text-danger">This will also delete all associated submitter reports '
-                f'and marking reports. This action cannot be undone.</p>',
+        message=f"<p>Are you sure you want to permanently delete the marking workflow "
+        f'<strong>"{workflow.name}"</strong>?</p>'
+        f'<p class="text-danger">This will also delete all associated submitter reports '
+        f"and marking reports. This action cannot be undone.</p>",
         action_url=url_for(
-            "convenor.confirm_delete_marking_workflow", workflow_id=workflow_id, url=url, text=text
+            "convenor.confirm_delete_marking_workflow",
+            workflow_id=workflow_id,
+            url=url,
+            text=text,
         ),
         submit_label="Delete marking workflow",
     )
@@ -1621,9 +1731,7 @@ def add_workflow_attachment(workflow_id):
     # Get period attachments not already attached to this workflow
     already_attached_ids = {a.id for a in workflow.attachments}
     available = [
-        a
-        for a in event.period.attachments.all()
-        if a.id not in already_attached_ids
+        a for a in event.period.attachments.all() if a.id not in already_attached_ids
     ]
 
     return render_template_context(
@@ -1637,7 +1745,9 @@ def add_workflow_attachment(workflow_id):
     )
 
 
-@convenor.route("/confirm_add_workflow_attachment/<int:workflow_id>/<int:attachment_id>")
+@convenor.route(
+    "/confirm_add_workflow_attachment/<int:workflow_id>/<int:attachment_id>"
+)
 @roles_accepted("faculty", "admin", "root", "office", "convenor")
 def confirm_add_workflow_attachment(workflow_id, attachment_id):
     """Add a PeriodAttachment to a MarkingWorkflow"""
@@ -1655,7 +1765,9 @@ def confirm_add_workflow_attachment(workflow_id, attachment_id):
 
     # Verify the attachment belongs to the same period
     if attachment.parent_id != event.period_id:
-        flash("This attachment does not belong to the correct submission period.", "error")
+        flash(
+            "This attachment does not belong to the correct submission period.", "error"
+        )
         return redirect(redirect_url())
 
     url = request.args.get(
@@ -1740,7 +1852,10 @@ def restart_report_processing(record_id):
         return redirect(redirect_url())
 
     if not record.report_processing_failed:
-        flash("Report processing has not failed for this submission, or no report has been uploaded.", "info")
+        flash(
+            "Report processing has not failed for this submission, or no report has been uploaded.",
+            "info",
+        )
         return redirect(redirect_url())
 
     try:
@@ -1802,7 +1917,10 @@ def dispatch_marking_report(report_id):
         return redirect(redirect_url())
 
     if not event.open or event.closed:
-        flash("Marking notifications can only be dispatched while the event is open.", "error")
+        flash(
+            "Marking notifications can only be dispatched while the event is open.",
+            "error",
+        )
         return redirect(redirect_url())
 
     force = request.args.get("resend", "false").lower() == "true"
@@ -1818,14 +1936,27 @@ def dispatch_marking_report(report_id):
             args=[report_id, True, 10, None, deadline_str, force],
         )
         if force:
-            flash(f"Marking notification re-send for {report.user.name} has been queued.", "success")
+            flash(
+                f"Marking notification re-send for {report.user.name} has been queued.",
+                "success",
+            )
         else:
-            flash(f"Marking notification for {report.user.name} has been queued.", "success")
+            flash(
+                f"Marking notification for {report.user.name} has been queued.",
+                "success",
+            )
     except Exception as e:
-        current_app.logger.exception("Error dispatching dispatch_single_email", exc_info=e)
-        flash("Could not dispatch marking notification. Please contact a system administrator.", "error")
+        current_app.logger.exception(
+            "Error dispatching dispatch_single_email", exc_info=e
+        )
+        flash(
+            "Could not dispatch marking notification. Please contact a system administrator.",
+            "error",
+        )
 
-    url = request.args.get("url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id))
+    url = request.args.get(
+        "url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id)
+    )
     return redirect(url)
 
 
@@ -1856,10 +1987,18 @@ def send_marking_emails_for_workflow(workflow_id):
                 "convenor_id": current_user.id,
             }
         )
-        flash(f'Marking notifications for workflow "{workflow.name}" have been queued.', "success")
+        flash(
+            f'Marking notifications for workflow "{workflow.name}" have been queued.',
+            "success",
+        )
     except Exception as e:
-        current_app.logger.exception("Error dispatching send_marking_emails", exc_info=e)
-        flash("Could not dispatch marking notifications. Please contact a system administrator.", "error")
+        current_app.logger.exception(
+            "Error dispatching send_marking_emails", exc_info=e
+        )
+        flash(
+            "Could not dispatch marking notifications. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1890,10 +2029,18 @@ def send_marking_emails_for_event(event_id):
                 "convenor_id": current_user.id,
             }
         )
-        flash(f'Marking notifications for event "{event.name}" have been queued.', "success")
+        flash(
+            f'Marking notifications for event "{event.name}" have been queued.',
+            "success",
+        )
     except Exception as e:
-        current_app.logger.exception("Error dispatching send_marking_event_emails", exc_info=e)
-        flash("Could not dispatch marking notifications. Please contact a system administrator.", "error")
+        current_app.logger.exception(
+            "Error dispatching send_marking_event_emails", exc_info=e
+        )
+        flash(
+            "Could not dispatch marking notifications. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(redirect_url())
 
@@ -1980,7 +2127,10 @@ def do_open_marking_event(event_id):
             project_classes=pclass,
         )
     except SQLAlchemyError as e:
-        flash("Could not open marking event due to a database error. Please contact a system administrator.", "error")
+        flash(
+            "Could not open marking event due to a database error. Please contact a system administrator.",
+            "error",
+        )
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
         return redirect(url)
@@ -1997,10 +2147,18 @@ def do_open_marking_event(event_id):
                 "convenor_id": current_user.id,
             }
         )
-        flash(f'Marking event "{event.name}" has been opened and notification emails have been queued.', "success")
+        flash(
+            f'Marking event "{event.name}" has been opened and notification emails have been queued.',
+            "success",
+        )
     except Exception as e:
-        current_app.logger.exception("Error dispatching send_marking_event_emails", exc_info=e)
-        flash("Marking event was opened but notifications could not be dispatched. Please contact a system administrator.", "error")
+        current_app.logger.exception(
+            "Error dispatching send_marking_event_emails", exc_info=e
+        )
+        flash(
+            "Marking event was opened but notifications could not be dispatched. Please contact a system administrator.",
+            "error",
+        )
 
     return redirect(url)
 
@@ -2046,8 +2204,13 @@ def test_marking_event(event_id):
                 "success",
             )
         except Exception as e:
-            current_app.logger.exception("Error dispatching test send_marking_event_emails", exc_info=e)
-            flash("Could not dispatch test notifications. Please contact a system administrator.", "error")
+            current_app.logger.exception(
+                "Error dispatching test send_marking_event_emails", exc_info=e
+            )
+            flash(
+                "Could not dispatch test notifications. Please contact a system administrator.",
+                "error",
+            )
 
         return redirect(url)
 
@@ -2065,7 +2228,7 @@ def test_marking_event(event_id):
 @roles_accepted("faculty", "admin", "root", "office", "convenor")
 def clear_marking_grade(report_id):
     """
-    Clear the grade_generated_by_id and grade_generated_timestamp fields on a MarkingReport,
+    Clear the grade_submitted_by_id and grade_submitted_timestamp fields on a MarkingReport,
     re-opening the marking form for the assessor.
     """
     report: MarkingReport = MarkingReport.query.get_or_404(report_id)
@@ -2076,8 +2239,8 @@ def clear_marking_grade(report_id):
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
-    report.grade_generated_by_id = None
-    report.grade_generated_timestamp = None
+    report.grade_submitted_by_id = None
+    report.grade_submitted_timestamp = None
 
     try:
         log_db_commit(
@@ -2095,5 +2258,7 @@ def clear_marking_grade(report_id):
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash("Could not clear marking grade due to a database error.", "error")
 
-    url = request.args.get("url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id))
+    url = request.args.get(
+        "url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id)
+    )
     return redirect(url)

@@ -1,0 +1,23 @@
+{% extends "base_app.html" %}
+
+{% block title %}
+    Marking report submitted
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <div class="text-center fs-2 text-success"><i class="fas fa-check-circle"></i></div>
+            <div class="text-center fs-3 text-success fw-semibold">Marking report submitted successfully.
+            </div>
+            <div class="mt-5 text-center text-secondary fs-5">
+                Thank you for completing your marking report.
+            </div>
+            <div class="mt-5 d-flex flex-row justify-content-center gap-3 align-items-center text-muted">
+                <span>Return to <a class="link-primary text-decoration-none" href="{{ dashboard_url }}">marking dashboard</a></span>
+            </div>
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

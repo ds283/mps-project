@@ -274,8 +274,8 @@ _submitter_report_actions = """
 _submitter_report_grade = """
 {% if report.grade is not none %}
     <div class="text-primary fw-semibold">{{ "%.1f"|format(report.grade) }}%</div>
-    {% if report.grade_generated_by is not none %}
-        <div class="small text-muted mt-1">by {{ report.grade_generated_by.name }}</div>
+    {% if report.grade_submitted_by is not none %}
+        <div class="small text-muted mt-1">by {{ report.grade_submitted_by.name }}</div>
     {% endif %}
 {% else %}
     <span class="badge bg-secondary">Not graded</span>
@@ -407,11 +407,11 @@ _marking_report_student = """
 _marking_report_grade = """
 {% if report.grade is not none %}
     <div class="text-primary fw-semibold">{{ "%.1f"|format(report.grade) }}%</div>
-    {% if report.grade_generated_by is not none %}
-        <div class="small text-muted mt-1">by {{ report.grade_generated_by.name }}</div>
+    {% if report.grade_submitted_by is not none %}
+        <div class="small text-muted mt-1">by {{ report.grade_submitted_by.name }}</div>
     {% endif %}
-    {% if report.grade_generated_timestamp is not none %}
-        <div class="small text-muted">{{ report.grade_generated_timestamp.strftime("%d %b %Y %H:%M") }}</div>
+    {% if report.grade_submitted_timestamp is not none %}
+        <div class="small text-muted">{{ report.grade_submitted_timestamp.strftime("%d %b %Y %H:%M") }}</div>
     {% endif %}
 {% else %}
     <span class="badge bg-secondary">Not graded</span>
@@ -520,7 +520,7 @@ _marking_report_actions = """
                      url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}">
             <i class="fas fa-pen fa-fw"></i> {% if report.report_submitted %}Edit{% else %}View{% endif %} marking form...
         </a>
-        {% if report.grade_generated_timestamp is not none %}
+        {% if report.grade_submitted_timestamp is not none %}
             <form method="POST"
                   action="{{ url_for('convenor.clear_marking_grade', report_id=report.id,
                              url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}"

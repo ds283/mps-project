@@ -54,6 +54,7 @@ from ..shared.convenor import (
     add_blank_submitter,
 )
 from ..shared.conversions import is_integer
+from ..shared.journal import create_auto_journal_entry
 from ..shared.utils import (
     build_enrol_submitter_candidates,
     build_submitters_data,
@@ -64,7 +65,6 @@ from ..shared.validators import (
     validate_is_administrator,
     validate_is_convenor,
 )
-from ..shared.journal import create_auto_journal_entry
 from ..shared.workflow_logging import log_db_commit
 from ..tools import ServerSideSQLHandler
 from .forms import (
@@ -1226,6 +1226,8 @@ def add_role(record_id):
                                 signed_off_id=None,
                                 signed_off_timestamp=None,
                                 feedback_timestamp=None,
+                                creator_id=current_user.id,
+                                creation_timestamp=datetime.now(),
                             )
                             db.session.add(mr)
 

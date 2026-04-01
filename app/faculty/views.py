@@ -3501,8 +3501,11 @@ def marking_form(report_id):
                             "error",
                         )
                         current_app.logger.error(
-                            f'Failed to evaluate conflation rule for MarkingReport #{report.id} -- assessor "{role_user.name}", student "{student_user.name}", for workflow "{workflow.name}", event "{event.name}", submission period "{period.display_name}", project class "{pclass.abbreviation}"')
-                        current_app.logger.error(f'conflation rule = "{conflation_rule}')
+                            f'Failed to evaluate conflation rule for MarkingReport #{report.id} -- assessor "{role_user.name}", student "{student_user.name}", for workflow "{workflow.name}", event "{event.name}", submission period "{period.display_name}", project class "{pclass.abbreviation}"'
+                        )
+                        current_app.logger.error(
+                            f'conflation rule = "{conflation_rule}'
+                        )
                         current_app.logger.error(f"field_values = {field_values}")
 
                 # Store results
@@ -3515,8 +3518,8 @@ def marking_form(report_id):
                 report.grade = grade_val
                 report.signed_off_id = None
                 report.signed_off_timestamp = None
-                report.grade_generated_by_id = current_user.id
-                report.grade_generated_timestamp = datetime.utcnow()
+                report.grade_submitted_by_id = current_user.id
+                report.grade_submitted_timestamp = datetime.utcnow()
 
                 try:
                     log_db_commit(
@@ -3525,10 +3528,9 @@ def marking_form(report_id):
                         user=current_user,
                         project_classes=pclass,
                     )
-                    return redirect(
-                        url_for(
-                            "faculty.view_marking_report", report_id=report_id, url=url
-                        )
+                    return render_template_context(
+                        "faculty/thankyou_marking.html",
+                        dashboard_url=url_for("faculty.dashboard", pane="marking"),
                     )
                 except SQLAlchemyError as e:
                     db.session.rollback()

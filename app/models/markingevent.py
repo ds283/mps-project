@@ -689,15 +689,15 @@ class MarkingReport(db.Model, EditingMetadataMixin):
     grade = db.Column(db.Numeric(6, 2), nullable=True)
 
     # who generated the grade (i.e., who submitted this individual marking report)?
-    grade_generated_by_id = db.Column(
+    grade_submitted_by_id = db.Column(
         db.Integer(), db.ForeignKey("users.id"), nullable=True
     )
-    grade_generated_by = db.relationship(
-        "User", foreign_keys=[grade_generated_by_id], uselist=False
+    grade_submitted_by = db.relationship(
+        "User", foreign_keys=[grade_submitted_by_id], uselist=False
     )
 
     # when was the grade generated?
-    grade_generated_timestamp = db.Column(db.DateTime(), nullable=True)
+    grade_submitted_timestamp = db.Column(db.DateTime(), nullable=True)
 
     # FEEDBACK TO STUDENT
 
@@ -717,15 +717,15 @@ class MarkingReport(db.Model, EditingMetadataMixin):
     def marking_form_is_open(self) -> bool:
         """
         Returns True if the marking form is currently accessible to the assessor.
-        The form is open once distributed=True, and remains open until grade_generated_timestamp
+        The form is open once distributed=True, and remains open until grade_submitted_timestamp
         is set and more than 1 day old. A convenor can re-open the form by clearing
-        grade_generated_by_id and grade_generated_timestamp.
+        grade_submitted_by_id and grade_submitted_timestamp.
         """
         if not self.distributed:
             return False
-        if self.grade_generated_timestamp is None:
+        if self.grade_submitted_timestamp is None:
             return True
-        delta = datetime.utcnow() - self.grade_generated_timestamp
+        delta = datetime.utcnow() - self.grade_submitted_timestamp
         return delta.total_seconds() < 86400
 
     @property

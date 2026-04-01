@@ -7,6 +7,7 @@
 #
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
+from datetime import datetime
 
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
@@ -18,7 +19,10 @@ from ..models.submissions import SubmissionRecord, SubmissionRoleTypesMixin
 from ..shared.workflow_logging import log_db_commit
 
 _SUPERVISOR_ROLES = frozenset(
-    {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
+    {
+        SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+        SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+    }
 )
 
 
@@ -35,7 +39,9 @@ def register_markingevent_tasks(celery):
         MarkingReport is created.
         """
         try:
-            workflow: MarkingWorkflow = db.session.query(MarkingWorkflow).filter_by(id=workflow_id).first()
+            workflow: MarkingWorkflow = (
+                db.session.query(MarkingWorkflow).filter_by(id=workflow_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -63,15 +69,29 @@ def register_markingevent_tasks(celery):
                 # rather than READY_TO_DISTRIBUTE. The SubmitterReport cannot proceed past
                 # REQUIRES_CONVENOR_INTERVENTION until the convenor resolves the Turnitin concern.
                 if not workflow.requires_report:
-                    if record.turnitin_score is not None and record.turnitin_score >= 25:
-                        initial_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                    if (
+                        record.turnitin_score is not None
+                        and record.turnitin_score >= 25
+                    ):
+                        initial_state = (
+                            SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                        )
                     else:
-                        initial_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                        initial_state = (
+                            SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                        )
                 elif record.report is not None and record.processed_report is not None:
-                    if record.turnitin_score is not None and record.turnitin_score >= 25:
-                        initial_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                    if (
+                        record.turnitin_score is not None
+                        and record.turnitin_score >= 25
+                    ):
+                        initial_state = (
+                            SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                        )
                     else:
-                        initial_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                        initial_state = (
+                            SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                        )
                 else:
                     initial_state = SubmitterReportWorkflowStates.NOT_READY
 
@@ -87,6 +107,8 @@ def register_markingevent_tasks(celery):
                     feedback_sent=False,
                     feedback_push_id=None,
                     feedback_push_timestamp=None,
+                    creator_id=None,
+                    creation_timestamp=datetime.now(),
                 )
                 db.session.add(sr)
                 db.session.flush()  # materialise sr.id before creating MarkingReports
@@ -112,13 +134,15 @@ def register_markingevent_tasks(celery):
                             signed_off_id=None,
                             signed_off_timestamp=None,
                             feedback_timestamp=None,
+                            creator_id=None,
+                            creation_timestamp=datetime.now(),
                         )
                         db.session.add(mr)
                         marking_count += 1
 
             log_db_commit(
                 f'Initialized MarkingWorkflow "{workflow.name}" (id={workflow_id}): '
-                f'created {submitter_count} SubmitterReport(s) and {marking_count} MarkingReport(s) '
+                f"created {submitter_count} SubmitterReport(s) and {marking_count} MarkingReport(s) "
                 f'for period "{period.display_name}"',
                 endpoint=self.name,
                 project_classes=pclass,
@@ -140,7 +164,9 @@ def register_markingevent_tasks(celery):
         Called by the process_report.finalize task after successful report processing.
         """
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -167,10 +193,18 @@ def register_markingevent_tasks(celery):
                 # REQUIRES_CONVENOR_INTERVENTION instead of READY_TO_DISTRIBUTE.
                 # The SubmitterReport cannot proceed past REQUIRES_CONVENOR_INTERVENTION until
                 # the convenor resolves the Turnitin concern via convenor.resolve_turnitin_issue.
-                if record.turnitin_score is not None and record.turnitin_score >= 25 and not sr.turnitin_resolved:
-                    sr.workflow_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                if (
+                    record.turnitin_score is not None
+                    and record.turnitin_score >= 25
+                    and not sr.turnitin_resolved
+                ):
+                    sr.workflow_state = (
+                        SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                    )
                 else:
-                    sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                    sr.workflow_state = (
+                        SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                    )
                 advanced += 1
 
             if advanced > 0:
@@ -186,4 +220,3 @@ def register_markingevent_tasks(celery):
                 "SQLAlchemyError in advance_marking_workflow", exc_info=e
             )
             raise self.retry()
-

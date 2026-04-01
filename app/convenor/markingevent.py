@@ -410,7 +410,7 @@ def resolve_turnitin_issue(submitter_report_id):
         try:
             sr.turnitin_resolved = True
             sr.turnitin_resolved_comment = form.comment.data
-            sr.turnitin_resolved_timestamp = datetime.utcnow()
+            sr.turnitin_resolved_timestamp = datetime.now()
             sr.turnitin_resolved_id = current_user.id
 
             # Unblock the workflow if the report is currently held in REQUIRES_CONVENOR_INTERVENTION

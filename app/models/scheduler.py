@@ -8,13 +8,12 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 import json
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 
 from celery import schedules
 from sqlalchemy.event import listens_for
 
 from ..database import db
-
 
 # Models imported from thirdparty/celery_sqlalchemy_scheduler
 
@@ -157,4 +156,4 @@ class DatabaseSchedulerEntry(db.Model):
 
 @listens_for(DatabaseSchedulerEntry, "before_insert")
 def _set_entry_changed_date(mapper, connection, target):
-    target.date_changed = datetime.utcnow()
+    target.date_changed = datetime.now()

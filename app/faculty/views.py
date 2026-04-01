@@ -3419,7 +3419,7 @@ def marking_form(report_id):
             if scheme.uses_standard_feedback:
                 report.feedback_positive = form.feedback_positive.data or ""
                 report.feedback_improvement = form.feedback_improvement.data or ""
-                report.feedback_timestamp = datetime.utcnow()
+                report.feedback_timestamp = datetime.now()
 
             # Process validation block
             prevent_submit = False
@@ -3519,7 +3519,7 @@ def marking_form(report_id):
                 report.signed_off_id = None
                 report.signed_off_timestamp = None
                 report.grade_submitted_by_id = current_user.id
-                report.grade_submitted_timestamp = datetime.utcnow()
+                report.grade_submitted_timestamp = datetime.now()
 
                 try:
                     log_db_commit(
@@ -3718,7 +3718,7 @@ def edit_marking_feedback(report_id):
     if form.validate_on_submit():
         report.feedback_positive = form.feedback_positive.data or ""
         report.feedback_improvement = form.feedback_improvement.data or ""
-        report.feedback_timestamp = datetime.utcnow()
+        report.feedback_timestamp = datetime.now()
 
         try:
             log_db_commit(

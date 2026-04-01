@@ -725,7 +725,7 @@ class MarkingReport(db.Model, EditingMetadataMixin):
             return False
         if self.grade_submitted_timestamp is None:
             return True
-        delta = datetime.utcnow() - self.grade_submitted_timestamp
+        delta = datetime.now() - self.grade_submitted_timestamp
         return delta.total_seconds() < 86400
 
     @property

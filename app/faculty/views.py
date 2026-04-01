@@ -31,9 +31,12 @@ from ..models import (
     EnrollmentRecord,
     FacultyData,
     FHEQ_Level,
+    LiveMarkingScheme,
     LiveProject,
     MainConfig,
+    MarkingEvent,
     MarkingReport,
+    MarkingWorkflow,
     MessageOfTheDay,
     Module,
     PresentationAssessment,
@@ -70,7 +73,6 @@ from ..shared.context.global_context import render_template_context
 from ..shared.context.root_dashboard import get_root_dashboard_data
 from ..shared.conversions import is_integer
 from ..shared.projects import create_new_tags, project_list_SQL_handler
-from ..shared.workflow_logging import log_db_commit
 from ..shared.utils import (
     allow_approval_for_description,
     filter_assessors,
@@ -95,6 +97,7 @@ from ..shared.validators import (
     validate_using_assessment,
     validate_view_project,
 )
+from ..shared.workflow_logging import log_db_commit
 from . import faculty
 from .forms import (
     AddDescriptionFormFactory,
@@ -1965,6 +1968,7 @@ def dashboard():
 
     # Find pending marking reports for this user (distributed but not yet closed)
     from sqlalchemy import and_
+
     pending_marking_reports = (
         db.session.query(MarkingReport)
         .join(SubmissionRole, SubmissionRole.id == MarkingReport.role_id)
@@ -1975,7 +1979,9 @@ def dashboard():
         .all()
     )
     # Filter in Python for the time-based window (marking_form_is_open)
-    pending_marking_reports = [r for r in pending_marking_reports if r.marking_form_is_open]
+    pending_marking_reports = [
+        r for r in pending_marking_reports if r.marking_form_is_open
+    ]
 
     pane = request.args.get("pane", None)
     if pane is None and session.get("faculty_dashboard_pane"):
@@ -3246,9 +3252,16 @@ def _build_marking_form_class(scheme):
     Dynamically build a WTForms form class from a LiveMarkingScheme.
     Returns a FlaskForm subclass whose fields correspond to the schema.
     """
-    from wtforms import BooleanField, FloatField, StringField, SubmitField, TextAreaField
-    from wtforms.validators import InputRequired, NumberRange, Optional as WTFOptional
     from flask_wtf import FlaskForm
+    from wtforms import (
+        BooleanField,
+        FloatField,
+        StringField,
+        SubmitField,
+        TextAreaField,
+    )
+    from wtforms.validators import InputRequired, NumberRange
+    from wtforms.validators import Optional as WTFOptional
 
     schema = scheme.schema_as_dict
     fields = {}
@@ -3262,7 +3275,9 @@ def _build_marking_form_class(scheme):
             label = field_spec["text"]
 
             if ftype == "boolean":
-                fields[key] = BooleanField(label, default=bool(default) if default is not None else False)
+                fields[key] = BooleanField(
+                    label, default=bool(default) if default is not None else False
+                )
 
             elif ftype == "text":
                 fields[key] = TextAreaField(
@@ -3289,8 +3304,12 @@ def _build_marking_form_class(scheme):
                 )
 
     if scheme.uses_standard_feedback:
-        fields["feedback_positive"] = TextAreaField("What was good?", validators=[WTFOptional()])
-        fields["feedback_improvement"] = TextAreaField("What could be improved next time?", validators=[WTFOptional()])
+        fields["feedback_positive"] = TextAreaField(
+            "What was good?", validators=[WTFOptional()]
+        )
+        fields["feedback_improvement"] = TextAreaField(
+            "What could be improved next time?", validators=[WTFOptional()]
+        )
 
     fields["submit_marking"] = SubmitField("Submit marking report")
     return type("MarkingForm", (FlaskForm,), fields)
@@ -3325,21 +3344,33 @@ def marking_form(report_id):
     import json as _json
 
     report: MarkingReport = MarkingReport.query.get_or_404(report_id)
-    workflow = report.workflow
-    scheme = workflow.scheme
+    workflow: MarkingWorkflow = report.workflow
+    event: MarkingEvent = workflow.event
+    scheme: LiveMarkingScheme = workflow.scheme
     submitter_report = report.submitter_report
     record: SubmissionRecord = submitter_report.record
     period: SubmissionPeriodRecord = record.period
     pclass: ProjectClass = workflow.event.pclass
     config: ProjectClassConfig = workflow.event.config
+    role: SubmissionRole = report.role
+    role_user: User = role.user
+    submitter: SubmittingStudent = record.owner
+    student: StudentData = submitter.student
+    student_user: User = student.user
 
     is_allowed, is_elevated = _can_access_marking_form(report)
     if not is_allowed:
-        flash("You do not have access to this marking form, or the form is no longer accepting submissions.", "error")
+        flash(
+            "You do not have access to this marking form, or the form is no longer accepting submissions.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if scheme is None:
-        flash("This marking workflow has no marking scheme assigned. Please contact the convenor.", "error")
+        flash(
+            "This marking workflow has no marking scheme assigned. Please contact the convenor.",
+            "error",
+        )
         return redirect(redirect_url())
 
     url = request.args.get("url", url_for("faculty.dashboard"))
@@ -3378,7 +3409,9 @@ def marking_form(report_id):
                         val = round(float(raw_val), 1)
                         field_values[key] = val
                 except (ValueError, TypeError):
-                    getattr(form, key).errors.append("Could not convert this value to the required type.")
+                    getattr(form, key).errors.append(
+                        "Could not convert this value to the required type."
+                    )
                     extraction_error = True
 
         if not extraction_error:
@@ -3423,10 +3456,15 @@ def marking_form(report_id):
                                     db.session.add(vf_wf)
                                     db.session.flush()
 
-                                    for notify_user in workflow.notify_on_validation_failure:
+                                    for (
+                                        notify_user
+                                    ) in workflow.notify_on_validation_failure:
                                         item = EmailWorkflowItem.build_(
                                             subject_payload=encode_email_payload(
-                                                {"report_id": report.id, "message": message}
+                                                {
+                                                    "report_id": report.id,
+                                                    "message": message,
+                                                }
                                             ),
                                             body_payload=encode_email_payload(
                                                 {
@@ -3441,7 +3479,8 @@ def marking_form(report_id):
                                         vf_wf.items.append(item)
                             except Exception as e:
                                 current_app.logger.exception(
-                                    "Could not create validation failure email workflow", exc_info=e
+                                    "Could not create validation failure email workflow",
+                                    exc_info=e,
                                 )
 
                         if "web" in actions:
@@ -3449,15 +3488,22 @@ def marking_form(report_id):
 
             if not prevent_submit:
                 # Evaluate conflation rule to get grade
-                conflation_rule = schema.get("conflation_rule", "0.0")
-                try:
-                    grade_val = float(eval(conflation_rule, {"__builtins__": {}}, field_values))
-                except Exception as e:
-                    flash(
-                        f"Could not evaluate grade from conflation rule: {e}. Please contact the convenor.",
-                        "error",
-                    )
-                    grade_val = None
+                conflation_rule = schema.get("conflation_rule", None)
+                grade_val = None
+                if conflation_rule is not None:
+                    try:
+                        grade_val = float(
+                            eval(conflation_rule, {"__builtins__": {}}, field_values)
+                        )
+                    except Exception as e:
+                        flash(
+                            f"Could not evaluate grade from conflation rule. Your report will be saved, but the final value will not have been conflated correctly. Please contact the convenor.",
+                            "error",
+                        )
+                        current_app.logger.error(
+                            f'Failed to evaluate conflation rule for MarkingReport #{report.id} -- assessor "{role_user.name}", student "{student_user.name}", for workflow "{workflow.name}", event "{event.name}", submission period "{period.display_name}", project class "{pclass.abbreviation}"')
+                        current_app.logger.error(f'conflation rule = "{conflation_rule}')
+                        current_app.logger.error(f"field_values = {field_values}")
 
                 # Store results
                 report_blob = {"fields": field_values}
@@ -3479,12 +3525,20 @@ def marking_form(report_id):
                         user=current_user,
                         project_classes=pclass,
                     )
-                    flash("Your marking report has been submitted successfully.", "success")
-                    return redirect(url_for("faculty.view_marking_report", report_id=report_id, url=url))
+                    return redirect(
+                        url_for(
+                            "faculty.view_marking_report", report_id=report_id, url=url
+                        )
+                    )
                 except SQLAlchemyError as e:
                     db.session.rollback()
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                    flash("Could not save marking report due to a database error. Please contact a system administrator.", "error")
+                    current_app.logger.exception(
+                        "SQLAlchemyError exception", exc_info=e
+                    )
+                    flash(
+                        "Could not save marking report due to a database error. Please contact a system administrator.",
+                        "error",
+                    )
 
     else:
         if request.method == "GET":
@@ -3528,9 +3582,7 @@ def marking_form(report_id):
         SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
     )
     if is_supervisor_role or is_elevated:
-        supervision_events = (
-            record.events.order_by("time").all()
-        )
+        supervision_events = record.events.order_by("time").all()
 
     return render_template_context(
         "faculty/marking_form.html",
@@ -3614,9 +3666,9 @@ def edit_marking_feedback(report_id):
     MarkingReport. Does not recompute the grade. Accessible to the role owner at any time
     after submission, and to convenors/admins/root.
     """
+    from flask_wtf import FlaskForm
     from wtforms import SubmitField, TextAreaField
     from wtforms.validators import Optional as WTFOptional
-    from flask_wtf import FlaskForm
 
     report: MarkingReport = MarkingReport.query.get_or_404(report_id)
     workflow = report.workflow
@@ -3629,11 +3681,17 @@ def edit_marking_feedback(report_id):
     is_role_owner = report.role.user_id == current_user.id
 
     if not (is_elevated or is_role_owner):
-        flash("You do not have permission to edit feedback for this marking report.", "error")
+        flash(
+            "You do not have permission to edit feedback for this marking report.",
+            "error",
+        )
         return redirect(redirect_url())
 
     if not report.report_submitted and not is_elevated:
-        flash("Feedback can only be edited after the marking report has been submitted.", "warning")
+        flash(
+            "Feedback can only be edited after the marking report has been submitted.",
+            "warning",
+        )
         return redirect(redirect_url())
 
     # Build a simple feedback-only form
@@ -3641,13 +3699,19 @@ def edit_marking_feedback(report_id):
         "MarkingFeedbackForm",
         (FlaskForm,),
         {
-            "feedback_positive": TextAreaField("What was good?", validators=[WTFOptional()]),
-            "feedback_improvement": TextAreaField("What could be improved next time?", validators=[WTFOptional()]),
+            "feedback_positive": TextAreaField(
+                "What was good?", validators=[WTFOptional()]
+            ),
+            "feedback_improvement": TextAreaField(
+                "What could be improved next time?", validators=[WTFOptional()]
+            ),
             "submit_feedback": SubmitField("Save feedback"),
         },
     )
     form = FeedbackFormClass(request.form)
-    url = request.args.get("url", url_for("faculty.view_marking_report", report_id=report_id))
+    url = request.args.get(
+        "url", url_for("faculty.view_marking_report", report_id=report_id)
+    )
 
     if form.validate_on_submit():
         report.feedback_positive = form.feedback_positive.data or ""
@@ -3682,5 +3746,7 @@ def edit_marking_feedback(report_id):
         period=period,
         pclass=pclass,
         url=url,
-        submit_url=url_for("faculty.edit_marking_feedback", report_id=report_id, url=url),
+        submit_url=url_for(
+            "faculty.edit_marking_feedback", report_id=report_id, url=url
+        ),
     )

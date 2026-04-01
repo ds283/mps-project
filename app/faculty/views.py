@@ -1975,6 +1975,10 @@ def dashboard():
         .filter(
             SubmissionRole.user_id == current_user.id,
             MarkingReport.distributed.is_(True),
+            or_(
+                MarkingReport.report_submitted.is_not(True),
+                MarkingReport.feedback_submitted.is_not(True),
+            ),
         )
         .all()
     )
@@ -2053,6 +2057,12 @@ def dashboard():
         approvals_data=approvals_data,
         pane=pane,
         pane_label=enrolment_labels.get(pane, None),
+        pane_is_system=pane == "system",
+        pane_is_approve=pane == "approve",
+        pane_is_marking=pane == "marking",
+        pane_is_enrollment=pane in enrolment_panes,
+        is_user_approver=current_user.has_role("user_approver"),
+        is_project_approver=current_user.has_role("project_approver"),
         today=date.today(),
         pending_marking_reports=pending_marking_reports,
     )
@@ -3284,7 +3294,7 @@ def _build_marking_form_class(scheme):
                     label,
                     default=str(default) if default is not None else "",
                     validators=[WTFOptional()],
-                    render_kw = {"rows": rows}
+                    render_kw={"rows": rows},
                 )
 
             elif ftype in ("number", "percent"):
@@ -3306,10 +3316,12 @@ def _build_marking_form_class(scheme):
 
     if scheme.uses_standard_feedback:
         fields["feedback_positive"] = TextAreaField(
-            "What was good?", validators=[WTFOptional()], render_kw = {"rows": 7}
+            "What was good?", validators=[WTFOptional()], render_kw={"rows": 7}
         )
         fields["feedback_improvement"] = TextAreaField(
-            "What could be improved next time?", validators=[WTFOptional()], render_kw = {"rows": 7}
+            "What could be improved next time?",
+            validators=[WTFOptional()],
+            render_kw={"rows": 7},
         )
 
     fields["submit_marking"] = SubmitField("Submit marking report")

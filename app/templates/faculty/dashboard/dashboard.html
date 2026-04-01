@@ -10,19 +10,14 @@
 {% from "macros.html" import message_card %}
 {% from "megamenu.html" import megamenu_columns %}
 
-{%- set is_user_approver = current_user.has_role('user_approver') -%}
-{%- set is_project_approver = current_user.has_role('project_approver') -%}
-
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
-        {%- set pane_is_system = pane == 'system' -%}
-        {%- set pane_is_approve = pane == 'approve' -%}
-        {%- set pane_is_enrollment = not pane_is_system and not pane_is_approve %}
         {% if is_root %}
             {% set warning = root_dash_data['warning'] %}
             {% set messages = root_dash_data['messages'] %}
             <li class="nav-item">
-                <a class="nav-link {% if pane_is_system %}active{% endif %}" href="{{ url_for('faculty.dashboard', pane='system') }}">
+                <a class="nav-link {% if pane_is_system %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard', pane='system') }}">
                     {% if warning or (messages is not none and messages|length > 0) %}
                         <i class="fas fa-exclamation-triangle"></i>
                     {% endif %}
@@ -33,9 +28,10 @@
         {% if pending_marking_reports and pending_marking_reports|length > 0 %}
             {%- set pane_is_marking = pane == 'marking' -%}
             <li class="nav-item">
-                <a class="nav-link {% if pane_is_marking %}active{% endif %}" href="{{ url_for('faculty.dashboard', pane='marking') }}">
+                <a class="nav-link {% if pane_is_marking %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard', pane='marking') }}">
                     <i class="fas fa-marker fa-fw"></i>
-                    Marking tasks
+                    Marking and feedback
                     <span class="badge rounded-pill {% if pane_is_marking %}bg-light text-dark{% else %}bg-danger{% endif %}">{{ pending_marking_reports|length }}</span>
                 </a>
             </li>
@@ -47,7 +43,8 @@
         {%- set project_warning = (project_num_rejected > 0) if project_num_rejected is not none else false -%}
         {% if is_user_approver or is_project_approver or (user_warning and (is_manage_users or is_root)) %}
             <li class="nav-item">
-                <a class="nav-link {% if pane_is_approve %}active{% endif %}" href="{{ url_for('faculty.dashboard', pane='approve') }}">
+                <a class="nav-link {% if pane_is_approve %}active{% endif %}"
+                   href="{{ url_for('faculty.dashboard', pane='approve') }}">
                     {% if user_warning or project_warning %}
                         <i class="fas fa-exclamation-triangle"></i>
                     {% endif %}
@@ -60,7 +57,8 @@
         {% endif %}
         {% if enrolments and num_enrolments > 0 %}
             <li class="nav-item dropdown megamenu">
-                <a class="nav-link {% if pane_is_enrollment %}active{% endif %} dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">
+                <a class="nav-link {% if pane_is_enrollment %}active{% endif %} dropdown-toggle"
+                   data-bs-toggle="dropdown" role="button" href="#">
                     {%- if pane_is_enrollment -%}
                         {% if pane_label is defined and pane_label is not none %}Currently showing:
                             {{ pane_label }}{% else %}My enrolments{% endif %}
@@ -84,7 +82,8 @@
                                 {% if alert_marker %}
                                     <i class="fas fa-exclamation-triangle text-danger"></i>
                                 {% endif %}
-                                <a class="text-decoration-none" href="{{ url_for('faculty.dashboard', pane=config.id) }}">
+                                <a class="text-decoration-none"
+                                   href="{{ url_for('faculty.dashboard', pane=config.id) }}">
                                     <strong>{{ config.name }}</strong>
                                 </a>
                                 {% if marking_underway %}
@@ -156,10 +155,10 @@
                 <div class="card mt-3 mb-3 border-danger">
                     <div class="card-header bg-danger text-white">
                         <i class="fas fa-marker fa-fw me-1"></i>
-                        <strong>Marking tasks requiring attention</strong>
+                        <strong>Marking and feedback tasks requiring attention</strong>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted small mb-3">
+                        <p class="text-primary mt-2 mb-3">
                             The following marking reports have been distributed to you and are awaiting submission.
                             Please complete each form before the deadline.
                         </p>
@@ -176,13 +175,31 @@
                                                 <div class="small text-muted">
                                                     {{ workflow.event.pclass.name }} &mdash; {{ workflow.name }}
                                                     {% if deadline %}
-                                                        &mdash; deadline <strong>{{ deadline.strftime("%a %d %b %Y") }}</strong>
+                                                        &mdash; deadline
+                                                        <strong>{{ deadline.strftime("%a %d %b %Y") }}</strong>
                                                     {% endif %}
                                                 </div>
                                             </div>
-                                            <a class="btn btn-sm btn-danger" href="{{ url_for('faculty.marking_form', report_id=report.id, url=url_for('faculty.dashboard', pane='marking')) }}">
-                                                <i class="fas fa-pen fa-fw"></i> Complete marking form
+                                            <a class="btn btn-sm btn-danger"
+                                               href="{{ url_for('faculty.marking_form', report_id=report.id, url=url_for('faculty.dashboard', pane='marking')) }}">
+                                                <i class="fas fa-pen fa-fw"></i> Enter report
                                             </a>
+                                        </div>
+                                        <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-3 mt-2 small">
+                                            {% if report.report_submitted %}
+                                                <span class="text-success"><i
+                                                        class="fas fa-check-circle"></i> Report submitted</span>
+                                            {% else %}
+                                                <span class="text-secondary fst-italic"><i
+                                                        class="fas fa-hourglass-half"></i> Awaiting report</span>
+                                            {% endif %}
+                                            {% if report.feedback_submitted %}
+                                                <span class="text-success"><i
+                                                        class="fas fa-comment"></i> Feedback submitted</span>
+                                            {% else %}
+                                                <span class="text-secondary fst-italic"><i
+                                                        class="fas fa-hourglass-half"></i> Awaiting feedback</span>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -218,7 +235,8 @@
                         </p>
                         <hr class="intro-divider">
                         <p>
-                            <a class="text-decoration-none" href="{{ url_for('faculty.settings') }}">View my settings</a>
+                            <a class="text-decoration-none" href="{{ url_for('faculty.settings') }}">View my
+                                settings</a>
                         </p>
                     </div>
                 {% endfor %}

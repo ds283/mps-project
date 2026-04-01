@@ -134,8 +134,24 @@ def register_marking_tasks(celery):
         if test_email is not None:
             print(f"-- working in test mode: emails being sent to sink={test_email}")
 
+        pclass: ProjectClass = workflow.event.pclass
+        email_wf = EmailWorkflow.build_(
+            name=f"Marking notification: {workflow.name}",
+            template=workflow.template,
+            defer=timedelta(minutes=15),
+            pclasses=[pclass],
+            max_attachment_size=max_attachment,
+        )
+        db.session.add(email_wf)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
         email_group = group(
-            dispatch_emails.s(sr_id, cc_convenor, max_attachment, test_email, deadline)
+            dispatch_emails.s(sr_id, cc_convenor, max_attachment, test_email, deadline, email_wf.id)
             for sr_id in eligible_ids
         ) | notify_dispatch.s(convenor_id)
 
@@ -175,23 +191,47 @@ def register_marking_tasks(celery):
             except SQLAlchemyError:
                 pass
 
-        eligible_pairs = []  # (sr_id, deadline_str)
+        eligible_triples = []  # (sr_id, deadline_str, email_workflow_id)
         for workflow in event.workflows:
             if workflow.template is None:
                 continue
             deadline_str = workflow.effective_deadline.isoformat() if workflow.effective_deadline else None
+            workflow_sr_ids = []
             for sr in workflow.submitter_reports:
                 if sr.workflow_state < SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE:
                     continue
                 if any(not mr.distributed for mr in sr.marking_reports):
-                    eligible_pairs.append((sr.id, deadline_str))
+                    workflow_sr_ids.append(sr.id)
 
-        if not eligible_pairs:
+            if not workflow_sr_ids:
+                continue
+
+            pclass: ProjectClass = workflow.event.pclass
+            email_wf = EmailWorkflow.build_(
+                name=f"Marking notification: {workflow.name}",
+                template=workflow.template,
+                defer=timedelta(minutes=15),
+                pclasses=[pclass],
+                max_attachment_size=max_attachment,
+            )
+            db.session.add(email_wf)
+            db.session.flush()
+            for sr_id in workflow_sr_ids:
+                eligible_triples.append((sr_id, deadline_str, email_wf.id))
+
+        if not eligible_triples:
             return
 
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
         email_group = group(
-            dispatch_emails.s(sr_id, cc_convenor, max_attachment, test_email, deadline_str)
-            for sr_id, deadline_str in eligible_pairs
+            dispatch_emails.s(sr_id, cc_convenor, max_attachment, test_email, deadline_str, email_workflow_id)
+            for sr_id, deadline_str, email_workflow_id in eligible_triples
         ) | notify_dispatch.s(convenor_id)
 
         return self.replace(email_group)
@@ -435,6 +475,7 @@ def register_marking_tasks(celery):
         max_attachment: int,
         test_email: Optional[str],
         deadline: Optional[str],
+        email_workflow_id: int,
     ):
         """
         Send marking notification emails for all undistributed MarkingReport instances
@@ -484,16 +525,16 @@ def register_marking_tasks(celery):
         if not undistributed:
             return {"sent": 0}
 
-        # Create one EmailWorkflow for this batch
-        email_wf = EmailWorkflow.build_(
-            name=f"Marking notification: {workflow.name} — {student.user.name}",
-            template=workflow.template,
-            defer=timedelta(minutes=15),
-            pclasses=[pclass],
-            max_attachment_size=max_attachment,
-        )
-        db.session.add(email_wf)
-        db.session.flush()
+        try:
+            email_wf: EmailWorkflow = db.session.query(EmailWorkflow).filter_by(id=email_workflow_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if email_wf is None:
+            msg = f"dispatch_emails: could not load EmailWorkflow id={email_workflow_id} from database"
+            current_app.logger.error(msg)
+            raise Exception(msg)
 
         sent = 0
         for mr in undistributed:
@@ -562,12 +603,26 @@ def register_marking_tasks(celery):
             return
 
         mr.distribution_emails.append(email_log)
+        # Flush so the newly added association is visible to subsequent count() queries
+        # within this transaction.
+        db.session.flush()
+
+        # Advance SubmitterReport to AWAITING_GRADING_REPORTS once all distributed
+        # MarkingReports have had their notification emails actually sent.
+        sr: SubmitterReport = mr.submitter_report
+        transitioned = False
+        if sr is not None and sr.workflow_state == SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE:
+            distributed_mrs = [mr2 for mr2 in sr.marking_reports if mr2.distributed]
+            if distributed_mrs and all(mr2.distribution_emails.count() > 0 for mr2 in distributed_mrs):
+                sr.workflow_state = SubmitterReportWorkflowStates.AWAITING_GRADING_REPORTS
+                transitioned = True
+
+        commit_msg = f"Linked distribution email #{email_log_id} to MarkingReport #{marking_report_id}"
+        if transitioned:
+            commit_msg += f"; advanced SubmitterReport #{sr.id} to AWAITING_GRADING_REPORTS"
 
         try:
-            log_db_commit(
-                f"Linked distribution email #{email_log_id} to MarkingReport #{marking_report_id}",
-                endpoint=self.name,
-            )
+            log_db_commit(commit_msg, endpoint=self.name)
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

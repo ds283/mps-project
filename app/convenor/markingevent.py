@@ -294,10 +294,10 @@ def submitter_reports_inspector(workflow_id):
             "Awaiting supervisor sign-off",
         ),
         (SubmitterReportWorkflowStates.AWAITING_FEEDBACK, "Awaiting feedback"),
-        (
-            SubmitterReportWorkflowStates.REPORTS_OUT_OF_TOLERANCE,
-            "Reports out of tolerance",
-        ),
+        # (
+        #     SubmitterReportWorkflowStates.REPORTS_OUT_OF_TOLERANCE,
+        #     "Reports out of tolerance",
+        # ),
         (
             SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
             "Needs moderator assigned",
@@ -310,10 +310,10 @@ def submitter_reports_inspector(workflow_id):
             SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
             "Requires convenor intervention",
         ),
-        (
-            SubmitterReportWorkflowStates.READY_TO_GENERATE_GRADE,
-            "Ready to generate grade",
-        ),
+        # (
+        #     SubmitterReportWorkflowStates.READY_TO_GENERATE_GRADE,
+        #     "Ready to generate grade",
+        # ),
         (SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, "Ready to sign off"),
         (
             SubmitterReportWorkflowStates.READY_TO_GENERATE_FEEDBACK,
@@ -415,13 +415,6 @@ def resolve_turnitin_issue(submitter_report_id):
             sr.turnitin_resolved_timestamp = datetime.now()
             sr.turnitin_resolved_id = current_user.id
 
-            # Unblock the workflow if the report is currently held in REQUIRES_CONVENOR_INTERVENTION
-            if (
-                sr.workflow_state
-                == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
-            ):
-                sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
-
             log_db_commit(
                 f"Convenor resolved Turnitin concern for SubmitterReport id={sr.id} "
                 f"(student: {sr.student.user.name}, workflow: {workflow.name})",
@@ -434,6 +427,13 @@ def resolve_turnitin_issue(submitter_report_id):
             )
             flash("A database error occurred. Please try again.", "danger")
             return redirect(url)
+
+        # Re-evaluate the lifecycle state for all SubmitterReports on this submission record.
+        # advance_marking_workflow handles both pre-distribution (→ READY_TO_DISTRIBUTE) and
+        # mid-lifecycle (delegates to advance_submitter_report) Turnitin resolution cases.
+        celery = current_app.extensions["celery"]
+        advance_wf = celery.tasks["app.tasks.markingevent.advance_marking_workflow"]
+        advance_wf.apply_async(args=[sr.record.id])
 
         flash("Turnitin resolution recorded successfully.", "success")
         return redirect(url)
@@ -2301,7 +2301,10 @@ def marking_report_properties(report_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            flash("Could not save marking report properties due to a database error.", "error")
+            flash(
+                "Could not save marking report properties due to a database error.",
+                "error",
+            )
 
         return redirect(url)
 
@@ -2321,7 +2324,11 @@ def assign_moderator(submitter_report_id):
     from ..models.submissions import SubmissionRoleTypesMixin
     from ..tasks.markingevent import _assign_moderator, advance_submitter_report
 
-    sr = db.session.query(SubmitterReport).filter_by(id=submitter_report_id).first_or_404()
+    sr = (
+        db.session.query(SubmitterReport)
+        .filter_by(id=submitter_report_id)
+        .first_or_404()
+    )
     workflow = sr.workflow
     pclass = workflow.pclass
 
@@ -2375,14 +2382,18 @@ def assign_moderator(submitter_report_id):
     )
 
 
-@convenor.route("/accept-moderator-grade/<int:mod_report_id>/<int:workflow_id>", methods=["POST"])
+@convenor.route(
+    "/accept-moderator-grade/<int:mod_report_id>/<int:workflow_id>", methods=["POST"]
+)
 @roles_accepted("faculty", "admin", "root")
 def accept_moderator_grade(mod_report_id, workflow_id):
     from datetime import datetime
 
     from ..models.markingevent import ModeratorReport, SubmitterReportWorkflowStates
 
-    mod_report = db.session.query(ModeratorReport).filter_by(id=mod_report_id).first_or_404()
+    mod_report = (
+        db.session.query(ModeratorReport).filter_by(id=mod_report_id).first_or_404()
+    )
     sr = mod_report.submitter_report
     workflow = sr.workflow
     pclass = workflow.pclass

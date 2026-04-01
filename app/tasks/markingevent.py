@@ -492,10 +492,17 @@ def register_markingevent_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def advance_marking_workflow(self, record_id):
         """
-        Advance any SubmitterReport instances for a SubmissionRecord from NOT_READY to
-        READY_TO_DISTRIBUTE, where the preconditions for the associated MarkingWorkflow are met.
+        Advance SubmitterReport instances for a SubmissionRecord in two situations:
 
-        Called by the process_report.finalize task after successful report processing.
+        1. NOT_READY → READY_TO_DISTRIBUTE (or REQUIRES_CONVENOR_INTERVENTION if Turnitin
+           score >= 25 and unresolved).  Called after successful report processing.
+
+        2. REQUIRES_CONVENOR_INTERVENTION → re-evaluated next state, when the Turnitin
+           concern has since been resolved (turnitin_resolved=True).  For pre-distribution
+           reports (no MarkingReports yet submitted) the state becomes READY_TO_DISTRIBUTE;
+           for mid-lifecycle reports advance_submitter_report() picks the correct state.
+
+        Called by process_report.finalize and by convenor.resolve_turnitin_issue.
         """
         try:
             record: SubmissionRecord = (
@@ -514,37 +521,53 @@ def register_markingevent_tasks(celery):
         advanced = 0
         try:
             for sr in record.submitter_reports.all():
-                if sr.workflow_state != SubmitterReportWorkflowStates.NOT_READY:
-                    continue
+                if sr.workflow_state == SubmitterReportWorkflowStates.NOT_READY:
+                    workflow = sr.workflow
+                    if workflow.requires_report:
+                        # Only advance when both report and processed_report are present
+                        if record.report is None or record.processed_report is None:
+                            continue
 
-                workflow = sr.workflow
-                if workflow.requires_report:
-                    # Only advance when both report and processed_report are present
-                    if record.report is None or record.processed_report is None:
-                        continue
+                    # NOTE: If turnitin_score >= 25 and turnitin_resolved=False, transition to
+                    # REQUIRES_CONVENOR_INTERVENTION instead of READY_TO_DISTRIBUTE.
+                    # The SubmitterReport cannot proceed past REQUIRES_CONVENOR_INTERVENTION until
+                    # the convenor resolves the Turnitin concern via convenor.resolve_turnitin_issue.
+                    if (
+                        record.turnitin_score is not None
+                        and record.turnitin_score >= 25
+                        and not sr.turnitin_resolved
+                    ):
+                        sr.workflow_state = (
+                            SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                        )
+                    else:
+                        sr.workflow_state = (
+                            SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                        )
+                    advanced += 1
 
-                # NOTE: If turnitin_score >= 25 and turnitin_resolved=False, transition to
-                # REQUIRES_CONVENOR_INTERVENTION instead of READY_TO_DISTRIBUTE.
-                # The SubmitterReport cannot proceed past REQUIRES_CONVENOR_INTERVENTION until
-                # the convenor resolves the Turnitin concern via convenor.resolve_turnitin_issue.
-                if (
-                    record.turnitin_score is not None
-                    and record.turnitin_score >= 25
-                    and not sr.turnitin_resolved
+                elif (
+                    sr.workflow_state == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                    and sr.turnitin_resolved
                 ):
-                    sr.workflow_state = (
-                        SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
-                    )
-                else:
-                    sr.workflow_state = (
-                        SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
-                    )
-                advanced += 1
+                    # Turnitin concern resolved: re-evaluate using the full lifecycle evaluator
+                    # to handle mid-lifecycle cases (MarkingReports already submitted/signed off).
+                    advance_submitter_report(sr)
+
+                    # If advance_submitter_report did not change the state (no MarkingReports
+                    # submitted yet), the SR is still pre-distribution — move to READY_TO_DISTRIBUTE.
+                    if (
+                        sr.workflow_state
+                        == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                    ):
+                        sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+
+                    advanced += 1
 
             if advanced > 0:
                 log_db_commit(
-                    f"Advanced {advanced} SubmitterReport(s) to READY_TO_DISTRIBUTE or "
-                    f"REQUIRES_CONVENOR_INTERVENTION for SubmissionRecord id={record_id}",
+                    f"Re-evaluated {advanced} SubmitterReport(s) for SubmissionRecord id={record_id} "
+                    f"via advance_marking_workflow",
                     endpoint=self.name,
                 )
 

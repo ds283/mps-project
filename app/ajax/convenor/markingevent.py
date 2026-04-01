@@ -200,7 +200,7 @@ _submitter_report_project = """
 {% endif %}
 {% set asset = report.record.processed_report %}
 {% if asset is not none %}
-    <div class="mt-2">
+    <div class="d-flex flex-row flex-wrap justify-content-between align-items-start gap-2 mt-2">
         {% if asset.medium_thumbnail is not none and not asset.medium_thumbnail.lost %}
             <img src="{{ url_for('documents.serve_thumbnail', asset_type='GeneratedAsset', asset_id=asset.id, size='medium') }}"
                  class="img-thumbnail mb-1" style="max-width:200px; max-height:200px;" alt="Preview">
@@ -208,17 +208,15 @@ _submitter_report_project = """
             <img src="{{ url_for('documents.serve_thumbnail', asset_type='GeneratedAsset', asset_id=asset.id, size='small') }}"
                  class="img-thumbnail mb-1" style="max-width:150px; max-height:150px;" alt="Preview">
         {% endif %}
-        <div class="mt-1">
-            <a href="{{ url_for('admin.download_generated_asset', asset_id=asset.id) }}"
-               class="btn btn-xs btn-outline-secondary" data-bs-toggle="tooltip" title="Download processed report">
-                <i class="fas fa-file-pdf fa-fw"></i> Report
-            </a>
-        </div>
+        <a href="{{ url_for('admin.download_generated_asset', asset_id=asset.id) }}"
+           class="btn btn-xs btn-outline-secondary" data-bs-toggle="tooltip" title="Download processed report">
+            <i class="fas fa-file-pdf fa-fw"></i> Download
+        </a>
     </div>
 {% endif %}
 {% if report.record.report_processing_failed %}
-    <div class="mt-1">
-        <span class="badge bg-danger">Processing failed</span>
+    <div class="d-flex flex-row flex-wrap justify-content-between align-items-start gap-2 mt-1">
+        <span class="text-danger"><i class="fas fa-exclamation-triangle"></i> Processing failed</span>
         <a href="{{ url_for('convenor.restart_report_processing', record_id=report.record.id) }}"
            class="btn btn-xs btn-outline-danger ms-1">
             <i class="fas fa-redo fa-fw"></i> Restart
@@ -294,8 +292,8 @@ _submitter_report_actions = """
 _submitter_report_grade = """
 {% if report.grade is not none %}
     <div class="text-primary fw-semibold fs-4">{{ "%.1f"|format(report.grade) }}%</div>
-    {% if report.grade_submitted_by is not none %}
-        <div class="small text-muted mt-1">by {{ report.grade_submitted_by.name }}</div>
+    {% if report.grade_generated_by is not none %}
+        <div class="small text-muted mt-1">by {{ report.grade_generated_by.name }}</div>
     {% endif %}
 {% else %}
     <span class="badge bg-secondary">Not graded</span>
@@ -417,43 +415,67 @@ _submitter_report_reports = """
 {%- set moderator_reports = report.moderator_reports.all() -%}
 <div class="d-flex flex-column gap-2">
     {% for mr in marking_reports %}
-        <div class="small">
-            <div class="fw-semibold">{{ mr.user.name }}</div>
-            <div class="text-muted">{{ mr.role.role_as_str }}</div>
-            {% if mr.grade is not none %}
-                <span class="text-primary fw-semibold">{{ "%.1f"|format(mr.grade) }}%</span>
-            {% endif %}
-            {% if mr.report_submitted %}
-                <span class="badge bg-success ms-1">Submitted</span>
-            {% else %}
-                <span class="badge bg-secondary ms-1">Pending</span>
-            {% endif %}
-            {% if mr.signed_off_id is not none %}
-                <span class="badge bg-light text-dark border ms-1"><i class="fas fa-check-double"></i> Signed off</span>
-            {% endif %}
+        <div class="bg-light p-2 mb-2">
+            <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+                <div class="fw-semibold">{{ mr.user.name }}</div>
+                <div class="text-muted small">{{ mr.role.role_as_str }}</div>
+                {% if mr.grade is not none %}
+                    <span class="text-primary fw-semibold fs-4">{{ "%.1f"|format(mr.grade) }}%</span>
+                {% endif %}
+                {% if mr.report_submitted %}
+                    <span class="text-success small"><i
+                            class="fas fa-check-circle"></i> Report submitted</span>
+                {% else %}
+                    <span class="text-secondary small fst-italic"><i
+                            class="fas fa-hourglass-half"></i> Awaiting report</span>
+                {% endif %}
+                {% if mr.feedback_submitted %}
+                    <span class="text-success small"><i
+                            class="fas fa-comment"></i> Feedback submitted</span>
+                {% else %}
+                    <span class="text-secondary small fst-italic"><i
+                            class="fas fa-hourglass-half"></i> Awaiting feedback</span>
+                {% endif %}
+                {% if mr.signed_off_by is not none %}
+                    <div>
+                        <div class="small text-success fw-semibold"><i class="fas fa-check-circle"></i> Signed off</div>
+                        <div class="small text-muted mt-1">by <i class="fas fa-user"></i> {{ mr.signed_off_by.user.name }}</div>
+                        {% if mr.signed_off_timestamp is not none %}
+                            <div class="small text-muted">{{ mr.signed_off_timestamp.strftime("%d/%m/%Y") }}</div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                        <span class="text-secondary small fst-italic small"><i
+                                class="fas fa-hourglass-half"></i> Awaiting signoff</span>
+                {% endif %}
+            </div>
         </div>
     {% endfor %}
     {% if moderator_reports %}
         <hr class="my-1">
         {% for mod_report in moderator_reports %}
-            <div class="small">
-                <div class="text-muted fst-italic">Moderator: {{ mod_report.user.name }}</div>
-                {% if mod_report.report_submitted %}
-                    {% if mod_report.grade is not none %}
-                        <span class="text-danger fw-semibold">{{ "%.1f"|format(mod_report.grade) }}%</span>
+            <div class="bg-light p-2 mb-2">
+                <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+                    <div class="text-muted fst-italic">Moderator: {{ mod_report.user.name }}</div>
+                    {% if mod_report.report_submitted %}
+                        {% if mod_report.grade is not none %}
+                            <span class="text-danger fw-semibold fs-4">{{ "%.1f"|format(mod_report.grade) }}%</span>
+                        {% endif %}
+                        <span class="text-success"><i
+                                class="fas fa-check-circle"></i> Report submitted</span>
+                        <form method="POST"
+                              action="{{ url_for('convenor.accept_moderator_grade', mod_report_id=mod_report.id, workflow_id=report.workflow_id) }}"
+                              class="d-inline ms-1">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-xs btn-outline-success" type="submit">
+                                <i class="fas fa-check fa-fw"></i> Accept
+                            </button>
+                        </form>
+                    {% else %}
+                        <span class="text-secondary fst-italic"><i
+                                class="fas fa-hourglass-half"></i> Awaiting report</span>
                     {% endif %}
-                    <span class="badge bg-success ms-1">Submitted</span>
-                    <form method="POST"
-                          action="{{ url_for('convenor.accept_moderator_grade', mod_report_id=mod_report.id, workflow_id=report.workflow_id) }}"
-                          class="d-inline ms-1">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button class="btn btn-xs btn-outline-success" type="submit">
-                            <i class="fas fa-check fa-fw"></i> Accept
-                        </button>
-                    </form>
-                {% else %}
-                    <span class="badge bg-secondary">Pending</span>
-                {% endif %}
+                </div>
             </div>
         {% endfor %}
     {% endif %}
@@ -522,7 +544,7 @@ _marking_report_status = """
 _marking_report_signoff = """
 {% if report.signed_off_by is not none %}
     <div class="small text-success fw-semibold"><i class="fas fa-check-circle"></i> Signed off</div>
-    <div class="small text-muted mt-1">by {{ report.signed_off_by.user.name }}</div>
+    <div class="small text-muted mt-1">by <i class="fas fa-user"></i> {{ report.signed_off_by.user.name }}</div>
     {% if report.signed_off_timestamp is not none %}
         <div class="small text-muted">{{ report.signed_off_timestamp.strftime("%d/%m/%Y") }}</div>
     {% endif %}

@@ -915,17 +915,25 @@ _marking_scheme_menu = """
 # language=jinja2
 _period_marking_event_status = """
 {% if event.closed %}
-    <span class="badge bg-secondary">Finished</span>
+    <span class="text-secondary"><i class="fas fa-check-circle"></i> Finished</span>
 {% elif event.open %}
-    <span class="badge bg-success">Marking and feedback in progress</span>
+    <span class="text-primary"><i class="fas fa-check-circle"></i> Marking and feedback in progress</span>
 {% else %}
-    <span class="badge bg-primary">Pending</span>
-    <div class="mt-2">
-        <a href="{{ url_for('convenor.open_marking_event', event_id=event.id) }}"
-           class="btn btn-xs btn-outline-primary">
-            <i class="fas fa-play fa-fw"></i> Open event&hellip;
-        </a>
-    </div>
+    {% set has_workflows = event.workflows.count() > 0 %}
+    {% if has_workflows %}
+        <span class="text-secondary"><i class="fas fa-hourglass-half"></i> Pending</span>
+        <div class="mt-2">
+            <a href="{{ url_for('convenor.open_marking_event', event_id=event.id) }}"
+               class="btn btn-xs btn-outline-primary">
+                <i class="fas fa-play fa-fw"></i> Open event&hellip;
+            </a>
+        </div>
+    {% else %}
+        <span class="text-secondary"><i class="fas fa-hourglass-half"></i> Pending</span>
+        <div class="mt-2">
+            <span class="badge bg-secondary">No workflows configured</span>
+        </div>
+    {% endif %}
 {% endif %}
 """
 
@@ -940,9 +948,15 @@ _period_marking_event_menu = """
             <i class="fas fa-search fa-fw"></i> Inspect workflows&hellip;
         </a>
         {% if not event.open and not event.closed %}
-            <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.open_marking_event', event_id=event.id) }}">
-                <i class="fas fa-play fa-fw"></i> Open event&hellip;
-            </a>
+            {% if event.workflows.count() > 0 %}
+                <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.open_marking_event', event_id=event.id) }}">
+                    <i class="fas fa-play fa-fw"></i> Open event&hellip;
+                </a>
+            {% else %}
+                <span class="dropdown-item d-flex gap-2 disabled text-muted">
+                    <i class="fas fa-play fa-fw"></i> Open event&hellip;
+                </span>
+            {% endif %}
             <div class="dropdown-divider"></div>
         {% endif %}
         <a class="dropdown-item d-flex gap-2" href="{{ url_for('convenor.edit_marking_event', event_id=event.id, url=url, text=text) }}">

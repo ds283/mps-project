@@ -37,16 +37,10 @@
                         {{ form.hidden_tag() }}
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">
-                                <span class="badge bg-success me-1">What was good?</span>
-                            </label>
                             {{ wtf.render_field(form.feedback_positive, label=False) }}
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">
-                                <span class="badge bg-secondary me-1">What could be improved next time?</span>
-                            </label>
                             {{ wtf.render_field(form.feedback_improvement, label=False) }}
                         </div>
 

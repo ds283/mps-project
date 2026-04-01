@@ -273,7 +273,7 @@ _submitter_report_actions = """
 # language=jinja2
 _submitter_report_grade = """
 {% if report.grade is not none %}
-    <div class="text-primary fw-semibold">{{ "%.1f"|format(report.grade) }}%</div>
+    <div class="text-primary fw-semibold fs-4">{{ "%.1f"|format(report.grade) }}%</div>
     {% if report.grade_submitted_by is not none %}
         <div class="small text-muted mt-1">by {{ report.grade_submitted_by.name }}</div>
     {% endif %}
@@ -395,6 +395,7 @@ _submitter_report_turnitin = """
 _marking_report_marker = """
 <div class="fw-semibold">{{ report.user.name }}</div>
 <div class="small text-muted mt-1">{{ report.role.role_as_str }}</div>
+{{ offcanvas|safe }}
 """
 
 # language=jinja2
@@ -406,7 +407,7 @@ _marking_report_student = """
 # language=jinja2
 _marking_report_grade = """
 {% if report.grade is not none %}
-    <div class="text-primary fw-semibold">{{ "%.1f"|format(report.grade) }}%</div>
+    <div class="text-primary fw-semibold fs-4">{{ "%.1f"|format(report.grade) }}%</div>
     {% if report.grade_submitted_by is not none %}
         <div class="small text-muted mt-1">by {{ report.grade_submitted_by.name }}</div>
     {% endif %}
@@ -456,10 +457,12 @@ _marking_report_signoff = """
 _mr_emails_offcanvas = """
 {# Offcanvas: distribution email history for a single MarkingReport.
    Extensible: add further sections (e.g. feedback emails) below the distribution emails section. #}
+<a class="text-muted text-decoration-none small" role="button" data-bs-toggle="offcanvas" href="#mr_info_{{ report.id }}"
+   aria-controls="edit_{{ report.id }}">Show info <i class="fas fa-chevron-right"></i></a>
 <div class="offcanvas offcanvas-start text-bg-light" tabindex="-1"
-     id="mr_emails_{{ report.id }}" aria-labelledby="mr_emails_label_{{ report.id }}">
+     id="mr_info_{{ report.id }}" aria-labelledby="mr_info_label_{{ report.id }}">
     <div class="offcanvas-header border-bottom">
-        <h5 class="offcanvas-title" id="mr_emails_label_{{ report.id }}">
+        <h5 class="offcanvas-title" id="mr_info_label_{{ report.id }}">
             <i class="fas fa-envelope fa-fw me-1"></i> {{ report.user.name }}
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
@@ -518,7 +521,7 @@ _marking_report_actions = """
         <a class="dropdown-item d-flex gap-2"
            href="{{ url_for('faculty.marking_form', report_id=report.id,
                      url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}">
-            <i class="fas fa-pen fa-fw"></i> {% if report.report_submitted %}Edit{% else %}View{% endif %} marking form...
+            <i class="fas fa-pen fa-fw"></i> {% if report.report_submitted %}Edit{% else %}View{% endif %} report&hellip;
         </a>
         {% if report.grade_submitted_timestamp is not none %}
             <form method="POST"
@@ -526,12 +529,12 @@ _marking_report_actions = """
                              url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}"
                   style="display:contents">
                 <button class="dropdown-item d-flex gap-2 text-warning" type="submit">
-                    <i class="fas fa-undo fa-fw"></i> Clear submitted grade&hellip;
+                    <i class="fas fa-undo fa-fw"></i> Clear grade&hellip;
                 </button>
             </form>
         {% endif %}
-        <div class="dropdown-divider"></div>
         {% if event.open and not event.closed %}
+            <div class="dropdown-divider"></div>
             {% if not report.distributed %}
                 <form method="POST"
                       action="{{ url_for('convenor.dispatch_marking_report', report_id=report.id,
@@ -557,14 +560,13 @@ _marking_report_actions = """
         {% endif %}
         {% if report.distribution_emails.count() > 0 %}
             <button class="dropdown-item d-flex gap-2" type="button"
-                    data-bs-toggle="offcanvas" data-bs-target="#mr_emails_{{ report.id }}"
-                    aria-controls="mr_emails_{{ report.id }}">
+                    data-bs-toggle="offcanvas" data-bs-target="#mr_info_{{ report.id }}"
+                    aria-controls="mr_info_{{ report.id }}">
                 <i class="fas fa-envelope-open fa-fw"></i> View emails ({{ report.distribution_emails.count() }})
             </button>
         {% endif %}
     </div>
 </div>
-{{ offcanvas }}
 """
 
 
@@ -660,16 +662,16 @@ def marking_report_data(reports):
 
     return [
         {
-            "marker": render_template(marker_tmpl, report=report),
+            "marker": render_template(
+                marker_tmpl,
+                report=report,
+                offcanvas=render_template(offcanvas_tmpl, report=report),
+            ),
             "student": render_template(student_tmpl, report=report),
             "grade": render_template(grade_tmpl, report=report),
             "status": render_template(status_tmpl, report=report),
             "signoff": render_template(signoff_tmpl, report=report),
-            "actions": render_template(
-                actions_tmpl,
-                report=report,
-                offcanvas=render_template(offcanvas_tmpl, report=report),
-            ),
+            "actions": render_template(actions_tmpl, report=report),
         }
         for report in reports
     ]

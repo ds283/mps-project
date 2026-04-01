@@ -6,7 +6,7 @@
 {% block scripts %}
     {{ super() }}
     <script>
-        $(document).ready(function() {
+        $(document).ready(function () {
             $('[data-bs-toggle="tooltip"]').tooltip();
         });
     </script>
@@ -26,7 +26,7 @@
                 </a>
                 <h4 class="mb-0">
                     <i class="fas fa-marker fa-fw me-1"></i>
-                    Marking form &mdash; {{ record.student_identifier['label'] }}
+                    Marking report for {{ record.student_identifier['label'] }}
                 </h4>
             </div>
 
@@ -35,14 +35,15 @@
                 <div class="alert alert-secondary mb-3">
                     {% call icon_block("lock") %}
                         <strong>This marking form is now closed.</strong>
-                        The submission window (24 hours) has passed. Please contact the convenor if you need to make changes.
+                        The 24 hour submission window has now passed. Please contact the convenor if you need to make
+                        changes.
                     {% endcall %}
                 </div>
-            {% elif report.grade_generated_timestamp is not none %}
+            {% elif report.grade_submitted_timestamp is not none %}
                 <div class="alert alert-success mb-3">
                     {% call icon_block("check-circle") %}
                         <strong>Marking report submitted.</strong>
-                        Submitted on {{ report.grade_generated_timestamp.strftime("%a %d %b %Y at %H:%M") }}.
+                        Submitted on {{ report.grade_submitted_timestamp.strftime("%a %d %b %Y at %H:%M") }}.
                         {% if is_editable %}
                             You can still edit and resubmit within 24 hours of submission.
                         {% endif %}
@@ -53,7 +54,7 @@
             {# Marking context card #}
             <div class="card border-secondary mb-3">
                 <div class="card-header bg-secondary text-white">
-                    <i class="fas fa-info-circle fa-fw me-1"></i> Marking context
+                    <i class="fas fa-info-circle fa-fw me-1"></i> Context and data
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -66,7 +67,8 @@
                                 <dt class="col-sm-5 text-muted">Supervisors</dt>
                                 <dd class="col-sm-7">
                                     {% for role in record.supervisor_roles %}
-                                        <div><a class="text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a></div>
+                                        <div><a class="text-decoration-none"
+                                                href="mailto:{{ role.user.email }}">{{ role.user.name }}</a></div>
                                     {% else %}
                                         <span class="text-muted">None recorded</span>
                                     {% endfor %}
@@ -104,7 +106,8 @@
                             {%- set display_asset = record.processed_report if record.processed_report else record.report -%}
                             {% if display_asset.small_thumbnail and not display_asset.small_thumbnail.lost %}
                                 <img src="{{ url_for('documents.serve_thumbnail', asset_type=display_asset.get_type(), asset_id=display_asset.id, size='small') }}"
-                                     class="img-thumbnail" style="max-width:70px; max-height:90px;" alt="Report preview">
+                                     class="img-thumbnail" style="max-width:70px; max-height:90px;"
+                                     alt="Report preview">
                             {% else %}
                                 <div class="d-flex align-items-center justify-content-center bg-light border rounded"
                                      style="width:70px; height:90px;">
@@ -114,12 +117,14 @@
                             <div>
                                 <div class="fw-semibold mb-1">{{ display_asset.target_name or display_asset.filename or "Student report" }}</div>
                                 {% if record.processed_report %}
-                                    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.download_generated_asset', asset_id=record.processed_report.id) }}">
+                                    <a class="btn btn-sm btn-outline-primary"
+                                       href="{{ url_for('admin.download_generated_asset', asset_id=record.processed_report.id) }}">
                                         <i class="fas fa-download fa-fw"></i> Download processed report
                                     </a>
                                 {% endif %}
                                 {% if record.report %}
-                                    <a class="btn btn-sm btn-outline-secondary ms-1" href="{{ url_for('admin.download_submitted_asset', asset_id=record.report.id) }}">
+                                    <a class="btn btn-sm btn-outline-secondary ms-1"
+                                       href="{{ url_for('admin.download_submitted_asset', asset_id=record.report.id) }}">
                                         <i class="fas fa-download fa-fw"></i> Download original
                                     </a>
                                 {% endif %}
@@ -143,19 +148,23 @@
                                     <div class="card-body p-2 text-center">
                                         {% if asset.small_thumbnail and not asset.small_thumbnail.lost %}
                                             <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
-                                                 class="img-thumbnail mb-2" style="max-width:80px; max-height:80px;" alt="">
+                                                 class="img-thumbnail mb-2" style="max-width:80px; max-height:80px;"
+                                                 alt="">
                                         {% else %}
-                                            <div class="d-flex align-items-center justify-content-center bg-light border rounded mb-2" style="width:80px; height:80px; margin: 0 auto;">
+                                            <div class="d-flex align-items-center justify-content-center bg-light border rounded mb-2"
+                                                 style="width:80px; height:80px; margin: 0 auto;">
                                                 <i class="fas fa-file fa-2x text-muted"></i>
                                             </div>
                                         {% endif %}
-                                        <div class="small fw-semibold text-truncate" title="{{ asset.target_name or asset.filename }}">
+                                        <div class="small fw-semibold text-truncate"
+                                             title="{{ asset.target_name or asset.filename }}">
                                             {{ asset.target_name or asset.filename }}
                                         </div>
                                         {% if pa.description %}
                                             <div class="small text-muted mt-1">{{ pa.description }}</div>
                                         {% endif %}
-                                        <a class="btn btn-xs btn-outline-secondary mt-2" href="{{ url_for('admin.download_submitted_asset', asset_id=asset.id) }}">
+                                        <a class="btn btn-xs btn-outline-secondary mt-2"
+                                           href="{{ url_for('admin.download_submitted_asset', asset_id=asset.id) }}">
                                             <i class="fas fa-download fa-fw"></i> Download
                                         </a>
                                     </div>
@@ -182,7 +191,8 @@
                                                 <div class="fw-semibold small">{{ entry.title or "(Untitled)" }}</div>
                                                 <div class="small text-muted">{{ entry.created_timestamp.strftime("%a %d %b %Y") }}</div>
                                                 {% if entry.entry %}
-                                                    <div class="small text-muted mt-1 fst-italic" style="max-width:600px;">
+                                                    <div class="small text-muted mt-1 fst-italic"
+                                                         style="max-width:600px;">
                                                         {{ entry.entry | striptags | truncate(200) }}
                                                     </div>
                                                 {% endif %}
@@ -255,9 +265,11 @@
                                 <div class="position-relative" style="min-width:90px; max-width:120px;">
                                     <div class="card {{ ev_class }} p-2 text-center" style="font-size:0.75rem;">
                                         <div><i class="fas fa-{{ ev_icon }} fa-fw"></i></div>
-                                        <div class="fw-semibold text-truncate" title="{{ ev.name }}">{{ ev.name }}</div>
                                         {% if ev.get_start_time() %}
-                                            <div>{{ ev.get_start_time().strftime("%d %b") }}</div>
+                                            <div class="fw-semibold">{{ ev.get_start_time().strftime("%d %b") }}</div>
+                                        {% else %}
+                                            <div class="fw-semibold text-truncate"
+                                                 title="{{ ev.name }}">{{ ev.name }}</div>
                                         {% endif %}
                                         {% if has_notes %}
                                             {# Offcanvas trigger for notes #}
@@ -272,7 +284,8 @@
                                         {% endif %}
                                     </div>
                                     {% if ev.attendance is not none %}
-                                        <div class="small text-center text-muted mt-1" style="font-size:0.65rem;">{{ ev.attendance_str }}</div>
+                                        <div class="small text-center text-muted mt-1"
+                                             style="font-size:0.65rem;">{{ ev.attendance_str }}</div>
                                     {% endif %}
                                 </div>
                                 {% if has_notes %}
@@ -282,7 +295,8 @@
                                             <h5 class="offcanvas-title" id="ev_notes_label_{{ ev.id }}">
                                                 <i class="fas fa-calendar-check fa-fw me-1"></i> {{ ev.name }}
                                             </h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                                            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"
+                                                    aria-label="Close"></button>
                                         </div>
                                         <div class="offcanvas-body">
                                             {% if ev.get_start_time() %}
@@ -357,9 +371,11 @@
                                                 {% elif field_spec.field_type.get('min') is not none or field_spec.field_type.get('max') is not none %}
                                                     <div class="col-md-4 small text-muted">
                                                         Range:
-                                                        {% if field_spec.field_type.get('min') is not none %}{{ field_spec.field_type.min }}{% else %}&mdash;{% endif %}
+                                                        {% if field_spec.field_type.get('min') is not none %}
+                                                            {{ field_spec.field_type.min }}{% else %}&mdash;{% endif %}
                                                         &ndash;
-                                                        {% if field_spec.field_type.get('max') is not none %}{{ field_spec.field_type.max }}{% else %}&mdash;{% endif %}
+                                                        {% if field_spec.field_type.get('max') is not none %}
+                                                            {{ field_spec.field_type.max }}{% else %}&mdash;{% endif %}
                                                     </div>
                                                 {% endif %}
                                             </div>
@@ -381,15 +397,9 @@
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">
-                                    <span class="badge bg-success me-1">What was good?</span>
-                                </label>
                                 {{ wtf.render_field(form.feedback_positive, label=False) }}
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">
-                                    <span class="badge bg-secondary me-1">What could be improved next time?</span>
-                                </label>
                                 {{ wtf.render_field(form.feedback_improvement, label=False) }}
                             </div>
                         </div>
@@ -407,7 +417,7 @@
                             <i class="fas fa-times fa-fw"></i> Cancel
                         </a>
                         <button type="submit" name="submit_marking" class="btn btn-primary">
-                            <i class="fas fa-check fa-fw"></i> Submit marking report
+                            <i class="fas fa-check fa-fw"></i> Submit report
                         </button>
                     </div>
                 {% else %}

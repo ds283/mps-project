@@ -191,9 +191,7 @@ def close_period(id):
 
     state = config.submitter_lifecycle
     if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
-        flash(
-            "The period cannot be closed while marking events are active.", "info"
-        )
+        flash("The period cannot be closed while marking events are active.", "info")
         return redirect(redirect_url())
 
     if config.submission_period > config.number_submissions:
@@ -247,9 +245,7 @@ def do_close_period(id):
 
     state = config.submitter_lifecycle
     if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
-        flash(
-            "The period cannot be closed while marking events are active.", "info"
-        )
+        flash("The period cannot be closed while marking events are active.", "info")
         return redirect(redirect_url())
 
     if config.submission_period > config.number_submissions:
@@ -1764,7 +1760,7 @@ def submit_feedback(id):
 
     if not report.feedback_positive and not report.feedback_improvement:
         flash(
-            "Feedback is empty — please enter feedback before submitting.",
+            "Feedback is empty: please enter feedback before submitting.",
             "warning",
         )
         return redirect(redirect_url())

@@ -3419,7 +3419,13 @@ def marking_form(report_id):
             if scheme.uses_standard_feedback:
                 report.feedback_positive = form.feedback_positive.data or ""
                 report.feedback_improvement = form.feedback_improvement.data or ""
-                report.feedback_timestamp = datetime.now()
+
+                if (
+                    len(report.feedback_positive) > 0
+                    and len(report.feedback_improvement) > 0
+                ):
+                    report.feedback_submitted = True
+                    report.feedback_timestamp = datetime.now()
 
             # Process validation block
             prevent_submit = False
@@ -3528,6 +3534,8 @@ def marking_form(report_id):
                         user=current_user,
                         project_classes=pclass,
                     )
+                    if is_elevated:
+                        return redirect(url)
                     return render_template_context(
                         "faculty/thankyou_marking.html",
                         dashboard_url=url_for("faculty.dashboard", pane="marking"),

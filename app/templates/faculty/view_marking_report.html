@@ -43,8 +43,8 @@
                                 <dd class="col-sm-7">{{ workflow.role_as_str }}</dd>
                                 <dt class="col-sm-5 text-muted">Submitted</dt>
                                 <dd class="col-sm-7">
-                                    {% if report.grade_generated_timestamp %}
-                                        {{ report.grade_generated_timestamp.strftime("%a %d %b %Y at %H:%M") }}
+                                    {% if report.grade_submitted_timestamp %}
+                                        {{ report.grade_submitted_timestamp.strftime("%a %d %b %Y at %H:%M") }}
                                         {% if report.grade_generated_by %}
                                             <span class="text-muted">by {{ report.grade_generated_by.name }}</span>
                                         {% endif %}
@@ -54,7 +54,8 @@
                                 </dd>
                                 {% if report.feedback_submitted %}
                                     <dt class="col-sm-5 text-muted">Feedback</dt>
-                                    <dd class="col-sm-7"><span class="badge bg-success"><i class="fas fa-check"></i> Submitted</span></dd>
+                                    <dd class="col-sm-7"><span class="badge bg-success"><i class="fas fa-check"></i> Submitted</span>
+                                    </dd>
                                 {% endif %}
                             </dl>
                         </div>
@@ -97,9 +98,11 @@
                                         {% if key in field_values %}
                                             {% if ftype == 'boolean' %}
                                                 {% if field_values[key] %}
-                                                    <span class="badge bg-success"><i class="fas fa-check"></i> Yes</span>
+                                                    <span class="badge bg-success"><i
+                                                            class="fas fa-check"></i> Yes</span>
                                                 {% else %}
-                                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> No</span>
+                                                    <span class="badge bg-secondary"><i
+                                                            class="fas fa-times"></i> No</span>
                                                 {% endif %}
                                             {% elif ftype in ('number', 'percent') %}
                                                 {{ field_values[key] }}{% if ftype == 'percent' %}%{% endif %}
@@ -170,7 +173,7 @@
                 {% if report.marking_form_is_open or is_elevated %}
                     <a class="btn btn-outline-primary"
                        href="{{ url_for('faculty.marking_form', report_id=report.id, url=url) }}">
-                        <i class="fas fa-pen fa-fw"></i> Edit marking form
+                        <i class="fas fa-pen fa-fw"></i> Edit report
                     </a>
                 {% endif %}
             </div>

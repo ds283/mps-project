@@ -7,134 +7,115 @@
     {% if roles|length > 0 %}
         <table class="table table-striped">
             <thead>
-                <tr>
-                    <th width="20%">Exam number</th>
-                    <th width="20%">Supervisor roles</th>
-                    <th width="40%">Project</th>
-                    <th width="20%"></th>
-                </tr>
+            <tr>
+                <th width="20%">Exam number</th>
+                <th width="20%">Supervisor roles</th>
+                <th width="40%">Project</th>
+                <th width="20%"></th>
+            </tr>
             </thead>
             <tbody>
-                {% for my_role in roles %}
-                    {# role is a SubmissionRole #}
-                    {% set rec = my_role.submission %}
-                    {# rec is a SubmissionRecord #}
-                    {% set uses_feedback = rec.uses_marker_feedback %}
-                    <tr>
-                        <td>
-                            {{ unformatted_label(rec.student_identifier) }}
-                        </td>
-                        <td>
-                            {% set supv_roles = rec.supervisor_roles %}
-                            {% if supv_roles|length > 0 %}
-                                <div class="d-flex flex-column justify-content-start align-items-start">
-                                    {% for role in supv_roles %}
-                                        <a class="text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a class="text-decoration-none" href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
-                                {{ rec.project.name }}
-                            </a>
-                            {% if rec.project.generic or rec.project.owner is none %}
-                                <span class="small text-capitalize text-secondary">Generic</span>
-                            {% elif rec.project.owner_id != current_user.id %}
-                                <div class="small text-muted">
-                                    Owner
-                                    <a class="text-decoration-none" href="mailto:{{ rec.project.owner.user.email }}">{{ rec.project.owner.user.name }}</a>
-                                </div>
-                            {% endif %}
-                            <div class="d-flex flex-row justify-content-start align-items-center gap-2 mt-1">
-                                {% if rec.report %}
-                                    <span class="badge bg-success"><i class="fas fa-check"></i> Report uploaded</span>
-                                {% endif %}
-                                {% if uses_feedback %}
-                                    <div>
-                                        {% if my_role.submitted_feedback %}
-                                            <span class="badge bg-success"><i class="fas fa-check"></i> Feedback submitted</span>
-                                        {% elif period.closed %}
-                                            <span class="badge bg-warning text-dark"><i class="fas fa-times"></i> Feedback missing</span>
-                                        {% elif period.is_feedback_open %}
-                                            <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-circle"></i> Feedback needed</span>
-                                        {% endif %}
-                                    </div>
-                                {% endif %}
+            {% for my_role in roles %}
+                {# role is a SubmissionRole #}
+                {% set rec = my_role.submission %}
+                {# rec is a SubmissionRecord #}
+                <tr>
+                    <td>
+                        {{ unformatted_label(rec.student_identifier) }}
+                    </td>
+                    <td>
+                        {% set supv_roles = rec.supervisor_roles %}
+                        {% if supv_roles|length > 0 %}
+                            <div class="d-flex flex-column justify-content-start align-items-start">
+                                {% for role in supv_roles %}
+                                    <a class="text-decoration-none"
+                                       href="mailto:{{ role.user.email }}">{{ role.user.name }}</a>
+                                {% endfor %}
                             </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a class="text-decoration-none"
+                           href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                            {{ rec.project.name }}
+                        </a>
+                        {% if rec.project.generic or rec.project.owner is none %}
+                            <span class="small text-capitalize text-secondary">Generic</span>
+                        {% elif rec.project.owner_id != current_user.id %}
+                            <div class="small text-muted">
+                                Owner
+                                <a class="text-decoration-none"
+                                   href="mailto:{{ rec.project.owner.user.email }}">{{ rec.project.owner.user.name }}</a>
+                            </div>
+                        {% endif %}
+                        <div class="d-flex flex-column justify-content-start align-items-start gap-1 mt-1">
+                            {% if rec.report %}
+                                <div class="text-success"><i class="fas fa-check-circle"></i> Student report available
+                                </div>
+                            {% endif %}
                             {# MarkingReport status for any distributed reports on this role #}
                             {%- set distributed_reports = my_role.marking_reports.filter_by(distributed=True).all() -%}
                             {% if distributed_reports %}
-                                <div class="mt-2 d-flex flex-column gap-1">
-                                    {% for mr in distributed_reports %}
-                                        <div class="d-flex flex-row flex-wrap align-items-center gap-1">
-                                            <span class="badge bg-success small"><i class="fas fa-envelope fa-fw"></i> Distributed</span>
-                                            {% if mr.report_submitted %}
-                                                <span class="badge bg-success small"><i class="fas fa-check fa-fw"></i> Report submitted</span>
-                                                {% if mr.grade is not none %}
-                                                    <span class="badge bg-primary small">Grade: {{ "%.1f"|format(mr.grade) }}%</span>
-                                                {% endif %}
-                                            {% else %}
-                                                <span class="badge bg-warning text-dark small"><i class="fas fa-hourglass-half fa-fw"></i> Report pending</span>
-                                            {% endif %}
-                                            {% if mr.signed_off_id %}
-                                                <span class="badge bg-secondary small"><i class="fas fa-check-double fa-fw"></i> Signed off</span>
-                                            {% endif %}
-                                            {% if mr.feedback_submitted %}
-                                                <span class="badge bg-success small"><i class="fas fa-comment fa-fw"></i> Feedback submitted</span>
-                                            {% endif %}
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="d-flex flex-column align-items-end gap-2 w-100">
-                                {# Marking form CTAs #}
-                                {%- set distributed_reports = my_role.marking_reports.filter_by(distributed=True).all() -%}
                                 {% for mr in distributed_reports %}
-                                    {% if mr.marking_form_is_open %}
-                                        <a class="btn btn-warning btn-sm full-width-button" href="{{ url_for('faculty.marking_form', report_id=mr.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
-                                            <i class="fas fa-pen fa-fw"></i> Complete marking form
-                                        </a>
-                                    {% elif mr.report_submitted %}
-                                        <a class="btn btn-outline-secondary btn-sm full-width-button" href="{{ url_for('faculty.view_marking_report', report_id=mr.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
-                                            <i class="fas fa-search fa-fw"></i> View report
-                                        </a>
-                                    {% endif %}
-                                {% endfor %}
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                        Actions
-                                    </button>
-                                    <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fas fa-file fa-fw"></i> Manage documents ({{ rec.number_attachments }})...</a>
-                                        {% if uses_feedback %}
-                                            {% set state = my_role.feedback_state %}
-                                            {% set valid = my_role.feedback_valid %}
-                                            {% if state > my_role.FEEDBACK_NOT_YET %}
-                                                {% if (period.is_feedback_open and not period.closed) or (period.closed and not my_role.submitted_feedback) %}
-                                                    {% if valid %}
-                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-search fa-fw"></i> Preview feedback...</a>
-                                                    {% else %}
-                                                        <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.edit_feedback', id=my_role.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-pencil-alt fa-fw"></i> Edit feedback...</a>
-                                                    {% endif %}
-                                                {% elif period.closed %}
-                                                    <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-search fa-fw"></i> View feedback...</a>
-                                                {% endif %}
+                                    <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-2">
+                                        {% if mr.report_submitted %}
+                                            {% if mr.grade is not none %}
+                                                <span class="text-primary fw-semibold">Grade: {{ "%.1f"|format(mr.grade) }}%</span>
                                             {% endif %}
+                                            <span class="text-success"><i
+                                                    class="fas fa-check-circle"></i> Report</span>
+                                        {% else %}
+                                            <span class="text-secondary fst-italic"><i
+                                                    class="fas fa-hourglass-half"></i> Awaiting report</span>
                                         {% endif %}
-                                        {% for mr in distributed_reports %}
-                                            {% if mr.report_submitted %}
-                                                <a class="dropdown-item d-flex gap-2" href="{{ url_for('faculty.edit_marking_feedback', report_id=mr.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fas fa-comment fa-fw"></i> Edit marking feedback...</a>
-                                            {% endif %}
-                                        {% endfor %}
+                                        {% if mr.feedback_submitted %}
+                                            <span class="text-success"><i
+                                                    class="fas fa-comment"></i> Feedback</span>
+                                        {% else %}
+                                            <span class="text-secondary fst-italic"><i
+                                                    class="fas fa-hourglass-half"></i> Awaiting feedback</span>
+                                        {% endif %}
+                                        {% if mr.signed_off_id %}
+                                            <span class="text-secondary small"><i class="fas fa-check-double"></i> Signed off</span>
+                                        {% endif %}
                                     </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-column align-items-end gap-2 w-100">
+                            {# Marking form CTAs #}
+                            {%- set distributed_reports = my_role.marking_reports.filter_by(distributed=True).all() -%}
+                            {% for mr in distributed_reports %}
+                                {% if mr.marking_form_is_open %}
+                                    <a class="btn btn-warning btn-sm full-width-button"
+                                       href="{{ url_for('faculty.marking_form', report_id=mr.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                                        <i class="fas fa-pen fa-fw"></i> Complete marking form
+                                    </a>
+                                {% elif mr.report_submitted %}
+                                    <a class="btn btn-outline-secondary btn-sm full-width-button"
+                                       href="{{ url_for('faculty.view_marking_report', report_id=mr.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}">
+                                        <i class="fas fa-search fa-fw"></i> View report
+                                    </a>
+                                {% endif %}
+                            {% endfor %}
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm full-width-button dropdown-toggle"
+                                        type="button" data-bs-toggle="dropdown">
+                                    Actions
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+                                    <a class="dropdown-item d-flex gap-2"
+                                       href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i
+                                            class="fas fa-file fa-fw"></i> Manage documents
+                                        ({{ rec.number_attachments }})&hellip;</a>
                                 </div>
                             </div>
-                        </td>
-                    </tr>
-                {% endfor %}
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
             </tbody>
         </table>
     {% else %}

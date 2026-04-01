@@ -134,13 +134,14 @@
                         <div class="card-body py-2">
                             <ul class="mb-1 small">
                                 {% for msg in item.failures %}
-                                    <li class="text-warning"><i class="fas fa-exclamation-circle fa-fw"></i> {{ msg }}</li>
+                                    <li class="text-warning"><i class="fas fa-exclamation-circle fa-fw"></i> {{ msg }}
+                                    </li>
                                 {% endfor %}
                             </ul>
                             <a class="btn btn-sm btn-outline-secondary mt-1"
                                href="{{ url_for('faculty.marking_form', report_id=mr.id,
                                          url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}">
-                                <i class="fas fa-search fa-fw"></i> View marking form
+                                <i class="fas fa-search fa-fw"></i> View report
                             </a>
                         </div>
                     </div>

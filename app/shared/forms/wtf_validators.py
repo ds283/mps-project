@@ -796,7 +796,9 @@ def make_unique_marking_event_in_period(period_id, event=None):
             return
         existing = (
             db.session.query(MarkingEvent)
-            .filter(MarkingEvent.period_id == period_id, MarkingEvent.name == field.data)
+            .filter(
+                MarkingEvent.period_id == period_id, MarkingEvent.name == field.data
+            )
             .first()
         )
         if existing is not None:
@@ -819,7 +821,9 @@ def make_unique_marking_workflow_in_event(event_id, workflow=None):
             return
         existing = (
             db.session.query(MarkingWorkflow)
-            .filter(MarkingWorkflow.event_id == event_id, MarkingWorkflow.name == field.data)
+            .filter(
+                MarkingWorkflow.event_id == event_id, MarkingWorkflow.name == field.data
+            )
             .first()
         )
         if existing is not None:
@@ -860,6 +864,7 @@ def parse_schema(data) -> dict | None:
                     "type" in {"boolean", "text", "number", "percent"} (required)
                     "min", "max": optional, used with number type
                     "precision": optional, used with number type
+                    "rows": optional, used with text type, specifies initial number of rows to display in text area
                     "default": optional
         "conflation_rule": str (required, valid Python expression)
         "validation": list of dicts (optional), each with:

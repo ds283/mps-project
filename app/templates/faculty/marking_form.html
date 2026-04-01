@@ -106,7 +106,7 @@
                             {%- set display_asset = record.processed_report if record.processed_report else record.report -%}
                             {% if display_asset.small_thumbnail and not display_asset.small_thumbnail.lost %}
                                 <img src="{{ url_for('documents.serve_thumbnail', asset_type=display_asset.get_type(), asset_id=display_asset.id, size='small') }}"
-                                     class="img-thumbnail" style="max-width:70px; max-height:90px;"
+                                     class="img-thumbnail" style="max-width:150px; max-height:150px;"
                                      alt="Report preview">
                             {% else %}
                                 <div class="d-flex align-items-center justify-content-center bg-light border rounded"
@@ -119,14 +119,16 @@
                                 {% if record.processed_report %}
                                     <a class="btn btn-sm btn-outline-primary"
                                        href="{{ url_for('admin.download_generated_asset', asset_id=record.processed_report.id) }}">
-                                        <i class="fas fa-download fa-fw"></i> Download processed report
+                                        <i class="fas fa-download fa-fw"></i> Download report
                                     </a>
-                                {% endif %}
-                                {% if record.report %}
-                                    <a class="btn btn-sm btn-outline-secondary ms-1"
+                                {% elif record.report %}
+                                    <a class="btn btn-sm btn-outline-primary ms-1"
                                        href="{{ url_for('admin.download_submitted_asset', asset_id=record.report.id) }}">
-                                        <i class="fas fa-download fa-fw"></i> Download original
+                                        <i class="fas fa-download fa-fw"></i> Download report (processed report not
+                                        available)
                                     </a>
+                                {% else %}
+                                    <span class="text-danger fst-italic"><i class="fas fa-exclamation-triangle"></i> Student report not available</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -212,26 +214,18 @@
 
             {# Supervision event timeline — supervisors and elevated users #}
             {% if (is_supervisor_role or is_elevated) and supervision_events %}
-                {%- set monitored_count = namespace(value=0) -%}
-                {%- set present_count = namespace(value=0) -%}
-                {% for ev in supervision_events %}
-                    {% if ev.monitor_attendance %}
-                        {%- set monitored_count.value = monitored_count.value + 1 -%}
-                        {% if ev.attendance is not none and ev.attendance in (0, 1) %}
-                            {%- set present_count.value = present_count.value + 1 -%}
-                        {% endif %}
-                    {% endif %}
-                {% endfor %}
                 <div class="card border-secondary mb-3">
                     <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-calendar-check fa-fw me-1"></i> Supervision events</span>
-                        {% if monitored_count.value > 0 %}
-                            <span class="badge {% if present_count.value == monitored_count.value %}bg-success{% elif present_count.value == 0 %}bg-danger{% else %}bg-warning text-dark{% endif %}">
-                                Attendance: {{ present_count.value }}/{{ monitored_count.value }}
-                            </span>
-                        {% endif %}
                     </div>
                     <div class="card-body">
+                        {% if attendance_total %}
+                            <div class="text-primary fw-semibold mb-2">
+                                Attendance: {{ attendance_recorded }}/{{ attendance_total }}
+                                {% if attendance_percent is not none %}
+                                    <span class="fs-4">{{ attendance_percent | round(0) | int }}%)</span>{% endif %}
+                            </div>
+                        {% endif %}
                         <div class="d-flex flex-row flex-wrap gap-2">
                             {% for ev in supervision_events %}
                                 {%- set has_notes = ev.meeting_summary or ev.supervision_notes -%}

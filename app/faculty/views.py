@@ -3256,7 +3256,6 @@ def _build_marking_form_class(scheme):
     from wtforms import (
         BooleanField,
         FloatField,
-        StringField,
         SubmitField,
         TextAreaField,
     )
@@ -3272,6 +3271,7 @@ def _build_marking_form_class(scheme):
             ft = field_spec["field_type"]
             ftype = ft["type"]
             default = ft.get("default")
+            rows = ft.get("rows", 5)
             label = field_spec["text"]
 
             if ftype == "boolean":
@@ -3284,6 +3284,7 @@ def _build_marking_form_class(scheme):
                     label,
                     default=str(default) if default is not None else "",
                     validators=[WTFOptional()],
+                    render_kw = {"rows": rows}
                 )
 
             elif ftype in ("number", "percent"):
@@ -3305,10 +3306,10 @@ def _build_marking_form_class(scheme):
 
     if scheme.uses_standard_feedback:
         fields["feedback_positive"] = TextAreaField(
-            "What was good?", validators=[WTFOptional()]
+            "What was good?", validators=[WTFOptional()], render_kw = {"rows": 7}
         )
         fields["feedback_improvement"] = TextAreaField(
-            "What could be improved next time?", validators=[WTFOptional()]
+            "What could be improved next time?", validators=[WTFOptional()], render_kw = {"rows": 7}
         )
 
     fields["submit_marking"] = SubmitField("Submit marking report")
@@ -3585,14 +3586,27 @@ def marking_form(report_id):
             .all()
         )
 
-    # Build supervision events (supervisor roles)
+    # Build supervision events and attendance data (supervisor roles and elevated users)
+    from math import isinf, isnan
+
     supervision_events = []
     is_supervisor_role = report.role.role in (
         SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
         SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
     )
+    attendance_recorded = None
+    attendance_missing = None
+    attendance_total = None
+    attendance_percent = None
     if is_supervisor_role or is_elevated:
         supervision_events = record.events.order_by("time").all()
+        attendance_data = record.get_attendance_data()
+        attendance_recorded = attendance_data["recorded"]
+        attendance_missing = attendance_data["missing"]
+        attendance_total = attendance_data["total"]
+        _pct = attendance_data["attendance"]
+        if _pct is not None and not isnan(_pct) and not isinf(_pct):
+            attendance_percent = _pct
 
     return render_template_context(
         "faculty/marking_form.html",
@@ -3610,6 +3624,10 @@ def marking_form(report_id):
         is_supervisor_role=is_supervisor_role,
         journal_entries=journal_entries,
         supervision_events=supervision_events,
+        attendance_recorded=attendance_recorded,
+        attendance_missing=attendance_missing,
+        attendance_total=attendance_total,
+        attendance_percent=attendance_percent,
         url=url,
         submit_url=url_for("faculty.marking_form", report_id=report_id, url=url),
     )

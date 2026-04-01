@@ -1,0 +1,425 @@
+{% extends "base_app.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+{% from "icon_block.html" import icon_block %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        $(document).ready(function() {
+            $('[data-bs-toggle="tooltip"]').tooltip();
+        });
+    </script>
+{% endblock %}
+
+{% block title %}Marking form{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+
+            {# Return navigation #}
+            <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+                    <i class="fas fa-arrow-left fa-fw"></i> Return
+                </a>
+                <h4 class="mb-0">
+                    <i class="fas fa-marker fa-fw me-1"></i>
+                    Marking form &mdash; {{ record.student_identifier['label'] }}
+                </h4>
+            </div>
+
+            {# Status banner #}
+            {% if not is_editable and not is_elevated %}
+                <div class="alert alert-secondary mb-3">
+                    {% call icon_block("lock") %}
+                        <strong>This marking form is now closed.</strong>
+                        The submission window (24 hours) has passed. Please contact the convenor if you need to make changes.
+                    {% endcall %}
+                </div>
+            {% elif report.grade_generated_timestamp is not none %}
+                <div class="alert alert-success mb-3">
+                    {% call icon_block("check-circle") %}
+                        <strong>Marking report submitted.</strong>
+                        Submitted on {{ report.grade_generated_timestamp.strftime("%a %d %b %Y at %H:%M") }}.
+                        {% if is_editable %}
+                            You can still edit and resubmit within 24 hours of submission.
+                        {% endif %}
+                    {% endcall %}
+                </div>
+            {% endif %}
+
+            {# Marking context card #}
+            <div class="card border-secondary mb-3">
+                <div class="card-header bg-secondary text-white">
+                    <i class="fas fa-info-circle fa-fw me-1"></i> Marking context
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row mb-0 small">
+                                <dt class="col-sm-5 text-muted">Student</dt>
+                                <dd class="col-sm-7">{{ record.student_identifier['label'] }}</dd>
+                                <dt class="col-sm-5 text-muted">Project</dt>
+                                <dd class="col-sm-7">{{ record.project.name }}</dd>
+                                <dt class="col-sm-5 text-muted">Supervisors</dt>
+                                <dd class="col-sm-7">
+                                    {% for role in record.supervisor_roles %}
+                                        <div><a class="text-decoration-none" href="mailto:{{ role.user.email }}">{{ role.user.name }}</a></div>
+                                    {% else %}
+                                        <span class="text-muted">None recorded</span>
+                                    {% endfor %}
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row mb-0 small">
+                                <dt class="col-sm-5 text-muted">Workflow</dt>
+                                <dd class="col-sm-7">{{ workflow.name }}</dd>
+                                <dt class="col-sm-5 text-muted">Role</dt>
+                                <dd class="col-sm-7">{{ workflow.role_as_str }}</dd>
+                                <dt class="col-sm-5 text-muted">Deadline</dt>
+                                <dd class="col-sm-7">
+                                    {% if workflow.effective_deadline %}
+                                        {{ workflow.effective_deadline.strftime("%a %d %b %Y") }}
+                                    {% else %}
+                                        <span class="text-muted">Not set</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Student report download #}
+            {% if record.report or record.processed_report %}
+                <div class="card border-primary mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-file-pdf fa-fw me-1"></i> Student report
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-row align-items-center gap-3">
+                            {%- set display_asset = record.processed_report if record.processed_report else record.report -%}
+                            {% if display_asset.small_thumbnail and not display_asset.small_thumbnail.lost %}
+                                <img src="{{ url_for('documents.serve_thumbnail', asset_type=display_asset.get_type(), asset_id=display_asset.id, size='small') }}"
+                                     class="img-thumbnail" style="max-width:70px; max-height:90px;" alt="Report preview">
+                            {% else %}
+                                <div class="d-flex align-items-center justify-content-center bg-light border rounded"
+                                     style="width:70px; height:90px;">
+                                    <i class="fas fa-file-pdf fa-2x text-muted"></i>
+                                </div>
+                            {% endif %}
+                            <div>
+                                <div class="fw-semibold mb-1">{{ display_asset.target_name or display_asset.filename or "Student report" }}</div>
+                                {% if record.processed_report %}
+                                    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.download_generated_asset', asset_id=record.processed_report.id) }}">
+                                        <i class="fas fa-download fa-fw"></i> Download processed report
+                                    </a>
+                                {% endif %}
+                                {% if record.report %}
+                                    <a class="btn btn-sm btn-outline-secondary ms-1" href="{{ url_for('admin.download_submitted_asset', asset_id=record.report.id) }}">
+                                        <i class="fas fa-download fa-fw"></i> Download original
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# Workflow attachments #}
+            {% if workflow.attachments %}
+                <div class="card border-secondary mb-3">
+                    <div class="card-header bg-secondary text-white">
+                        <i class="fas fa-paperclip fa-fw me-1"></i> Attachments
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-row flex-wrap gap-3">
+                            {% for pa in workflow.attachments %}
+                                {%- set asset = pa.attachment -%}
+                                <div class="card border" style="width:180px;">
+                                    <div class="card-body p-2 text-center">
+                                        {% if asset.small_thumbnail and not asset.small_thumbnail.lost %}
+                                            <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
+                                                 class="img-thumbnail mb-2" style="max-width:80px; max-height:80px;" alt="">
+                                        {% else %}
+                                            <div class="d-flex align-items-center justify-content-center bg-light border rounded mb-2" style="width:80px; height:80px; margin: 0 auto;">
+                                                <i class="fas fa-file fa-2x text-muted"></i>
+                                            </div>
+                                        {% endif %}
+                                        <div class="small fw-semibold text-truncate" title="{{ asset.target_name or asset.filename }}">
+                                            {{ asset.target_name or asset.filename }}
+                                        </div>
+                                        {% if pa.description %}
+                                            <div class="small text-muted mt-1">{{ pa.description }}</div>
+                                        {% endif %}
+                                        <a class="btn btn-xs btn-outline-secondary mt-2" href="{{ url_for('admin.download_submitted_asset', asset_id=asset.id) }}">
+                                            <i class="fas fa-download fa-fw"></i> Download
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# Journal entries — elevated users only #}
+            {% if is_elevated and journal_entries %}
+                <div class="card border-secondary mb-3">
+                    <div class="card-header bg-secondary text-white">
+                        <i class="fas fa-book fa-fw me-1"></i> Student journal entries
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-column gap-2">
+                            {% for entry in journal_entries %}
+                                <div class="card border-light">
+                                    <div class="card-body py-2 px-3">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <div class="fw-semibold small">{{ entry.title or "(Untitled)" }}</div>
+                                                <div class="small text-muted">{{ entry.created_timestamp.strftime("%a %d %b %Y") }}</div>
+                                                {% if entry.entry %}
+                                                    <div class="small text-muted mt-1 fst-italic" style="max-width:600px;">
+                                                        {{ entry.entry | striptags | truncate(200) }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <a class="btn btn-xs btn-outline-secondary ms-2 text-nowrap"
+                                               href="{{ url_for('convenor.view_journal_entry', entry_id=entry.id, url=url_for('faculty.marking_form', report_id=report.id), text='marking form') }}">
+                                                <i class="fas fa-external-link-alt fa-fw"></i> View
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# Supervision event timeline — supervisors and elevated users #}
+            {% if (is_supervisor_role or is_elevated) and supervision_events %}
+                {%- set monitored_count = namespace(value=0) -%}
+                {%- set present_count = namespace(value=0) -%}
+                {% for ev in supervision_events %}
+                    {% if ev.monitor_attendance %}
+                        {%- set monitored_count.value = monitored_count.value + 1 -%}
+                        {% if ev.attendance is not none and ev.attendance in (0, 1) %}
+                            {%- set present_count.value = present_count.value + 1 -%}
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+                <div class="card border-secondary mb-3">
+                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-calendar-check fa-fw me-1"></i> Supervision events</span>
+                        {% if monitored_count.value > 0 %}
+                            <span class="badge {% if present_count.value == monitored_count.value %}bg-success{% elif present_count.value == 0 %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                Attendance: {{ present_count.value }}/{{ monitored_count.value }}
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-row flex-wrap gap-2">
+                            {% for ev in supervision_events %}
+                                {%- set has_notes = ev.meeting_summary or ev.supervision_notes -%}
+                                {%- if ev.monitor_attendance and ev.attendance is not none -%}
+                                    {%- if ev.attendance == 0 -%}
+                                        {%- set ev_class = 'bg-success text-white' -%}
+                                        {%- set ev_icon = 'check' -%}
+                                    {%- elif ev.attendance == 1 -%}
+                                        {%- set ev_class = 'bg-warning text-dark' -%}
+                                        {%- set ev_icon = 'clock' -%}
+                                    {%- elif ev.attendance == 2 -%}
+                                        {%- set ev_class = 'bg-danger text-white' -%}
+                                        {%- set ev_icon = 'times' -%}
+                                    {%- elif ev.attendance == 3 -%}
+                                        {%- set ev_class = 'bg-danger text-white' -%}
+                                        {%- set ev_icon = 'exclamation' -%}
+                                    {%- elif ev.attendance == 4 -%}
+                                        {%- set ev_class = 'bg-secondary text-white' -%}
+                                        {%- set ev_icon = 'redo' -%}
+                                    {%- else -%}
+                                        {%- set ev_class = 'bg-light text-muted border' -%}
+                                        {%- set ev_icon = 'question' -%}
+                                    {%- endif -%}
+                                {%- elif not ev.monitor_attendance -%}
+                                    {%- set ev_class = 'bg-light text-muted border' -%}
+                                    {%- set ev_icon = 'minus' -%}
+                                {%- else -%}
+                                    {%- set ev_class = 'bg-light text-muted border' -%}
+                                    {%- set ev_icon = 'question-circle' -%}
+                                {%- endif -%}
+                                <div class="position-relative" style="min-width:90px; max-width:120px;">
+                                    <div class="card {{ ev_class }} p-2 text-center" style="font-size:0.75rem;">
+                                        <div><i class="fas fa-{{ ev_icon }} fa-fw"></i></div>
+                                        <div class="fw-semibold text-truncate" title="{{ ev.name }}">{{ ev.name }}</div>
+                                        {% if ev.get_start_time() %}
+                                            <div>{{ ev.get_start_time().strftime("%d %b") }}</div>
+                                        {% endif %}
+                                        {% if has_notes %}
+                                            {# Offcanvas trigger for notes #}
+                                            <button class="btn btn-xs mt-1 {% if 'text-white' in ev_class %}btn-outline-light{% else %}btn-outline-secondary{% endif %}"
+                                                    type="button"
+                                                    data-bs-toggle="offcanvas"
+                                                    data-bs-target="#ev_notes_{{ ev.id }}"
+                                                    aria-controls="ev_notes_{{ ev.id }}"
+                                                    title="View notes">
+                                                <i class="fas fa-sticky-note fa-fw"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                    {% if ev.attendance is not none %}
+                                        <div class="small text-center text-muted mt-1" style="font-size:0.65rem;">{{ ev.attendance_str }}</div>
+                                    {% endif %}
+                                </div>
+                                {% if has_notes %}
+                                    <div class="offcanvas offcanvas-start text-bg-light" tabindex="-1"
+                                         id="ev_notes_{{ ev.id }}" aria-labelledby="ev_notes_label_{{ ev.id }}">
+                                        <div class="offcanvas-header">
+                                            <h5 class="offcanvas-title" id="ev_notes_label_{{ ev.id }}">
+                                                <i class="fas fa-calendar-check fa-fw me-1"></i> {{ ev.name }}
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                                        </div>
+                                        <div class="offcanvas-body">
+                                            {% if ev.get_start_time() %}
+                                                <p class="small text-muted">{{ ev.get_start_time().strftime("%A %d %b %Y %H:%M") }}</p>
+                                            {% endif %}
+                                            {% if ev.meeting_summary %}
+                                                <h6>Meeting summary</h6>
+                                                <div class="small">{{ ev.meeting_summary | safe }}</div>
+                                            {% endif %}
+                                            {% if ev.supervision_notes %}
+                                                <h6 class="mt-3">Supervision notes</h6>
+                                                <div class="small">{{ ev.supervision_notes | safe }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# Mark scheme title and rubric #}
+            <div class="card border-primary mb-3">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-clipboard-list fa-fw me-1"></i> Mark scheme
+                </div>
+                <div class="card-body">
+                    <h5>{{ scheme.title | safe }}</h5>
+                    {% if scheme.rubric %}
+                        <div class="mt-2 text-muted">{{ scheme.rubric | safe }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Main marking form #}
+            <form method="POST" action="{{ submit_url }}">
+                {{ form.hidden_tag() }}
+
+                {% if not is_editable %}
+                    <fieldset disabled>
+                {% endif %}
+
+                {# Schema sections #}
+                {% for block in schema.get('scheme', []) %}
+                    <div class="card border-secondary mb-3">
+                        <div class="card-header bg-light">
+                            <strong>{{ block.title | safe }}</strong>
+                        </div>
+                        <div class="card-body">
+                            {% if block.description %}
+                                <div class="text-muted small mb-3">{{ block.description | safe }}</div>
+                            {% endif %}
+                            {% for field_spec in block.get('fields', []) %}
+                                {%- set key = field_spec.key -%}
+                                {%- set ftype = field_spec.field_type.type -%}
+                                {%- if form[key] is defined -%}
+                                    <div class="mb-3">
+                                        {% if ftype == 'boolean' %}
+                                            {{ wtf.render_field(form[key], form_type='inline') }}
+                                        {% elif ftype == 'text' %}
+                                            {{ wtf.render_field(form[key]) }}
+                                        {% elif ftype in ('number', 'percent') %}
+                                            <div class="row g-2 align-items-center">
+                                                <div class="col-md-8">
+                                                    {{ wtf.render_field(form[key]) }}
+                                                </div>
+                                                {% if ftype == 'percent' %}
+                                                    <div class="col-md-4 small text-muted">
+                                                        Range: 0 &ndash; 100%
+                                                    </div>
+                                                {% elif field_spec.field_type.get('min') is not none or field_spec.field_type.get('max') is not none %}
+                                                    <div class="col-md-4 small text-muted">
+                                                        Range:
+                                                        {% if field_spec.field_type.get('min') is not none %}{{ field_spec.field_type.min }}{% else %}&mdash;{% endif %}
+                                                        &ndash;
+                                                        {% if field_spec.field_type.get('max') is not none %}{{ field_spec.field_type.max }}{% else %}&mdash;{% endif %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            {{ wtf.render_field(form[key]) }}
+                                        {% endif %}
+                                    </div>
+                                {%- endif -%}
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+
+                {# Standard feedback fields #}
+                {% if scheme.uses_standard_feedback %}
+                    <div class="card border-success mb-3">
+                        <div class="card-header bg-success text-white">
+                            <i class="fas fa-comment fa-fw me-1"></i> Feedback to student
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    <span class="badge bg-success me-1">What was good?</span>
+                                </label>
+                                {{ wtf.render_field(form.feedback_positive, label=False) }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    <span class="badge bg-secondary me-1">What could be improved next time?</span>
+                                </label>
+                                {{ wtf.render_field(form.feedback_improvement, label=False) }}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if not is_editable %}
+                    </fieldset>
+                {% endif %}
+
+                {# Submit button #}
+                {% if is_editable %}
+                    <div class="d-flex justify-content-end gap-2 mb-4">
+                        <a class="btn btn-outline-secondary" href="{{ url }}">
+                            <i class="fas fa-times fa-fw"></i> Cancel
+                        </a>
+                        <button type="submit" name="submit_marking" class="btn btn-primary">
+                            <i class="fas fa-check fa-fw"></i> Submit marking report
+                        </button>
+                    </div>
+                {% else %}
+                    <div class="d-flex justify-content-start mb-4">
+                        <a class="btn btn-outline-secondary" href="{{ url }}">
+                            <i class="fas fa-arrow-left fa-fw"></i> Return
+                        </a>
+                    </div>
+                {% endif %}
+            </form>
+
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

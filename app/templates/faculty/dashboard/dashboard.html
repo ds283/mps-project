@@ -30,6 +30,16 @@
                 </a>
             </li>
         {% endif %}
+        {% if pending_marking_reports and pending_marking_reports|length > 0 %}
+            {%- set pane_is_marking = pane == 'marking' -%}
+            <li class="nav-item">
+                <a class="nav-link {% if pane_is_marking %}active{% endif %}" href="{{ url_for('faculty.dashboard', pane='marking') }}">
+                    <i class="fas fa-marker fa-fw"></i>
+                    Marking tasks
+                    <span class="badge rounded-pill {% if pane_is_marking %}bg-light text-dark{% else %}bg-danger{% endif %}">{{ pending_marking_reports|length }}</span>
+                </a>
+            </li>
+        {% endif %}
         {%- set approve_total = approvals_data.get('total') -%}
         {%- set user_num_rejected = approvals_data.get('approval_user_rejected') -%}
         {%- set project_num_rejected = approvals_data.get('approval_project_rejected') -%}
@@ -142,6 +152,45 @@
                 {% endif %}
             {% endif %}
 
+            {% if pane == 'marking' and pending_marking_reports %}
+                <div class="card mt-3 mb-3 border-danger">
+                    <div class="card-header bg-danger text-white">
+                        <i class="fas fa-marker fa-fw me-1"></i>
+                        <strong>Marking tasks requiring attention</strong>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">
+                            The following marking reports have been distributed to you and are awaiting submission.
+                            Please complete each form before the deadline.
+                        </p>
+                        <div class="d-flex flex-column gap-3">
+                            {% for report in pending_marking_reports %}
+                                {%- set workflow = report.workflow -%}
+                                {%- set rec = report.submitter_report.record -%}
+                                {%- set deadline = workflow.effective_deadline -%}
+                                <div class="card border-secondary">
+                                    <div class="card-body py-2 px-3">
+                                        <div class="d-flex flex-row justify-content-between align-items-center flex-wrap gap-2">
+                                            <div>
+                                                <div class="fw-semibold">{{ rec.student_identifier['label'] }}</div>
+                                                <div class="small text-muted">
+                                                    {{ workflow.event.pclass.name }} &mdash; {{ workflow.name }}
+                                                    {% if deadline %}
+                                                        &mdash; deadline <strong>{{ deadline.strftime("%a %d %b %Y") }}</strong>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <a class="btn btn-sm btn-danger" href="{{ url_for('faculty.marking_form', report_id=report.id, url=url_for('faculty.dashboard', pane='marking')) }}">
+                                                <i class="fas fa-pen fa-fw"></i> Complete marking form
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
             {% if is_root and pane == 'system' %}
                 <div class="card mt-3 mb-3 card-body bg-well">
                     {{ admin_dashboard_card(root_dash_data) }}

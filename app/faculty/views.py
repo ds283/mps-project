@@ -25,11 +25,15 @@ from ..database import db
 from ..models import (
     DegreeProgramme,
     DescriptionComment,
+    EmailTemplate,
+    EmailWorkflow,
+    EmailWorkflowItem,
     EnrollmentRecord,
     FacultyData,
     FHEQ_Level,
     LiveProject,
     MainConfig,
+    MarkingReport,
     MessageOfTheDay,
     Module,
     PresentationAssessment,
@@ -44,6 +48,7 @@ from ..models import (
     SelectingStudent,
     SkillGroup,
     StudentData,
+    StudentJournalEntry,
     SubmissionPeriodRecord,
     SubmissionRecord,
     SubmissionRole,
@@ -53,6 +58,8 @@ from ..models import (
     User,
     WorkflowMixin,
 )
+from ..models.emails import encode_email_payload
+from ..models.submissions import SubmissionRoleTypesMixin
 from ..shared.actions import (
     do_cancel_confirm,
     do_confirm,
@@ -1956,6 +1963,20 @@ def dashboard():
         if include:
             messages.append(message)
 
+    # Find pending marking reports for this user (distributed but not yet closed)
+    from sqlalchemy import and_
+    pending_marking_reports = (
+        db.session.query(MarkingReport)
+        .join(SubmissionRole, SubmissionRole.id == MarkingReport.role_id)
+        .filter(
+            SubmissionRole.user_id == current_user.id,
+            MarkingReport.distributed.is_(True),
+        )
+        .all()
+    )
+    # Filter in Python for the time-based window (marking_form_is_open)
+    pending_marking_reports = [r for r in pending_marking_reports if r.marking_form_is_open]
+
     pane = request.args.get("pane", None)
     if pane is None and session.get("faculty_dashboard_pane"):
         pane = session["faculty_dashboard_pane"]
@@ -1963,6 +1984,8 @@ def dashboard():
     if pane is None:
         if current_user.has_role("root"):
             pane = "system"
+        elif pending_marking_reports:
+            pane = "marking"
         elif len(enrolments) > 0:
             c = enrolments[0]["config"]
             pane = c.id
@@ -1987,6 +2010,9 @@ def dashboard():
             else:
                 pane = None
 
+    elif pane == "marking":
+        pass  # always valid if pending_marking_reports is non-empty
+
     else:
         if pane not in enrolment_panes:
             if num_enrolment_panes > 0:
@@ -1996,7 +2022,7 @@ def dashboard():
 
         # mark any unviewed confirmation requests as viewed, but do it with a 15 sec delay so that the
         # NEW labels don't disappear immediately
-        if pane is not None and pane not in ["system", "approve"]:
+        if pane is not None and pane not in ["system", "approve", "marking"]:
             celery = current_app.extensions["celery"]
             remove_new = celery.tasks["app.tasks.selecting.remove_new"]
             remove_new.apply_async(args=(int(pane), current_user.id), countdown=15)
@@ -2022,6 +2048,7 @@ def dashboard():
         pane=pane,
         pane_label=enrolment_labels.get(pane, None),
         today=date.today(),
+        pending_marking_reports=pending_marking_reports,
     )
 
 
@@ -3211,4 +3238,449 @@ def past_feedback(student_id):
         student_text=student_text,
         generic_text=generic_text,
         return_url=return_url,
+    )
+
+
+def _build_marking_form_class(scheme):
+    """
+    Dynamically build a WTForms form class from a LiveMarkingScheme.
+    Returns a FlaskForm subclass whose fields correspond to the schema.
+    """
+    from wtforms import BooleanField, FloatField, StringField, SubmitField, TextAreaField
+    from wtforms.validators import InputRequired, NumberRange, Optional as WTFOptional
+    from flask_wtf import FlaskForm
+
+    schema = scheme.schema_as_dict
+    fields = {}
+
+    for block in schema.get("scheme", []):
+        for field_spec in block.get("fields", []):
+            key = field_spec["key"]
+            ft = field_spec["field_type"]
+            ftype = ft["type"]
+            default = ft.get("default")
+            label = field_spec["text"]
+
+            if ftype == "boolean":
+                fields[key] = BooleanField(label, default=bool(default) if default is not None else False)
+
+            elif ftype == "text":
+                fields[key] = TextAreaField(
+                    label,
+                    default=str(default) if default is not None else "",
+                    validators=[WTFOptional()],
+                )
+
+            elif ftype in ("number", "percent"):
+                validators = [InputRequired()]
+                if ftype == "percent":
+                    mn, mx = 0.0, 100.0
+                else:
+                    mn = float(ft["min"]) if ft.get("min") is not None else None
+                    mx = float(ft["max"]) if ft.get("max") is not None else None
+                if mn is not None:
+                    validators.append(NumberRange(min=mn))
+                if mx is not None:
+                    validators.append(NumberRange(max=mx))
+                fields[key] = FloatField(
+                    label,
+                    validators=validators,
+                    default=float(default) if default is not None else None,
+                )
+
+    if scheme.uses_standard_feedback:
+        fields["feedback_positive"] = TextAreaField("What was good?", validators=[WTFOptional()])
+        fields["feedback_improvement"] = TextAreaField("What could be improved next time?", validators=[WTFOptional()])
+
+    fields["submit_marking"] = SubmitField("Submit marking report")
+    return type("MarkingForm", (FlaskForm,), fields)
+
+
+def _can_access_marking_form(report: MarkingReport) -> tuple:
+    """
+    Returns (is_allowed, is_elevated) where is_elevated means the user is a convenor/admin/root
+    who can access the form even when the normal access window has closed.
+    """
+    from ..shared.validators import validate_is_convenor
+
+    pclass = report.workflow.event.pclass
+    is_elevated = validate_is_convenor(pclass, message=False)
+    is_role_owner = report.role.user_id == current_user.id
+
+    if is_elevated:
+        return True, True
+    if is_role_owner:
+        return report.marking_form_is_open, False
+    return False, False
+
+
+@faculty.route("/marking_form/<int:report_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def marking_form(report_id):
+    """
+    Display and process the marking form for a single MarkingReport.
+    Accessible to the owning assessor (while marking_form_is_open) and to
+    convenors, admins, and root users at any time.
+    """
+    import json as _json
+
+    report: MarkingReport = MarkingReport.query.get_or_404(report_id)
+    workflow = report.workflow
+    scheme = workflow.scheme
+    submitter_report = report.submitter_report
+    record: SubmissionRecord = submitter_report.record
+    period: SubmissionPeriodRecord = record.period
+    pclass: ProjectClass = workflow.event.pclass
+    config: ProjectClassConfig = workflow.event.config
+
+    is_allowed, is_elevated = _can_access_marking_form(report)
+    if not is_allowed:
+        flash("You do not have access to this marking form, or the form is no longer accepting submissions.", "error")
+        return redirect(redirect_url())
+
+    if scheme is None:
+        flash("This marking workflow has no marking scheme assigned. Please contact the convenor.", "error")
+        return redirect(redirect_url())
+
+    url = request.args.get("url", url_for("faculty.dashboard"))
+
+    # Build the dynamic form class
+    FormClass = _build_marking_form_class(scheme)
+    form = FormClass(request.form)
+
+    schema = scheme.schema_as_dict
+    is_editable = is_elevated or report.marking_form_is_open
+
+    if form.validate_on_submit() and is_editable:
+        # Extract field values from the submitted form
+        field_values = {}
+        extraction_error = False
+
+        for block in schema.get("scheme", []):
+            for field_spec in block.get("fields", []):
+                key = field_spec["key"]
+                ft = field_spec["field_type"]
+                ftype = ft["type"]
+                raw_val = getattr(form, key).data
+
+                try:
+                    if ftype == "boolean":
+                        field_values[key] = bool(raw_val)
+                    elif ftype == "text":
+                        field_values[key] = str(raw_val) if raw_val is not None else ""
+                    elif ftype == "number":
+                        val = float(raw_val)
+                        precision = ft.get("precision")
+                        if precision is not None:
+                            val = round(val, int(precision))
+                        field_values[key] = val
+                    elif ftype == "percent":
+                        val = round(float(raw_val), 1)
+                        field_values[key] = val
+                except (ValueError, TypeError):
+                    getattr(form, key).errors.append("Could not convert this value to the required type.")
+                    extraction_error = True
+
+        if not extraction_error:
+            # Handle standard feedback fields
+            if scheme.uses_standard_feedback:
+                report.feedback_positive = form.feedback_positive.data or ""
+                report.feedback_improvement = form.feedback_improvement.data or ""
+                report.feedback_timestamp = datetime.utcnow()
+
+            # Process validation block
+            prevent_submit = False
+            web_failures = []
+
+            for test_item in schema.get("validation", []):
+                test_expr = test_item.get("test", "True")
+                actions = test_item.get("action", [])
+                message = test_item.get("message", "Validation check failed.")
+
+                try:
+                    test_passed = eval(test_expr, {"__builtins__": {}}, field_values)
+                except Exception:
+                    test_passed = False
+
+                if not test_passed:
+                    if "prevent_submit" in actions:
+                        flash(message, "error")
+                        prevent_submit = True
+                    else:
+                        if "email" in actions:
+                            # Generate validation-failure email workflow
+                            try:
+                                tmpl = EmailTemplate.find_template_(
+                                    EmailTemplate.MARKING_VALIDATION_FAILURE,
+                                    pclass_id=pclass.id,
+                                )
+                                if tmpl is not None:
+                                    vf_wf = EmailWorkflow.build_(
+                                        name=f"Marking validation failure: report #{report.id}",
+                                        template=tmpl,
+                                        pclasses=[pclass],
+                                    )
+                                    db.session.add(vf_wf)
+                                    db.session.flush()
+
+                                    for notify_user in workflow.notify_on_validation_failure:
+                                        item = EmailWorkflowItem.build_(
+                                            subject_payload=encode_email_payload(
+                                                {"report_id": report.id, "message": message}
+                                            ),
+                                            body_payload=encode_email_payload(
+                                                {
+                                                    "report": report,
+                                                    "field_values": field_values,
+                                                    "message": message,
+                                                    "pclass": pclass,
+                                                }
+                                            ),
+                                            recipient_list=[notify_user.email],
+                                        )
+                                        vf_wf.items.append(item)
+                            except Exception as e:
+                                current_app.logger.exception(
+                                    "Could not create validation failure email workflow", exc_info=e
+                                )
+
+                        if "web" in actions:
+                            web_failures.append(message)
+
+            if not prevent_submit:
+                # Evaluate conflation rule to get grade
+                conflation_rule = schema.get("conflation_rule", "0.0")
+                try:
+                    grade_val = float(eval(conflation_rule, {"__builtins__": {}}, field_values))
+                except Exception as e:
+                    flash(
+                        f"Could not evaluate grade from conflation rule: {e}. Please contact the convenor.",
+                        "error",
+                    )
+                    grade_val = None
+
+                # Store results
+                report_blob = {"fields": field_values}
+                if web_failures:
+                    report_blob["validation_failures"] = web_failures
+
+                report.report = _json.dumps(report_blob)
+                report.report_submitted = True
+                report.grade = grade_val
+                report.signed_off_id = None
+                report.signed_off_timestamp = None
+                report.grade_generated_by_id = current_user.id
+                report.grade_generated_timestamp = datetime.utcnow()
+
+                try:
+                    log_db_commit(
+                        f"Submitted marking report for {record.student_identifier['label']} "
+                        f"(workflow: {workflow.name})",
+                        user=current_user,
+                        project_classes=pclass,
+                    )
+                    flash("Your marking report has been submitted successfully.", "success")
+                    return redirect(url_for("faculty.view_marking_report", report_id=report_id, url=url))
+                except SQLAlchemyError as e:
+                    db.session.rollback()
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    flash("Could not save marking report due to a database error. Please contact a system administrator.", "error")
+
+    else:
+        if request.method == "GET":
+            # Pre-populate form with any existing saved values
+            existing_blob = {}
+            if report.report and report.report != "{}":
+                try:
+                    existing_blob = _json.loads(report.report).get("fields", {})
+                except Exception:
+                    pass
+
+            for block in schema.get("scheme", []):
+                for field_spec in block.get("fields", []):
+                    key = field_spec["key"]
+                    if key in existing_blob and hasattr(form, key):
+                        getattr(form, key).data = existing_blob[key]
+
+            if scheme.uses_standard_feedback:
+                if report.feedback_positive:
+                    form.feedback_positive.data = report.feedback_positive
+                if report.feedback_improvement:
+                    form.feedback_improvement.data = report.feedback_improvement
+
+    # Build journal entries (elevated users only)
+    journal_entries = []
+    if is_elevated:
+        student = record.owner.student
+        journal_entries = (
+            StudentJournalEntry.query.filter_by(
+                student_id=student.id,
+                config_year=config.year,
+            )
+            .order_by(StudentJournalEntry.created_timestamp.desc())
+            .all()
+        )
+
+    # Build supervision events (supervisor roles)
+    supervision_events = []
+    is_supervisor_role = report.role.role in (
+        SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+        SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+    )
+    if is_supervisor_role or is_elevated:
+        supervision_events = (
+            record.events.order_by("time").all()
+        )
+
+    return render_template_context(
+        "faculty/marking_form.html",
+        report=report,
+        workflow=workflow,
+        scheme=scheme,
+        schema=schema,
+        record=record,
+        period=period,
+        pclass=pclass,
+        config=config,
+        form=form,
+        is_editable=is_editable,
+        is_elevated=is_elevated,
+        is_supervisor_role=is_supervisor_role,
+        journal_entries=journal_entries,
+        supervision_events=supervision_events,
+        url=url,
+        submit_url=url_for("faculty.marking_form", report_id=report_id, url=url),
+    )
+
+
+@faculty.route("/view_marking_report/<int:report_id>")
+@roles_accepted("faculty", "admin", "root")
+def view_marking_report(report_id):
+    """
+    Read-only view of a submitted MarkingReport — shows grade, field values, and feedback.
+    Accessible to the role owner (after submission) and to convenors/admins/root.
+    """
+    import json as _json
+
+    report: MarkingReport = MarkingReport.query.get_or_404(report_id)
+    workflow = report.workflow
+    scheme = workflow.scheme
+    submitter_report = report.submitter_report
+    record: SubmissionRecord = submitter_report.record
+    period: SubmissionPeriodRecord = record.period
+    pclass: ProjectClass = workflow.event.pclass
+
+    is_allowed, is_elevated = _can_access_marking_form(report)
+    is_role_owner = report.role.user_id == current_user.id
+    if not is_allowed and not (is_role_owner and report.report_submitted):
+        flash("You do not have permission to view this marking report.", "error")
+        return redirect(redirect_url())
+
+    url = request.args.get("url", url_for("faculty.dashboard"))
+
+    schema = scheme.schema_as_dict if scheme else {}
+    field_values = {}
+    validation_failures = []
+
+    if report.report and report.report != "{}":
+        try:
+            blob = _json.loads(report.report)
+            field_values = blob.get("fields", {})
+            validation_failures = blob.get("validation_failures", [])
+        except Exception:
+            pass
+
+    return render_template_context(
+        "faculty/view_marking_report.html",
+        report=report,
+        workflow=workflow,
+        scheme=scheme,
+        schema=schema,
+        record=record,
+        period=period,
+        pclass=pclass,
+        field_values=field_values,
+        validation_failures=validation_failures,
+        is_elevated=is_elevated,
+        url=url,
+    )
+
+
+@faculty.route("/edit_marking_feedback/<int:report_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root")
+def edit_marking_feedback(report_id):
+    """
+    Allow editing of feedback fields (feedback_positive, feedback_improvement) on a submitted
+    MarkingReport. Does not recompute the grade. Accessible to the role owner at any time
+    after submission, and to convenors/admins/root.
+    """
+    from wtforms import SubmitField, TextAreaField
+    from wtforms.validators import Optional as WTFOptional
+    from flask_wtf import FlaskForm
+
+    report: MarkingReport = MarkingReport.query.get_or_404(report_id)
+    workflow = report.workflow
+    submitter_report = report.submitter_report
+    record: SubmissionRecord = submitter_report.record
+    period: SubmissionPeriodRecord = record.period
+    pclass: ProjectClass = workflow.event.pclass
+
+    is_allowed, is_elevated = _can_access_marking_form(report)
+    is_role_owner = report.role.user_id == current_user.id
+
+    if not (is_elevated or is_role_owner):
+        flash("You do not have permission to edit feedback for this marking report.", "error")
+        return redirect(redirect_url())
+
+    if not report.report_submitted and not is_elevated:
+        flash("Feedback can only be edited after the marking report has been submitted.", "warning")
+        return redirect(redirect_url())
+
+    # Build a simple feedback-only form
+    FeedbackFormClass = type(
+        "MarkingFeedbackForm",
+        (FlaskForm,),
+        {
+            "feedback_positive": TextAreaField("What was good?", validators=[WTFOptional()]),
+            "feedback_improvement": TextAreaField("What could be improved next time?", validators=[WTFOptional()]),
+            "submit_feedback": SubmitField("Save feedback"),
+        },
+    )
+    form = FeedbackFormClass(request.form)
+    url = request.args.get("url", url_for("faculty.view_marking_report", report_id=report_id))
+
+    if form.validate_on_submit():
+        report.feedback_positive = form.feedback_positive.data or ""
+        report.feedback_improvement = form.feedback_improvement.data or ""
+        report.feedback_timestamp = datetime.utcnow()
+
+        try:
+            log_db_commit(
+                f"Updated marking feedback for {record.student_identifier['label']} "
+                f"(workflow: {workflow.name})",
+                user=current_user,
+                project_classes=pclass,
+            )
+            flash("Feedback updated successfully.", "success")
+            return redirect(url)
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash("Could not save feedback due to a database error.", "error")
+
+    else:
+        if request.method == "GET":
+            form.feedback_positive.data = report.feedback_positive or ""
+            form.feedback_improvement.data = report.feedback_improvement or ""
+
+    return render_template_context(
+        "faculty/edit_marking_feedback.html",
+        form=form,
+        report=report,
+        workflow=workflow,
+        record=record,
+        period=period,
+        pclass=pclass,
+        url=url,
+        submit_url=url_for("faculty.edit_marking_feedback", report_id=report_id, url=url),
     )

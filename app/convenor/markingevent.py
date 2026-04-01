@@ -578,6 +578,20 @@ def marking_reports_inspector(workflow_id):
     )
     feedback_count = workflow.number_marking_reports_with_feedback
 
+    # Collect web validation failures from submitted marking reports
+    import json as _json
+
+    web_validation_failures = []
+    for mr in workflow.marking_reports:
+        if mr.report_submitted and mr.report and mr.report != "{}":
+            try:
+                blob = _json.loads(mr.report)
+                failures = blob.get("validation_failures", [])
+                if failures:
+                    web_validation_failures.append({"report": mr, "failures": failures})
+            except Exception:
+                pass
+
     return render_template_context(
         "convenor/markingevent/marking_reports_inspector.html",
         workflow=workflow,
@@ -589,6 +603,7 @@ def marking_reports_inspector(workflow_id):
         distributed_count=distributed_count,
         submitted_count=submitted_count,
         feedback_count=feedback_count,
+        web_validation_failures=web_validation_failures,
     )
 
 
@@ -2044,3 +2059,41 @@ def test_marking_event(event_id):
         title=f'Test notifications for "{event.name}"',
         formtitle=f"Send test notifications for marking event <strong>{event.name}</strong>",
     )
+
+
+@convenor.route("/clear_marking_grade/<int:report_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def clear_marking_grade(report_id):
+    """
+    Clear the grade_generated_by_id and grade_generated_timestamp fields on a MarkingReport,
+    re-opening the marking form for the assessor.
+    """
+    report: MarkingReport = MarkingReport.query.get_or_404(report_id)
+    workflow: MarkingWorkflow = report.submitter_report.workflow
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.pclass
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    report.grade_generated_by_id = None
+    report.grade_generated_timestamp = None
+
+    try:
+        log_db_commit(
+            f"Cleared marking grade submission for report #{report.id} (workflow: {workflow.name})",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash(
+            f"The marking form for {report.user.name} has been re-opened. "
+            "The assessor can now resubmit their report.",
+            "success",
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not clear marking grade due to a database error.", "error")
+
+    url = request.args.get("url", url_for("convenor.marking_reports_inspector", workflow_id=workflow.id))
+    return redirect(url)

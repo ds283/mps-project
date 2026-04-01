@@ -124,9 +124,25 @@
                     {{ supervisor_assignments(period, current_user, supv_sabbatical, supv_exempt, record.supervisor_reenroll) }}
                 {% endif %}
 
-                {# show marker assignments #}
-                {% if config.uses_marker and config.display_marker %}
+                {# show marker assignments — override display_marker gate if any marking form is open #}
+                {%- set marker_roles = period.get_marker_records(current_user.faculty_data.id) -%}
+                {%- set has_open_marking_form = namespace(value=false) -%}
+                {%- for mrole in marker_roles -%}
+                    {%- for mr in mrole.marking_reports if mr.distributed -%}
+                        {%- if mr.marking_form_is_open -%}
+                            {%- set has_open_marking_form.value = true -%}
+                        {%- endif -%}
+                    {%- endfor -%}
+                {%- endfor -%}
+                {% if config.uses_marker and (config.display_marker or has_open_marking_form.value) %}
                     <span class="dashboard-subtitle">Marking</span>
+                    {% if has_open_marking_form.value and not config.display_marker %}
+                        <div class="alert alert-warning mb-2 py-2">
+                            <i class="fas fa-exclamation-circle fa-fw"></i>
+                            <strong>Marking tasks are available.</strong>
+                            Please complete the marking forms below.
+                        </div>
+                    {% endif %}
                     {{ marker_assignments(period, current_user, mark_sabbatical, mark_exempt, record.marker_reenroll) }}
                 {% endif %}
 

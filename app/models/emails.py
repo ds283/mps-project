@@ -98,6 +98,7 @@ class EmailTemplateTypesMixin:
     # marking
     MARKING_MARKER = 8
     MARKING_SUPERVISOR = 9
+    MARKING_VALIDATION_FAILURE = 60
 
     # notifications
     NOTIFICATIONS_REQUEST_MEETING = 18

@@ -113,6 +113,42 @@
         </div>
     {% endif %}
 
+    {% if web_validation_failures %}
+        <div class="card border-warning mt-3 mb-3">
+            <div class="card-header bg-warning text-dark">
+                <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
+                Validation warnings — convenor intervention may be required
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">
+                    The following marking reports contain answers that triggered validation warnings.
+                    These do not prevent submission but may require your attention.
+                </p>
+                {% for item in web_validation_failures %}
+                    {%- set mr = item.report -%}
+                    <div class="card border-secondary mb-2">
+                        <div class="card-header small py-1 bg-light">
+                            <strong>{{ mr.user.name }}</strong>
+                            &mdash; {{ mr.submitter_report.record.student_identifier['label'] }}
+                        </div>
+                        <div class="card-body py-2">
+                            <ul class="mb-1 small">
+                                {% for msg in item.failures %}
+                                    <li class="text-warning"><i class="fas fa-exclamation-circle fa-fw"></i> {{ msg }}</li>
+                                {% endfor %}
+                            </ul>
+                            <a class="btn btn-sm btn-outline-secondary mt-1"
+                               href="{{ url_for('faculty.marking_form', report_id=mr.id,
+                                         url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}">
+                                <i class="fas fa-search fa-fw"></i> View marking form
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white">Marking reports</div>
         <div class="card-body">

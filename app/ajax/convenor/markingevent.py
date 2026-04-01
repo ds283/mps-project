@@ -407,6 +407,12 @@ _marking_report_student = """
 _marking_report_grade = """
 {% if report.grade is not none %}
     <div class="text-primary fw-semibold">{{ "%.1f"|format(report.grade) }}%</div>
+    {% if report.grade_generated_by is not none %}
+        <div class="small text-muted mt-1">by {{ report.grade_generated_by.name }}</div>
+    {% endif %}
+    {% if report.grade_generated_timestamp is not none %}
+        <div class="small text-muted">{{ report.grade_generated_timestamp.strftime("%d %b %Y %H:%M") }}</div>
+    {% endif %}
 {% else %}
     <span class="badge bg-secondary">Not graded</span>
 {% endif %}
@@ -503,11 +509,28 @@ _mr_emails_offcanvas = """
 # language=jinja2
 _marking_report_actions = """
 {% set event = report.submitter_report.workflow.event %}
+{% set workflow = report.submitter_report.workflow %}
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
+        <a class="dropdown-item d-flex gap-2"
+           href="{{ url_for('faculty.marking_form', report_id=report.id,
+                     url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}">
+            <i class="fas fa-pen fa-fw"></i> {% if report.report_submitted %}Edit{% else %}View{% endif %} marking form...
+        </a>
+        {% if report.grade_generated_timestamp is not none %}
+            <form method="POST"
+                  action="{{ url_for('convenor.clear_marking_grade', report_id=report.id,
+                             url=url_for('convenor.marking_reports_inspector', workflow_id=workflow.id)) }}"
+                  style="display:contents">
+                <button class="dropdown-item d-flex gap-2 text-warning" type="submit">
+                    <i class="fas fa-undo fa-fw"></i> Clear submitted grade&hellip;
+                </button>
+            </form>
+        {% endif %}
+        <div class="dropdown-divider"></div>
         {% if event.open and not event.closed %}
             {% if not report.distributed %}
                 <form method="POST"

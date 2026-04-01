@@ -291,7 +291,7 @@ notify_on_moderation_required = db.Table(
     ),
 )
 
-## assocation table linking users to a marking workflow, who should be notified when an email is generated due to a validation failure
+## association table linking users to a marking workflow, who should be notified when an email is generated due to a validation failure
 notify_on_validation_failure = db.Table(
     "notify_on_validation_failure",
     db.Column("user_id", db.Integer(), db.ForeignKey("users.id"), primary_key=True),
@@ -688,6 +688,17 @@ class MarkingReport(db.Model, EditingMetadataMixin):
     # final consolidated grade, expressed as a percentage, stored with 2-digits decimal precision
     grade = db.Column(db.Numeric(6, 2), nullable=True)
 
+    # who generated the grade (i.e., who submitted this individual marking report)?
+    grade_generated_by_id = db.Column(
+        db.Integer(), db.ForeignKey("users.id"), nullable=True
+    )
+    grade_generated_by = db.relationship(
+        "User", foreign_keys=[grade_generated_by_id], uselist=False
+    )
+
+    # when was the grade generated?
+    grade_generated_timestamp = db.Column(db.DateTime(), nullable=True)
+
     # FEEDBACK TO STUDENT
 
     # positive feedback: what was good?
@@ -701,6 +712,21 @@ class MarkingReport(db.Model, EditingMetadataMixin):
 
     # feedback submission timestamp
     feedback_timestamp = db.Column(db.DateTime())
+
+    @property
+    def marking_form_is_open(self) -> bool:
+        """
+        Returns True if the marking form is currently accessible to the assessor.
+        The form is open once distributed=True, and remains open until grade_generated_timestamp
+        is set and more than 1 day old. A convenor can re-open the form by clearing
+        grade_generated_by_id and grade_generated_timestamp.
+        """
+        if not self.distributed:
+            return False
+        if self.grade_generated_timestamp is None:
+            return True
+        delta = datetime.utcnow() - self.grade_generated_timestamp
+        return delta.total_seconds() < 86400
 
     @property
     def workflow(self):

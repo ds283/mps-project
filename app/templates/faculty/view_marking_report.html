@@ -1,0 +1,181 @@
+{% extends "base_app.html" %}
+
+{% from "icon_block.html" import icon_block %}
+
+{% block title %}View marking report{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+
+            <div class="d-flex align-items-center mt-3 mb-3 gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+                    <i class="fas fa-arrow-left fa-fw"></i> Return
+                </a>
+                <h4 class="mb-0">
+                    <i class="fas fa-marker fa-fw me-1"></i>
+                    Marking report &mdash; {{ record.student_identifier['label'] }}
+                </h4>
+            </div>
+
+            {# Submission status #}
+            <div class="card border-{% if report.grade is not none %}success{% else %}secondary{% endif %} mb-3">
+                <div class="card-header bg-{% if report.grade is not none %}success{% else %}secondary{% endif %} text-white">
+                    <i class="fas fa-chart-bar fa-fw me-1"></i> Submission summary
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-4 text-center mb-3 mb-md-0">
+                            {% if report.grade is not none %}
+                                <div class="display-4 fw-bold text-success">{{ "%.1f"|format(report.grade) }}%</div>
+                                <div class="small text-muted">Grade</div>
+                            {% else %}
+                                <div class="display-6 text-muted"><i class="fas fa-hourglass-half"></i></div>
+                                <div class="small text-muted">No grade yet</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-8">
+                            <dl class="row mb-0 small">
+                                <dt class="col-sm-5 text-muted">Workflow</dt>
+                                <dd class="col-sm-7">{{ workflow.name }}</dd>
+                                <dt class="col-sm-5 text-muted">Role</dt>
+                                <dd class="col-sm-7">{{ workflow.role_as_str }}</dd>
+                                <dt class="col-sm-5 text-muted">Submitted</dt>
+                                <dd class="col-sm-7">
+                                    {% if report.grade_generated_timestamp %}
+                                        {{ report.grade_generated_timestamp.strftime("%a %d %b %Y at %H:%M") }}
+                                        {% if report.grade_generated_by %}
+                                            <span class="text-muted">by {{ report.grade_generated_by.name }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Not submitted</span>
+                                    {% endif %}
+                                </dd>
+                                {% if report.feedback_submitted %}
+                                    <dt class="col-sm-5 text-muted">Feedback</dt>
+                                    <dd class="col-sm-7"><span class="badge bg-success"><i class="fas fa-check"></i> Submitted</span></dd>
+                                {% endif %}
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Validation warnings #}
+            {% if validation_failures %}
+                <div class="alert alert-warning mb-3">
+                    {% call icon_block("exclamation-triangle") %}
+                        <strong>Validation warnings were recorded for this submission.</strong>
+                        <ul class="mb-0 mt-1">
+                            {% for msg in validation_failures %}
+                                <li>{{ msg }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endcall %}
+                </div>
+            {% endif %}
+
+            {# Field values from report JSON #}
+            {% if field_values and schema.get('scheme') %}
+                <div class="card border-secondary mb-3">
+                    <div class="card-header bg-secondary text-white">
+                        <i class="fas fa-clipboard-list fa-fw me-1"></i> Submitted answers
+                    </div>
+                    <div class="card-body">
+                        {% for block in schema.get('scheme', []) %}
+                            <h6 class="fw-semibold mt-3 mb-2">{{ block.title | safe }}</h6>
+                            {% if block.description %}
+                                <p class="small text-muted">{{ block.description | safe }}</p>
+                            {% endif %}
+                            {% for field_spec in block.get('fields', []) %}
+                                {%- set key = field_spec.key -%}
+                                {%- set ftype = field_spec.field_type.type -%}
+                                <div class="row mb-2 small">
+                                    <div class="col-md-6 text-muted">{{ field_spec.text }}</div>
+                                    <div class="col-md-6 fw-semibold">
+                                        {% if key in field_values %}
+                                            {% if ftype == 'boolean' %}
+                                                {% if field_values[key] %}
+                                                    <span class="badge bg-success"><i class="fas fa-check"></i> Yes</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary"><i class="fas fa-times"></i> No</span>
+                                                {% endif %}
+                                            {% elif ftype in ('number', 'percent') %}
+                                                {{ field_values[key] }}{% if ftype == 'percent' %}%{% endif %}
+                                            {% else %}
+                                                {{ field_values[key] }}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted fst-italic">Not answered</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            {# Feedback #}
+            {% if scheme and scheme.uses_standard_feedback and (report.feedback_positive or report.feedback_improvement) %}
+                <div class="card border-success mb-3">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-comment fa-fw me-1"></i> Feedback to student</span>
+                        <a class="btn btn-sm btn-outline-light"
+                           href="{{ url_for('faculty.edit_marking_feedback', report_id=report.id, url=url_for('faculty.view_marking_report', report_id=report.id, url=url)) }}">
+                            <i class="fas fa-pencil-alt fa-fw"></i> Edit feedback
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if report.feedback_positive %}
+                            <div class="mb-3">
+                                <span class="badge bg-success mb-2">What was good?</span>
+                                <div class="small">{{ report.feedback_positive | safe }}</div>
+                            </div>
+                        {% endif %}
+                        {% if report.feedback_improvement %}
+                            <div class="mb-3">
+                                <span class="badge bg-secondary mb-2">What could be improved next time?</span>
+                                <div class="small">{{ report.feedback_improvement | safe }}</div>
+                            </div>
+                        {% endif %}
+                        {% if report.feedback_timestamp %}
+                            <div class="small text-muted mt-2">
+                                <i class="fas fa-clock fa-fw"></i>
+                                Feedback last updated {{ report.feedback_timestamp.strftime("%a %d %b %Y at %H:%M") }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% elif scheme and scheme.uses_standard_feedback %}
+                <div class="card border-secondary mb-3">
+                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-comment fa-fw me-1"></i> Feedback to student</span>
+                        <a class="btn btn-sm btn-outline-light"
+                           href="{{ url_for('faculty.edit_marking_feedback', report_id=report.id, url=url_for('faculty.view_marking_report', report_id=report.id, url=url)) }}">
+                            <i class="fas fa-pencil-alt fa-fw"></i> Add feedback
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted fst-italic small mb-0">No feedback entered yet.</p>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="d-flex gap-2 mb-4">
+                <a class="btn btn-outline-secondary" href="{{ url }}">
+                    <i class="fas fa-arrow-left fa-fw"></i> Return
+                </a>
+                {% if report.marking_form_is_open or is_elevated %}
+                    <a class="btn btn-outline-primary"
+                       href="{{ url_for('faculty.marking_form', report_id=report.id, url=url) }}">
+                        <i class="fas fa-pen fa-fw"></i> Edit marking form
+                    </a>
+                {% endif %}
+            </div>
+
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

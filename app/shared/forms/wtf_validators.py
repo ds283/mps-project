@@ -897,7 +897,10 @@ def parse_schema(data) -> dict | None:
         for field in fields:
             if not isinstance(field, dict):
                 return None
-            if not isinstance(field.get("key"), str):
+            key = field.get("key")
+            if not isinstance(key, str):
+                return None
+            if not key.isidentifier():
                 return None
             if not isinstance(field.get("text"), str):
                 return None

@@ -1647,17 +1647,17 @@ def _get_or_create_marking_workflow(event, name, role, now):
 
 
 def _get_or_create_submitter_report(
-        record,
-        workflow,
-        now,
-        *,
-        grade,
-        signed_off_id,
-        feedback_sent,
-        feedback_push_id,
-        feedback_push_timestamp,
-        grade_generated_by_id,
-        grade_generated_timestamp,
+    record,
+    workflow,
+    now,
+    *,
+    grade,
+    signed_off_id,
+    feedback_sent,
+    feedback_push_id,
+    feedback_push_timestamp,
+    grade_generated_by_id,
+    grade_generated_timestamp,
 ):
     existing = (
         db.session.query(SubmitterReport)
@@ -1686,7 +1686,9 @@ def _get_or_create_submitter_report(
     return sr, True
 
 
-def _get_or_create_marking_report(role, submitter_report, now, *, grade, copy_feedback_from):
+def _get_or_create_marking_report(
+    role, submitter_report, now, *, grade, copy_feedback_from
+):
     existing = (
         db.session.query(MarkingReport)
         .filter(
@@ -1724,7 +1726,10 @@ def migrate_to_marking_events(app):
     Idempotent: safe to run multiple times.
     """
     now = datetime.now()
-    counts = {k: [0, 0] for k in ["events", "workflows", "submitter_reports", "marking_reports"]}
+    counts = {
+        k: [0, 0]
+        for k in ["events", "workflows", "submitter_reports", "marking_reports"]
+    }
 
     closed_periods = (
         db.session.query(SubmissionPeriodRecord)
@@ -1733,46 +1738,63 @@ def migrate_to_marking_events(app):
     )
 
     for period in closed_periods:
-
         # BLOCK A: Presentation grading
         if period.has_presentation and period.has_deployed_schedule:
-            pres_event, created = _get_or_create_marking_event(period, "Presentation grading", now)
+            pres_event, created = _get_or_create_marking_event(
+                period, "Presentation grading", now
+            )
             _track(counts["events"], created)
             pres_wf, created = _get_or_create_marking_workflow(
-                pres_event, "Presentation grading",
-                role=SubmissionRole.ROLE_PRESENTATION_ASSESSOR, now=now,
+                pres_event,
+                "Presentation grading",
+                role=SubmissionRole.ROLE_PRESENTATION_ASSESSOR,
+                now=now,
             )
             _track(counts["workflows"], created)
             for record in period.submissions:
                 sr, created = _get_or_create_submitter_report(
-                    record, pres_wf, now,
-                    grade=0.0, signed_off_id=None,
+                    record,
+                    pres_wf,
+                    now,
+                    grade=0.0,
+                    signed_off_id=None,
                     feedback_sent=False,
-                    feedback_push_id=None, feedback_push_timestamp=None,
-                    grade_generated_by_id=None, grade_generated_timestamp=None,
+                    feedback_push_id=None,
+                    feedback_push_timestamp=None,
+                    grade_generated_by_id=None,
+                    grade_generated_timestamp=None,
                 )
                 _track(counts["submitter_reports"], created)
                 for role in record.roles:
                     if role.role != SubmissionRole.ROLE_PRESENTATION_ASSESSOR:
                         continue
-                    mr, c = _get_or_create_marking_report(role, sr, now, grade=None, copy_feedback_from=role)
+                    mr, c = _get_or_create_marking_report(
+                        role, sr, now, grade=None, copy_feedback_from=role
+                    )
                     _track(counts["marking_reports"], c)
 
         # BLOCK B: Main report MarkingEvent
-        report_event, created = _get_or_create_marking_event(period, period.display_name, now)
+        report_event, created = _get_or_create_marking_event(
+            period, period.display_name, now
+        )
         _track(counts["events"], created)
 
         if period.number_markers == 1:
             # BLOCK C: single marker — ROLE_MARKER used as representative value
             rpt_wf, created = _get_or_create_marking_workflow(
-                report_event, "Report grading",
-                role=SubmissionRole.ROLE_MARKER, now=now,
+                report_event,
+                "Report grading",
+                role=SubmissionRole.ROLE_MARKER,
+                now=now,
             )
             _track(counts["workflows"], created)
             for record in period.submissions:
                 sr, created = _get_or_create_submitter_report(
-                    record, rpt_wf, now,
-                    grade=None, signed_off_id=None,
+                    record,
+                    rpt_wf,
+                    now,
+                    grade=None,
+                    signed_off_id=None,
                     feedback_sent=record.feedback_sent,
                     feedback_push_id=record.feedback_push_id,
                     feedback_push_timestamp=record.feedback_push_timestamp,
@@ -1785,25 +1807,32 @@ def migrate_to_marking_events(app):
                         sr.feedback_reports.append(fr)
                 for role in record.roles:
                     if role.role not in (
-                            SubmissionRole.ROLE_SUPERVISOR,
-                            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
-                            SubmissionRole.ROLE_MARKER,
+                        SubmissionRole.ROLE_SUPERVISOR,
+                        SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                        SubmissionRole.ROLE_MARKER,
                     ):
                         continue
-                    mr, c = _get_or_create_marking_report(role, sr, now, grade=None, copy_feedback_from=role)
+                    mr, c = _get_or_create_marking_report(
+                        role, sr, now, grade=None, copy_feedback_from=role
+                    )
                     _track(counts["marking_reports"], c)
 
         elif period.number_markers == 2:
             # BLOCK D1: Report grading (ROLE_MARKER)
             rpt_wf, created = _get_or_create_marking_workflow(
-                report_event, "Report grading",
-                role=SubmissionRole.ROLE_MARKER, now=now,
+                report_event,
+                "Report grading",
+                role=SubmissionRole.ROLE_MARKER,
+                now=now,
             )
             _track(counts["workflows"], created)
             for record in period.submissions:
                 sr, created = _get_or_create_submitter_report(
-                    record, rpt_wf, now,
-                    grade=record.report_grade, signed_off_id=None,
+                    record,
+                    rpt_wf,
+                    now,
+                    grade=record.report_grade,
+                    signed_off_id=None,
                     feedback_sent=record.feedback_sent,
                     feedback_push_id=record.feedback_push_id,
                     feedback_push_timestamp=record.feedback_push_timestamp,
@@ -1817,19 +1846,26 @@ def migrate_to_marking_events(app):
                 for role in record.roles:
                     if role.role != SubmissionRole.ROLE_MARKER:
                         continue
-                    mr, c = _get_or_create_marking_report(role, sr, now, grade=role.grade, copy_feedback_from=role)
+                    mr, c = _get_or_create_marking_report(
+                        role, sr, now, grade=role.grade, copy_feedback_from=role
+                    )
                     _track(counts["marking_reports"], c)
 
             # BLOCK D2: Supervisor observations
             sup_wf, created = _get_or_create_marking_workflow(
-                report_event, "Supervisor observations",
-                role=SubmissionRole.ROLE_SUPERVISOR, now=now,
+                report_event,
+                "Supervisor observations",
+                role=SubmissionRole.ROLE_SUPERVISOR,
+                now=now,
             )
             _track(counts["workflows"], created)
             for record in period.submissions:
                 sr, created = _get_or_create_submitter_report(
-                    record, sup_wf, now,
-                    grade=record.supervision_grade, signed_off_id=None,
+                    record,
+                    sup_wf,
+                    now,
+                    grade=record.supervision_grade,
+                    signed_off_id=None,
                     feedback_sent=record.feedback_sent,
                     feedback_push_id=record.feedback_push_id,
                     feedback_push_timestamp=record.feedback_push_timestamp,
@@ -1839,11 +1875,13 @@ def migrate_to_marking_events(app):
                 _track(counts["submitter_reports"], created)
                 for role in record.roles:
                     if role.role not in (
-                            SubmissionRole.ROLE_SUPERVISOR,
-                            SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
+                        SubmissionRole.ROLE_SUPERVISOR,
+                        SubmissionRole.ROLE_RESPONSIBLE_SUPERVISOR,
                     ):
                         continue
-                    mr, c = _get_or_create_marking_report(role, sr, now, grade=role.grade, copy_feedback_from=role)
+                    mr, c = _get_or_create_marking_report(
+                        role, sr, now, grade=role.grade, copy_feedback_from=role
+                    )
                     _track(counts["marking_reports"], c)
 
     try:

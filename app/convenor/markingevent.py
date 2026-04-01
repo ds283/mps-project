@@ -732,7 +732,7 @@ def inspect_marking_schemes(pclass_id):
     data = get_convenor_dashboard_data(pclass, config)
 
     return render_template_context(
-        "convenor/marking_events/marking_schemes_inspector.html",
+        "convenor/markingevent/marking_schemes_inspector.html",
         pclass=pclass,
         config=config,
         convenor_data=data,
@@ -823,7 +823,7 @@ def add_marking_scheme(pclass_id):
         )
 
     return render_template_context(
-        "convenor/marking_events/edit_marking_scheme.html",
+        "convenor/markingevent/edit_marking_scheme.html",
         form=form,
         scheme=None,
         pclass=pclass,
@@ -883,7 +883,7 @@ def edit_marking_scheme(scheme_id):
         )
 
     return render_template_context(
-        "convenor/marking_events/edit_marking_scheme.html",
+        "convenor/markingevent/edit_marking_scheme.html",
         form=form,
         scheme=scheme,
         pclass=pclass,

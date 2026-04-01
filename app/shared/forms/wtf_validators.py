@@ -846,12 +846,28 @@ def valid_json(form, field):
 _VALID_MARKING_FIELD_TYPES = {"boolean", "text", "number", "percent"}
 _VALID_VALIDATION_ACTIONS = {"prevent_submit", "email", "web"}
 
+_FIDUCIAL_VALUES = {
+    "boolean": True,
+    "number": 1.0,
+    "percent": 1.0,
+    "text": "test",
+}
 
-def parse_schema(data) -> dict | None:
+# Safe builtins exposed to eval() when checking marking-scheme expressions
+_SAFE_BUILTINS = {"abs": abs, "min": min, "max": max, "round": round, "len": len, "sum": sum}
+
+
+class SchemaValidationError(Exception):
+    """Raised by parse_schema() when schema fails structural or expression validation."""
+
+    pass
+
+
+def parse_schema(data) -> dict:
     """
     Validate the structure of a deserialized marking scheme schema.
     `data` should be a Python object obtained from json.loads().
-    Returns the validated schema dict, or None if the structure is invalid.
+    Returns the validated schema dict on success, or raises SchemaValidationError.
 
     Expected layout: a dict with:
         "scheme": list of section blocks (required), each block a dict with:
@@ -866,73 +882,125 @@ def parse_schema(data) -> dict | None:
                     "precision": optional, used with number type
                     "rows": optional, used with text type, specifies initial number of rows to display in text area
                     "default": optional
-        "conflation_rule": str (required, valid Python expression)
+        "conflation_rule": str (required, valid Python expression returning a number)
         "validation": list of dicts (optional), each with:
-            "test": str (required, valid Python expression)
+            "test": str (required, valid Python expression returning a bool)
             "action": list of strings from {"prevent_submit", "email", "web"}
                       ("prevent_submit" must be the only action if present)
     """
     if not isinstance(data, dict):
-        return None
+        raise SchemaValidationError("Schema must be a JSON object")
 
     # "conflation_rule" is required and must be a string
     if not isinstance(data.get("conflation_rule"), str):
-        return None
+        raise SchemaValidationError("'conflation_rule' is required and must be a string")
 
     # "scheme" is required and must be a list of section blocks
     scheme = data.get("scheme")
     if not isinstance(scheme, list):
-        return None
+        raise SchemaValidationError("'scheme' is required and must be a list of section blocks")
 
-    for block in scheme:
+    # Pass 1: structural validation; build fiducial value dictionary
+    fiducial: dict = {}
+
+    for block_idx, block in enumerate(scheme):
         if not isinstance(block, dict):
-            return None
+            raise SchemaValidationError(f"Section block {block_idx} must be a JSON object")
         if not isinstance(block.get("title"), str):
-            return None
+            raise SchemaValidationError(f"Section block {block_idx} is missing a 'title' string")
 
         # Optional description
         description = block.get("description")
         if description is not None and not isinstance(description, str):
-            return None
+            raise SchemaValidationError(f"Section block {block_idx}: 'description' must be a string")
 
         # Required fields list
         fields = block.get("fields")
         if not isinstance(fields, list):
-            return None
-        for field in fields:
+            raise SchemaValidationError(f"Section block {block_idx} ('{block.get('title')}'): 'fields' must be a list")
+        for field_idx, field in enumerate(fields):
             if not isinstance(field, dict):
-                return None
+                raise SchemaValidationError(
+                    f"Section block {block_idx}, field {field_idx}: must be a JSON object"
+                )
             key = field.get("key")
             if not isinstance(key, str):
-                return None
+                raise SchemaValidationError(
+                    f"Section block {block_idx}, field {field_idx}: 'key' must be a string"
+                )
             if not key.isidentifier():
-                return None
+                raise SchemaValidationError(
+                    f"Section block {block_idx}, field {field_idx}: key '{key}' is not a valid Python identifier"
+                )
+            if key in fiducial:
+                raise SchemaValidationError(f"Duplicate field key '{key}'")
             if not isinstance(field.get("text"), str):
-                return None
+                raise SchemaValidationError(
+                    f"Section block {block_idx}, field '{key}': 'text' must be a string"
+                )
             ft = field.get("field_type")
             if not isinstance(ft, dict):
-                return None
-            if ft.get("type") not in _VALID_MARKING_FIELD_TYPES:
-                return None
+                raise SchemaValidationError(
+                    f"Section block {block_idx}, field '{key}': 'field_type' must be a JSON object"
+                )
+            field_type_name = ft.get("type")
+            if field_type_name not in _VALID_MARKING_FIELD_TYPES:
+                raise SchemaValidationError(
+                    f"Section block {block_idx}, field '{key}': field type '{field_type_name}' is not valid; "
+                    f"must be one of {sorted(_VALID_MARKING_FIELD_TYPES)}"
+                )
+            fiducial[key] = _FIDUCIAL_VALUES[field_type_name]
 
-    # Optional top-level validation list
+    # Optional top-level validation list — structural check only in pass 1
     validation = data.get("validation")
     if validation is not None:
         if not isinstance(validation, list):
-            return None
-        for test_item in validation:
+            raise SchemaValidationError("'validation' must be a list")
+        for item_idx, test_item in enumerate(validation):
             if not isinstance(test_item, dict):
-                return None
+                raise SchemaValidationError(f"Validation item {item_idx} must be a JSON object")
             if not isinstance(test_item.get("test"), str):
-                return None
+                raise SchemaValidationError(f"Validation item {item_idx}: 'test' must be a string")
             action = test_item.get("action")
             if not isinstance(action, list):
-                return None
+                raise SchemaValidationError(f"Validation item {item_idx}: 'action' must be a list")
             if not all(a in _VALID_VALIDATION_ACTIONS for a in action):
-                return None
+                invalid = [a for a in action if a not in _VALID_VALIDATION_ACTIONS]
+                raise SchemaValidationError(
+                    f"Validation item {item_idx}: unknown action(s) {invalid}; "
+                    f"must be from {sorted(_VALID_VALIDATION_ACTIONS)}"
+                )
             # "prevent_submit" must be the only action if present
             if "prevent_submit" in action and len(action) != 1:
-                return None
+                raise SchemaValidationError(
+                    f"Validation item {item_idx}: 'prevent_submit' cannot be combined with other actions"
+                )
+
+    # Pass 2: expression evaluation using fiducial values
+    eval_ns = {"__builtins__": _SAFE_BUILTINS} | fiducial
+
+    try:
+        result = eval(data["conflation_rule"], eval_ns)
+    except Exception as exc:
+        raise SchemaValidationError(f"'conflation_rule' raised an error during evaluation: {exc}")
+    if not isinstance(result, (int, float)):
+        raise SchemaValidationError(
+            f"'conflation_rule' must evaluate to a number, but got {type(result).__name__}"
+        )
+
+    if validation is not None:
+        for item_idx, test_item in enumerate(validation):
+            try:
+                result = eval(test_item["test"], eval_ns)
+            except Exception as exc:
+                raise SchemaValidationError(
+                    f"Validation item {item_idx} 'test' expression raised an error during evaluation: {exc}"
+                )
+            if not isinstance(result, bool):
+                raise SchemaValidationError(
+                    f"Validation item {item_idx} 'test' expression must evaluate to a bool, "
+                    f"but got {type(result).__name__}"
+                )
 
     return data
 
@@ -946,13 +1014,10 @@ def valid_marking_schema(form, field):
     except json.JSONDecodeError:
         raise ValidationError("Schema is not valid JSON")
 
-    if parse_schema(data) is None:
-        raise ValidationError(
-            "Schema does not conform to the required layout: "
-            "expected a dict with 'scheme' (list of section blocks, each with a title and fields), "
-            "'conflation_rule' (Python expression string), "
-            "and optional 'validation' list"
-        )
+    try:
+        parse_schema(data)
+    except SchemaValidationError as exc:
+        raise ValidationError(str(exc))
 
 
 def password_strength(form, field):

@@ -12,7 +12,7 @@ from flask import current_app, get_template_attribute, render_template
 from markupsafe import escape
 
 from ...models.markingevent import SubmitterReportWorkflowStates
-from ...shared.forms.wtf_validators import parse_schema
+from ...shared.forms.wtf_validators import SchemaValidationError, parse_schema
 
 # language=jinja2
 _marking_event_period = """
@@ -799,7 +799,10 @@ def _parse_scheme_schema(scheme) -> dict | None:
         raw = scheme.schema_as_dict
     except Exception:
         return None
-    return parse_schema(raw)
+    try:
+        return parse_schema(raw)
+    except SchemaValidationError:
+        return None
 
 
 def _make_schema_block_summaries(schema) -> list | None:

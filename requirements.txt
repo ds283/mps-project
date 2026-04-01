@@ -123,7 +123,7 @@ pyasn1_modules==0.4.2
 pycparser==3.0
 pydyf==0.12.1
 pyexifinfo==0.4.0
-Pygments==2.19.2
+Pygments==2.20.0
 pyinstrument==5.1.2
 pymongo==4.16.0
 PyMuPDF==1.27.2

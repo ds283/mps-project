@@ -32,6 +32,7 @@ from ...models import (
     FeedbackRecipe,
     FHEQ_Level,
     MarkingEvent,
+    MarkingScheme,
     MarkingWorkflow,
     MatchingAttempt,
     Module,
@@ -859,6 +860,30 @@ def make_unique_marking_workflow_key_in_event(event_id, key=None):
     return validator
 
 
+def make_unique_marking_scheme_in_pclass(pclass_id, name=None):
+    """
+    Return a WTForms validator that checks MarkingScheme.name is unique within a
+    ProjectClass. If name is provided (edit case), the scheme's own current name is allowed.
+    """
+
+    def validator(form, field):
+        if name is not None and field.data == name:
+            return
+        existing = (
+            db.session.query(MarkingScheme)
+            .filter(
+                MarkingScheme.pclass_id == pclass_id, MarkingScheme.name == field.data
+            )
+            .first()
+        )
+        if existing is not None:
+            raise ValidationError(
+                f'"{field.data}" is already used as a marking scheme name in this project class'
+            )
+
+    return validator
+
+
 def valid_json(form, field):
     try:
         json_obj = json.loads(field.data)
@@ -1078,7 +1103,7 @@ def valid_marking_schema(form, field):
         raise ValidationError(str(exc))
 
 
-def parse_targets(data) -> dict:
+def parse_targets(data, fiducial) -> dict:
     """
     Validate the structure of a deserialized targets dict.
     `data` should be a Python object obtained from json.loads().
@@ -1090,39 +1115,52 @@ def parse_targets(data) -> dict:
     """
     if not isinstance(data, dict):
         raise SchemaValidationError("targets must be a JSON object (dict)")
-    for k, v in data.items():
-        if not isinstance(k, str) or not k.isidentifier():
+
+    eval_ns = {"__builtins__": _SAFE_BUILTINS} | fiducial
+
+    for target, conflation_rule in data.items():
+        if not isinstance(target, str) or not target.isidentifier():
             raise SchemaValidationError(
-                f"Target key {k!r} must be a valid Python identifier"
+                f"Target key {target!r} must be a valid Python identifier"
             )
-        if not isinstance(v, str):
+        if not isinstance(conflation_rule, str):
             raise SchemaValidationError(
-                f"Target value for key {k!r} must be a string expression"
+                f"Target value for key {target!r} must be a string expression"
             )
+
         try:
-            compile(v, "<targets>", "eval")
-        except SyntaxError as exc:
+            result = eval(conflation_rule, eval_ns)
+        except Exception as exc:
             raise SchemaValidationError(
-                f"Target expression for key {k!r} has a syntax error: {exc}"
+                f"Target expression for key {target!r} raised an error during evaluation: {exc}"
             )
+        if not isinstance(result, (int, float)):
+            raise SchemaValidationError(
+                f"Target expression for key {target!r} must evaluate to a float, but got {type(result).__name__}"
+            )
+
     return data
 
 
-def valid_marking_targets(form, field):
-    """WTForms validator: checks that the field contains valid JSON conforming to the targets layout."""
-    if not field.data:
-        return
-    try:
-        data = json.loads(field.data)
-    except TypeError:
-        raise ValidationError("Unexpected text encoding in targets")
-    except json.JSONDecodeError:
-        raise ValidationError("Targets field is not valid JSON")
+def make_valid_marking_targets(fiducial):
 
-    try:
-        parse_targets(data)
-    except SchemaValidationError as exc:
-        raise ValidationError(str(exc))
+    def valid_marking_targets(form, field):
+        """WTForms validator: checks that the field contains valid JSON conforming to the targets layout."""
+        if not field.data:
+            return
+        try:
+            data = json.loads(field.data)
+        except TypeError:
+            raise ValidationError("Unexpected text encoding in targets")
+        except json.JSONDecodeError:
+            raise ValidationError("Targets field is not valid JSON")
+
+        try:
+            parse_targets(data, fiducial)
+        except SchemaValidationError as exc:
+            raise ValidationError(str(exc))
+
+    return valid_marking_targets
 
 
 def password_strength(form, field):

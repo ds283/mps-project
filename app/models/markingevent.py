@@ -108,11 +108,13 @@ class MarkingScheme(db.Model, MarkingSchemeMixin, EditingMetadataMixin):
 
     __tablename__ = "marking_schemes"
 
+    __table_args__ = (db.UniqueConstraint("pclass_id", "name"),)
+
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
-    # name must be unique across all MarkingScheme instances
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"), unique=True)
+    # name must be unique within the parent ProjectClass
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
     # project class this marking scheme is for
     pclass_id = db.Column(

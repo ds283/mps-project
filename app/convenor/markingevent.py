@@ -47,8 +47,10 @@ from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.wtf_validators import (
     make_unique_marking_event_in_period,
+    make_unique_marking_scheme_in_pclass,
     make_unique_marking_workflow_in_event,
     make_unique_marking_workflow_key_in_event,
+    make_valid_marking_targets,
 )
 from ..shared.security import validate_nonce
 from ..shared.utils import redirect_url
@@ -789,6 +791,7 @@ def add_marking_scheme(pclass_id):
     text = request.args.get("text", "Marking schemes")
 
     form = AddMarkingSchemeForm(request.form)
+    form.name.validators.append(make_unique_marking_scheme_in_pclass(pclass_id))
 
     if form.validate_on_submit():
         scheme = MarkingScheme(
@@ -853,6 +856,7 @@ def edit_marking_scheme(scheme_id):
     text = request.args.get("text", "Marking schemes")
 
     form = EditMarkingSchemeForm(obj=scheme)
+    form.name.validators.append(make_unique_marking_scheme_in_pclass(pclass.id, name=scheme.name))
 
     if form.validate_on_submit():
         scheme.name = form.name.data
@@ -1053,9 +1057,15 @@ def edit_marking_event(event_id):
     )
     text = request.args.get("text", "Marking events")
 
+    # build fiducial list of key->value assignments used to test the conflation rules for each target
+    fiducial = {wf.key: 1.0 for wf in event.workflows}
+
     form = EditMarkingEventForm(obj=event)
     form.name.validators.append(
         make_unique_marking_event_in_period(period.id, name=event.name)
+    )
+    form.targets.validators.append(
+        make_valid_marking_targets(fiducial)
     )
 
     if form.validate_on_submit():

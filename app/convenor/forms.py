@@ -24,7 +24,6 @@ from wtforms import (
 )
 from wtforms.validators import (
     DataRequired,
-    Email,
     InputRequired,
     Length,
     NumberRange,
@@ -87,7 +86,6 @@ from ..shared.forms.wtf_validators import (
     unique_or_original_submission_unit,
     unique_or_original_supervision_event_template,
     valid_marking_schema,
-    valid_marking_targets,
     valid_python_identifier,
 )
 from ..shared.utils import get_current_year
@@ -1025,7 +1023,7 @@ class AddMarkingEventForm(Form, MarkingEventMixin):
 class EditMarkingEventForm(Form, MarkingEventMixin, SaveChangesMixin):
     targets = TextAreaField(
         "Targets",
-        validators=[Optional(), valid_marking_targets],
+        validators=[InputRequired()],  # we append a parse check after construction
         description="JSON dict mapping target names to a conflation rule. Each target name should be a valid Python identifier."
         "The conflation rules may reference the key fields of the constituent marking workflows.",
     )

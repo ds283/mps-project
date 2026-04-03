@@ -448,7 +448,7 @@
                     </a>
                     {% if not is_student and (hub_role.is_admin or hub_role.is_convenor) %}
                         <a class="btn btn-sm btn-outline-secondary"
-                           href="{{ url_for('convenor.student_journal_inspector', student_id=record.student_id, url=return_url, text=return_text) }}">
+                           href="{{ url_for('convenor.student_journal_inspector', student_id=record.owner.student_id, url=return_url, text=return_text) }}">
                             <i class="fas fa-book"></i> Journal...
                         </a>
                     {% endif %}
@@ -489,7 +489,8 @@
                                         </div>
                                     {% endif %}
                                     <div class="small fw-semibold text-truncate"
-                                         {% if pa.description %}data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{ pa.description }}"{% endif %}>
+                                         {% if pa.description %}data-bs-toggle="tooltip" data-bs-placement="bottom"
+                                         title="{{ pa.description }}"{% endif %}>
                                         {{ asset.target_name or asset.filename }}
                                     </div>
                                     <a class="btn btn-sm btn-outline-secondary mt-1"
@@ -503,7 +504,9 @@
                     {% if visible_attachments|length > 5 %}
                         <div class="mt-2 small text-muted">
                             Showing 5 of {{ visible_attachments|length }} files.
-                            <a class="text-decoration-none" href="{{ url_for('projecthub.downloads', subid=record.id, url=return_url, text=return_text) }}">View all&hellip;</a>
+                            <a class="text-decoration-none"
+                               href="{{ url_for('projecthub.downloads', subid=record.id, url=return_url, text=return_text) }}">View
+                                all&hellip;</a>
                         </div>
                     {% endif %}
                 </div>

@@ -562,6 +562,12 @@ def upload_period_attachment(pid):
             # convenors always have access, and office admin roles all have access
             asset.grant_roles(["office", "convenor"])
 
+            # if all roles selected
+            if len(selected_roles) == 0:
+                asset.grant_roles(
+                    ["student", "faculty", "moderator", "exam_board", "external"]
+                )
+
             # grant asset-level access based on selected roles
             if SubmissionRoleTypesMixin.ROLE_STUDENT in selected_roles:
                 asset.grant_role("student")
@@ -585,7 +591,7 @@ def upload_period_attachment(pid):
                 asset.grant_role("exam_board")
 
             if SubmissionRoleTypesMixin.ROLE_EXTERNAL_EXAMINER in selected_roles:
-                asset.grant_role("external_examiner")
+                asset.grant_role("external")
 
             try:
                 log_db_commit(

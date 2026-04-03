@@ -10,14 +10,11 @@ to guide their analysis. These include:
   report
 - number of references in the bibliography/reference list
 - number of figures and tables
-- whether all referenecs are actually cited in the text of the report
+- whether all references are actually cited in the text of the report, and if not, which ones
 - whether all figures and tables are actually referenced in the text of the report, and if not, which ones
 
-A second reason is to help us identify the extent to which generative AI is being used to produce reports. To do this
-we'd like to estiamte some language-based metrics that might be diagnostic of AI use. These include:
-
-In planning this implementation, you should prefer to use existing Python libraries for PDF parsing, computing language
-metrics, and handling submission of prompts to LLMs.
+A second reason is to help us identify the extent to which generative AI is being used to produce reports. To do this,
+we'd like to estimate some language-based metrics that might be diagnostic of AI use. These include:
 
 - MATTR
 - MTLD
@@ -26,31 +23,39 @@ metrics, and handling submission of prompts to LLMs.
 The third is to test whether a local LLM can provide guidance to human markers by determining how well each report
 matches a set of indicative criteria defining grade bands.
 
-For PDF parsing, the PyMuPDF library is already used in the project. You can recommend using other libraries if you
-consider them to be suitable.
-
 ### GENERAL CONSIDERATIONS
 
+In planning this implementation, you should prefer to use existing Python libraries for PDF parsing, computing language
+metrics, and handling submission of prompts to LLMs.
+
+For PDF parsing, the PyMuPDF library is already used in the project. You can recommend using other PDF libraries for PDF
+handling if you consider them to have clear advantages.
+
 Celery tasks implemented as part of this feature should run on a separate Celery task queue labelled `llm_tasks`.
-This is to avoid blocking the main Celery task queue. LLM tasks must **only** run on this queue.
+This is because jobs involving LLM submission particularly may be long-running, and we wish to avoid blocking the main
+Celery task queue. LLM tasks must **only** run on this queue.
 
-It's possible that shorter tasks to perform text scraping and statistical analysis could also run on the default queue.
-Please consider the architecture and make a recommendation.
+The Celery chain should route tasks explicitly using si() signatures with queue specified for each step. Statistical
+tasks should be routed to the default queue; extraction and LLM tasks to llm_tasks. Do not rely on automatic queue
+routing for cross-queue chains.
 
-This is a large implementation task. Completion may span multiple rate limit windows. Please write a status file to disk
-at the top level of the repository, and update it periodically as you work.
+Run PDF download and text extraction on the llm_tasks queue alongside the LLM submission task, since these involve file
+I/O and may be slow. Run purely statistical computation (MATTR, MTLD, burstiness, pattern matching) on the default
+queue. Use a Celery chain to sequence these stages.
 
-### REPORT ANALYSIS WORKFLOW
+This is a large implementation task. Completion may span multiple rate limit windows. The status file should be named
+LANGUAGE_ANALYSIS_IMPLEMENTATION.md at the repository root. Structure it with sections: Completed, In Progress, Pending,
+Decisions Made, and Known Issues. Update it after completing each major component. Record any architectural decisions
+made during implementation, particularly where the spec was ambiguous.
 
-The desired workflow is as follows. This should all be implemented as a Celery workflow operating on a
+### LANGUAGE ANALYSIS WORKFLOW
+
+The desired language analysis workflow is as follows. This should all be implemented as a Celery workflow operating on a
 `SubmissionRecord` instance.
 
-Eventually this analysis step will take place **before** production of the processed report. The processed report will
-then include some of the metadata and information obtained during this analysis. You must not used
+Eventually, this analysis step will take place **before** production of the processed report. The processed report will
+then include some of the metadata and information obtained during this analysis. You must NOT use
 `SubmissionRecord.processed_report` during this workflow.
-
-Design a mechanism to capture errors that occur during the workflow, so they can be surfaced to an administrator later
-via the web interface.
 
 - The asset corresponding to the `SubmissionRecord.report` should be downloaded to the container's ephemeral filesystem.
 - The text content should be extracted. In particular:
@@ -60,8 +65,11 @@ via the web interface.
 
 - The text content of the asset should be extracted. For PDF this can perhaps be done using PyMuPDF, which is already
   part of the project, but you may consider other libraries where appropriate.
-- For text scraped from a PDF, the extracted text needs to be cleaned, as far as possible, to remove unwanted content
+- The extracted text needs to be cleaned, as far as possible, to remove unwanted content
   from headers, footers, and page numbers.
+- Word document text extraction should use python-docx. Apply the same cleaning and analysis pipeline as for PDF. If
+  Word document support is complex to integrate, implement it as a stub that can be completed later, and note this in
+  the status file.
 - Perform a word count. Exclude (as far as possible) content that comes from figure or table captions, and from the
   bibliography or reference list. The word count is only intended to be an estimate, so it is understood that this
   procedure will be inexact. This word count will need to be persisted in the database, perhaps as part of a JSON
@@ -80,6 +88,8 @@ via the web interface.
 
 Please also compute the Goh and Barabási "burstiness" metric for the following groups of words. The text should be
 lemmatised for these groups so that simple changes of inflectional forms are not counted as different words.
+Comma-separated entries in the hedging phrase list represent distinct words or phrases that should each be counted
+separately and reported individually.
 
 - suggest, suggests, suggested
 - indicate, indicates, indicated
@@ -89,7 +99,7 @@ lemmatised for these groups so that simple changes of inflectional forms are not
 - estimate, estimates, estimated
 - assume, assumes, assumed
 - imply, implies, implied
-- significant, significant
+- significant, insignificant
 - important, relevant
 - consistent, inconsistent
 - unexpected, surprising
@@ -123,11 +133,6 @@ should be above the standard range. Classify using the bands "low" (all metrics 
 outside range), "medium" (more than one metric outside the standard range), and "high" (all three metrics outside the
 standard range, or two at the higher level).
 
-Please consider the database schema changes needed to persist all this information on the `SubmissionRecord` instance.
-We are unlikely to need to query by any of these metrics, and for forward compatibility it may be helpful if
-the layout is extensible (e.g. extra metrics can be added cheaply later). This may suggest serialization of a JSON
-structure.
-
 Please also compute the rate of ocurrence of the following specific patterns in the text. Current LLMs have
 characteristic tendencies that are measurable with simple pattern matching. Please produce counts of
 these:
@@ -139,7 +144,8 @@ these:
     - it should be noted that
     - needless to say
     - it goes without saying that
-    - as mentioned above, as noted above
+    - as mentioned above
+    - as noted above
     - as discussed previously
     - it is interesting to note that
     - significantly, importantly
@@ -159,11 +165,25 @@ occur in the text.
 In a second step (perhaps a separate Celery task to break the task up), we wish to submit the scraped text to an LLM
 via the ollama REST API. Consider using "ollama-python" to abstract this. The API base URL and LLM model identifier
 should be configurable and provided as part of the Celery task setup. They will likely be determined within the app by
-environment variables set in docker-compose.yml. Consider using streaming responses to improve load balancing and reduce
-the risk of a timeout.
+environment variables set in docker-compose.yml.
 
-You should expect the target LLM to be of 32B or 70B type. Carefully consider how the prompt (or sequence of prompts)
-should be engineered to account for the LLM's context window. Ask for guidance if you're unsure.
+Use streaming responses to keep the connection alive during long inference and to allow progress to be written
+incrementally. Accumulate streamed tokens into a complete response string before attempting JSON parsing.
+
+You should expect the target LLM to be of 32B or 70B type. You should expect typical documents submitted for analysis to
+be in the range of 20 to 50 PDF pages, with 40 pages being typical.
+
+A 40-page document may contain 15,000–20,000 words. For models with a 32k token context window this is feasible but
+tight when combined with the rubric and output schema. Submit the full document text in a single prompt. If the text
+exceeds 12,000 words, truncate to the first 6,000 and last 6,000 words, noting this truncation in the caveats field of
+the output. Do not chunk the document across multiple LLM calls for the rubric assessment.
+
+Use a system prompt for the rubric and instructions, and the user prompt for the document text. This is better practice
+and uses the context window more efficiently.
+
+When truncating, insert a clear marker in the text between the two sections, such
+as [... middle section omitted due to length ...], so the LLM is aware the text is not continuous. Include a note in the
+system prompt that the document may be truncated.
 
 The LLM should be asked to evaluate the text against a rubric which gives indicative criteria for a number of grade
 bands. The crtieria for these bands may vary by ProjectClass, but initially they will all be the same. The model should
@@ -207,12 +227,27 @@ highest.
     - Sources of error in techniques, approximations or methodologies are considered
     - Clear, well-defined suggestions for future directions or improvements
 
-In constructing the prompt, instruct the LLM that each higher band subsumes the criteria of lower bands.
-The LLM should assess against the highest band whose criteria are mostly satisfied.
+The prompt must explicitly state: "Each higher grade band subsumes all criteria of lower bands. A submission cannot be
+awarded a higher band unless it substantially satisfies the criteria of all lower bands. Assess against the highest band
+whose full set of criteria, including those of all lower bands, are mostly satisfied."
+
+Use ollama's format='json' parameter on all LLM API calls to constrain output to valid JSON. Additionally, provide the
+expected JSON schema in the prompt itself. Implement a retry mechanism with a maximum of three attempts. On persistent
+failure, store the raw LLM response alongside the failure notice so it can be inspected by an administrator.
+
+On retry, use identical prompt and parameters. Add a brief delay between retries (suggest 5 seconds) to avoid hammering
+the ollama service.
+
+Treat network errors and malformed JSON as retryable. Treat HTTP 4xx errors from the ollama service as permanent
+failures. A response that is valid JSON but does not conform to the expected schema should be treated as a parsing
+failure after all retries are exhausted.
+
+If JSON parsing fails after retries, store the raw text response in the database rather than discarding it. Surface this
+to the administrator as a parsing failure rather than an inference failure, since the raw text may still contain useful
+information.
 
 In considering how to build the prompt, you should consider the following:
 
-- The prompt should require JSON structured output so that the result is easily parseable downstream
 - Ask the model to assess each criterion individually, with brief textual evidence from the document
 - Ask for a classification with explicit reasoning, not just a label
 - Explicitly instruct the LLM to note where it is uncertain or where the text doesn't provide enough evidence
@@ -250,27 +285,41 @@ it is preferable.
 }
 ```
 
-Please consider how best to enforce the JSON output structure. Consider what fallback options exist if the output from
-the LLM cannot be interpreted. A valid strategy is simply to retry the analysis a certain number of times, or simply to
-report failure. Failure notices would have to be persisted in the database so they can be surfaced to the administrator
-in the web interface.
-
-`SubmssionRecord` instances that have been marked as producing an LLM failure should not be retried until the status
+`SubmissionRecord` instances that have been marked as producing an LLM failure should not be retried until the status
 flag is explicitly cleared by a human administrator. You will need to produce UI elements in order to allow this.
 
 Please attempt to design the Celery workflows so that they are robust to failure and can be retried safely.
+
+Make suitable changes to the database models to capture all the results identified above.
+Add a single `language_analysis` JSON column to SubmissionRecord to store all metrics, flags, and LLM output. Use a
+top-level structure with keys `metrics`, `flags`, `patterns`, `llm_result`, and `errors`. This allows new metrics to be
+added without schema migrations. Add a separate boolean column `llm_analysis_failed` and a text column
+`llm_failure_reason` for explicit failure state tracking, since these will need to be queried directly.
+
+Errors during any workflow stage should be caught, serialised, and written to the `errors` key of the
+`language_analysis` JSON column. Include the stage name, exception type, and message. Non-LLM errors should not set
+`llm_analysis_failed`; that flag is reserved specifically for LLM inference and JSON parsing failures.
 
 ### SURFACE THESE RESULTS IN THE WEB INTERFACE
 
 Where language metrics are available, please surface a concise summary of these in the UI. This could be done in the
 project_tag() macro in @app/templates/convenor/submitters_macros.html. Key information would be the LLM's grade band
-assessment, and the MATTR, MTLD and burstiness metrics.
+assessment, and the MATTR, MTLD and burstiness metrics. If the LLM's assessment is not available because of a workflow
+failure, please note this.
 
-To make the remining information accessible to a user of the web app, consider using an offcanvas popover to display the
+To make the remining information accessible to a user of the web app, use an offcanvas popover to display the
 full results, including the LLM's reasoning and confidence. Add UI elements to visualize the LLM's confidence measures.
 
 You will need to parse the JSON output from the LLM and format the result attractively using Jinja2 markup and HTML
 elements.
+
+For the offcanvas popover, use the existing Bootstrap offcanvas component patterns already present in the project.
+Display per-criterion confidence using coloured badge elements: green for "strong evidence", amber for "partial
+evidence", red for "not evident". The overall grade band recommendation should be displayed prominently. Flag criteria
+the model was uncertain about with a distinct visual treatment.
+
+The action button to launch analysis should trigger a Celery task and return immediately. Do not make the user wait
+for the result.
 
 ### ADD UI ELEMENTS TO LAUNCH TASK PROCESSING
 

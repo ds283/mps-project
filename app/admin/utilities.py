@@ -63,6 +63,7 @@ from ..models import (
     TemporaryAsset,
     User,
 )
+from ..models.submissions import SubmissionRoleTypesMixin
 from ..models.assets import ThumbnailAsset
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.backup import (
@@ -448,7 +449,7 @@ def download_submitted_asset(asset_id):
 
     # if an attachment record is available, check its 'publish_to_students' flag
     if attachment is not None:
-        if current_user.has_role("student") and not attachment.publish_to_students:
+        if current_user.has_role("student") and not attachment.has_role_access(SubmissionRoleTypesMixin.ROLE_STUDENT):
             # give no indication that this asset actually exists
             abort(404)
 

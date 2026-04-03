@@ -24,6 +24,7 @@ from initdb import (
     initial_populate_database,
     migrate_period_attachment_roles,
     migrate_schedule_submission_roles,
+    migrate_submission_attachment_roles,
     migrate_to_marking_events,
     populate_CATS_limits,
     populate_email_templates,
@@ -104,6 +105,9 @@ with app.app_context():
 
     db.session.commit()
     migrate_period_attachment_roles(app)
+
+    db.session.commit()
+    migrate_submission_attachment_roles(app)
 
 
 if __name__ == "__main__":

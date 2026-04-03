@@ -1201,7 +1201,11 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     @property
     def canvas_turnitin_refetchable(self) -> bool:
         """True if a Canvas Turnitin re-fetch is possible for this submission record."""
-        return self.period.canvas_enabled and self.owner is not None and self.owner.canvas_user_id is not None
+        return (
+            self.period.canvas_enabled
+            and self.owner is not None
+            and self.owner.canvas_user_id is not None
+        )
 
     @property
     def submission_period(self):
@@ -1639,9 +1643,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             SubmissionRole.ROLE_MARKER,
         ]
         return any(
-            role.submitted_feedback
-            for role in self.roles
-            if role.role in allowed_roles
+            role.submitted_feedback for role in self.roles if role.role in allowed_roles
         )
 
     @property
@@ -1879,7 +1881,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     def _build_submitted_attachment_query(
         self,
-        published_to_students=True,
+        role: Optional[int] = None,
         allowed_users: Optional[List[User]] = None,
         allowed_roles: Optional[List[Role]] = None,
         ordering: Optional[List] = None,
@@ -1896,8 +1898,25 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         query = db.session.query(SubmissionAttachment).filter(
             SubmissionAttachment.parent_id == self.id
         )
-        if published_to_students:
-            query = query.filter(SubmissionAttachment.publish_to_students.is_(True))
+
+        # Role-based filtering: include attachments that are either unrestricted (no entries in
+        # submission_attachment_roles) or have an entry matching the requested role.
+        if role is not None:
+            restricted_ids = db.session.query(
+                SubmissionAttachmentRole.attachment_id
+            ).subquery()
+            query = query.outerjoin(
+                SubmissionAttachmentRole,
+                and_(
+                    SubmissionAttachmentRole.attachment_id == SubmissionAttachment.id,
+                    SubmissionAttachmentRole.role == role,
+                ),
+            ).filter(
+                or_(
+                    ~SubmissionAttachment.id.in_(restricted_ids),
+                    SubmissionAttachmentRole.role.isnot(None),
+                )
+            )
 
         query = (
             query.join(
@@ -1960,7 +1979,9 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         # Role-based filtering: include attachments that are either unrestricted (no entries in
         # period_attachment_roles) or have an entry matching the requested role.
         if role is not None:
-            restricted_ids = db.session.query(PeriodAttachmentRole.attachment_id).subquery()
+            restricted_ids = db.session.query(
+                PeriodAttachmentRole.attachment_id
+            ).subquery()
             query = query.outerjoin(
                 PeriodAttachmentRole,
                 and_(
@@ -1969,8 +1990,10 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 ),
             ).filter(
                 or_(
-                    ~PeriodAttachment.id.in_(restricted_ids),  # unrestricted: no role entries at all
-                    PeriodAttachmentRole.role.isnot(None),      # has a matching role entry
+                    ~PeriodAttachment.id.in_(
+                        restricted_ids
+                    ),  # unrestricted: no role entries at all
+                    PeriodAttachmentRole.role.isnot(None),  # has a matching role entry
                 )
             )
 
@@ -2007,7 +2030,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         :return:
         """
         submission_attachments = self._build_submitted_attachment_query(
-            published_to_students=False,
+            role=None,
             allowed_users=[current_user],
             allowed_roles=current_user.roles,
         )
@@ -2059,7 +2082,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         :return:
         """
         submission_attachments = self._build_submitted_attachment_query(
-            published_to_students=True,
+            role=SubmissionRoleTypesMixin.ROLE_STUDENT,
             allowed_users=[current_user],
             allowed_roles=current_user.roles,
         )
@@ -2343,179 +2366,136 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     def maintenance(self):
         """
-        Fix (some) issues with record configuration
-        :return:
+        Fix (some) issues with record configuration.
+        Ensures that asset access control is consistent with the role sets on each attachment
+        and that all SubmissionRole holders can access the report and processed report.
         """
-        from .assets import SubmittedAsset
+        from .assets import GeneratedAsset, SubmittedAsset
+        from .users import User as _User
 
         modified = False
+        all_submission_roles = list(self.roles)
+        student_user: _User = self.owner.student.user
 
-        # check access control status for uploaded report
+        def _ensure_asset_access(asset, include_student: bool) -> bool:
+            """Ensure all SubmissionRole users can access this asset (report / processed report).
+            Prefers role-based access; removes redundant user-based entries where possible.
+            Student access is always user-based.
+            """
+            m = False
+            for sr in all_submission_roles:
+                user = sr.user
+                if asset.has_role_access(user):
+                    # user already has access via a role grant — remove redundant user entry
+                    if asset.in_user_acl(user):
+                        asset.revoke_user(user)
+                        m = True
+                elif not asset.in_user_acl(user):
+                    asset.grant_user(user)
+                    m = True
+            # student access (always user-based for reports)
+            if include_student:
+                if not asset.has_access(student_user):
+                    asset.grant_user(student_user)
+                    m = True
+            else:
+                if asset.in_user_acl(student_user):
+                    asset.revoke_user(student_user)
+                    m = True
+            # ensure archive_reports role is in the role ACR
+            if not asset.in_role_acl("archive_reports"):
+                asset.grant_role("archive_reports")
+                m = True
+            return m
+
+        def _ensure_attachment_access(asset, role_set: set) -> bool:
+            """Ensure correct access for a SubmissionAttachment asset.
+            Only users whose SubmissionRole.role is in role_set (or all if role_set is empty)
+            should have access. Student access is user-based only (never via role grant).
+            """
+            m = False
+            if not role_set:
+                authorized = all_submission_roles
+            else:
+                authorized = [sr for sr in all_submission_roles if sr.role in role_set]
+
+            for sr in authorized:
+                user = sr.user
+                if asset.has_role_access(user):
+                    # user already covered by a role grant — remove redundant user entry
+                    if asset.in_user_acl(user):
+                        asset.revoke_user(user)
+                        m = True
+                elif not asset.in_user_acl(user):
+                    # grant user-based access (role-based would be too broad for per-submission docs)
+                    asset.grant_user(user)
+                    m = True
+
+            # student: user-based only, never role-based
+            student_should_have = SubmissionRoleTypesMixin.ROLE_STUDENT in role_set
+            if student_should_have:
+                if not asset.has_access(student_user):
+                    asset.grant_user(student_user)
+                    m = True
+            else:
+                if asset.in_user_acl(student_user):
+                    asset.revoke_user(student_user)
+                    m = True
+
+            # ensure archive_reports role is in the role ACR
+            if not asset.in_role_acl("archive_reports"):
+                asset.grant_role("archive_reports")
+                m = True
+            return m
+
+        # report: all SubmissionRole users + student
         if self.report is not None:
-            modified = (
-                modified
-                | self._check_access_control_users(self.report, allow_student=True)
-                | self._check_access_control_groups(self.report)
-            )
+            modified |= _ensure_asset_access(self.report, include_student=True)
 
-        # check access control status for processed report
+        # processed report: all SubmissionRole users, no student access
         if self.processed_report is not None:
-            modified = (
-                modified
-                | self._check_access_control_users(
-                    self.processed_report, allow_student=False
-                )
-                | self._check_access_control_groups(self.processed_report)
-            )
+            modified |= _ensure_asset_access(self.processed_report, include_student=False)
 
-        # check access control status for any uploaded attachments; generally these should not be
-        # available to students
+        # attachments: access controlled by each attachment's role_set
         for attachment in self.attachments:
             attachment: SubmissionAttachment
-            asset: SubmittedAsset = attachment.attachment
-            modified = modified | self._check_access_control_users(
-                asset, allow_student=attachment.publish_to_students
-            )
+            if attachment.attachment is not None:
+                modified |= _ensure_attachment_access(attachment.attachment, attachment.role_set)
 
         return modified
 
     @property
     def validate_documents(self):
         """
-        Return a list of possible issues with the current SubmissionRecord
-        :return:
+        Return a list of possible issues with the current SubmissionRecord.
+        Access control correctness is now enforced by maintenance(); only non-access issues
+        (missing report, unexpected license) are reported here.
         """
         from .content import AssetLicense
 
         messages = []
-
-        # get current config
-        config: ProjectClassConfig = self.current_config
 
         # get license used for exam submission
         exam_license: AssetLicense = (
             db.session.query(AssetLicense).filter_by(abbreviation="Exam").first()
         )
 
-        def _validate_report_access_control(asset, text_label):
-            if config.uses_supervisor:
-                for role in self.supervisor_roles:
-                    if not asset.has_access(role.user):
-                        messages.append(
-                            "{name} has been assigned a supervision role, but does not have access "
-                            "permissions for the {what}".format(
-                                name=role.user.name, what=text_label
-                            )
-                        )
-
-            if config.uses_marker:
-                for role in self.marker_roles:
-                    if not asset.has_access(role.user):
-                        messages.append(
-                            "{name} has been assigned a marking role, but does not have access "
-                            "permissions for the {what}".format(
-                                name=role.user.name, what=text_label
-                            )
-                        )
-
-            if config.uses_moderator:
-                for role in self.moderator_roles:
-                    if not asset.has_access(role.user):
-                        messages.append(
-                            "{name} has been assigned a moderation role, but does not have access "
-                            "permissions for the {what}".format(
-                                name=role.user.name, what=text_label
-                            )
-                        )
-
-            if not asset.has_access(self.current_config.convenor.user):
-                messages.append(
-                    "Convenor {name} does not have access "
-                    "permissions for the {what}".format(
-                        name=self.current_config.convenor_name, what=text_label
-                    )
-                )
-            if not asset.has_access(self.owner.student.user):
-                messages.append(
-                    "Submitter {name} does not have access permissions for their "
-                    "report".format(
-                        attach=asset.target_name, name=self.owner.student.user.name
-                    )
-                )
-
-            if exam_license is not None:
-                if asset.license_id != exam_license.id:
-                    messages.append(
-                        "The {what} is tagged with an unexpected license type "
-                        '"{license}"'.format(
-                            license=asset.license.name, what=text_label
-                        )
-                    )
-
-        def _validate_attachment_access_control(asset, publish_to_students=False):
-            if config.uses_supervisor:
-                for role in self.supervisor_roles:
-                    if not asset.has_access(role.user):
-                        messages.append(
-                            "{name} has been assigned a supervision role, but does not have access "
-                            'permissions for attachment "{attach}"'.format(
-                                name=role.user.name, attach=asset.target_name
-                            )
-                        )
-
-            if config.uses_marker:
-                for role in self.marker_roles:
-                    if not asset.has_access(role.user):
-                        messages.append(
-                            "{name} has been assigned a marking role, but does not have access "
-                            'permissions for attachment "{attach}"'.format(
-                                name=role.user.name, attach=asset.target_name
-                            )
-                        )
-
-            if config.uses_moderator:
-                for role in self.moderator_roles:
-                    if not asset.has_access(role.user):
-                        messages.append(
-                            "{name} has been assigned a moderation role, but does not have access "
-                            'permissions for attachment "{attach}"'.format(
-                                name=role.user.name, attach=asset.target_name
-                            )
-                        )
-
-            if not asset.has_access(self.current_config.convenor.user):
-                messages.append(
-                    "Convenor {name} does not have access permissions for the attachment "
-                    '"{attach}"'.format(
-                        name=self.current_config.convenor_name, attach=asset.target_name
-                    )
-                )
-
-            if publish_to_students:
-                if not asset.has_access(self.owner.student.user):
-                    messages.append(
-                        'Attachment "{attach}" is published to students, but the submitter '
-                        "{name} does not have access permissions".format(
-                            attach=asset.target_name, name=self.owner.student.user.name
-                        )
-                    )
-
         if self.period.closed and self.report is None:
             messages.append(
                 "This submission period is closed, but no report has been uploaded."
             )
 
-        if self.report is not None:
-            _validate_report_access_control(self.report, "uploaded report")
-
-        if self.processed_report is not None:
-            _validate_report_access_control(self.processed_report, "processed report")
-
-        for item in self.attachments:
-            item: SubmissionAttachment
-            _validate_attachment_access_control(
-                item.attachment, item.publish_to_students
-            )
+        if exam_license is not None:
+            if self.report is not None and self.report.license_id != exam_license.id:
+                messages.append(
+                    'The uploaded report is tagged with an unexpected license type '
+                    '"{license}"'.format(license=self.report.license.name)
+                )
+            if self.processed_report is not None and self.processed_report.license_id != exam_license.id:
+                messages.append(
+                    'The processed report is tagged with an unexpected license type '
+                    '"{license}"'.format(license=self.processed_report.license.name)
+                )
 
         return messages
 
@@ -2587,6 +2567,22 @@ def _SubmissionRecord_delete_handler(mapper, connection, target):
         cache.delete_memoized(_SubmittingStudent_is_valid, target.owner_id)
 
 
+class SubmissionAttachmentRole(db.Model):
+    """
+    Associates a SubmissionAttachment with one or more submission roles (integer constants from
+    SubmissionRoleTypesMixin, including ROLE_STUDENT=7) that are permitted to access it.
+    An empty role set means the attachment is unrestricted and visible to all participants.
+    """
+
+    __tablename__ = "submission_attachment_roles"
+
+    attachment_id = db.Column(
+        db.Integer(), db.ForeignKey("submission_attachments.id"), primary_key=True
+    )
+    # raw integer from SubmissionRoleTypesMixin; not a FK to another table
+    role = db.Column(db.Integer(), primary_key=True)
+
+
 class SubmissionAttachment(db.Model, SubmissionAttachmentTypesMixin):
     """
     Model an attachment to a submission
@@ -2623,14 +2619,50 @@ class SubmissionAttachment(db.Model, SubmissionAttachmentTypesMixin):
     # textual description of attachment
     description = db.Column(db.Text())
 
-    # publish to students
+    # LEGACY boolean flags — retained for data migration; replaced by role_records below
     publish_to_students = db.Column(db.Boolean(), default=False)
-
-    # include in marking notification emails sent to examiners?
     include_marker_emails = db.Column(db.Boolean(), default=False)
-
-    # include in marking notification emails sent to project supervisors?
     include_supervisor_emails = db.Column(db.Boolean(), default=False)
+
+    # role-based access control
+    role_records = db.relationship(
+        "SubmissionAttachmentRole",
+        foreign_keys=[SubmissionAttachmentRole.attachment_id],
+        backref=db.backref("attachment", uselist=False),
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+
+    @property
+    def role_set(self) -> set:
+        """Return the set of integer role values that may access this attachment."""
+        return {r.role for r in self.role_records}
+
+    def has_role_access(self, role: int) -> bool:
+        """
+        Return True if the given role integer may access this attachment.
+        An empty role set means unrestricted (all roles may access).
+        """
+        roles = self.role_set
+        return not roles or role in roles
+
+    def has_role_access_for_set(self, role_set) -> bool:
+        """
+        Return True if any role in role_set may access this attachment.
+        An empty role set on the attachment means unrestricted.
+        Accepts any iterable (set, list, tuple).
+        """
+        my_roles = self.role_set
+        return not my_roles or bool(my_roles & set(role_set))
+
+    def set_roles(self, role_ints) -> None:
+        """
+        Replace the role set for this attachment.
+        Pass an empty iterable to make the attachment unrestricted (visible to all roles).
+        """
+        self.role_records.delete()
+        for r in role_ints:
+            db.session.add(SubmissionAttachmentRole(attachment_id=self.id, role=r))
 
 
 class PeriodAttachmentRole(db.Model):

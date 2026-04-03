@@ -2,6 +2,24 @@
 
 {% import "bootstrap/form.html" as wtf %}
 {% from "labels.html" import unformatted_label %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {% if has_admin_rights %}
+        {{ import_select2() }}
+        <script>
+            $(document).ready(function () {
+                $('#roles').select2({
+                    theme: 'bootstrap-5',
+                    selectionCssClass: 'select2--small',
+                    dropdownCssClass: 'select2--small',
+                    placeholder: 'Select roles (leave empty for all roles)...'
+                });
+            });
+        </script>
+    {% endif %}
+{% endblock %}
 
 {% block title %}
     Upload new attachment for {{ unformatted_label(record.student_identifier, tag=none) }}
@@ -32,10 +50,8 @@
                         {{ wtf.render_field(form.license) }}
                         {% if has_admin_rights %}
                             {{ wtf.render_field(form.type) }}
-                            <div class="form-group-heading mt-3">Visibility</div>
-                            {{ wtf.render_field(form.publish_to_students) }}
-                            {{ wtf.render_field(form.include_supervisor_emails) }}
-                            {{ wtf.render_field(form.include_marker_emails) }}
+                            <hr class="intro-divider" role="separator">
+                            {{ wtf.render_field(form.roles) }}
                         {% endif %}
                         <div class="mt-4">
                             {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}

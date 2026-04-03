@@ -49,6 +49,7 @@ from ..models import (
     ThumbnailAsset,
     User,
 )
+from ..models.submissions import SubmissionRoleTypesMixin
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
@@ -737,9 +738,16 @@ def edit_submitter_attachment(aid):
 
         if has_admin_rights:
             attachment.type = form.type.data
-            attachment.publish_to_students = form.publish_to_students.data
-            attachment.include_supervisor_emails = form.include_supervisor_emails.data
-            attachment.include_marker_emails = form.include_marker_emails.data
+            selected_roles = form.roles.data
+            attachment.set_roles(selected_roles)
+            # reconcile student asset grant based on updated role set
+            student_user = record.owner.student.user
+            if SubmissionRoleTypesMixin.ROLE_STUDENT in selected_roles:
+                if not asset.has_access(student_user):
+                    asset.grant_user(student_user)
+            else:
+                if asset.in_user_acl(student_user):
+                    asset.revoke_user(student_user)
 
         try:
             log_db_commit(
@@ -764,6 +772,8 @@ def edit_submitter_attachment(aid):
         if request.method == "GET":
             form.license.data = asset.license
             form.target_name.data = asset.target_name
+            if has_admin_rights:
+                form.roles.data = list(attachment.role_set)
 
     action_url = url_for(
         "documents.edit_submitter_attachment", aid=attachment.id, url=url, text=text
@@ -802,7 +812,7 @@ def delete_submitter_attachment(aid):
         )
         return redirect(redirect_url())
 
-    if current_user.has_role("student") and not attachment.publish_to_students:
+    if current_user.has_role("student") and not attachment.has_role_access(SubmissionRoleTypesMixin.ROLE_STUDENT):
         # give no indication that this asset actually exists
         abort(404)
 
@@ -975,42 +985,32 @@ def upload_submitter_attachment(sid):
 
             if has_admin_rights:
                 attachment.type = form.type.data
-                attachment.publish_to_students = form.publish_to_students.data
-                attachment.include_supervisor_emails = (
-                    form.include_supervisor_emails.data
-                )
-                attachment.include_marker_emails = form.include_marker_emails.data
-
+                selected_roles = form.roles.data
             else:
-                attachment.include_marker_emails = False
-                attachment.include_supervisor_emails = False
                 attachment.type = SubmissionAttachment.ATTACHMENT_OTHER
-
-                if current_user.has_role("student"):
-                    # if uploaded by a student, assume published to students, otherwise not
-                    attachment.publish_to_students = True
-
-                else:
-                    attachment.publish_to_students = False
+                # non-admin uploads: student uploads are visible to students; others are unrestricted
+                selected_roles = [SubmissionRoleTypesMixin.ROLE_STUDENT] if current_user.has_role("student") else []
 
             # uploading user has access
             asset.grant_user(current_user)
 
-            # users with appropriate roles have access
-            for role in record.roles:
-                asset.grant_user(role.user)
+            # users with submission roles have access
+            for sr in record.roles:
+                asset.grant_user(sr.user)
 
-            # students can't ordinarily download attachments unless permission is given
-            if attachment.publish_to_students:
+            # student access: user-based only — never grant_role("student")
+            if SubmissionRoleTypesMixin.ROLE_STUDENT in selected_roles:
                 asset.grant_user(record.owner.student.user)
 
-            # set up list of roles that should have access, if they exist
+            # broad role grants that always apply
             asset.grant_roles(
                 ["office", "convenor", "moderator", "exam_board", "external_examiner"]
             )
 
             try:
                 db.session.add(attachment)
+                db.session.flush()
+                attachment.set_roles(selected_roles)
                 log_db_commit(
                     "Uploaded attachment for submission record",
                     user=current_user,

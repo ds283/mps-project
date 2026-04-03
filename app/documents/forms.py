@@ -10,21 +10,20 @@
 
 from flask_security.forms import Form
 from wtforms import (
-    SubmitField,
-    StringField,
     BooleanField,
+    DateTimeField,
     SelectField,
     SelectMultipleField,
-    DateTimeField,
+    StringField,
+    SubmitField,
     TextAreaField,
 )
 from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy import QuerySelectField
 
+from ..models import SubmissionAttachment
 from ..shared.forms.mixins import SaveChangesMixin
 from ..shared.forms.queries import GetActiveAssetLicenses
-
-from ..models import SubmissionAttachment
 
 
 class LicenseMixin:
@@ -78,14 +77,19 @@ def AttachmentMixinFactory(admin=False):
             ]
             type = SelectField("Attachment type", choices=_types, coerce=int)
 
-            publish_to_students = BooleanField("Publish this document to students")
-
-            include_marker_emails = BooleanField(
-                "Attach this document to marking notifications sent to examiners"
-            )
-
-            include_supervisor_emails = BooleanField(
-                "Attach this document to marking notifications sent to supervisors"
+            roles = SelectMultipleField(
+                "Visible to",
+                choices=[
+                    (7, "Students"),
+                    (6, "Responsible supervisors"),
+                    (0, "Supervisors"),
+                    (1, "Markers"),
+                    (3, "Moderators"),
+                    (4, "Exam board members"),
+                    (5, "External examiners"),
+                ],
+                coerce=int,
+                description="Leave empty to make visible to all roles.",
             )
 
     return AttachmentMixin

@@ -198,6 +198,45 @@
                     {% endif %}
                 {% endif %}
             </div>
+            {# LANGUAGE ANALYSIS SUMMARY #}
+            {% if r.language_analysis_complete %}
+                {% set la = r.language_analysis_data %}
+                {% set la_metrics = la.get('metrics', {}) %}
+                {% set la_flags = la.get('flags', {}) %}
+                {% set la_llm = la.get('llm_result', {}) %}
+                <div class="d-flex flex-row flex-wrap justify-content-start align-items-center gap-2 mt-1">
+                    <span class="small text-muted">Lang:</span>
+                    {% if la_metrics.get('mattr') is not none %}
+                        <span class="small">MATTR {{ "%.2f" | format(la_metrics['mattr']) }}</span>
+                    {% endif %}
+                    {% if la_metrics.get('mtld') is not none %}
+                        <span class="small">&middot; MTLD {{ "%.0f" | format(la_metrics['mtld']) }}</span>
+                    {% endif %}
+                    {% if la_metrics.get('burstiness') is not none %}
+                        <span class="small">&middot; B {{ "%.2f" | format(la_metrics['burstiness']) }}</span>
+                    {% endif %}
+                    {% set concern = la_flags.get('ai_concern', 'low') %}
+                    {% if concern == 'high' %}
+                        <span class="badge bg-danger">AI: High</span>
+                    {% elif concern == 'medium' %}
+                        <span class="badge bg-warning text-dark">AI: Medium</span>
+                    {% else %}
+                        <span class="badge bg-secondary">AI: Low</span>
+                    {% endif %}
+                    {% if la_llm.get('classification') %}
+                        <span class="small text-muted">&middot; LLM: <strong>{{ la_llm['classification'] }}</strong></span>
+                    {% elif r.llm_analysis_failed %}
+                        <span class="small text-danger">&middot; LLM failed</span>
+                    {% endif %}
+                </div>
+            {% elif r.report and not r.language_analysis_started %}
+                <div class="mt-1">
+                    <a class="btn btn-xs btn-outline-secondary"
+                       href="{{ url_for('documents.launch_language_analysis', sid=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
+                        <small>Analyse</small>
+                    </a>
+                </div>
+            {% endif %}
             <div class="d-flex flex-row flex-wrap justify-content-start align-items-start gap-4 mt-1">
                 {% if config.uses_supervisor %}
                     {{ roles_list(r.supervisor_roles, 'Supervisor roles') }}

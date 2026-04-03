@@ -1101,6 +1101,26 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # attachments incorporated via back-reference under 'attachments' data member
 
+    # LANGUAGE ANALYSIS
+
+    # JSON blob storing all language analysis results: metrics, flags, patterns, llm_result, errors.
+    # Uses Text rather than a native JSON column, consistent with the existing project pattern.
+    language_analysis = db.Column(db.Text(), default=None)
+
+    # has the language analysis workflow been started?
+    language_analysis_started = db.Column(db.Boolean(), default=False)
+
+    # has the language analysis workflow completed successfully?
+    language_analysis_complete = db.Column(db.Boolean(), default=False)
+
+    # did the LLM submission step fail? Separate boolean so the UI can query it directly without
+    # parsing the JSON blob. Only set for LLM inference / JSON parsing failures; not for
+    # statistical computation errors, which are recorded in language_analysis['errors'].
+    llm_analysis_failed = db.Column(db.Boolean(), default=False)
+
+    # human-readable reason for LLM failure, for display to administrators
+    llm_failure_reason = db.Column(db.Text(), default=None)
+
     # MARKING WORKFLOW
 
     # assigned supervision grade (determined from SubmissionRole instances by some conflation rule)
@@ -2463,6 +2483,29 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 modified |= _ensure_attachment_access(attachment.attachment, attachment.role_set)
 
         return modified
+
+    # LANGUAGE ANALYSIS HELPERS
+
+    @property
+    def language_analysis_data(self) -> dict:
+        """
+        Deserialise the language_analysis JSON blob.
+        Returns an empty dict if no analysis has been stored.
+        """
+        import json
+
+        if self.language_analysis is None:
+            return {}
+        try:
+            return json.loads(self.language_analysis)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    def set_language_analysis_data(self, data: dict) -> None:
+        """Serialise *data* and store it in the language_analysis column."""
+        import json
+
+        self.language_analysis = json.dumps(data)
 
     @property
     def validate_documents(self):

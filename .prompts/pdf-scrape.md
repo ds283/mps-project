@@ -86,10 +86,8 @@ then include some of the metadata and information obtained during this analysis.
   consider the 'lexicalrichness' library, but you can also consider alternatives. These metrics will need to be
   persisted in the database. Use a 50-word window (=lexicalrichness default)
 
-Please also compute the Goh and Barabási "burstiness" metric for the following groups of words. The text should be
-lemmatised for these groups so that simple changes of inflectional forms are not counted as different words.
-Comma-separated entries in the hedging phrase list represent distinct words or phrases that should each be counted
-separately and reported individually.
+Please also compute the Goh and Barabási "burstiness" metric for the following comma-separated groups of words. The text
+should be lemmatised for these groups so that simple changes of inflectional forms are not counted as different words.
 
 - suggest, suggests, suggested
 - indicate, indicates, indicated
@@ -160,7 +158,7 @@ these:
 - The em-dash used as a stylistic separator: current models overuse this noticeably
 
 Do NOT use these counts in the "AI concern" classification. You should ONLY compute the number of times these patterns
-occur in the text.
+occur, and record the result.
 
 In a second step (perhaps a separate Celery task to break the task up), we wish to submit the scraped text to an LLM
 via the ollama REST API. Consider using "ollama-python" to abstract this. The API base URL and LLM model identifier
@@ -182,8 +180,8 @@ Use a system prompt for the rubric and instructions, and the user prompt for the
 and uses the context window more efficiently.
 
 When truncating, insert a clear marker in the text between the two sections, such
-as [... middle section omitted due to length ...], so the LLM is aware the text is not continuous. Include a note in the
-system prompt that the document may be truncated.
+as "[... middle section omitted due to length ...]", so the LLM is aware the text is not continuous.
+Include a note in the system prompt that the document may be truncated.
 
 The LLM should be asked to evaluate the text against a rubric which gives indicative criteria for a number of grade
 bands. The crtieria for these bands may vary by ProjectClass, but initially they will all be the same. The model should

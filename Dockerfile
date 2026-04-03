@@ -20,6 +20,11 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 USER mpsproject
 RUN pip3 install -U pip setuptools wheel && pip3 install -U -r requirements.txt
 
+# spaCy is installed in separate layers to benefit from Docker layer caching.
+# The model layer is kept separate so it only rebuilds when the model URL changes.
+RUN pip install spacy
+RUN pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+
 # note chmod of 774 is more permissive than we would like (would prefer files not to have x set
 # by default, but directories should), but this requires a separate application of chmod which increases
 # build time and container size. Currently sticking with this trade-off.

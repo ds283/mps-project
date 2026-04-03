@@ -128,6 +128,7 @@ def read_configuration(app: Flask, config_name: str):
     app.config.from_pyfile("mail.py")
     app.config.from_pyfile("profiling.py")
     app.config.from_pyfile("config.py")
+    app.config.from_pyfile("llm.py")
 
     app.config.from_pyfile("local.py")
 
@@ -328,6 +329,7 @@ def create_app():
     tasks.register_attendance_tasks(celery)
     tasks.register_workflow_log_tasks(celery)
     tasks.register_thumbnail_tasks(celery)
+    tasks.register_language_analysis_tasks(celery)
 
     use_pyinstrument = app.config.get("PROFILE_PYINSTRUMENT")
     if use_pyinstrument:

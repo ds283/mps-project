@@ -431,6 +431,303 @@
                     </table>
                 </div>
             {% endif %}
+
+            {# LANGUAGE ANALYSIS #}
+            {% if record.report %}
+                <div class="card mt-3 mb-3 card-body bg-well">
+                    <span class="document-group-title mb-2">Language Analysis</span>
+
+                    {% if not record.language_analysis_started %}
+                        {# No analysis run yet #}
+                        <div class="mt-1 mb-2">
+                            {% call icon_block("info-circle") %}
+                                <div>No language analysis has been performed for this report.</div>
+                            {% endcall %}
+                        </div>
+                        {% if admin_rights %}
+                            <div>
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   href="{{ url_for('documents.launch_language_analysis', sid=record.id, url=url, text=text) }}">
+                                    <i class="fas fa-flask"></i> Run analysis
+                                </a>
+                            </div>
+                        {% endif %}
+
+                    {% elif not record.language_analysis_complete %}
+                        {# In progress #}
+                        <div class="text-muted">
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Language analysis in progress&hellip;
+                        </div>
+
+                    {% else %}
+                        {# Analysis complete — show results #}
+                        {% set la = record.language_analysis_data %}
+                        {% set metrics = la.get('metrics', {}) %}
+                        {% set flags = la.get('flags', {}) %}
+                        {% set patterns = la.get('patterns', {}) %}
+                        {% set refs = la.get('references', {}) %}
+                        {% set llm_result = la.get('llm_result', {}) %}
+                        {% set errors = la.get('errors', []) %}
+
+                        {# --- Metrics table --- #}
+                        <table class="table table-sm table-borderless mb-3" style="max-width: 500px;">
+                            <tbody>
+                            {% if metrics.get('word_count') is not none %}
+                                <tr>
+                                    <td class="text-muted small">Word count (est.)</td>
+                                    <td class="fw-semibold">{{ metrics['word_count'] | int }}</td>
+                                </tr>
+                            {% endif %}
+                            {% if metrics.get('reference_count') is not none %}
+                                <tr>
+                                    <td class="text-muted small">References</td>
+                                    <td class="fw-semibold">{{ metrics['reference_count'] | int }}</td>
+                                </tr>
+                            {% endif %}
+                            {% if metrics.get('figure_count') is not none %}
+                                <tr>
+                                    <td class="text-muted small">Figures / Tables</td>
+                                    <td class="fw-semibold">{{ metrics['figure_count'] | int }} / {{ metrics.get('table_count', 0) | int }}</td>
+                                </tr>
+                            {% endif %}
+                            {% if metrics.get('mattr') is not none %}
+                                {% set mattr_flag = flags.get('mattr_flag', 'ok') %}
+                                <tr>
+                                    <td class="text-muted small">MATTR (w=50)</td>
+                                    <td>
+                                        <span class="fw-semibold">{{ "%.3f" | format(metrics['mattr']) }}</span>
+                                        {% if mattr_flag == 'strong' %}
+                                            <span class="badge bg-danger ms-1">Low</span>
+                                        {% elif mattr_flag == 'note' %}
+                                            <span class="badge bg-warning text-dark ms-1">Note</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                            {% if metrics.get('mtld') is not none %}
+                                {% set mtld_flag = flags.get('mtld_flag', 'ok') %}
+                                <tr>
+                                    <td class="text-muted small">MTLD</td>
+                                    <td>
+                                        <span class="fw-semibold">{{ "%.1f" | format(metrics['mtld']) }}</span>
+                                        {% if mtld_flag == 'strong' %}
+                                            <span class="badge bg-danger ms-1">Low</span>
+                                        {% elif mtld_flag == 'note' %}
+                                            <span class="badge bg-warning text-dark ms-1">Note</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                            {% if metrics.get('burstiness') is not none %}
+                                {% set burst_flag = flags.get('burstiness_flag', 'ok') %}
+                                <tr>
+                                    <td class="text-muted small">Burstiness (B)</td>
+                                    <td>
+                                        <span class="fw-semibold">{{ "%.3f" | format(metrics['burstiness']) }}</span>
+                                        {% if burst_flag == 'strong' %}
+                                            <span class="badge bg-danger ms-1">Low</span>
+                                        {% elif burst_flag == 'note' %}
+                                            <span class="badge bg-warning text-dark ms-1">Note</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                            </tbody>
+                        </table>
+
+                        {# --- AI concern flag --- #}
+                        {% set concern = flags.get('ai_concern', 'low') %}
+                        <div class="mb-3">
+                            <span class="text-muted small me-2">AI concern:</span>
+                            {% if concern == 'high' %}
+                                <span class="badge bg-danger">High</span>
+                            {% elif concern == 'medium' %}
+                                <span class="badge bg-warning text-dark">Medium</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Low</span>
+                            {% endif %}
+                        </div>
+
+                        {# --- Pattern counts (hedging, fillers, em-dash) --- #}
+                        {% if patterns %}
+                            <div class="mb-3">
+                                <div class="small text-muted fw-semibold mb-1">AI-indicator pattern counts</div>
+                                <div class="d-flex flex-row flex-wrap gap-3">
+                                    <span class="small">Hedging phrases: <strong>{{ patterns.get('hedging_total', 0) }}</strong></span>
+                                    <span class="small">Filler phrases: <strong>{{ patterns.get('filler_total', 0) }}</strong></span>
+                                    <span class="small">Em-dashes: <strong>{{ patterns.get('em_dash_count', 0) }}</strong></span>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {# --- Reference / figure cross-reference issues --- #}
+                        {% if refs.get('uncited') %}
+                            <div class="mb-2">
+                                <span class="small text-muted">Possibly uncited references: </span>
+                                <span class="small">{{ refs['uncited'] | join(', ') }}</span>
+                            </div>
+                        {% endif %}
+                        {% if refs.get('uncaptioned_figures') %}
+                            <div class="mb-2">
+                                <span class="small text-muted">Possibly unreferenced figures: </span>
+                                <span class="small">{{ refs['uncaptioned_figures'] | join(', ') }}</span>
+                            </div>
+                        {% endif %}
+                        {% if refs.get('uncaptioned_tables') %}
+                            <div class="mb-2">
+                                <span class="small text-muted">Possibly unreferenced tables: </span>
+                                <span class="small">{{ refs['uncaptioned_tables'] | join(', ') }}</span>
+                            </div>
+                        {% endif %}
+
+                        {# --- LLM grade band result or failure --- #}
+                        <div class="mb-3">
+                            {% if llm_result.get('classification') %}
+                                <div class="small text-muted fw-semibold mb-1">LLM grade band assessment</div>
+                                <div class="mb-1">
+                                    <span class="badge bg-primary fs-6">{{ llm_result['classification'] }}</span>
+                                </div>
+                                {% if llm_result.get('overall_reasoning') %}
+                                    <div class="small text-muted">{{ llm_result['overall_reasoning'] }}</div>
+                                {% endif %}
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-secondary"
+                                            type="button"
+                                            data-bs-toggle="offcanvas"
+                                            data-bs-target="#lang-analysis-offcanvas-{{ record.id }}"
+                                            aria-controls="lang-analysis-offcanvas-{{ record.id }}">
+                                        <i class="fas fa-list-ul me-1"></i> Full LLM report&hellip;
+                                    </button>
+                                </div>
+                            {% elif record.llm_analysis_failed %}
+                                <div class="text-danger small">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    LLM assessment failed: {{ record.llm_failure_reason or 'Unknown error' }}
+                                </div>
+                                {% if la.get('llm_raw_response') and admin_rights %}
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-outline-secondary"
+                                                type="button"
+                                                data-bs-toggle="offcanvas"
+                                                data-bs-target="#lang-analysis-offcanvas-{{ record.id }}"
+                                                aria-controls="lang-analysis-offcanvas-{{ record.id }}">
+                                            <i class="fas fa-bug me-1"></i> Inspect raw LLM response&hellip;
+                                        </button>
+                                    </div>
+                                {% endif %}
+                                {% if admin_rights %}
+                                    <div class="mt-2">
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="{{ url_for('documents.clear_llm_failure', sid=record.id, url=url, text=text) }}">
+                                            <i class="fas fa-redo me-1"></i> Clear failure flag
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <span class="small text-muted">LLM assessment not yet available.</span>
+                            {% endif %}
+                        </div>
+
+                        {# --- Workflow errors --- #}
+                        {% if errors and admin_rights %}
+                            <div class="mb-3">
+                                <div class="small text-muted fw-semibold mb-1">Workflow errors (admin only)</div>
+                                {% for err in errors %}
+                                    <div class="small text-danger">
+                                        <strong>{{ err.get('stage', '?') }}:</strong>
+                                        {{ err.get('type', '') }} &mdash; {{ err.get('message', '') }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {# --- Action buttons --- #}
+                        {% if admin_rights %}
+                            <div class="d-flex flex-row gap-2 mt-2">
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   href="{{ url_for('documents.launch_language_analysis', sid=record.id, url=url, text=text) }}">
+                                    <i class="fas fa-redo me-1"></i> Re-run analysis
+                                </a>
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   href="{{ url_for('documents.clear_language_analysis', sid=record.id, url=url, text=text) }}">
+                                    <i class="fas fa-trash me-1"></i> Clear results
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+                {# OFFCANVAS: Full LLM report #}
+                {% set la = record.language_analysis_data %}
+                {% set llm_result = la.get('llm_result', {}) %}
+                <div class="offcanvas offcanvas-end" tabindex="-1"
+                     id="lang-analysis-offcanvas-{{ record.id }}"
+                     aria-labelledby="lang-analysis-label-{{ record.id }}"
+                     style="width: 550px;">
+                    <div class="offcanvas-header">
+                        <h5 class="offcanvas-title" id="lang-analysis-label-{{ record.id }}">
+                            LLM Assessment Report
+                        </h5>
+                        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                                aria-label="Close"></button>
+                    </div>
+                    <div class="offcanvas-body">
+                        {% if llm_result.get('classification') %}
+                            <div class="mb-3">
+                                <div class="small text-muted fw-semibold">Recommended grade band</div>
+                                <span class="badge bg-primary fs-5 mt-1">{{ llm_result['classification'] }}</span>
+                            </div>
+                            {% if llm_result.get('overall_reasoning') %}
+                                <div class="mb-3">
+                                    <div class="small text-muted fw-semibold">Overall reasoning</div>
+                                    <p class="small mt-1">{{ llm_result['overall_reasoning'] }}</p>
+                                </div>
+                            {% endif %}
+                            {% if llm_result.get('criteria') %}
+                                <div class="mb-3">
+                                    <div class="small text-muted fw-semibold mb-2">Per-criterion assessment</div>
+                                    {% for item in llm_result['criteria'] %}
+                                        <div class="mb-3 p-2 border rounded">
+                                            <div class="d-flex flex-row justify-content-between align-items-start gap-2 mb-1">
+                                                <div class="small fw-semibold">{{ item.get('criterion', '') }}</div>
+                                                {% set conf = item.get('confidence', 'low') %}
+                                                {% if conf == 'high' %}
+                                                    <span class="badge bg-success text-nowrap">Strong evidence</span>
+                                                {% elif conf == 'medium' %}
+                                                    <span class="badge bg-warning text-dark text-nowrap">Partial evidence</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger text-nowrap">Not evident</span>
+                                                {% endif %}
+                                            </div>
+                                            {% if item.get('assessment') %}
+                                                <div class="small text-muted mb-1">{{ item['assessment'] }}</div>
+                                            {% endif %}
+                                            {% if item.get('commentary') %}
+                                                <div class="small">{{ item['commentary'] }}</div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            {% if llm_result.get('caveats') %}
+                                <div class="mb-3">
+                                    <div class="small text-muted fw-semibold">Caveats</div>
+                                    <p class="small mt-1 fst-italic">{{ llm_result['caveats'] }}</p>
+                                </div>
+                            {% endif %}
+                        {% elif la.get('llm_raw_response') and admin_rights %}
+                            <div class="mb-3">
+                                <div class="small text-muted fw-semibold mb-2">Raw LLM response (parse failed)</div>
+                                <pre class="small" style="white-space: pre-wrap; word-break: break-word;">{{ la['llm_raw_response'] }}</pre>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No LLM assessment is available.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
         </div>
     </div>
 

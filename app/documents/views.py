@@ -216,6 +216,125 @@ def generate_processed_report(sid):
     return redirect(redirect_url())
 
 
+@documents.route("/launch_language_analysis/<int:sid>")
+@login_required
+def launch_language_analysis(sid):
+    """Trigger the language analysis Celery workflow for a submission record."""
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
+
+    if record.report is None:
+        flash(
+            "Could not launch language analysis because no report has been uploaded for this submitter.",
+            "info",
+        )
+        return redirect(redirect_url())
+
+    if not is_deletable(record, message=True):
+        return redirect(redirect_url())
+
+    celery = current_app.extensions["celery"]
+
+    t_extract = celery.tasks["app.tasks.language_analysis.download_and_extract"]
+    t_stats = celery.tasks["app.tasks.language_analysis.compute_statistics"]
+    t_llm = celery.tasks["app.tasks.language_analysis.submit_to_llm"]
+    t_finalize = celery.tasks["app.tasks.language_analysis.finalize"]
+    t_error = celery.tasks["app.tasks.language_analysis.error_handler"]
+
+    work = chain(
+        t_extract.si(record.id).set(queue="llm_tasks"),
+        t_stats.si(record.id).set(queue="default"),
+        t_llm.si(record.id).set(queue="llm_tasks"),
+        t_finalize.si(record.id).set(queue="default"),
+    ).on_error(t_error.si(record.id, current_user.id).set(queue="default"))
+    work.apply_async()
+
+    # Reset / initialise state flags
+    record.language_analysis = None
+    record.language_analysis_started = True
+    record.language_analysis_complete = False
+    record.llm_analysis_failed = False
+    record.llm_failure_reason = None
+
+    try:
+        log_db_commit(
+            "Initiated language analysis workflow for submission record",
+            project_classes=record.owner.config.project_class,
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash(
+            "A database error was encountered while initiating language analysis. Please contact an administrator.",
+            "error",
+        )
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
+@documents.route("/clear_language_analysis/<int:sid>")
+@login_required
+def clear_language_analysis(sid):
+    """Clear stored language analysis results so analysis can be re-triggered."""
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
+
+    if not is_deletable(record, message=True):
+        return redirect(redirect_url())
+
+    record.language_analysis = None
+    record.language_analysis_started = False
+    record.language_analysis_complete = False
+    record.llm_analysis_failed = False
+    record.llm_failure_reason = None
+
+    try:
+        log_db_commit(
+            "Cleared language analysis results for submission record",
+            project_classes=record.owner.config.project_class,
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash(
+            "A database error was encountered while clearing language analysis results. Please contact an administrator.",
+            "error",
+        )
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
+@documents.route("/clear_llm_failure/<int:sid>")
+@login_required
+def clear_llm_failure(sid):
+    """
+    Clear the LLM failure flag for a submission record.
+    For administrator use: allows the LLM submission step to be retried after
+    a human has reviewed the raw response stored in the JSON blob.
+    """
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
+
+    if not is_admin(current_user):
+        flash("Only administrators can clear LLM failure flags.", "error")
+        return redirect(redirect_url())
+
+    record.llm_analysis_failed = False
+    record.llm_failure_reason = None
+
+    try:
+        log_db_commit(
+            "Cleared LLM failure flag for submission record",
+            project_classes=record.owner.config.project_class,
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash(
+            "A database error was encountered while clearing the LLM failure flag. Please contact an administrator.",
+            "error",
+        )
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
 @documents.route("/delete_submitter_report/<int:sid>")
 @login_required
 def delete_submitter_report(sid):

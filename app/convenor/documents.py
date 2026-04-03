@@ -37,6 +37,7 @@ from ..models import (
     SubmissionPeriodRecord,
     SubmittedAsset,
 )
+from ..models.model_mixins import SubmissionRoleTypesMixin
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
 from ..shared.security import validate_nonce
@@ -531,31 +532,62 @@ def upload_period_attachment(pid):
             attachment = PeriodAttachment(
                 parent_id=record.id,
                 attachment_id=asset.id,
-                publish_to_students=form.publish_to_students.data,
-                include_marker_emails=form.include_marker_emails.data,
-                include_supervisor_emails=form.include_supervisor_emails.data,
                 description=form.description.data,
                 rank_order=get_count(record.attachments) + 1,
             )
 
-            # uploading user has access
-            asset.grant_user(current_user)
-
-            # project convenor has access
-            # 'office', 'convenor', 'moderator', 'exam_board' and 'external_examiner' roles all have access
-            asset.grant_roles(
-                ["office", "convenor", "moderator", "exam_board", "external_examiner"]
-            )
-
-            # if available to students, any student can download
-            if form.publish_to_students.data:
-                asset.grant_role("student")
-
-            if form.include_marker_emails.data or form.include_supervisor_emails.data:
-                asset.grant_role("faculty")
-
             try:
                 db.session.add(attachment)
+                db.session.flush()  # populate attachment.id before set_roles()
+            except SQLAlchemyError as e:
+                flash(
+                    "Could not upload attachment due to a database issue. Please contact an administrator.",
+                    "error",
+                )
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                return redirect(
+                    url_for(
+                        "convenor.submission_period_documents",
+                        pid=pid,
+                        url=url,
+                        text=text,
+                    )
+                )
+
+            selected_roles = form.roles.data or []
+            attachment.set_roles(selected_roles)
+
+            # uploader is a convenor or has admin/root privileges, so we don't need to provide user-level access
+
+            # convenors always have access, and office admin roles all have access
+            asset.grant_roles(["office", "convenor"])
+
+            # grant asset-level access based on selected roles
+            if SubmissionRoleTypesMixin.ROLE_STUDENT in selected_roles:
+                asset.grant_role("student")
+
+            _faculty_roles = {
+                SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+                SubmissionRoleTypesMixin.ROLE_MARKER,
+                SubmissionRoleTypesMixin.ROLE_MODERATOR,
+                SubmissionRoleTypesMixin.ROLE_PRESENTATION_ASSESSOR,
+            }
+            if _faculty_roles & set(selected_roles):
+                asset.grant_role("faculty")
+
+            # NOTE "moderator" role is not really implemented
+            # moderators will typically be drawn from enrolled faculty members who all have the "faculty" role
+            if SubmissionRoleTypesMixin.ROLE_MODERATOR in selected_roles:
+                asset.grant_role("moderator")
+
+            if SubmissionRoleTypesMixin.ROLE_EXAM_BOARD in selected_roles:
+                asset.grant_role("exam_board")
+
+            if SubmissionRoleTypesMixin.ROLE_EXTERNAL_EXAMINER in selected_roles:
+                asset.grant_role("external_examiner")
+
+            try:
                 log_db_commit(
                     f"Uploaded attachment '{attachment_file.filename}' to submission period {record.display_name}",
                     user=current_user,
@@ -623,23 +655,29 @@ def edit_period_attachment(aid):
     form = EditPeriodAttachmentForm(obj=record)
 
     if form.validate_on_submit():
-        record.publish_to_students = form.publish_to_students.data
-        record.include_marker_emails = form.include_marker_emails.data
-        record.include_supervisor_emails = form.include_supervisor_emails.data
         record.description = form.description.data
+
+        selected_roles = form.roles.data or []
+        record.set_roles(selected_roles)
 
         if asset is not None:
             asset.license = form.license.data
 
-            if form.publish_to_students.data:
+            if SubmissionRoleTypesMixin.ROLE_STUDENT in selected_roles:
                 asset.grant_role("student")
             else:
                 asset.revoke_role("student")
 
-            if form.include_marker_emails.data or form.include_supervisor_emails.data:
-                asset.grant_roles(["faculty", "office"])
-            # else:
-            #     asset.revoke_roles(['faculty', 'office'])
+            _faculty_roles = {
+                SubmissionRoleTypesMixin.ROLE_SUPERVISOR,
+                SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR,
+                SubmissionRoleTypesMixin.ROLE_MARKER,
+                SubmissionRoleTypesMixin.ROLE_MODERATOR,
+                SubmissionRoleTypesMixin.ROLE_EXAM_BOARD,
+                SubmissionRoleTypesMixin.ROLE_EXTERNAL_EXAMINER,
+            }
+            if _faculty_roles & set(selected_roles):
+                asset.grant_role("faculty")
 
         try:
             log_db_commit(
@@ -659,6 +697,7 @@ def edit_period_attachment(aid):
     else:
         if request.method == "GET":
             form.license.data = asset.license if asset is not None else None
+            form.roles.data = list(record.role_set)
 
     return render_template_context(
         "convenor/documents/edit_period_attachment.html",

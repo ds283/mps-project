@@ -1804,6 +1804,7 @@ def confirm_add_workflow_attachment(workflow_id, attachment_id):
     """Add a PeriodAttachment to a MarkingWorkflow"""
     workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
     attachment: PeriodAttachment = PeriodAttachment.query.get_or_404(attachment_id)
+    asset: SubmittedAsset = attachment.attachment
     event: MarkingEvent = workflow.event
     pclass: ProjectClass = event.pclass
 
@@ -1832,7 +1833,7 @@ def confirm_add_workflow_attachment(workflow_id, attachment_id):
     try:
         workflow.attachments.append(attachment)
         log_db_commit(
-            f'Added attachment "{attachment.attachment.filename if attachment.attachment else attachment.id}" '
+            f'Added attachment "{asset.target_name if asset else attachment.id}" '
             f'to workflow "{workflow.name}" in event "{event.name}" '
             f'in project class "{pclass.name}"',
             user=current_user,

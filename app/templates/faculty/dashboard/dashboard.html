@@ -303,6 +303,45 @@
                                 </div>
                             {% endfor %}
                         </div>
+                        {% if moderator_workflow_attachments is defined and moderator_workflow_attachments %}
+                            <div class="mt-4">
+                                <div class="d-flex flex-row align-items-center gap-2 mb-2">
+                                    <i class="fas fa-file-download text-secondary fa-fw"></i>
+                                    <span class="fw-semibold small">Resources for moderation</span>
+                                </div>
+                                {% for item in moderator_workflow_attachments %}
+                                    {% if moderator_workflow_attachments|length > 1 %}
+                                        <div class="small text-muted mb-1">{{ item.workflow.name }}</div>
+                                    {% endif %}
+                                    <table class="table table-sm table-borderless mb-0">
+                                        <tbody>
+                                            {% for pa in item.attachments %}
+                                                {% set asset = pa.attachment %}
+                                                <tr>
+                                                    <td class="text-center align-middle" style="width:50px;">
+                                                        {% if asset.small_thumbnail and not asset.small_thumbnail.lost %}
+                                                            <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
+                                                                 class="img-thumbnail" style="max-width:40px; max-height:40px;" alt="">
+                                                        {% else %}
+                                                            <i class="fas fa-file text-muted fa-fw"></i>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="align-middle">
+                                                        <a class="text-decoration-none"
+                                                           href="{{ url_for('admin.download_submitted_asset', asset_id=asset.id) }}">
+                                                            {{ asset.target_name or asset.filename }}
+                                                        </a>
+                                                    </td>
+                                                    <td class="align-middle text-muted small">
+                                                        {% if pa.description %}{{ pa.description }}{% endif %}
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             {% endif %}

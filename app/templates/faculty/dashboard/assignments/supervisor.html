@@ -145,6 +145,20 @@
                                     {% endfor %}
                                 </div>
                             {% endif %}
+                            {% if my_role.role == 6 %}
+                                {% set supv_files = period.get_attachments_for_role_set([0, 6]) %}
+                            {% else %}
+                                {% set supv_files = period.get_attachments_for_role(my_role.role) %}
+                            {% endif %}
+                            {% if supv_files %}
+                                <div class="mt-1">
+                                    <a class="badge bg-secondary text-decoration-none"
+                                       href="{{ url_for('projecthub.downloads', subid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}">
+                                        <i class="fas fa-file-download me-1"></i>
+                                        {{ supv_files|length }} file{{ 's' if supv_files|length != 1 }} available
+                                    </a>
+                                </div>
+                            {% endif %}
                         </td>
                         <td>
                             <div class="d-flex flex-row justify-content-end align-content-start">

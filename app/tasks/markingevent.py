@@ -185,7 +185,10 @@ def _emit_moderator_assignment_email(sr: SubmitterReport, role: SubmissionRole) 
             ext=ext,
         )
 
-        attachments = _collect_marking_attachments(record, workflow, report_name)
+        attachments = _collect_marking_attachments(
+            record, workflow, report_name,
+            target_role=SubmissionRoleTypesMixin.ROLE_MODERATOR,
+        )
 
         email_wf = EmailWorkflow.build_(
             name=f"Moderator assignment: submitter report #{sr.id}",

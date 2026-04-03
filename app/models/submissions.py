@@ -1926,11 +1926,24 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     def _build_period_attachment_query(
         self,
-        published_to_students=True,
+        role: Optional[int] = None,
         allowed_users: Optional[List[User]] = None,
         allowed_roles: Optional[List[Role]] = None,
         ordering: Optional[List] = None,
     ):
+        """
+        Build a query returning PeriodAttachment instances for this record's parent period.
+
+        :param role: If set, restrict to attachments visible to this role integer (from
+            SubmissionRoleTypesMixin, including ROLE_STUDENT=7). Attachments with an empty
+            role set are always included (unrestricted). Pass None to skip role filtering
+            (used by admin/convenor views that may see all attachments).
+        :param allowed_users: Asset-level ACL filter — only include assets accessible by one
+            of these users.
+        :param allowed_roles: Asset-level ACL filter — only include assets accessible by one
+            of these Flask-Security roles.
+        :param ordering: Optional SQLAlchemy ordering clauses.
+        """
         from .assets import SubmittedAsset
 
         allowed_user_ids = (
@@ -1943,8 +1956,23 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         query = db.session.query(PeriodAttachment).filter(
             PeriodAttachment.parent_id == self.period.id
         )
-        if published_to_students:
-            query = query.filter(PeriodAttachment.publish_to_students.is_(True))
+
+        # Role-based filtering: include attachments that are either unrestricted (no entries in
+        # period_attachment_roles) or have an entry matching the requested role.
+        if role is not None:
+            restricted_ids = db.session.query(PeriodAttachmentRole.attachment_id).subquery()
+            query = query.outerjoin(
+                PeriodAttachmentRole,
+                and_(
+                    PeriodAttachmentRole.attachment_id == PeriodAttachment.id,
+                    PeriodAttachmentRole.role == role,
+                ),
+            ).filter(
+                or_(
+                    ~PeriodAttachment.id.in_(restricted_ids),  # unrestricted: no role entries at all
+                    PeriodAttachmentRole.role.isnot(None),      # has a matching role entry
+                )
+            )
 
         query = (
             query.join(
@@ -1984,7 +2012,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             allowed_roles=current_user.roles,
         )
         period_attachments = self._build_period_attachment_query(
-            published_to_students=False,
+            role=None,
             allowed_users=[current_user],
             allowed_roles=current_user.roles,
         )
@@ -2036,7 +2064,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             allowed_roles=current_user.roles,
         )
         period_attachments = self._build_period_attachment_query(
-            published_to_students=True,
+            role=SubmissionRoleTypesMixin.ROLE_STUDENT,
             allowed_users=[current_user],
             allowed_roles=current_user.roles,
         )
@@ -2605,6 +2633,22 @@ class SubmissionAttachment(db.Model, SubmissionAttachmentTypesMixin):
     include_supervisor_emails = db.Column(db.Boolean(), default=False)
 
 
+class PeriodAttachmentRole(db.Model):
+    """
+    Associates a PeriodAttachment with one or more submission roles (integer constants from
+    SubmissionRoleTypesMixin, including ROLE_STUDENT=7) that are permitted to access it.
+    An empty role set means the attachment is unrestricted and visible to all participants.
+    """
+
+    __tablename__ = "period_attachment_roles"
+
+    attachment_id = db.Column(
+        db.Integer(), db.ForeignKey("period_attachments.id"), primary_key=True
+    )
+    # raw integer from SubmissionRoleTypesMixin; not a FK to another table
+    role = db.Column(db.Integer(), primary_key=True)
+
+
 class PeriodAttachment(db.Model):
     """
     Model an attachment to a SubmissionPeriodRecord (eg. mark scheme)
@@ -2638,13 +2682,13 @@ class PeriodAttachment(db.Model):
         backref=db.backref("period_attachment", uselist=False),
     )
 
-    # publish to students
+    # publish to students (LEGACY — retained for data migration; use role_records instead)
     publish_to_students = db.Column(db.Boolean(), default=False)
 
-    # include in marking notification emails sent to examiners?
+    # include in marking notification emails sent to examiners? (LEGACY — retained for data migration)
     include_marker_emails = db.Column(db.Boolean(), default=False)
 
-    # include in marking notification emails sent to project supervisors?
+    # include in marking notification emails sent to project supervisors? (LEGACY — retained for data migration)
     include_supervisor_emails = db.Column(db.Boolean(), default=False)
 
     # textual description of attachment
@@ -2652,6 +2696,47 @@ class PeriodAttachment(db.Model):
 
     # rank order for inclusion in emails
     rank_order = db.Column(db.Integer())
+
+    # role-based access control: which submission roles may access this attachment.
+    # An empty role_records set means the attachment is unrestricted (visible to all roles).
+    role_records = db.relationship(
+        "PeriodAttachmentRole",
+        foreign_keys=[PeriodAttachmentRole.attachment_id],
+        backref=db.backref("attachment", uselist=False),
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+
+    @property
+    def role_set(self) -> set:
+        """Return the set of integer role values that may access this attachment."""
+        return {r.role for r in self.role_records}
+
+    def has_role_access(self, role: int) -> bool:
+        """
+        Return True if the given role integer may access this attachment.
+        An empty role set means unrestricted (all roles may access).
+        """
+        roles = self.role_set
+        return not roles or role in roles
+
+    def has_role_access_for_set(self, role_set) -> bool:
+        """
+        Return True if any role in role_set may access this attachment.
+        An empty role set on the attachment means unrestricted (all roles may access).
+        Accepts any iterable (set, list, tuple).
+        """
+        my_roles = self.role_set
+        return not my_roles or bool(my_roles & set(role_set))
+
+    def set_roles(self, role_ints) -> None:
+        """
+        Replace the role set for this attachment.
+        Pass an empty iterable to make the attachment unrestricted (visible to all roles).
+        """
+        self.role_records.delete()
+        for r in role_ints:
+            db.session.add(PeriodAttachmentRole(attachment_id=self.id, role=r))
 
 
 class Bookmark(db.Model):

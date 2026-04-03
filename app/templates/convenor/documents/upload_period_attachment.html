@@ -1,6 +1,23 @@
 {% extends "base_form.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+
+    <script>
+        $(document).ready(function () {
+            $('#roles').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+                placeholder: 'Select roles (leave empty for all participants)...'
+            });
+        });
+    </script>
+{% endblock %}
 
 {% block title %}
     Upload new attachment for {{ record.display_name }}
@@ -30,9 +47,7 @@
                         {{ wtf.render_field(form.description) }}
                         {{ wtf.render_field(form.license) }}
                         <hr class="intro-divider" role="separator">
-                        {{ wtf.render_field(form.publish_to_students) }}
-                        {{ wtf.render_field(form.include_marker_emails) }}
-                        {{ wtf.render_field(form.include_supervisor_emails) }}
+                        {{ wtf.render_field(form.roles) }}
                         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
                     </form>
                 </div>

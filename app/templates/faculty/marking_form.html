@@ -136,15 +136,15 @@
                 </div>
             {% endif %}
 
-            {# Workflow attachments #}
-            {% if workflow.attachments %}
+            {# Workflow attachments — filtered to roles visible to the current user #}
+            {% if filtered_attachments %}
                 <div class="card border-secondary mb-3">
                     <div class="card-header bg-secondary text-white">
                         <i class="fas fa-paperclip fa-fw me-1"></i> Attachments
                     </div>
                     <div class="card-body">
                         <div class="d-flex flex-row flex-wrap gap-3">
-                            {% for pa in workflow.attachments %}
+                            {% for pa in filtered_attachments %}
                                 {%- set asset = pa.attachment -%}
                                 <div class="card border" style="width:180px;">
                                     <div class="card-body p-2 text-center">

@@ -14,6 +14,7 @@ from wtforms import (
     StringField,
     BooleanField,
     SelectField,
+    SelectMultipleField,
     DateTimeField,
     TextAreaField,
 )
@@ -124,14 +125,19 @@ class PeriodAttachmentMixin:
         "end-users.",
     )
 
-    publish_to_students = BooleanField("Publish this document to students")
-
-    include_marker_emails = BooleanField(
-        "Attach this document to marking notifications sent to examiners"
-    )
-
-    include_supervisor_emails = BooleanField(
-        "Attach this document to marking notifications sent to supervisors"
+    roles = SelectMultipleField(
+        "Visible to",
+        choices=[
+            (7, "Students"),
+            (6, "Responsible supervisors"),
+            (0, "Supervisors"),
+            (1, "Markers"),
+            (3, "Moderators"),
+            (4, "Exam board members"),
+            (5, "External examiners"),
+        ],
+        coerce=int,
+        description="Select which roles may access this document. Leave empty to make it visible to all participants.",
     )
 
     license = QuerySelectField(

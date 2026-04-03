@@ -22,6 +22,7 @@ from initdb import (
     import_examiner_data,
     import_supervisor_data,
     initial_populate_database,
+    migrate_period_attachment_roles,
     migrate_schedule_submission_roles,
     migrate_to_marking_events,
     populate_CATS_limits,
@@ -100,6 +101,9 @@ with app.app_context():
 
     db.session.commit()
     cleanup_orphaned_live_marking_schemes(app)
+
+    db.session.commit()
+    migrate_period_attachment_roles(app)
 
 
 if __name__ == "__main__":

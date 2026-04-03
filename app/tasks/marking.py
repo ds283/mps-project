@@ -69,13 +69,18 @@ def _collect_marking_attachments(
     record: SubmissionRecord,
     workflow: MarkingWorkflow,
     report_name: str,
+    target_role: Optional[int] = None,
 ) -> List[EmailWorkflowItemAttachment]:
     """
     Build the attachment list for a marking notification email.
 
     If workflow.requires_report is True and the record has a processed_report, the report
-    is included as the first attachment. All documents explicitly assigned to the workflow
-    via workflow.attachments are then appended unconditionally.
+    is included as the first attachment. Workflow-level PeriodAttachment instances are then
+    appended, filtered by target_role if supplied.
+
+    :param target_role: If set, only include attachments accessible to this role integer
+        (from SubmissionRoleTypesMixin). Attachments with an empty role set are always
+        included (unrestricted). Pass None to include all attachments regardless of role.
     """
     attachments = []
 
@@ -89,9 +94,11 @@ def _collect_marking_attachments(
             )
         )
 
-    # Add all explicitly assigned workflow-level attachments
+    # Add workflow-level attachments, filtered by role where requested
     for pa in workflow.attachments:
         pa: PeriodAttachment
+        if target_role is not None and not pa.has_role_access(target_role):
+            continue
         attachments.append(
             EmailWorkflowItemAttachment.build_(
                 name=str(pa.attachment.target_name or pa.attachment.unique_name),
@@ -341,7 +348,7 @@ def register_marking_tasks(celery):
         user: User = role.user
         print(f'-- preparing email to supervisor "{user.name}" for submitter "{student.user.name}"')
 
-        attachments = _collect_marking_attachments(record, workflow, report_name)
+        attachments = _collect_marking_attachments(record, workflow, report_name, target_role=role.role)
 
         recipient = test_email if test_email is not None else user.email
         recipient_list = [recipient]
@@ -422,7 +429,7 @@ def register_marking_tasks(celery):
         user: User = role.user
         print(f'-- preparing email to marker "{user.name}" for submitter "{student.user.name}"')
 
-        attachments = _collect_marking_attachments(record, workflow, report_name)
+        attachments = _collect_marking_attachments(record, workflow, report_name, target_role=role.role)
 
         recipient = test_email if test_email is not None else user.email
         recipient_list = [recipient]

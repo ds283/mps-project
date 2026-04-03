@@ -127,8 +127,8 @@ class HubRoleMap:
         return tiles
 
     def get_ui_elements(self) -> List[str]:
-        # everyone gets a header and can see the event list
-        ui_elements = {"header", "events"}
+        # everyone gets a header and can see the event list, and the Files pane
+        ui_elements = {"header", "events", "files"}
 
         return ui_elements
 

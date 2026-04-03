@@ -1996,6 +1996,19 @@ def dashboard():
         .all()
     )
 
+    # Compute unique workflow attachments visible to ROLE_MODERATOR, for the moderator dashboard pane
+    seen_workflow_ids: set = set()
+    moderator_workflow_attachments: List[Dict] = []
+    for mod_report in pending_moderator_reports:
+        sr = mod_report.submitter_report
+        if sr is not None:
+            workflow = sr.workflow
+            if workflow is not None and workflow.id not in seen_workflow_ids:
+                seen_workflow_ids.add(workflow.id)
+                files = [pa for pa in workflow.attachments if pa.has_role_access(SubmissionRoleTypesMixin.ROLE_MODERATOR)]
+                if files:
+                    moderator_workflow_attachments.append({"workflow": workflow, "attachments": files})
+
     # Find pending marking reports for this user (distributed but not yet closed)
     from sqlalchemy import and_
 
@@ -2109,6 +2122,7 @@ def dashboard():
         pending_marking_reports=pending_marking_reports,
         pending_sign_off_reports=pending_sign_off_reports,
         pending_moderator_reports=pending_moderator_reports,
+        moderator_workflow_attachments=moderator_workflow_attachments,
     )
 
 
@@ -3669,6 +3683,15 @@ def marking_form(report_id):
         if _pct is not None and not isnan(_pct) and not isinf(_pct):
             attendance_percent = _pct
 
+    # Filter workflow attachments to those visible to the user's role.
+    # ROLE_RESPONSIBLE_SUPERVISOR can also see ROLE_SUPERVISOR attachments (per spec).
+    _user_role = report.role.role
+    if _user_role == SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR:
+        _filter_set = {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
+    else:
+        _filter_set = {_user_role}
+    filtered_attachments = [pa for pa in workflow.attachments if pa.has_role_access_for_set(_filter_set)]
+
     return render_template_context(
         "faculty/marking_form.html",
         report=report,
@@ -3689,6 +3712,7 @@ def marking_form(report_id):
         attendance_missing=attendance_missing,
         attendance_total=attendance_total,
         attendance_percent=attendance_percent,
+        filtered_attachments=filtered_attachments,
         url=url,
         submit_url=url_for("faculty.marking_form", report_id=report_id, url=url),
     )
@@ -3919,6 +3943,10 @@ def moderator_report_form(mod_report_id):
         form.report.data = mod_report.report
 
     marking_reports = sr.marking_reports.all()
+    filtered_attachments = [
+        pa for pa in workflow.attachments
+        if pa.has_role_access(SubmissionRoleTypesMixin.ROLE_MODERATOR)
+    ]
 
     return render_template_context(
         "faculty/moderator_report_form.html",
@@ -3929,6 +3957,7 @@ def moderator_report_form(mod_report_id):
         pclass=pclass,
         record=record,
         marking_reports=marking_reports,
+        filtered_attachments=filtered_attachments,
         is_elevated=is_elevated,
         url=url,
     )

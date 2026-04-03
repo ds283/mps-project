@@ -154,6 +154,18 @@
                             </div>
                         </div>
 
+                        {# Files available annotation #}
+                        {% set student_files = period.get_attachments_for_role(7) %}
+                        {% if student_files %}
+                            <div class="mt-2 mb-1">
+                                <a class="badge bg-secondary text-decoration-none"
+                                   href="{{ url_for('projecthub.downloads', subid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}">
+                                    <i class="fas fa-file-download me-1"></i>
+                                    {{ student_files|length }} file{{ 's' if student_files|length != 1 }} available
+                                </a>
+                            </div>
+                        {% endif %}
+
                         {# deal with presentation if this period has one #}
                         {% if period.has_presentation %}
                             {% if period.has_deployed_schedule %}

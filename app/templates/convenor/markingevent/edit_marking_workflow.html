@@ -149,21 +149,30 @@
                     <div class="list-group list-group-flush">
                         {% for att in attachments %}
                             <div class="list-group-item d-flex flex-row justify-content-between align-items-center px-0 py-2">
-                                <div class="d-flex flex-row align-items-center gap-2">
-                                    {% if att.attachment and att.attachment.small_thumbnail and not att.attachment.small_thumbnail.lost %}
-                                        <img src="{{ url_for('documents.serve_thumbnail', asset_type='SubmittedAsset', asset_id=att.attachment.id, size='small') }}"
-                                             class="img-thumbnail" style="max-width:60px; max-height:60px;"
-                                             alt="Preview">
+                                <div class="d-flex flex-row align-items-center gap-3">
+                                    {% if att.attachment %}
+                                        {% set asset = att.attachment %}
+                                        {% if asset.medium_thumbnail and not asset.medium_thumbnail.lost %}
+                                            <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='medium') }}"
+                                                 class="img-thumbnail flex-shrink-0" style="max-width:80px; max-height:80px;" alt="Preview">
+                                        {% elif asset.small_thumbnail and not asset.small_thumbnail.lost %}
+                                            <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
+                                                 class="img-thumbnail flex-shrink-0" style="max-width:60px; max-height:60px;" alt="Preview">
+                                        {% else %}
+                                            <div class="d-flex align-items-center justify-content-center bg-light border rounded flex-shrink-0"
+                                                 style="width:60px; height:60px;">
+                                                <i class="fas fa-file fa-2x text-muted"></i>
+                                            </div>
+                                        {% endif %}
                                     {% endif %}
                                     <div>
-                                        <i class="fas fa-paperclip fa-fw me-1 text-secondary"></i>
                                         {% if att.attachment %}
-                                            <span class="fw-semibold">{{ att.attachment.filename }}</span>
+                                            <span class="fw-semibold">{{ att.attachment.target_name or att.attachment.filename }}</span>
                                         {% else %}
                                             <span class="text-muted fst-italic">Unknown attachment</span>
                                         {% endif %}
                                         {% if att.description %}
-                                            <span class="small text-muted ms-2">{{ att.description }}</span>
+                                            <div class="small text-muted mt-1">{{ att.description }}</div>
                                         {% endif %}
                                     </div>
                                 </div>

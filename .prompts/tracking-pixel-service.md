@@ -6,7 +6,7 @@ instances.
 ### TASK 1. The tracking pixel implementation
 
 Design a tracking pixel implementation based on the `EmailWorkflow`, `EmailWorkflowItem` and `EmailLog` models. The main
-use case is that we'd like to know which students
+use case is that we'd like to know which students have opened and engaged with an email.
 
 - Use of a tracking pixel should be configurable at the level of an `EmailWorkflow`. You will need to add a new field
   `use_tracking_pixel` to the `EmailWorkflow` model in order to persist the configuration. Allow this setting to be

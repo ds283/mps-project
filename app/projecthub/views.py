@@ -27,6 +27,7 @@ from ..models import (
     FacultyData,
     FormattedArticle,
     LiveProject,
+    PeriodAttachmentRole,
     ProjectClass,
     ProjectClassConfig,
     ProjectSubmitterArticle,
@@ -39,6 +40,7 @@ from ..models import (
     SupervisionEvent,
     User,
 )
+from ..models.model_mixins import SubmissionRoleTypesMixin
 from ..shared.context.global_context import render_template_context
 from ..shared.workflow_logging import log_db_commit
 from ..shared.utils import redirect_url
@@ -57,6 +59,43 @@ from .forms import (
     build_event_team_form,
 )
 from .utils import doughnut_diagram, validate_project_hub, validate_set_attendance
+
+
+def _get_hub_visible_attachments(period: SubmissionPeriodRecord, hub_role, my_role: SubmissionRole):
+    """
+    Return the list of PeriodAttachment instances visible to the current user based on their
+    hub role and specific submission role integer.
+    """
+    from ..models.project_class import SubmissionPeriodRecord as _SPR  # avoid circular
+
+    # convenors and admins see all attachments
+    if hub_role.is_convenor or hub_role.is_admin:
+        return period.get_attachments_for_role_set(None) if False else list(
+            period.attachments.order_by("rank_order").all()
+        )
+
+    # Build the set of role integers applicable to the current user
+    role_set = set()
+
+    if hub_role.is_student:
+        role_set.add(SubmissionRoleTypesMixin.ROLE_STUDENT)
+
+    if hub_role.is_supervisor and my_role is not None:
+        # ROLE_RESPONSIBLE_SUPERVISOR can also see ROLE_SUPERVISOR attachments
+        role_set.add(my_role.role)
+        if my_role.role == SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR:
+            role_set.add(SubmissionRoleTypesMixin.ROLE_SUPERVISOR)
+
+    if hub_role.is_marker:
+        role_set.add(SubmissionRoleTypesMixin.ROLE_MARKER)
+
+    if hub_role.is_moderator:
+        role_set.add(SubmissionRoleTypesMixin.ROLE_MODERATOR)
+
+    if not role_set:
+        return []
+
+    return period.get_attachments_for_role_set(role_set)
 
 
 @projecthub.route("/hub/<int:subid>")
@@ -192,6 +231,9 @@ def hub(subid):
         else:
             attendance_percent = None
 
+    # Compute visible PeriodAttachments for this user's role in the hub
+    visible_attachments = _get_hub_visible_attachments(period, hub_role, my_role)
+
     return render_template_context(
         "projecthub/hub.html",
         tiles=hub_role.get_tiles(),
@@ -208,6 +250,7 @@ def hub(subid):
         period=period,
         my_role=my_role,
         hub_role=hub_role,
+        visible_attachments=visible_attachments,
         burndown_div=burn_diagram.div if burn_diagram else None,
         burndown_script=burn_diagram.script if burn_diagram else None,
         attendance_recorded=attendance_recorded,
@@ -215,6 +258,63 @@ def hub(subid):
         attendance_percent=attendance_percent,
         attendance_div=attendance_diagram.div if attendance_diagram else None,
         attendance_script=attendance_diagram.script if attendance_diagram else None,
+        return_url=url_for("projecthub.hub", subid=subid, url=url, text=text),
+        return_text=f"project page for {suser.name}",
+    )
+
+
+@projecthub.route("/downloads/<int:subid>")
+@roles_accepted(
+    "admin",
+    "root",
+    "faculty",
+    "supervisor",
+    "student",
+    "office",
+    "moderator",
+    "external_examiner",
+    "exam_board",
+)
+def downloads(subid):
+    """
+    Show all PeriodAttachment instances visible to the current user for a given SubmissionRecord,
+    in a DataTables table backed by a server-side AJAX endpoint.
+    """
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(subid)
+
+    my_role: SubmissionRole = None
+    if current_user.has_role("faculty"):
+        for role in record.roles:
+            role: SubmissionRole
+            if role.user_id == current_user.id:
+                my_role = role
+                break
+
+    hub_role = validate_project_hub(record, current_user, current_role=my_role, message=True)
+    if not hub_role:
+        return redirect(redirect_url())
+
+    period: SubmissionPeriodRecord = record.period
+    submitter: SubmittingStudent = record.owner
+    student: StudentData = submitter.student
+    suser: User = student.user
+
+    text = request.args.get("text", None)
+    url = request.args.get("url", None)
+
+    visible_attachments = _get_hub_visible_attachments(period, hub_role, my_role)
+
+    return render_template_context(
+        "projecthub/downloads.html",
+        record=record,
+        period=period,
+        submitter=submitter,
+        student=student,
+        hub_role=hub_role,
+        my_role=my_role,
+        visible_attachments=visible_attachments,
+        text=text,
+        url=url,
         return_url=url_for("projecthub.hub", subid=subid, url=url, text=text),
         return_text=f"project page for {suser.name}",
     )

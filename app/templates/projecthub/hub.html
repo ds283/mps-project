@@ -464,6 +464,51 @@
                 {{ show_supervision_events() }}
             {% endif %}
 
+            {# SHOW FILES PANE #}
+            {% if 'files' in ui_elements and visible_attachments %}
+                <div class="mt-4">
+                    <div class="d-flex flex-row justify-content-between align-items-baseline mb-2">
+                        <div class="fs-5 fw-semibold text-dark"><i class="fas fa-file-download me-2"></i>Files</div>
+                        <a class="small text-decoration-none link-primary"
+                           href="{{ url_for('projecthub.downloads', subid=record.id, url=return_url, text=return_text) }}">
+                            View all&hellip;
+                        </a>
+                    </div>
+                    <div class="d-flex flex-row flex-wrap gap-3">
+                        {% for pa in visible_attachments[:5] %}
+                            {%- set asset = pa.attachment -%}
+                            <div class="card border" style="width:180px;">
+                                <div class="card-body p-2 text-center">
+                                    {% if asset.small_thumbnail and not asset.small_thumbnail.lost %}
+                                        <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
+                                             class="img-thumbnail mb-1" style="max-width:80px; max-height:80px;" alt="">
+                                    {% else %}
+                                        <div class="d-flex align-items-center justify-content-center bg-light border rounded mb-1"
+                                             style="width:80px; height:80px; margin: 0 auto;">
+                                            <i class="fas fa-file fa-2x text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div class="small fw-semibold text-truncate"
+                                         {% if pa.description %}data-bs-toggle="tooltip" data-bs-placement="bottom" title="{{ pa.description }}"{% endif %}>
+                                        {{ asset.target_name or asset.filename }}
+                                    </div>
+                                    <a class="btn btn-sm btn-outline-secondary mt-1"
+                                       href="{{ url_for('admin.download_submitted_asset', asset_id=asset.id) }}">
+                                        <i class="fas fa-download fa-fw"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% if visible_attachments|length > 5 %}
+                        <div class="mt-2 small text-muted">
+                            Showing 5 of {{ visible_attachments|length }} files.
+                            <a class="text-decoration-none" href="{{ url_for('projecthub.downloads', subid=record.id, url=return_url, text=return_text) }}">View all&hellip;</a>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+
             {# Populate dashboard widgets #}
             {#        <div class="mt-3 card border-secondary">#}
             {#            <div class="card-header bg-light">#}

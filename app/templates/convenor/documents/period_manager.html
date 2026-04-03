@@ -42,6 +42,9 @@
     Manage documents for {{ record.display_name }}
 {% endblock %}
 
+{% set _role_labels = {0: 'Supervisors', 1: 'Markers', 3: 'Moderators', 4: 'Exam board',
+                       5: 'External examiners', 6: 'Resp. supervisors', 7: 'Students'} %}
+
 {% macro asset_line(asset, attachment, download_url=none, delete_url=none, edit_url=none,
                     acl_url=none, log_url=none, deletable=true) %}
     <tr id="PA-{{ attachment.id }}">
@@ -50,39 +53,43 @@
             <span id="ranking" class="badge bg-primary">#{{ attachment.rank_order }}</span>
         </td>
         <td>
-            <div class="d-flex flex-row flex-wrap justify-content-between align-items-start gap-2">
-                <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+            <div class="d-flex flex-column justify-content-start align-items-start gap-1">
+                <div>
+                    {% if asset.target_name %}
+                        <strong>{{ asset.target_name }}</strong>
+                    {% else %}
+                        <strong>{{ asset.unique_name }}</strong>
+                    {% endif %}
+                </div>
+                <div class="d-flex flex-row flex-wrap gap-1 justify-content-start align-items-start">
                     <div>
-                        {% if asset.target_name %}
-                            <strong>{{ asset.target_name }}</strong>
+                        {% if asset.medium_thumbnail and not asset.medium_thumbnail.lost %}
+                            <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='medium') }}"
+                                 class="img-thumbnail" style="max-width:120px; max-height:120px;" alt="Preview">
+                        {% elif asset.small_thumbnail and not asset.small_thumbnail.lost %}
+                            <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
+                                 class="img-thumbnail" style="max-width:80px; max-height:80px;" alt="Preview">
                         {% else %}
-                            <strong>{{ asset.unique_name }}</strong>
+                            <div class="d-flex align-items-center justify-content-center bg-light border rounded"
+                                 style="width:60px; height:60px; margin:0 auto;">
+                                <i class="fas fa-file fa-2x text-muted"></i>
+                            </div>
                         {% endif %}
                     </div>
                     {% if attachment and attachment.description and attachment.description|length > 0 %}
-                        <div class="mt-2 small text-muted">
+                        <div class="mt-1 small text-muted">
                             <i class="fas fa-paperclip"></i> {{ attachment.description }}
                         </div>
                     {% endif %}
-                    <div>
-                        {% if attachment.publish_to_students %}
-                            <span class="badge bg-info"><i class="fas fa-eye"></i> Publish</span>
-                        {% endif %}
-                        {% if attachment.include_marker_emails %}
-                            <span class="badge bg-info"><i class="fas fa-envelope"></i> Marker</span>
-                        {% endif %}
-                        {% if attachment.include_supervisor_emails %}
-                            <span class="badge bg-info"><i class="fas fa-envelope"></i> Supervisor</span>
-                        {% endif %}
-                    </div>
                 </div>
-                <div>
-                    {% if asset.medium_thumbnail and not asset.medium_thumbnail.lost %}
-                        <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='medium') }}"
-                             class="img-thumbnail mb-1" style="max-width:250px; max-height:250px;" alt="Preview">
-                    {% elif asset.small_thumbnail and not asset.small_thumbnail.lost %}
-                        <img src="{{ url_for('documents.serve_thumbnail', asset_type=asset.get_type(), asset_id=asset.id, size='small') }}"
-                             class="img-thumbnail mb-1" style="max-width:150px; max-height:150px;" alt="Preview">
+                <div class="d-flex flex-row flex-wrap gap-1 mt-1">
+                    {% set role_set = attachment.role_set %}
+                    {% if not role_set %}
+                        <span class="badge bg-secondary"><i class="fas fa-globe fa-fw"></i> All roles</span>
+                    {% else %}
+                        {% for role_int in role_set|sort %}
+                            <span class="badge bg-secondary">{{ _role_labels.get(role_int, role_int) }}</span>
+                        {% endfor %}
                     {% endif %}
                 </div>
             </div>
@@ -201,7 +208,7 @@
                 {% else %}
                     <strong>No attachments.</strong>
                 {% endif %}
-                <hr class="into-divider">
+                <hr class="intro-divider">
                 <div style="text-align: center;">
                     <a href="{{ url_for('convenor.upload_period_attachment', pid=record.id, url=url, text=text) }}"
                        class="btn btn-secondary btn-lg">

@@ -2484,6 +2484,34 @@ class SubmissionPeriodRecord(db.Model):
 
         return self.attachments.order_by(PeriodAttachment.rank_order).all()
 
+    def get_attachments_for_role(self, role: int) -> list:
+        """
+        Return PeriodAttachment instances accessible to the given role integer
+        (a constant from SubmissionRoleTypesMixin), ordered by rank_order.
+        Attachments with an empty role set are unrestricted and always included.
+        """
+        from .submissions import PeriodAttachment
+
+        return [
+            pa
+            for pa in self.attachments.order_by(PeriodAttachment.rank_order)
+            if pa.has_role_access(role)
+        ]
+
+    def get_attachments_for_role_set(self, role_set) -> list:
+        """
+        Return PeriodAttachment instances accessible to any role in role_set,
+        ordered by rank_order.
+        Attachments with an empty role set are unrestricted and always included.
+        """
+        from .submissions import PeriodAttachment
+
+        return [
+            pa
+            for pa in self.attachments.order_by(PeriodAttachment.rank_order)
+            if pa.has_role_access_for_set(role_set)
+        ]
+
     @property
     def canvas_enabled(self):
         if not self.config.canvas_enabled:

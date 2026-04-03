@@ -1509,6 +1509,10 @@ class SubmissionRoleTypesMixin:
     ROLE_EXTERNAL_EXAMINER = 5
     ROLE_RESPONSIBLE_SUPERVISOR = 6
 
+    # ROLE_STUDENT is used only for PeriodAttachment access control; it is never the type of
+    # an actual SubmissionRole instance
+    ROLE_STUDENT = 7
+
     _MIN_ROLE = ROLE_SUPERVISOR
     _MAX_ROLE = ROLE_RESPONSIBLE_SUPERVISOR
 

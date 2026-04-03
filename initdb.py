@@ -36,6 +36,8 @@ from app.models import (
     MarkingEvent,
     MarkingReport,
     MarkingWorkflow,
+    PeriodAttachment,
+    PeriodAttachmentRole,
     Project,
     ProjectClass,
     ProjectClassConfig,
@@ -1929,3 +1931,48 @@ def cleanup_orphaned_live_marking_schemes(app):
             return
 
         print(f"** cleanup_orphaned_live_marking_schemes: removed {count} orphaned LiveMarkingScheme row(s)")
+
+
+def migrate_period_attachment_roles(app):
+    """
+    Idempotent startup migration: populate the period_attachment_roles table from the legacy
+    boolean flags on PeriodAttachment.
+
+    Mapping:
+      publish_to_students=True       -> ROLE_STUDENT (7)
+      include_marker_emails=True     -> ROLE_MARKER (1), ROLE_MODERATOR (3)
+      include_supervisor_emails=True -> ROLE_SUPERVISOR (0), ROLE_RESPONSIBLE_SUPERVISOR (6)
+
+    Only inserts rows that do not already exist, so it is safe to run on every startup.
+    """
+    with app.app_context():
+        attachments = db.session.query(PeriodAttachment).all()
+
+        added = 0
+        for pa in attachments:
+            existing_roles = {r.role for r in pa.role_records}
+            to_add = set()
+
+            if pa.publish_to_students:
+                to_add.add(7)  # ROLE_STUDENT
+            if pa.include_marker_emails:
+                to_add.update({1, 3})  # ROLE_MARKER, ROLE_MODERATOR
+            if pa.include_supervisor_emails:
+                to_add.update({0, 6})  # ROLE_SUPERVISOR, ROLE_RESPONSIBLE_SUPERVISOR
+
+            for r in to_add - existing_roles:
+                db.session.add(PeriodAttachmentRole(attachment_id=pa.id, role=r))
+                added += 1
+
+        if added == 0:
+            print("** migrate_period_attachment_roles: nothing to migrate")
+            return
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            app.logger.exception("SQLAlchemyError in migrate_period_attachment_roles", exc_info=e)
+            return
+
+        print(f"** migrate_period_attachment_roles: added {added} role record(s)")

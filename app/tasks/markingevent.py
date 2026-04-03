@@ -30,6 +30,7 @@ from ..models.emails import encode_email_payload
 from ..models.markingevent import SubmitterReportWorkflowStates
 from ..models.submissions import SubmissionRecord, SubmissionRoleTypesMixin
 from ..shared.workflow_logging import log_db_commit
+from .marking import _collect_marking_attachments
 
 
 def _next_9am() -> datetime:
@@ -147,6 +148,8 @@ def _emit_moderation_required_emails(sr: SubmitterReport) -> None:
 
 def _emit_moderator_assignment_email(sr: SubmitterReport, role: SubmissionRole) -> None:
     """Generate a MARKING_MODERATOR email to the newly assigned moderator."""
+    from pathlib import Path
+
     workflow = sr.workflow
     pclass = workflow.event.pclass
 
@@ -165,6 +168,25 @@ def _emit_moderator_assignment_email(sr: SubmitterReport, role: SubmissionRole) 
         return
 
     try:
+        record = sr.record
+        student = sr.student
+        config = pclass.most_recent_config
+
+        asset = record.processed_report
+        if asset is not None:
+            ext = Path(asset.target_name if hasattr(asset, "target_name") else asset.filename).suffix.lower()
+        else:
+            ext = ".pdf"
+
+        report_name = "{year}_{abbv}_candidate_{number}{ext}".format(
+            year=config.year,
+            abbv=pclass.abbreviation,
+            number=student.exam_number,
+            ext=ext,
+        )
+
+        attachments = _collect_marking_attachments(record, workflow, report_name)
+
         email_wf = EmailWorkflow.build_(
             name=f"Moderator assignment: submitter report #{sr.id}",
             template=tmpl,
@@ -180,6 +202,7 @@ def _emit_moderator_assignment_email(sr: SubmitterReport, role: SubmissionRole) 
                 {"submitter_report": sr, "workflow": workflow, "pclass": pclass}
             ),
             recipient_list=[role.user.email],
+            attachments=attachments,
         )
         item.workflow = email_wf
         db.session.add(item)

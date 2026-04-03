@@ -2454,6 +2454,9 @@ def accept_moderator_grade(mod_report_id, workflow_id):
     sr.grade_generated_by_id = current_user.id
     sr.grade_generated_timestamp = datetime.now()
     sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
+    sr.accepted_moderator_report_id = mod_report.id
+    sr.moderator_accepted_id = mod_report.role_id
+    sr.moderator_accepted_timestamp = datetime.now()
 
     url = url_for("convenor.submitter_reports_inspector", workflow_id=workflow_id)
 

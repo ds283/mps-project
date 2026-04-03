@@ -731,6 +731,31 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     # Set by _check_tolerance_and_grade(); cleared if a convenor resets the workflow state.
     out_of_tolerance = db.Column(db.Boolean(), default=False, nullable=False)
 
+    # which ModeratorReport was accepted (implicitly on first submission, or explicitly by a convenor)?
+    # use_alter=True avoids circular FK dependency during table creation since ModeratorReport also
+    # holds a FK back to SubmitterReport.
+    accepted_moderator_report_id = db.Column(
+        db.Integer(),
+        db.ForeignKey("moderator_reports.id", use_alter=True, name="fk_submitter_report_accepted_moderator"),
+        nullable=True,
+    )
+    accepted_moderator_report = db.relationship(
+        "ModeratorReport",
+        foreign_keys=[accepted_moderator_report_id],
+        uselist=False,
+    )
+
+    # SubmissionRole (ROLE_MODERATOR) belonging to the moderator whose report was accepted
+    moderator_accepted_id = db.Column(
+        db.Integer(), db.ForeignKey("submission_roles.id"), nullable=True
+    )
+    moderator_accepted_by = db.relationship(
+        "SubmissionRole", foreign_keys=[moderator_accepted_id], uselist=False
+    )
+
+    # timestamp when the acceptance was recorded
+    moderator_accepted_timestamp = db.Column(db.DateTime(), nullable=True)
+
     # convenience accessors
     @property
     def submitter(self) -> SubmittingStudent:

@@ -65,6 +65,44 @@ from .thumbnails import dispatch_thumbnail_task
 AssetDictionary = Dict[str, AssetCloudScratchContextManager]
 
 
+def _collect_marking_attachments(
+    record: SubmissionRecord,
+    workflow: MarkingWorkflow,
+    report_name: str,
+) -> List[EmailWorkflowItemAttachment]:
+    """
+    Build the attachment list for a marking notification email.
+
+    If workflow.requires_report is True and the record has a processed_report, the report
+    is included as the first attachment. All documents explicitly assigned to the workflow
+    via workflow.attachments are then appended unconditionally.
+    """
+    attachments = []
+
+    # Optionally add the processed report
+    if workflow.requires_report and record.processed_report is not None:
+        attachments.append(
+            EmailWorkflowItemAttachment.build_(
+                name=report_name,
+                description="student's submitted report",
+                generated_asset=record.processed_report,
+            )
+        )
+
+    # Add all explicitly assigned workflow-level attachments
+    for pa in workflow.attachments:
+        pa: PeriodAttachment
+        attachments.append(
+            EmailWorkflowItemAttachment.build_(
+                name=str(pa.attachment.target_name or pa.attachment.unique_name),
+                description=pa.description or "",
+                submitted_asset=pa.attachment,
+            )
+        )
+
+    return attachments
+
+
 _SUPERVISOR_ROLES = frozenset(
     {SubmissionRoleTypesMixin.ROLE_SUPERVISOR, SubmissionRoleTypesMixin.ROLE_RESPONSIBLE_SUPERVISOR}
 )
@@ -267,43 +305,6 @@ def register_marking_tasks(celery):
             "notify_dispatch",
             convenor,
         )
-
-    def _collect_marking_attachments(
-        record: SubmissionRecord,
-        workflow: MarkingWorkflow,
-        report_name: str,
-    ) -> List[EmailWorkflowItemAttachment]:
-        """
-        Build the attachment list for a marking notification email.
-
-        If workflow.requires_report is True and the record has a processed_report, the report
-        is included as the first attachment. All documents explicitly assigned to the workflow
-        via workflow.attachments are then appended unconditionally.
-        """
-        attachments = []
-
-        # Optionally add the processed report
-        if workflow.requires_report and record.processed_report is not None:
-            attachments.append(
-                EmailWorkflowItemAttachment.build_(
-                    name=report_name,
-                    description="student's submitted report",
-                    generated_asset=record.processed_report,
-                )
-            )
-
-        # Add all explicitly assigned workflow-level attachments
-        for pa in workflow.attachments:
-            pa: PeriodAttachment
-            attachments.append(
-                EmailWorkflowItemAttachment.build_(
-                    name=str(pa.attachment.target_name or pa.attachment.unique_name),
-                    description=pa.description or "",
-                    submitted_asset=pa.attachment,
-                )
-            )
-
-        return attachments
 
     def _build_supervisor_item(
         role: SubmissionRole,

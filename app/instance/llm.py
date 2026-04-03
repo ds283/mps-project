@@ -14,5 +14,6 @@ import os
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 
 # Model identifier to use for language analysis LLM submission
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:32b")
-# OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:70b")
+# OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:8b")
+# OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:32b")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:70b")

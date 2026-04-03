@@ -17,13 +17,15 @@ assets
 backups
 basic_database
 build.sh
-Claude.md
+CLAUDE.md
 database-copies
+docker-nginx
+docker-web-app
+docker-celery-worker
 fix-latin1.py
 FYP_feedback_template.html.j2
 instance
 logs
-reference-mark-schemes
 memory-bank
 mongodb
 mysql
@@ -32,6 +34,7 @@ objectstore-data
 profiling
 profile
 scratch
+reference-mark-schemes
 restart.sh
 test_pdf.py
 venv

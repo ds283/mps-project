@@ -128,10 +128,14 @@ special targets:
 - a target named "report": this target can be copied to the `SubmissionRecord.report_grade` field.
 - a target named "supervisor: this target can be copied to the `SubmissionRecord.supervision_grade` field.
 
-In addition, you should add a `SubmissionRecord.presentation_grade` field, woth the same properties as `report_grade`
-and `supervision_grade`. Then:
+In addition, you should add a `SubmissionRecord.presentation_grade` field, with the same properties as `report_grade`
+and `supervision_grade`. Adjust the project_tag() macro in @app/templates/convenor/submitters_macros.html to display
+this grade, if `uses_presentations` is set for this ProjectClassConfig, alongside the report and supervisor grades.
 
-- a target named "presentation": this target can be copied to the `SubmissionRecord.presentation_grade` field.
+Then:
+
+- where the `MarkingEvent` omputes a target named "presentation": this target can be copied to the
+  `SubmissionRecord.presentation_grade` field.
 
 These options allow conflated marks from a MarkingEvent to be back-populated to the `SubmissionRecord`.
 
@@ -151,4 +155,3 @@ agent or human maintainer.
 
 Please consider whether the comment block headed "# REQUIRES_CONVENOR_INTERVENTION: blocking state" also requires
 updating.
-"

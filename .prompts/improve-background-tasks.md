@@ -24,3 +24,4 @@ Please consider these problems and make a recommendation for how to fix both iss
   themslves with other workflows (chains, groups, or chords), will these task ids mutate?
 
 - It would be preferable not to have to poll for the state of each task, which is inefficient
+

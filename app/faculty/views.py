@@ -3596,7 +3596,8 @@ def marking_form(report_id):
                 report.signed_off_id = None
                 report.signed_off_timestamp = None
                 report.grade_submitted_by_id = current_user.id
-                report.grade_submitted_timestamp = datetime.now()
+                if report.grade_submitted_timestamp is None:
+                    report.grade_submitted_timestamp = datetime.now()
 
                 # Schedule close_marking_window to fire 24 hours from now
                 from ..tasks.markingevent import schedule_close_marking_window

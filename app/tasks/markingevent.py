@@ -345,6 +345,16 @@ def schedule_close_marking_window(mr: MarkingReport) -> None:
     if mr.grade_submitted_timestamp is None:
         return
 
+    # Idempotency guard: do not create a new entry if one already exists for this
+    # MarkingReport (e.g. marker edited and resubmitted within the 24-hour window).
+    existing = (
+        db.session.query(DatabaseSchedulerEntry)
+        .filter(DatabaseSchedulerEntry.name.like(f"close_marking_window_mr{mr.id}_%"))
+        .first()
+    )
+    if existing is not None:
+        return
+
     target = mr.grade_submitted_timestamp + timedelta(hours=24)
 
     crontab = CrontabSchedule(

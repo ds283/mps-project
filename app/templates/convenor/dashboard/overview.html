@@ -1,0 +1,182 @@
+{% extends "base_app.html" %}
+
+{% block title %}
+    Convenor overview
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+
+            <div class="d-flex align-items-baseline gap-3 mt-3 mb-3">
+                <h3 class="dashboard-subtitle mb-0">Convenor overview</h3>
+                {% if is_admin or is_root %}
+                    <a class="text-decoration-none small text-muted"
+                       href="{{ url_for('convenor.show_unofferable', id=0) }}">
+                        <i class="fas fa-list fa-fw"></i> Show unofferable projects
+                    </a>
+                {% endif %}
+            </div>
+
+            {# Separate published and unpublished items #}
+            {%- set published = [] -%}
+            {%- set unpublished = [] -%}
+            {%- for item in items -%}
+                {%- if item['pclass'].publish -%}
+                    {%- set _ = published.append(item) -%}
+                {%- else -%}
+                    {%- set _ = unpublished.append(item) -%}
+                {%- endif -%}
+            {%- endfor -%}
+
+            {% if published|length > 0 %}
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+                    {% for item in published %}
+                        {%- set pclass = item['pclass'] -%}
+                        {%- set config = item['config'] -%}
+                        {%- set data = item['data'] -%}
+                        {%- set lifecycle = config.selector_lifecycle -%}
+                        {%- set outstanding_confirms = data['outstanding_confirms'] -%}
+                        {%- set age_oldest = data['age_oldest_confirm_request'] -%}
+                        {%- set missing_canvas = data['missing_canvas_count'] -%}
+                        {%- set stale_confirmations = outstanding_confirms and outstanding_confirms > 0 and age_oldest is not none and age_oldest > 5 -%}
+                        {%- set canvas_issue = missing_canvas is not none and missing_canvas > 0 -%}
+                        {%- set lifecycle_action = lifecycle == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED or lifecycle == config.SELECTOR_LIFECYCLE_READY_GOLIVE -%}
+                        {%- set has_alert = stale_confirmations -%}
+                        {%- set has_warning = canvas_issue and not has_alert -%}
+
+                        <div class="col">
+                            <div class="card h-100 {% if has_alert %}border-danger{% elif has_warning %}border-warning{% elif lifecycle_action %}border-primary{% endif %}">
+                                <div class="card-header d-flex justify-content-between align-items-center {% if has_alert %}bg-danger text-white{% elif has_warning %}bg-warning text-dark{% elif lifecycle_action %}bg-primary text-white{% endif %}">
+                                    <strong>{{ pclass.name }}</strong>
+                                    <span class="small {% if has_alert or has_warning or lifecycle_action %}opacity-75{% else %}text-muted{% endif %}">
+                                        {{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}
+                                    </span>
+                                </div>
+                                <div class="card-body">
+                                    {# Alert strip — highest-priority condition #}
+                                    {% if stale_confirmations %}
+                                        <div class="alert alert-danger py-1 px-2 small mb-2 d-flex align-items-center gap-2">
+                                            <i class="fas fa-exclamation-triangle fa-fw"></i>
+                                            {{ outstanding_confirms }} outstanding confirmation{{ '' if outstanding_confirms == 1 else 's' }},
+                                            oldest {{ age_oldest | int }} day{{ '' if age_oldest | int == 1 else 's' }} ago
+                                        </div>
+                                    {% elif canvas_issue %}
+                                        <div class="alert alert-warning py-1 px-2 small mb-2 d-flex align-items-center gap-2">
+                                            <i class="fas fa-exclamation-triangle fa-fw"></i>
+                                            {{ missing_canvas }} student{{ '' if missing_canvas == 1 else 's' }} missing from Canvas
+                                        </div>
+                                    {% endif %}
+
+                                    {# Lifecycle state label #}
+                                    <div class="small {% if lifecycle_action and not has_alert and not has_warning %}text-primary fw-semibold{% else %}text-muted{% endif %} mb-2">
+                                        {% if lifecycle == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+                                            <i class="fas fa-clock fa-fw"></i> Confirmations not yet issued
+                                        {% elif lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                                            <i class="fas fa-hourglass-half fa-fw"></i> Waiting for faculty confirmations
+                                        {% elif lifecycle == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
+                                            <i class="fas fa-rocket fa-fw"></i> Ready to go live
+                                        {% elif lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                            <i class="fas fa-door-open fa-fw"></i> Selections open
+                                        {% elif lifecycle == config.SELECTOR_LIFECYCLE_READY_MATCHING %}
+                                            <i class="fas fa-random fa-fw"></i> Ready for matching
+                                        {% elif lifecycle == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
+                                            <i class="fas fa-sync fa-fw"></i> Cycle closing
+                                        {% else %}
+                                            <i class="fas fa-circle fa-fw"></i> Active
+                                        {% endif %}
+                                    </div>
+
+                                    {# Metrics row #}
+                                    <div class="d-flex flex-wrap gap-3 small text-muted">
+                                        {%- set n_sel = data['selectors'] -%}
+                                        {%- set n_sub = data['submitters'] -%}
+                                        {%- set n_proj = data['attached_projects'] -%}
+                                        {%- set n_fac = data['faculty'] -%}
+                                        {%- set n_fac_total = data['total_faculty'] -%}
+                                        {%- set n_todo = data['todo_count'] -%}
+                                        {% if n_sel %}
+                                            <span><i class="fas fa-user-graduate fa-fw"></i> {{ n_sel }} selector{{ '' if n_sel == 1 else 's' }}</span>
+                                        {% endif %}
+                                        {% if n_sub %}
+                                            <span><i class="fas fa-file-alt fa-fw"></i> {{ n_sub }} submitter{{ '' if n_sub == 1 else 's' }}</span>
+                                        {% endif %}
+                                        {% if n_proj is not none %}
+                                            <span><i class="fas fa-project-diagram fa-fw"></i> {{ n_proj }} project{{ '' if n_proj == 1 else 's' }}</span>
+                                        {% endif %}
+                                        {% if n_fac is not none and n_fac_total is not none %}
+                                            <span><i class="fas fa-chalkboard-teacher fa-fw"></i> {{ n_fac }}/{{ n_fac_total }} faculty</span>
+                                        {% endif %}
+                                        {% if n_todo %}
+                                            <span class="text-primary"><i class="fas fa-tasks fa-fw"></i> {{ n_todo }} task{{ '' if n_todo == 1 else 's' }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="card-footer d-flex justify-content-end">
+                                    <a class="btn btn-sm {% if has_alert %}btn-danger{% elif has_warning %}btn-warning text-dark{% elif lifecycle_action %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                                       href="{{ url_for('convenor.status', id=pclass.id) }}">
+                                        Open dashboard <i class="fas fa-arrow-right fa-fw"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% elif unpublished|length == 0 %}
+                <div class="card card-body bg-well mt-3 mb-3">
+                    <h3 class="dashboard-subtitle">No active project classes</h3>
+                    <p>You have no active convenor roles at this time.</p>
+                </div>
+            {% endif %}
+
+            {# Unpublished project classes — de-emphasised #}
+            {% if unpublished|length > 0 %}
+                <div class="mt-2 mb-2">
+                    <span class="small text-muted">
+                        <i class="fas fa-eye-slash fa-fw"></i> Not published
+                    </span>
+                </div>
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 mb-4">
+                    {% for item in unpublished %}
+                        {%- set pclass = item['pclass'] -%}
+                        {%- set config = item['config'] -%}
+                        {%- set data = item['data'] -%}
+                        <div class="col">
+                            <div class="card h-100 border-0 bg-light opacity-75">
+                                <div class="card-header bg-light border-bottom d-flex justify-content-between align-items-center">
+                                    <span class="text-muted fw-semibold">{{ pclass.name }}</span>
+                                    <span class="small text-muted">{{ config.submit_year_a }}&ndash;{{ config.submit_year_b }}</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="small text-muted mb-2">
+                                        <i class="fas fa-eye-slash fa-fw"></i> Not published
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-3 small text-muted">
+                                        {%- set n_proj = data['attached_projects'] -%}
+                                        {%- set n_fac = data['faculty'] -%}
+                                        {%- set n_fac_total = data['total_faculty'] -%}
+                                        {% if n_proj is not none %}
+                                            <span><i class="fas fa-project-diagram fa-fw"></i> {{ n_proj }} project{{ '' if n_proj == 1 else 's' }}</span>
+                                        {% endif %}
+                                        {% if n_fac is not none and n_fac_total is not none %}
+                                            <span><i class="fas fa-chalkboard-teacher fa-fw"></i> {{ n_fac }}/{{ n_fac_total }} faculty</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light border-0 d-flex justify-content-end">
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                       href="{{ url_for('convenor.status', id=pclass.id) }}">
+                                        Open dashboard <i class="fas fa-arrow-right fa-fw"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+        </div>
+        <div class="col-1"></div>
+    </div>
+{% endblock %}

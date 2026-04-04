@@ -44,7 +44,6 @@ from ..models import (
     TransferableSkill,
     User,
 )
-from ..shared.forms.queries import GetWorkflowTemplates
 from ..shared.context.convenor_dashboard import (
     get_capacity_data,
     get_convenor_approval_data,
@@ -52,6 +51,7 @@ from ..shared.context.convenor_dashboard import (
     get_convenor_todo_data,
 )
 from ..shared.context.global_context import render_template_context
+from ..shared.forms.queries import GetWorkflowTemplates
 from ..shared.projects import (
     get_filter_list_for_groups_and_skills,
     project_list_SQL_handler,
@@ -72,13 +72,34 @@ from .forms import (
 )
 
 
+@convenor.route("/overview")
+@roles_accepted("faculty", "admin", "root")
+def overview():
+    if current_user.has_role("admin") or current_user.has_role("root"):
+        pclasses = db.session.query(ProjectClass).filter_by(active=True).all()
+    elif current_user.faculty_data is not None:
+        pclasses = current_user.faculty_data.convenor_list
+    else:
+        pclasses = []
+
+    items = []
+    for pclass in pclasses:
+        config = pclass.most_recent_config
+        if config is None:
+            continue
+        data = get_convenor_dashboard_data(pclass, config)
+        items.append({"pclass": pclass, "config": config, "data": data})
+
+    return render_template_context("convenor/dashboard/overview.html", items=items)
+
+
 @convenor.route("/status/<int:id>", methods=["GET", "POST"])
 @roles_accepted("faculty", "admin", "root")
 def status(id):
     # get details for project class
     pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not a convenor for this project class
+    # reject user if not a convenor for this project eu
     if not validate_is_convenor(pclass):
         return redirect(redirect_url())
 
@@ -123,10 +144,18 @@ def status(id):
 
     # inject query factories for template selectors
     pclass_id = pclass.id
-    golive_form.faculty_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.GO_LIVE_FACULTY, pclass_id=pclass_id)
-    golive_form.selector_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.GO_LIVE_SELECTOR, pclass_id=pclass_id)
-    golive_form.convenor_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.GO_LIVE_CONVENOR, pclass_id=pclass_id)
-    issue_form.confirm_template.query_factory = lambda: GetWorkflowTemplates(EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass_id=pclass_id)
+    golive_form.faculty_template.query_factory = lambda: GetWorkflowTemplates(
+        EmailTemplate.GO_LIVE_FACULTY, pclass_id=pclass_id
+    )
+    golive_form.selector_template.query_factory = lambda: GetWorkflowTemplates(
+        EmailTemplate.GO_LIVE_SELECTOR, pclass_id=pclass_id
+    )
+    golive_form.convenor_template.query_factory = lambda: GetWorkflowTemplates(
+        EmailTemplate.GO_LIVE_CONVENOR, pclass_id=pclass_id
+    )
+    issue_form.confirm_template.query_factory = lambda: GetWorkflowTemplates(
+        EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass_id=pclass_id
+    )
 
     # first time this page is displayed, populate the forms with sensible default data
     if request.method == "GET":
@@ -149,10 +178,18 @@ def status(id):
         change_form.notify_convenor.data = True
 
         # pre-select the default templates
-        golive_form.faculty_template.data = EmailTemplate.find_template_(EmailTemplate.GO_LIVE_FACULTY, pclass=pclass)
-        golive_form.selector_template.data = EmailTemplate.find_template_(EmailTemplate.GO_LIVE_SELECTOR, pclass=pclass)
-        golive_form.convenor_template.data = EmailTemplate.find_template_(EmailTemplate.GO_LIVE_CONVENOR, pclass=pclass)
-        issue_form.confirm_template.data = EmailTemplate.find_template_(EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass=pclass)
+        golive_form.faculty_template.data = EmailTemplate.find_template_(
+            EmailTemplate.GO_LIVE_FACULTY, pclass=pclass
+        )
+        golive_form.selector_template.data = EmailTemplate.find_template_(
+            EmailTemplate.GO_LIVE_SELECTOR, pclass=pclass
+        )
+        golive_form.convenor_template.data = EmailTemplate.find_template_(
+            EmailTemplate.GO_LIVE_CONVENOR, pclass=pclass
+        )
+        issue_form.confirm_template.data = EmailTemplate.find_template_(
+            EmailTemplate.PROJECT_CONFIRMATION_REQUESTED, pclass=pclass
+        )
 
     data = get_convenor_dashboard_data(pclass, config)
     todo = get_convenor_todo_data(config)
@@ -210,46 +247,46 @@ def comms(id):
     for w in workflows:
         # Item counts via sub-queries for efficiency
         total = (
-                db.session.query(func.count(EmailWorkflowItem.id))
-                .filter(EmailWorkflowItem.workflow_id == w.id)
-                .scalar()
-                or 0
+            db.session.query(func.count(EmailWorkflowItem.id))
+            .filter(EmailWorkflowItem.workflow_id == w.id)
+            .scalar()
+            or 0
         )
         sent = (
-                db.session.query(func.count(EmailWorkflowItem.id))
-                .filter(
-                    EmailWorkflowItem.workflow_id == w.id,
-                    EmailWorkflowItem.sent_timestamp.isnot(None),
-                )
-                .scalar()
-                or 0
+            db.session.query(func.count(EmailWorkflowItem.id))
+            .filter(
+                EmailWorkflowItem.workflow_id == w.id,
+                EmailWorkflowItem.sent_timestamp.isnot(None),
+            )
+            .scalar()
+            or 0
         )
         pending = (
-                db.session.query(func.count(EmailWorkflowItem.id))
-                .filter(
-                    EmailWorkflowItem.workflow_id == w.id,
-                    EmailWorkflowItem.sent_timestamp.is_(None),
-                )
-                .scalar()
-                or 0
+            db.session.query(func.count(EmailWorkflowItem.id))
+            .filter(
+                EmailWorkflowItem.workflow_id == w.id,
+                EmailWorkflowItem.sent_timestamp.is_(None),
+            )
+            .scalar()
+            or 0
         )
         errors = (
-                db.session.query(func.count(EmailWorkflowItem.id))
-                .filter(
-                    EmailWorkflowItem.workflow_id == w.id,
-                    EmailWorkflowItem.error_condition.is_(True),
-                )
-                .scalar()
-                or 0
+            db.session.query(func.count(EmailWorkflowItem.id))
+            .filter(
+                EmailWorkflowItem.workflow_id == w.id,
+                EmailWorkflowItem.error_condition.is_(True),
+            )
+            .scalar()
+            or 0
         )
         item_paused = (
-                db.session.query(func.count(EmailWorkflowItem.id))
-                .filter(
-                    EmailWorkflowItem.workflow_id == w.id,
-                    EmailWorkflowItem.paused.is_(True),
-                )
-                .scalar()
-                or 0
+            db.session.query(func.count(EmailWorkflowItem.id))
+            .filter(
+                EmailWorkflowItem.workflow_id == w.id,
+                EmailWorkflowItem.paused.is_(True),
+            )
+            .scalar()
+            or 0
         )
 
         workflow_data.append(

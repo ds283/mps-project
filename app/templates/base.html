@@ -1,6 +1,5 @@
 {%- extends "bootstrap/base.html" -%}
 {%- from "macros.html" import flashed_messages -%}
-{%- from "megamenu.html" import megamenu_columns %}
 
 {%- block scripts -%}
     {{ super() }}
@@ -256,44 +255,6 @@
     </script>
 {% endblock %}
 
-{% macro convenor_menu(pclasses) %}
-    <li class="nav-item dropdown megamenu">
-        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">
-            Convenor
-        </a>
-        <div class="dropdown-menu bg-secondary megamenu-body" data-bs-theme="dark" role="menu">
-            <div class="container mt-4 mb-4">
-                <div class="card card-body bg-light convenor-projects-megamenu">
-                    <h4 class="mb-2">Convenor roles</h4>
-                    {% call(project_class) megamenu_columns("col-4", 3, pclasses) %}
-                        <a class="text-decoration-none" href="{{ url_for('convenor.status', id=project_class.id) }}">
-                            {{ project_class.name }}
-                        </a>
-                    {% endcall %}
-                </div>
-                {% if is_admin or is_root %}
-                    <div class="card card-body mt-4 bg-light convenor-admin-megamenu">
-                        <h4 class="mb-2">Administrative functions</h4>
-                        <div class="row">
-                            <div class="col-4">
-                                <ul>
-                                    <li>
-                                        <a class="text-decoration-none"
-                                           href="{{ url_for('convenor.show_unofferable', id=0) }}">
-                                            Show unofferable projects
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                            <div class="col-4"></div>
-                            <div class="col-4"></div>
-                        </div>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-    </li>
-{% endmacro %}
 
 {% block navbar %}
     {% if (is_root or is_admin) and (not email_is_live or not backup_is_live) %}
@@ -401,11 +362,14 @@
                         </li>
                     {% endif %}
 
-                    {# add convenor menu if user is a convenor, or an admin user #}
-                    {% if is_admin or is_root %}
-                        {{ convenor_menu(all_pclasses) }}
-                    {% elif is_convenor %}
-                        {{ convenor_menu(current_user.faculty_data.convenor_list) }}
+                    {# add convenor link if user is a convenor, or an admin user #}
+                    {% if is_admin or is_root or is_convenor %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.blueprint == 'convenor' %}active{% endif %}"
+                               href="{{ url_for('convenor.overview') }}">
+                                Convenor
+                            </a>
+                        </li>
                     {% endif %}
 
                     {# add admin menu if user is an administrator or system administrator, or a convenor #}

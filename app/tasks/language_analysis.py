@@ -11,6 +11,7 @@
 import json
 import re
 import time
+import unicodedata
 from datetime import datetime
 
 import numpy as np
@@ -22,7 +23,6 @@ from ..database import db
 from ..models import SubmissionRecord
 from ..shared.asset_tools import AssetCloudAdapter
 from ..shared.workflow_logging import log_db_commit
-
 
 # ---------------------------------------------------------------------------
 # Rubric: grade bands and criteria.
@@ -266,11 +266,86 @@ def _split_text(text: str) -> tuple[str, str]:
     """
     Split *text* into (main_text, biblio_text) at the bibliography heading.
     If no heading is found, returns (text, "").
+
+    Uses the *last* match of _BIBLIO_HEADING rather than the first.  Reports
+    commonly include a table of contents where "References" appears on its own
+    line (e.g. "5\nReferences\n8") well before the actual reference list.
+    The genuine bibliography is always the final occurrence of the heading.
     """
-    match = _BIBLIO_HEADING.search(text)
-    if match:
+    matches = list(_BIBLIO_HEADING.finditer(text))
+    if matches:
+        match = matches[-1]
         return text[: match.start()], text[match.start() :]
     return text, ""
+
+
+# ---------------------------------------------------------------------------
+# Pattern used to decide whether a line contains English prose.
+# See _strip_math_lines() for the full rationale.
+# ---------------------------------------------------------------------------
+
+_ENGLISH_WORD = re.compile(r"[a-zA-Z]{5,}")
+
+
+def _strip_math_lines(text: str) -> str:
+    """
+    Remove lines that consist predominantly of mathematical notation produced
+    by PDF text extraction of LaTeX-typeset equations.
+
+    Such extraction scatters formula content across many short lines that are
+    meaningless as English text — e.g. ``d4q``, ``(2π)4``, ``D0D1``,
+    ``→I2(p) =``, lone integers, Greek-letter fragments.  Retaining them
+    inflates word counts and distorts lexical-richness metrics (MATTR, MTLD).
+
+    ## Detection strategy
+
+    A line is *kept* if and only if it contains at least one run of **five or
+    more consecutive ASCII letters**.  Such a run reliably indicates either an
+    English content word or a recognisable section heading.
+
+    Threshold rationale — alternatives evaluated and rejected:
+
+    * ``[a-zA-Z]{2,}`` (≥ 2 letters): false positives for 2-letter math
+      variable names (``Dk``, ``Di``, ``dq``, ``ki``) and 3-letter function
+      abbreviations (``Res``, ``lim``, ``sin``, ``det``).  A digit inside a
+      token (e.g. ``d3q``) *does* break the run and so is correctly filtered,
+      but purely alphabetic 2–4-character tokens are not.
+
+    * ``≥ 2 tokens of [a-zA-Z]{3,}``: correctly rejects variable names, but
+      strips single-word headings such as "Introduction" and "Conclusion"
+      because they contain only one matching token.
+
+    * Vowel-gated tokens (≥ 3 letters containing ≥ 1 vowel): ``Res``,
+      ``sin``, ``lim``, ``det`` all contain vowels and would pass — same
+      false positives as the ``{2,}`` approach.
+
+    With ``{5,}``:
+    * Math tokens ``d3q``, ``D0D1``, ``dq0``, ``Dk``, ``Res``, ``lim`` →
+      correctly filtered.
+    * Section headings ``Introduction``, ``Conclusion``, ``Results``,
+      ``Cauchy`` → correctly kept.
+    * Prose lines → kept (always contain at least one 5+ letter word).
+
+    The only theoretical false negative is a line whose every word is 1–4
+    characters long (e.g. "We do it.").  Such lines are rare as standalone
+    lines in scientific prose and, even if removed, do not materially affect
+    word count or lexical richness scores.
+
+    ## Scope of application
+
+    This function should be applied to *main_text* only (after bibliography
+    splitting) to produce a *clean_main_text* used for word count and
+    MATTR/MTLD computation.  The unstripped text is left intact for burstiness
+    analysis (spaCy already filters to alphabetic tokens internally), pattern
+    matching (searches for English phrases), figure/table cross-reference
+    detection, and LLM submission where the prose context surrounding equations
+    is preserved even after stripping the equation fragments themselves.
+    """
+    kept = []
+    for line in text.splitlines():
+        if not line.strip() or _ENGLISH_WORD.search(line):
+            kept.append(line)
+    return "\n".join(kept)
 
 
 def _word_count(main_text: str) -> int:
@@ -298,7 +373,11 @@ def _count_bibliography(biblio_text: str) -> tuple[int, list[str]]:
     # Heuristic: count non-blank lines after the heading as rough entry count
     lines = [ln.strip() for ln in biblio_text.splitlines() if ln.strip()]
     # Skip the heading line itself
-    entry_lines = [ln for ln in lines[1:] if ln and not ln.lower().startswith(("ref", "biblio", "works"))]
+    entry_lines = [
+        ln
+        for ln in lines[1:]
+        if ln and not ln.lower().startswith(("ref", "biblio", "works"))
+    ]
     return len(entry_lines), []
 
 
@@ -365,12 +444,17 @@ def _compute_mattr_mtld(main_text: str) -> tuple[float | None, float | None]:
 
         lex = LexicalRichness(main_text)
         if lex.words < 50:
+            print(
+                f"_compute_matr_mtld: too few words to compute MATTR and MTLD statistics ({lex.words} words detected)"
+            )
             return None, None
         mattr = float(lex.mattr(window_size=50))
         mtld = float(lex.mtld(threshold=0.72))
         return mattr, mtld
     except Exception as exc:
-        current_app.logger.warning(f"language_analysis: MATTR/MTLD computation failed: {exc}")
+        current_app.logger.warning(
+            f"language_analysis: MATTR/MTLD computation failed: {exc}"
+        )
         return None, None
 
 
@@ -387,7 +471,9 @@ def _compute_burstiness(text: str) -> tuple[dict, float | None]:
     # spaCy processes the text; we only need token lemmas and positions.
     # Restrict to alphabetic tokens to avoid punctuation noise.
     doc = nlp(text)
-    token_lemmas = [(i, token.lemma_.lower()) for i, token in enumerate(doc) if token.is_alpha]
+    token_lemmas = [
+        (i, token.lemma_.lower()) for i, token in enumerate(doc) if token.is_alpha
+    ]
 
     group_results: dict[str, float | None] = {}
     eligible_values: list[float] = []
@@ -446,7 +532,9 @@ def _count_patterns(text: str) -> dict:
     }
 
 
-def _classify_metric(value: float | None, note_threshold: float, strong_threshold: float) -> str:
+def _classify_metric(
+    value: float | None, note_threshold: float, strong_threshold: float
+) -> str:
     """Return 'ok', 'note', or 'strong' classification for a metric value."""
     if value is None:
         return "unknown"
@@ -479,6 +567,34 @@ def _ai_concern_flag(mattr_flag: str, mtld_flag: str, burst_flag: str) -> str:
 # LLM helpers.
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Criterion type annotations for the LLM checklist.
+#
+# 3rd class criteria mix two types that the LLM must treat differently for
+# submissions that exceed that band:
+#
+#   NEGATIVE criteria describe deficiencies.  A higher-band submission does NOT
+#   exhibit these deficiencies, so the correct assessment is "Not evident".
+#
+#   POSITIVE FLOOR criteria describe minimum positive requirements.  A
+#   higher-band submission clearly meets and exceeds these floors, so the
+#   correct assessment is "Strong evidence".
+#
+# All criteria for 2.2 and above are achievement-level descriptors and are not
+# tagged — they should be assessed normally against the evidence in the text.
+# ---------------------------------------------------------------------------
+
+_NEGATIVE_CRITERIA: frozenset = frozenset([
+    "Scientific work of limited quality",
+    "Demonstrates some relevant knowledge and understanding, with limitations",
+    "Limited evidence for technical and practical skills",
+])
+
+_POSITIVE_FLOOR_CRITERIA: frozenset = frozenset([
+    "At least some attempt to explain and interpret the results of the project",
+    "Report shows evidence of at least some editing and proof-reading",
+])
+
 _TRUNCATION_MARKER = "\n\n[... middle section omitted due to length ...]\n\n"
 _MAX_WORDS_BEFORE_TRUNCATION = 12000
 _TRUNCATION_HEAD_WORDS = 6000
@@ -503,12 +619,30 @@ def _truncate_text(text: str) -> tuple[str, bool]:
 
 
 def _build_system_prompt(truncated: bool) -> str:
-    """Construct the LLM system prompt including the rubric."""
+    """Construct the LLM system prompt including the rubric and explicit criteria checklist."""
+    # Rubric narrative section (used for context and assessment rules)
     band_sections = []
     for band in GRADE_BANDS:
         criteria_list = "\n".join(f"  - {c}" for c in band["criteria"])
         band_sections.append(f"### {band['band']}\n{criteria_list}")
     rubric_text = "\n\n".join(band_sections)
+
+    # Explicit numbered checklist — enumerate every criterion so the LLM cannot
+    # accidentally omit or paraphrase any of them.  The criterion text here must
+    # be reproduced verbatim in the "criterion" field of each response entry.
+    checklist_sections = []
+    for band_idx, band in enumerate(GRADE_BANDS, start=1):
+        lines = [f"Band {band_idx} — {band['band']}:"]
+        for crit_idx, criterion in enumerate(band["criteria"], start=1):
+            if criterion in _NEGATIVE_CRITERIA:
+                tag = "  [NEGATIVE — 'Not evident' for submissions above this band]"
+            elif criterion in _POSITIVE_FLOOR_CRITERIA:
+                tag = "  [POSITIVE FLOOR — 'Strong evidence' for submissions above this band]"
+            else:
+                tag = ""
+            lines.append(f"  {band_idx}.{crit_idx}  {criterion}{tag}")
+        checklist_sections.append("\n".join(lines))
+    criteria_checklist = "\n\n".join(checklist_sections)
 
     truncation_note = (
         "\n\nNOTE: The document text provided may have been truncated. "
@@ -519,25 +653,70 @@ def _build_system_prompt(truncated: bool) -> str:
         else ""
     )
 
-    schema_description = """
-Your response MUST be valid JSON conforming exactly to this schema:
-{
-  "classification": "<band name, e.g. '2.1 class'>",
-  "overall_reasoning": "<one paragraph explaining the recommended band>",
-  "criteria": [
-    {
-      "criterion": "<criterion text>",
-      "assessment": "<Strong evidence | Partial evidence | Not evident>",
-      "commentary": "<one or two sentences with specific textual evidence>",
-      "confidence": "<high | medium | low>"
-    }
-  ],
-  "caveats": "<any limitations, uncertainties, or criteria that could not be assessed from text alone>"
-}
+    schema_description = f"""
+Your response must be a JSON object with the following fields:
 
-Assess ALL criteria listed in the rubric, grouped by band, and include a separate entry for each.
+- "report_summary": 1-2 paragraphs describing what the report is about, what the student
+  did, and the overall approach taken. This is a content summary, not a marking judgement.
+
+- "classification": the recommended grade band (one of the exact band names from the rubric).
+
+- "overall_reasoning": one paragraph explaining why you recommend that band.
+
+- "bands": an array with exactly one entry per grade band, in order from lowest to highest.
+  Each entry must have:
+    - "band": the band name, copied exactly from the rubric
+    - "band_assessment": one of:
+        "Criteria clearly demonstrated"   — report substantially satisfies all criteria for this band
+        "Criteria mostly demonstrated"    — most criteria met, minor gaps
+        "Some criteria demonstrated"      — meaningful evidence for some criteria but threshold not reached
+        "No evidence"                     — report does not meet this band's criteria
+    - "criteria": an object with exactly one key per criterion for that band.
+      Each key is the short numeric code from the checklist below (e.g. "1.1", "2.3").
+      Each value is an object with:
+        - "assessment": one of "Strong evidence", "Partial evidence", or "Not evident"
+        - "commentary": one or two sentences with specific textual evidence from the report
+        - "confidence": one of "high", "medium", or "low"
+      Every code in the checklist MUST appear as a key. Do not add extra keys.
+
+- "caveats": any limitations, uncertainties, or criteria that could not be assessed from
+  text alone (e.g. typesetting quality, visual presentation).
+
+## Criteria checklist — use the numeric code (e.g. "1.1") as the key for each criterion
+
+{criteria_checklist}
+
 Flag criteria that relate to visual presentation or typesetting with low confidence and a note
 that these cannot be fully assessed from extracted text alone.
+"""
+
+    cross_band_guidance = """
+## Cross-band assessment guidance
+
+Rubric criteria fall into two types:
+
+1. **Negative/limitation criteria** describe deficiencies (e.g. "Scientific work of \
+limited quality", "Limited evidence for technical and practical skills"). For a \
+submission that exceeds that band, the correct assessment is "Not evident" — the \
+deficiency is simply absent.
+
+2. **Positive minimum criteria** describe a floor requirement (e.g. "At least some \
+attempt to explain and interpret the results", "Some discussion of future directions"). \
+A submission at a higher band clearly meets and exceeds these floors. The correct \
+assessment is "Strong evidence" — not "Not evident".
+
+For bands BELOW your recommended classification:
+- Negative/limitation criteria → "Not evident"
+- Positive minimum criteria → "Strong evidence"
+
+For your recommended band: assess each criterion normally on the evidence in the text.
+
+For bands ABOVE your recommended classification: use "Partial evidence" or "Not evident" \
+with commentary explaining specifically what evidence is missing or insufficient.
+
+Your assessments must be self-consistent. If you recommend "2.1 class", marking \
+"At least some attempt to explain and interpret the results" as "Not evident" is \
+contradictory — a 2.1 submission clearly demonstrates this.
 """
 
     return f"""You are an expert academic marker assisting with assessment of undergraduate and postgraduate project reports. Your task is to evaluate the submitted report text against the rubric below and recommend a grade band.
@@ -551,7 +730,7 @@ that these cannot be fully assessed from extracted text alone.
 Each higher grade band subsumes all criteria of lower bands. A submission cannot be awarded a higher band unless it substantially satisfies the criteria of all lower bands. Assess against the highest band whose full set of criteria, including those of all lower bands, are mostly satisfied.
 
 Where you are uncertain, or where the text does not provide enough evidence, say so explicitly. Quote specific passages from the text to support your assessment — this makes your reasoning auditable by a human marker. Flag criteria where you consider yourself less able to assess reliably from text alone.
-
+{cross_band_guidance}
 {schema_description}{truncation_note}"""
 
 
@@ -559,7 +738,118 @@ def _build_user_prompt(document_text: str) -> str:
     return f"Please assess the following report text:\n\n---\n\n{document_text}\n\n---"
 
 
-_REQUIRED_JSON_KEYS = {"classification", "overall_reasoning", "criteria", "caveats"}
+_REQUIRED_JSON_KEYS = {
+    "report_summary",
+    "classification",
+    "overall_reasoning",
+    "bands",
+    "caveats",
+}
+
+def _make_band_schema(band_idx: int, criteria_list: list) -> dict:
+    """
+    Return the JSON Schema for a single band entry within the top-level 'bands' object.
+
+    *band_idx* is the 1-based index of the band (used to generate criterion codes).
+    *criteria_list* is the exhaustive list of criterion strings for this band.
+
+    'criteria' is modelled as a fixed-key JSON Schema object (not an array) where each
+    property key is a short numeric code ("1.1", "1.2", …) rather than the full criterion
+    text.  Using short codes avoids a SIGSEGV in the llama.cpp GBNF grammar generator,
+    which crashes when property name literals in the generated grammar exceed a certain
+    length or contain special characters (parentheses, punctuation, etc.).
+
+    Short alphanumeric keys ("1.1", "2.3", …) are entirely safe for grammar generation.
+    The mapping from code to full criterion text is stored separately in criterion_map
+    (built in submit_to_llm) and injected into the template context for display.
+
+    This approach still enforces at the grammar level that:
+      - every criterion is present exactly once (object keys are unique and required),
+      - no criterion can be invented (only the declared property names are valid).
+    """
+    per_criterion_schema = {
+        "type": "object",
+        "properties": {
+            "assessment": {
+                "type": "string",
+                "enum": ["Strong evidence", "Partial evidence", "Not evident"],
+            },
+            "commentary": {"type": "string"},
+            "confidence": {
+                "type": "string",
+                "enum": ["high", "medium", "low"],
+            },
+        },
+        "required": ["assessment", "commentary", "confidence"],
+    }
+    codes = [f"{band_idx}.{crit_idx}" for crit_idx in range(1, len(criteria_list) + 1)]
+    return {
+        "type": "object",
+        "properties": {
+            "band_assessment": {
+                "type": "string",
+                "enum": [
+                    "Criteria clearly demonstrated",
+                    "Criteria mostly demonstrated",
+                    "Some criteria demonstrated",
+                    "No evidence",
+                ],
+            },
+            "criteria": {
+                "type": "object",
+                "properties": {code: per_criterion_schema for code in codes},
+                "required": codes,
+            },
+        },
+        "required": ["band_assessment", "criteria"],
+    }
+
+
+# JSON Schema passed to the Ollama structured-output API (format= parameter).
+# This enforces the response structure at the token-sampling level, independently
+# of the natural-language instructions in the system prompt.
+#
+# Top-level structure:
+#   report_summary    — 1-2 paragraph narrative description of the report content
+#   classification    — recommended grade band (enum-constrained to GRADE_BANDS)
+#   overall_reasoning — one paragraph justifying the recommended band
+#   bands             — fixed-key object, one property per GRADE_BANDS entry, each
+#                       containing a band_assessment summary and a 'criteria' object.
+#                       'bands' as an object enforces that all four band names are present
+#                       exactly once (object keys are unique and required).
+#                       'criteria' is also modelled as a fixed-key object keyed by short
+#                       numeric codes ("1.1", "1.2", …) rather than the full criterion
+#                       text.  Long criterion strings as grammar property-name literals
+#                       trigger a SIGSEGV in the llama.cpp GBNF generator; short codes
+#                       are safe.  The code→text mapping is stored in criterion_map.
+#   caveats           — free-text limitations or caveats
+_LLM_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "report_summary": {"type": "string"},
+        "classification": {
+            "type": "string",
+            "enum": [band["band"] for band in GRADE_BANDS],
+        },
+        "overall_reasoning": {"type": "string"},
+        "bands": {
+            "type": "object",
+            "properties": {
+                band["band"]: _make_band_schema(band_idx, band["criteria"])
+                for band_idx, band in enumerate(GRADE_BANDS, start=1)
+            },
+            "required": [band["band"] for band in GRADE_BANDS],
+        },
+        "caveats": {"type": "string"},
+    },
+    "required": [
+        "report_summary",
+        "classification",
+        "overall_reasoning",
+        "bands",
+        "caveats",
+    ],
+}
 
 
 def _validate_llm_response(data: dict) -> bool:
@@ -581,19 +871,29 @@ def register_language_analysis_tasks(celery):
         extract plain text from it.  The extracted text is stored temporarily
         in the language_analysis JSON blob under the key '_extracted_text'.
         """
-        self.update_state(state=states.STARTED, meta={"msg": "Downloading report asset"})
+        self.update_state(
+            state=states.STARTED, meta={"msg": "Downloading report asset"}
+        )
 
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
         except SQLAlchemyError as exc:
-            current_app.logger.exception("SQLAlchemyError in download_and_extract", exc_info=exc)
+            current_app.logger.exception(
+                "SQLAlchemyError in download_and_extract", exc_info=exc
+            )
             raise self.retry()
 
         if record is None:
-            raise Exception(f"language_analysis.download_and_extract: SubmissionRecord #{record_id} not found")
+            raise Exception(
+                f"language_analysis.download_and_extract: SubmissionRecord #{record_id} not found"
+            )
 
         if record.report is None:
-            raise Exception(f"language_analysis.download_and_extract: SubmissionRecord #{record_id} has no report")
+            raise Exception(
+                f"language_analysis.download_and_extract: SubmissionRecord #{record_id} has no report"
+            )
 
         asset = record.report
         storage = current_app.config["OBJECT_STORAGE_ASSETS"]
@@ -604,20 +904,27 @@ def register_language_analysis_tasks(celery):
         )
 
         if not adapter.exists():
-            raise Exception(f"language_analysis.download_and_extract: report asset not found in object store for record #{record_id}")
+            raise Exception(
+                f"language_analysis.download_and_extract: report asset not found in object store for record #{record_id}"
+            )
 
         raw_text = ""
         page_count = 0
         errors = []
 
         mimetype = (asset.mimetype or "").lower()
+        _t_extraction = time.monotonic()
 
         try:
             with adapter.download_to_scratch() as scratch:
                 path = str(scratch.path)
                 if "pdf" in mimetype or path.lower().endswith(".pdf"):
                     raw_text, page_count = _extract_pdf_text(path)
-                elif "word" in mimetype or "officedocument" in mimetype or path.lower().endswith((".docx", ".doc")):
+                elif (
+                    "word" in mimetype
+                    or "officedocument" in mimetype
+                    or path.lower().endswith((".docx", ".doc"))
+                ):
                     raw_text, page_count = _extract_docx_text(path)
                 else:
                     # Fall back to PDF extraction and log a warning
@@ -627,23 +934,34 @@ def register_language_analysis_tasks(celery):
                     try:
                         raw_text, page_count = _extract_pdf_text(path)
                     except Exception as exc2:
-                        errors.append({"stage": "extract", "type": type(exc2).__name__, "message": str(exc2)})
+                        errors.append(
+                            {
+                                "stage": "extract",
+                                "type": type(exc2).__name__,
+                                "message": str(exc2),
+                            }
+                        )
         except Exception as exc:
-            errors.append({"stage": "download", "type": type(exc).__name__, "message": str(exc)})
+            errors.append(
+                {"stage": "download", "type": type(exc).__name__, "message": str(exc)}
+            )
 
         # Persist extracted text in the JSON blob
         data = record.language_analysis_data
-        data["_extracted_text"] = raw_text
+        data["_extracted_text"] = unicodedata.normalize("NFKC", raw_text)
         data["_page_count"] = page_count
         if errors:
             data.setdefault("errors", []).extend(errors)
+        data.setdefault("timings", {})["extraction_s"] = round(time.monotonic() - _t_extraction, 1)
         record.set_language_analysis_data(data)
 
         try:
             db.session.commit()
         except SQLAlchemyError as exc:
             db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError committing extracted text", exc_info=exc)
+            current_app.logger.exception(
+                "SQLAlchemyError committing extracted text", exc_info=exc
+            )
             raise self.retry()
 
     # -----------------------------------------------------------------------
@@ -655,16 +973,24 @@ def register_language_analysis_tasks(celery):
         the extracted text stored in the JSON blob.  Errors in individual
         computation steps are caught and recorded; the task does not abort.
         """
-        self.update_state(state=states.STARTED, meta={"msg": "Computing language statistics"})
+        self.update_state(
+            state=states.STARTED, meta={"msg": "Computing language statistics"}
+        )
 
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
         except SQLAlchemyError as exc:
-            current_app.logger.exception("SQLAlchemyError in compute_statistics", exc_info=exc)
+            current_app.logger.exception(
+                "SQLAlchemyError in compute_statistics", exc_info=exc
+            )
             raise self.retry()
 
         if record is None:
-            raise Exception(f"language_analysis.compute_statistics: SubmissionRecord #{record_id} not found")
+            raise Exception(
+                f"language_analysis.compute_statistics: SubmissionRecord #{record_id} not found"
+            )
 
         data = record.language_analysis_data
         raw_text: str = data.get("_extracted_text", "")
@@ -676,13 +1002,23 @@ def register_language_analysis_tasks(celery):
 
         # --- split into main text and bibliography ---------------------------
         main_text, biblio_text = _split_text(raw_text)
+        # Strip math-extraction noise for metrics sensitive to vocabulary content.
+        # See _strip_math_lines() for full rationale and threshold choice.
+        clean_main_text = _strip_math_lines(main_text)
+
+        # print(f"CLEANED MAIN TEXT = {clean_main_text}")
+        # print(f"BIBLIOGRAPHY = {biblio_text}")
+
+        _t_counting = time.monotonic()
 
         # --- word count -------------------------------------------------------
         try:
-            wc = _word_count(main_text)
+            wc = _word_count(clean_main_text)
             metrics["word_count"] = wc
         except Exception as exc:
-            errors.append({"stage": "word_count", "type": type(exc).__name__, "message": str(exc)})
+            errors.append(
+                {"stage": "word_count", "type": type(exc).__name__, "message": str(exc)}
+            )
             metrics["word_count"] = None
 
         # --- bibliography count and citation check ----------------------------
@@ -693,7 +1029,9 @@ def register_language_analysis_tasks(celery):
             uncited = _check_uncited(main_text, ref_keys)
             references_info["uncited"] = uncited
         except Exception as exc:
-            errors.append({"stage": "references", "type": type(exc).__name__, "message": str(exc)})
+            errors.append(
+                {"stage": "references", "type": type(exc).__name__, "message": str(exc)}
+            )
             metrics["reference_count"] = None
             references_info["uncited"] = []
 
@@ -701,26 +1039,40 @@ def register_language_analysis_tasks(celery):
         try:
             uncaptioned_figs, uncaptioned_tabs = _check_figure_table_refs(raw_text)
             # Count distinct labels found
-            fig_labels = set(re.findall(r"\b(?:figure|fig\.)\s+\d+", raw_text, re.IGNORECASE))
+            fig_labels = set(
+                re.findall(r"\b(?:figure|fig\.)\s+\d+", raw_text, re.IGNORECASE)
+            )
             tab_labels = set(re.findall(r"\btable\s+\d+", raw_text, re.IGNORECASE))
             metrics["figure_count"] = len(fig_labels)
             metrics["table_count"] = len(tab_labels)
             references_info["uncaptioned_figures"] = uncaptioned_figs
             references_info["uncaptioned_tables"] = uncaptioned_tabs
         except Exception as exc:
-            errors.append({"stage": "figure_table_refs", "type": type(exc).__name__, "message": str(exc)})
+            errors.append(
+                {
+                    "stage": "figure_table_refs",
+                    "type": type(exc).__name__,
+                    "message": str(exc),
+                }
+            )
             metrics["figure_count"] = None
             metrics["table_count"] = None
             references_info["uncaptioned_figures"] = []
             references_info["uncaptioned_tables"] = []
 
+        # counting_s covers: word count, bibliography, figure/table refs, pattern
+        # matching — all fast regex/counting operations with no NLP model load.
+        _t_ai = time.monotonic()
+
         # --- MATTR and MTLD --------------------------------------------------
         try:
-            mattr, mtld = _compute_mattr_mtld(main_text)
+            mattr, mtld = _compute_mattr_mtld(clean_main_text)
             metrics["mattr"] = mattr
             metrics["mtld"] = mtld
         except Exception as exc:
-            errors.append({"stage": "mattr_mtld", "type": type(exc).__name__, "message": str(exc)})
+            errors.append(
+                {"stage": "mattr_mtld", "type": type(exc).__name__, "message": str(exc)}
+            )
             metrics["mattr"] = None
             metrics["mtld"] = None
 
@@ -730,7 +1082,9 @@ def register_language_analysis_tasks(celery):
             metrics["burstiness"] = burstiness_aggregate
             metrics["burstiness_by_group"] = burstiness_groups
         except Exception as exc:
-            errors.append({"stage": "burstiness", "type": type(exc).__name__, "message": str(exc)})
+            errors.append(
+                {"stage": "burstiness", "type": type(exc).__name__, "message": str(exc)}
+            )
             metrics["burstiness"] = None
             metrics["burstiness_by_group"] = {}
 
@@ -738,12 +1092,22 @@ def register_language_analysis_tasks(celery):
         try:
             patterns_info = _count_patterns(raw_text)
         except Exception as exc:
-            errors.append({"stage": "patterns", "type": type(exc).__name__, "message": str(exc)})
+            errors.append(
+                {"stage": "patterns", "type": type(exc).__name__, "message": str(exc)}
+            )
 
         # --- classification flags --------------------------------------------
-        mattr_flag = _classify_metric(metrics.get("mattr"), MATTR_NOTE_THRESHOLD, MATTR_STRONG_THRESHOLD)
-        mtld_flag = _classify_metric(metrics.get("mtld"), MTLD_NOTE_THRESHOLD, MTLD_STRONG_THRESHOLD)
-        burst_flag = _classify_metric(metrics.get("burstiness"), BURSTINESS_NOTE_THRESHOLD, BURSTINESS_STRONG_THRESHOLD)
+        mattr_flag = _classify_metric(
+            metrics.get("mattr"), MATTR_NOTE_THRESHOLD, MATTR_STRONG_THRESHOLD
+        )
+        mtld_flag = _classify_metric(
+            metrics.get("mtld"), MTLD_NOTE_THRESHOLD, MTLD_STRONG_THRESHOLD
+        )
+        burst_flag = _classify_metric(
+            metrics.get("burstiness"),
+            BURSTINESS_NOTE_THRESHOLD,
+            BURSTINESS_STRONG_THRESHOLD,
+        )
         ai_concern = _ai_concern_flag(mattr_flag, mtld_flag, burst_flag)
 
         flags = {
@@ -754,6 +1118,10 @@ def register_language_analysis_tasks(celery):
         }
 
         # --- persist ---------------------------------------------------------
+        timings = data.get("timings", {})
+        timings["counting_s"] = round(_t_ai - _t_counting, 1)
+        timings["ai_metrics_s"] = round(time.monotonic() - _t_ai, 1)
+        data["timings"] = timings
         data["metrics"] = metrics
         data["flags"] = flags
         data["references"] = references_info
@@ -765,7 +1133,9 @@ def register_language_analysis_tasks(celery):
             db.session.commit()
         except SQLAlchemyError as exc:
             db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError committing statistics", exc_info=exc)
+            current_app.logger.exception(
+                "SQLAlchemyError committing statistics", exc_info=exc
+            )
             raise self.retry()
 
     # -----------------------------------------------------------------------
@@ -783,13 +1153,19 @@ def register_language_analysis_tasks(celery):
         self.update_state(state=states.STARTED, meta={"msg": "Submitting to LLM"})
 
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
         except SQLAlchemyError as exc:
-            current_app.logger.exception("SQLAlchemyError in submit_to_llm", exc_info=exc)
+            current_app.logger.exception(
+                "SQLAlchemyError in submit_to_llm", exc_info=exc
+            )
             raise self.retry()
 
         if record is None:
-            raise Exception(f"language_analysis.submit_to_llm: SubmissionRecord #{record_id} not found")
+            raise Exception(
+                f"language_analysis.submit_to_llm: SubmissionRecord #{record_id} not found"
+            )
 
         # Do not re-attempt if a human administrator has not yet cleared the failure flag
         if record.llm_analysis_failed:
@@ -801,7 +1177,14 @@ def register_language_analysis_tasks(celery):
         data = record.language_analysis_data
         raw_text: str = data.get("_extracted_text", "")
 
-        document_text, was_truncated = _truncate_text(raw_text)
+        # Strip math-extraction noise before submission: garbled equation
+        # fragments convey nothing useful to the LLM and waste context tokens.
+        # The prose surrounding equations — which carries the scientific
+        # reasoning the LLM needs to assess — is preserved intact.
+        main_text, _ = _split_text(raw_text)
+        clean_text = _strip_math_lines(main_text)
+
+        document_text, was_truncated = _truncate_text(clean_text)
         system_prompt = _build_system_prompt(was_truncated)
         user_prompt = _build_user_prompt(document_text)
 
@@ -815,6 +1198,7 @@ def register_language_analysis_tasks(celery):
         import ollama
 
         client = ollama.Client(host=base_url)
+        _t_llm = time.monotonic()
 
         for attempt in range(_LLM_RETRY_ATTEMPTS):
             accumulated = ""
@@ -823,7 +1207,7 @@ def register_language_analysis_tasks(celery):
                     model=model,
                     prompt=user_prompt,
                     system=system_prompt,
-                    format="json",
+                    format=_LLM_RESPONSE_SCHEMA,
                     stream=True,
                 )
                 for chunk in stream:
@@ -837,7 +1221,9 @@ def register_language_analysis_tasks(celery):
                 # Attempt to parse and validate
                 parsed = json.loads(accumulated)
                 if not _validate_llm_response(parsed):
-                    raise ValueError(f"LLM response missing required keys; got: {list(parsed.keys())}")
+                    raise ValueError(
+                        f"LLM response missing required keys; got: {list(parsed.keys())}"
+                    )
                 parsed_result = parsed
                 last_exc = None
                 break  # success
@@ -872,24 +1258,36 @@ def register_language_analysis_tasks(celery):
                     time.sleep(_LLM_RETRY_DELAY)
 
         # Handle outcome
+        data.setdefault("timings", {})["llm_s"] = round(time.monotonic() - _t_llm, 1)
         errors: list = data.get("errors", [])
 
         if parsed_result is not None:
             # Success: store result and remove the bulky intermediate text
             data["llm_result"] = parsed_result
+            # Build a code→full-text mapping so the template can display criterion text.
+            # Codes match those used as JSON Schema property keys in _make_band_schema.
+            data["criterion_map"] = {
+                f"{band_idx}.{crit_idx}": criterion
+                for band_idx, band in enumerate(GRADE_BANDS, start=1)
+                for crit_idx, criterion in enumerate(band["criteria"], start=1)
+            }
             data.pop("_extracted_text", None)
         else:
             # Failure after all retries
             failure_reason = str(last_exc) if last_exc else "Unknown error"
             record.llm_analysis_failed = True
             record.llm_failure_reason = failure_reason
-            data["llm_raw_response"] = accumulated  # preserve raw response for admin inspection
+            data["llm_raw_response"] = (
+                accumulated  # preserve raw response for admin inspection
+            )
             data.pop("_extracted_text", None)
-            errors.append({
-                "stage": "llm_submission",
-                "type": type(last_exc).__name__ if last_exc else "Unknown",
-                "message": failure_reason,
-            })
+            errors.append(
+                {
+                    "stage": "llm_submission",
+                    "type": type(last_exc).__name__ if last_exc else "Unknown",
+                    "message": failure_reason,
+                }
+            )
             current_app.logger.error(
                 f"language_analysis.submit_to_llm: LLM submission failed for record #{record_id}: {failure_reason}"
             )
@@ -901,7 +1299,9 @@ def register_language_analysis_tasks(celery):
             db.session.commit()
         except SQLAlchemyError as exc:
             db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError committing LLM result", exc_info=exc)
+            current_app.logger.exception(
+                "SQLAlchemyError committing LLM result", exc_info=exc
+            )
             raise self.retry()
 
     # -----------------------------------------------------------------------
@@ -912,13 +1312,19 @@ def register_language_analysis_tasks(celery):
         Stage 4 (default queue): mark language analysis as complete.
         """
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
         except SQLAlchemyError as exc:
-            current_app.logger.exception("SQLAlchemyError in language_analysis.finalize", exc_info=exc)
+            current_app.logger.exception(
+                "SQLAlchemyError in language_analysis.finalize", exc_info=exc
+            )
             raise self.retry()
 
         if record is None:
-            raise Exception(f"language_analysis.finalize: SubmissionRecord #{record_id} not found")
+            raise Exception(
+                f"language_analysis.finalize: SubmissionRecord #{record_id} not found"
+            )
 
         record.language_analysis_complete = True
 
@@ -926,12 +1332,16 @@ def register_language_analysis_tasks(celery):
             log_db_commit(
                 "Language analysis workflow completed",
                 student=record.owner.student if record.owner else None,
-                project_classes=record.owner.config.project_class if record.owner and record.owner.config else None,
+                project_classes=record.owner.config.project_class
+                if record.owner and record.owner.config
+                else None,
                 endpoint=self.name,
             )
         except SQLAlchemyError as exc:
             db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError in language_analysis.finalize commit", exc_info=exc)
+            current_app.logger.exception(
+                "SQLAlchemyError in language_analysis.finalize commit", exc_info=exc
+            )
             raise self.retry()
 
     # -----------------------------------------------------------------------
@@ -947,13 +1357,19 @@ def register_language_analysis_tasks(celery):
         inference and JSON parsing failures only.
         """
         try:
-            record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
         except SQLAlchemyError as exc:
-            current_app.logger.exception("SQLAlchemyError in language_analysis.error_handler", exc_info=exc)
+            current_app.logger.exception(
+                "SQLAlchemyError in language_analysis.error_handler", exc_info=exc
+            )
             return
 
         if record is None:
-            current_app.logger.error(f"language_analysis.error_handler: SubmissionRecord #{record_id} not found")
+            current_app.logger.error(
+                f"language_analysis.error_handler: SubmissionRecord #{record_id} not found"
+            )
             return
 
         # Reset progress flags so the analysis can be re-triggered
@@ -963,15 +1379,20 @@ def register_language_analysis_tasks(celery):
         # Record the workflow-level failure in the JSON blob
         data = record.language_analysis_data
         data.pop("_extracted_text", None)  # clean up large intermediate data
-        data.setdefault("errors", []).append({
-            "stage": "workflow",
-            "type": "UnhandledError",
-            "message": "An unhandled exception occurred in the language analysis workflow. Check Celery logs.",
-        })
+        data.setdefault("errors", []).append(
+            {
+                "stage": "workflow",
+                "type": "UnhandledError",
+                "message": "An unhandled exception occurred in the language analysis workflow. Check Celery logs.",
+            }
+        )
         record.set_language_analysis_data(data)
 
         try:
             db.session.commit()
         except SQLAlchemyError as exc:
             db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError in language_analysis.error_handler commit", exc_info=exc)
+            current_app.logger.exception(
+                "SQLAlchemyError in language_analysis.error_handler commit",
+                exc_info=exc,
+            )

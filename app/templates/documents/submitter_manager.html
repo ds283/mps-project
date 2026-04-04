@@ -468,7 +468,9 @@
                         {% set patterns = la.get('patterns', {}) %}
                         {% set refs = la.get('references', {}) %}
                         {% set llm_result = la.get('llm_result', {}) %}
+                        {% set criterion_map = la.get('criterion_map', {}) %}
                         {% set errors = la.get('errors', []) %}
+                        {% set timings = la.get('timings', {}) %}
 
                         {# --- Metrics table --- #}
                         <table class="table table-sm table-borderless mb-3" style="max-width: 500px;">
@@ -536,6 +538,24 @@
                             </tbody>
                         </table>
 
+                        {# --- Pipeline timings --- #}
+                        {% if timings %}
+                            <div class="mb-3 d-flex flex-row flex-wrap gap-3">
+                                {% if timings.get('extraction_s') is not none %}
+                                    <span class="small text-muted">Extraction: <strong>{{ timings['extraction_s'] }}s</strong></span>
+                                {% endif %}
+                                {% if timings.get('counting_s') is not none %}
+                                    <span class="small text-muted">Statistics: <strong>{{ timings['counting_s'] }}s</strong></span>
+                                {% endif %}
+                                {% if timings.get('ai_metrics_s') is not none %}
+                                    <span class="small text-muted">AI metrics: <strong>{{ timings['ai_metrics_s'] }}s</strong></span>
+                                {% endif %}
+                                {% if timings.get('llm_s') is not none %}
+                                    <span class="small text-muted">LLM: <strong>{{ timings['llm_s'] }}s</strong></span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
                         {# --- AI concern flag --- #}
                         {% set concern = flags.get('ai_concern', 'low') %}
                         <div class="mb-3">
@@ -588,8 +608,8 @@
                                 <div class="mb-1">
                                     <span class="badge bg-primary fs-6">{{ llm_result['classification'] }}</span>
                                 </div>
-                                {% if llm_result.get('overall_reasoning') %}
-                                    <div class="small text-muted">{{ llm_result['overall_reasoning'] }}</div>
+                                {% if llm_result.get('report_summary') %}
+                                    <div class="small text-muted">{{ llm_result['report_summary'] }}</div>
                                 {% endif %}
                                 <div class="mt-2">
                                     <button class="btn btn-sm btn-outline-secondary"
@@ -674,48 +694,90 @@
                     </div>
                     <div class="offcanvas-body">
                         {% if llm_result.get('classification') %}
+                            {# --- Grade band badge --- #}
                             <div class="mb-3">
                                 <div class="small text-muted fw-semibold">Recommended grade band</div>
                                 <span class="badge bg-primary fs-5 mt-1">{{ llm_result['classification'] }}</span>
                             </div>
+
+                            {# --- Report content summary --- #}
+                            {% if llm_result.get('report_summary') %}
+                                <div class="mb-3">
+                                    <div class="small text-muted fw-semibold">Report summary</div>
+                                    <p class="small mt-1">{{ llm_result['report_summary'] }}</p>
+                                </div>
+                            {% endif %}
+
+                            {# --- Marking rationale --- #}
                             {% if llm_result.get('overall_reasoning') %}
                                 <div class="mb-3">
                                     <div class="small text-muted fw-semibold">Overall reasoning</div>
                                     <p class="small mt-1">{{ llm_result['overall_reasoning'] }}</p>
                                 </div>
                             {% endif %}
-                            {% if llm_result.get('criteria') %}
+
+                            {# --- Per-band criteria, grouped --- #}
+                            {% if llm_result.get('bands') %}
                                 <div class="mb-3">
-                                    <div class="small text-muted fw-semibold mb-2">Per-criterion assessment</div>
-                                    {% for item in llm_result['criteria'] %}
-                                        <div class="mb-3 p-2 border rounded">
-                                            <div class="d-flex flex-row justify-content-between align-items-start gap-2 mb-1">
-                                                <div class="small fw-semibold">{{ item.get('criterion', '') }}</div>
-                                                {% set conf = item.get('confidence', 'low') %}
-                                                {% if conf == 'high' %}
-                                                    <span class="badge bg-success text-nowrap">Strong evidence</span>
-                                                {% elif conf == 'medium' %}
-                                                    <span class="badge bg-warning text-dark text-nowrap">Partial evidence</span>
+                                    <div class="small text-muted fw-semibold mb-2">Assessment by grade band</div>
+                                    {% set band_order = ['3rd class', '2.2 class', '2.1 class', '1st class'] %}
+                                    {% for band_name in band_order %}
+                                        {% set band_entry = llm_result['bands'].get(band_name, {}) %}
+                                        {% if band_entry %}
+                                        {% set band_assess = band_entry.get('band_assessment', '') %}
+                                        <div class="mb-4">
+                                            {# Band heading with overall band assessment badge #}
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <span class="fw-semibold">{{ band_name }}</span>
+                                                {% if band_assess == 'Criteria clearly demonstrated' %}
+                                                    <span class="badge bg-success">{{ band_assess }}</span>
+                                                {% elif band_assess == 'Criteria mostly demonstrated' %}
+                                                    <span class="badge bg-primary">{{ band_assess }}</span>
+                                                {% elif band_assess == 'Some criteria demonstrated' %}
+                                                    <span class="badge bg-warning text-dark">{{ band_assess }}</span>
                                                 {% else %}
-                                                    <span class="badge bg-danger text-nowrap">Not evident</span>
+                                                    <span class="badge bg-secondary">{{ band_assess }}</span>
                                                 {% endif %}
                                             </div>
-                                            {% if item.get('assessment') %}
-                                                <div class="small text-muted mb-1">{{ item['assessment'] }}</div>
-                                            {% endif %}
-                                            {% if item.get('commentary') %}
-                                                <div class="small">{{ item['commentary'] }}</div>
-                                            {% endif %}
+                                            {# Per-criterion entries for this band.
+                                               criteria is an object keyed by numeric codes ("1.1", "2.3", …).
+                                               criterion_map resolves codes to full criterion text for display. #}
+                                            {% for code, item in band_entry.get('criteria', {}).items() %}
+                                                <div class="mb-2 p-2 border rounded">
+                                                    <div class="d-flex flex-row justify-content-between align-items-start gap-2 mb-1">
+                                                        <div class="small fw-semibold">{{ criterion_map.get(code, code) }}</div>
+                                                        {% set assess = item.get('assessment', '') %}
+                                                        {% if assess == 'Strong evidence' %}
+                                                            <span class="badge bg-success text-nowrap">Strong evidence</span>
+                                                        {% elif assess == 'Partial evidence' %}
+                                                            <span class="badge bg-warning text-dark text-nowrap">Partial evidence</span>
+                                                        {% else %}
+                                                            <span class="badge bg-danger text-nowrap">Not evident</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if item.get('commentary') %}
+                                                        <div class="small">{{ item['commentary'] }}</div>
+                                                    {% endif %}
+                                                    {% set conf = item.get('confidence', 'high') %}
+                                                    {% if conf != 'high' %}
+                                                        <div class="small text-muted mt-1">Confidence: {{ conf }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
                                         </div>
-                                    {% endfor %}
+                                        {% endif %}{# band_entry #}
+                                    {% endfor %}{# band_name #}
                                 </div>
                             {% endif %}
+
+                            {# --- Caveats --- #}
                             {% if llm_result.get('caveats') %}
                                 <div class="mb-3">
                                     <div class="small text-muted fw-semibold">Caveats</div>
                                     <p class="small mt-1 fst-italic">{{ llm_result['caveats'] }}</p>
                                 </div>
                             {% endif %}
+
                         {% elif la.get('llm_raw_response') and admin_rights %}
                             <div class="mb-3">
                                 <div class="small text-muted fw-semibold mb-2">Raw LLM response (parse failed)</div>

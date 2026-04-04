@@ -33,13 +33,15 @@ from ..models import (
     User,
 )
 from ..models.emails import encode_email_payload
+from ..models import TaskRecord
 from ..shared.workflow_logging import log_db_commit
+from ..task_queue import progress_update
 from .shared.utils import report_info
 
 
 def register_push_feedback_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
-    def push_period(self, period_id, user_id, cc_convenor, test_email):
+    def push_period(self, period_id, user_id, cc_convenor, test_email, task_id=None):
         try:
             period: SubmissionPeriodRecord = (
                 db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
@@ -121,11 +123,23 @@ def register_push_feedback_tasks(celery):
             if marker_id is not None
         ]
 
-        tasks = group(
-            submitter_tasks + supervisor_tasks + marker_tasks
-        ) | notify_feedback_push.s(period_id, user_id)
+        tasks = (
+            group(submitter_tasks + supervisor_tasks + marker_tasks)
+            | notify_feedback_push.s(period_id, user_id, task_id)
+        ).on_error(push_feedback_error.si(task_id))
 
         return self.replace(tasks)
+
+    @celery.task()
+    def push_feedback_error(task_id):
+        if task_id is not None:
+            progress_update(
+                task_id,
+                TaskRecord.FAILURE,
+                100,
+                "Failed to send feedback reports",
+                autocommit=True,
+            )
 
     # default max attachment size to 50 Mb
     MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024
@@ -378,7 +392,7 @@ def register_push_feedback_tasks(celery):
         return {outcome_label: 1}
 
     @celery.task(bind=True, default_retry_delay=5)
-    def notify_feedback_push(self, result_data, period_id, user_id):
+    def notify_feedback_push(self, result_data, period_id, user_id, task_id=None):
         if user_id is None:
             return
 
@@ -448,3 +462,6 @@ def register_push_feedback_tasks(celery):
             "notify_feedback_push",
             user,
         )
+
+        if task_id is not None:
+            progress_update(task_id, TaskRecord.SUCCESS, 100, "Feedback reports sent", autocommit=True)

@@ -1863,13 +1863,15 @@ def push_feedback(id):
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     init = celery.tasks["app.tasks.user_launch.mark_user_task_started"]
-    final = celery.tasks["app.tasks.user_launch.mark_user_task_ended"]
     error = celery.tasks["app.tasks.user_launch.mark_user_task_failed"]
 
-    seq = chain(
-        init.si(task_id, tk_name),
-        email_task.si(id, current_user.id, True, None),
-        final.si(task_id, tk_name, current_user.id),
+    # push_period always calls self.replace(), so mark_user_task_ended would never be reached
+    # in the outer chain. push_period handles its own terminal state via notify_feedback_push
+    # and push_feedback_error. The outer .on_error() catches early failures in init or push_period
+    # before self.replace() is called.
+    seq = (
+        init.si(task_id, tk_name)
+        | email_task.si(id, current_user.id, True, None, task_id)
     ).on_error(error.si(task_id, tk_name, current_user.id))
     seq.apply_async(task_id=task_id)
 

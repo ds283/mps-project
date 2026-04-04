@@ -16,6 +16,7 @@ from waitress import serve
 
 from app import create_app
 from app.database import db
+from app.task_queue.background_task import reconcile_background_tasks
 from initdb import (
     cleanup_orphaned_live_marking_schemes,
     import_attendance_data,
@@ -108,6 +109,8 @@ with app.app_context():
 
     db.session.commit()
     migrate_submission_attachment_roles(app)
+
+    reconcile_background_tasks(app)
 
 
 if __name__ == "__main__":

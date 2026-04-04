@@ -1297,6 +1297,9 @@ class TaskRecord(db.Model, TaskWorkflowStatesMixin):
     # progress message
     message = db.Column(db.String(DEFAULT_STRING_LENGTH, collation="utf8_bin"))
 
+    # timestamp of last status update (set by progress_update(); used to detect stale tasks)
+    last_updated = db.Column(db.DateTime())
+
 
 class Notification(db.Model, NotificationTypesMixin):
     __tablename__ = "notifications"

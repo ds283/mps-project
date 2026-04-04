@@ -9,8 +9,10 @@
 # Adapted from: Flask design patterns, http://flask.pocoo.org/docs/0.12/patterns/celery/
 #
 
+from datetime import datetime
+
 from celery import Celery
-from celery.signals import worker_init
+from celery.signals import task_failure, task_revoked, worker_init
 
 
 @worker_init.connect
@@ -47,5 +49,46 @@ def make_celery(app):
                 return self.run(*args, **kwargs)
 
     celery.Task = ContextTask
+
+    @task_failure.connect
+    def on_task_failure(task_id, exception, traceback, einfo, sender=None, **kwargs):
+        """
+        Catch-all signal handler: if a Celery task fails and its task_id matches a TaskRecord
+        (i.e. it was launched directly with task_id=uuid), mark the TaskRecord as FAILURE.
+        Tasks inside self.replace() chains have auto-generated IDs and won't match here;
+        those must be handled by per-chain .on_error() callbacks.
+        """
+        with app.app_context():
+            from ..database import db
+            from ..models import TaskRecord
+            try:
+                task = db.session.query(TaskRecord).filter_by(id=task_id).first()
+                if task is not None and task.status in (TaskRecord.PENDING, TaskRecord.RUNNING):
+                    task.status = TaskRecord.FAILURE
+                    task.message = f"Unexpected failure: {str(exception)[:200]}"
+                    task.last_updated = datetime.now()
+                    db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                app.logger.exception("on_task_failure signal: database error", exc_info=e)
+
+    @task_revoked.connect
+    def on_task_revoked(request, terminated, signum, expired, sender=None, **kwargs):
+        """
+        If a Celery task is revoked and its task_id matches a TaskRecord, mark it TERMINATED.
+        """
+        with app.app_context():
+            from ..database import db
+            from ..models import TaskRecord
+            try:
+                task = db.session.query(TaskRecord).filter_by(id=request.id).first()
+                if task is not None and task.status in (TaskRecord.PENDING, TaskRecord.RUNNING):
+                    task.status = TaskRecord.TERMINATED
+                    task.message = "Task was revoked"
+                    task.last_updated = datetime.now()
+                    db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                app.logger.exception("on_task_revoked signal: database error", exc_info=e)
 
     return celery

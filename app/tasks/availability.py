@@ -140,7 +140,17 @@ def register_availability_tasks(celery):
                 | task_chain
             )
 
-        return self.replace(task_chain)
+        return self.replace(task_chain.on_error(availability_error.si(celery_id)))
+
+    @celery.task()
+    def availability_error(celery_id):
+        progress_update(
+            celery_id,
+            TaskRecord.FAILURE,
+            100,
+            "Availability setup failed",
+            autocommit=True,
+        )
 
     @celery.task()
     def attach_assessor_pre_msg(task_id):

@@ -243,6 +243,16 @@ def _check_tolerance_and_grade(sr: SubmitterReport, reports: list) -> None:
     Compute the weighted average grade (or handle the out-of-tolerance case) and advance
     the SubmitterReport accordingly.
     """
+    # Turnitin override: if an unresolved high-similarity score is present, the SR cannot
+    # advance past REQUIRES_CONVENOR_INTERVENTION regardless of the marking-report state.
+    if (
+        sr.record.turnitin_score is not None
+        and sr.record.turnitin_score >= 25
+        and not sr.turnitin_resolved
+    ):
+        sr.workflow_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+        return
+
     scheme = sr.workflow.scheme
 
     if scheme is None or not scheme.uses_tolerance:
@@ -257,6 +267,13 @@ def _check_tolerance_and_grade(sr: SubmitterReport, reports: list) -> None:
         ) / total_weight if total_weight > 0 else None
         sr.grade_generated_by_id = None  # system-generated
         sr.grade_generated_timestamp = datetime.now()
+        # Guard: only advance to READY_TO_SIGN_OFF if a grade was actually computed.
+        if sr.grade is None:
+            current_app.logger.error(
+                f"_check_tolerance_and_grade: computed grade is None for SubmitterReport "
+                f"id={sr.id} — not advancing to READY_TO_SIGN_OFF"
+            )
+            return
         sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
     else:
         # Tolerance check required: mark out-of-tolerance and route to moderation
@@ -284,6 +301,16 @@ def advance_submitter_report(sr: SubmitterReport) -> None:
 
     Does NOT commit the session — callers are responsible for committing.
     """
+    # Turnitin override: an unresolved high-similarity score blocks all forward progress.
+    # The SR must remain in REQUIRES_CONVENOR_INTERVENTION until the convenor resolves it.
+    if (
+        sr.record.turnitin_score is not None
+        and sr.record.turnitin_score >= 25
+        and not sr.turnitin_resolved
+    ):
+        sr.workflow_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+        return
+
     reports = sr.marking_reports.all()
 
     if not reports:

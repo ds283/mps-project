@@ -929,8 +929,10 @@ def register_marking_tasks(celery):
             sum(m["weight"] * m["grade"] for m in marker_marks) + 0.05, 0
         )
 
-        record.grade_generated_id = convenor_id
-        record.grade_generated_timestamp = datetime.now()
+        record.supervision_generated_id = convenor_id
+        record.supervision_generated_timestamp = datetime.now()
+        record.report_generated_id = convenor_id
+        record.report_generated_timestamp = datetime.now()
 
         config: ProjectClassConfig = sub.config
         print(

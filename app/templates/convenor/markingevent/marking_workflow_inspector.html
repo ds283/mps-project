@@ -96,6 +96,125 @@
         </div>
     </div>
 
+    {# Conflation and back-propagation section (shown when event is completed) #}
+    {% if event.completed %}
+        {% set targets = event.targets_as_dict %}
+        {% set conflation_reports = event.conflation_reports.all() %}
+        {% set any_stale = conflation_reports | selectattr('is_stale') | list | length > 0 %}
+        <div class="card border-success mt-3 mb-3">
+            <div class="card-header bg-success text-white d-flex flex-row align-items-center gap-2">
+                <i class="fas fa-calculator fa-fw"></i>
+                <span class="flex-grow-1">Conflation</span>
+                {% if event.completed %}
+                    <form method="POST"
+                          action="{{ url_for('convenor.calculate_conflation', event_id=event.id) }}"
+                          class="flex-shrink-0">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-light btn-sm" type="submit">
+                            <i class="fas fa-calculator fa-fw"></i>
+                            {% if conflation_reports %}Re-calculate{% else %}Calculate{% endif %} conflation
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if conflation_reports %}
+                    {% if any_stale %}
+                        <div class="alert alert-warning py-2 mb-2">
+                            <i class="fas fa-exclamation-triangle fa-fw me-1"></i>
+                            Some conflation results may be <strong>stale</strong> because a report was returned
+                            to the convenor after conflation was last run. Re-calculate to refresh.
+                        </div>
+                    {% endif %}
+                    <p class="small text-muted mb-2">
+                        Conflation run for <strong>{{ conflation_reports|length }}</strong> submission record(s).
+                        Generated {{ conflation_reports[0].generated_timestamp.strftime("%d/%m/%Y %H:%M") }}
+                        {% if conflation_reports[0].generated_by is not none %}
+                            by {{ conflation_reports[0].generated_by.name }}
+                        {% endif %}.
+                    </p>
+                    {% if targets %}
+                        {% set sample_dict = conflation_reports[0].conflation_report_as_dict %}
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            {# Back-populate "report" target #}
+                            {% if 'report' in sample_dict %}
+                                <form method="POST"
+                                      action="{{ url_for('convenor.propagate_report_grade', event_id=event.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button class="btn btn-sm {% if any_stale %}btn-outline-warning{% else %}btn-outline-primary{% endif %}" type="submit">
+                                        <i class="fas fa-arrow-right fa-fw"></i>
+                                        Copy &ldquo;report&rdquo; grades &rarr; submission records
+                                        {% if any_stale %}<span class="badge bg-warning text-dark ms-1">Stale</span>{% endif %}
+                                    </button>
+                                </form>
+                            {% endif %}
+                            {# Back-populate "supervisor" target #}
+                            {% if 'supervisor' in sample_dict %}
+                                <form method="POST"
+                                      action="{{ url_for('convenor.propagate_supervision_grade', event_id=event.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button class="btn btn-sm {% if any_stale %}btn-outline-warning{% else %}btn-outline-primary{% endif %}" type="submit">
+                                        <i class="fas fa-arrow-right fa-fw"></i>
+                                        Copy &ldquo;supervisor&rdquo; grades &rarr; submission records
+                                        {% if any_stale %}<span class="badge bg-warning text-dark ms-1">Stale</span>{% endif %}
+                                    </button>
+                                </form>
+                            {% endif %}
+                            {# Back-populate "presentation" target #}
+                            {% if 'presentation' in sample_dict %}
+                                <form method="POST"
+                                      action="{{ url_for('convenor.propagate_presentation_grade', event_id=event.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button class="btn btn-sm {% if any_stale %}btn-outline-warning{% else %}btn-outline-primary{% endif %}" type="submit">
+                                        <i class="fas fa-arrow-right fa-fw"></i>
+                                        Copy &ldquo;presentation&rdquo; grades &rarr; submission records
+                                        {% if any_stale %}<span class="badge bg-warning text-dark ms-1">Stale</span>{% endif %}
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted fst-italic mb-0">
+                        No conflation results yet. Click <strong>Calculate conflation</strong> to generate them.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    {# Per-workflow completion CTAs #}
+    {% for wf_state in workflow_states %}
+        {% set wf = wf_state.workflow %}
+        {% if wf_state.all_ready_to_sign_off %}
+            <div class="alert alert-success d-flex flex-row align-items-center gap-3 mt-2 mb-1">
+                <div class="flex-grow-1">
+                    <i class="fas fa-check-circle fa-fw me-1"></i>
+                    <strong>{{ wf.name }}:</strong> all reports ready to complete.
+                </div>
+                <form method="POST"
+                      action="{{ url_for('convenor.complete_all_submitter_reports', workflow_id=wf.id) }}"
+                      class="flex-shrink-0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-success btn-sm" type="submit">
+                        <i class="fas fa-check-double fa-fw"></i> Complete all
+                    </button>
+                </form>
+            </div>
+        {% endif %}
+        {% if wf_state.any_completed and (is_root or is_admin) %}
+            <div class="d-flex flex-row justify-content-end mb-1">
+                <form method="POST"
+                      action="{{ url_for('convenor.return_all_submitter_reports', workflow_id=wf.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-outline-danger btn-sm" type="submit">
+                        <i class="fas fa-undo fa-fw"></i> Return all ({{ wf.name }}) to convenor
+                    </button>
+                </form>
+            </div>
+        {% endif %}
+    {% endfor %}
+
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white">Marking workflows</div>
         <div class="card-body">

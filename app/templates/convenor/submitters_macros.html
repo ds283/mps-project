@@ -128,6 +128,12 @@
                                 <div class="fw-bold fs-4 text-success">{{ r.report_grade|round(precision=1) }}%</div>
                             </div>
                         {% endif %}
+                        {% if r.presentation_grade and pclass.uses_presentations %}
+                            <div>
+                                <div class="small text-muted">Presentation</div>
+                                <div class="fw-bold fs-4 text-success">{{ r.presentation_grade|round(precision=1) }}%</div>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="d-flex flex-row flex-wrap justify-content-start align-items-baseline gap-1">

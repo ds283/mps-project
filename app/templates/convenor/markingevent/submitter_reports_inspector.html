@@ -114,6 +114,38 @@
         </div>
     {% endif %}
 
+    {# Call-to-action: all reports ready to complete #}
+    {% if all_ready_to_sign_off %}
+        <div class="alert alert-success d-flex flex-row align-items-center gap-3 mt-3 mb-2">
+            <div class="flex-grow-1">
+                <i class="fas fa-check-circle fa-fw me-1"></i>
+                <strong>All reports are ready to complete.</strong>
+                Click to move all reports to the Completed state.
+            </div>
+            <form method="POST"
+                  action="{{ url_for('convenor.complete_all_submitter_reports', workflow_id=workflow.id) }}"
+                  class="flex-shrink-0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-success btn-sm" type="submit">
+                    <i class="fas fa-check-double fa-fw"></i> Complete all
+                </button>
+            </form>
+        </div>
+    {% endif %}
+
+    {# Admin/root: return all completed reports to convenor #}
+    {% if any_completed and (is_root or is_admin) %}
+        <div class="d-flex flex-row justify-content-end mt-2 mb-2">
+            <form method="POST"
+                  action="{{ url_for('convenor.return_all_submitter_reports', workflow_id=workflow.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-outline-danger btn-sm" type="submit">
+                    <i class="fas fa-undo fa-fw"></i> Return all to convenor
+                </button>
+            </form>
+        </div>
+    {% endif %}
+
     <div class="card border-primary mt-3 mb-3">
         <div class="card-header bg-primary text-white">Submitter reports</div>
         <div class="card-body">

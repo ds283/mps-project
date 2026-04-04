@@ -193,6 +193,11 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
     # Form: { "target_name": "conflation_expression", ... }
     targets = db.Column(db.Text(), nullable=True)
 
+    # True when every MarkingWorkflow belonging to this event is in the completed state
+    # (i.e. all their SubmitterReports are COMPLETED).
+    # Updated atomically by routes that change MarkingWorkflow.completed; do not set directly.
+    completed = db.Column(db.Boolean(), default=False, nullable=False)
+
     __table_args__ = (db.UniqueConstraint("period_id", "name"),)
 
     @property
@@ -279,6 +284,17 @@ class MarkingEvent(db.Model, EditingMetadataMixin):
             )
 
         return actions
+
+    def refresh_completed(self) -> None:
+        """
+        Recompute and persist self.completed.
+
+        self.completed is True iff every MarkingWorkflow belonging to this event has
+        workflow.completed == True and there is at least one workflow.  Call this method
+        after calling workflow.refresh_completed() for any constituent workflow.
+        """
+        wfs = self.workflows.all()
+        self.completed = bool(wfs) and all(wf.completed for wf in wfs)
 
 
 # association table of PeriodAttachment instances that should be included with each workflow
@@ -386,6 +402,10 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
     # move to READY_TO_DISTRIBUTE? Set at creation time only; not editable afterwards.
     requires_report = db.Column(db.Boolean(), default=True, nullable=False)
 
+    # True when every SubmitterReport in this workflow is in the COMPLETED state.
+    # Updated atomically by routes that change SubmitterReport state; do not set directly.
+    completed = db.Column(db.Boolean(), default=False, nullable=False)
+
     # optional sub-deadline for this workflow; if set, must be <= event.deadline
     deadline = db.Column(db.DateTime(), nullable=True)
 
@@ -476,6 +496,20 @@ class MarkingWorkflow(db.Model, EditingMetadataMixin, SubmissionRoleTypesMixin):
             return 0
         return sum(
             1 for sr in self.submitter_reports if sr.record.report_processing_failed
+        )
+
+    def refresh_completed(self) -> None:
+        """
+        Recompute and persist self.completed.
+
+        self.completed is True iff every SubmitterReport in this workflow is in the COMPLETED
+        state and there is at least one SubmitterReport.  Call this method — and subsequently
+        call self.event.refresh_completed() — after any change to a SubmitterReport's
+        workflow_state within this workflow.
+        """
+        srs = self.submitter_reports.all()
+        self.completed = bool(srs) and all(
+            sr.workflow_state == SubmitterReportWorkflowStates.COMPLETED for sr in srs
         )
 
 
@@ -584,22 +618,47 @@ class SubmitterReportWorkflowStates:
              different grades. The convenor must accept one via the Accept button in the inspector.
              Accepting transitions to READY_TO_SIGN_OFF.
 
-    --- Post-grading lifecycle (not yet fully implemented) ---
+    --- Post-grading lifecycle ---
 
     READY_TO_GENERATE_FEEDBACK (10)
         Grade has been signed off. Feedback documents can now be generated.
+        (Not yet fully implemented.)
 
     READY_TO_PUSH_FEEDBACK (11)
         Feedback documents generated and ready to be released to the student.
+        (Not yet fully implemented.)
 
     COMPLETED (12)
-        Feedback has been pushed to the student. The lifecycle for this SubmitterReport is done.
+        The SubmitterReport has been explicitly completed by a convenor via the inspector UI.
+        `completed_by_id` and `completed_timestamp` record who completed it and when.
+        The `signed_off_id` and `signed_off_timestamp` fields are set at the same time as the
+        COMPLETED transition is made.
+
+        SEMANTICS: When a SubmitterReport is in the COMPLETED state, all edit operations on it
+        and its dependent MarkingReports are DISABLED for all users, including those with "admin"
+        or "root" roles.  A SubmitterReport must be explicitly returned to the convenor — by a
+        user with "admin" or "root" role — before any further changes can be made.  Returning
+        a SubmitterReport from COMPLETED transitions it back to READY_TO_SIGN_OFF and clears
+        `completed_by_id` / `completed_timestamp`.
+
+        Returning a SubmitterReport from COMPLETED may cause any existing ConflationReport
+        instances for the parent MarkingEvent to become stale; they are flagged with
+        `ConflationReport.is_stale = True` rather than discarded.
+
+        When all SubmitterReports in a MarkingWorkflow are COMPLETED, the workflow's `completed`
+        flag is set True.  When all MarkingWorkflows in a MarkingEvent are completed, the event's
+        `completed` flag is set True.  These flags enable efficient querying and surface the
+        conflation call-to-action in the UI.
 
     TURNITIN OVERRIDE
     =================
     At any point, if a SubmissionRecord's turnitin_score >= 25 and the SubmitterReport's
     turnitin_resolved=False, the SubmitterReport must be in REQUIRES_CONVENOR_INTERVENTION and
     cannot advance until turnitin_resolved is set True by a convenor.
+
+    This invariant is enforced in both advance_submitter_report() and _check_tolerance_and_grade()
+    in app/tasks/markingevent.py: both functions check the Turnitin state as their first action
+    and redirect to REQUIRES_CONVENOR_INTERVENTION if needed.
     """
 
     NOT_READY = 999
@@ -611,12 +670,23 @@ class SubmitterReportWorkflowStates:
     NEEDS_MODERATOR_ASSIGNED = 5
     AWAITING_MODERATOR_REPORT = 6
     # REQUIRES_CONVENOR_INTERVENTION: blocking state.
-    # A SubmitterReport enters this state when turnitin_score >= 25 and turnitin_resolved=False,
-    # because the convenor must review the Turnitin similarity report before marking can proceed.
-    # It CANNOT be advanced to AWAITING_GRADING_REPORTS or any subsequent state until
-    # turnitin_resolved is set to True by a convenor (via the convenor.resolve_turnitin_issue view).
-    # Resolution transitions the report back to READY_TO_DISTRIBUTE.
-    # Also used for other convenor-intervention scenarios that may be added in future.
+    # Used in two scenarios:
+    #
+    # 1. TURNITIN: A SubmitterReport enters this state when turnitin_score >= 25 and
+    #    turnitin_resolved=False, because the convenor must review the Turnitin similarity
+    #    report before marking can proceed.  It CANNOT be advanced to AWAITING_GRADING_REPORTS
+    #    or any subsequent state until turnitin_resolved is set to True by a convenor (via the
+    #    convenor.resolve_turnitin_issue view).  Resolution transitions the report back to
+    #    READY_TO_DISTRIBUTE.
+    #
+    # 2. CONFLICTING MODERATION: Entered when multiple ModeratorReport instances with different
+    #    grades have been submitted for the same SubmitterReport (i.e. a second moderator graded
+    #    it after the first grade was already stored).  The convenor must accept one ModeratorReport
+    #    via the Accept button in the inspector.  Accepting transitions the SubmitterReport to
+    #    READY_TO_SIGN_OFF and sets accepted_moderator_report_id.
+    #
+    # The Turnitin invariant is enforced in advance_submitter_report() and
+    # _check_tolerance_and_grade() in app/tasks/markingevent.py.
     REQUIRES_CONVENOR_INTERVENTION = 7
     # READY_TO_GENERATE_GRADE = 8
     READY_TO_SIGN_OFF = 9
@@ -755,6 +825,17 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
 
     # timestamp when the acceptance was recorded
     moderator_accepted_timestamp = db.Column(db.DateTime(), nullable=True)
+
+    # COMPLETION
+    # Set when the SubmitterReport moves into the COMPLETED state.  Overwritten if the SR is
+    # returned to the convenor and subsequently completed again.
+
+    # who completed this SubmitterReport?
+    completed_by_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
+    completed_by = db.relationship("User", foreign_keys=[completed_by_id], uselist=False)
+
+    # timestamp when the completion was recorded
+    completed_timestamp = db.Column(db.DateTime(), nullable=True)
 
     # convenience accessors
     @property
@@ -990,3 +1071,66 @@ class ModeratorReport(db.Model, EditingMetadataMixin):
     def user(self) -> User:
         """Convenience accessor to the moderator's User record."""
         return self.role.user
+
+
+class ConflationReport(db.Model, EditingMetadataMixin):
+    """
+    Stores the result of one conflation run for a single SubmissionRecord within a MarkingEvent.
+
+    One ConflationReport is generated per SubmissionRecord each time the convenor runs the
+    conflation workflow on a MarkingEvent.  All existing ConflationReport instances for an event
+    are discarded whenever the conflation workflow is re-run.
+
+    The conflation_report field is a JSON dict mapping target names to evaluated float values,
+    e.g. {"report": 72.5, "supervisor": 68.0}.
+
+    is_stale is set True when a SubmitterReport that contributed to this conflation moves out of
+    the COMPLETED state (because the convenor has returned it for editing).  Stale results should
+    be regenerated via a fresh conflation run.
+    """
+
+    __tablename__ = "conflation_reports"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # parent MarkingEvent
+    marking_event_id = db.Column(
+        db.Integer(), db.ForeignKey("marking_events.id"), nullable=False
+    )
+    marking_event = db.relationship(
+        "MarkingEvent",
+        foreign_keys=[marking_event_id],
+        uselist=False,
+        backref=db.backref("conflation_reports", lazy="dynamic"),
+    )
+
+    # SubmissionRecord whose grades are stored in this row
+    submission_record_id = db.Column(
+        db.Integer(), db.ForeignKey("submission_records.id"), nullable=False
+    )
+    submission_record = db.relationship(
+        "SubmissionRecord",
+        foreign_keys=[submission_record_id],
+        uselist=False,
+        backref=db.backref("conflation_reports", lazy="dynamic"),
+    )
+
+    # JSON dict: {"target_name": <float>, ...}
+    conflation_report = db.Column(db.Text(), nullable=True)
+
+    # who generated this report?
+    generated_by_id = db.Column(db.Integer(), db.ForeignKey("users.id"), nullable=True)
+    generated_by = db.relationship("User", foreign_keys=[generated_by_id], uselist=False)
+
+    # when was this report generated?
+    generated_timestamp = db.Column(db.DateTime(), nullable=True)
+
+    # True when a contributing SubmitterReport has moved out of COMPLETED since this run
+    is_stale = db.Column(db.Boolean(), default=False, nullable=False)
+
+    @property
+    def conflation_report_as_dict(self) -> dict:
+        if not self.conflation_report:
+            return {}
+        return json.loads(self.conflation_report)

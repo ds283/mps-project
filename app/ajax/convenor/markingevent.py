@@ -45,7 +45,13 @@ _marking_event_workflows = """
 {% if workflows|length > 0 %}
     <div class="d-flex flex-column gap-1">
         {% for wf in workflows %}
-            <div><i class="fas fa-clipboard-check me-1"></i> <span class="text-primary">{{ wf.name }}</span></div>
+            <div>
+                <i class="fas fa-clipboard-check me-1"></i>
+                <span class="text-primary">{{ wf.name }}</span>
+                {% if wf.completed %}
+                    <span class="badge bg-success ms-1 small">Complete</span>
+                {% endif %}
+            </div>
         {% endfor %}
     </div>
 {% else %}
@@ -55,9 +61,30 @@ _marking_event_workflows = """
 {% if targets %}
     <hr class="my-2">
     <div class="small text-muted fw-semibold mb-1">Targets</div>
-    {% for name, expr in targets.items() %}
-        <div class="small font-monospace mt-1"><span class="text-primary">{{ name }}</span> = {{ expr }}</div>
-    {% endfor %}
+    {% set conflation_reports = event.conflation_reports.all() %}
+    {% if conflation_reports %}
+        {% set any_stale = conflation_reports | selectattr('is_stale') | list | length > 0 %}
+        {% if any_stale %}
+            <span class="badge bg-warning text-dark mb-1"><i class="fas fa-exclamation-triangle fa-fw"></i> Results may be stale</span>
+        {% endif %}
+        {# Show first record's results as a representative sample #}
+        {% set sample = conflation_reports[0].conflation_report_as_dict %}
+        {% for name, expr in targets.items() %}
+            <div class="small font-monospace mt-1">
+                <span class="text-primary">{{ name }}</span>
+                {% if name in sample %}
+                    = <strong>{{ "%.1f"|format(sample[name]) }}%</strong>
+                    <span class="text-muted">({{ conflation_reports|length }} records)</span>
+                {% else %}
+                    <span class="text-muted fst-italic">— not yet conflated</span>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% else %}
+        {% for name, expr in targets.items() %}
+            <div class="small font-monospace mt-1"><span class="text-primary">{{ name }}</span> = <span class="text-muted fst-italic">Not yet conflated</span></div>
+        {% endfor %}
+    {% endif %}
 {% endif %}
 """
 
@@ -250,58 +277,111 @@ _submitter_report_project = """
 _submitter_report_actions = """
 {% set rec = report.record %}
 {% set state = report.workflow_state %}
+{% set is_completed = (state == COMPLETED) %}
+{% set inspector_url = url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id) %}
+
+{# --- Direct action buttons (shown above the dropdown) --- #}
 {% if state == NEEDS_MODERATOR_ASSIGNED %}
     <a class="btn btn-danger btn-sm full-width-button mb-2"
        href="{{ url_for('convenor.assign_moderator', submitter_report_id=report.id,
-                url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id),
-                text='Submitter reports') }}">
+                url=inspector_url, text='Submitter reports') }}">
         <i class="fas fa-user-plus fa-fw"></i> Assign moderator
     </a>
+{% elif state == READY_TO_SIGN_OFF %}
+    <form method="POST"
+          action="{{ url_for('convenor.complete_submitter_report', sr_id=report.id) }}"
+          class="mb-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-success btn-sm full-width-button" type="submit">
+            <i class="fas fa-check-double fa-fw"></i> Complete
+        </button>
+    </form>
+{% elif is_completed %}
+    <div class="mb-2">
+        <span class="badge bg-success py-2 px-3">
+            <i class="fas fa-check-circle fa-fw"></i> Completed
+        </span>
+        {% if report.completed_by is not none %}
+            <div class="small text-muted mt-1">by {{ report.completed_by.name }}</div>
+        {% endif %}
+        {% if report.completed_timestamp is not none %}
+            <div class="small text-muted">{{ report.completed_timestamp.strftime("%d/%m/%Y") }}</div>
+        {% endif %}
+    </div>
 {% endif %}
+
+{# --- Actions dropdown --- #}
 <div class="dropdown">
     <button class="btn btn-secondary btn-sm full-width-button dropdown-toggle" type="button" data-bs-toggle="dropdown">
         Actions
     </button>
     <div class="dropdown-menu dropdown-menu-dark mx-0 border-0 dropdown-menu-end">
-        {# Moderator assignment: shown for NEEDS_MODERATOR_ASSIGNED and AWAITING_MODERATOR_REPORT #}
+
+        {# Complete: shown in dropdown for READY_TO_SIGN_OFF (in addition to direct button) #}
+        {% if state == READY_TO_SIGN_OFF %}
+            <form method="POST"
+                  action="{{ url_for('convenor.complete_submitter_report', sr_id=report.id) }}"
+                  style="display:contents">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="dropdown-item d-flex gap-2" type="submit">
+                    <i class="fas fa-check-double fa-fw"></i> Complete&hellip;
+                </button>
+            </form>
+            <div class="dropdown-divider"></div>
+        {% endif %}
+
+        {# Return to convenor: admin/root only, shown when COMPLETED #}
+        {% if is_completed and (is_root or is_admin) %}
+            <form method="POST"
+                  action="{{ url_for('convenor.return_submitter_report_to_convenor', sr_id=report.id) }}"
+                  style="display:contents">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="dropdown-item d-flex gap-2 text-danger" type="submit">
+                    <i class="fas fa-undo fa-fw"></i> Return to convenor&hellip;
+                </button>
+            </form>
+            <div class="dropdown-divider"></div>
+        {% endif %}
+
+        {# Moderator assignment: shown for NEEDS_MODERATOR_ASSIGNED and AWAITING_MODERATOR_REPORT, disabled when COMPLETED #}
         {% if state in (NEEDS_MODERATOR_ASSIGNED, AWAITING_MODERATOR_REPORT) %}
-            <a class="dropdown-item d-flex gap-2"
+            <a class="dropdown-item d-flex gap-2 {% if is_completed %}disabled{% endif %}"
                href="{{ url_for('convenor.assign_moderator', submitter_report_id=report.id,
-                        url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id),
-                        text='Submitter reports') }}">
+                        url=inspector_url, text='Submitter reports') }}">
                 <i class="fas fa-user-plus fa-fw"></i> Assign moderator&hellip;
             </a>
             <div class="dropdown-divider"></div>
         {% endif %}
-        {# Turnitin: resolve (only shown when score >= 25) #}
+
+        {# Turnitin: resolve (only shown when score >= 25, disabled when COMPLETED) #}
         {% if rec is not none and rec.turnitin_score is not none and rec.turnitin_score >= 25 %}
-            <a class="dropdown-item d-flex gap-2"
+            <a class="dropdown-item d-flex gap-2 {% if is_completed %}disabled{% endif %}"
                href="{{ url_for('convenor.resolve_turnitin_issue',
                                 submitter_report_id=report.id,
-                                url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id),
-                                text='Submitter reports') }}">
+                                url=inspector_url, text='Submitter reports') }}">
                 <i class="fas fa-gavel fa-fw"></i>
                 {% if report.turnitin_resolved %}Re-review Turnitin&hellip;{% else %}Resolve Turnitin&hellip;{% endif %}
             </a>
         {% endif %}
-        {# Turnitin: re-fetch from Canvas or enter manually (only when score is missing) #}
+
+        {# Turnitin: re-fetch from Canvas or enter manually (only when score is missing, disabled when COMPLETED) #}
         {% if rec is not none and rec.turnitin_score is none %}
             {% if rec.canvas_turnitin_refetchable %}
                 <form method="POST"
                       action="{{ url_for('convenor.refetch_turnitin_from_canvas',
                                          record_id=rec.id,
-                                         url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id)) }}"
+                                         url=inspector_url) }}"
                       style="display:contents">
-                    <button class="dropdown-item d-flex gap-2" type="submit">
+                    <button class="dropdown-item d-flex gap-2{% if is_completed %} disabled{% endif %}" type="submit"
+                            {% if is_completed %}disabled{% endif %}>
                         <i class="fas fa-sync fa-fw"></i> Re-fetch Turnitin from Canvas
                     </button>
                 </form>
             {% endif %}
-            <a class="dropdown-item d-flex gap-2"
+            <a class="dropdown-item d-flex gap-2 {% if is_completed %}disabled{% endif %}"
                href="{{ url_for('convenor.enter_turnitin_score',
                                 record_id=rec.id,
-                                url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id),
-                                text='Submitter reports') }}">
+                                url=inspector_url, text='Submitter reports') }}">
                 <i class="fas fa-keyboard fa-fw"></i> Enter Turnitin score&hellip;
             </a>
         {% endif %}
@@ -761,9 +841,17 @@ def submitter_report_data(reports):
     turnitin_tmpl = env.from_string(_submitter_report_turnitin)
     actions_tmpl = env.from_string(_submitter_report_actions)
 
+    from flask_login import current_user as _cu
+    from flask_security import current_user as _scu
+
+    _roles = set(r.name for r in _cu.roles) if hasattr(_cu, "roles") else set()
     state_ctx = {
         "NEEDS_MODERATOR_ASSIGNED": SubmitterReportWorkflowStates.NEEDS_MODERATOR_ASSIGNED,
         "AWAITING_MODERATOR_REPORT": SubmitterReportWorkflowStates.AWAITING_MODERATOR_REPORT,
+        "READY_TO_SIGN_OFF": SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
+        "COMPLETED": SubmitterReportWorkflowStates.COMPLETED,
+        "is_root": "root" in _roles,
+        "is_admin": "admin" in _roles,
     }
 
     return [

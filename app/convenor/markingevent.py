@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import json
 from datetime import datetime
 from functools import partial
 
@@ -41,7 +42,7 @@ from ..models import (
     SubmittingStudent,
     User,
 )
-from ..models.markingevent import ConvenorAction, SubmitterReportWorkflowStates
+from ..models.markingevent import ConflationReport, ConvenorAction, SubmitterReportWorkflowStates
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.convenor_dashboard import get_convenor_dashboard_data
 from ..shared.context.global_context import render_template_context
@@ -209,12 +210,43 @@ def marking_workflow_inspector(event_id):
     )
     text = request.args.get("text", "Assessment archive")
 
+    # Per-workflow ready/completed summary used by the CTA cards
+    workflows = event.workflows.all()
+    workflow_states = []
+    for wf in workflows:
+        wf_total = wf.submitter_reports.count()
+        wf_rts = (
+            db.session.query(func.count())
+            .filter(
+                SubmitterReport.workflow_id == wf.id,
+                SubmitterReport.workflow_state == SubmitterReportWorkflowStates.READY_TO_SIGN_OFF,
+            )
+            .scalar()
+        )
+        wf_completed = (
+            db.session.query(func.count())
+            .filter(
+                SubmitterReport.workflow_id == wf.id,
+                SubmitterReport.workflow_state == SubmitterReportWorkflowStates.COMPLETED,
+            )
+            .scalar()
+        )
+        workflow_states.append(
+            {
+                "workflow": wf,
+                "total": wf_total,
+                "all_ready_to_sign_off": wf_total > 0 and wf_rts == wf_total,
+                "any_completed": wf_completed > 0,
+            }
+        )
+
     return render_template_context(
         "convenor/markingevent/marking_workflow_inspector.html",
         event=event,
         pclass=pclass,
         url=url,
         text=text,
+        workflow_states=workflow_states,
     )
 
 
@@ -329,6 +361,13 @@ def submitter_reports_inspector(workflow_id):
         (SubmitterReportWorkflowStates.COMPLETED, "Completed"),
     ]
 
+    total = workflow.submitter_reports.count()
+    all_ready_to_sign_off = (
+        total > 0
+        and state_counts.get(SubmitterReportWorkflowStates.READY_TO_SIGN_OFF, 0) == total
+    )
+    any_completed = state_counts.get(SubmitterReportWorkflowStates.COMPLETED, 0) > 0
+
     return render_template_context(
         "convenor/markingevent/submitter_reports_inspector.html",
         workflow=workflow,
@@ -338,6 +377,8 @@ def submitter_reports_inspector(workflow_id):
         text=text,
         state_counts=state_counts,
         state_labels=state_labels,
+        all_ready_to_sign_off=all_ready_to_sign_off,
+        any_completed=any_completed,
     )
 
 
@@ -2473,5 +2514,455 @@ def accept_moderator_grade(mod_report_id, workflow_id):
         db.session.rollback()
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         flash("Could not accept moderator grade due to a database error.", "error")
+
+    return redirect(url)
+
+
+@convenor.route("/complete-submitter-report/<int:sr_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def complete_submitter_report(sr_id):
+    """Move a single SubmitterReport from READY_TO_SIGN_OFF to COMPLETED."""
+    sr: SubmitterReport = SubmitterReport.query.get_or_404(sr_id)
+    workflow: MarkingWorkflow = sr.workflow
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.period.config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = url_for("convenor.submitter_reports_inspector", workflow_id=workflow.id)
+
+    if sr.workflow_state != SubmitterReportWorkflowStates.READY_TO_SIGN_OFF:
+        flash("This report is not in the Ready to sign off state.", "error")
+        return redirect(url)
+
+    if sr.grade is None:
+        flash("Cannot complete a report that does not have a grade assigned.", "error")
+        return redirect(url)
+
+    now = datetime.now()
+    sr.signed_off_id = current_user.id
+    sr.signed_off_timestamp = now
+    sr.completed_by_id = current_user.id
+    sr.completed_timestamp = now
+    sr.workflow_state = SubmitterReportWorkflowStates.COMPLETED
+
+    workflow.refresh_completed()
+    event.refresh_completed()
+
+    try:
+        log_db_commit(
+            f"Completed SubmitterReport #{sr.id} for student {sr.student.user.name} "
+            f"in workflow '{workflow.name}' (event: {event.name})",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash("Report marked as completed.", "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not complete report due to a database error.", "error")
+
+    return redirect(url)
+
+
+@convenor.route("/complete-all-submitter-reports/<int:workflow_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def complete_all_submitter_reports(workflow_id):
+    """Move all READY_TO_SIGN_OFF SubmitterReports in a workflow to COMPLETED."""
+    workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.period.config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = url_for("convenor.submitter_reports_inspector", workflow_id=workflow_id)
+
+    now = datetime.now()
+    completed_count = 0
+    skipped_count = 0
+
+    try:
+        for sr in workflow.submitter_reports.all():
+            if sr.workflow_state != SubmitterReportWorkflowStates.READY_TO_SIGN_OFF:
+                continue
+            if sr.grade is None:
+                skipped_count += 1
+                continue
+            sr.signed_off_id = current_user.id
+            sr.signed_off_timestamp = now
+            sr.completed_by_id = current_user.id
+            sr.completed_timestamp = now
+            sr.workflow_state = SubmitterReportWorkflowStates.COMPLETED
+            completed_count += 1
+
+        workflow.refresh_completed()
+        event.refresh_completed()
+
+        if completed_count > 0:
+            msg = f"Completed {completed_count} SubmitterReport(s) in workflow '{workflow.name}' (event: {event.name})"
+            if skipped_count > 0:
+                msg += f"; skipped {skipped_count} without a grade"
+            log_db_commit(msg, user=current_user, project_classes=pclass)
+            flash(
+                f"{completed_count} report(s) marked as completed."
+                + (f" {skipped_count} skipped (no grade)." if skipped_count else ""),
+                "success",
+            )
+        else:
+            db.session.commit()
+            flash("No reports were in the Ready to sign off state.", "info")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not complete reports due to a database error.", "error")
+
+    return redirect(url)
+
+
+@convenor.route("/return-submitter-report/<int:sr_id>", methods=["POST"])
+@roles_accepted("admin", "root")
+def return_submitter_report_to_convenor(sr_id):
+    """Return a single COMPLETED SubmitterReport to READY_TO_SIGN_OFF (admin/root only)."""
+    from flask_security import current_user as _cu
+
+    sr: SubmitterReport = SubmitterReport.query.get_or_404(sr_id)
+    workflow: MarkingWorkflow = sr.workflow
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.period.config.project_class
+
+    url = url_for("convenor.submitter_reports_inspector", workflow_id=workflow.id)
+
+    if sr.workflow_state != SubmitterReportWorkflowStates.COMPLETED:
+        flash("This report is not in the Completed state.", "error")
+        return redirect(url)
+
+    sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
+    sr.completed_by_id = None
+    sr.completed_timestamp = None
+
+    workflow.refresh_completed()
+    event.refresh_completed()
+
+    # Mark any existing ConflationReports for this event as stale
+    from ..models.markingevent import ConflationReport
+
+    for cr in event.conflation_reports.all():
+        cr.is_stale = True
+
+    try:
+        log_db_commit(
+            f"Returned SubmitterReport #{sr.id} for student {sr.student.user.name} "
+            f"to convenor from COMPLETED state in workflow '{workflow.name}' (event: {event.name})",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash("Report returned to convenor for editing.", "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not return report due to a database error.", "error")
+
+    return redirect(url)
+
+
+@convenor.route("/return-all-submitter-reports/<int:workflow_id>", methods=["POST"])
+@roles_accepted("admin", "root")
+def return_all_submitter_reports(workflow_id):
+    """Return all COMPLETED SubmitterReports in a workflow to READY_TO_SIGN_OFF (admin/root only)."""
+    workflow: MarkingWorkflow = MarkingWorkflow.query.get_or_404(workflow_id)
+    event: MarkingEvent = workflow.event
+    pclass: ProjectClass = event.period.config.project_class
+
+    url = url_for("convenor.submitter_reports_inspector", workflow_id=workflow_id)
+
+    returned_count = 0
+
+    try:
+        for sr in workflow.submitter_reports.all():
+            if sr.workflow_state != SubmitterReportWorkflowStates.COMPLETED:
+                continue
+            sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_SIGN_OFF
+            sr.completed_by_id = None
+            sr.completed_timestamp = None
+            returned_count += 1
+
+        workflow.refresh_completed()
+        event.refresh_completed()
+
+        # Mark any existing ConflationReports for this event as stale
+        from ..models.markingevent import ConflationReport
+
+        for cr in event.conflation_reports.all():
+            cr.is_stale = True
+
+        if returned_count > 0:
+            log_db_commit(
+                f"Returned {returned_count} SubmitterReport(s) in workflow '{workflow.name}' "
+                f"to convenor from COMPLETED state (event: {event.name})",
+                user=current_user,
+                project_classes=pclass,
+            )
+            flash(f"{returned_count} report(s) returned to convenor for editing.", "success")
+        else:
+            db.session.commit()
+            flash("No completed reports found in this workflow.", "info")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash("Could not return reports due to a database error.", "error")
+
+    return redirect(url)
+
+
+# ---------------------------------------------------------------------------
+# CONFLATION
+# ---------------------------------------------------------------------------
+
+
+@convenor.route("/calculate-conflation/<int:event_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def calculate_conflation(event_id):
+    """
+    Calculate conflated target marks for all SubmissionRecords in a MarkingEvent.
+
+    Requires that the event is in the completed state (all MarkingWorkflows completed).
+    Discards any existing ConflationReport instances for this event and generates a fresh set.
+    """
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.period.config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = url_for("convenor.marking_workflow_inspector", event_id=event_id)
+
+    if not event.completed:
+        flash(
+            "Cannot calculate conflation: not all marking workflows are complete.", "error"
+        )
+        return redirect(url)
+
+    targets = event.targets_as_dict
+    if not targets:
+        flash("This event has no conflation targets defined.", "error")
+        return redirect(url)
+
+    workflows = event.workflows.all()
+
+    try:
+        # Discard all existing ConflationReports for this event
+        event.conflation_reports.delete()
+
+        submissions = event.period.submissions.all()
+        now = datetime.now()
+        generated_count = 0
+
+        for record in submissions:
+            # Build grades dict: {workflow.key: float(sr.grade)}
+            grades = {}
+            failed = False
+            for wf in workflows:
+                sr = (
+                    db.session.query(SubmitterReport)
+                    .filter_by(record_id=record.id, workflow_id=wf.id)
+                    .first()
+                )
+                if sr is None:
+                    flash(
+                        f"Conflation failed: no SubmitterReport found for student "
+                        f"'{record.owner.student.user.name}' in workflow '{wf.name}'. "
+                        f"All ConflationReports have been discarded.",
+                        "error",
+                    )
+                    db.session.rollback()
+                    return redirect(url)
+                if sr.grade is None:
+                    flash(
+                        f"Conflation failed: SubmitterReport for student "
+                        f"'{record.owner.student.user.name}' in workflow '{wf.name}' "
+                        f"has no grade. All ConflationReports have been discarded.",
+                        "error",
+                    )
+                    db.session.rollback()
+                    return redirect(url)
+                grades[wf.key] = float(sr.grade)
+
+            # Evaluate each target expression in the restricted namespace
+            result = {}
+            for target_name, expr in targets.items():
+                try:
+                    value = eval(expr, {"__builtins__": {}}, grades)  # noqa: S307
+                    result[target_name] = float(value)
+                except Exception as exc:
+                    flash(
+                        f"Conflation failed: error evaluating target '{target_name}' "
+                        f"(expression: {expr!r}) for student "
+                        f"'{record.owner.student.user.name}': {exc}. "
+                        f"All ConflationReports have been discarded.",
+                        "error",
+                    )
+                    db.session.rollback()
+                    return redirect(url)
+
+            cr = ConflationReport(
+                marking_event_id=event.id,
+                submission_record_id=record.id,
+                conflation_report=json.dumps(result),
+                generated_by_id=current_user.id,
+                generated_timestamp=now,
+                is_stale=False,
+            )
+            db.session.add(cr)
+            generated_count += 1
+
+        log_db_commit(
+            f"Calculated conflation for {generated_count} SubmissionRecord(s) in event "
+            f"'{event.name}' ({pclass.name})",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash(
+            f"Conflation complete: {generated_count} record(s) processed.", "success"
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError in calculate_conflation", exc_info=e)
+        flash("Could not calculate conflation due to a database error.", "error")
+
+    return redirect(url)
+
+
+# ---------------------------------------------------------------------------
+# GRADE BACK-PROPAGATION
+# ---------------------------------------------------------------------------
+
+
+def _propagate_grade_to_records(event: MarkingEvent, target_key: str, grade_field: str,
+                                 generated_id_field: str, generated_ts_field: str,
+                                 pclass: ProjectClass) -> tuple[int, str | None]:
+    """
+    Copy the named target value from each ConflationReport to the given SubmissionRecord field.
+
+    Returns (count_updated, error_message).  error_message is None on success.
+    """
+    conflation_reports = event.conflation_reports.all()
+    if not conflation_reports:
+        return 0, "No conflation results exist for this event."
+
+    now = datetime.now()
+    updated = 0
+    for cr in conflation_reports:
+        result = cr.conflation_report_as_dict
+        if target_key not in result:
+            continue
+        record = cr.submission_record
+        setattr(record, grade_field, result[target_key])
+        setattr(record, generated_id_field, current_user.id)
+        setattr(record, generated_ts_field, now)
+        updated += 1
+
+    return updated, None
+
+
+@convenor.route("/propagate-report-grade/<int:event_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def propagate_report_grade(event_id):
+    """Copy the 'report' conflation target to SubmissionRecord.report_grade."""
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.period.config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = url_for("convenor.marking_workflow_inspector", event_id=event_id)
+
+    try:
+        count, err = _propagate_grade_to_records(
+            event, "report", "report_grade", "report_generated_id", "report_generated_timestamp", pclass
+        )
+        if err:
+            flash(err, "error")
+            return redirect(url)
+        log_db_commit(
+            f"Propagated 'report' grades from conflation to {count} SubmissionRecord(s) "
+            f"in event '{event.name}' ({pclass.name})",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash(f"Report grades copied to {count} submission record(s).", "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError in propagate_report_grade", exc_info=e)
+        flash("Could not propagate report grades due to a database error.", "error")
+
+    return redirect(url)
+
+
+@convenor.route("/propagate-supervision-grade/<int:event_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def propagate_supervision_grade(event_id):
+    """Copy the 'supervisor' conflation target to SubmissionRecord.supervision_grade."""
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.period.config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = url_for("convenor.marking_workflow_inspector", event_id=event_id)
+
+    try:
+        count, err = _propagate_grade_to_records(
+            event, "supervisor", "supervision_grade", "supervision_generated_id", "supervision_generated_timestamp", pclass
+        )
+        if err:
+            flash(err, "error")
+            return redirect(url)
+        log_db_commit(
+            f"Propagated 'supervisor' grades from conflation to {count} SubmissionRecord(s) "
+            f"in event '{event.name}' ({pclass.name})",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash(f"Supervision grades copied to {count} submission record(s).", "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError in propagate_supervision_grade", exc_info=e)
+        flash("Could not propagate supervision grades due to a database error.", "error")
+
+    return redirect(url)
+
+
+@convenor.route("/propagate-presentation-grade/<int:event_id>", methods=["POST"])
+@roles_accepted("faculty", "admin", "root")
+def propagate_presentation_grade(event_id):
+    """Copy the 'presentation' conflation target to SubmissionRecord.presentation_grade."""
+    event: MarkingEvent = MarkingEvent.query.get_or_404(event_id)
+    pclass: ProjectClass = event.period.config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(redirect_url())
+
+    url = url_for("convenor.marking_workflow_inspector", event_id=event_id)
+
+    try:
+        count, err = _propagate_grade_to_records(
+            event, "presentation", "presentation_grade", "presentation_generated_id", "presentation_generated_timestamp", pclass
+        )
+        if err:
+            flash(err, "error")
+            return redirect(url)
+        log_db_commit(
+            f"Propagated 'presentation' grades from conflation to {count} SubmissionRecord(s) "
+            f"in event '{event.name}' ({pclass.name})",
+            user=current_user,
+            project_classes=pclass,
+        )
+        flash(f"Presentation grades copied to {count} submission record(s).", "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError in propagate_presentation_grade", exc_info=e)
+        flash("Could not propagate presentation grades due to a database error.", "error")
 
     return redirect(url)

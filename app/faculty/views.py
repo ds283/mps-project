@@ -2044,8 +2044,7 @@ def dashboard():
         elif pending_marking_reports:
             pane = "marking"
         elif len(enrolments) > 0:
-            c = enrolments[0]["config"]
-            pane = c.id
+            pane = "enrolments"
 
     num_enrolment_panes = len(enrolment_panes)
     if pane == "system":
@@ -2077,15 +2076,15 @@ def dashboard():
         pass  # always valid if pending_moderator_reports is non-empty
 
     else:
-        if pane not in enrolment_panes:
+        if pane != "enrolments" and pane not in enrolment_panes:
             if num_enrolment_panes > 0:
-                pane = enrolment_panes[0]
+                pane = "enrolments"
             else:
                 pane = None
 
         # mark any unviewed confirmation requests as viewed, but do it with a 15 sec delay so that the
         # NEW labels don't disappear immediately
-        if pane is not None and pane not in ["system", "approve", "marking"]:
+        if pane is not None and pane not in ["system", "approve", "marking", "enrolments"]:
             celery = current_app.extensions["celery"]
             remove_new = celery.tasks["app.tasks.selecting.remove_new"]
             remove_new.apply_async(args=(int(pane), current_user.id), countdown=15)
@@ -2115,7 +2114,7 @@ def dashboard():
         pane_is_marking=pane == "marking",
         pane_is_signoff=pane == "signoff",
         pane_is_moderation=pane == "moderation",
-        pane_is_enrollment=pane in enrolment_panes,
+        pane_is_enrollment=pane == "enrolments" or pane in enrolment_panes,
         is_user_approver=current_user.has_role("user_approver"),
         is_project_approver=current_user.has_role("project_approver"),
         today=date.today(),

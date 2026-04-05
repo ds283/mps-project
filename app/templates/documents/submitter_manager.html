@@ -480,6 +480,29 @@
                                     <td class="text-muted small">Word count (est.)</td>
                                     <td class="fw-semibold">{{ metrics['word_count'] | int }}</td>
                                 </tr>
+                                {% if llm_result.get('stated_word_count_found') is not none %}
+                                    <tr>
+                                        <td class="text-muted small">Word count (stated)</td>
+                                        <td>
+                                            {% if llm_result.get('stated_word_count_found') %}
+                                                <span class="fw-semibold">{{ llm_result['stated_word_count'] | int }}</span>
+                                                {% set _est = metrics['word_count'] | int %}
+                                                {% if _est > 0 %}
+                                                    {% set _disc = (((llm_result['stated_word_count'] | int) - _est) / _est * 100) | round(1) %}
+                                                    {% if _disc | abs < 5 %}
+                                                        <span class="badge bg-success ms-1">{{ "%+.1f" | format(_disc) }}%</span>
+                                                    {% elif _disc | abs < 15 %}
+                                                        <span class="badge bg-warning text-dark ms-1">{{ "%+.1f" | format(_disc) }}%</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger ms-1">{{ "%+.1f" | format(_disc) }}%</span>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted fst-italic small">not stated in report</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endif %}
                             {% endif %}
                             {% if metrics.get('reference_count') is not none %}
                                 <tr>
@@ -601,6 +624,37 @@
                             </div>
                         {% endif %}
 
+                        {# --- Compliance statements (LLM-extracted) --- #}
+                        {% if llm_result.get('genai_statement_found') is not none or llm_result.get('preface_found') is not none %}
+                            <div class="mb-3">
+                                <div class="small text-muted fw-semibold mb-2">Document compliance statements</div>
+
+                                {# Generative AI statement #}
+                                {% if llm_result.get('genai_statement_found') %}
+                                    <div class="border-start border-primary border-2 ps-2 mb-2">
+                                        <div class="small fw-semibold mb-1">AI use statement detected</div>
+                                        <div class="small">{{ llm_result['genai_statement'] }}</div>
+                                    </div>
+                                {% else %}
+                                    <div class="small text-muted mb-2">
+                                        <i class="fas fa-exclamation-circle me-1"></i>No AI use statement detected
+                                    </div>
+                                {% endif %}
+
+                                {# Personal contribution / preface #}
+                                {% if llm_result.get('preface_found') %}
+                                    <div class="border-start border-secondary border-2 ps-2 mb-2">
+                                        <div class="small fw-semibold mb-1">Personal contribution statement</div>
+                                        <div class="small">{{ llm_result['preface_precis'] }}</div>
+                                    </div>
+                                {% else %}
+                                    <div class="small text-muted mb-2">
+                                        <i class="fas fa-exclamation-circle me-1"></i>No preface / personal contribution statement detected
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
                         {# --- LLM grade band result or failure --- #}
                         <div class="mb-3">
                             {% if llm_result.get('classification') %}
@@ -681,6 +735,7 @@
                 {# OFFCANVAS: Full LLM report #}
                 {% set la = record.language_analysis_data %}
                 {% set llm_result = la.get('llm_result', {}) %}
+                {% set llm_feedback = la.get('llm_feedback', {}) %}
                 <div class="offcanvas offcanvas-end" tabindex="-1"
                      id="lang-analysis-offcanvas-{{ record.id }}"
                      aria-labelledby="lang-analysis-label-{{ record.id }}"
@@ -693,6 +748,38 @@
                                 aria-label="Close"></button>
                     </div>
                     <div class="offcanvas-body">
+
+                        {# --- Feedback recommendations --- #}
+                        <div class="mb-3">
+                            <div class="small text-muted fw-semibold mb-2">Feedback recommendations</div>
+                            {% if llm_feedback.get('positive_feedback') or llm_feedback.get('improvements') %}
+                                {% if llm_feedback.get('positive_feedback') %}
+                                    <div class="small fw-semibold mb-1">What was done well</div>
+                                    <ul class="small mb-2">
+                                        {% for item in llm_feedback['positive_feedback'] %}
+                                            <li>{{ item }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                                {% if llm_feedback.get('improvements') %}
+                                    <div class="small fw-semibold mb-1">Suggestions for improvement</div>
+                                    <ul class="small mb-2">
+                                        {% for item in llm_feedback['improvements'] %}
+                                            <li>{{ item }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            {% elif record.llm_feedback_failed %}
+                                <div class="small text-danger">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    Feedback generation failed{% if admin_rights and record.llm_feedback_failure_reason %}: {{ record.llm_feedback_failure_reason }}{% endif %}
+                                </div>
+                            {% else %}
+                                <div class="small text-muted fst-italic">Feedback recommendations not yet available.</div>
+                            {% endif %}
+                        </div>
+                        <hr class="mb-3">
+
                         {% if llm_result.get('classification') %}
                             {# --- Grade band badge --- #}
                             <div class="mb-3">

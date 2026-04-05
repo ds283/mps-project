@@ -1121,6 +1121,12 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # human-readable reason for LLM failure, for display to administrators
     llm_failure_reason = db.Column(db.Text(), default=None)
 
+    # did the feedback LLM step fail?
+    llm_feedback_failed = db.Column(db.Boolean(), default=False)
+
+    # human-readable reason for feedback LLM failure, for display to administrators
+    llm_feedback_failure_reason = db.Column(db.Text(), default=None)
+
     # MARKING WORKFLOW
 
     # assigned supervision grade (determined from SubmissionRole instances by some conflation rule)

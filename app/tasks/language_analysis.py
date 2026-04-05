@@ -682,6 +682,28 @@ Your response must be a JSON object with the following fields:
 - "caveats": any limitations, uncertainties, or criteria that could not be assessed from
   text alone (e.g. typesetting quality, visual presentation).
 
+- "stated_word_count_found": true if the document contains an explicit word count stated
+  by the student (typically near a label such as "Word count:", "Total word count:", or
+  similar); false otherwise.
+
+- "stated_word_count": the integer value of the student's stated word count if
+  stated_word_count_found is true, otherwise null.
+
+- "genai_statement_found": true if the document contains any statement about the student's
+  use (or non-use) of generative AI tools; false otherwise. The statement may appear
+  anywhere in the document under any heading.
+
+- "genai_statement": if genai_statement_found is true, copy the verbatim text of the AI
+  use statement (or its first sentence if very long). Empty string if not found.
+
+- "preface_found": true if the document contains a "Preface" section (or equivalently
+  named section, e.g. "Acknowledgements and Contribution", "Personal Statement") that
+  includes a description of the student's personal contribution to the project work.
+  false otherwise.
+
+- "preface_precis": if preface_found is true, provide a 1-3 sentence précis of the
+  student's personal contribution statement. Empty string if not found.
+
 ## Criteria checklist — use the numeric code (e.g. "1.1") as the key for each criterion
 
 {criteria_checklist}
@@ -744,6 +766,12 @@ _REQUIRED_JSON_KEYS = {
     "overall_reasoning",
     "bands",
     "caveats",
+    "stated_word_count_found",
+    "stated_word_count",
+    "genai_statement_found",
+    "genai_statement",
+    "preface_found",
+    "preface_precis",
 }
 
 def _make_band_schema(band_idx: int, criteria_list: list) -> dict:
@@ -810,19 +838,26 @@ def _make_band_schema(band_idx: int, criteria_list: list) -> dict:
 # of the natural-language instructions in the system prompt.
 #
 # Top-level structure:
-#   report_summary    — 1-2 paragraph narrative description of the report content
-#   classification    — recommended grade band (enum-constrained to GRADE_BANDS)
-#   overall_reasoning — one paragraph justifying the recommended band
-#   bands             — fixed-key object, one property per GRADE_BANDS entry, each
-#                       containing a band_assessment summary and a 'criteria' object.
-#                       'bands' as an object enforces that all four band names are present
-#                       exactly once (object keys are unique and required).
-#                       'criteria' is also modelled as a fixed-key object keyed by short
-#                       numeric codes ("1.1", "1.2", …) rather than the full criterion
-#                       text.  Long criterion strings as grammar property-name literals
-#                       trigger a SIGSEGV in the llama.cpp GBNF generator; short codes
-#                       are safe.  The code→text mapping is stored in criterion_map.
-#   caveats           — free-text limitations or caveats
+#   report_summary         — 1-2 paragraph narrative description of the report content
+#   classification         — recommended grade band (enum-constrained to GRADE_BANDS)
+#   overall_reasoning      — one paragraph justifying the recommended band
+#   bands                  — fixed-key object, one property per GRADE_BANDS entry, each
+#                            containing a band_assessment summary and a 'criteria' object.
+#                            'bands' as an object enforces that all four band names are
+#                            present exactly once (object keys are unique and required).
+#                            'criteria' is also modelled as a fixed-key object keyed by
+#                            short numeric codes ("1.1", "1.2", …) rather than the full
+#                            criterion text.  Long criterion strings as grammar property-
+#                            name literals trigger a SIGSEGV in the llama.cpp GBNF
+#                            generator; short codes are safe.  The code→text mapping is
+#                            stored in criterion_map.
+#   caveats                — free-text limitations or caveats
+#   stated_word_count_found — whether the document states an explicit word count
+#   stated_word_count      — the stated integer count, or null
+#   genai_statement_found  — whether a generative-AI use statement is present
+#   genai_statement        — verbatim AI use statement, or empty string
+#   preface_found          — whether a preface / personal contribution section exists
+#   preface_precis         — 1-3 sentence précis of the contribution statement, or ""
 _LLM_RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
@@ -841,6 +876,12 @@ _LLM_RESPONSE_SCHEMA = {
             "required": [band["band"] for band in GRADE_BANDS],
         },
         "caveats": {"type": "string"},
+        "stated_word_count_found": {"type": "boolean"},
+        "stated_word_count": {"type": ["integer", "null"]},
+        "genai_statement_found": {"type": "boolean"},
+        "genai_statement": {"type": "string"},
+        "preface_found": {"type": "boolean"},
+        "preface_precis": {"type": "string"},
     },
     "required": [
         "report_summary",
@@ -848,6 +889,12 @@ _LLM_RESPONSE_SCHEMA = {
         "overall_reasoning",
         "bands",
         "caveats",
+        "stated_word_count_found",
+        "stated_word_count",
+        "genai_statement_found",
+        "genai_statement",
+        "preface_found",
+        "preface_precis",
     ],
 }
 
@@ -855,6 +902,76 @@ _LLM_RESPONSE_SCHEMA = {
 def _validate_llm_response(data: dict) -> bool:
     """Return True if the LLM JSON response has all required top-level keys."""
     return _REQUIRED_JSON_KEYS.issubset(data.keys())
+
+
+# ---------------------------------------------------------------------------
+# Feedback LLM helpers.
+# ---------------------------------------------------------------------------
+
+_LLM_FEEDBACK_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "positive_feedback": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 2,
+            "maxItems": 3,
+        },
+        "improvements": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 2,
+            "maxItems": 3,
+        },
+    },
+    "required": ["positive_feedback", "improvements"],
+}
+
+_REQUIRED_FEEDBACK_JSON_KEYS = {"positive_feedback", "improvements"}
+
+
+def _build_feedback_system_prompt(truncated: bool) -> str:
+    """Construct the LLM system prompt for the feedback-generation pass."""
+    truncation_note = (
+        "\n\nNOTE: The document text provided may have been truncated. "
+        "If you see the marker '[... middle section omitted due to length ...]', "
+        "the middle portion of the document has been removed. Base your feedback "
+        "only on the text that is visible."
+        if truncated
+        else ""
+    )
+
+    return f"""You are an experienced academic supervisor reading a student project report. \
+Your task is to provide concise, specific formative feedback that will help the student \
+understand what they did well and how they could improve.
+
+## Instructions
+
+Produce exactly 2–3 items of **positive feedback** and exactly 2–3 **suggestions for improvement**.
+
+Each item must:
+- Be specific to the actual content of this report — name the topic, technique, section, \
+or argument you are referring to. Generic phrases such as "good introduction" or \
+"consider improving your writing" are not acceptable.
+- Be written in plain English, addressed to the student, in one or two sentences.
+- For improvements: be actionable — say what the student should do differently, not just \
+that something is missing.
+
+## Response format
+
+Your response must be a JSON object with exactly two fields:
+
+- "positive_feedback": an array of 2–3 strings, each being one item of positive feedback.
+- "improvements": an array of 2–3 strings, each being one actionable improvement suggestion.{truncation_note}"""
+
+
+def _build_feedback_user_prompt(document_text: str) -> str:
+    return f"Please provide feedback on the following report:\n\n---\n\n{document_text}\n\n---"
+
+
+def _validate_feedback_response(data: dict) -> bool:
+    """Return True if the feedback JSON response has all required top-level keys."""
+    return _REQUIRED_FEEDBACK_JSON_KEYS.issubset(data.keys())
 
 
 # ---------------------------------------------------------------------------
@@ -1262,7 +1379,9 @@ def register_language_analysis_tasks(celery):
         errors: list = data.get("errors", [])
 
         if parsed_result is not None:
-            # Success: store result and remove the bulky intermediate text
+            # Success: store result.
+            # _extracted_text is left intact here so the subsequent
+            # submit_to_llm_feedback task can reuse it; finalize() cleans it up.
             data["llm_result"] = parsed_result
             # Build a code→full-text mapping so the template can display criterion text.
             # Codes match those used as JSON Schema property keys in _make_band_schema.
@@ -1271,7 +1390,6 @@ def register_language_analysis_tasks(celery):
                 for band_idx, band in enumerate(GRADE_BANDS, start=1)
                 for crit_idx, criterion in enumerate(band["criteria"], start=1)
             }
-            data.pop("_extracted_text", None)
         else:
             # Failure after all retries
             failure_reason = str(last_exc) if last_exc else "Unknown error"
@@ -1280,7 +1398,6 @@ def register_language_analysis_tasks(celery):
             data["llm_raw_response"] = (
                 accumulated  # preserve raw response for admin inspection
             )
-            data.pop("_extracted_text", None)
             errors.append(
                 {
                     "stage": "llm_submission",
@@ -1307,9 +1424,153 @@ def register_language_analysis_tasks(celery):
     # -----------------------------------------------------------------------
 
     @celery.task(bind=True, default_retry_delay=30)
+    def submit_to_llm_feedback(self, record_id: int):
+        """
+        Stage 4 (llm_tasks queue): submit the extracted report text to an Ollama
+        LLM for formative feedback generation (positive feedback and improvement
+        suggestions).  Runs after submit_to_llm in the chain so both tasks share
+        the same _extracted_text without redundant downloads.
+
+        Failures are recorded in the JSON blob and in llm_feedback_failed on the
+        record, but do not abort the chain — finalize() still runs so the rest of
+        the analysis results remain available.
+        """
+        self.update_state(state=states.STARTED, meta={"msg": "Generating feedback"})
+
+        try:
+            record: SubmissionRecord = (
+                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+            )
+        except SQLAlchemyError as exc:
+            current_app.logger.exception(
+                "SQLAlchemyError in submit_to_llm_feedback", exc_info=exc
+            )
+            raise self.retry()
+
+        if record is None:
+            raise Exception(
+                f"language_analysis.submit_to_llm_feedback: SubmissionRecord #{record_id} not found"
+            )
+
+        # Do not re-attempt if a human administrator has not yet cleared the failure flag
+        if record.llm_feedback_failed:
+            current_app.logger.info(
+                f"language_analysis.submit_to_llm_feedback: skipping record #{record_id} — llm_feedback_failed is set"
+            )
+            return
+
+        data = record.language_analysis_data
+        raw_text: str = data.get("_extracted_text", "")
+
+        main_text, _ = _split_text(raw_text)
+        clean_text = _strip_math_lines(main_text)
+        document_text, was_truncated = _truncate_text(clean_text)
+
+        system_prompt = _build_feedback_system_prompt(was_truncated)
+        user_prompt = _build_feedback_user_prompt(document_text)
+
+        base_url = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        model = current_app.config.get("OLLAMA_MODEL", "llama3.1:70b")
+
+        accumulated = ""
+        last_exc: Exception | None = None
+        parsed_result: dict | None = None
+
+        import ollama
+
+        client = ollama.Client(host=base_url)
+        _t_feedback = time.monotonic()
+
+        for attempt in range(_LLM_RETRY_ATTEMPTS):
+            accumulated = ""
+            try:
+                stream = client.generate(
+                    model=model,
+                    prompt=user_prompt,
+                    system=system_prompt,
+                    format=_LLM_FEEDBACK_RESPONSE_SCHEMA,
+                    stream=True,
+                )
+                for chunk in stream:
+                    if hasattr(chunk, "response"):
+                        accumulated += chunk.response
+                    elif isinstance(chunk, dict):
+                        accumulated += chunk.get("response", "")
+
+                parsed = json.loads(accumulated)
+                if not _validate_feedback_response(parsed):
+                    raise ValueError(
+                        f"Feedback LLM response missing required keys; got: {list(parsed.keys())}"
+                    )
+                parsed_result = parsed
+                last_exc = None
+                break
+
+            except ollama.ResponseError as exc:
+                last_exc = exc
+                status = getattr(exc, "status_code", 0)
+                if 400 <= status < 500:
+                    current_app.logger.error(
+                        f"language_analysis.submit_to_llm_feedback: permanent HTTP {status} error for record #{record_id}: {exc}"
+                    )
+                    break
+                if attempt < _LLM_RETRY_ATTEMPTS - 1:
+                    time.sleep(_LLM_RETRY_DELAY)
+
+            except (json.JSONDecodeError, ValueError) as exc:
+                last_exc = exc
+                current_app.logger.warning(
+                    f"language_analysis.submit_to_llm_feedback: JSON parse failure on attempt {attempt + 1}: {exc}"
+                )
+                if attempt < _LLM_RETRY_ATTEMPTS - 1:
+                    time.sleep(_LLM_RETRY_DELAY)
+
+            except Exception as exc:
+                last_exc = exc
+                current_app.logger.warning(
+                    f"language_analysis.submit_to_llm_feedback: transient error on attempt {attempt + 1}: {exc}"
+                )
+                if attempt < _LLM_RETRY_ATTEMPTS - 1:
+                    time.sleep(_LLM_RETRY_DELAY)
+
+        data.setdefault("timings", {})["llm_feedback_s"] = round(time.monotonic() - _t_feedback, 1)
+        errors: list = data.get("errors", [])
+
+        if parsed_result is not None:
+            data["llm_feedback"] = parsed_result
+        else:
+            failure_reason = str(last_exc) if last_exc else "Unknown error"
+            record.llm_feedback_failed = True
+            record.llm_feedback_failure_reason = failure_reason
+            errors.append(
+                {
+                    "stage": "llm_feedback_submission",
+                    "type": type(last_exc).__name__ if last_exc else "Unknown",
+                    "message": failure_reason,
+                }
+            )
+            current_app.logger.error(
+                f"language_analysis.submit_to_llm_feedback: feedback generation failed for record #{record_id}: {failure_reason}"
+            )
+
+        data["errors"] = errors
+        record.set_language_analysis_data(data)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as exc:
+            db.session.rollback()
+            current_app.logger.exception(
+                "SQLAlchemyError committing feedback result", exc_info=exc
+            )
+            raise self.retry()
+
+    # -----------------------------------------------------------------------
+
+    @celery.task(bind=True, default_retry_delay=30)
     def finalize(self, record_id: int):
         """
-        Stage 4 (default queue): mark language analysis as complete.
+        Stage 5 (default queue): mark language analysis as complete.
         """
         try:
             record: SubmissionRecord = (
@@ -1325,6 +1586,12 @@ def register_language_analysis_tasks(celery):
             raise Exception(
                 f"language_analysis.finalize: SubmissionRecord #{record_id} not found"
             )
+
+        # Remove the bulky intermediate extracted text now that both LLM tasks
+        # have completed (or been skipped due to failure).
+        data = record.language_analysis_data
+        data.pop("_extracted_text", None)
+        record.set_language_analysis_data(data)
 
         record.language_analysis_complete = True
 

@@ -81,34 +81,19 @@ with app.app_context():
 
     # LEGACY
     # if specified, import supervisor and examiner data (expected to be from Qualtrics)
-    if getattr(initdb_module, "INITDB_SUPERVISOR_IMPORT", None) is not None:
-        db.session.commit()
-        import_supervisor_data(app, initdb_module)
+    # if getattr(initdb_module, "INITDB_SUPERVISOR_IMPORT", None) is not None:
+    #     db.session.commit()
+    #     import_supervisor_data(app, initdb_module)
 
-    if getattr(initdb_module, "INITDB_EXAMINER_IMPORT", None) is not None:
-        db.session.commit()
-        import_examiner_data(app, initdb_module)
+    # if getattr(initdb_module, "INITDB_EXAMINER_IMPORT", None) is not None:
+    #     db.session.commit()
+    #     import_examiner_data(app, initdb_module)
 
     # LEGACY
     # if specified, import attendance data (expected to be from Office forms)
-    if getattr(initdb_module, "INITDB_ATTENDANCE_IMPORT", None) is not None:
-        db.session.commit()
-        import_attendance_data(app, initdb_module)
-
-    # db.session.commit()
-    # migrate_schedule_submission_roles(app)
-
-    # db.session.commit()
-    # migrate_to_marking_events(app)
-
-    db.session.commit()
-    cleanup_orphaned_live_marking_schemes(app)
-
-    db.session.commit()
-    migrate_period_attachment_roles(app)
-
-    db.session.commit()
-    migrate_submission_attachment_roles(app)
+    # if getattr(initdb_module, "INITDB_ATTENDANCE_IMPORT", None) is not None:
+    #     db.session.commit()
+    #     import_attendance_data(app, initdb_module)
 
     reconcile_background_tasks(app)
 

@@ -58,6 +58,20 @@ _subject = """
 """
 
 
+# language=jinja2
+_workflow = """
+{% set item = e.email_workflow_items.first() %}
+{% if item and item.workflow %}
+    <div class="small fw-semibold">{{ item.workflow.name }}</div>
+    {% for pc in item.workflow.pclasses %}
+        <span class="badge bg-secondary me-1">{{ pc.abbreviation }}</span>
+    {% endfor %}
+{% else %}
+    <span class="badge bg-secondary">None</span>
+{% endif %}
+"""
+
+
 def email_log_data(emails):
     data = [
         {
@@ -65,6 +79,7 @@ def email_log_data(emails):
             "address": render_template_string(_addresses, e=e),
             "date": e.send_date.strftime("%a %d %b %Y %H:%M:%S"),
             "subject": render_template_string(_subject, e=e),
+            "workflow": render_template_string(_workflow, e=e),
             "menu": render_template_string(_email_log_menu, e=e),
         }
         for e in emails

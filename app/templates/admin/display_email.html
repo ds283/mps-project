@@ -6,118 +6,278 @@
     Email log
 {% endblock %}
 
+{% block scripts %}
+    {{ super() }}
+    <script>
+        function resizeEmailFrame(frame) {
+            try {
+                var doc = frame.contentDocument || frame.contentWindow.document;
+                frame.style.height = doc.documentElement.scrollHeight + 'px';
+            } catch(e) {}
+        }
+    </script>
+{% endblock %}
+
 {% block bodyblock %}
+    {% set wf_item = email.email_workflow_items.first() %}
+    {% set workflow = wf_item.workflow if wf_item else none %}
+
     <div class="row">
         <div class="col-1"></div>
         <div class="col-10">
+
             <div class="top-return-link">
                 <a class="text-decoration-none" href="{{ url }}">
                     <i class="fas fa-backward"></i> Return to {{ text }}
                 </a>
             </div>
+
             <div class="card border-primary mt-3 mb-3">
-                <div class="card-header bg-primary text-white">{{ email.subject }}</div>
+                {# ── Card header ──────────────────────────────────────────────────── #}
+                <div class="card-header bg-primary text-white d-flex align-items-center gap-2">
+                    <i class="fas fa-envelope fa-fw"></i>
+                    <span class="fw-semibold">{{ email.subject }}</span>
+                </div>
+
                 <div class="card-body">
-                    <div class="card card-body bg-light border-0 email-display">
-                        <p>To:
-                            {% for user in email.recipients -%}
-                                {%- if loop.index > 1 -%}, {% endif -%}<strong>{{ user.name }}</strong>
-                                <a href="mailto::{{ user.email }}">&lt;{{ user.email }}&gt;</a>
-                            {%- else -%}
-                                <span class="badge bg-secondary">Nobody</span>
-                            {%- endfor %}
-                        </p>
-                        <p>Sent: <strong>{{ email.send_date.strftime("%a %d %b %Y %H:%M:%S") }}</strong></p>
-                        <p>Subject: <strong>{{ email.subject }}</strong></p>
+
+                    {# ── Metadata panel ───────────────────────────────────────────── #}
+                    <div class="card border-0 bg-light mb-3">
+                        <div class="card-body py-3">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="small text-muted text-uppercase fw-semibold mb-1">Recipients</div>
+                                    {% for user in email.recipients -%}
+                                        <div class="d-flex align-items-baseline gap-1">
+                                            <span class="fw-semibold">{{ user.name }}</span>
+                                            <a class="text-decoration-none small text-muted" href="mailto:{{ user.email }}">&lt;{{ user.email }}&gt;</a>
+                                        </div>
+                                    {%- else -%}
+                                        <span class="badge bg-secondary">Nobody</span>
+                                    {%- endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <div class="small text-muted text-uppercase fw-semibold mb-1">Sent</div>
+                                        <span class="fw-semibold">{{ email.send_date.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                    </div>
+                                    <div>
+                                        <div class="small text-muted text-uppercase fw-semibold mb-1">Subject</div>
+                                        <span class="fw-semibold">{{ email.subject }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    {% if email.body and email.body|length > 0 %}
-                        <div class="card card-body bg-light mt-2 border-0 email-display">
-                            <div class="mb-1"><strong>Plain text content</strong></div>
-                            <div>
-                                <pre>{{ email.body }}</pre>
+
+                    {# ── HTML email preview (primary) ─────────────────────────────── #}
+                    {% if email.html and email.html|length > 0 %}
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-white border-bottom d-flex align-items-center gap-2 py-2">
+                                <i class="fas fa-eye fa-fw text-primary"></i>
+                                <span class="fw-semibold">Email preview</span>
+                            </div>
+                            <div class="card-body p-0" style="background: #fff; border-radius: 0 0 .375rem .375rem; overflow: hidden;">
+                                <iframe id="email-html-frame"
+                                        srcdoc="{{ email.html | e }}"
+                                        style="width: 100%; border: none; min-height: 300px; display: block; font-family: sans-serif;"
+                                        sandbox="allow-same-origin"
+                                        onload="resizeEmailFrame(this)"></iframe>
                             </div>
                         </div>
                     {% endif %}
-                    {% if email.html and email.html|length > 0 %}
-                        <div class="card card-body bg-light mt-2 border-0 email-display">
-                            <div class="mb-1"><strong>HTML content</strong></div>
-                            <div>{{ email.html|safe }}</div>
+
+                    {# ── Plain text (collapsible) ──────────────────────────────────── #}
+                    {% if email.body and email.body|length > 0 %}
+                        <div class="accordion mb-3" id="plainTextAccordion">
+                            <div class="accordion-item border-0 bg-light">
+                                <h2 class="accordion-header" id="plainTextHeading">
+                                    <button class="accordion-button collapsed bg-light fw-semibold py-2" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#plainTextCollapse"
+                                            aria-expanded="false" aria-controls="plainTextCollapse">
+                                        <i class="fas fa-align-left fa-fw me-2 text-muted"></i> Plain text content
+                                    </button>
+                                </h2>
+                                <div id="plainTextCollapse" class="accordion-collapse collapse"
+                                     aria-labelledby="plainTextHeading" data-bs-parent="#plainTextAccordion">
+                                    <div class="accordion-body pt-2">
+                                        <pre class="mb-0 small" style="white-space: pre-wrap; word-break: break-word;">{{ email.body }}</pre>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     {% endif %}
+
+                    {# ── Attachments ──────────────────────────────────────────────── #}
                     {% if email.attachments.count() > 0 %}
-                        <div class="card card-body bg-light mt-2 border-0 email-display">
-                            <div class="mb-1"><strong>Attachments</strong></div>
-                            <table class="table table-sm table-striped">
-                                <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Description</th>
-                                    <th>Details</th>
-                                    <th>Expiry</th>
-                                    <th>Actions</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {% for att in email.attachments %}
-                                    {% set asset = att.generated_asset or att.submitted_asset or att.temporary_asset %}
+                        <div class="card border-0 bg-light mb-3">
+                            <div class="card-header bg-light border-bottom d-flex align-items-center gap-2 py-2">
+                                <i class="fas fa-paperclip fa-fw text-secondary"></i>
+                                <span class="fw-semibold">Attachments</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm table-striped mb-0">
+                                    <thead class="table-light">
                                     <tr>
-                                        <td>{{ att.name }}</td>
-                                        <td>{{ att.description }}</td>
-                                        <td>
-                                            <div class="small">
-                                                <div>Size: {{ asset.human_file_size() if asset else 'Unknown' }}</div>
-                                                <div>Bucket: <span
-                                                        class="badge bg-secondary">{{ asset.bucket if asset else 'Unknown' }}</span>
-                                                </div>
-                                                {% if asset and asset.compressed %}
-                                                    <span class="badge bg-info">Compressed</span>
-                                                {% endif %}
-                                                {% if asset and asset.encryption != 0 %}
-                                                    <span class="badge bg-warning text-dark">Encrypted</span>
-                                                {% endif %}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            {% if asset and asset.expiry %}
-                                                <span class="badge bg-danger">{{ asset.expiry.strftime("%a %d %b %Y %H:%M") }}</span>
-                                            {% else %}
-                                                <span class="badge bg-secondary">None</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if att.generated_asset_id %}
-                                                <a href="{{ url_for('admin.download_generated_asset', asset_id=att.generated_asset_id) }}"
-                                                   class="btn btn-sm btn-outline-primary">
-                                                    <i class="fas fa-download"></i> Download
-                                                </a>
-                                            {% elif att.submitted_asset_id %}
-                                                <a href="{{ url_for('admin.download_submitted_asset', asset_id=att.submitted_asset_id) }}"
-                                                   class="btn btn-sm btn-outline-primary">
-                                                    <i class="fas fa-download"></i> Download
-                                                </a>
-                                            {% else %}
-                                                <button class="btn btn-sm btn-outline-secondary" disabled>
-                                                    <i class="fas fa-download"></i> Download
-                                                </button>
-                                            {% endif %}
-                                        </td>
+                                        <th>Name</th>
+                                        <th>Description</th>
+                                        <th>Details</th>
+                                        <th>Expiry</th>
+                                        <th>Actions</th>
                                     </tr>
-                                {% endfor %}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                    {% for att in email.attachments %}
+                                        {% set asset = att.generated_asset or att.submitted_asset or att.temporary_asset %}
+                                        <tr>
+                                            <td>{{ att.name }}</td>
+                                            <td>{{ att.description }}</td>
+                                            <td>
+                                                <div class="small">
+                                                    <div>Size: {{ asset.human_file_size() if asset else 'Unknown' }}</div>
+                                                    <div>Bucket: <span class="badge bg-secondary">{{ asset.bucket if asset else 'Unknown' }}</span></div>
+                                                    {% if asset and asset.compressed %}
+                                                        <span class="badge bg-primary">Compressed</span>
+                                                    {% endif %}
+                                                    {% if asset and asset.encryption != 0 %}
+                                                        <span class="badge bg-warning text-dark">Encrypted</span>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if asset and asset.expiry %}
+                                                    <span class="badge bg-danger">{{ asset.expiry.strftime("%a %d %b %Y %H:%M") }}</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">None</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if att.generated_asset_id %}
+                                                    <a href="{{ url_for('admin.download_generated_asset', asset_id=att.generated_asset_id) }}"
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-download"></i> Download
+                                                    </a>
+                                                {% elif att.submitted_asset_id %}
+                                                    <a href="{{ url_for('admin.download_submitted_asset', asset_id=att.submitted_asset_id) }}"
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-download"></i> Download
+                                                    </a>
+                                                {% else %}
+                                                    <button class="btn btn-sm btn-outline-secondary" disabled>
+                                                        <i class="fas fa-download"></i> Download
+                                                    </button>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     {% endif %}
-                    <div class="d-flex flex-row justify-content-end mt-2 align-content-start">
+
+                    {# ── Workflow status pane (admin / root only) ─────────────────── #}
+                    {% if (is_admin or is_root) and wf_item and workflow %}
+                        <div class="card border-secondary mb-3">
+                            <div class="card-header bg-secondary bg-opacity-10 border-secondary d-flex align-items-center gap-2 py-2">
+                                <i class="fas fa-project-diagram fa-fw text-secondary"></i>
+                                <span class="fw-semibold text-secondary">Workflow status</span>
+                            </div>
+                            <div class="card-body">
+                                <dl class="row mb-0 small">
+
+                                    <dt class="col-sm-3">Workflow name</dt>
+                                    <dd class="col-sm-9">
+                                        <span class="fw-semibold">{{ workflow.name }}</span>
+                                        {% if workflow.completed %}
+                                            <span class="badge bg-success ms-2">Complete</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary ms-2">In progress</span>
+                                        {% endif %}
+                                        {% if workflow.paused %}
+                                            <span class="badge bg-warning text-dark ms-1">Paused</span>
+                                        {% endif %}
+                                    </dd>
+
+                                    <dt class="col-sm-3">Template</dt>
+                                    <dd class="col-sm-9">
+                                        {% if wf_item.body_override %}
+                                            <span class="badge bg-warning text-dark">Body override</span>
+                                        {% else %}
+                                            <span class="fw-semibold">{{ workflow.template.type_name }}</span>
+                                            <span class="text-muted ms-1">v{{ workflow.template.version }}</span>
+                                        {% endif %}
+                                        {% if wf_item.subject_override %}
+                                            <span class="badge bg-warning text-dark ms-1">Subject override</span>
+                                        {% endif %}
+                                    </dd>
+
+                                    <dt class="col-sm-3">Project classes</dt>
+                                    <dd class="col-sm-9">
+                                        {% for pc in workflow.pclasses %}
+                                            <span class="badge bg-primary me-1">{{ pc.abbreviation }}</span>
+                                        {% else %}
+                                            <span class="text-muted">None</span>
+                                        {% endfor %}
+                                    </dd>
+
+                                    <dt class="col-sm-3">Sent (item)</dt>
+                                    <dd class="col-sm-9">
+                                        {% if wf_item.sent_timestamp %}
+                                            {{ wf_item.sent_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                                        {% else %}
+                                            <span class="text-muted">Not recorded</span>
+                                        {% endif %}
+                                    </dd>
+
+                                    <dt class="col-sm-3">Send attempts</dt>
+                                    <dd class="col-sm-9">
+                                        {% if wf_item.send_attempts == 0 %}
+                                            <span class="badge bg-secondary">0</span>
+                                        {% elif wf_item.send_attempts == 1 %}
+                                            <span class="badge bg-success">1</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">{{ wf_item.send_attempts }}</span>
+                                        {% endif %}
+                                    </dd>
+
+                                    {% if workflow.completed_timestamp %}
+                                        <dt class="col-sm-3">Workflow completed</dt>
+                                        <dd class="col-sm-9">{{ workflow.completed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</dd>
+                                    {% endif %}
+
+                                    {% if wf_item.error_condition %}
+                                        <dt class="col-sm-3">Error</dt>
+                                        <dd class="col-sm-9">
+                                            <span class="badge bg-danger me-1">Error</span>
+                                            {% if wf_item.error_message %}
+                                                <span class="text-danger">{{ wf_item.error_message }}</span>
+                                            {% endif %}
+                                        </dd>
+                                    {% endif %}
+
+                                </dl>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {# ── Actions ──────────────────────────────────────────────────── #}
+                    <div class="d-flex flex-row justify-content-end mt-2">
                         <a href="{{ url_for('admin.delete_email', id=email.id) }}"
-                           class="btn btn-outline-danger">Delete</a>
+                           class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-trash fa-fw"></i> Delete
+                        </a>
                     </div>
+
                 </div>
             </div>
+
             <div>
                 <a class="text-decoration-none" href="{{ url }}">
                     <i class="fas fa-backward"></i> Return to {{ text }}
                 </a>
             </div>
+
         </div>
         <div class="col-1"></div>
     </div>

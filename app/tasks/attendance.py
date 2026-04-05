@@ -11,8 +11,7 @@ from datetime import datetime, time, timedelta
 from typing import List
 
 import holidays
-import humanize
-from celery import chain, group, states
+from celery import group, states
 from flask import current_app, url_for
 from numpy import is_busday
 from sqlalchemy.exc import SQLAlchemyError
@@ -27,7 +26,6 @@ from ..models import (
     ProjectClassConfig,
     StudentData,
     SubmissionPeriodRecord,
-    SubmissionPeriodUnit,
     SubmissionRecord,
     SubmissionRole,
     SubmittingStudent,
@@ -35,10 +33,8 @@ from ..models import (
     User,
 )
 from ..models.emails import encode_email_payload
-from ..shared.sqlalchemy import get_count
 from ..shared.utils import get_current_year
 from ..shared.workflow_logging import log_db_commit
-from ..task_queue import register_task
 
 
 def register_attendance_tasks(celery):
@@ -48,11 +44,26 @@ def register_attendance_tasks(celery):
             state=states.STARTED, meta={"msg": "Checking for attendance prompts"}
         )
 
+        now = datetime.now()
+        today = now.date()
+        holiday_calendar = holidays.UK()
+
+        # check once: bail immediately on non-working days
+        if today in holiday_calendar:
+            msg = {"msg": f"Today ({today}) is a UK holiday, skipping attendance prompts"}
+            print(msg["msg"])
+            self.update_state(state=states.SUCCESS, meta=msg)
+            return msg
+
+        if not is_busday(today):
+            msg = {"msg": f"Today ({today}) is not a working day, skipping attendance prompts"}
+            print(msg["msg"])
+            self.update_state(state=states.SUCCESS, meta=msg)
+            return msg
+
         try:
             year = get_current_year()
 
-            # get all ProjectClassConfig instances for the current year,
-            # where the ProjectClass is active and published
             configs: List[ProjectClassConfig] = (
                 db.session.query(ProjectClassConfig)
                 .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id)
@@ -68,408 +79,250 @@ def register_attendance_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        # replace ourselves with a group of tasks to check each of these configs individually
+        if not configs:
+            return None
+
         self.update_state(
             state=states.STARTED,
-            meta={"msg": "Generating tasks to test for email prompts"},
+            meta={
+                "msg": f"Dispatching attendance prompt tasks for {len(configs)} config(s)"
+            },
         )
 
-        master_tasks = []
-
-        for config in configs:
-            try:
-                # search for all SupervisionEvents belonging to non-retired submitters,
-                # for which a prompt has not already been sent, and for which notifications
-                # are not muted
-                events: List[SupervisionEvent] = (
-                    db.session.query(SupervisionEvent)
-                    .join(
-                        SubmissionRole, SubmissionRole.id == SupervisionEvent.owner_id
-                    )
-                    .join(
-                        SubmissionRecord,
-                        SubmissionRecord.id == SupervisionEvent.sub_record_id,
-                    )
-                    .join(
-                        SubmissionPeriodRecord,
-                        SubmissionPeriodRecord.id == SubmissionRecord.period_id,
-                    )
-                    .join(
-                        SubmittingStudent,
-                        SubmittingStudent.id == SubmissionRecord.owner_id,
-                    )
-                    .filter(
-                        SupervisionEvent.attendance.is_(None),
-                        SupervisionEvent.mute.is_(False),
-                        SupervisionEvent.prompt_sent_timestamp.is_(None),
-                        ~SubmissionPeriodRecord.marking_events.any(open=True, closed=False),
-                        SubmissionPeriodRecord.closed.is_(False),
-                        SubmissionRole.mute.is_(False),
-                        SubmissionRole.prompt_after_event.is_(True),
-                        SubmittingStudent.retired.is_(False),
-                        SubmittingStudent.config_id == config.id,
-                    )
-                    .all()
-                )
-
-                if len(events) > 0:
-                    template = EmailTemplate.find_template_(
-                        EmailTemplate.ATTENDANCE_PROMPT, pclass=config.project_class
-                    )
-                    workflow = EmailWorkflow.build_(
-                        name=f"Attendance prompts: {config.name} ({datetime.now().strftime('%d/%m/%Y %H:%M')})",
-                        template=template,
-                        defer=timedelta(minutes=15),
-                        pclasses=[config.project_class],
-                        creator=config.project_class.convenor.user,
-                    )
-                    db.session.add(workflow)
-                    db.session.flush()
-
-                    workflow_id = workflow.id
-                    db.session.commit()  # intentionally not logged: periodic attendance notification task
-
-                    tasks = group(
-                        check_event_for_attendance_prompt.si(event.id, workflow_id)
-                        for event in events
-                    )
-                    master_tasks.append(
-                        chain(tasks, cleanup_attendance_workflow.si(workflow_id))
-                    )
-
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-        if len(master_tasks) > 0:
-            return self.replace(group(master_tasks))
-
-        return None
+        return self.replace(
+            group(
+                process_attendance_prompts_for_config.si(config.id)
+                for config in configs
+            )
+        )
 
     @celery.task(bind=True, default_retry_delay=30)
-    def check_event_for_attendance_prompt(self, event_id: int, workflow_id: int):
-        msg = f"Testing event #{event_id} for an attendance email prompt"
-        print(msg)
+    def process_attendance_prompts_for_config(self, config_id: int):
         self.update_state(
             state=states.STARTED,
-            meta={"msg": msg},
+            meta={"msg": f"Processing attendance prompts for config #{config_id}"},
         )
 
         try:
-            event: SupervisionEvent = (
-                db.session.query(SupervisionEvent).filter_by(id=event_id).first()
-            )
-            workflow: EmailWorkflow = (
-                db.session.query(EmailWorkflow).filter_by(id=workflow_id).first()
+            config: ProjectClassConfig = (
+                db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
             )
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if event is None:
-            msg = {"msg": f"Could not load event #{event_id}"}
+        if config is None:
+            msg = {"msg": f"Could not load config #{config_id}"}
             self.update_state(state=states.FAILURE, meta=msg)
             return msg
 
-        if workflow is None:
-            msg = {"msg": f"Could not load workflow #{workflow_id}"}
-            self.update_state(state=states.FAILURE, meta=msg)
-            return msg
-
-        year = get_current_year()
-        record: SubmissionRecord = event.sub_record
-        owner: SubmissionRole = event.owner
-        period: SubmissionPeriodRecord = record.period
-        sub: SubmittingStudent = record.owner
-        config: ProjectClassConfig = sub.config
-        unit: SubmissionPeriodUnit = event.unit
-
-        student_name: str = sub.student.user.name
-        event_label: str = f'"{event.name}"'
-        if event.time is not None:
-            event_label += f" on {event.time.strftime('%A %-d %B %Y at %H:%M')}"
-
-        # REMOVE LATER
-        # restrict emails to just user #1
-        # if owner.user_id != 1:
-        #     self.update_state(
-        #         state=states.SUCCESS,
-        #         meta={"msg": f"SubmissionRole #{owner.id} is currently being ignored"},
-        #     )
-        #     raise Ignore()
-
-        if config.year != year:
-            msg = {
-                "msg": f"Event #{event_id} {event_label} for {student_name} belongs to a different academic year"
-            }
-            print(msg["msg"])
-            self.update_state(
-                state=states.SUCCESS,
-                meta=msg,
+        try:
+            events: List[SupervisionEvent] = (
+                db.session.query(SupervisionEvent)
+                .join(
+                    SubmissionRole, SubmissionRole.id == SupervisionEvent.owner_id
+                )
+                .join(
+                    SubmissionRecord,
+                    SubmissionRecord.id == SupervisionEvent.sub_record_id,
+                )
+                .join(
+                    SubmissionPeriodRecord,
+                    SubmissionPeriodRecord.id == SubmissionRecord.period_id,
+                )
+                .join(
+                    SubmittingStudent,
+                    SubmittingStudent.id == SubmissionRecord.owner_id,
+                )
+                .filter(
+                    SupervisionEvent.attendance.is_(None),
+                    SupervisionEvent.mute.is_(False),
+                    SupervisionEvent.prompt_sent_timestamp.is_(None),
+                    ~SubmissionPeriodRecord.marking_events.any(open=True, closed=False),
+                    SubmissionPeriodRecord.closed.is_(False),
+                    SubmissionRole.mute.is_(False),
+                    SubmissionRole.prompt_after_event.is_(True),
+                    SubmittingStudent.retired.is_(False),
+                    SubmittingStudent.config_id == config.id,
+                )
+                .all()
             )
-            return msg
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
-        if sub.retired:
-            msg = {
-                "msg": f"Event #{event_id} {event_label}: student {student_name} is retired"
-            }
-            print(msg["msg"])
-            self.update_state(
-                state=states.SUCCESS,
-                meta=msg,
-            )
-            return msg
+        if not events:
+            return None
 
-        if period.is_feedback_open:
-            msg = {
-                "msg": f"Event #{event_id} {event_label} for {student_name} belongs to a submission period that has been opened for feedback"
-            }
-            print(msg["msg"])
-            self.update_state(
-                state=states.SUCCESS,
-                meta=msg,
-            )
-            return msg
-
-        if period.closed:
-            msg = {
-                "msg": f"Event #{event_id} {event_label} for {student_name} belongs to a submission period that has been closed"
-            }
-            print(msg["msg"])
-            self.update_state(
-                state=states.SUCCESS,
-                meta=msg,
-            )
-            return msg
-
-        if event.attendance is not None:
-            msg = {
-                "msg": f"Event #{event_id} {event_label} for {student_name} already has attendance recorded"
-            }
-            print(msg["msg"])
-            self.update_state(
-                state=states.SUCCESS,
-                meta=msg,
-            )
-            return msg
-
-        if event.mute:
-            msg = {
-                "msg": f"Event #{event_id} {event_label} for {student_name} is muted"
-            }
-            print(msg["msg"])
-            self.update_state(state=states.SUCCESS, meta=msg)
-            return msg
-
-        owner_name: str = owner.user.name
-
-        # is this event in the past?
-        # to decide that, we need to know when the owner has asked for prompts to be delivered
-        if owner.mute:
-            msg = {
-                "msg": f"Event #{event_id} {event_label} for {student_name}: owner {owner_name} is muted"
-            }
-            print(msg["msg"])
-            self.update_state(
-                state=states.SUCCESS,
-                meta=msg,
-            )
-            return msg
-
-        if not owner.prompt_after_event:
-            msg = {
-                "msg": f"Event #{event_id} {event_label} for {student_name}: owner {owner_name} has not requested an email prompt"
-            }
-            print(msg["msg"])
-            self.update_state(
-                state=states.SUCCESS,
-                meta=msg,
-            )
-            return msg
-
-        if event.prompt_sent_timestamp is not None:
-            msg = {
-                "msg": f"Event #{event_id} {event_label} for {student_name}: owner {owner_name} has already been notified"
-            }
-            print(msg["msg"])
-            self.update_state(
-                state=states.SUCCESS,
-                meta=msg,
-            )
-            return msg
-
-        target_time: datetime
-        event_time: datetime = event.get_start_time()
-
-        if owner.prompt_at_fixed_time:
-            # event_time is guaranteed to be on a weekday
-            fixed_time: time = owner.prompt_at_time
-            target_time = event_time.replace(
-                hour=fixed_time.hour, minute=fixed_time.minute
-            )
-        else:
-            shift: timedelta = timedelta(hours=owner.prompt_delay)
-            target_time = event_time + shift
-
-        # if the event has not yet taken place, then no need to send a prompt yet
         now = datetime.now()
-        if target_time > now:
-            msg = {
-                "msg": f"Event #{event_id} {event_label} for {student_name} is not yet in the past"
-            }
-            print(msg["msg"])
-            self.update_state(
-                state=states.SUCCESS,
-                meta=msg,
+        year = get_current_year()
+
+        qualifying = []
+        for event in events:
+            record: SubmissionRecord = event.sub_record
+            owner: SubmissionRole = event.owner
+            period: SubmissionPeriodRecord = record.period
+            sub: SubmittingStudent = record.owner
+
+            # defensive guards (SQL filter is comprehensive, but guard against race conditions)
+            if config.year != year:
+                continue
+            if sub.retired:
+                continue
+            if period.is_feedback_open:
+                continue
+            if period.closed:
+                continue
+            if event.attendance is not None:
+                continue
+            if event.mute:
+                continue
+            if owner.mute:
+                continue
+            if not owner.prompt_after_event:
+                continue
+            if event.prompt_sent_timestamp is not None:
+                continue
+
+            # compute target_time from owner preferences
+            event_time: datetime = event.get_start_time()
+            if owner.prompt_at_fixed_time:
+                fixed_time: time = owner.prompt_at_time
+                target_time = event_time.replace(
+                    hour=fixed_time.hour, minute=fixed_time.minute
+                )
+            else:
+                target_time = event_time + timedelta(hours=owner.prompt_delay)
+
+            # event not yet due?
+            if target_time > now:
+                continue
+
+            # event too old to prompt?
+            delta_time: timedelta = now - target_time
+            if delta_time.days > 5:
+                continue
+
+            qualifying.append((event, target_time, delta_time))
+
+        if not qualifying:
+            return None
+
+        template = EmailTemplate.find_template_(
+            EmailTemplate.ATTENDANCE_PROMPT, pclass=config.project_class
+        )
+        workflow = EmailWorkflow.build_(
+            name=f"Attendance prompts: {config.name} ({datetime.now().strftime('%d/%m/%Y %H:%M')})",
+            template=template,
+            defer=timedelta(minutes=15),
+            pclasses=[config.project_class],
+            creator=config.project_class.convenor.user,
+        )
+        db.session.add(workflow)
+        db.session.flush()
+
+        for event, target_time, delta_time in qualifying:
+            record: SubmissionRecord = event.sub_record
+            owner: SubmissionRole = event.owner
+            sub: SubmittingStudent = record.owner
+            sd: StudentData = sub.student
+            owner_user: User = owner.user
+            student_user: User = sd.user
+
+            event_id = event.id
+            owner_id = owner.id
+            record_id = record.id
+            sub_id = sub.id
+
+            if delta_time.days == 0:
+                human_start_time = f"today at {target_time.strftime('%H:%M')}"
+            elif delta_time.days == -1:
+                human_start_time = f"yesterday at {target_time.strftime('%H:%M')}"
+            else:
+                human_start_time = f"on {target_time.strftime('%A %d %B')} at {target_time.strftime('%H:%M')}"
+
+            project_hub_url = url_for("projecthub.hub", subid=record_id)
+            attendance_OK_api_url = url_for(
+                "api.set_event_attendance",
+                event_id=event_id,
+                owner_id=owner_id,
+                record_id=record_id,
+                submitter_id=sub_id,
+                value=SupervisionEvent.ATTENDANCE_ON_TIME,
             )
-            return msg
-
-        # test whether today is a working day (a "business day" or "bday"), and if not then bail out;
-        # we don't want to bother people with emails at the weekend or on statutory holidays
-        today = now.date()
-        holiday_calendar = holidays.UK()
-
-        # the test is in two parts: first we check for a holiday, then for a conventional working day
-        # (in future perhaps allow individual users to choose their own working-day pattern).
-        # Annoyingly, numpy.is_busday() won't accept objects generated by the holidays module
-        # as a holiday calendar (it wants an array-like of datetime)
-
-        # is today a UK holiday?
-        if today in holiday_calendar:
-            msg = {
-                "msg": f"Event #{event_id} {event_label} for {student_name}: today ({today}) is a UK holiday, so not sending emails"
-            }
-            print(msg["msg"])
-            self.update_state(
-                state=states.SUCCESS,
-                meta=msg,
+            attendance_late_api_url = url_for(
+                "api.set_event_attendance",
+                event_id=event_id,
+                owner_id=owner_id,
+                record_id=record_id,
+                submitter_id=sub_id,
+                value=SupervisionEvent.ATTENDANCE_LATE,
             )
-            return msg
-
-        # is today a working day?
-        if not is_busday(today):
-            msg = {
-                "msg": f"Event #{event_id} {event_label} for {student_name}: today ({today}) is not a working day, so not sending emails"
-            }
-            print(msg["msg"])
-            self.update_state(
-                state=states.SUCCESS,
-                meta=msg,
+            attendance_notified_api_url = url_for(
+                "api.set_event_attendance",
+                event_id=event_id,
+                owner_id=owner_id,
+                record_id=record_id,
+                submitter_id=sub_id,
+                value=SupervisionEvent.ATTENDANCE_NO_SHOW_NOTIFIED,
             )
-            return msg
-
-        # if the event took place more than a few days ago, then probably the owner previously
-        # had notifications muted, and has now unmuted them.
-        # They won't want to be deluged with prompts for past events.
-        # So should send only if the target time passed recently.
-        delta_time: timedelta = now - target_time
-        if delta_time.days > 5:
-            age_str = humanize.precisedelta(
-                delta_time, minimum_unit="days", format="%d"
+            attendance_not_notified_api_url = url_for(
+                "api.set_event_attendance",
+                event_id=event_id,
+                owner_id=owner_id,
+                record_id=record_id,
+                submitter_id=sub_id,
+                value=SupervisionEvent.ATTENDANCE_NO_SHOW_UNNOTIFIED,
             )
-            msg = {
-                "msg": f"Event #{event_id} {event_label} for {student_name} is too old to send a prompt (age: {age_str})"
-            }
-            print(msg["msg"])
-            self.update_state(
-                state=states.SUCCESS,
-                meta=msg,
+            mute_event_api_url = url_for(
+                "api.mute_event",
+                event_id=event_id,
+                owner_id=owner_id,
+                record_id=record_id,
             )
-            return msg
+            mute_role_api_url = url_for(
+                "api.mute_role",
+                role_id=owner_id,
+                record_id=record_id,
+            )
 
-        owner_user: User = owner.user
-        sd: StudentData = sub.student
-        student_user: User = sd.user
+            item = EmailWorkflowItem.build_(
+                subject_payload=encode_email_payload({"name": student_user.name}),
+                body_payload=encode_email_payload(
+                    {
+                        "event": event,
+                        "user": owner_user,
+                        "sd": sd,
+                        "pclass": config.project_class,
+                        "human_start_time": human_start_time,
+                        "projecthub_url": project_hub_url,
+                        "attendance_OK_api_url": attendance_OK_api_url,
+                        "attendance_late_api_url": attendance_late_api_url,
+                        "attendance_notified_api_url": attendance_notified_api_url,
+                        "attendance_not_notified_api_url": attendance_not_notified_api_url,
+                        "mute_event_api_url": mute_event_api_url,
+                        "mute_role_api_url": mute_role_api_url,
+                    }
+                ),
+                recipient_list=[owner_user.email],
+                callbacks=[
+                    {
+                        "task": "app.tasks.attendance.mark_attendance_prompt_sent",
+                        "args": [event_id],
+                        "kwargs": {},
+                    }
+                ],
+            )
+            item.workflow = workflow
+            db.session.add(item)
 
-        project_hub_url = url_for("projecthub.hub", subid=record.id)
-        attendance_OK_api_url = url_for(
-            "api.set_event_attendance",
-            event_id=event_id,
-            owner_id=owner.id,
-            record_id=record.id,
-            submitter_id=sub.id,
-            value=SupervisionEvent.ATTENDANCE_ON_TIME,
-        )
-        attendance_late_api_url = url_for(
-            "api.set_event_attendance",
-            event_id=event_id,
-            owner_id=owner.id,
-            record_id=record.id,
-            submitter_id=sub.id,
-            value=SupervisionEvent.ATTENDANCE_LATE,
-        )
-        attendance_notified_api_url = url_for(
-            "api.set_event_attendance",
-            event_id=event_id,
-            owner_id=owner.id,
-            record_id=record.id,
-            submitter_id=sub.id,
-            value=SupervisionEvent.ATTENDANCE_NO_SHOW_NOTIFIED,
-        )
-        attendance_not_notified_api_url = url_for(
-            "api.set_event_attendance",
-            event_id=event_id,
-            owner_id=owner.id,
-            record_id=record.id,
-            submitter_id=sub.id,
-            value=SupervisionEvent.ATTENDANCE_NO_SHOW_UNNOTIFIED,
-        )
-        mute_event_api_url = url_for(
-            "api.mute_event",
-            event_id=event_id,
-            owner_id=owner.id,
-            record_id=record.id,
-        )
-        mute_role_api_url = url_for(
-            "api.mute_role",
-            role_id=owner.id,
-            record_id=record.id,
-        )
+            # deduplication guard: set before commit so a crash cannot cause a duplicate prompt
+            event.prompt_sent_timestamp = now
 
-        human_start_time: str
-        if delta_time.days == 0:
-            human_start_time = f"today at {target_time.strftime('%H:%M')}"
-        elif delta_time.days == -1:
-            human_start_time = f"yesterday at {target_time.strftime('%H:%M')}"
-        else:
-            human_start_time = f"on {target_time.strftime('%A %d %B')} at {target_time.strftime('%H:%M')}"
-
-        item = EmailWorkflowItem.build_(
-            subject_payload=encode_email_payload({"name": student_user.name}),
-            body_payload=encode_email_payload(
-                {
-                    "event": event,
-                    "user": owner_user,
-                    "sd": sd,
-                    "pclass": config.project_class,
-                    "human_start_time": human_start_time,
-                    "projecthub_url": project_hub_url,
-                    "attendance_OK_api_url": attendance_OK_api_url,
-                    "attendance_late_api_url": attendance_late_api_url,
-                    "attendance_notified_api_url": attendance_notified_api_url,
-                    "attendance_not_notified_api_url": attendance_not_notified_api_url,
-                    "mute_event_api_url": mute_event_api_url,
-                    "mute_role_api_url": mute_role_api_url,
-                }
-            ),
-            recipient_list=[owner_user.email],
-            callbacks=[
-                {
-                    "task": "app.tasks.attendance.mark_attendance_prompt_sent",
-                    "args": [event_id],
-                    "kwargs": {},
-                }
-            ],
-        )
-        item.workflow = workflow
-        db.session.add(item)
-
-        # Set prompt_sent_timestamp before committing so that a crash cannot
-        # cause a duplicate prompt to be queued.
-        event.prompt_sent_timestamp = datetime.now()
         try:
             db.session.commit()  # intentionally not logged: periodic attendance notification task
         except SQLAlchemyError as e:
+            db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
@@ -524,31 +377,3 @@ def register_attendance_tasks(celery):
             meta=msg,
         )
         return msg
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def cleanup_attendance_workflow(self, workflow_id: int):
-        self.update_state(
-            state=states.STARTED, meta={"msg": f"Cleaning up workflow #{workflow_id}"}
-        )
-
-        try:
-            workflow: EmailWorkflow = (
-                db.session.query(EmailWorkflow).filter_by(id=workflow_id).first()
-            )
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if workflow is None:
-            return
-
-        if get_count(workflow.items) == 0:
-            try:
-                db.session.delete(workflow)
-                db.session.commit()  # intentionally not logged: periodic maintenance cleanup
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                raise self.retry()
-
-        return None

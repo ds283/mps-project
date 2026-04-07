@@ -124,6 +124,7 @@ def transform_date(date_str):
 def _process_report(source: Path, dest: Path, record: SubmissionRecord):
     config: ProjectClassConfig = record.owner.config
     data: StudentData = record.owner.student
+    full_name = f"{data.user.first_name} {data.user.last_name}"
 
     doc = fitz.open(str(source))
     if not doc.is_pdf:
@@ -140,6 +141,9 @@ def _process_report(source: Path, dest: Path, record: SubmissionRecord):
 
     w, h = fitz.paper_size("A4")
     page = doc.new_page(pno=0, width=w, height=h)
+
+    # Redact student name from all original pages (now at indices 1+)
+    redaction_count = _redact_student_name(doc, full_name)
 
     ytop = _initial_y_position
 
@@ -158,6 +162,10 @@ def _process_report(source: Path, dest: Path, record: SubmissionRecord):
         ytop = _attach_sticker(
             page, w, ytop, _dyspraxia_sticker_colour, _dyspraxic_label
         )
+
+    # embed redaction notice if the student's name was found and redacted
+    if redaction_count > 0:
+        ytop = _coverpage_redaction_notice(page, w, ytop, redaction_count)
 
     # embed LLM analysis metrics section (only when analysis has completed)
     if record.language_analysis_complete:
@@ -296,6 +304,52 @@ def _coverpage_title(coverpage_label, page, w, ytop):
     )
 
     return ytop + _title_label_size + _vertical_margin + _title_label_size
+
+
+def _redact_student_name(doc: fitz.Document, full_name: str) -> int:
+    """
+    Search pages 1+ of doc for full_name and permanently redact every hit.
+    Page 0 is the generated cover sheet and is skipped.
+    Returns the total number of redacted instances.
+    """
+    total = 0
+    for page_idx in range(1, doc.page_count):
+        page = doc[page_idx]
+        hits = page.search_for(full_name)
+        if hits:
+            for rect in hits:
+                page.add_redact_annot(rect, fill=(0, 0, 0))
+            page.apply_redactions(graphics=0)
+            total += len(hits)
+    return total
+
+
+def _coverpage_redaction_notice(page, w, ytop, count):
+    """Add a notice to the cover page that the student's name has been redacted."""
+    xmargin = _initial_x_position
+    rwidth = w - 2 * xmargin
+    notice_colour = (0.95, 0.92, 0.80)  # pale amber
+
+    notice_text = (
+        f"Name redacted: {count} instance(s) of the student's name were automatically "
+        "redacted from the submitted document. Redacted text appears as solid black rectangles."
+    )
+    box_height = _vertical_margin + 2 * (_text_label_size + 2) + _vertical_margin
+    ytop += _vertical_margin
+    r = fitz.Rect(xmargin, ytop, xmargin + rwidth, ytop + box_height)
+    shape = page.new_shape()
+    shape.draw_rect(r)
+    shape.finish(color=(0.6, 0.5, 0.0), fill=notice_colour, width=0.8)
+    shape.insert_textbox(
+        r,
+        notice_text,
+        color=_black,
+        fontname="Helvetica-Oblique",
+        fontsize=_text_label_size,
+        align=fitz.TEXT_ALIGN_LEFT,
+    )
+    shape.commit()
+    return ytop + box_height + _vertical_margin
 
 
 def _attach_sticker(page, w, ytop, colour, text):

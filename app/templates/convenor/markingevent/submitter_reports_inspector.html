@@ -125,7 +125,7 @@
             <form method="POST"
                   action="{{ url_for('convenor.complete_all_submitter_reports', workflow_id=workflow.id) }}"
                   class="flex-shrink-0">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {{ complete_all_form.hidden_tag() }}
                 <button class="btn btn-success btn-sm" type="submit">
                     <i class="fas fa-check-double fa-fw"></i> Complete all
                 </button>
@@ -138,7 +138,7 @@
         <div class="d-flex flex-row justify-content-end mt-2 mb-2">
             <form method="POST"
                   action="{{ url_for('convenor.return_all_submitter_reports', workflow_id=workflow.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {{ return_all_form.hidden_tag() }}
                 <button class="btn btn-outline-danger btn-sm" type="submit">
                     <i class="fas fa-undo fa-fw"></i> Return all to convenor
                 </button>

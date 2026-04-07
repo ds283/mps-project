@@ -105,6 +105,7 @@ def _build_global_context():
     is_view_email = "view_email" in visible_roles
     is_manage_users = "manage_users" in visible_roles
     is_emailer = "email" in visible_roles
+    is_data_dashboard_AI = "data_dashboard_AI" in visible_roles
 
     base_context_data = get_global_context_data()
 
@@ -130,6 +131,12 @@ def _build_global_context():
                 "is_emailer": is_emailer,
                 "is_archive": is_archive,
                 "is_archive_reports": is_archive_reports,
+                "is_data_dashboard_AI": is_data_dashboard_AI,
+                # Combined flag: can view any data dashboard
+                "can_view_dashboards": is_root or is_admin or is_data_dashboard_AI
+                                       or (is_faculty
+                                           and current_user.faculty_data is not None
+                                           and current_user.faculty_data.is_convenor),
             }
             | base_context_data
     )

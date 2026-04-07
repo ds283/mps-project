@@ -330,6 +330,8 @@ def create_app():
     tasks.register_workflow_log_tasks(celery)
     tasks.register_thumbnail_tasks(celery)
     tasks.register_language_analysis_tasks(celery)
+    tasks.register_llm_orchestration_tasks(celery)
+    tasks.register_ai_dashboard_export_tasks(celery)
 
     use_pyinstrument = app.config.get("PROFILE_PYINSTRUMENT")
     if use_pyinstrument:
@@ -536,6 +538,10 @@ def create_app():
     from .emailworkflow import emailworkflow as emailworkflow_blueprint
 
     app.register_blueprint(emailworkflow_blueprint, url_prefix="/emailworkflow")
+
+    from .dashboards import dashboards as dashboards_blueprint
+
+    app.register_blueprint(dashboards_blueprint, url_prefix="/dashboards")
 
     from .archive import archive as archive_blueprint
 

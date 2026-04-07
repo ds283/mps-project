@@ -1467,3 +1467,25 @@ class EnterTurnitinScoreForm(Form):
         description="Student papers overlap percentage (leave blank if unavailable).",
     )
     submit = SubmitField("Save Turnitin data")
+
+
+class ActionForm(Form):
+    """Minimal form used to provide CSRF protection for button-only action forms."""
+
+    pass
+
+
+def build_resolve_risk_factors_form():
+    """
+    Dynamically build a WTForms form class with one BooleanField and one TextAreaField
+    per risk type defined in SubmissionRecord.ALL_RISK_TYPES.
+    """
+    from ..models.submissions import SubmissionRecord
+
+    fields = {}
+    for factor_type in SubmissionRecord.ALL_RISK_TYPES:
+        fields[f"resolve_{factor_type}"] = BooleanField(
+            factor_type.replace("_", " ").title(), default=False
+        )
+        fields[f"annotation_{factor_type}"] = TextAreaField("Annotation", validators=[Optional()])
+    return type("ResolveRiskFactorsForm", (Form,), fields)

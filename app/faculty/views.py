@@ -103,6 +103,7 @@ from . import faculty
 from .forms import (
     AddDescriptionFormFactory,
     AddProjectFormFactory,
+    ApproveMarkingReportForm,
     AvailabilityFormFactory,
     EditDescriptionContentForm,
     EditDescriptionSettingsFormFactory,
@@ -3795,6 +3796,7 @@ def view_marking_report(report_id):
         is_elevated=is_elevated,
         is_responsible_supervisor=is_responsible_supervisor,
         url=url,
+        approve_form=ApproveMarkingReportForm(),
     )
 
 
@@ -3809,6 +3811,11 @@ def approve_marking_report(report_id):
 
     from ..models.markingevent import marking_report_to_responsible_supervisors
     from ..tasks.markingevent import advance_submitter_report
+
+    form = ApproveMarkingReportForm(request.form)
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(redirect_url())
 
     report: MarkingReport = MarkingReport.query.get_or_404(report_id)
 

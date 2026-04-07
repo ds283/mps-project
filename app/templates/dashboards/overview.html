@@ -1,0 +1,80 @@
+{% extends "base_app.html" %}
+
+{% block title %}Dashboards{% endblock %}
+
+{% block bodyblock %}
+    <div class="container-fluid mt-4 mb-5">
+
+        <div class="d-flex align-items-center mb-4 gap-3">
+            <div>
+                <h2 class="mb-0 fw-semibold">
+                    <i class="fas fa-chart-bar text-primary me-2"></i>Dashboards
+                </h2>
+                <p class="text-muted mb-0 mt-1">Data analytics and reporting tools</p>
+            </div>
+        </div>
+
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+
+            {# ---- AI Data Dashboard card ---- #}
+            <div class="col">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex align-items-start gap-3 mb-3">
+                            <div class="rounded-3 p-3 bg-primary bg-opacity-10 flex-shrink-0">
+                                <i class="fas fa-robot fa-2x text-primary"></i>
+                            </div>
+                            <div>
+                                <h5 class="card-title mb-1 fw-semibold">AI Risk Dashboard</h5>
+                                <p class="card-text text-muted small mb-0">
+                                    Lexical diversity metrics, LLM-assessed grade bands, and AI risk
+                                    indicators for submitted reports. Distributions across cohorts and
+                                    academic cycles.
+                                </p>
+                            </div>
+                        </div>
+
+                        {# summary badges #}
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            {% if summary.n_tenants > 1 %}
+                                <span class="badge bg-secondary">
+                                <i class="fas fa-building me-1"></i>{{ summary.n_tenants }} tenants
+                            </span>
+                            {% endif %}
+                            {% if summary.n_pclasses > 1 %}
+                                <span class="badge bg-secondary">
+                                <i class="fas fa-graduation-cap me-1"></i>{{ summary.n_pclasses }} project classes
+                            </span>
+                            {% elif summary.n_pclasses == 1 %}
+                                <span class="badge bg-secondary">
+                                <i class="fas fa-graduation-cap me-1"></i>1 project class
+                            </span>
+                            {% endif %}
+                            {% if summary.n_cycles > 1 %}
+                                <span class="badge bg-secondary">
+                                <i class="fas fa-calendar-alt me-1"></i>{{ summary.n_cycles }} cycles
+                            </span>
+                            {% elif summary.n_cycles == 1 %}
+                                <span class="badge bg-secondary">
+                                <i class="fas fa-calendar-alt me-1"></i>1 cycle
+                            </span>
+                            {% endif %}
+                            {% if summary.n_cycles == 0 %}
+                                <span class="badge bg-secondary text-muted">No data available</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="mt-auto">
+                            <a href="{{ url_for('dashboards.ai_dashboard') }}"
+                               class="btn btn-primary btn-sm">
+                                <i class="fas fa-chart-area me-1"></i>Open dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+{% endblock %}

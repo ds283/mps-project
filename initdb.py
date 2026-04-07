@@ -43,6 +43,7 @@ from app.models import (
     ProjectClassConfig,
     ProjectTag,
     ProjectTagGroup,
+    Role,
     ScheduleAttempt,
     ScheduleSlot,
     StudentData,
@@ -2023,3 +2024,46 @@ def migrate_submission_attachment_roles(app):
             return
 
         print(f"** migrate_submission_attachment_roles: added {added} role record(s)")
+
+
+# ---------------------------------------------------------------------------
+# Ensure built-in roles exist
+# ---------------------------------------------------------------------------
+
+# Roles that must exist for the application to function correctly.
+# Each entry is (name, description, colour).
+_REQUIRED_ROLES: List[Dict] = [
+    {
+        "name": "data_dashboard_AI",
+        "description": "Read-only access to the AI data dashboard for all project classes and cycles "
+                       "belonging to the user's tenants. Does not grant permission to launch "
+                       "analysis pipeline tasks.",
+        "colour": "#5a6fd6",
+    },
+]
+
+
+def ensure_roles(app) -> None:
+    """
+    Idempotently create any roles that are required by the application but may
+    not yet exist in the database (e.g. after a schema migration that introduces
+    a new feature).  Safe to call on every startup.
+    """
+    with app.app_context():
+        created = 0
+        for spec in _REQUIRED_ROLES:
+            existing = db.session.query(Role).filter_by(name=spec["name"]).first()
+            if existing is None:
+                role = Role(name=spec["name"], description=spec["description"], colour=spec["colour"])
+                db.session.add(role)
+                created += 1
+                print(f"** ensure_roles: created role '{spec['name']}'")
+
+        if created:
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                app.logger.exception("SQLAlchemyError in ensure_roles", exc_info=e)
+        else:
+            print("** ensure_roles: all required roles already present")

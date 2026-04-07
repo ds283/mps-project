@@ -43,6 +43,25 @@
             {% endif %}
         {% endcall %}
     </div>
+    {# Admin actions in error/not-started state #}
+    {% if can_admin and (record.llm_analysis_failed or record.llm_feedback_failed) %}
+    <div class="card border-secondary mb-3">
+        <div class="card-header bg-light text-muted small">
+            <i class="fas fa-tools fa-fw me-1"></i> Admin actions
+        </div>
+        <div class="card-body d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('documents.clear_llm_failure', sid=record.id, url=url, text=text) }}"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-eraser fa-fw me-1"></i> Clear failure flag
+            </a>
+            <a href="{{ url_for('documents.launch_language_analysis', sid=record.id, url=url, text=text) }}"
+               class="btn btn-sm btn-outline-primary"
+               onclick="return confirm('Clear results and re-run language analysis?')">
+                <i class="fas fa-redo fa-fw me-1"></i> Clear and re-run
+            </a>
+        </div>
+    </div>
+    {% endif %}
 {% else %}
 
 {# ── TOP: Grade band + summary ── #}
@@ -495,15 +514,20 @@
         <i class="fas fa-tools fa-fw me-1"></i> Admin actions
     </div>
     <div class="card-body d-flex gap-2 flex-wrap">
-        <a href="{{ url_for('documents.clear_language_analysis', sid=record.id) }}"
+        <a href="{{ url_for('documents.clear_language_analysis', sid=record.id, url=url, text=text) }}"
            class="btn btn-sm btn-outline-danger"
            onclick="return confirm('Clear the LLM analysis results? This will also remove the processed report.')">
             <i class="fas fa-trash fa-fw me-1"></i> Clear results
         </a>
-        <a href="{{ url_for('documents.launch_language_analysis', sid=record.id) }}"
+        <a href="{{ url_for('documents.launch_language_analysis', sid=record.id, url=url, text=text) }}"
            class="btn btn-sm btn-outline-primary"
            onclick="return confirm('Clear results and re-run language analysis?')">
             <i class="fas fa-redo fa-fw me-1"></i> Clear and re-run
+        </a>
+        <a href="{{ url_for('documents.clear_and_regenerate_processed_report', sid=record.id, url=url, text=text) }}"
+           class="btn btn-sm btn-outline-secondary"
+           onclick="return confirm('Clear and regenerate the processed report? LLM analysis results will be kept.')">
+            <i class="fas fa-sync fa-fw me-1"></i> Regenerate processed report
         </a>
     </div>
 </div>

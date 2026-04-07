@@ -109,7 +109,7 @@
                     <form method="POST"
                           action="{{ url_for('convenor.calculate_conflation', event_id=event.id) }}"
                           class="flex-shrink-0">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {{ conflation_form.hidden_tag() }}
                         <button class="btn btn-light btn-sm" type="submit">
                             <i class="fas fa-calculator fa-fw"></i>
                             {% if conflation_reports %}Re-calculate{% else %}Calculate{% endif %} conflation
@@ -140,7 +140,7 @@
                             {% if 'report' in sample_dict %}
                                 <form method="POST"
                                       action="{{ url_for('convenor.propagate_report_grade', event_id=event.id) }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    {{ propagate_form.hidden_tag() }}
                                     <button class="btn btn-sm {% if any_stale %}btn-outline-warning{% else %}btn-outline-primary{% endif %}" type="submit">
                                         <i class="fas fa-arrow-right fa-fw"></i>
                                         Copy &ldquo;report&rdquo; grades &rarr; submission records
@@ -152,7 +152,7 @@
                             {% if 'supervisor' in sample_dict %}
                                 <form method="POST"
                                       action="{{ url_for('convenor.propagate_supervision_grade', event_id=event.id) }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    {{ propagate_form.hidden_tag() }}
                                     <button class="btn btn-sm {% if any_stale %}btn-outline-warning{% else %}btn-outline-primary{% endif %}" type="submit">
                                         <i class="fas fa-arrow-right fa-fw"></i>
                                         Copy &ldquo;supervisor&rdquo; grades &rarr; submission records
@@ -164,7 +164,7 @@
                             {% if 'presentation' in sample_dict %}
                                 <form method="POST"
                                       action="{{ url_for('convenor.propagate_presentation_grade', event_id=event.id) }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    {{ propagate_form.hidden_tag() }}
                                     <button class="btn btn-sm {% if any_stale %}btn-outline-warning{% else %}btn-outline-primary{% endif %}" type="submit">
                                         <i class="fas fa-arrow-right fa-fw"></i>
                                         Copy &ldquo;presentation&rdquo; grades &rarr; submission records
@@ -195,7 +195,7 @@
                 <form method="POST"
                       action="{{ url_for('convenor.complete_all_submitter_reports', workflow_id=wf.id) }}"
                       class="flex-shrink-0">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {{ complete_all_form.hidden_tag() }}
                     <button class="btn btn-success btn-sm" type="submit">
                         <i class="fas fa-check-double fa-fw"></i> Complete all
                     </button>
@@ -206,7 +206,7 @@
             <div class="d-flex flex-row justify-content-end mb-1">
                 <form method="POST"
                       action="{{ url_for('convenor.return_all_submitter_reports', workflow_id=wf.id) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {{ return_all_form.hidden_tag() }}
                     <button class="btn btn-outline-danger btn-sm" type="submit">
                         <i class="fas fa-undo fa-fw"></i> Return all ({{ wf.name }}) to convenor
                     </button>

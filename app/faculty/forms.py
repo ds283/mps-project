@@ -533,3 +533,9 @@ def AvailabilityFormFactory(include_confirm=False):
             update = SubmitField("Update")
 
     return AvailabilityForm
+
+
+class ApproveMarkingReportForm(Form):
+    """CSRF-protected form for the approve-marking-report button."""
+
+    pass

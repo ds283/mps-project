@@ -66,6 +66,7 @@ from ..shared.validators import (
     validate_is_convenor,
 )
 from ..shared.workflow_logging import log_db_commit
+from ..tasks.llm_orchestration import launch_pclass_pipeline
 from ..tools import ServerSideSQLHandler
 from .forms import (
     AddSubmitterRoleForm,
@@ -1328,3 +1329,72 @@ def edit_role(role_id):
         sub=sub,
         url=url,
     )
+
+
+@convenor.route("/submit_missing_llm/<int:configid>")
+@roles_accepted("faculty", "admin", "root")
+def submit_missing_llm(configid):
+    """
+    Launch LLM-pipeline submission for all SubmissionRecords in this ProjectClassConfig
+    that do not yet have analysis results.
+    """
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    try:
+        job = launch_pclass_pipeline(
+            pclass_config_id=configid,
+            clear_existing=False,
+            user=current_user,
+        )
+    except Exception as exc:
+        current_app.logger.exception("Error launching LLM pipeline", exc_info=exc)
+        flash("An error occurred while launching the analysis pipeline. Please contact an administrator.", "error")
+        return redirect(redirect_url())
+
+    if job is None:
+        flash("No reports are currently missing analysis results.", "info")
+    else:
+        flash(
+            f"Queued {job.total_count} report(s) for language analysis. "
+            f"Results will appear as submissions are processed.",
+            "success",
+        )
+
+    return redirect(redirect_url())
+
+
+@convenor.route("/clear_and_resubmit_llm/<int:configid>")
+@roles_accepted("faculty", "admin", "root")
+def clear_and_resubmit_llm(configid):
+    """
+    Clear all existing LLM analysis results for this ProjectClassConfig and
+    re-submit every SubmissionRecord to the language-analysis pipeline.
+    """
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(redirect_url())
+
+    try:
+        job = launch_pclass_pipeline(
+            pclass_config_id=configid,
+            clear_existing=True,
+            user=current_user,
+        )
+    except Exception as exc:
+        current_app.logger.exception("Error launching LLM pipeline (clear & resubmit)", exc_info=exc)
+        flash("An error occurred while launching the analysis pipeline. Please contact an administrator.", "error")
+        return redirect(redirect_url())
+
+    if job is None:
+        flash("No reports with uploaded files were found for this project class.", "info")
+    else:
+        flash(
+            f"Cleared existing results and queued {job.total_count} report(s) for re-analysis.",
+            "success",
+        )
+
+    return redirect(redirect_url())

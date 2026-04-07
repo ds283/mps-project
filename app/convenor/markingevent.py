@@ -61,6 +61,7 @@ from ..tasks.thumbnails import dispatch_thumbnail_task
 from ..tools.ServerSideProcessing import ServerSideSQLHandler
 from . import convenor
 from .forms import (
+    ActionForm,
     AddMarkingEventForm,
     AddMarkingSchemeForm,
     AssignModeratorFormFactory,
@@ -71,6 +72,7 @@ from .forms import (
     MarkingWorkflowFormFactory,
     ResolveTurnitinForm,
     TestMarkingEventFormFactory,
+    build_resolve_risk_factors_form,
 )
 
 
@@ -247,6 +249,10 @@ def marking_workflow_inspector(event_id):
         url=url,
         text=text,
         workflow_states=workflow_states,
+        conflation_form=ActionForm(),
+        propagate_form=ActionForm(),
+        complete_all_form=ActionForm(),
+        return_all_form=ActionForm(),
     )
 
 
@@ -379,6 +385,8 @@ def submitter_reports_inspector(workflow_id):
         state_labels=state_labels,
         all_ready_to_sign_off=all_ready_to_sign_off,
         any_completed=any_completed,
+        complete_all_form=ActionForm(),
+        return_all_form=ActionForm(),
     )
 
 
@@ -461,13 +469,15 @@ def resolve_risk_factors(record_id):
     )
     text = request.args.get("text", "Back")
 
-    if request.method == "POST":
+    FormClass = build_resolve_risk_factors_form()
+    form = FormClass(request.form)
+
+    if form.validate_on_submit():
         try:
             # Process each risk factor type: resolve if the corresponding checkbox is checked
             for factor_type in SubmissionRecord.ALL_RISK_TYPES:
-                checked = request.form.get(f"resolve_{factor_type}") == "1"
-                if checked:
-                    annotation = request.form.get(f"annotation_{factor_type}", "").strip() or None
+                if getattr(form, f"resolve_{factor_type}").data:
+                    annotation = (getattr(form, f"annotation_{factor_type}").data or "").strip() or None
                     record.resolve_risk_factor(factor_type, current_user, annotation)
 
             log_db_commit(
@@ -500,6 +510,7 @@ def resolve_risk_factors(record_id):
         display_items=display_items,
         url=url,
         text=text,
+        form=form,
     )
 
 
@@ -2602,6 +2613,11 @@ def complete_all_submitter_reports(workflow_id):
 
     url = url_for("convenor.submitter_reports_inspector", workflow_id=workflow_id)
 
+    form = ActionForm(request.form)
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(url)
+
     now = datetime.now()
     completed_count = 0
     skipped_count = 0
@@ -2700,6 +2716,11 @@ def return_all_submitter_reports(workflow_id):
 
     url = url_for("convenor.submitter_reports_inspector", workflow_id=workflow_id)
 
+    form = ActionForm(request.form)
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(url)
+
     returned_count = 0
 
     try:
@@ -2760,6 +2781,11 @@ def calculate_conflation(event_id):
         return redirect(redirect_url())
 
     url = url_for("convenor.marking_workflow_inspector", event_id=event_id)
+
+    form = ActionForm(request.form)
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(url)
 
     if not event.completed:
         flash(
@@ -2904,6 +2930,11 @@ def propagate_report_grade(event_id):
 
     url = url_for("convenor.marking_workflow_inspector", event_id=event_id)
 
+    form = ActionForm(request.form)
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(url)
+
     try:
         count, err = _propagate_grade_to_records(
             event, "report", "report_grade", "report_generated_id", "report_generated_timestamp",
@@ -2939,6 +2970,11 @@ def propagate_supervision_grade(event_id):
 
     url = url_for("convenor.marking_workflow_inspector", event_id=event_id)
 
+    form = ActionForm(request.form)
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(url)
+
     try:
         count, err = _propagate_grade_to_records(
             event, "supervisor", "supervision_grade", "supervision_generated_id", "supervision_generated_timestamp",
@@ -2973,6 +3009,11 @@ def propagate_presentation_grade(event_id):
         return redirect(redirect_url())
 
     url = url_for("convenor.marking_workflow_inspector", event_id=event_id)
+
+    form = ActionForm(request.form)
+    if not form.validate_on_submit():
+        flash("Invalid request.", "error")
+        return redirect(url)
 
     try:
         count, err = _propagate_grade_to_records(

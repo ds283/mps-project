@@ -236,6 +236,79 @@ def generate_processed_report(sid):
     return redirect(redirect_url())
 
 
+@documents.route("/clear_and_regenerate_processed_report/<int:sid>")
+@login_required
+def clear_and_regenerate_processed_report(sid):
+    """
+    Clear the existing processed report (DB record + physical object-store asset) and
+    re-trigger the process_report Celery chain.  LLM analysis results are left untouched.
+
+    Requires the LLM analysis to have completed successfully, since the cover page
+    embeds LLM outputs.
+    """
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
+
+    if not (current_user.has_role("root") or current_user.has_role("admin")):
+        abort(403)
+
+    if not record.language_analysis_complete:
+        flash(
+            "Cannot regenerate the processed report because language analysis has not completed successfully.",
+            "info",
+        )
+        return redirect(redirect_url())
+
+    if not is_deletable(record, message=True):
+        return redirect(redirect_url())
+
+    # Delete existing processed report from DB and object store
+    if record.processed_report is not None:
+        old_asset = record.processed_report
+        record.processed_report_id = None
+        try:
+            object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+            from ..shared.cloud_object_store.base import ObjectStore
+
+            store: ObjectStore = object_store
+            if store is not None:
+                store.delete(old_asset.unique_name)
+        except Exception as exc:
+            current_app.logger.warning(
+                f"Could not delete processed report asset during regeneration: {exc}"
+            )
+        db.session.delete(old_asset)
+
+    # Reset processing state flags and dispatch the process_report chain
+    record.celery_started = True
+    record.celery_finished = None
+    record.celery_failed = False
+
+    celery = current_app.extensions["celery"]
+    process = celery.tasks["app.tasks.process_report.process"]
+    finalize = celery.tasks["app.tasks.process_report.finalize"]
+    error = celery.tasks["app.tasks.process_report.error"]
+
+    work = chain(process.si(record.id), finalize.si(record.id)).on_error(
+        error.si(record.id, current_user.id)
+    )
+    work.apply_async()
+
+    try:
+        log_db_commit(
+            "Cleared processed report and re-initiated processing for submission record",
+            project_classes=record.owner.config.project_class,
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash(
+            "A database error was encountered while regenerating the processed report. Please contact an administrator.",
+            "error",
+        )
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(redirect_url())
+
+
 @documents.route("/launch_language_analysis/<int:sid>")
 @login_required
 def launch_language_analysis(sid):

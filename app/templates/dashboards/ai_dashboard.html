@@ -1,0 +1,473 @@
+{% extends "base_app.html" %}
+{% from "bokeh.html" import import_bokeh %}
+
+{% block title %}AI Risk Dashboard{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    {% if sections %}{{ import_bokeh() }}{% endif %}
+    {# Inject all Bokeh scripts #}
+    {% for section in sections %}
+        {% for sub in section.period_subsections %}
+            {% for key, (script, div) in sub.histograms.items() %}
+                {% if script %}{{ script|safe }}{% endif %}
+            {% endfor %}
+        {% endfor %}
+        {% for key, (script, div) in section.cycle_histograms.items() %}
+            {% if script %}{{ script|safe }}{% endif %}
+        {% endfor %}
+    {% endfor %}
+    <script>
+        // Auto-reload when an orchestration job completes
+        (function () {
+            var _jobPoller = null;
+
+            function pollJobs() {
+                fetch('{{ url_for("dashboards.active_jobs_status") }}')
+                    .then(function (r) {
+                        return r.json();
+                    })
+                    .then(function (data) {
+                        if (data.just_finished) {
+                            window.location.reload();
+                        }
+                    })
+                    .catch(function () { /* ignore network errors */
+                    });
+            }
+            {% if active_jobs %}
+                _jobPoller = setInterval(pollJobs, 15000);
+            {% endif %}
+        })();
+    </script>
+{% endblock %}
+
+{% macro stat_cell(val, fmt) %}
+    {% if val is not none %}
+        {{ "%.{}f".format(fmt)|format(val) if fmt else val }}
+    {% else %}
+        <span class="text-muted">—</span>
+    {% endif %}
+{% endmacro %}
+
+{% macro stats_table(agg) %}
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered mb-0 small">
+            <thead class="table-dark">
+            <tr>
+                <th>Metric</th>
+                <th class="text-end">N</th>
+                <th class="text-end">Mean</th>
+                <th class="text-end">SD</th>
+                <th class="text-end">Min</th>
+                <th class="text-end">Q1</th>
+                <th class="text-end">Q3</th>
+                <th class="text-end">Max</th>
+                <th class="text-end">IQR</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for cfg in metric_configs %}
+                {% set m = agg.get(cfg.key) %}
+                <tr>
+                    <td>
+                        <span class="fw-semibold">{{ cfg.label }}</span>
+                        <span class="text-muted ms-1" style="font-size:0.75em">{{ cfg.description }}</span>
+                    </td>
+                    {% if m %}
+                        <td class="text-end">{{ m.n }}</td>
+                        <td class="text-end fw-semibold">{{ "%.3f" | format(m.mean) if cfg.fmt == '.3f' else "%.1f" | format(m.mean) }}</td>
+                        <td class="text-end text-muted">{{ "%.3f" | format(m.std) if cfg.fmt == '.3f' else "%.1f" | format(m.std) }}</td>
+                        <td class="text-end">{{ "%.3f" | format(m.min) if cfg.fmt == '.3f' else "%.0f" | format(m.min) }}</td>
+                        <td class="text-end">{{ "%.3f" | format(m.q25) if cfg.fmt == '.3f' else "%.0f" | format(m.q25) }}</td>
+                        <td class="text-end">{{ "%.3f" | format(m.q75) if cfg.fmt == '.3f' else "%.0f" | format(m.q75) }}</td>
+                        <td class="text-end">{{ "%.3f" | format(m.max) if cfg.fmt == '.3f' else "%.0f" | format(m.max) }}</td>
+                        <td class="text-end text-muted">{{ "%.3f" | format(m.iqr) if cfg.fmt == '.3f' else "%.0f" | format(m.iqr) }}</td>
+                    {% else %}
+                        <td colspan="8" class="text-center text-muted fst-italic">No data</td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endmacro %}
+
+{% macro histogram_grid(histograms) %}
+    {% set has_any = namespace(val=false) %}
+    {% for key, (script, div) in histograms.items() %}{% if div %}{% set has_any.val = true %}{% endif %}{% endfor %}
+    {% if has_any.val %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2 mt-2">
+            {% for cfg in metric_configs %}
+                {% set pair = histograms.get(cfg.key) %}
+                {% if pair and pair[1] %}
+                    <div class="col">
+                        <div class="border rounded p-2 bg-light h-100">
+                            {{ pair[1]|safe }}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endmacro %}
+
+{% macro coverage_badges(agg) %}
+    <span class="badge bg-secondary me-1">{{ agg.n_total }} report{% if agg.n_total != 1 %}s{% endif %}</span>
+    {% if agg.n_missing > 0 %}
+        <span class="badge bg-danger me-1">
+            <i class="fas fa-exclamation-triangle me-1"></i>{{ agg.n_missing }} missing analysis
+        </span>
+    {% else %}
+        <span class="badge bg-success me-1">
+            <i class="fas fa-check me-1"></i>All analysed
+        </span>
+    {% endif %}
+    {% if agg.n_ai_flagged > 0 %}
+        <span class="badge bg-warning text-dark me-1">
+            <i class="fas fa-robot me-1"></i>{{ agg.n_ai_flagged }} AI risk flag{% if agg.n_ai_flagged != 1 %}
+            s{% endif %}
+        </span>
+    {% endif %}
+{% endmacro %}
+
+{% macro launch_buttons(submit_url, clear_url, level_label) %}
+    <a href="{{ submit_url }}"
+       class="btn btn-sm btn-outline-primary"
+       data-bs-toggle="tooltip"
+       title="Submit reports without analysis results to the LLM pipeline">
+        <i class="fas fa-robot me-1"></i>Submit missing
+    </a>
+    <a href="{{ clear_url }}"
+       class="btn btn-sm btn-outline-danger"
+       data-bs-toggle="tooltip"
+       title="Clear all existing results and resubmit every report for {{ level_label }}"
+       onclick="return confirm('Clear ALL existing analysis results for {{ level_label }} and resubmit every report? This cannot be undone.')">
+        <i class="fas fa-sync-alt me-1"></i>Clear &amp; resubmit
+    </a>
+{% endmacro %}
+
+{% macro export_buttons(xlsx_url, csv_url) %}
+    <div class="btn-group btn-group-sm" role="group">
+        <a href="{{ xlsx_url }}"
+           class="btn btn-outline-secondary"
+           data-bs-toggle="tooltip" title="Export as Excel workbook">
+            <i class="fas fa-file-excel me-1"></i>Excel
+        </a>
+        <a href="{{ csv_url }}"
+           class="btn btn-outline-secondary"
+           data-bs-toggle="tooltip" title="Export as CSV">
+            <i class="fas fa-file-csv me-1"></i>CSV
+        </a>
+    </div>
+{% endmacro %}
+
+{% block bodyblock %}
+    <div class="container-fluid mt-4 mb-5">
+
+        {# ---- page header ---- #}
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+            <div>
+                <h2 class="mb-0 fw-semibold">
+                    <i class="fas fa-robot text-primary me-2"></i>AI Risk Dashboard
+                </h2>
+                <p class="text-muted small mb-0">Lexical diversity and language analysis metrics</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ request.url }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-sync-alt me-1"></i>Reload
+                </a>
+                <a href="{{ url_for('dashboards.overview') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Dashboards
+                </a>
+            </div>
+        </div>
+
+        {# ---- active orchestration jobs panel ---- #}
+        {% if active_jobs %}
+            <div class="card border-primary mb-4">
+                <div class="card-header bg-primary text-white d-flex align-items-center gap-2">
+                    <i class="fas fa-tasks fa-fw"></i>
+                    <strong>Active analysis pipeline jobs</strong>
+                    <span class="badge bg-light text-dark ms-auto">{{ active_jobs|length }} job
+                        {% if active_jobs|length != 1 %}s{% endif %}</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Description</th>
+                                <th>Status</th>
+                                <th class="text-end">Progress</th>
+                                <th class="text-end">Done</th>
+                                <th class="text-end">Failed</th>
+                                <th class="text-end">Total</th>
+                                <th>Started</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for job in active_jobs %}
+                                <tr>
+                                    <td>
+                                        {{ job.description or job.scope_label }}
+                                        {% if job.clear_existing %}
+                                            <span class="badge bg-warning text-dark ms-1 small">clear &amp; resubmit</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ job.status_colour }}">{{ job.status_label }}</span>
+                                    </td>
+                                    <td class="text-end" style="min-width:120px">
+                                        <div class="progress" style="height:8px; min-width:80px">
+                                            <div class="progress-bar bg-{{ job.status_colour }}"
+                                                 role="progressbar"
+                                                 style="width:{{ job.progress_pct }}%"
+                                                 aria-valuenow="{{ job.progress_pct }}"
+                                                 aria-valuemin="0" aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">{{ job.progress_pct }}%</small>
+                                    </td>
+                                    <td class="text-end text-success fw-semibold">{{ job.completed_count }}</td>
+                                    <td class="text-end {% if job.failed_count > 0 %}text-danger fw-semibold{% else %}text-muted{% endif %}">{{ job.failed_count }}</td>
+                                    <td class="text-end text-muted">{{ job.total_count }}</td>
+                                    <td class="text-muted small">
+                                        {% if job.started_at %}{{ job.started_at.strftime('%d %b %Y %H:%M') }}{% else %}
+                                            —{% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# ---- filter controls ---- #}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('dashboards.ai_dashboard') }}" class="row g-3 align-items-end">
+
+                    {# tenant selector — only for multi-tenant users #}
+                    {% if accessible_tenants|length > 1 %}
+                        <div class="col-auto">
+                            <label class="form-label small fw-semibold mb-1">Tenant</label>
+                            <select name="tenant_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                                {% for tenant in accessible_tenants %}
+                                    <option value="{{ tenant.id }}"
+                                            {% if tenant.id == selected_tenant.id %}selected{% endif %}>
+                                        {{ tenant.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    {% else %}
+                        <input type="hidden" name="tenant_id" value="{{ selected_tenant.id }}">
+                    {% endif %}
+
+                    {# project class multi-select #}
+                    {% if accessible_pclasses %}
+                        <div class="col-auto">
+                            <label class="form-label small fw-semibold mb-1">Project classes</label>
+                            <select name="pclass_id" multiple class="form-select form-select-sm"
+                                    style="min-width:180px; height: auto; max-height:120px">
+                                {% for pclass in accessible_pclasses %}
+                                    <option value="{{ pclass.id }}"
+                                            {% if pclass.id in selected_pclass_ids %}selected{% endif %}>
+                                        {{ pclass.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text" style="font-size:0.7em">Ctrl/Cmd+click to select multiple</div>
+                        </div>
+                    {% endif %}
+
+                    {# cycle multi-select #}
+                    {% if accessible_cycles %}
+                        <div class="col-auto">
+                            <label class="form-label small fw-semibold mb-1">Academic cycles</label>
+                            <select name="year" multiple class="form-select form-select-sm"
+                                    style="min-width:140px; height: auto; max-height:120px">
+                                {% for year in accessible_cycles %}
+                                    <option value="{{ year }}"
+                                            {% if year in selected_years %}selected{% endif %}>
+                                        {{ year }}/{{ year + 1 }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text" style="font-size:0.7em">Ctrl/Cmd+click to select multiple</div>
+                        </div>
+                    {% endif %}
+
+                    {# sort order #}
+                    <div class="col-auto">
+                        <label class="form-label small fw-semibold mb-1">Sort order</label>
+                        <select name="sort_order" class="form-select form-select-sm">
+                            <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Newest first</option>
+                            <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Oldest first</option>
+                        </select>
+                    </div>
+
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="fas fa-filter me-1"></i>Apply
+                        </button>
+                        <a href="{{ url_for('dashboards.ai_dashboard', tenant_id=selected_tenant.id) }}"
+                           class="btn btn-sm btn-outline-secondary ms-1">
+                            Reset
+                        </a>
+                    </div>
+
+                    {# global-level actions #}
+                    <div class="col-auto ms-auto d-flex gap-2 align-items-end flex-wrap">
+                        {% if can_launch_global %}
+                            <span class="text-muted small me-1">Global:</span>
+                            {{ launch_buttons(
+                        url_for('dashboards.launch_global'),
+                        url_for('dashboards.clear_global'),
+                        'all records globally'
+                    ) }}
+                        {% endif %}
+                        {{ export_buttons(
+                        url_for('dashboards.export_global', fmt='xlsx'),
+                        url_for('dashboards.export_global', fmt='csv')
+                    ) }}
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        {# ---- no data state ---- #}
+        {% if not sections %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No submission data found for the selected filters. Try adjusting your project class or cycle selection.
+            </div>
+        {% endif %}
+
+        {# ---- per-cycle sections ---- #}
+        {% for section in sections %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header d-flex align-items-center justify-content-between py-2"
+                     style="background: linear-gradient(135deg, #1a3c5e 0%, #2d6fa8 100%); color: white;">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-calendar-alt fa-fw"></i>
+                        <h5 class="mb-0 fw-semibold">Academic year {{ section.label }}</h5>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        {{ coverage_badges(section.cycle_agg) }}
+                        {% if section.can_launch_cycle %}
+                            <div class="d-flex gap-2 ms-2">
+                                {{ launch_buttons(
+                            url_for('dashboards.launch_cycle', year=section.year),
+                            url_for('dashboards.clear_cycle', year=section.year),
+                            'cycle ' ~ section.label
+                        ) }}
+                            </div>
+                        {% endif %}
+                        <div class="ms-2">
+                            {{ export_buttons(
+                        url_for('dashboards.export_cycle', year=section.year, fmt='xlsx'),
+                        url_for('dashboards.export_cycle', year=section.year, fmt='csv')
+                    ) }}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-3">
+
+                    {# ---- per-period subsections ---- #}
+                    {% for sub in section.period_subsections %}
+                        <div class="card border mb-3">
+                            <div class="card-header d-flex align-items-center justify-content-between py-2 bg-light">
+                                <div class="d-flex align-items-center gap-2">
+                        <span class="fw-semibold text-dark">
+                            {{ sub.pclass.abbreviation }}
+                            <span class="text-muted mx-1">›</span>
+                            {{ sub.period.display_name }}
+                        </span>
+                                    <div class="ms-2">
+                                        {{ coverage_badges(sub.agg) }}
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2 flex-wrap align-items-center">
+                                    {% if sub.can_launch %}
+                                        {{ launch_buttons(
+                            url_for('dashboards.launch_period', period_id=sub.period.id),
+                            url_for('dashboards.clear_period', period_id=sub.period.id),
+                            sub.period.display_name
+                        ) }}
+                                    {% endif %}
+                                    <div class="vr mx-1 d-none d-md-block"></div>
+                                    <span class="text-muted small d-none d-md-inline">Export:</span>
+                                    {{ export_buttons(
+                            url_for('dashboards.export_period', period_id=sub.period.id, fmt='xlsx'),
+                            url_for('dashboards.export_period', period_id=sub.period.id, fmt='csv')
+                        ) }}
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-file-download me-1"></i>Project class
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   href="{{ url_for('dashboards.export_pclass', config_id=sub.config.id, fmt='xlsx') }}">
+                                                    <i class="fas fa-file-excel me-2 text-success"></i>Excel (.xlsx)
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   href="{{ url_for('dashboards.export_pclass', config_id=sub.config.id, fmt='csv') }}">
+                                                    <i class="fas fa-file-csv me-2 text-secondary"></i>CSV (.csv)
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body p-3">
+                                {% if sub.agg.n_complete > 0 %}
+                                    {{ stats_table(sub.agg) }}
+                                    {{ histogram_grid(sub.histograms) }}
+                                {% else %}
+                                    <p class="text-muted fst-italic mb-0">
+                                        <i class="fas fa-exclamation-circle me-1"></i>
+                                        No completed analysis results for this period.
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+
+                    {# ---- cycle summary ---- #}
+                    {% if section.period_subsections|length > 1 %}
+                        <div class="card border border-primary mt-3">
+                            <div class="card-header bg-primary bg-opacity-10 border-primary d-flex align-items-center justify-content-between py-2">
+                    <span class="fw-semibold text-primary">
+                        <i class="fas fa-layer-group me-1"></i>
+                        Cycle summary — {{ section.label }}
+                        <span class="text-muted fw-normal small ms-1">(all selected periods combined)</span>
+                    </span>
+                                <div class="ms-2">{{ coverage_badges(section.cycle_agg) }}</div>
+                            </div>
+                            <div class="card-body p-3">
+                                {% if section.cycle_agg.n_complete > 0 %}
+                                    {{ stats_table(section.cycle_agg) }}
+                                    {{ histogram_grid(section.cycle_histograms) }}
+                                {% else %}
+                                    <p class="text-muted fst-italic mb-0">No completed analysis results in this
+                                        cycle.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                </div>
+            </div>
+        {% endfor %}
+
+    </div>
+{% endblock %}

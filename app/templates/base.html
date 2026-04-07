@@ -347,6 +347,15 @@
                         </li>
                     {% endif %}
 
+                    {% if can_view_dashboards %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.blueprint == 'dashboards' %}active{% endif %}"
+                               href="{{ url_for('dashboards.overview') }}">
+                                Dashboards
+                            </a>
+                        </li>
+                    {% endif %}
+
                     {% if is_archive %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" href="#">

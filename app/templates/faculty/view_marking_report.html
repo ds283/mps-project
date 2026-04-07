@@ -179,7 +179,7 @@
                 {% if is_responsible_supervisor is defined and is_responsible_supervisor and report.signed_off_id is none %}
                     <form method="POST" action="{{ url_for('faculty.approve_marking_report', report_id=report.id) }}"
                           class="d-inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        {{ approve_form.hidden_tag() }}
                         <button type="submit" class="btn btn-warning text-dark">
                             <i class="fas fa-signature fa-fw"></i> Approve report
                         </button>

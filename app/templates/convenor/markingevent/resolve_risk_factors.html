@@ -29,7 +29,7 @@
     </div>
 
     <form method="POST" action="{{ url_for('convenor.resolve_risk_factors', record_id=record.id, url=url, text=text) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {{ form.hidden_tag() }}
 
         {% for item in display_items %}
             {% set border_class = "border-danger" if item.severity == "danger" else "border-warning" %}

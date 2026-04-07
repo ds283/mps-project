@@ -22,6 +22,14 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import SubmissionRecord
 from ..shared.asset_tools import AssetCloudAdapter
+from ..shared.llm_thresholds import (
+    BURSTINESS_NOTE_THRESHOLD,
+    BURSTINESS_STRONG_THRESHOLD,
+    MATTR_NOTE_THRESHOLD,
+    MATTR_STRONG_THRESHOLD,
+    classify_metric,
+    classify_mtld,
+)
 from ..shared.workflow_logging import log_db_commit
 
 # ---------------------------------------------------------------------------
@@ -110,19 +118,6 @@ BURSTINESS_WORD_GROUPS = [
 # burstiness calculation. Groups below this threshold are excluded
 # because the inter-arrival distribution is too sparse.
 BURSTINESS_MIN_OCCURRENCES = 8
-
-
-# ---------------------------------------------------------------------------
-# Classification thresholds.
-# ---------------------------------------------------------------------------
-
-MTLD_NOTE_THRESHOLD = 70
-MTLD_STRONG_THRESHOLD = 50
-MTLD_HIGH_NOTE_THRESHOLD = 100
-MATTR_NOTE_THRESHOLD = 0.68
-MATTR_STRONG_THRESHOLD = 0.60
-BURSTINESS_NOTE_THRESHOLD = 0.20
-BURSTINESS_STRONG_THRESHOLD = 0.10
 
 
 # ---------------------------------------------------------------------------
@@ -531,19 +526,6 @@ def _count_patterns(text: str) -> dict:
         "filler_detail": filler_detail,
         "em_dash_count": em_dash_count,
     }
-
-
-def _classify_metric(
-    value: float | None, note_threshold: float, strong_threshold: float
-) -> str:
-    """Return 'ok', 'note', or 'strong' classification for a metric value."""
-    if value is None:
-        return "unknown"
-    if value < strong_threshold:
-        return "strong"
-    if value < note_threshold:
-        return "note"
-    return "ok"
 
 
 def _ai_concern_flag(mattr_flag: str, mtld_flag: str, burst_flag: str) -> str:
@@ -1234,17 +1216,11 @@ def register_language_analysis_tasks(celery):
             )
 
         # --- classification flags --------------------------------------------
-        mattr_flag = _classify_metric(
+        mattr_flag = classify_metric(
             metrics.get("mattr"), MATTR_NOTE_THRESHOLD, MATTR_STRONG_THRESHOLD
         )
-        _mtld_val = metrics.get("mtld")
-        if _mtld_val is not None and _mtld_val > MTLD_HIGH_NOTE_THRESHOLD:
-            mtld_flag = "note"
-        else:
-            mtld_flag = _classify_metric(
-                _mtld_val, MTLD_NOTE_THRESHOLD, MTLD_STRONG_THRESHOLD
-            )
-        burst_flag = _classify_metric(
+        mtld_flag = classify_mtld(metrics.get("mtld"))
+        burst_flag = classify_metric(
             metrics.get("burstiness"),
             BURSTINESS_NOTE_THRESHOLD,
             BURSTINESS_STRONG_THRESHOLD,

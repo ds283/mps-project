@@ -22,6 +22,11 @@ from sqlalchemy.orm import validates, with_polymorphic
 
 from ..cache import cache
 from ..database import db
+from ..shared.llm_thresholds import (
+    BURSTINESS_NOTE_THRESHOLD,
+    MATTR_NOTE_THRESHOLD,
+    MTLD_NOTE_THRESHOLD,
+)
 from ..shared.sqlalchemy import get_count
 from .associations import (
     submission_record_to_feedback_report,
@@ -2736,11 +2741,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             })
         return entries
 
-    # Thresholds for AI metrics (values at or above which a metric is considered elevated)
-    MATTR_THRESHOLD = 0.80
-    MTLD_THRESHOLD = 70.0
-    BURSTINESS_THRESHOLD = 0.50
-
     def llm_metrics_for_display(self) -> dict:
         """
         Prepare structured display data for the LLM metrics section of the report page.
@@ -2758,7 +2758,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         flag_label = {"ok": "Normal", "note": "Elevated", "strong": "Strongly elevated"}
         flag_severity = {"ok": "success", "note": "warning", "strong": "danger"}
 
-        def metric_entry(key, value, threshold, flag_key):
+        def metric_entry(value, threshold, flag_key):
             flag = flags.get(flag_key, "ok")
             return {
                 "value": value,
@@ -2767,8 +2767,6 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 "flag_label": flag_label.get(flag, flag),
                 "flag_severity": flag_severity.get(flag, "secondary"),
                 "elevated": flag in {"note", "strong"},
-                # percentage of threshold reached (capped at 150% for bar display)
-                "pct_of_threshold": min(round((value / threshold) * 100, 1), 150) if value and threshold else None,
             }
 
         mattr = metrics.get("mattr")
@@ -2782,9 +2780,9 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         wc_discrepancy = rf.get(self.RISK_WORD_COUNT_DISCREPANCY, {})
 
         return {
-            "mattr": metric_entry("mattr", mattr, self.MATTR_THRESHOLD, "mattr_flag"),
-            "mtld": metric_entry("mtld", mtld, self.MTLD_THRESHOLD, "mtld_flag"),
-            "burstiness": metric_entry("burstiness", burstiness, self.BURSTINESS_THRESHOLD, "burstiness_flag"),
+            "mattr": metric_entry(mattr, MATTR_NOTE_THRESHOLD, "mattr_flag"),
+            "mtld": metric_entry(mtld, MTLD_NOTE_THRESHOLD, "mtld_flag"),
+            "burstiness": metric_entry(burstiness, BURSTINESS_NOTE_THRESHOLD, "burstiness_flag"),
             "hedging_count": patterns.get("hedging_total"),
             "filler_count": patterns.get("filler_total"),
             "em_dash_count": patterns.get("em_dash_count"),

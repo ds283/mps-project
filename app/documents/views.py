@@ -35,14 +35,14 @@ from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
 import app.shared.cloud_object_store.bucket_types as buckets
-from app.tasks.language_analysis import (
-    MATTR_NOTE_THRESHOLD,
-    MATTR_STRONG_THRESHOLD,
-    MTLD_NOTE_THRESHOLD,
-    MTLD_STRONG_THRESHOLD,
-    MTLD_HIGH_NOTE_THRESHOLD,
+from app.shared.llm_thresholds import (
     BURSTINESS_NOTE_THRESHOLD,
     BURSTINESS_STRONG_THRESHOLD,
+    MATTR_NOTE_THRESHOLD,
+    MATTR_STRONG_THRESHOLD,
+    MTLD_HIGH_NOTE_THRESHOLD,
+    MTLD_NOTE_THRESHOLD,
+    MTLD_STRONG_THRESHOLD,
 )
 
 from ..database import db

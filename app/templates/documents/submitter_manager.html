@@ -530,7 +530,7 @@
                                 <span class="small">MATTR:
                                     <strong>{{ "%.3f" | format(metrics['mattr']) }}</strong>
                                     {% if mattr_flag == 'strong' %}
-                                        <span class="badge bg-danger ms-1">Low</span>
+                                        <span class="badge bg-danger ms-1">Flagged</span>
                                     {% elif mattr_flag == 'note' %}
                                         <span class="badge bg-warning text-dark ms-1">Note</span>
                                     {% endif %}
@@ -541,7 +541,7 @@
                                 <span class="small">MTLD:
                                     <strong>{{ "%.1f" | format(metrics['mtld']) }}</strong>
                                     {% if mtld_flag == 'strong' %}
-                                        <span class="badge bg-danger ms-1">Low</span>
+                                        <span class="badge bg-danger ms-1">Flagged</span>
                                     {% elif mtld_flag == 'note' %}
                                         <span class="badge bg-warning text-dark ms-1">Note</span>
                                     {% endif %}
@@ -552,8 +552,19 @@
                                 <span class="small">Burstiness:
                                     <strong>{{ "%.3f" | format(metrics['burstiness']) }}</strong>
                                     {% if burst_flag == 'strong' %}
-                                        <span class="badge bg-danger ms-1">Low</span>
+                                        <span class="badge bg-danger ms-1">Flagged</span>
                                     {% elif burst_flag == 'note' %}
+                                        <span class="badge bg-warning text-dark ms-1">Note</span>
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+                            {% if metrics.get('sentence_cv') is not none %}
+                                {% set cv_flag = flags.get('sentence_cv_flag', 'ok') %}
+                                <span class="small">CV:
+                                    <strong>{{ "%.3f" | format(metrics['sentence_cv']) }}</strong>
+                                    {% if cv_flag == 'strong' %}
+                                        <span class="badge bg-danger ms-1">Flagged</span>
+                                    {% elif cv_flag == 'note' %}
                                         <span class="badge bg-warning text-dark ms-1">Note</span>
                                     {% endif %}
                                 </span>

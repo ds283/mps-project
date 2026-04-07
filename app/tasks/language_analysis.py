@@ -23,12 +23,10 @@ from ..database import db
 from ..models import SubmissionRecord
 from ..shared.asset_tools import AssetCloudAdapter
 from ..shared.llm_thresholds import (
-    BURSTINESS_NOTE_THRESHOLD,
-    BURSTINESS_STRONG_THRESHOLD,
-    MATTR_NOTE_THRESHOLD,
-    MATTR_STRONG_THRESHOLD,
-    classify_metric,
+    classify_burstiness,
+    classify_mattr,
     classify_mtld,
+    classify_sentence_cv,
 )
 from ..shared.workflow_logging import log_db_commit
 
@@ -432,19 +430,20 @@ def _check_figure_table_refs(text: str) -> tuple[list[str], list[str]]:
 
 def _compute_mattr_mtld(main_text: str) -> tuple[float | None, float | None]:
     """
-    Compute MATTR (window=50) and MTLD for *main_text*.
+    Compute MATTR (window=100) and MTLD for *main_text*.
     Returns (mattr, mtld), either of which may be None on failure.
+    Requires at least 100 words; fewer returns (None, None).
     """
     try:
         from lexicalrichness import LexicalRichness
 
         lex = LexicalRichness(main_text)
-        if lex.words < 50:
+        if lex.words < 100:
             print(
                 f"_compute_matr_mtld: too few words to compute MATTR and MTLD statistics ({lex.words} words detected)"
             )
             return None, None
-        mattr = float(lex.mattr(window_size=50))
+        mattr = float(lex.mattr(window_size=100))
         mtld = float(lex.mtld(threshold=0.72))
         return mattr, mtld
     except Exception as exc:
@@ -498,6 +497,34 @@ def _compute_burstiness(text: str) -> tuple[dict, float | None]:
     return group_results, aggregate
 
 
+def _compute_sentence_cv(text: str) -> float | None:
+    """
+    Compute the coefficient of variation (CV = σ/μ) of sentence lengths for *text*.
+
+    Sentence length is measured as the number of non-punctuation, non-space tokens
+    per sentence, using spaCy's sentence segmentation.  Returns None if fewer than
+    5 sentences are found (insufficient data for a stable estimate).
+    """
+    nlp = _get_nlp()
+    doc = nlp(text)
+
+    lengths = [
+        sum(1 for tok in sent if not tok.is_punct and not tok.is_space)
+        for sent in doc.sents
+    ]
+    # Discard empty or single-token sentences (e.g. section headings misread as sentences)
+    lengths = [ln for ln in lengths if ln > 1]
+
+    if len(lengths) < 5:
+        return None
+
+    mu = float(np.mean(lengths))
+    if mu == 0.0:
+        return None
+    sigma = float(np.std(lengths, ddof=1))
+    return sigma / mu
+
+
 def _count_patterns(text: str) -> dict:
     """
     Count occurrences of AI-tendency indicator patterns.
@@ -528,22 +555,26 @@ def _count_patterns(text: str) -> dict:
     }
 
 
-def _ai_concern_flag(mattr_flag: str, mtld_flag: str, burst_flag: str) -> str:
+def _ai_concern_flag(mattr_flag: str, mtld_flag: str, burst_flag: str, cv_flag: str) -> str:
     """
-    Compute overall AI concern classification:
-    - 'low'    : at most one metric outside the standard range
-    - 'medium' : two or more metrics outside the standard range
-    - 'high'   : all three outside, or two at the 'strong' level
+    Compute overall AI concern classification from four metric flags.
+
+    Each flag is one of 'ok', 'note', 'strong', or 'unknown'.
+
+    Rules:
+    - 'low'    : 0–1 metrics in "note" or above, none "strong"
+    - 'medium' : 2 metrics "note" or above, OR 1 metric "strong"
+    - 'high'   : 2+ metrics "strong", OR 3+ metrics "note" or above
     """
-    flags = [mattr_flag, mtld_flag, burst_flag]
+    flags = [mattr_flag, mtld_flag, burst_flag, cv_flag]
     outside = sum(1 for f in flags if f in ("note", "strong"))
     strong_count = sum(1 for f in flags if f == "strong")
 
-    if outside <= 1:
-        return "low"
-    if outside == 3 or strong_count >= 2:
+    if strong_count >= 2 or outside >= 3:
         return "high"
-    return "medium"
+    if strong_count >= 1 or outside >= 2:
+        return "medium"
+    return "low"
 
 
 # ---------------------------------------------------------------------------
@@ -1207,6 +1238,15 @@ def register_language_analysis_tasks(celery):
             metrics["burstiness"] = None
             metrics["burstiness_by_group"] = {}
 
+        # --- sentence CV -----------------------------------------------------
+        try:
+            metrics["sentence_cv"] = _compute_sentence_cv(clean_main_text)
+        except Exception as exc:
+            errors.append(
+                {"stage": "sentence_cv", "type": type(exc).__name__, "message": str(exc)}
+            )
+            metrics["sentence_cv"] = None
+
         # --- pattern matching ------------------------------------------------
         try:
             patterns_info = _count_patterns(raw_text)
@@ -1216,21 +1256,17 @@ def register_language_analysis_tasks(celery):
             )
 
         # --- classification flags --------------------------------------------
-        mattr_flag = classify_metric(
-            metrics.get("mattr"), MATTR_NOTE_THRESHOLD, MATTR_STRONG_THRESHOLD
-        )
+        mattr_flag = classify_mattr(metrics.get("mattr"))
         mtld_flag = classify_mtld(metrics.get("mtld"))
-        burst_flag = classify_metric(
-            metrics.get("burstiness"),
-            BURSTINESS_NOTE_THRESHOLD,
-            BURSTINESS_STRONG_THRESHOLD,
-        )
-        ai_concern = _ai_concern_flag(mattr_flag, mtld_flag, burst_flag)
+        burst_flag = classify_burstiness(metrics.get("burstiness"))
+        cv_flag = classify_sentence_cv(metrics.get("sentence_cv"))
+        ai_concern = _ai_concern_flag(mattr_flag, mtld_flag, burst_flag, cv_flag)
 
         flags = {
             "mattr_flag": mattr_flag,
             "mtld_flag": mtld_flag,
             "burstiness_flag": burst_flag,
+            "sentence_cv_flag": cv_flag,
             "ai_concern": ai_concern,
         }
 

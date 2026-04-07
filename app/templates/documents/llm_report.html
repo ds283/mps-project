@@ -187,7 +187,7 @@
         {% if gauge_div is defined and gauge_div is not none %}
             <div class="mb-3">{{ gauge_div|safe }}</div>
             <div class="d-flex flex-wrap gap-3 small mb-3">
-                {% for key, label, fmt in [('mattr', 'MATTR', '%.3f'), ('mtld', 'MTLD', '%.1f'), ('burstiness', 'Burstiness (B)', '%.3f')] %}
+                {% for key, label, fmt in [('mattr', 'MATTR', '%.3f'), ('mtld', 'MTLD', '%.1f'), ('burstiness', 'Burstiness (B)', '%.3f'), ('sentence_cv', 'CV', '%.3f')] %}
                     {% set m = metrics_data[key] %}
                     {% if m.value is not none %}
                         <span>
@@ -199,7 +199,7 @@
                 {% endfor %}
             </div>
         {% else %}
-            {% for key, label in [('mattr', 'MATTR'), ('mtld', 'MTLD'), ('burstiness', 'Burstiness')] %}
+            {% for key, label in [('mattr', 'MATTR'), ('mtld', 'MTLD'), ('burstiness', 'Burstiness'), ('sentence_cv', 'CV')] %}
                 {% set m = metrics_data[key] %}
                 {% if m.value is not none %}
                     <div class="mb-2">

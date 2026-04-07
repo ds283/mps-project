@@ -23,9 +23,10 @@ from sqlalchemy.orm import validates, with_polymorphic
 from ..cache import cache
 from ..database import db
 from ..shared.llm_thresholds import (
-    BURSTINESS_NOTE_THRESHOLD,
-    MATTR_NOTE_THRESHOLD,
+    MATTR_NOTE_LOW_THRESHOLD,
     MTLD_NOTE_THRESHOLD,
+    BURSTINESS_NOTE_LOW,
+    SENT_CV_NOTE_LOW,
 )
 from ..shared.sqlalchemy import get_count
 from .associations import (
@@ -2772,6 +2773,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         mattr = metrics.get("mattr")
         mtld = metrics.get("mtld")
         burstiness = metrics.get("burstiness")
+        sentence_cv = metrics.get("sentence_cv")
 
         measured_words = metrics.get("word_count")
         stated_words = llm_result.get("stated_word_count") if llm_result.get("stated_word_count_found") else None
@@ -2780,9 +2782,10 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         wc_discrepancy = rf.get(self.RISK_WORD_COUNT_DISCREPANCY, {})
 
         return {
-            "mattr": metric_entry(mattr, MATTR_NOTE_THRESHOLD, "mattr_flag"),
+            "mattr": metric_entry(mattr, MATTR_NOTE_LOW_THRESHOLD, "mattr_flag"),
             "mtld": metric_entry(mtld, MTLD_NOTE_THRESHOLD, "mtld_flag"),
-            "burstiness": metric_entry(burstiness, BURSTINESS_NOTE_THRESHOLD, "burstiness_flag"),
+            "burstiness": metric_entry(burstiness, BURSTINESS_NOTE_LOW, "burstiness_flag"),
+            "sentence_cv": metric_entry(sentence_cv, SENT_CV_NOTE_LOW, "sentence_cv_flag"),
             "hedging_count": patterns.get("hedging_total"),
             "filler_count": patterns.get("filler_total"),
             "em_dash_count": patterns.get("em_dash_count"),
@@ -3002,11 +3005,11 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         new_data[self.RISK_AI_COMPLIANCE] = genai_factor
 
         # --- AI USE METRICS ---
-        # Elevated if 2+ of {mattr_flag, mtld_flag, burstiness_flag} are "note" or "strong"
+        # Elevated if 2+ of {mattr_flag, mtld_flag, burstiness_flag, sentence_cv_flag} are "note" or "strong"
         elevated_thresholds = {"note", "strong"}
         elevated_metrics = [
             m
-            for m in ("mattr", "mtld", "burstiness")
+            for m in ("mattr", "mtld", "burstiness", "sentence_cv")
             if flags.get(f"{m}_flag", "ok") in elevated_thresholds
         ]
         ai_use_present = len(elevated_metrics) >= 2

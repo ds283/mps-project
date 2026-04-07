@@ -36,13 +36,20 @@ from sqlalchemy.exc import SQLAlchemyError
 import app.ajax as ajax
 import app.shared.cloud_object_store.bucket_types as buckets
 from app.shared.llm_thresholds import (
-    BURSTINESS_NOTE_THRESHOLD,
-    BURSTINESS_STRONG_THRESHOLD,
-    MATTR_NOTE_THRESHOLD,
+    BURSTINESS_NOTE_HIGH,
+    BURSTINESS_NOTE_LOW,
+    BURSTINESS_STRONG_HIGH,
+    BURSTINESS_STRONG_LOW,
+    MATTR_NOTE_HIGH_THRESHOLD,
+    MATTR_NOTE_LOW_THRESHOLD,
     MATTR_STRONG_THRESHOLD,
     MTLD_HIGH_NOTE_THRESHOLD,
     MTLD_NOTE_THRESHOLD,
     MTLD_STRONG_THRESHOLD,
+    SENT_CV_NOTE_HIGH,
+    SENT_CV_NOTE_LOW,
+    SENT_CV_STRONG_HIGH,
+    SENT_CV_STRONG_LOW,
 )
 
 from ..database import db
@@ -1774,19 +1781,123 @@ def _build_lexical_gauge(metrics_data) -> tuple:
                            background_fill_alpha=0))
         return p
 
+    def _symmetric_gauge_fig(
+        label, value, low, high,
+        strong_low, note_low, note_high, strong_high,
+        flag, fmt=".3f"
+    ):
+        """
+        Five-zone symmetric gauge: strong-low / note-low / ok / note-high / strong-high.
+        Used for Burstiness B and sentence CV, which have concern zones on both sides.
+        """
+        if value is None:
+            return None
+
+        display_val = max(low, min(high, value))
+        flag_col = _flag_color.get(flag, "#6c757d")
+
+        p = figure(
+            width=480,
+            height=90,
+            x_range=(low, high),
+            y_range=(-1, 1),
+            toolbar_location=None,
+        )
+        p.sizing_mode = "fixed"
+        p.background_fill_color = None
+        p.border_fill_color = None
+        p.outline_line_color = None
+        p.axis.visible = False
+        p.xgrid.visible = False
+        p.ygrid.visible = False
+        p.toolbar.logo = None
+
+        # Background track
+        p.quad(left=low, right=high, bottom=-0.35, top=0.35,
+               fill_color="#e9ecef", line_color=None)
+
+        # Five colour zones
+        p.quad(left=low, right=strong_low, bottom=-0.35, top=0.35,
+               fill_color="#f8d7da", line_color=None)
+        p.quad(left=strong_low, right=note_low, bottom=-0.35, top=0.35,
+               fill_color="#fff3cd", line_color=None)
+        p.quad(left=note_low, right=note_high, bottom=-0.35, top=0.35,
+               fill_color="#d1e7dd", line_color=None)
+        p.quad(left=note_high, right=strong_high, bottom=-0.35, top=0.35,
+               fill_color="#fff3cd", line_color=None)
+        p.quad(left=strong_high, right=high, bottom=-0.35, top=0.35,
+               fill_color="#f8d7da", line_color=None)
+
+        # Boundary lines
+        p.add_layout(Span(location=strong_low, dimension="height",
+                          line_color="#dc3545", line_dash="dashed", line_width=1.5))
+        p.add_layout(Span(location=note_low, dimension="height",
+                          line_color="#495057", line_dash="dashed", line_width=1.5))
+        p.add_layout(Span(location=note_high, dimension="height",
+                          line_color="#495057", line_dash="dashed", line_width=1.5))
+        p.add_layout(Span(location=strong_high, dimension="height",
+                          line_color="#dc3545", line_dash="dashed", line_width=1.5))
+
+        # Labels: outer bounds at row -0.38; note lines at row -0.38; strong lines at row -0.62
+        p.add_layout(Label(x=low, y=-0.38, x_units="data", y_units="data",
+                           text=f"{low:{fmt}}", text_font_size="9px",
+                           text_color="#6c757d", text_align="left",
+                           text_baseline="top", background_fill_alpha=0))
+        p.add_layout(Label(x=high, y=-0.38, x_units="data", y_units="data",
+                           text=f"{high:{fmt}}", text_font_size="9px",
+                           text_color="#6c757d", text_align="right",
+                           text_baseline="top", background_fill_alpha=0))
+        p.add_layout(Label(x=note_low, y=-0.38, x_units="data", y_units="data",
+                           text=f"note {note_low:{fmt}}", text_font_size="9px",
+                           text_color="#495057", text_align="center",
+                           text_baseline="top", background_fill_alpha=0))
+        p.add_layout(Label(x=note_high, y=-0.38, x_units="data", y_units="data",
+                           text=f"note {note_high:{fmt}}", text_font_size="9px",
+                           text_color="#495057", text_align="center",
+                           text_baseline="top", background_fill_alpha=0))
+        p.add_layout(Label(x=strong_low, y=-0.62, x_units="data", y_units="data",
+                           text=f"strong {strong_low:{fmt}}", text_font_size="9px",
+                           text_color="#dc3545", text_align="center",
+                           text_baseline="top", background_fill_alpha=0))
+        p.add_layout(Label(x=strong_high, y=-0.62, x_units="data", y_units="data",
+                           text=f"strong {strong_high:{fmt}}", text_font_size="9px",
+                           text_color="#dc3545", text_align="center",
+                           text_baseline="top", background_fill_alpha=0))
+
+        # Metric name label
+        p.add_layout(Label(x=low, y=0, x_units="data", y_units="data",
+                           text=label, text_font_size="11px", text_font_style="bold",
+                           text_align="left", text_baseline="middle",
+                           x_offset=2, y_offset=0, background_fill_alpha=0))
+
+        # Value marker
+        p.circle(x=[display_val], y=[0], size=14,
+                 fill_color=flag_col, line_color="white", line_width=1.5)
+
+        # Current value label above marker
+        p.add_layout(Label(x=display_val, y=0.5, x_units="data", y_units="data",
+                           text=f"{value:{fmt}}", text_font_size="10px",
+                           text_color=flag_col, text_font_style="bold",
+                           text_align="center", text_baseline="bottom",
+                           background_fill_alpha=0))
+        return p
+
     mattr_m = metrics_data.get("mattr", {})
     mtld_m = metrics_data.get("mtld", {})
     burst_m = metrics_data.get("burstiness", {})
+    cv_m = metrics_data.get("sentence_cv", {})
 
     figs = []
+    # MATTR: two-sided (low strong / low note / ok / high note); reuse existing two-threshold mode
     f = _gauge_fig(
         "MATTR",
         mattr_m.get("value"),
         0.0,
         1.0,
-        MATTR_NOTE_THRESHOLD,
+        MATTR_NOTE_LOW_THRESHOLD,
         mattr_m.get("flag", "ok"),
         fmt=".3f",
+        high_threshold=MATTR_NOTE_HIGH_THRESHOLD,
         strong_threshold=MATTR_STRONG_THRESHOLD,
     )
     if f:
@@ -1804,15 +1915,31 @@ def _build_lexical_gauge(metrics_data) -> tuple:
     )
     if f:
         figs.append(f)
-    f = _gauge_fig(
+    f = _symmetric_gauge_fig(
         "Burstiness (B)",
         burst_m.get("value"),
         -1.0,
         1.0,
-        BURSTINESS_NOTE_THRESHOLD,
-        burst_m.get("flag", "ok"),
+        strong_low=BURSTINESS_STRONG_LOW,
+        note_low=BURSTINESS_NOTE_LOW,
+        note_high=BURSTINESS_NOTE_HIGH,
+        strong_high=BURSTINESS_STRONG_HIGH,
+        flag=burst_m.get("flag", "ok"),
         fmt=".3f",
-        strong_threshold=BURSTINESS_STRONG_THRESHOLD,
+    )
+    if f:
+        figs.append(f)
+    f = _symmetric_gauge_fig(
+        "Sentence CV",
+        cv_m.get("value"),
+        0.0,
+        1.5,
+        strong_low=SENT_CV_STRONG_LOW,
+        note_low=SENT_CV_NOTE_LOW,
+        note_high=SENT_CV_NOTE_HIGH,
+        strong_high=SENT_CV_STRONG_HIGH,
+        flag=cv_m.get("flag", "ok"),
+        fmt=".3f",
     )
     if f:
         figs.append(f)

@@ -12,6 +12,10 @@ from datetime import datetime, timedelta
 from functools import partial
 
 import requests as http_requests
+from bokeh.embed import components
+from bokeh.layouts import column
+from bokeh.models import Label, Span
+from bokeh.plotting import figure
 from celery import chain, chord
 from flask import (
     Response,
@@ -31,6 +35,15 @@ from sqlalchemy.exc import SQLAlchemyError
 
 import app.ajax as ajax
 import app.shared.cloud_object_store.bucket_types as buckets
+from app.tasks.language_analysis import (
+    MATTR_NOTE_THRESHOLD,
+    MATTR_STRONG_THRESHOLD,
+    MTLD_NOTE_THRESHOLD,
+    MTLD_STRONG_THRESHOLD,
+    MTLD_HIGH_NOTE_THRESHOLD,
+    BURSTINESS_NOTE_THRESHOLD,
+    BURSTINESS_STRONG_THRESHOLD,
+)
 
 from ..database import db
 from ..models import (
@@ -1596,6 +1609,407 @@ def serve_thumbnail(asset_type, asset_id, size):
     )
 
 
+def _build_lexical_gauge(metrics_data) -> tuple:
+    """
+    Build a Bokeh Column layout containing three horizontal gauge figures for MATTR, MTLD,
+    and Burstiness.  Returns (div, script) from bokeh.embed.components, or (None, None) if
+    metrics_data is None or all three metric values are absent.
+    """
+    if metrics_data is None:
+        return None, None
+
+    _flag_color = {"ok": "#198754", "note": "#ffc107", "strong": "#dc3545"}
+
+    def _gauge_fig(
+        label, value, low, high, threshold, flag, fmt=".3f",
+        high_threshold=None, strong_threshold=None
+    ):
+        if value is None:
+            return None
+
+        # Clamp the displayed value to the axis range
+        display_val = max(low, min(high, value))
+        flag_col = _flag_color.get(flag, "#6c757d")
+
+        p = figure(
+            width=480,
+            height=80,
+            x_range=(low, high),
+            y_range=(-1, 1),
+            toolbar_location=None,
+        )
+        p.sizing_mode = "fixed"
+        p.background_fill_color = None
+        p.border_fill_color = None
+        p.outline_line_color = None
+        p.axis.visible = False
+        p.xgrid.visible = False
+        p.ygrid.visible = False
+        p.toolbar.logo = None
+
+        # Background track
+        p.quad(left=low, right=high, bottom=-0.35, top=0.35,
+               fill_color="#e9ecef", line_color=None)
+
+        if high_threshold is None:
+            # ── Single-threshold mode (MATTR, Burstiness) ──────────────────
+            # With strong_threshold: three zones (strong / note / safe).
+            # Without strong_threshold: two zones (concern / safe), flag-colored.
+            if strong_threshold is not None:
+                p.quad(left=low, right=strong_threshold, bottom=-0.35, top=0.35,
+                       fill_color="#f8d7da", line_color=None)
+                p.quad(left=strong_threshold, right=threshold, bottom=-0.35, top=0.35,
+                       fill_color="#fff3cd", line_color=None)
+                p.quad(left=threshold, right=high, bottom=-0.35, top=0.35,
+                       fill_color="#d1e7dd", line_color=None)
+                # Strong threshold line (red dashed)
+                p.add_layout(Span(location=strong_threshold, dimension="height",
+                                  line_color="#dc3545", line_dash="dashed", line_width=1.5))
+                # Note threshold line (grey dashed)
+                p.add_layout(Span(location=threshold, dimension="height",
+                                  line_color="#495057", line_dash="dashed", line_width=1.5))
+                # Labels: min and max on the outer row; note and strong labels staggered
+                p.add_layout(Label(x=low, y=-0.38, x_units="data", y_units="data",
+                                   text=f"{low:{fmt}}", text_font_size="9px",
+                                   text_color="#6c757d", text_align="left",
+                                   text_baseline="top", background_fill_alpha=0))
+                p.add_layout(Label(x=high, y=-0.38, x_units="data", y_units="data",
+                                   text=f"{high:{fmt}}", text_font_size="9px",
+                                   text_color="#6c757d", text_align="right",
+                                   text_baseline="top", background_fill_alpha=0))
+                p.add_layout(Label(x=threshold, y=-0.38, x_units="data", y_units="data",
+                                   text=f"note {threshold:{fmt}}", text_font_size="9px",
+                                   text_color="#495057", text_align="center",
+                                   text_baseline="top", background_fill_alpha=0))
+                p.add_layout(Label(x=strong_threshold, y=-0.62, x_units="data", y_units="data",
+                                   text=f"strong {strong_threshold:{fmt}}", text_font_size="9px",
+                                   text_color="#dc3545", text_align="center",
+                                   text_baseline="top", background_fill_alpha=0))
+            else:
+                concern_col = (
+                    "#f8d7da" if flag == "strong"
+                    else "#fff3cd" if flag == "note"
+                    else "#d1e7dd"
+                )
+                p.quad(left=low, right=threshold, bottom=-0.35, top=0.35,
+                       fill_color=concern_col, line_color=None)
+                p.quad(left=threshold, right=high, bottom=-0.35, top=0.35,
+                       fill_color="#d1e7dd", line_color=None)
+                p.add_layout(Span(location=threshold, dimension="height",
+                                  line_color="#495057", line_dash="dashed", line_width=1.5))
+                p.add_layout(Label(x=low, y=-0.38, x_units="data", y_units="data",
+                                   text=f"{low:{fmt}}", text_font_size="9px",
+                                   text_color="#6c757d", text_align="left",
+                                   text_baseline="top", background_fill_alpha=0))
+                p.add_layout(Label(x=threshold, y=-0.38, x_units="data", y_units="data",
+                                   text=f"threshold {threshold:{fmt}}", text_font_size="9px",
+                                   text_color="#495057", text_align="center",
+                                   text_baseline="top", background_fill_alpha=0))
+                p.add_layout(Label(x=high, y=-0.38, x_units="data", y_units="data",
+                                   text=f"{high:{fmt}}", text_font_size="9px",
+                                   text_color="#6c757d", text_align="right",
+                                   text_baseline="top", background_fill_alpha=0))
+        else:
+            # ── Two-threshold (band) mode (MTLD) ────────────────────────────
+            # With strong_threshold: lower concern area is split into strong/note zones.
+            # Upper concern area is always note-level (no upper strong threshold defined).
+            if strong_threshold is not None:
+                p.quad(left=low, right=strong_threshold, bottom=-0.35, top=0.35,
+                       fill_color="#f8d7da", line_color=None)
+                p.quad(left=strong_threshold, right=threshold, bottom=-0.35, top=0.35,
+                       fill_color="#fff3cd", line_color=None)
+            else:
+                p.quad(left=low, right=threshold, bottom=-0.35, top=0.35,
+                       fill_color="#f8d7da", line_color=None)
+            p.quad(left=threshold, right=high_threshold, bottom=-0.35, top=0.35,
+                   fill_color="#d1e7dd", line_color=None)
+            p.quad(left=high_threshold, right=high, bottom=-0.35, top=0.35,
+                   fill_color="#fff3cd", line_color=None)
+
+            if strong_threshold is not None:
+                p.add_layout(Span(location=strong_threshold, dimension="height",
+                                  line_color="#dc3545", line_dash="dashed", line_width=1.5))
+            p.add_layout(Span(location=threshold, dimension="height",
+                              line_color="#495057", line_dash="dashed", line_width=1.5))
+            p.add_layout(Span(location=high_threshold, dimension="height",
+                              line_color="#495057", line_dash="dashed", line_width=1.5))
+
+            p.add_layout(Label(x=low, y=-0.38, x_units="data", y_units="data",
+                               text=f"{low:{fmt}}", text_font_size="9px",
+                               text_color="#6c757d", text_align="left",
+                               text_baseline="top", background_fill_alpha=0))
+            p.add_layout(Label(x=threshold, y=-0.38, x_units="data", y_units="data",
+                               text=f"low {threshold:{fmt}}", text_font_size="9px",
+                               text_color="#495057", text_align="center",
+                               text_baseline="top", background_fill_alpha=0))
+            p.add_layout(Label(x=high_threshold, y=-0.38, x_units="data", y_units="data",
+                               text=f"high {high_threshold:{fmt}}", text_font_size="9px",
+                               text_color="#495057", text_align="center",
+                               text_baseline="top", background_fill_alpha=0))
+            p.add_layout(Label(x=high, y=-0.38, x_units="data", y_units="data",
+                               text=f"{high:{fmt}}", text_font_size="9px",
+                               text_color="#6c757d", text_align="right",
+                               text_baseline="top", background_fill_alpha=0))
+            if strong_threshold is not None:
+                p.add_layout(Label(x=strong_threshold, y=-0.62, x_units="data", y_units="data",
+                                   text=f"strong {strong_threshold:{fmt}}", text_font_size="9px",
+                                   text_color="#dc3545", text_align="center",
+                                   text_baseline="top", background_fill_alpha=0))
+
+        # Metric name label (shared)
+        p.add_layout(Label(x=low, y=0, x_units="data", y_units="data",
+                           text=label, text_font_size="11px", text_font_style="bold",
+                           text_align="left", text_baseline="middle",
+                           x_offset=2, y_offset=0, background_fill_alpha=0))
+
+        # Value marker
+        p.circle(x=[display_val], y=[0], size=14,
+                 fill_color=flag_col, line_color="white", line_width=1.5)
+
+        # Current value label above marker
+        p.add_layout(Label(x=display_val, y=0.5, x_units="data", y_units="data",
+                           text=f"{value:{fmt}}", text_font_size="10px",
+                           text_color=flag_col, text_font_style="bold",
+                           text_align="center", text_baseline="bottom",
+                           background_fill_alpha=0))
+        return p
+
+    mattr_m = metrics_data.get("mattr", {})
+    mtld_m = metrics_data.get("mtld", {})
+    burst_m = metrics_data.get("burstiness", {})
+
+    figs = []
+    f = _gauge_fig(
+        "MATTR",
+        mattr_m.get("value"),
+        0.0,
+        1.0,
+        MATTR_NOTE_THRESHOLD,
+        mattr_m.get("flag", "ok"),
+        fmt=".3f",
+        strong_threshold=MATTR_STRONG_THRESHOLD,
+    )
+    if f:
+        figs.append(f)
+    f = _gauge_fig(
+        "MTLD",
+        mtld_m.get("value"),
+        0.0,
+        130.0,
+        MTLD_NOTE_THRESHOLD,
+        mtld_m.get("flag", "ok"),
+        fmt=".1f",
+        high_threshold=MTLD_HIGH_NOTE_THRESHOLD,
+        strong_threshold=MTLD_STRONG_THRESHOLD,
+    )
+    if f:
+        figs.append(f)
+    f = _gauge_fig(
+        "Burstiness (B)",
+        burst_m.get("value"),
+        -1.0,
+        1.0,
+        BURSTINESS_NOTE_THRESHOLD,
+        burst_m.get("flag", "ok"),
+        fmt=".3f",
+        strong_threshold=BURSTINESS_STRONG_THRESHOLD,
+    )
+    if f:
+        figs.append(f)
+
+    if not figs:
+        return None, None
+
+    layout = column(*figs, sizing_mode="fixed", spacing=8)
+    script, div = components(layout)
+    return div, script
+
+
+def _build_document_length_gauge(la_metrics: dict, config) -> tuple:
+    """
+    Build Bokeh gauge figure(s) for word count and/or page count versus configured limits.
+    Returns (div, script) or (None, None) if no limits are enabled or no measurements available.
+
+    la_metrics: the 'metrics' sub-dict from record.language_analysis_data
+    config:     ProjectClassConfig (for effective_word_limit_enabled etc.)
+    """
+    if config is None or not la_metrics:
+        return None, None
+
+    _ok_col = "#198754"
+    _bad_col = "#dc3545"
+
+    def _gauge_fig(label, measured, limit):
+        if measured is None or limit is None or limit <= 0:
+            return None
+
+        flag_col = _ok_col if measured <= limit else _bad_col
+        high = max(limit * 1.5, measured * 1.1)
+        display_val = min(float(measured), high)
+
+        p = figure(
+            width=480,
+            height=55,
+            x_range=(0, high),
+            y_range=(-1, 1),
+            toolbar_location=None,
+        )
+        p.sizing_mode = "fixed"
+        p.background_fill_color = None
+        p.border_fill_color = None
+        p.outline_line_color = None
+        p.axis.visible = False
+        p.xgrid.visible = False
+        p.ygrid.visible = False
+        p.toolbar.logo = None
+
+        # Background track
+        p.quad(
+            left=0,
+            right=high,
+            bottom=-0.35,
+            top=0.35,
+            fill_color="#e9ecef",
+            line_color=None,
+        )
+        # Safe zone (0 → limit) — always green
+        p.quad(
+            left=0,
+            right=float(limit),
+            bottom=-0.35,
+            top=0.35,
+            fill_color="#d1e7dd",
+            line_color=None,
+        )
+        # Concern zone (limit → high) — always red
+        p.quad(
+            left=float(limit),
+            right=high,
+            bottom=-0.35,
+            top=0.35,
+            fill_color="#f8d7da",
+            line_color=None,
+        )
+
+        # Limit marker
+        p.add_layout(
+            Span(
+                location=float(limit),
+                dimension="height",
+                line_color="#495057",
+                line_dash="dashed",
+                line_width=1.5,
+            )
+        )
+
+        # Value marker
+        p.circle(
+            x=[display_val],
+            y=[0],
+            size=14,
+            fill_color=flag_col,
+            line_color="white",
+            line_width=1.5,
+        )
+
+        # Labels: metric name, 0, limit, max, current value
+        p.add_layout(
+            Label(
+                x=0,
+                y=0,
+                x_units="data",
+                y_units="data",
+                text=label,
+                text_font_size="11px",
+                text_font_style="bold",
+                text_align="left",
+                text_baseline="middle",
+                x_offset=2,
+                y_offset=0,
+                background_fill_alpha=0,
+            )
+        )
+        p.add_layout(
+            Label(
+                x=0,
+                y=-0.38,
+                x_units="data",
+                y_units="data",
+                text="0",
+                text_font_size="9px",
+                text_color="#6c757d",
+                text_align="left",
+                text_baseline="top",
+                background_fill_alpha=0,
+            )
+        )
+        p.add_layout(
+            Label(
+                x=float(limit),
+                y=-0.38,
+                x_units="data",
+                y_units="data",
+                text=f"limit {limit:,.0f}",
+                text_font_size="9px",
+                text_color="#495057",
+                text_align="center",
+                text_baseline="top",
+                background_fill_alpha=0,
+            )
+        )
+        p.add_layout(
+            Label(
+                x=high,
+                y=-0.38,
+                x_units="data",
+                y_units="data",
+                text=f"{high:,.0f}",
+                text_font_size="9px",
+                text_color="#6c757d",
+                text_align="right",
+                text_baseline="top",
+                background_fill_alpha=0,
+            )
+        )
+        p.add_layout(
+            Label(
+                x=display_val,
+                y=0.5,
+                x_units="data",
+                y_units="data",
+                text=f"{measured:,.0f}",
+                text_font_size="10px",
+                text_color=flag_col,
+                text_font_style="bold",
+                text_align="center",
+                text_baseline="bottom",
+                background_fill_alpha=0,
+            )
+        )
+        return p
+
+    figs = []
+    if config.effective_word_limit_enabled and config.effective_word_limit:
+        f = _gauge_fig(
+            "Words", la_metrics.get("word_count"), config.effective_word_limit
+        )
+        if f:
+            figs.append(f)
+    if config.effective_page_limit_enabled and config.effective_page_limit:
+        f = _gauge_fig(
+            "Pages", la_metrics.get("page_count"), config.effective_page_limit
+        )
+        if f:
+            figs.append(f)
+
+    if not figs:
+        return None, None
+
+    layout = column(*figs, sizing_mode="fixed", spacing=8)
+    script, div = components(layout)
+    return div, script
+
+
 @documents.route("/llm-report/<int:record_id>")
 @login_required
 def llm_report(record_id):
@@ -1653,6 +2067,13 @@ def llm_report(record_id):
     # Admin-only actions: can clear results or clear and re-run
     can_admin = current_user.has_role("root") or current_user.has_role("admin")
 
+    gauge_div, gauge_script = _build_lexical_gauge(metrics_data)
+
+    la_metrics = la.get("metrics", {})
+    length_gauge_div, length_gauge_script = _build_document_length_gauge(
+        la_metrics, period.config
+    )
+
     return render_template_context(
         "documents/llm_report.html",
         record=record,
@@ -1667,6 +2088,29 @@ def llm_report(record_id):
         rf_items=rf_items,
         resolve_url=resolve_url,
         can_admin=can_admin,
+        gauge_div=gauge_div,
+        gauge_script=gauge_script,
+        length_gauge_div=length_gauge_div,
+        length_gauge_script=length_gauge_script,
         url=url,
         text=text,
     )
+
+
+@documents.route("/analysis_status/<int:sid>")
+@login_required
+def analysis_status(sid):
+    """
+    Lightweight status endpoint used by client-side JS to poll for analysis completion.
+    Returns JSON {"status": "in_progress"|"complete"|"failed"|"not_started"}.
+    """
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
+    if record.language_analysis_complete:
+        status = "complete"
+    elif record.llm_analysis_failed:
+        status = "failed"
+    elif record.language_analysis_started:
+        status = "in_progress"
+    else:
+        status = "not_started"
+    return jsonify({"status": status})

@@ -229,6 +229,11 @@
                     {% elif r.llm_analysis_failed %}
                         <span class="small text-danger">LLM failed</span>
                     {% endif %}
+                    {# Documents link #}
+                    <a class="btn btn-xs btn-outline-secondary"
+                       href="{{ url_for('documents.submitter_documents', sid=r.id, url=url_for('convenor.submitters', id=pclass.id), text='Submitters') }}">
+                        <small><i class="fas fa-folder-open fa-fw"></i> Documents</small>
+                    </a>
                     {# LLM report link #}
                     <a class="btn btn-xs btn-outline-secondary"
                        href="{{ url_for('documents.llm_report', record_id=r.id, url=url_for('convenor.submitters', id=pclass.id), text='convenor submitters view') }}">
@@ -245,11 +250,25 @@
                         </a>
                     </div>
                 {% endif %}
+            {% elif r.language_analysis_started and not r.language_analysis_complete %}
+                {# Analysis in progress — spinner with data-sid for JS polling #}
+                <div class="d-flex flex-row align-items-center gap-2 mt-1 llm-in-progress" data-sid="{{ r.id }}">
+                    <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+                    <span class="small text-muted">Analysis in progress&hellip;</span>
+                    <a class="btn btn-xs btn-outline-secondary ms-1"
+                       href="{{ url_for('documents.submitter_documents', sid=r.id, url=url_for('convenor.submitters', id=pclass.id), text='Submitters') }}">
+                        <small><i class="fas fa-folder-open fa-fw"></i> Documents</small>
+                    </a>
+                </div>
             {% elif r.report and not r.language_analysis_started %}
-                <div class="mt-1">
+                <div class="d-flex flex-row flex-wrap align-items-center gap-2 mt-1">
+                    <a class="btn btn-xs btn-outline-secondary"
+                       href="{{ url_for('documents.submitter_documents', sid=r.id, url=url_for('convenor.submitters', id=pclass.id), text='Submitters') }}">
+                        <small><i class="fas fa-folder-open fa-fw"></i> Documents</small>
+                    </a>
                     <a class="btn btn-xs btn-outline-secondary"
                        href="{{ url_for('documents.launch_language_analysis', sid=r.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
-                        <small>Analyse</small>
+                        <small><i class="fas fa-flask fa-fw"></i> Analyse</small>
                     </a>
                 </div>
             {% endif %}

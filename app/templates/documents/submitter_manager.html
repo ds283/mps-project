@@ -454,273 +454,147 @@
                         {% endif %}
 
                     {% elif not record.language_analysis_complete %}
-                        {# In progress #}
-                        <div class="text-muted">
-                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                            Language analysis in progress&hellip;
+                        {# In progress — spinner + auto-reload polling #}
+                        <div class="d-flex align-items-center gap-2 mt-1 mb-2">
+                            <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+                            <span class="text-muted small">Analysis in progress&hellip;</span>
+                        </div>
+                        <script>
+                        (function () {
+                            var _interval = setInterval(function () {
+                                fetch("{{ url_for('documents.analysis_status', sid=record.id) }}")
+                                    .then(function (r) { return r.json(); })
+                                    .then(function (data) {
+                                        if (data.status !== 'in_progress') {
+                                            clearInterval(_interval);
+                                            location.reload();
+                                        }
+                                    });
+                            }, 12000);
+                        })();
+                        </script>
+
+                    {% elif record.llm_analysis_failed %}
+                        {# Analysis failed #}
+                        <div class="d-flex align-items-center gap-2 mt-1 mb-2">
+                            <span class="badge bg-danger">Failed</span>
+                            <span class="small text-muted">{{ record.llm_failure_reason or 'Unknown error' }}</span>
+                        </div>
+                        <div class="d-flex flex-row gap-2 mt-2">
+                            <a class="btn btn-sm btn-outline-secondary"
+                               href="{{ url_for('documents.llm_report', record_id=record.id, url=url, text=text) }}">
+                                <i class="fas fa-bug me-1"></i> View analysis details&hellip;
+                            </a>
+                            {% if admin_rights %}
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   href="{{ url_for('documents.clear_llm_failure', sid=record.id, url=url, text=text) }}">
+                                    <i class="fas fa-redo me-1"></i> Clear failure flag
+                                </a>
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   href="{{ url_for('documents.launch_language_analysis', sid=record.id, url=url, text=text) }}">
+                                    <i class="fas fa-flask me-1"></i> Re-run analysis
+                                </a>
+                            {% endif %}
                         </div>
 
                     {% else %}
-                        {# Analysis complete — show results #}
+                        {# Analysis complete — compact summary #}
                         {% set la = record.language_analysis_data %}
                         {% set metrics = la.get('metrics', {}) %}
                         {% set flags = la.get('flags', {}) %}
-                        {% set patterns = la.get('patterns', {}) %}
-                        {% set refs = la.get('references', {}) %}
                         {% set llm_result = la.get('llm_result', {}) %}
-                        {% set criterion_map = la.get('criterion_map', {}) %}
-                        {% set errors = la.get('errors', []) %}
-                        {% set timings = la.get('timings', {}) %}
 
-                        {# --- Metrics table --- #}
-                        <table class="table table-sm table-borderless mb-3" style="max-width: 500px;">
-                            <tbody>
-                            {% if metrics.get('word_count') is not none %}
-                                <tr>
-                                    <td class="text-muted small">Word count (est.)</td>
-                                    <td class="fw-semibold">{{ metrics['word_count'] | int }}</td>
-                                </tr>
-                                {% if llm_result.get('stated_word_count_found') is not none %}
-                                    <tr>
-                                        <td class="text-muted small">Word count (stated)</td>
-                                        <td>
-                                            {% if llm_result.get('stated_word_count_found') %}
-                                                <span class="fw-semibold">{{ llm_result['stated_word_count'] | int }}</span>
-                                                {% set _est = metrics['word_count'] | int %}
-                                                {% if _est > 0 %}
-                                                    {% set _disc = (((llm_result['stated_word_count'] | int) - _est) / _est * 100) | round(1) %}
-                                                    {% if _disc | abs < 5 %}
-                                                        <span class="badge bg-success ms-1">{{ "%+.1f" | format(_disc) }}%</span>
-                                                    {% elif _disc | abs < 15 %}
-                                                        <span class="badge bg-warning text-dark ms-1">{{ "%+.1f" | format(_disc) }}%</span>
-                                                    {% else %}
-                                                        <span class="badge bg-danger ms-1">{{ "%+.1f" | format(_disc) }}%</span>
-                                                    {% endif %}
-                                                {% endif %}
-                                            {% else %}
-                                                <span class="text-muted fst-italic small">not stated in report</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                {% endif %}
+                        {# Document metrics row #}
+                        <div class="d-flex flex-row flex-wrap gap-3 mb-2">
+                            {% if metrics.get('page_count') is not none %}
+                                <span class="small text-muted">Pages: <strong>{{ metrics['page_count'] | int }}</strong></span>
                             {% endif %}
-                            {% if metrics.get('reference_count') is not none %}
-                                <tr>
-                                    <td class="text-muted small">References</td>
-                                    <td class="fw-semibold">{{ metrics['reference_count'] | int }}</td>
-                                </tr>
+                            {% if metrics.get('word_count') is not none %}
+                                <span class="small text-muted">Words: <strong>{{ metrics['word_count'] | int }}</strong></span>
                             {% endif %}
                             {% if metrics.get('figure_count') is not none %}
-                                <tr>
-                                    <td class="text-muted small">Figures / Tables</td>
-                                    <td class="fw-semibold">{{ metrics['figure_count'] | int }} / {{ metrics.get('table_count', 0) | int }}</td>
-                                </tr>
+                                <span class="small text-muted">Figures: <strong>{{ metrics['figure_count'] | int }}</strong></span>
                             {% endif %}
+                            {% if metrics.get('table_count') is not none %}
+                                <span class="small text-muted">Tables: <strong>{{ metrics['table_count'] | int }}</strong></span>
+                            {% endif %}
+                            {% if metrics.get('reference_count') is not none %}
+                                <span class="small text-muted">References: <strong>{{ metrics['reference_count'] | int }}</strong></span>
+                            {% endif %}
+                        </div>
+
+                        {# Language metrics row #}
+                        <div class="d-flex flex-row flex-wrap gap-3 mb-2">
                             {% if metrics.get('mattr') is not none %}
                                 {% set mattr_flag = flags.get('mattr_flag', 'ok') %}
-                                <tr>
-                                    <td class="text-muted small">MATTR (w=50)</td>
-                                    <td>
-                                        <span class="fw-semibold">{{ "%.3f" | format(metrics['mattr']) }}</span>
-                                        {% if mattr_flag == 'strong' %}
-                                            <span class="badge bg-danger ms-1">Low</span>
-                                        {% elif mattr_flag == 'note' %}
-                                            <span class="badge bg-warning text-dark ms-1">Note</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
+                                <span class="small">MATTR:
+                                    <strong>{{ "%.3f" | format(metrics['mattr']) }}</strong>
+                                    {% if mattr_flag == 'strong' %}
+                                        <span class="badge bg-danger ms-1">Low</span>
+                                    {% elif mattr_flag == 'note' %}
+                                        <span class="badge bg-warning text-dark ms-1">Note</span>
+                                    {% endif %}
+                                </span>
                             {% endif %}
                             {% if metrics.get('mtld') is not none %}
                                 {% set mtld_flag = flags.get('mtld_flag', 'ok') %}
-                                <tr>
-                                    <td class="text-muted small">MTLD</td>
-                                    <td>
-                                        <span class="fw-semibold">{{ "%.1f" | format(metrics['mtld']) }}</span>
-                                        {% if mtld_flag == 'strong' %}
-                                            <span class="badge bg-danger ms-1">Low</span>
-                                        {% elif mtld_flag == 'note' %}
-                                            <span class="badge bg-warning text-dark ms-1">Note</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
+                                <span class="small">MTLD:
+                                    <strong>{{ "%.1f" | format(metrics['mtld']) }}</strong>
+                                    {% if mtld_flag == 'strong' %}
+                                        <span class="badge bg-danger ms-1">Low</span>
+                                    {% elif mtld_flag == 'note' %}
+                                        <span class="badge bg-warning text-dark ms-1">Note</span>
+                                    {% endif %}
+                                </span>
                             {% endif %}
                             {% if metrics.get('burstiness') is not none %}
                                 {% set burst_flag = flags.get('burstiness_flag', 'ok') %}
-                                <tr>
-                                    <td class="text-muted small">Burstiness (B)</td>
-                                    <td>
-                                        <span class="fw-semibold">{{ "%.3f" | format(metrics['burstiness']) }}</span>
-                                        {% if burst_flag == 'strong' %}
-                                            <span class="badge bg-danger ms-1">Low</span>
-                                        {% elif burst_flag == 'note' %}
-                                            <span class="badge bg-warning text-dark ms-1">Note</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
+                                <span class="small">Burstiness:
+                                    <strong>{{ "%.3f" | format(metrics['burstiness']) }}</strong>
+                                    {% if burst_flag == 'strong' %}
+                                        <span class="badge bg-danger ms-1">Low</span>
+                                    {% elif burst_flag == 'note' %}
+                                        <span class="badge bg-warning text-dark ms-1">Note</span>
+                                    {% endif %}
+                                </span>
                             {% endif %}
-                            </tbody>
-                        </table>
-
-                        {# --- Pipeline timings --- #}
-                        {% if timings %}
-                            <div class="mb-3 d-flex flex-row flex-wrap gap-3">
-                                {% if timings.get('extraction_s') is not none %}
-                                    <span class="small text-muted">Extraction: <strong>{{ timings['extraction_s'] }}s</strong></span>
+                            {% set concern = flags.get('ai_concern', 'low') %}
+                            <span class="small">AI concern:
+                                {% if concern == 'high' %}
+                                    <span class="badge bg-danger">High</span>
+                                {% elif concern == 'medium' %}
+                                    <span class="badge bg-warning text-dark">Medium</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Low</span>
                                 {% endif %}
-                                {% if timings.get('counting_s') is not none %}
-                                    <span class="small text-muted">Statistics: <strong>{{ timings['counting_s'] }}s</strong></span>
-                                {% endif %}
-                                {% if timings.get('ai_metrics_s') is not none %}
-                                    <span class="small text-muted">AI metrics: <strong>{{ timings['ai_metrics_s'] }}s</strong></span>
-                                {% endif %}
-                                {% if timings.get('llm_s') is not none %}
-                                    <span class="small text-muted">LLM: <strong>{{ timings['llm_s'] }}s</strong></span>
-                                {% endif %}
-                            </div>
-                        {% endif %}
-
-                        {# --- AI concern flag --- #}
-                        {% set concern = flags.get('ai_concern', 'low') %}
-                        <div class="mb-3">
-                            <span class="text-muted small me-2">AI concern:</span>
-                            {% if concern == 'high' %}
-                                <span class="badge bg-danger">High</span>
-                            {% elif concern == 'medium' %}
-                                <span class="badge bg-warning text-dark">Medium</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Low</span>
-                            {% endif %}
+                            </span>
                         </div>
 
-                        {# --- Pattern counts (hedging, fillers, em-dash) --- #}
-                        {% if patterns %}
-                            <div class="mb-3">
-                                <div class="small text-muted fw-semibold mb-1">AI-indicator pattern counts</div>
-                                <div class="d-flex flex-row flex-wrap gap-3">
-                                    <span class="small">Hedging phrases: <strong>{{ patterns.get('hedging_total', 0) }}</strong></span>
-                                    <span class="small">Filler phrases: <strong>{{ patterns.get('filler_total', 0) }}</strong></span>
-                                    <span class="small">Em-dashes: <strong>{{ patterns.get('em_dash_count', 0) }}</strong></span>
-                                </div>
-                            </div>
-                        {% endif %}
-
-                        {# --- Reference / figure cross-reference issues --- #}
-                        {% if refs.get('uncited') %}
+                        {# Grade band (if available) #}
+                        {% if llm_result.get('classification') %}
                             <div class="mb-2">
-                                <span class="small text-muted">Possibly uncited references: </span>
-                                <span class="small">{{ refs['uncited'] | join(', ') }}</span>
-                            </div>
-                        {% endif %}
-                        {% if refs.get('uncaptioned_figures') %}
-                            <div class="mb-2">
-                                <span class="small text-muted">Possibly unreferenced figures: </span>
-                                <span class="small">{{ refs['uncaptioned_figures'] | join(', ') }}</span>
-                            </div>
-                        {% endif %}
-                        {% if refs.get('uncaptioned_tables') %}
-                            <div class="mb-2">
-                                <span class="small text-muted">Possibly unreferenced tables: </span>
-                                <span class="small">{{ refs['uncaptioned_tables'] | join(', ') }}</span>
+                                <span class="small text-muted me-1">LLM grade band:</span>
+                                <span class="badge bg-primary">{{ llm_result['classification'] }}</span>
                             </div>
                         {% endif %}
 
-                        {# --- Compliance statements (LLM-extracted) --- #}
-                        {% if llm_result.get('genai_statement_found') is not none or llm_result.get('preface_found') is not none %}
-                            <div class="mb-3">
-                                <div class="small text-muted fw-semibold mb-2">Document compliance statements</div>
-
-                                {# Generative AI statement #}
-                                {% if llm_result.get('genai_statement_found') %}
-                                    <div class="border-start border-primary border-2 ps-2 mb-2">
-                                        <div class="small fw-semibold mb-1">AI use statement detected</div>
-                                        <div class="small">{{ llm_result['genai_statement'] }}</div>
-                                    </div>
-                                {% else %}
-                                    <div class="small text-muted mb-2">
-                                        <i class="fas fa-exclamation-circle me-1"></i>No AI use statement detected
-                                    </div>
-                                {% endif %}
-
-                                {# Personal contribution / preface #}
-                                {% if llm_result.get('preface_found') %}
-                                    <div class="border-start border-secondary border-2 ps-2 mb-2">
-                                        <div class="small fw-semibold mb-1">Personal contribution statement</div>
-                                        <div class="small">{{ llm_result['preface_precis'] }}</div>
-                                    </div>
-                                {% else %}
-                                    <div class="small text-muted mb-2">
-                                        <i class="fas fa-exclamation-circle me-1"></i>No preface / personal contribution statement detected
-                                    </div>
-                                {% endif %}
-                            </div>
-                        {% endif %}
-
-                        {# --- LLM grade band result or failure --- #}
-                        <div class="mb-3">
-                            {% if llm_result.get('classification') %}
-                                <div class="small text-muted fw-semibold mb-1">LLM grade band assessment</div>
-                                <div class="mb-1">
-                                    <span class="badge bg-primary fs-6">{{ llm_result['classification'] }}</span>
-                                </div>
-                                {% if llm_result.get('report_summary') %}
-                                    <div class="small text-muted">{{ llm_result['report_summary'] }}</div>
-                                {% endif %}
-                                <div class="mt-2">
-                                    <a class="btn btn-sm btn-outline-secondary"
-                                       href="{{ url_for('documents.llm_report', record_id=record.id, url=url, text=text) }}">
-                                        <i class="fas fa-list-ul me-1"></i> Full LLM report&hellip;
-                                    </a>
-                                </div>
-                            {% elif record.llm_analysis_failed %}
-                                <div class="text-danger small">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                    LLM assessment failed: {{ record.llm_failure_reason or 'Unknown error' }}
-                                </div>
-                                <div class="mt-2">
-                                    <a class="btn btn-sm btn-outline-secondary"
-                                       href="{{ url_for('documents.llm_report', record_id=record.id, url=url, text=text) }}">
-                                        <i class="fas fa-bug me-1"></i> View analysis details&hellip;
-                                    </a>
-                                </div>
-                                {% if admin_rights %}
-                                    <div class="mt-2">
-                                        <a class="btn btn-sm btn-outline-secondary"
-                                           href="{{ url_for('documents.clear_llm_failure', sid=record.id, url=url, text=text) }}">
-                                            <i class="fas fa-redo me-1"></i> Clear failure flag
-                                        </a>
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <span class="small text-muted">LLM assessment not yet available.</span>
-                            {% endif %}
-                        </div>
-
-                        {# --- Workflow errors --- #}
-                        {% if errors and admin_rights %}
-                            <div class="mb-3">
-                                <div class="small text-muted fw-semibold mb-1">Workflow errors (admin only)</div>
-                                {% for err in errors %}
-                                    <div class="small text-danger">
-                                        <strong>{{ err.get('stage', '?') }}:</strong>
-                                        {{ err.get('type', '') }} &mdash; {{ err.get('message', '') }}
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        {# --- Action buttons --- #}
-                        {% if admin_rights %}
-                            <div class="d-flex flex-row gap-2 mt-2">
+                        {# Action buttons #}
+                        <div class="d-flex flex-row gap-2 mt-2">
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="{{ url_for('documents.llm_report', record_id=record.id, url=url, text=text) }}">
+                                <i class="fas fa-list-ul me-1"></i> Full LLM report&hellip;
+                            </a>
+                            {% if admin_rights %}
                                 <a class="btn btn-sm btn-outline-secondary"
                                    href="{{ url_for('documents.launch_language_analysis', sid=record.id, url=url, text=text) }}">
-                                    <i class="fas fa-redo me-1"></i> Re-run analysis
+                                    <i class="fas fa-redo me-1"></i> Re-run
                                 </a>
                                 <a class="btn btn-sm btn-outline-secondary"
                                    href="{{ url_for('documents.clear_language_analysis', sid=record.id, url=url, text=text) }}">
-                                    <i class="fas fa-trash me-1"></i> Clear results
+                                    <i class="fas fa-trash me-1"></i> Clear
                                 </a>
-                            </div>
-                        {% endif %}
+                            {% endif %}
+                        </div>
                     {% endif %}
                 </div>
 

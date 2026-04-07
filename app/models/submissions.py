@@ -2738,7 +2738,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # Thresholds for AI metrics (values at or above which a metric is considered elevated)
     MATTR_THRESHOLD = 0.80
-    MTLD_THRESHOLD = 55.0
+    MTLD_THRESHOLD = 70.0
     BURSTINESS_THRESHOLD = 0.50
 
     def llm_metrics_for_display(self) -> dict:

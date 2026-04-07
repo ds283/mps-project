@@ -118,6 +118,7 @@ BURSTINESS_MIN_OCCURRENCES = 8
 
 MTLD_NOTE_THRESHOLD = 70
 MTLD_STRONG_THRESHOLD = 50
+MTLD_HIGH_NOTE_THRESHOLD = 100
 MATTR_NOTE_THRESHOLD = 0.68
 MATTR_STRONG_THRESHOLD = 0.60
 BURSTINESS_NOTE_THRESHOLD = 0.20
@@ -132,7 +133,7 @@ BURSTINESS_STRONG_THRESHOLD = 0.10
 HEDGING_PATTERNS = [
     r"it is important to note that",
     r"it is worth noting that",
-    r"it is crucial to note that",
+    r"it is crucial toin  note that",
     r"it should be noted that",
     r"needless to say",
     r"it goes without saying that",
@@ -584,16 +585,20 @@ def _ai_concern_flag(mattr_flag: str, mtld_flag: str, burst_flag: str) -> str:
 # tagged — they should be assessed normally against the evidence in the text.
 # ---------------------------------------------------------------------------
 
-_NEGATIVE_CRITERIA: frozenset = frozenset([
-    "Scientific work of limited quality",
-    "Demonstrates some relevant knowledge and understanding, with limitations",
-    "Limited evidence for technical and practical skills",
-])
+_NEGATIVE_CRITERIA: frozenset = frozenset(
+    [
+        "Scientific work of limited quality",
+        "Demonstrates some relevant knowledge and understanding, with limitations",
+        "Limited evidence for technical and practical skills",
+    ]
+)
 
-_POSITIVE_FLOOR_CRITERIA: frozenset = frozenset([
-    "At least some attempt to explain and interpret the results of the project",
-    "Report shows evidence of at least some editing and proof-reading",
-])
+_POSITIVE_FLOOR_CRITERIA: frozenset = frozenset(
+    [
+        "At least some attempt to explain and interpret the results of the project",
+        "Report shows evidence of at least some editing and proof-reading",
+    ]
+)
 
 _TRUNCATION_MARKER = "\n\n[... middle section omitted due to length ...]\n\n"
 _MAX_WORDS_BEFORE_TRUNCATION = 12000
@@ -773,6 +778,7 @@ _REQUIRED_JSON_KEYS = {
     "preface_found",
     "preface_precis",
 }
+
 
 def _make_band_schema(band_idx: int, criteria_list: list) -> dict:
     """
@@ -1081,7 +1087,9 @@ def register_language_analysis_tasks(celery):
         data["_page_count"] = page_count
         if errors:
             data.setdefault("errors", []).extend(errors)
-        data.setdefault("timings", {})["extraction_s"] = round(time.monotonic() - _t_extraction, 1)
+        data.setdefault("timings", {})["extraction_s"] = round(
+            time.monotonic() - _t_extraction, 1
+        )
         record.set_language_analysis_data(data)
 
         try:
@@ -1229,9 +1237,13 @@ def register_language_analysis_tasks(celery):
         mattr_flag = _classify_metric(
             metrics.get("mattr"), MATTR_NOTE_THRESHOLD, MATTR_STRONG_THRESHOLD
         )
-        mtld_flag = _classify_metric(
-            metrics.get("mtld"), MTLD_NOTE_THRESHOLD, MTLD_STRONG_THRESHOLD
-        )
+        _mtld_val = metrics.get("mtld")
+        if _mtld_val is not None and _mtld_val > MTLD_HIGH_NOTE_THRESHOLD:
+            mtld_flag = "note"
+        else:
+            mtld_flag = _classify_metric(
+                _mtld_val, MTLD_NOTE_THRESHOLD, MTLD_STRONG_THRESHOLD
+            )
         burst_flag = _classify_metric(
             metrics.get("burstiness"),
             BURSTINESS_NOTE_THRESHOLD,
@@ -1545,7 +1557,9 @@ def register_language_analysis_tasks(celery):
                 if attempt < _LLM_RETRY_ATTEMPTS - 1:
                     time.sleep(_LLM_RETRY_DELAY)
 
-        data.setdefault("timings", {})["llm_feedback_s"] = round(time.monotonic() - _t_feedback, 1)
+        data.setdefault("timings", {})["llm_feedback_s"] = round(
+            time.monotonic() - _t_feedback, 1
+        )
         errors: list = data.get("errors", [])
 
         if parsed_result is not None:
@@ -1615,7 +1629,8 @@ def register_language_analysis_tasks(celery):
         except Exception as exc:
             # Non-fatal: log and continue — analysis results are still available.
             current_app.logger.exception(
-                "Exception computing risk factors in language_analysis.finalize", exc_info=exc
+                "Exception computing risk factors in language_analysis.finalize",
+                exc_info=exc,
             )
 
         try:

@@ -1,6 +1,18 @@
 {% extends "base_app.html" %}
 
 {% from "icon_block.html" import icon_block %}
+{% from "bokeh.html" import import_bokeh %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_bokeh() }}
+    {% if gauge_script is defined and gauge_script is not none %}
+        {{ gauge_script|safe }}
+    {% endif %}
+    {% if length_gauge_script is defined and length_gauge_script is not none %}
+        {{ length_gauge_script|safe }}
+    {% endif %}
+{% endblock %}
 
 {% block title %}LLM Analysis Report – {{ record.owner.student.user.name if record.owner else "Unknown" }}{% endblock %}
 
@@ -170,33 +182,39 @@
         {% endif %}
         {% endif %}
 
-        {# MATTR / MTLD / Burstiness progress bars #}
+        {# MATTR / MTLD / Burstiness gauge visualizations #}
         <h6 class="text-muted small text-uppercase mb-2">Lexical diversity metrics</h6>
-        {% for key, label in [('mattr', 'MATTR'), ('mtld', 'MTLD'), ('burstiness', 'Burstiness')] %}
-            {% set m = metrics_data[key] %}
-            {% if m.value is not none %}
-                <div class="mb-2">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="small fw-semibold">{{ label }}</span>
-                        <span class="small">
-                            {{ "%.3f"|format(m.value) }}
-                            <span class="text-muted">(threshold: {{ "%.3f"|format(m.threshold) }})</span>
-                            <span class="badge bg-{{ m.flag_severity }} ms-1 small">{{ m.flag_label }}</span>
+        {% if gauge_div is defined and gauge_div is not none %}
+            <div class="mb-3">{{ gauge_div|safe }}</div>
+            <div class="d-flex flex-wrap gap-3 small mb-3">
+                {% for key, label, fmt in [('mattr', 'MATTR', '%.3f'), ('mtld', 'MTLD', '%.1f'), ('burstiness', 'Burstiness (B)', '%.3f')] %}
+                    {% set m = metrics_data[key] %}
+                    {% if m.value is not none %}
+                        <span>
+                            <span class="text-muted">{{ label }}:</span>
+                            <strong class="ms-1">{{ fmt|format(m.value) }}</strong>
+                            <span class="badge bg-{{ m.flag_severity }} ms-1">{{ m.flag_label }}</span>
                         </span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% else %}
+            {% for key, label in [('mattr', 'MATTR'), ('mtld', 'MTLD'), ('burstiness', 'Burstiness')] %}
+                {% set m = metrics_data[key] %}
+                {% if m.value is not none %}
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small fw-semibold">{{ label }}</span>
+                            <span class="small">
+                                {{ "%.3f"|format(m.value) }}
+                                <span class="text-muted">(threshold: {{ "%.3f"|format(m.threshold) }})</span>
+                                <span class="badge bg-{{ m.flag_severity }} ms-1 small">{{ m.flag_label }}</span>
+                            </span>
+                        </div>
                     </div>
-                    {% set bar_pct = m.pct_of_threshold or 0 %}
-                    {% set bar_class = "bg-" + m.flag_severity %}
-                    <div class="progress" style="height:8px" data-bs-toggle="tooltip"
-                         title="{{ '%.3f'|format(m.value) }} / threshold {{ '%.3f'|format(m.threshold) }}">
-                        <div class="progress-bar {{ bar_class }}"
-                             role="progressbar"
-                             style="width: {{ [bar_pct, 100]|min }}%"
-                             aria-valuenow="{{ bar_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
-                        {# Threshold marker at 100% of progress bar = reaching the threshold #}
-                    </div>
-                </div>
-            {% endif %}
-        {% endfor %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
 
         {# AI-indicator patterns #}
         {% if metrics_data.hedging_count is not none or metrics_data.filler_count is not none or metrics_data.em_dash_count is not none %}
@@ -270,6 +288,31 @@
         <i class="fas fa-file-alt fa-fw me-1"></i> <strong>Document metrics</strong>
     </div>
     <div class="card-body">
+
+        {# Document length gauge — only rendered when limits are configured for this project #}
+        {% if length_gauge_div is defined and length_gauge_div is not none %}
+            <h6 class="text-muted small text-uppercase mb-2">Document length</h6>
+            <div class="mb-3">{{ length_gauge_div|safe }}</div>
+            {% set rf_len = rf_items | selectattr('key', 'equalto', 'document_length') | first | default(none) %}
+            {% if rf_len and rf_len.present %}
+                <div class="mb-3">
+                    {% if rf_len.resolved %}
+                        <span class="badge bg-success small">
+                            <i class="fas fa-check-circle fa-fw"></i> Length reviewed
+                        </span>
+                        {% if rf_len.resolved_by_name %}
+                            <span class="small text-muted ms-1">by {{ rf_len.resolved_by_name }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge bg-danger small">
+                            <i class="fas fa-exclamation-triangle fa-fw"></i> Limit exceeded
+                        </span>
+                    {% endif %}
+                </div>
+            {% endif %}
+            <hr class="my-2">
+        {% endif %}
+
         <div class="row g-3">
             <div class="col-md-4">
                 <div class="small text-muted text-uppercase mb-1">References</div>

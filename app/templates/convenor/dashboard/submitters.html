@@ -13,7 +13,7 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#submitters-table').DataTable({
+            var table = $('#submitters-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { url: $SCRIPT_ROOT + '/convenor/submitters_ajax/{{ pclass.id }}?cohort_filter={{ cohort_filter }}&year_filter={{ year_filter }}&prog_filter={{ prog_filter }}&state_filter={{ state_filter }}&data_display={{ data_display }}', dataSrc: '' },
@@ -36,6 +36,27 @@
                 ],
                 deferRender: true
             });
+
+            var _llmPollers = {};
+            function startLlmPolling(tbl) {
+                tbl.$('.llm-in-progress').each(function () {
+                    var sid = $(this).data('sid');
+                    if (sid && !_llmPollers[sid]) {
+                        _llmPollers[sid] = setInterval(function () {
+                            fetch($SCRIPT_ROOT + '/documents/analysis_status/' + sid)
+                                .then(function (r) { return r.json(); })
+                                .then(function (data) {
+                                    if (data.status !== 'in_progress') {
+                                        clearInterval(_llmPollers[sid]);
+                                        delete _llmPollers[sid];
+                                        tbl.ajax.reload(null, false);
+                                    }
+                                });
+                        }, 12000);
+                    }
+                });
+            }
+            table.on('draw', function () { startLlmPolling(table); });
         });
     </script>
 {% endblock %}

@@ -133,23 +133,85 @@ def _get_accessible_tenants() -> List[Tenant]:
     return current_user.tenants.order_by(Tenant.name).all()
 
 
+def _pclass_has_reports_subq():
+    """
+    Correlated EXISTS subquery: True when a ProjectClass has at least one
+    SubmissionRecord (under any of its configs/periods) with a non-null report.
+    Intended to be used as a filter on a query that already aliases ProjectClass.
+    """
+    return (
+        db.session.query(SubmissionRecord.id)
+        .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id)
+        .join(ProjectClassConfig, SubmissionPeriodRecord.config_id == ProjectClassConfig.id)
+        .filter(
+            ProjectClassConfig.pclass_id == ProjectClass.id,
+            SubmissionRecord.report_id.isnot(None),
+        )
+        .correlate(ProjectClass)
+        .exists()
+    )
+
+
+def _qualifying_pclass_ids_for(candidate_ids: List[int]) -> List[int]:
+    """
+    Given a list of candidate ProjectClass IDs (e.g. a convenor's list),
+    return those that are published and have at least one SubmissionRecord
+    with a non-null report.
+    """
+    if not candidate_ids:
+        return []
+    rows = (
+        db.session.query(ProjectClass.id)
+        .filter(
+            ProjectClass.id.in_(candidate_ids),
+            ProjectClass.publish.is_(True),
+        )
+        .join(ProjectClassConfig, ProjectClassConfig.pclass_id == ProjectClass.id)
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.config_id == ProjectClassConfig.id)
+        .join(SubmissionRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id)
+        .filter(SubmissionRecord.report_id.isnot(None))
+        .distinct()
+        .all()
+    )
+    return [r[0] for r in rows]
+
+
 def _get_accessible_pclasses(tenant_id: Optional[int] = None) -> List[ProjectClass]:
-    """Return the ProjectClass instances the current user may view."""
+    """
+    Return the ProjectClass instances the current user may view on the dashboard.
+
+    A project class is included only when:
+      - Its ``publish`` flag is True, AND
+      - It has at least one SubmissionRecord with a non-null report (i.e. there
+        is actual data to display in the dashboard).
+    """
     if (
         current_user.has_role("root")
         or current_user.has_role("admin")
         or current_user.has_role("data_dashboard_AI")
     ):
-        q = db.session.query(ProjectClass)
+        q = (
+            db.session.query(ProjectClass)
+            .filter(
+                ProjectClass.publish.is_(True),
+                _pclass_has_reports_subq(),
+            )
+        )
         if tenant_id is not None:
             q = q.filter(ProjectClass.tenant_id == tenant_id)
         return q.order_by(ProjectClass.name).all()
 
-    # Convenors see only pclasses they convene
+    # Convenors see only pclasses they convene — filtered to the qualifying subset
     if current_user.has_role("faculty") and current_user.faculty_data is not None:
-        pcls = list(current_user.faculty_data.convenor_list)
+        candidate_ids = [p.id for p in current_user.faculty_data.convenor_list]
         if tenant_id is not None:
-            pcls = [p for p in pcls if p.tenant_id == tenant_id]
+            candidate_ids = [
+                p.id
+                for p in current_user.faculty_data.convenor_list
+                if p.tenant_id == tenant_id
+            ]
+        qualifying_ids = set(_qualifying_pclass_ids_for(candidate_ids))
+        pcls = [p for p in current_user.faculty_data.convenor_list if p.id in qualifying_ids]
         return sorted(pcls, key=lambda p: p.name)
 
     return []

@@ -172,6 +172,10 @@ def _get_nlp():
         import spacy
 
         _nlp = spacy.load("en_core_web_sm", disable=["ner", "parser"])
+        # The parser normally provides sentence boundaries; since it is disabled,
+        # add the rule-based sentencizer so that doc.sents is available.
+        if not _nlp.has_pipe("senter") and not _nlp.has_pipe("sentencizer"):
+            _nlp.add_pipe("sentencizer", first=True)
     return _nlp
 
 

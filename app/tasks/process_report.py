@@ -159,6 +159,10 @@ def _process_report(source: Path, dest: Path, record: SubmissionRecord):
             page, w, ytop, _dyspraxia_sticker_colour, _dyspraxic_label
         )
 
+    # embed LLM analysis metrics section (only when analysis has completed)
+    if record.language_analysis_complete:
+        ytop = _coverpage_llm_metrics(page, record, w, ytop)
+
     doc.save(str(dest))
 
 
@@ -321,6 +325,228 @@ def _attach_sticker(page, w, ytop, colour, text):
     return ytop + _title_label_size + rheight + _vertical_margin
 
 
+_ai_statement_highlight_colour = (0.95, 0.85, 0.85)  # pale red for AI compliance statement box
+_section_header_colour = (0.88, 0.88, 0.95)  # pale blue-grey for section header
+
+
+def _coverpage_llm_metrics(page, record: "SubmissionRecord", w, ytop):
+    """
+    Insert a section on the cover page summarising the automated language-analysis metrics.
+    Called only when record.language_analysis_complete is True.
+
+    Inserts:
+      • A section header
+      • A disclaimer (AI-generated, for guidance only)
+      • Word count (measured) and student-stated word count if available
+      • Reference, figure and table counts with brief detail on uncited items
+      • AI compliance statement block (red-highlighted if detected; grey note if absent)
+
+    Returns the updated ytop after all content has been inserted.
+    """
+    la = record.language_analysis_data
+    metrics = la.get("metrics", {})
+    llm_result = la.get("llm_result", {})
+
+    xmargin = _initial_x_position
+    rwidth = w - 2 * xmargin
+
+    # ── Section header ────────────────────────────────────────────────────────
+    ytop += _vertical_margin
+    header_height = _vertical_margin + _text_label_size + _vertical_margin
+    r_header = fitz.Rect(xmargin, ytop, xmargin + rwidth, ytop + header_height)
+    shape = page.new_shape()
+    shape.draw_rect(r_header)
+    shape.finish(color=_section_header_colour, fill=_section_header_colour, width=0.3)
+    shape.insert_textbox(
+        r_header,
+        "Automated Analysis Summary",
+        color=_black,
+        fontname="Helvetica-Bold",
+        fontsize=_text_label_size,
+        align=fitz.TEXT_ALIGN_CENTER,
+    )
+    shape.commit()
+    ytop += header_height + _vertical_margin
+
+    # ── Disclaimer ───────────────────────────────────────────────────────────
+    disclaimer = (
+        "The metrics below are automatically generated for guidance only. "
+        "They do not constitute recommendations and should not replace the marker's own judgement."
+    )
+    disclaimer_rect = fitz.Rect(xmargin, ytop, xmargin + rwidth, ytop + 3 * _text_label_size + _vertical_margin)
+    shape = page.new_shape()
+    shape.insert_textbox(
+        disclaimer_rect,
+        disclaimer,
+        color=(0.4, 0.4, 0.4),
+        fontname="Helvetica-Oblique",
+        fontsize=_text_label_size - 1,
+        align=fitz.TEXT_ALIGN_LEFT,
+    )
+    shape.commit()
+    ytop += 3 * _text_label_size + _vertical_margin
+
+    # ── Word count ───────────────────────────────────────────────────────────
+    word_count = metrics.get("word_count")
+    stated_word_count = llm_result.get("stated_word_count") if llm_result else None
+    if word_count is not None:
+        if stated_word_count is not None:
+            wc_text = "Word count: {measured:,} (measured)   |   {stated:,} (student-stated)".format(
+                measured=int(word_count), stated=int(stated_word_count)
+            )
+        else:
+            wc_text = "Word count: {measured:,} (measured)".format(measured=int(word_count))
+        ytop += _text_label_size
+        page.insert_text(
+            fitz.Point(xmargin, ytop),
+            wc_text,
+            color=_black,
+            fontname="Helvetica",
+            fontsize=_text_label_size,
+        )
+        ytop += _vertical_margin
+
+    # ── Page count ───────────────────────────────────────────────────────────
+    page_count = metrics.get("page_count")
+    if page_count is not None:
+        ytop += _text_label_size
+        page.insert_text(
+            fitz.Point(xmargin, ytop),
+            "Page count: {n}".format(n=int(page_count)),
+            color=_black,
+            fontname="Helvetica",
+            fontsize=_text_label_size,
+        )
+        ytop += _vertical_margin
+
+    # ── References ───────────────────────────────────────────────────────────
+    ref_count = metrics.get("reference_count")
+    uncited_refs = metrics.get("uncited_references") or []
+    if ref_count is not None:
+        uncited_count = len(uncited_refs) if isinstance(uncited_refs, list) else 0
+        if uncited_count > 0:
+            if uncited_count <= 4:
+                uncited_detail = "; ".join(str(r) for r in uncited_refs[:4])
+                ref_text = "References: {n}   |   Uncited: {uc} ({detail})".format(
+                    n=int(ref_count), uc=uncited_count, detail=uncited_detail
+                )
+            else:
+                ref_text = "References: {n}   |   Uncited: {uc}".format(
+                    n=int(ref_count), uc=uncited_count
+                )
+        else:
+            ref_text = "References: {n}   |   Uncited: none".format(n=int(ref_count))
+        ytop += _text_label_size
+        page.insert_text(
+            fitz.Point(xmargin, ytop),
+            ref_text,
+            color=_black,
+            fontname="Helvetica",
+            fontsize=_text_label_size,
+        )
+        ytop += _vertical_margin
+
+    # ── Figures ──────────────────────────────────────────────────────────────
+    fig_count = metrics.get("figure_count")
+    unreferenced_figs = metrics.get("unreferenced_figures") or []
+    if fig_count is not None:
+        unref_fig_count = len(unreferenced_figs) if isinstance(unreferenced_figs, list) else 0
+        if unref_fig_count > 0:
+            if unref_fig_count <= 4:
+                fig_detail = "; ".join(str(f) for f in unreferenced_figs[:4])
+                fig_text = "Figures: {n}   |   Unreferenced: {u} ({detail})".format(
+                    n=int(fig_count), u=unref_fig_count, detail=fig_detail
+                )
+            else:
+                fig_text = "Figures: {n}   |   Unreferenced: {u}".format(
+                    n=int(fig_count), u=unref_fig_count
+                )
+        else:
+            fig_text = "Figures: {n}   |   Unreferenced: none".format(n=int(fig_count))
+        ytop += _text_label_size
+        page.insert_text(
+            fitz.Point(xmargin, ytop),
+            fig_text,
+            color=_black,
+            fontname="Helvetica",
+            fontsize=_text_label_size,
+        )
+        ytop += _vertical_margin
+
+    # ── Tables ───────────────────────────────────────────────────────────────
+    table_count = metrics.get("table_count")
+    unreferenced_tables = metrics.get("unreferenced_tables") or []
+    if table_count is not None:
+        unref_table_count = len(unreferenced_tables) if isinstance(unreferenced_tables, list) else 0
+        if unref_table_count > 0:
+            if unref_table_count <= 4:
+                tbl_detail = "; ".join(str(t) for t in unreferenced_tables[:4])
+                tbl_text = "Tables: {n}   |   Unreferenced: {u} ({detail})".format(
+                    n=int(table_count), u=unref_table_count, detail=tbl_detail
+                )
+            else:
+                tbl_text = "Tables: {n}   |   Unreferenced: {u}".format(
+                    n=int(table_count), u=unref_table_count
+                )
+        else:
+            tbl_text = "Tables: {n}   |   Unreferenced: none".format(n=int(table_count))
+        ytop += _text_label_size
+        page.insert_text(
+            fitz.Point(xmargin, ytop),
+            tbl_text,
+            color=_black,
+            fontname="Helvetica",
+            fontsize=_text_label_size,
+        )
+        ytop += _vertical_margin
+
+    # ── AI compliance statement ───────────────────────────────────────────────
+    ytop += _vertical_margin
+    genai_found = llm_result.get("genai_statement_found", False) if llm_result else False
+    genai_precis = llm_result.get("genai_statement_precis") if llm_result else None
+
+    if genai_found:
+        if genai_precis:
+            ai_box_text = (
+                "AI COMPLIANCE STATEMENT DETECTED\n\n"
+                "The following AI compliance statement was identified in this submission. "
+                "Please review it carefully.\n\n"
+                '"{precis}"'.format(precis=genai_precis)
+            )
+        else:
+            ai_box_text = (
+                "AI COMPLIANCE STATEMENT DETECTED\n\n"
+                "An AI compliance statement was identified in this submission. "
+                "Please review it carefully."
+            )
+        box_colour = _ai_statement_highlight_colour
+        border_colour = (0.7, 0.2, 0.2)
+    else:
+        ai_box_text = "AI compliance statement: none detected."
+        box_colour = _light_grey
+        border_colour = (0.5, 0.5, 0.5)
+
+    # Estimate height: 4 lines for detected case, 1 for not-detected
+    ai_box_lines = 5 if genai_found else 1
+    ai_box_height = _vertical_margin + ai_box_lines * (_text_label_size + 2) + _vertical_margin
+    r_ai = fitz.Rect(xmargin, ytop, xmargin + rwidth, ytop + ai_box_height)
+    shape = page.new_shape()
+    shape.draw_rect(r_ai)
+    shape.finish(color=border_colour, fill=box_colour, width=1.0)
+    shape.insert_textbox(
+        r_ai,
+        ai_box_text,
+        color=_black,
+        fontname="Helvetica-Bold" if genai_found else "Helvetica",
+        fontsize=_text_label_size,
+        align=fitz.TEXT_ALIGN_LEFT,
+    )
+    shape.commit()
+    ytop += ai_box_height + _vertical_margin
+
+    return ytop
+
+
 def register_process_report_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def process(self, record_id):
@@ -336,6 +562,17 @@ def register_process_report_tasks(celery):
             msg = "Could not load SubmissionRecord instance from database"
             current_app.logger.error(msg)
             raise Exception(msg)
+
+        # Report processing requires the LLM analysis to have completed successfully,
+        # because LLM outputs (word counts, AI statement, metrics) are embedded in the cover page.
+        # If analysis has not yet run, skip silently — language_analysis.finalize() will
+        # dispatch this task again once analysis completes.
+        if not record.language_analysis_complete:
+            current_app.logger.info(
+                f"process_report.process: LLM analysis not yet complete for record "
+                f"id={record_id}; deferring until analysis finishes."
+            )
+            return
 
         asset: SubmittedAsset = record.report
 

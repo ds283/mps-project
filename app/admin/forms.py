@@ -800,6 +800,61 @@ def ProjectClassMixinFactory(allowed_tenants: List[Tenant]):
             "to enforce a consistent labelling convention.",
         )
 
+        word_limit_enabled = BooleanField(
+            "Enable word limit",
+            description="If selected, submissions will be checked against the specified word limit.",
+        )
+
+        word_limit = IntegerField(
+            "Word limit",
+            validators=[
+                Optional(),
+                NumberRange(min=1, message="Word limit must be at least 1"),
+            ],
+            description="Maximum permitted word count. Submissions exceeding this limit will be flagged as a risk factor.",
+        )
+
+        page_limit_enabled = BooleanField(
+            "Enable page limit",
+            description="If selected, submissions will be checked against the specified page limit.",
+        )
+
+        page_limit = IntegerField(
+            "Page limit",
+            validators=[
+                Optional(),
+                NumberRange(min=1, message="Page limit must be at least 1"),
+            ],
+            description="Maximum permitted page count. Submissions exceeding this limit will be flagged as a risk factor.",
+        )
+
+        word_count_tolerance = FloatField(
+            "Word count discrepancy tolerance (%)",
+            validators=[
+                Optional(),
+                NumberRange(min=0, max=100, message="Tolerance must be between 0 and 100"),
+            ],
+            description="Percentage discrepancy allowed between the measured word count and the student-stated word count "
+            "before a risk factor is raised. Default is 15%.",
+        )
+
+        @staticmethod
+        def validate_word_limit_enabled(form, field):
+            if field.data and getattr(form, "page_limit_enabled", None) and form.page_limit_enabled.data:
+                raise ValidationError("Word limit and page limit cannot both be enabled simultaneously.")
+
+        @staticmethod
+        def validate_word_limit(form, field):
+            if getattr(form, "word_limit_enabled", None) and form.word_limit_enabled.data:
+                if field.data is None:
+                    raise ValidationError("A word limit value is required when the word limit is enabled.")
+
+        @staticmethod
+        def validate_page_limit(form, field):
+            if getattr(form, "page_limit_enabled", None) and form.page_limit_enabled.data:
+                if field.data is None:
+                    raise ValidationError("A page limit value is required when the page limit is enabled.")
+
     return ProjectClassMixin
 
 

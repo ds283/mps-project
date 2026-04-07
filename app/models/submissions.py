@@ -1127,6 +1127,15 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # human-readable reason for feedback LLM failure, for display to administrators
     llm_feedback_failure_reason = db.Column(db.Text(), default=None)
 
+    # RISK FACTORS
+    # JSON blob recording which risk conditions are present and whether each has been resolved.
+    # Using a JSON blob allows new risk factor types to be added without schema changes.
+    # Schema per factor key:
+    #   { "present": bool, "resolved": bool, "resolved_by_id": int|null,
+    #     "resolved_at": str|null (ISO datetime), "annotation": str|null,
+    #     ... factor-specific fields ... }
+    risk_factors = db.Column(db.Text(), default=None)
+
     # MARKING WORKFLOW
 
     # assigned supervision grade (determined from SubmissionRole instances by some conflation rule)
@@ -1164,6 +1173,30 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # when was the presentation grade back-populated?
     presentation_generated_timestamp = db.Column(db.DateTime())
+
+    # GRADE PROVENANCE: which MarkingEvent was used to populate each grade?
+    # These are cross-references (not ownership FKs), recorded when _propagate_grade_to_records() runs.
+
+    supervision_event_id = db.Column(
+        db.Integer(), db.ForeignKey("marking_events.id"), nullable=True
+    )
+    supervision_event = db.relationship(
+        "MarkingEvent", foreign_keys="SubmissionRecord.supervision_event_id", uselist=False
+    )
+
+    report_event_id = db.Column(
+        db.Integer(), db.ForeignKey("marking_events.id"), nullable=True
+    )
+    report_event = db.relationship(
+        "MarkingEvent", foreign_keys="SubmissionRecord.report_event_id", uselist=False
+    )
+
+    presentation_event_id = db.Column(
+        db.Integer(), db.ForeignKey("marking_events.id"), nullable=True
+    )
+    presentation_event = db.relationship(
+        "MarkingEvent", foreign_keys="SubmissionRecord.presentation_event_id", uselist=False
+    )
 
     # CANVAS SYNCHRONIZATION
 
@@ -2533,6 +2566,504 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         import json
 
         self.language_analysis = json.dumps(data)
+
+    # RISK FACTOR HELPERS
+
+    # Known risk factor type keys
+    RISK_TURNITIN = "turnitin"
+    RISK_AI_COMPLIANCE = "ai_compliance"
+    RISK_AI_USE = "ai_use"
+    RISK_DOCUMENT_LENGTH = "document_length"
+    RISK_WORD_COUNT_DISCREPANCY = "word_count_discrepancy"
+
+    ALL_RISK_TYPES = [
+        RISK_TURNITIN,
+        RISK_AI_COMPLIANCE,
+        RISK_AI_USE,
+        RISK_DOCUMENT_LENGTH,
+        RISK_WORD_COUNT_DISCREPANCY,
+    ]
+
+    @property
+    def risk_factors_data(self) -> dict:
+        """Deserialise the risk_factors JSON blob. Returns an empty dict if nothing stored."""
+        import json
+
+        if self.risk_factors is None:
+            return {}
+        try:
+            return json.loads(self.risk_factors)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    def set_risk_factors_data(self, data: dict) -> None:
+        """Serialise *data* and store in the risk_factors column."""
+        import json
+
+        self.risk_factors = json.dumps(data)
+
+    @property
+    def has_unresolved_risk_factors(self) -> bool:
+        """Return True if any risk factor is present and unresolved."""
+        data = self.risk_factors_data
+        for key in self.ALL_RISK_TYPES:
+            factor = data.get(key, {})
+            if factor.get("present", False) and not factor.get("resolved", False):
+                return True
+        return False
+
+    def get_present_risk_factors(self) -> list:
+        """Return a list of (key, factor_dict) pairs for all present risk factors."""
+        data = self.risk_factors_data
+        return [(key, data[key]) for key in self.ALL_RISK_TYPES if data.get(key, {}).get("present", False)]
+
+    def get_unresolved_risk_factors(self) -> list:
+        """Return a list of (key, factor_dict) pairs for present, unresolved risk factors."""
+        return [
+            (key, factor)
+            for key, factor in self.get_present_risk_factors()
+            if not factor.get("resolved", False)
+        ]
+
+    def resolve_risk_factor(self, factor_type: str, user, annotation: str = None) -> None:
+        """
+        Mark a specific risk factor as resolved.
+
+        :param factor_type: one of the RISK_* constants
+        :param user: the User resolving the factor
+        :param annotation: optional explanation text
+        """
+        from datetime import datetime
+
+        data = self.risk_factors_data
+        factor = data.get(factor_type, {})
+        if factor:
+            factor["resolved"] = True
+            factor["resolved_by_id"] = user.id if user else None
+            factor["resolved_at"] = datetime.now().isoformat()
+            factor["annotation"] = annotation
+            data[factor_type] = factor
+            self.set_risk_factors_data(data)
+
+    # Human-readable labels for each risk factor type
+    RISK_FACTOR_LABELS = {
+        RISK_TURNITIN: "Turnitin similarity",
+        RISK_AI_COMPLIANCE: "AI compliance statement",
+        RISK_AI_USE: "AI use metrics",
+        RISK_DOCUMENT_LENGTH: "Document length",
+        RISK_WORD_COUNT_DISCREPANCY: "Word count discrepancy",
+    }
+
+    def risk_factors_ui_summary(self) -> dict:
+        """
+        Return a dict with pre-computed UI summary data for the risk factors column.
+
+        Structure:
+          {
+            "has_any_present": bool,
+            "has_unresolved": bool,
+            "unresolved_count": int,
+            "resolved_count": int,
+            "factors": [
+              { "key": str, "label": str, "present": bool, "resolved": bool,
+                "resolved_by_name": str|None, "resolved_at": str|None,
+                "annotation": str|None }
+            ]
+          }
+        """
+        data = self.risk_factors_data
+        factors = []
+        for key in self.ALL_RISK_TYPES:
+            factor = data.get(key, {})
+            if not factor.get("present", False):
+                continue
+            resolved_by_name = None
+            resolved_by_id = factor.get("resolved_by_id")
+            if resolved_by_id:
+                try:
+                    user = db.session.query(User).filter_by(id=resolved_by_id).first()
+                    if user:
+                        resolved_by_name = user.name
+                except Exception:
+                    pass
+            factors.append({
+                "key": key,
+                "label": self.RISK_FACTOR_LABELS.get(key, key),
+                "present": True,
+                "resolved": factor.get("resolved", False),
+                "resolved_by_name": resolved_by_name,
+                "resolved_at": factor.get("resolved_at"),
+                "annotation": factor.get("annotation"),
+            })
+        unresolved = [f for f in factors if not f["resolved"]]
+        resolved = [f for f in factors if f["resolved"]]
+        return {
+            "has_any_present": len(factors) > 0,
+            "has_unresolved": len(unresolved) > 0,
+            "unresolved_count": len(unresolved),
+            "resolved_count": len(resolved),
+            "factors": factors,
+        }
+
+    def grade_display_data(self) -> list:
+        """
+        Return a list of grade display dicts for supervision, report, and presentation grades.
+        Each entry is always present (even when the grade is not yet set) so the template
+        can render a consistent layout with "–" placeholders.
+
+        Structure per entry:
+          {
+            "label": str,           — display label, e.g. "Supervision"
+            "grade": float|None,    — grade value or None if not yet set
+            "event_name": str|None, — name of the MarkingEvent that generated the grade, or None
+            "event_timestamp": datetime|None  — creation timestamp of that event, or None
+          }
+        """
+        entries = []
+        grade_specs = [
+            ("Supervision", self.supervision_grade, self.supervision_event),
+            ("Report", self.report_grade, self.report_event),
+        ]
+        # Only include presentation if the project class uses presentations; we don't have
+        # direct access to config here so always include it — the template can gate on pclass.
+        grade_specs.append(("Presentation", self.presentation_grade, self.presentation_event))
+        for label, grade, event in grade_specs:
+            entries.append({
+                "label": label,
+                "grade": float(grade) if grade is not None else None,
+                "event_name": event.name if event is not None else None,
+                "event_timestamp": event.creation_timestamp if event is not None else None,
+            })
+        return entries
+
+    # Thresholds for AI metrics (values at or above which a metric is considered elevated)
+    MATTR_THRESHOLD = 0.80
+    MTLD_THRESHOLD = 55.0
+    BURSTINESS_THRESHOLD = 0.50
+
+    def llm_metrics_for_display(self) -> dict:
+        """
+        Prepare structured display data for the LLM metrics section of the report page.
+        Returns thresholds alongside measured values so templates can render progress bars
+        without needing to know threshold constants.
+        """
+        la = self.language_analysis_data
+        metrics = la.get("metrics", {})
+        flags = la.get("flags", {})
+        patterns = la.get("patterns", {})
+        refs = la.get("references", {})
+        timings = la.get("timings", {})
+        llm_result = la.get("llm_result", {})
+
+        flag_label = {"ok": "Normal", "note": "Elevated", "strong": "Strongly elevated"}
+        flag_severity = {"ok": "success", "note": "warning", "strong": "danger"}
+
+        def metric_entry(key, value, threshold, flag_key):
+            flag = flags.get(flag_key, "ok")
+            return {
+                "value": value,
+                "threshold": threshold,
+                "flag": flag,
+                "flag_label": flag_label.get(flag, flag),
+                "flag_severity": flag_severity.get(flag, "secondary"),
+                "elevated": flag in {"note", "strong"},
+                # percentage of threshold reached (capped at 150% for bar display)
+                "pct_of_threshold": min(round((value / threshold) * 100, 1), 150) if value and threshold else None,
+            }
+
+        mattr = metrics.get("mattr")
+        mtld = metrics.get("mtld")
+        burstiness = metrics.get("burstiness")
+
+        measured_words = metrics.get("word_count")
+        stated_words = llm_result.get("stated_word_count") if llm_result.get("stated_word_count_found") else None
+
+        rf = self.risk_factors_data
+        wc_discrepancy = rf.get(self.RISK_WORD_COUNT_DISCREPANCY, {})
+
+        return {
+            "mattr": metric_entry("mattr", mattr, self.MATTR_THRESHOLD, "mattr_flag"),
+            "mtld": metric_entry("mtld", mtld, self.MTLD_THRESHOLD, "mtld_flag"),
+            "burstiness": metric_entry("burstiness", burstiness, self.BURSTINESS_THRESHOLD, "burstiness_flag"),
+            "hedging_count": patterns.get("hedging_total"),
+            "filler_count": patterns.get("filler_total"),
+            "em_dash_count": patterns.get("em_dash_count"),
+            "measured_word_count": measured_words,
+            "stated_word_count": stated_words,
+            "discrepancy_pct": wc_discrepancy.get("discrepancy_pct"),
+            "tolerance_pct": wc_discrepancy.get("tolerance_pct"),
+            "reference_count": metrics.get("reference_count"),
+            "uncited_refs": refs.get("uncited", []),
+            "figure_count": metrics.get("figure_count"),
+            "unreferenced_figures": refs.get("uncaptioned_figures", []),
+            "table_count": metrics.get("table_count"),
+            "unreferenced_tables": refs.get("uncaptioned_tables", []),
+            "timings": {
+                "extraction_s": timings.get("extraction_s"),
+                "counting_s": timings.get("counting_s"),
+                "ai_metrics_s": timings.get("ai_metrics_s"),
+                "llm_grade_s": timings.get("llm_s"),
+                "llm_feedback_s": timings.get("llm_feedback_s"),
+            },
+        }
+
+    def risk_factor_display_items(self) -> list:
+        """
+        Return a list of dicts prepared for rendering the resolve_risk_factors template.
+        Each dict contains:
+          key, label, present, resolved, resolved_by_name, resolved_at, annotation,
+          severity ("danger"/"warning"), summary_items (list of (label, value) tuples for display)
+        """
+        data = self.risk_factors_data
+        la = self.language_analysis_data
+        metrics = la.get("metrics", {})
+        flags = la.get("flags", {})
+        llm_result = la.get("llm_result", {})
+
+        items = []
+
+        def _resolved_by_name(factor_dict):
+            uid = factor_dict.get("resolved_by_id")
+            if uid:
+                user = db.session.query(User).filter_by(id=uid).first()
+                return user.name if user else None
+            return None
+
+        # --- TURNITIN ---
+        t = data.get(self.RISK_TURNITIN, {})
+        if t.get("present", False):
+            score = self.turnitin_score
+            summary = [("Similarity score", f"{score}%" if score is not None else "—")]
+            if self.turnitin_web_overlap is not None:
+                summary.append(("Web overlap", f"{self.turnitin_web_overlap}%"))
+            if self.turnitin_publication_overlap is not None:
+                summary.append(("Publication overlap", f"{self.turnitin_publication_overlap}%"))
+            if self.turnitin_student_overlap is not None:
+                summary.append(("Student overlap", f"{self.turnitin_student_overlap}%"))
+            items.append({
+                "key": self.RISK_TURNITIN,
+                "label": self.RISK_FACTOR_LABELS[self.RISK_TURNITIN],
+                "present": True,
+                "resolved": t.get("resolved", False),
+                "resolved_by_name": _resolved_by_name(t),
+                "resolved_at": t.get("resolved_at"),
+                "annotation": t.get("annotation"),
+                "severity": "danger",
+                "description": "The Turnitin similarity score is ≥25%, which requires convenor review before marking can proceed.",
+                "summary_items": summary,
+            })
+
+        # --- AI COMPLIANCE ---
+        ac = data.get(self.RISK_AI_COMPLIANCE, {})
+        if ac.get("present", False):
+            statement = llm_result.get("genai_statement", "")
+            summary = [("Detected statement", statement[:200] + "…" if len(statement) > 200 else statement)]
+            items.append({
+                "key": self.RISK_AI_COMPLIANCE,
+                "label": self.RISK_FACTOR_LABELS[self.RISK_AI_COMPLIANCE],
+                "present": True,
+                "resolved": ac.get("resolved", False),
+                "resolved_by_name": _resolved_by_name(ac),
+                "resolved_at": ac.get("resolved_at"),
+                "annotation": ac.get("annotation"),
+                "severity": "warning",
+                "description": "An AI/generative-AI compliance statement was detected in the document. Please review and confirm this has been noted.",
+                "summary_items": summary,
+            })
+
+        # --- AI USE METRICS ---
+        au = data.get(self.RISK_AI_USE, {})
+        if au.get("present", False):
+            elevated = au.get("elevated_metrics", [])
+            metric_labels = {"mattr": "MATTR", "mtld": "MTLD", "burstiness": "Burstiness"}
+            summary = []
+            for m in ("mattr", "mtld", "burstiness"):
+                flag = flags.get(f"{m}_flag", "ok")
+                val = metrics.get(m)
+                label_str = metric_labels.get(m, m)
+                flag_str = {"ok": "Normal", "note": "Elevated", "strong": "Strongly elevated"}.get(flag, flag)
+                summary.append((label_str, f"{val:.3f}" if val is not None else "—" + f" ({flag_str})"))
+            items.append({
+                "key": self.RISK_AI_USE,
+                "label": self.RISK_FACTOR_LABELS[self.RISK_AI_USE],
+                "present": True,
+                "resolved": au.get("resolved", False),
+                "resolved_by_name": _resolved_by_name(au),
+                "resolved_at": au.get("resolved_at"),
+                "annotation": au.get("annotation"),
+                "severity": "warning",
+                "description": f"Two or more AI-use metrics ({', '.join(metric_labels[m] for m in elevated)}) are elevated, which may indicate AI-assisted writing.",
+                "summary_items": summary,
+            })
+
+        # --- DOCUMENT LENGTH ---
+        dl = data.get(self.RISK_DOCUMENT_LENGTH, {})
+        if dl.get("present", False):
+            limit_type = dl.get("limit_type", "words")
+            limit = dl.get("limit")
+            measured = dl.get("measured")
+            summary = [
+                ("Limit type", limit_type.capitalize()),
+                ("Configured limit", str(limit) if limit else "—"),
+                ("Measured count", str(measured) if measured else "—"),
+            ]
+            items.append({
+                "key": self.RISK_DOCUMENT_LENGTH,
+                "label": self.RISK_FACTOR_LABELS[self.RISK_DOCUMENT_LENGTH],
+                "present": True,
+                "resolved": dl.get("resolved", False),
+                "resolved_by_name": _resolved_by_name(dl),
+                "resolved_at": dl.get("resolved_at"),
+                "annotation": dl.get("annotation"),
+                "severity": "warning",
+                "description": f"The measured document {limit_type} count exceeds the configured limit.",
+                "summary_items": summary,
+            })
+
+        # --- WORD COUNT DISCREPANCY ---
+        wd = data.get(self.RISK_WORD_COUNT_DISCREPANCY, {})
+        if wd.get("present", False):
+            measured = wd.get("measured")
+            stated = wd.get("stated")
+            pct = wd.get("discrepancy_pct")
+            tol = wd.get("tolerance_pct")
+            summary = [
+                ("Measured word count", str(measured) if measured else "—"),
+                ("Student-reported word count", str(stated) if stated else "—"),
+                ("Discrepancy", f"{pct:.1f}%" if pct is not None else "—"),
+                ("Tolerance", f"{tol:.1f}%" if tol is not None else "—"),
+            ]
+            items.append({
+                "key": self.RISK_WORD_COUNT_DISCREPANCY,
+                "label": self.RISK_FACTOR_LABELS[self.RISK_WORD_COUNT_DISCREPANCY],
+                "present": True,
+                "resolved": wd.get("resolved", False),
+                "resolved_by_name": _resolved_by_name(wd),
+                "resolved_at": wd.get("resolved_at"),
+                "annotation": wd.get("annotation"),
+                "severity": "warning",
+                "description": "The student-reported word count differs from the measured word count by more than the configured tolerance.",
+                "summary_items": summary,
+            })
+
+        return items
+
+    def compute_risk_factors(self, config) -> None:
+        """
+        Evaluate all risk conditions against current analysis data and configuration,
+        then update the risk_factors JSON blob.
+
+        Preserves existing resolved/resolved_by_id/resolved_at/annotation values for
+        factors that remain present after re-evaluation.
+
+        :param config: ProjectClassConfig instance providing word/page limit settings
+        """
+        la = self.language_analysis_data
+        metrics = la.get("metrics", {})
+        flags = la.get("flags", {})
+        llm_result = la.get("llm_result", {})
+
+        existing = self.risk_factors_data
+        new_data = {}
+
+        def _carry_resolution(key: str, factor: dict) -> dict:
+            """Copy resolved/annotation fields from existing data if the factor is still present."""
+            prev = existing.get(key, {})
+            if prev.get("resolved", False):
+                factor["resolved"] = True
+                factor["resolved_by_id"] = prev.get("resolved_by_id")
+                factor["resolved_at"] = prev.get("resolved_at")
+                factor["annotation"] = prev.get("annotation")
+            else:
+                factor["resolved"] = False
+                factor["resolved_by_id"] = None
+                factor["resolved_at"] = None
+                factor["annotation"] = None
+            return factor
+
+        # --- TURNITIN ---
+        turnitin_score = self.turnitin_score
+        turnitin_present = turnitin_score is not None and turnitin_score >= 25
+        turnitin_factor = {"present": turnitin_present, "score": turnitin_score}
+        if turnitin_present:
+            turnitin_factor = _carry_resolution(self.RISK_TURNITIN, turnitin_factor)
+        else:
+            turnitin_factor.update({"resolved": False, "resolved_by_id": None, "resolved_at": None, "annotation": None})
+        new_data[self.RISK_TURNITIN] = turnitin_factor
+
+        # --- AI COMPLIANCE STATEMENT ---
+        genai_found = llm_result.get("genai_statement_found", False)
+        genai_factor = {
+            "present": bool(genai_found),
+            "statement_precis": llm_result.get("genai_statement", None),
+        }
+        if genai_found:
+            genai_factor = _carry_resolution(self.RISK_AI_COMPLIANCE, genai_factor)
+        else:
+            genai_factor.update({"resolved": False, "resolved_by_id": None, "resolved_at": None, "annotation": None})
+        new_data[self.RISK_AI_COMPLIANCE] = genai_factor
+
+        # --- AI USE METRICS ---
+        # Elevated if 2+ of {mattr_flag, mtld_flag, burstiness_flag} are "note" or "strong"
+        elevated_thresholds = {"note", "strong"}
+        elevated_metrics = [
+            m
+            for m in ("mattr", "mtld", "burstiness")
+            if flags.get(f"{m}_flag", "ok") in elevated_thresholds
+        ]
+        ai_use_present = len(elevated_metrics) >= 2
+        ai_use_factor = {"present": ai_use_present, "elevated_metrics": elevated_metrics}
+        if ai_use_present:
+            ai_use_factor = _carry_resolution(self.RISK_AI_USE, ai_use_factor)
+        else:
+            ai_use_factor.update({"resolved": False, "resolved_by_id": None, "resolved_at": None, "annotation": None})
+        new_data[self.RISK_AI_USE] = ai_use_factor
+
+        # --- DOCUMENT LENGTH ---
+        measured_words = metrics.get("word_count", None)
+        length_present = False
+        length_factor = {"present": False, "limit_type": None, "limit": None, "measured": measured_words}
+        if config is not None and measured_words is not None:
+            if config.effective_word_limit_enabled and config.effective_word_limit:
+                limit = config.effective_word_limit
+                if measured_words > limit:
+                    length_present = True
+                    length_factor.update({"present": True, "limit_type": "words", "limit": limit})
+            elif config.effective_page_limit_enabled and config.effective_page_limit:
+                page_count = metrics.get("page_count", None)
+                limit = config.effective_page_limit
+                if page_count is not None and page_count > limit:
+                    length_present = True
+                    length_factor.update({"present": True, "limit_type": "pages", "limit": limit, "measured": page_count})
+        if length_present:
+            length_factor = _carry_resolution(self.RISK_DOCUMENT_LENGTH, length_factor)
+        else:
+            length_factor.update({"resolved": False, "resolved_by_id": None, "resolved_at": None, "annotation": None})
+        new_data[self.RISK_DOCUMENT_LENGTH] = length_factor
+
+        # --- WORD COUNT DISCREPANCY ---
+        stated_found = llm_result.get("stated_word_count_found", False)
+        stated_words = llm_result.get("stated_word_count", None) if stated_found else None
+        tolerance = float(config.effective_word_count_tolerance) if config is not None else 0.15
+        discrepancy_present = False
+        discrepancy_pct = None
+        if measured_words and stated_words and measured_words > 0:
+            discrepancy_pct = abs(measured_words - stated_words) / measured_words
+            discrepancy_present = discrepancy_pct > tolerance
+        discrepancy_factor = {
+            "present": discrepancy_present,
+            "measured": measured_words,
+            "stated": stated_words,
+            "discrepancy_pct": round(discrepancy_pct * 100, 1) if discrepancy_pct is not None else None,
+            "tolerance_pct": round(tolerance * 100, 1),
+        }
+        if discrepancy_present:
+            discrepancy_factor = _carry_resolution(self.RISK_WORD_COUNT_DISCREPANCY, discrepancy_factor)
+        else:
+            discrepancy_factor.update({"resolved": False, "resolved_by_id": None, "resolved_at": None, "annotation": None})
+        new_data[self.RISK_WORD_COUNT_DISCREPANCY] = discrepancy_factor
+
+        self.set_risk_factors_data(new_data)
 
     @property
     def validate_documents(self):

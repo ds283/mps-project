@@ -83,6 +83,44 @@
             </div>
         </div>
 
+        <p class="form-group-heading mt-2">Document limits</p>
+        <p class="small text-muted">Leave fields blank to inherit the project class defaults. Enabling a limit here overrides the project class setting for this cycle only.</p>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {{ wtf.render_field(form.word_limit_enabled) }}
+                <div id="config-word-limit-field">
+                    {{ show_default_field(form.word_limit, config.project_class.word_limit if config.project_class.word_limit_enabled else "none") }}
+                </div>
+            </div>
+            <div class="col-6">
+                {{ wtf.render_field(form.page_limit_enabled) }}
+                <div id="config-page-limit-field">
+                    {{ show_default_field(form.page_limit, config.project_class.page_limit if config.project_class.page_limit_enabled else "none") }}
+                </div>
+            </div>
+        </div>
+        <div class="row vertical-top">
+            <div class="col-6">
+                {% set default_tol = (config.project_class.word_count_tolerance | float * 100) | round(1) if config.project_class.word_count_tolerance else 15.0 %}
+                {{ show_default_field(form.word_count_tolerance, default_tol ~ "%") }}
+            </div>
+        </div>
+        <script>
+            (function() {
+                function toggleConfigLimitFields() {
+                    var wlEnabled = document.getElementById('word_limit_enabled');
+                    var plEnabled = document.getElementById('page_limit_enabled');
+                    if (wlEnabled) document.getElementById('config-word-limit-field').style.display = wlEnabled.checked ? '' : 'none';
+                    if (plEnabled) document.getElementById('config-page-limit-field').style.display = plEnabled.checked ? '' : 'none';
+                }
+                var wlCb = document.getElementById('word_limit_enabled');
+                var plCb = document.getElementById('page_limit_enabled');
+                if (wlCb) wlCb.addEventListener('change', toggleConfigLimitFields);
+                if (plCb) plCb.addEventListener('change', toggleConfigLimitFields);
+                toggleConfigLimitFields();
+            })();
+        </script>
+
         {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>

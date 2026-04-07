@@ -183,6 +183,41 @@
             {{ wtf.render_field(pclass_form.display_presentations) }}
         </div>
     </div>
+    <p class="form-group-heading mt-2">Document limits</p>
+    <div class="row vertical-top">
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.word_limit_enabled) }}
+            <div id="word-limit-field">
+                {{ wtf.render_field(pclass_form.word_limit) }}
+            </div>
+        </div>
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.page_limit_enabled) }}
+            <div id="page-limit-field">
+                {{ wtf.render_field(pclass_form.page_limit) }}
+            </div>
+        </div>
+    </div>
+    <div class="row vertical-top">
+        <div class="col-6">
+            {{ wtf.render_field(pclass_form.word_count_tolerance) }}
+        </div>
+    </div>
+    <script>
+        (function() {
+            function toggleLimitFields() {
+                var wlEnabled = document.getElementById('word_limit_enabled');
+                var plEnabled = document.getElementById('page_limit_enabled');
+                if (wlEnabled) document.getElementById('word-limit-field').style.display = wlEnabled.checked ? '' : 'none';
+                if (plEnabled) document.getElementById('page-limit-field').style.display = plEnabled.checked ? '' : 'none';
+            }
+            var wlCb = document.getElementById('word_limit_enabled');
+            var plCb = document.getElementById('page_limit_enabled');
+            if (wlCb) wlCb.addEventListener('change', toggleLimitFields);
+            if (plCb) plCb.addEventListener('change', toggleLimitFields);
+            toggleLimitFields();
+        })();
+    </script>
 </div>
 
 <div class="card mt-3 mb-3 card-body bg-well">

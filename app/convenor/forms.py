@@ -16,6 +16,7 @@ from wtforms import (
     BooleanField,
     DateTimeField,
     DecimalField,
+    FloatField,
     IntegerField,
     SelectField,
     StringField,
@@ -495,6 +496,44 @@ def EditProjectConfigFormFactory(config: ProjectClassConfig):
                     min=0, message="The specified number of CATS should not be negative"
                 ),
             ],
+        )
+
+        # Document limit overrides (None = inherit from ProjectClass defaults)
+        word_limit_enabled = BooleanField(
+            "Override word limit setting",
+            description="If selected, the word limit setting below overrides the project class default for this cycle.",
+        )
+
+        word_limit = IntegerField(
+            "Word limit",
+            validators=[
+                Optional(),
+                NumberRange(min=1, message="Word limit must be at least 1"),
+            ],
+            description="Maximum permitted word count for this cycle. Leave blank to inherit the project class default.",
+        )
+
+        page_limit_enabled = BooleanField(
+            "Override page limit setting",
+            description="If selected, the page limit setting below overrides the project class default for this cycle.",
+        )
+
+        page_limit = IntegerField(
+            "Page limit",
+            validators=[
+                Optional(),
+                NumberRange(min=1, message="Page limit must be at least 1"),
+            ],
+            description="Maximum permitted page count for this cycle. Leave blank to inherit the project class default.",
+        )
+
+        word_count_tolerance = FloatField(
+            "Word count discrepancy tolerance (%)",
+            validators=[
+                Optional(),
+                NumberRange(min=0, max=100, message="Tolerance must be between 0 and 100"),
+            ],
+            description="Override the word count discrepancy tolerance for this cycle. Leave blank to inherit the project class default.",
         )
 
         # only include Canvas-related fields if Canvas integration is actually switched on

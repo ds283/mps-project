@@ -243,13 +243,9 @@ def _check_tolerance_and_grade(sr: SubmitterReport, reports: list) -> None:
     Compute the weighted average grade (or handle the out-of-tolerance case) and advance
     the SubmitterReport accordingly.
     """
-    # Turnitin override: if an unresolved high-similarity score is present, the SR cannot
-    # advance past REQUIRES_CONVENOR_INTERVENTION regardless of the marking-report state.
-    if (
-        sr.record.turnitin_score is not None
-        and sr.record.turnitin_score >= 25
-        and not sr.turnitin_resolved
-    ):
+    # Risk factor override: any unresolved risk factor blocks forward progress.
+    # The SR must remain in REQUIRES_CONVENOR_INTERVENTION until all are resolved.
+    if sr.record.has_unresolved_risk_factors:
         sr.workflow_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
         return
 
@@ -301,13 +297,9 @@ def advance_submitter_report(sr: SubmitterReport) -> None:
 
     Does NOT commit the session — callers are responsible for committing.
     """
-    # Turnitin override: an unresolved high-similarity score blocks all forward progress.
-    # The SR must remain in REQUIRES_CONVENOR_INTERVENTION until the convenor resolves it.
-    if (
-        sr.record.turnitin_score is not None
-        and sr.record.turnitin_score >= 25
-        and not sr.turnitin_resolved
-    ):
+    # Risk factor override: any unresolved risk factor blocks all forward progress.
+    # The SR must remain in REQUIRES_CONVENOR_INTERVENTION until all are resolved.
+    if sr.record.has_unresolved_risk_factors:
         sr.workflow_state = SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
         return
 
@@ -417,15 +409,10 @@ def register_markingevent_tasks(celery):
                 # Determine the correct initial state:
                 # - requires_report=False: ready immediately (no asset check needed)
                 # - requires_report=True: ready only if both report and processed_report already exist
-                # NOTE: If the SubmissionRecord has turnitin_score >= 25 and the SubmitterReport
-                # has turnitin_resolved=False, the state must be REQUIRES_CONVENOR_INTERVENTION
-                # rather than READY_TO_DISTRIBUTE. The SubmitterReport cannot proceed past
-                # REQUIRES_CONVENOR_INTERVENTION until the convenor resolves the Turnitin concern.
+                # NOTE: If the SubmissionRecord has any unresolved risk factors, the initial state
+                # must be REQUIRES_CONVENOR_INTERVENTION rather than READY_TO_DISTRIBUTE.
                 if not workflow.requires_report:
-                    if (
-                        record.turnitin_score is not None
-                        and record.turnitin_score >= 25
-                    ):
+                    if record.has_unresolved_risk_factors:
                         initial_state = (
                             SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
                         )
@@ -434,10 +421,7 @@ def register_markingevent_tasks(celery):
                             SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
                         )
                 elif record.report is not None and record.processed_report is not None:
-                    if (
-                        record.turnitin_score is not None
-                        and record.turnitin_score >= 25
-                    ):
+                    if record.has_unresolved_risk_factors:
                         initial_state = (
                             SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
                         )
@@ -557,15 +541,15 @@ def register_markingevent_tasks(celery):
         """
         Advance SubmitterReport instances for a SubmissionRecord in two situations:
 
-        1. NOT_READY → READY_TO_DISTRIBUTE (or REQUIRES_CONVENOR_INTERVENTION if Turnitin
-           score >= 25 and unresolved).  Called after successful report processing.
+        1. NOT_READY → READY_TO_DISTRIBUTE (or REQUIRES_CONVENOR_INTERVENTION if any risk
+           factors are unresolved).  Called after successful report processing.
 
-        2. REQUIRES_CONVENOR_INTERVENTION → re-evaluated next state, when the Turnitin
-           concern has since been resolved (turnitin_resolved=True).  For pre-distribution
-           reports (no MarkingReports yet submitted) the state becomes READY_TO_DISTRIBUTE;
-           for mid-lifecycle reports advance_submitter_report() picks the correct state.
+        2. REQUIRES_CONVENOR_INTERVENTION → re-evaluated next state, when all risk factors
+           have been resolved.  For pre-distribution reports (no MarkingReports yet submitted)
+           the state becomes READY_TO_DISTRIBUTE; for mid-lifecycle reports
+           advance_submitter_report() picks the correct state.
 
-        Called by process_report.finalize and by convenor.resolve_turnitin_issue.
+        Called by process_report.finalize and by convenor.resolve_risk_factors.
         """
         try:
             record: SubmissionRecord = (
@@ -591,15 +575,9 @@ def register_markingevent_tasks(celery):
                         if record.report is None or record.processed_report is None:
                             continue
 
-                    # NOTE: If turnitin_score >= 25 and turnitin_resolved=False, transition to
-                    # REQUIRES_CONVENOR_INTERVENTION instead of READY_TO_DISTRIBUTE.
-                    # The SubmitterReport cannot proceed past REQUIRES_CONVENOR_INTERVENTION until
-                    # the convenor resolves the Turnitin concern via convenor.resolve_turnitin_issue.
-                    if (
-                        record.turnitin_score is not None
-                        and record.turnitin_score >= 25
-                        and not sr.turnitin_resolved
-                    ):
+                    # If any risk factors are unresolved, transition to REQUIRES_CONVENOR_INTERVENTION
+                    # instead of READY_TO_DISTRIBUTE.
+                    if record.has_unresolved_risk_factors:
                         sr.workflow_state = (
                             SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
                         )
@@ -611,9 +589,9 @@ def register_markingevent_tasks(celery):
 
                 elif (
                     sr.workflow_state == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
-                    and sr.turnitin_resolved
+                    and not record.has_unresolved_risk_factors
                 ):
-                    # Turnitin concern resolved: re-evaluate using the full lifecycle evaluator
+                    # All risk factors resolved: re-evaluate using the full lifecycle evaluator
                     # to handle mid-lifecycle cases (MarkingReports already submitted/signed off).
                     advance_submitter_report(sr)
 

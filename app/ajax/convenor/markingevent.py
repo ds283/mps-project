@@ -9,6 +9,7 @@
 #
 
 from flask import current_app, get_template_attribute, render_template
+from flask_wtf.csrf import generate_csrf
 from markupsafe import escape
 
 from ...models.markingevent import SubmitterReportWorkflowStates
@@ -353,14 +354,13 @@ _submitter_report_actions = """
             <div class="dropdown-divider"></div>
         {% endif %}
 
-        {# Turnitin: resolve (only shown when score >= 25, disabled when COMPLETED) #}
-        {% if rec is not none and rec.turnitin_score is not none and rec.turnitin_score >= 25 %}
+        {# Risk factors: resolve (only shown when unresolved factors are present, disabled when COMPLETED) #}
+        {% if rec is not none and rec.has_unresolved_risk_factors %}
             <a class="dropdown-item d-flex gap-2 {% if is_completed %}disabled{% endif %}"
-               href="{{ url_for('convenor.resolve_turnitin_issue',
-                                submitter_report_id=report.id,
+               href="{{ url_for('convenor.resolve_risk_factors',
+                                record_id=rec.id,
                                 url=inspector_url, text='Submitter reports') }}">
-                <i class="fas fa-gavel fa-fw"></i>
-                {% if report.turnitin_resolved %}Re-review Turnitin&hellip;{% else %}Resolve Turnitin&hellip;{% endif %}
+                <i class="fas fa-gavel fa-fw"></i> Resolve risk factors&hellip;
             </a>
         {% endif %}
 
@@ -427,84 +427,36 @@ _submitter_report_feedback = """
 """
 
 # language=jinja2
-_submitter_report_turnitin = """
+_submitter_report_risk_factors = """
 {% set rec = report.record %}
-{% if rec is not none and rec.turnitin_score is not none %}
-    {# turnitin_outcome is a legacy Canvas LMS field not used in current Turnitin outputs; hidden from display #}
-    <div class="d-flex flex-column gap-1">
-        {# 5-tier colour scale per current Turnitin documentation:
-           0% = green (no match), 1-24% = blue (low), 25-49% = yellow (medium),
-           50-74% = orange (high), 75-100% = red (very high) #}
-        {% if rec.turnitin_score == 0 %}
-            {% set score_class = "text-success" %}
-            {% set badge_class = "bg-success" %}
-            {% set score_label = "No match" %}
-        {% elif rec.turnitin_score < 25 %}
-            {% set score_class = "text-primary" %}
-            {% set badge_class = "bg-primary" %}
-            {% set score_label = "Low" %}
-        {% elif rec.turnitin_score < 50 %}
-            {% set score_class = "text-warning" %}
-            {% set badge_class = "bg-warning text-dark" %}
-            {% set score_label = "Medium" %}
-        {% elif rec.turnitin_score < 75 %}
-            {% set score_class = "" %}
-            {% set badge_class = "bg-warning text-dark" %}
-            {% set score_label = "High" %}
-        {% else %}
-            {% set score_class = "text-danger" %}
-            {% set badge_class = "bg-danger" %}
-            {% set score_label = "Very high" %}
-        {% endif %}
-        <div class="d-flex flex-row align-items-center gap-2">
-            <span class="fw-semibold {{ score_class }}"{% if rec.turnitin_score >= 50 and rec.turnitin_score < 75 %} style="color: #fd7e14"{% endif %}>
-                {{ rec.turnitin_score }}%
-            </span>
-            <span class="badge {{ badge_class }} small">{{ score_label }}</span>
-        </div>
-        {% set has_breakdown = rec.turnitin_web_overlap is not none or rec.turnitin_publication_overlap is not none or rec.turnitin_student_overlap is not none %}
-        {% if has_breakdown %}
-            <div class="d-flex flex-row flex-wrap gap-2">
-                {% if rec.turnitin_web_overlap is not none %}
-                    <span class="small text-muted" data-bs-toggle="tooltip" title="Web sources">
-                        <i class="fas fa-globe fa-fw"></i> {{ rec.turnitin_web_overlap }}%
+{% if rec is not none %}
+    {% set rf = rec.risk_factors_ui_summary() %}
+    {% if rf.has_any_present %}
+        <div class="d-flex flex-column gap-1">
+            {% for factor in rf.factors %}
+                {% if factor.resolved %}
+                    <span class="badge bg-success" data-bs-toggle="tooltip" title="Resolved{% if factor.resolved_by_name %} by {{ factor.resolved_by_name }}{% endif %}">
+                        <i class="fas fa-check-circle fa-fw"></i> {{ factor.label }}
+                    </span>
+                {% else %}
+                    <span class="badge bg-danger">
+                        <i class="fas fa-exclamation-triangle fa-fw"></i> {{ factor.label }}
                     </span>
                 {% endif %}
-                {% if rec.turnitin_publication_overlap is not none %}
-                    <span class="small text-muted" data-bs-toggle="tooltip" title="Publications">
-                        <i class="fas fa-book fa-fw"></i> {{ rec.turnitin_publication_overlap }}%
-                    </span>
-                {% endif %}
-                {% if rec.turnitin_student_overlap is not none %}
-                    <span class="small text-muted" data-bs-toggle="tooltip" title="Student papers">
-                        <i class="fas fa-user-graduate fa-fw"></i> {{ rec.turnitin_student_overlap }}%
-                    </span>
-                {% endif %}
-            </div>
-        {% endif %}
-        {# Resolution status: shown for all reports with a turnitin score #}
-        {% if report.turnitin_resolved %}
-            <div class="mt-1">
-                <span class="badge bg-success"><i class="fas fa-check-circle"></i> Resolved</span>
-                {% if report.turnitin_resolved_by is not none %}
-                    <span class="small text-muted ms-1">by {{ report.turnitin_resolved_by.name }}</span>
-                {% endif %}
-            </div>
-        {% elif rec.turnitin_score >= 25 %}
-            <div class="mt-1"><span class="badge bg-danger">Requires attention</span></div>
-            <div class="mt-1">
-                <a href="{{ url_for('convenor.resolve_turnitin_issue',
-                           submitter_report_id=report.id,
+            {% endfor %}
+            {% if rf.has_unresolved %}
+                <a href="{{ url_for('convenor.resolve_risk_factors',
+                           record_id=rec.id,
                            url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id),
                            text='Submitter reports') }}"
-                   class="btn btn-xs btn-outline-danger">
+                   class="btn btn-xs btn-outline-danger mt-1">
                     <i class="fas fa-gavel fa-fw"></i> Resolve&hellip;
                 </a>
-            </div>
-        {% else %}
-            <div class="mt-1"><span class="badge bg-success">Passing</span></div>
-        {% endif %}
-    </div>
+            {% endif %}
+        </div>
+    {% else %}
+        <span class="badge bg-success"><i class="fas fa-check-circle fa-fw"></i> No risk factors</span>
+    {% endif %}
 {% else %}
     <span class="badge bg-light text-muted border">No data</span>
 {% endif %}
@@ -838,7 +790,7 @@ def submitter_report_data(reports):
     grade_tmpl = env.from_string(_submitter_report_grade)
     signoff_tmpl = env.from_string(_submitter_report_signoff)
     feedback_tmpl = env.from_string(_submitter_report_feedback)
-    turnitin_tmpl = env.from_string(_submitter_report_turnitin)
+    risk_factors_tmpl = env.from_string(_submitter_report_risk_factors)
     actions_tmpl = env.from_string(_submitter_report_actions)
 
     from flask_login import current_user as _cu
@@ -852,6 +804,7 @@ def submitter_report_data(reports):
         "COMPLETED": SubmitterReportWorkflowStates.COMPLETED,
         "is_root": "root" in _roles,
         "is_admin": "admin" in _roles,
+        "csrf_token": generate_csrf,
     }
 
     return [
@@ -862,7 +815,7 @@ def submitter_report_data(reports):
             "grade": render_template(grade_tmpl, report=report),
             "signoff": render_template(signoff_tmpl, report=report),
             "feedback": render_template(feedback_tmpl, report=report),
-            "turnitin": render_template(turnitin_tmpl, report=report),
+            "risk_factors": render_template(risk_factors_tmpl, report=report),
             "actions": render_template(actions_tmpl, report=report, **state_ctx),
         }
         for report in reports

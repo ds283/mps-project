@@ -278,7 +278,10 @@ def launch_language_analysis(sid):
 @documents.route("/clear_language_analysis/<int:sid>")
 @login_required
 def clear_language_analysis(sid):
-    """Clear stored language analysis results so analysis can be re-triggered."""
+    """
+    Clear stored language analysis results so analysis can be re-triggered.
+    Also clears the processed report, since LLM outputs are now embedded in the cover page.
+    """
     record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
 
     if not is_deletable(record, message=True):
@@ -291,10 +294,32 @@ def clear_language_analysis(sid):
     record.llm_failure_reason = None
     record.llm_feedback_failed = False
     record.llm_feedback_failure_reason = None
+    record.risk_factors = None
+
+    # Clear the processed report since it embeds LLM outputs; it will be regenerated
+    # automatically after analysis completes.
+    if record.processed_report is not None:
+        old_asset = record.processed_report
+        record.processed_report_id = None
+        record.celery_finished = False
+        record.celery_failed = False
+        # Delete the asset file from the object store
+        try:
+            object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+            from ..shared.cloud_object_store.base import ObjectStore
+
+            store: ObjectStore = object_store
+            if store is not None:
+                store.delete(old_asset.unique_name)
+        except Exception as exc:
+            current_app.logger.warning(
+                f"Could not delete processed report asset during analysis clear: {exc}"
+            )
+        db.session.delete(old_asset)
 
     try:
         log_db_commit(
-            "Cleared language analysis results for submission record",
+            "Cleared language analysis results and processed report for submission record",
             project_classes=record.owner.config.project_class,
         )
     except SQLAlchemyError as e:
@@ -937,7 +962,9 @@ def delete_submitter_attachment(aid):
         )
         return redirect(redirect_url())
 
-    if current_user.has_role("student") and not attachment.has_role_access(SubmissionRoleTypesMixin.ROLE_STUDENT):
+    if current_user.has_role("student") and not attachment.has_role_access(
+        SubmissionRoleTypesMixin.ROLE_STUDENT
+    ):
         # give no indication that this asset actually exists
         abort(404)
 
@@ -1114,7 +1141,11 @@ def upload_submitter_attachment(sid):
             else:
                 attachment.type = SubmissionAttachment.ATTACHMENT_OTHER
                 # non-admin uploads: student uploads are visible to students; others are unrestricted
-                selected_roles = [SubmissionRoleTypesMixin.ROLE_STUDENT] if current_user.has_role("student") else []
+                selected_roles = (
+                    [SubmissionRoleTypesMixin.ROLE_STUDENT]
+                    if current_user.has_role("student")
+                    else []
+                )
 
             # uploading user has access
             asset.grant_user(current_user)
@@ -1562,4 +1593,80 @@ def serve_thumbnail(asset_type, asset_id, size):
         stream_with_context(r.iter_content(chunk_size=8192)),
         content_type=content_type,
         headers={"Cache-Control": "private, max-age=3600"},
+    )
+
+
+@documents.route("/llm-report/<int:record_id>")
+@login_required
+def llm_report(record_id):
+    """
+    Display the full LLM language analysis report for a SubmissionRecord.
+    Accessible from the convenor submitters inspector and the submitter manager view.
+    """
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(record_id)
+    period: SubmissionPeriodRecord = record.period
+    pclass: ProjectClass = period.config.project_class
+
+    # Access control: convenors, admin, root, office, or the submitting student's supervisors
+    # and markers all need to be able to access this.
+    allowed = (
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or current_user.has_role("office")
+        or pclass.is_convenor(current_user.id)
+    )
+    if not allowed:
+        # Check if the current user has a role on this submission
+        for role in record.roles:
+            if role.user_id == current_user.id:
+                allowed = True
+                break
+    if not allowed:
+        abort(403)
+
+    url = request.args.get(
+        "url", url_for("documents.submitter_documents", sid=record.owner_id, url="/")
+    )
+    text = request.args.get("text", "Back")
+
+    la = record.language_analysis_data
+    llm_result = la.get("llm_result", {})
+    llm_feedback = la.get("llm_feedback", {})
+    criterion_map = la.get("criterion_map", {})
+    errors = la.get("errors", [])
+
+    # Prepare Python-side display data — keeps Jinja2 templates free of business logic
+    metrics_data = (
+        record.llm_metrics_for_display() if record.language_analysis_complete else None
+    )
+    rf_summary = record.risk_factors_ui_summary()
+    rf_items = record.risk_factor_display_items()
+
+    # Resolve display URL for the risk factors resolution view
+    resolve_url = url_for(
+        "convenor.resolve_risk_factors",
+        record_id=record.id,
+        url=request.url,
+        text="LLM Report",
+    )
+
+    # Admin-only actions: can clear results or clear and re-run
+    can_admin = current_user.has_role("root") or current_user.has_role("admin")
+
+    return render_template_context(
+        "documents/llm_report.html",
+        record=record,
+        period=period,
+        pclass=pclass,
+        llm_result=llm_result,
+        llm_feedback=llm_feedback,
+        criterion_map=criterion_map,
+        errors=errors,
+        metrics_data=metrics_data,
+        rf_summary=rf_summary,
+        rf_items=rf_items,
+        resolve_url=resolve_url,
+        can_admin=can_admin,
+        url=url,
+        text=text,
     )

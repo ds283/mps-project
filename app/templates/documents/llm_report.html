@@ -1,0 +1,470 @@
+{% extends "base_app.html" %}
+
+{% from "icon_block.html" import icon_block %}
+
+{% block title %}LLM Analysis Report – {{ record.owner.student.user.name if record.owner else "Unknown" }}{% endblock %}
+
+{% block bodyblock %}
+<div class="d-flex align-items-center mt-3 mb-3 gap-2">
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+        <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+    </a>
+    <h4 class="mb-0">
+        <i class="fas fa-robot fa-fw me-1"></i> LLM Analysis Report
+        <span class="text-muted fw-normal fs-6 ms-2">{{ record.owner.student.user.name if record.owner else "" }}</span>
+    </h4>
+</div>
+
+{% if not record.language_analysis_complete %}
+    {# ── Analysis not available ── #}
+    <div class="alert alert-secondary">
+        {% call icon_block("hourglass-half") %}
+            {% if record.language_analysis_started %}
+                <strong>Analysis in progress</strong>
+                <div class="small mt-1">Language analysis is currently running. Please check back shortly.</div>
+            {% elif record.llm_analysis_failed %}
+                <strong>Analysis failed</strong>
+                <div class="small mt-1 text-danger">{{ record.llm_failure_reason or "An error occurred during analysis." }}</div>
+            {% else %}
+                <strong>No analysis available</strong>
+                <div class="small mt-1">Language analysis has not yet been run for this submission.</div>
+            {% endif %}
+        {% endcall %}
+    </div>
+{% else %}
+
+{# ── TOP: Grade band + summary ── #}
+<div class="card border-primary mb-3">
+    <div class="card-body">
+        <div class="row g-3 align-items-start">
+            <div class="col-md-auto">
+                {% if llm_result.get('classification') %}
+                    <div class="text-center">
+                        <span class="badge bg-primary fs-5 px-3 py-2">{{ llm_result['classification'] }}</span>
+                        <div class="small text-muted mt-1">Recommended grade band</div>
+                    </div>
+                {% elif record.llm_analysis_failed %}
+                    <span class="badge bg-danger">LLM failed</span>
+                {% else %}
+                    <span class="badge bg-secondary">Grade band unavailable</span>
+                {% endif %}
+            </div>
+            <div class="col">
+                {% if llm_result.get('report_summary') %}
+                    <p class="mb-1">{{ llm_result['report_summary'] }}</p>
+                {% endif %}
+                {% if llm_result.get('preface_found') and llm_result.get('preface_precis') %}
+                    <div class="mt-2 small border-start border-3 border-secondary ps-3 text-muted">
+                        <strong>Personal contribution / preface detected:</strong>
+                        {{ llm_result['preface_precis'] }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── RISK FACTORS ── #}
+{% if rf_summary.has_any_present %}
+<div class="card mb-3 {% if rf_summary.has_unresolved %}border-danger{% else %}border-success{% endif %}">
+    <div class="card-header {% if rf_summary.has_unresolved %}bg-danger text-white{% else %}bg-success text-white{% endif %}">
+        <i class="fas fa-shield-alt fa-fw me-1"></i>
+        <strong>Risk factors</strong>
+        {% if rf_summary.has_unresolved %}
+            <span class="badge bg-light text-danger ms-2">{{ rf_summary.unresolved_count }} unresolved</span>
+        {% else %}
+            <span class="badge bg-light text-success ms-2">All resolved</span>
+        {% endif %}
+    </div>
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap gap-2 mb-2">
+            {% for factor in rf_summary.factors %}
+                {% if factor.resolved %}
+                    <span class="badge bg-success" data-bs-toggle="tooltip"
+                          title="Resolved{% if factor.resolved_by_name %} by {{ factor.resolved_by_name }}{% endif %}">
+                        <i class="fas fa-check-circle fa-fw"></i> {{ factor.label }}
+                    </span>
+                {% else %}
+                    <span class="badge bg-danger">
+                        <i class="fas fa-exclamation-triangle fa-fw"></i> {{ factor.label }}
+                    </span>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% if rf_summary.has_unresolved %}
+            <a href="{{ resolve_url }}" class="btn btn-sm btn-danger">
+                <i class="fas fa-gavel fa-fw me-1"></i> Review &amp; resolve risk factors
+            </a>
+        {% else %}
+            <a href="{{ resolve_url }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-gavel fa-fw me-1"></i> Review resolutions
+            </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if metrics_data %}
+
+{# ── AI USE METRICS ── #}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <i class="fas fa-chart-bar fa-fw me-1"></i> <strong>AI use metrics</strong>
+    </div>
+    <div class="card-body pb-2">
+
+        {# Turnitin #}
+        {% if record.turnitin_score is not none %}
+        <h6 class="text-muted small text-uppercase mb-2">Turnitin similarity</h6>
+        <div class="row g-2 mb-3">
+            <div class="col-auto">
+                {% set ts = record.turnitin_score %}
+                {% if ts == 0 %}
+                    <span class="fw-bold text-success fs-5">{{ ts }}%</span> <span class="badge bg-success ms-1">No match</span>
+                {% elif ts < 25 %}
+                    <span class="fw-bold text-primary fs-5">{{ ts }}%</span> <span class="badge bg-primary ms-1">Low</span>
+                {% elif ts < 50 %}
+                    <span class="fw-bold fs-5" style="color:#ffc107">{{ ts }}%</span> <span class="badge bg-warning text-dark ms-1">Medium</span>
+                {% elif ts < 75 %}
+                    <span class="fw-bold fs-5" style="color:#fd7e14">{{ ts }}%</span> <span class="badge bg-warning text-dark ms-1">High</span>
+                {% else %}
+                    <span class="fw-bold text-danger fs-5">{{ ts }}%</span> <span class="badge bg-danger ms-1">Very high</span>
+                {% endif %}
+            </div>
+            {% set rf_turnitin = rf_items | selectattr('key', 'equalto', 'turnitin') | first | default(none) %}
+            {% if rf_turnitin %}
+                <div class="col">
+                    {% if rf_turnitin.resolved %}
+                        <span class="badge bg-success"><i class="fas fa-check-circle fa-fw"></i> Resolved</span>
+                        {% if rf_turnitin.resolved_by_name %}<span class="small text-muted ms-1">by {{ rf_turnitin.resolved_by_name }}</span>{% endif %}
+                        {% if rf_turnitin.annotation %}<div class="small text-muted fst-italic mt-1">{{ rf_turnitin.annotation }}</div>{% endif %}
+                    {% else %}
+                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle fa-fw"></i> Requires attention</span>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# AI compliance statement #}
+        {% if llm_result.get('genai_statement_found') %}
+        <h6 class="text-muted small text-uppercase mb-2">AI compliance statement</h6>
+        <div class="alert alert-warning py-2 small mb-3">
+            <i class="fas fa-file-signature fa-fw me-1"></i>
+            <strong>Statement detected:</strong>
+            {{ llm_result.get('genai_statement', '') }}
+        </div>
+        {% set rf_ai_comp = rf_items | selectattr('key', 'equalto', 'ai_compliance') | first | default(none) %}
+        {% if rf_ai_comp %}
+            {% if rf_ai_comp.resolved %}
+                <div class="mb-3 small">
+                    <span class="badge bg-success"><i class="fas fa-check-circle fa-fw"></i> Reviewed</span>
+                    {% if rf_ai_comp.resolved_by_name %}<span class="text-muted ms-1">by {{ rf_ai_comp.resolved_by_name }}</span>{% endif %}
+                    {% if rf_ai_comp.annotation %}<div class="text-muted fst-italic mt-1">{{ rf_ai_comp.annotation }}</div>{% endif %}
+                </div>
+            {% else %}
+                <div class="mb-3 small">
+                    <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle fa-fw"></i> Awaiting review</span>
+                </div>
+            {% endif %}
+        {% endif %}
+        {% endif %}
+
+        {# MATTR / MTLD / Burstiness progress bars #}
+        <h6 class="text-muted small text-uppercase mb-2">Lexical diversity metrics</h6>
+        {% for key, label in [('mattr', 'MATTR'), ('mtld', 'MTLD'), ('burstiness', 'Burstiness')] %}
+            {% set m = metrics_data[key] %}
+            {% if m.value is not none %}
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small fw-semibold">{{ label }}</span>
+                        <span class="small">
+                            {{ "%.3f"|format(m.value) }}
+                            <span class="text-muted">(threshold: {{ "%.3f"|format(m.threshold) }})</span>
+                            <span class="badge bg-{{ m.flag_severity }} ms-1 small">{{ m.flag_label }}</span>
+                        </span>
+                    </div>
+                    {% set bar_pct = m.pct_of_threshold or 0 %}
+                    {% set bar_class = "bg-" + m.flag_severity %}
+                    <div class="progress" style="height:8px" data-bs-toggle="tooltip"
+                         title="{{ '%.3f'|format(m.value) }} / threshold {{ '%.3f'|format(m.threshold) }}">
+                        <div class="progress-bar {{ bar_class }}"
+                             role="progressbar"
+                             style="width: {{ [bar_pct, 100]|min }}%"
+                             aria-valuenow="{{ bar_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        {# Threshold marker at 100% of progress bar = reaching the threshold #}
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        {# AI-indicator patterns #}
+        {% if metrics_data.hedging_count is not none or metrics_data.filler_count is not none or metrics_data.em_dash_count is not none %}
+        <div class="row g-3 mt-1 mb-1">
+            {% if metrics_data.hedging_count is not none %}
+            <div class="col-auto">
+                <span class="small text-muted">Hedging phrases:</span>
+                <strong class="ms-1">{{ metrics_data.hedging_count }}</strong>
+            </div>
+            {% endif %}
+            {% if metrics_data.filler_count is not none %}
+            <div class="col-auto">
+                <span class="small text-muted">Filler phrases:</span>
+                <strong class="ms-1">{{ metrics_data.filler_count }}</strong>
+            </div>
+            {% endif %}
+            {% if metrics_data.em_dash_count is not none %}
+            <div class="col-auto">
+                <span class="small text-muted">Em-dashes:</span>
+                <strong class="ms-1">{{ metrics_data.em_dash_count }}</strong>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# Word count #}
+        {% if metrics_data.measured_word_count is not none %}
+        <h6 class="text-muted small text-uppercase mt-3 mb-2">Word count</h6>
+        <div class="row g-2 small mb-1">
+            <div class="col-auto">
+                <span class="text-muted">Measured (from text):</span>
+                <strong class="ms-1">{{ metrics_data.measured_word_count | int }}</strong>
+            </div>
+            {% if metrics_data.stated_word_count is not none %}
+            <div class="col-auto">
+                <span class="text-muted">Student-reported:</span>
+                <strong class="ms-1">{{ metrics_data.stated_word_count | int }}</strong>
+            </div>
+            {% if metrics_data.discrepancy_pct is not none %}
+            <div class="col-auto">
+                <span class="text-muted">Discrepancy:</span>
+                {% set disc = metrics_data.discrepancy_pct %}
+                {% set tol = metrics_data.tolerance_pct %}
+                <strong class="ms-1 {% if disc > tol %}text-danger{% endif %}">
+                    {{ "%.1f"|format(disc) }}%
+                </strong>
+                <span class="text-muted">(tolerance: {{ "%.1f"|format(tol) }}%)</span>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% set rf_wcd = rf_items | selectattr('key', 'equalto', 'word_count_discrepancy') | first | default(none) %}
+        {% if rf_wcd and rf_wcd.present %}
+            <div class="mt-1">
+                {% if rf_wcd.resolved %}
+                    <span class="badge bg-success small"><i class="fas fa-check-circle fa-fw"></i> Discrepancy reviewed</span>
+                    {% if rf_wcd.resolved_by_name %}<span class="small text-muted ms-1">by {{ rf_wcd.resolved_by_name }}</span>{% endif %}
+                {% else %}
+                    <span class="badge bg-warning text-dark small"><i class="fas fa-exclamation-triangle fa-fw"></i> Discrepancy requires review</span>
+                {% endif %}
+            </div>
+        {% endif %}
+        {% endif %}
+
+    </div>
+</div>
+
+{# ── DOCUMENT METRICS ── #}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <i class="fas fa-file-alt fa-fw me-1"></i> <strong>Document metrics</strong>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="small text-muted text-uppercase mb-1">References</div>
+                {% if metrics_data.reference_count is not none %}
+                    <div><strong>{{ metrics_data.reference_count }}</strong> detected</div>
+                    {% if metrics_data.uncited_refs %}
+                        <div class="text-danger small mt-1">
+                            {{ metrics_data.uncited_refs | length }} possibly uncited:
+                            {{ metrics_data.uncited_refs | join(', ') }}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <span class="text-muted small">—</span>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
+                <div class="small text-muted text-uppercase mb-1">Figures</div>
+                {% if metrics_data.figure_count is not none %}
+                    <div><strong>{{ metrics_data.figure_count }}</strong> detected</div>
+                    {% if metrics_data.unreferenced_figures %}
+                        <div class="text-danger small mt-1">
+                            {{ metrics_data.unreferenced_figures | length }} possibly unreferenced:
+                            {{ metrics_data.unreferenced_figures | join(', ') }}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <span class="text-muted small">—</span>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
+                <div class="small text-muted text-uppercase mb-1">Tables</div>
+                {% if metrics_data.table_count is not none %}
+                    <div><strong>{{ metrics_data.table_count }}</strong> detected</div>
+                    {% if metrics_data.unreferenced_tables %}
+                        <div class="text-danger small mt-1">
+                            {{ metrics_data.unreferenced_tables | length }} possibly unreferenced:
+                            {{ metrics_data.unreferenced_tables | join(', ') }}
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <span class="text-muted small">—</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Pipeline timings #}
+        {% set t = metrics_data.timings %}
+        {% if t.extraction_s is not none or t.llm_grade_s is not none %}
+        <hr class="my-2">
+        <div class="d-flex flex-wrap gap-3 small text-muted">
+            {% if t.extraction_s is not none %}
+                <span><i class="fas fa-file-export fa-fw"></i> Extraction: {{ "%.1f"|format(t.extraction_s) }}s</span>
+            {% endif %}
+            {% if t.counting_s is not none %}
+                <span><i class="fas fa-calculator fa-fw"></i> Statistics: {{ "%.1f"|format(t.counting_s) }}s</span>
+            {% endif %}
+            {% if t.ai_metrics_s is not none %}
+                <span><i class="fas fa-brain fa-fw"></i> AI metrics: {{ "%.1f"|format(t.ai_metrics_s) }}s</span>
+            {% endif %}
+            {% if t.llm_grade_s is not none %}
+                <span><i class="fas fa-star fa-fw"></i> Grade band LLM: {{ "%.1f"|format(t.llm_grade_s) }}s</span>
+            {% endif %}
+            {% if t.llm_feedback_s is not none %}
+                <span><i class="fas fa-comment fa-fw"></i> Feedback LLM: {{ "%.1f"|format(t.llm_feedback_s) }}s</span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endif %}{# end metrics_data #}
+
+{# ── GRADE BAND REASONING ── #}
+{% if llm_result.get('overall_reasoning') or llm_result.get('bands') %}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <i class="fas fa-balance-scale fa-fw me-1"></i> <strong>Grade band reasoning</strong>
+    </div>
+    <div class="card-body">
+        {% if llm_result.get('overall_reasoning') %}
+            <p class="small mb-3">{{ llm_result['overall_reasoning'] }}</p>
+        {% endif %}
+        {% for band_name, band_data in llm_result.get('bands', {}).items() %}
+            <div class="mb-3">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="fw-semibold small">{{ band_name }}</span>
+                    {% if band_data.get('band_assessment') %}
+                        <span class="badge bg-secondary small">{{ band_data['band_assessment'] }}</span>
+                    {% endif %}
+                </div>
+                {% if band_data.get('criteria') %}
+                <table class="table table-sm table-borderless small mb-0">
+                    <tbody>
+                    {% for code, crit in band_data['criteria'].items() %}
+                        <tr>
+                            <td class="text-muted pe-2" style="width:5%">{{ code }}</td>
+                            <td style="width:50%">{{ criterion_map.get(code, code) }}</td>
+                            <td style="width:20%">
+                                {% set a = crit.get('assessment', '') %}
+                                {% if a == 'Strong evidence' %}
+                                    <span class="badge bg-success small">{{ a }}</span>
+                                {% elif a == 'Partial evidence' %}
+                                    <span class="badge bg-warning text-dark small">{{ a }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary small">{{ a or '—' }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small" style="width:25%">{{ crit.get('commentary', '') }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </div>
+        {% endfor %}
+        {% if llm_result.get('caveats') %}
+            <div class="small text-muted border-top pt-2 mt-2 fst-italic">{{ llm_result['caveats'] }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{# ── FEEDBACK SUGGESTIONS ── #}
+{% if llm_feedback %}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <i class="fas fa-comment-dots fa-fw me-1"></i>
+        <strong>Feedback suggestions</strong>
+        <span class="badge bg-secondary ms-2 small fw-normal">AI-generated — for guidance only</span>
+    </div>
+    <div class="card-body">
+        {% if record.llm_feedback_failed %}
+            <div class="alert alert-danger py-2 small">
+                <i class="fas fa-exclamation-circle fa-fw"></i>
+                Feedback generation failed: {{ record.llm_feedback_failure_reason or "Unknown error" }}
+            </div>
+        {% else %}
+            {% if llm_feedback.get('positive_feedback') %}
+            <h6 class="text-success small text-uppercase">What was done well</h6>
+            <ul class="small mb-3">
+                {% for item in llm_feedback['positive_feedback'] %}
+                    <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% if llm_feedback.get('improvements') %}
+            <h6 class="text-primary small text-uppercase">Suggestions for improvement</h6>
+            <ul class="small mb-0">
+                {% for item in llm_feedback['improvements'] %}
+                    <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{# ── ERRORS (admin only) ── #}
+{% if errors and can_admin %}
+<div class="card border-danger mb-3">
+    <div class="card-header bg-danger text-white">
+        <i class="fas fa-bug fa-fw me-1"></i> Pipeline errors (admin view)
+    </div>
+    <div class="card-body small">
+        {% for err in errors %}
+            <div class="mb-1">
+                <strong>{{ err.get('stage', '?') }}:</strong>
+                [{{ err.get('type', '') }}] {{ err.get('message', '') }}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{# ── ADMIN ACTIONS ── #}
+{% if can_admin %}
+<div class="card border-secondary mb-3">
+    <div class="card-header bg-light text-muted small">
+        <i class="fas fa-tools fa-fw me-1"></i> Admin actions
+    </div>
+    <div class="card-body d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('documents.clear_language_analysis', sid=record.id) }}"
+           class="btn btn-sm btn-outline-danger"
+           onclick="return confirm('Clear the LLM analysis results? This will also remove the processed report.')">
+            <i class="fas fa-trash fa-fw me-1"></i> Clear results
+        </a>
+        <a href="{{ url_for('documents.launch_language_analysis', sid=record.id) }}"
+           class="btn btn-sm btn-outline-primary"
+           onclick="return confirm('Clear results and re-run language analysis?')">
+            <i class="fas fa-redo fa-fw me-1"></i> Clear and re-run
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{% endif %}{# end language_analysis_complete #}
+{% endblock %}

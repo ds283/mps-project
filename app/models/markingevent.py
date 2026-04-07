@@ -611,8 +611,10 @@ class SubmitterReportWorkflowStates:
 
     REQUIRES_CONVENOR_INTERVENTION (7)
         Blocking state used in two scenarios:
-          1. Turnitin: turnitin_score >= 25 and turnitin_resolved=False. The convenor must
-             review the Turnitin report and record a resolution before marking can proceed.
+          1. Risk factors: one or more risk factors on the SubmissionRecord are present and
+             unresolved (e.g. elevated Turnitin score, AI use metrics, AI compliance statement,
+             document length excess, or word count discrepancy). The convenor must review and
+             resolve all risk factors before marking can proceed.
              Resolution transitions back to READY_TO_DISTRIBUTE.
           2. Conflicting moderation: multiple ModeratorReport instances have been submitted with
              different grades. The convenor must accept one via the Accept button in the inspector.
@@ -650,15 +652,15 @@ class SubmitterReportWorkflowStates:
         `completed` flag is set True.  These flags enable efficient querying and surface the
         conflation call-to-action in the UI.
 
-    TURNITIN OVERRIDE
-    =================
-    At any point, if a SubmissionRecord's turnitin_score >= 25 and the SubmitterReport's
-    turnitin_resolved=False, the SubmitterReport must be in REQUIRES_CONVENOR_INTERVENTION and
-    cannot advance until turnitin_resolved is set True by a convenor.
+    RISK FACTOR OVERRIDE
+    ====================
+    At any point, if a SubmissionRecord has one or more unresolved risk factors
+    (SubmissionRecord.has_unresolved_risk_factors is True), the SubmitterReport must be in
+    REQUIRES_CONVENOR_INTERVENTION and cannot advance until all risk factors are resolved.
 
     This invariant is enforced in both advance_submitter_report() and _check_tolerance_and_grade()
-    in app/tasks/markingevent.py: both functions check the Turnitin state as their first action
-    and redirect to REQUIRES_CONVENOR_INTERVENTION if needed.
+    in app/tasks/markingevent.py: both functions check has_unresolved_risk_factors as their first
+    action and redirect to REQUIRES_CONVENOR_INTERVENTION if needed.
     """
 
     NOT_READY = 999
@@ -672,11 +674,10 @@ class SubmitterReportWorkflowStates:
     # REQUIRES_CONVENOR_INTERVENTION: blocking state.
     # Used in two scenarios:
     #
-    # 1. TURNITIN: A SubmitterReport enters this state when turnitin_score >= 25 and
-    #    turnitin_resolved=False, because the convenor must review the Turnitin similarity
-    #    report before marking can proceed.  It CANNOT be advanced to AWAITING_GRADING_REPORTS
-    #    or any subsequent state until turnitin_resolved is set to True by a convenor (via the
-    #    convenor.resolve_turnitin_issue view).  Resolution transitions the report back to
+    # 1. RISK FACTORS: A SubmitterReport enters this state when the parent SubmissionRecord has
+    #    one or more unresolved risk factors.  It CANNOT be advanced to AWAITING_GRADING_REPORTS
+    #    or any subsequent state until all risk factors are resolved by a convenor (via the
+    #    convenor.resolve_risk_factors view).  Resolution transitions the report back to
     #    READY_TO_DISTRIBUTE.
     #
     # 2. CONFLICTING MODERATION: Entered when multiple ModeratorReport instances with different
@@ -685,7 +686,7 @@ class SubmitterReportWorkflowStates:
     #    via the Accept button in the inspector.  Accepting transitions the SubmitterReport to
     #    READY_TO_SIGN_OFF and sets accepted_moderator_report_id.
     #
-    # The Turnitin invariant is enforced in advance_submitter_report() and
+    # The risk factor invariant is enforced in advance_submitter_report() and
     # _check_tolerance_and_grade() in app/tasks/markingevent.py.
     REQUIRES_CONVENOR_INTERVENTION = 7
     # READY_TO_GENERATE_GRADE = 8
@@ -773,28 +774,6 @@ class SubmitterReport(db.Model, EditingMetadataMixin):
     # feedback emails
     feedback_emails = db.relationship(
         "EmailLog", secondary=submitter_feedback_to_email_log, lazy="dynamic"
-    )
-
-    # TURNITIN REVIEW
-    # NOTE: A SubmitterReport with turnitin_score >= 25 and turnitin_resolved=False
-    # MUST be placed in REQUIRES_CONVENOR_INTERVENTION state and cannot advance to
-    # AWAITING_GRADING_REPORTS (or any subsequent state) until this field is set True.
-
-    # has the turnitin score been reviewed and resolved by a convenor?
-    turnitin_resolved = db.Column(db.Boolean(), default=False, nullable=False)
-
-    # optional comment entered by the convenor explaining their review decision
-    turnitin_resolved_comment = db.Column(db.Text(), nullable=True)
-
-    # timestamp when the resolution was recorded
-    turnitin_resolved_timestamp = db.Column(db.DateTime(), nullable=True)
-
-    # which user resolved the turnitin issue?
-    turnitin_resolved_id = db.Column(
-        db.Integer(), db.ForeignKey("users.id"), nullable=True
-    )
-    turnitin_resolved_by = db.relationship(
-        "User", foreign_keys=[turnitin_resolved_id], uselist=False
     )
 
     # flag set when the MarkingReport grades are out of tolerance and moderation is required.

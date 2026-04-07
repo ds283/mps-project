@@ -3692,6 +3692,15 @@ def marking_form(report_id):
         _filter_set = {_user_role}
     filtered_attachments = [pa for pa in workflow.attachments if pa.has_role_access_for_set(_filter_set)]
 
+    # Prepare LLM feedback suggestions for display on the marking form
+    llm_feedback_positive = []
+    llm_feedback_improvements = []
+    if record.language_analysis_complete:
+        _la = record.language_analysis_data
+        _fb = _la.get("llm_feedback", {})
+        llm_feedback_positive = _fb.get("positive_feedback", []) or []
+        llm_feedback_improvements = _fb.get("improvements", []) or []
+
     return render_template_context(
         "faculty/marking_form.html",
         report=report,
@@ -3713,6 +3722,8 @@ def marking_form(report_id):
         attendance_total=attendance_total,
         attendance_percent=attendance_percent,
         filtered_attachments=filtered_attachments,
+        llm_feedback_positive=llm_feedback_positive,
+        llm_feedback_improvements=llm_feedback_improvements,
         url=url,
         submit_url=url_for("faculty.marking_form", report_id=report_id, url=url),
     )

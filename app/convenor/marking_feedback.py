@@ -315,6 +315,15 @@ def edit_project_config(pid):
     EditProjectConfigForm = EditProjectConfigFormFactory(config)
     form = EditProjectConfigForm(obj=config)
 
+    if request.method == "GET":
+        # word_count_tolerance is stored as a fraction (e.g. 0.15) but displayed as a percentage.
+        # The effective value (inherited from ProjectClass when None) is shown as the placeholder/default.
+        stored_tolerance = config.word_count_tolerance
+        if stored_tolerance is not None:
+            form.word_count_tolerance.data = float(stored_tolerance) * 100.0
+        else:
+            form.word_count_tolerance.data = None  # show placeholder; effective value from pclass
+
     if form.validate_on_submit():
         now = datetime.now()
 
@@ -345,6 +354,13 @@ def edit_project_config(pid):
         config.CATS_marking = form.CATS_marking.data
         config.CATS_moderation = form.CATS_moderation.data
         config.CATS_presentation = form.CATS_presentation.data
+
+        # Document limit overrides: store None when not overriding (inherit from ProjectClass)
+        config.word_limit_enabled = form.word_limit_enabled.data if form.word_limit_enabled.data else None
+        config.word_limit = form.word_limit.data
+        config.page_limit_enabled = form.page_limit_enabled.data if form.page_limit_enabled.data else None
+        config.page_limit = form.page_limit.data
+        config.word_count_tolerance = (form.word_count_tolerance.data / 100.0) if form.word_count_tolerance.data is not None else None
 
         if hasattr(form, "canvas_module_id"):
             config.canvas_module_id = form.canvas_module_id.data

@@ -177,6 +177,26 @@ class ProjectClass(
     # display presentation information in UI?
     display_presentations = db.Column(db.Boolean(), default=True)
 
+    # DOCUMENT LIMITS
+    # At most one of word_limit_enabled / page_limit_enabled may be True at a time.
+
+    # is a word-count limit enforced for submissions in this project class?
+    word_limit_enabled = db.Column(db.Boolean(), default=False)
+
+    # maximum permitted word count (used when word_limit_enabled is True)
+    word_limit = db.Column(db.Integer(), nullable=True)
+
+    # is a page-count limit enforced for submissions in this project class?
+    page_limit_enabled = db.Column(db.Boolean(), default=False)
+
+    # maximum permitted page count (used when page_limit_enabled is True)
+    page_limit = db.Column(db.Integer(), nullable=True)
+
+    # tolerance for discrepancy between student-reported and measured word count, expressed
+    # as a fraction (e.g. 0.15 means 15%).  A discrepancy above this threshold is flagged
+    # as a risk factor requiring convenor attention.
+    word_count_tolerance = db.Column(db.Numeric(5, 3), default=0.15)
+
     # how many initial_choices should students make?
     initial_choices = db.Column(db.Integer())
 
@@ -784,6 +804,23 @@ class ProjectClassConfig(
 
     # display presentation information in UI?
     display_presentations = db.Column(db.Boolean())
+
+    # DOCUMENT LIMITS (local overrides; None means inherit from ProjectClass)
+
+    # local override for word-count limit flag
+    word_limit_enabled = db.Column(db.Boolean(), nullable=True)
+
+    # local override for word count limit value
+    word_limit = db.Column(db.Integer(), nullable=True)
+
+    # local override for page-count limit flag
+    page_limit_enabled = db.Column(db.Boolean(), nullable=True)
+
+    # local override for page count limit value
+    page_limit = db.Column(db.Integer(), nullable=True)
+
+    # local override for word count discrepancy tolerance
+    word_count_tolerance = db.Column(db.Numeric(5, 3), nullable=True)
 
     # CANVAS INTEGRATION
 
@@ -1911,6 +1948,39 @@ class ProjectClassConfig(
             and self.canvas_module_id is not None
             and self.canvas_login is not None
         )
+
+    # EFFECTIVE DOCUMENT LIMIT ACCESSORS
+    # Return the local override when set (non-None); otherwise fall back to the ProjectClass default.
+
+    @property
+    def effective_word_limit_enabled(self) -> bool:
+        if self.word_limit_enabled is not None:
+            return bool(self.word_limit_enabled)
+        return bool(self.project_class.word_limit_enabled)
+
+    @property
+    def effective_page_limit_enabled(self) -> bool:
+        if self.page_limit_enabled is not None:
+            return bool(self.page_limit_enabled)
+        return bool(self.project_class.page_limit_enabled)
+
+    @property
+    def effective_word_limit(self):
+        if self.word_limit is not None:
+            return self.word_limit
+        return self.project_class.word_limit
+
+    @property
+    def effective_page_limit(self):
+        if self.page_limit is not None:
+            return self.page_limit
+        return self.project_class.page_limit
+
+    @property
+    def effective_word_count_tolerance(self):
+        if self.word_count_tolerance is not None:
+            return self.word_count_tolerance
+        return self.project_class.word_count_tolerance or 0.15
 
     @property
     def canvas_root_URL(self):

@@ -427,68 +427,77 @@ def submitter_reports_ajax(workflow_id):
 @roles_accepted("faculty", "admin", "root", "office", "convenor")
 def resolve_turnitin_issue(submitter_report_id):
     """
-    GET:  Display Turnitin score details and a comment form for the convenor to record
-          their review decision for a SubmitterReport with similarity score >= 25%.
-    POST: Set turnitin_resolved=True, record the comment, timestamp and resolving user,
-          then transition the SubmitterReport from REQUIRES_CONVENOR_INTERVENTION back to
-          READY_TO_DISTRIBUTE if it is currently in that blocking state.
-
-    NOTE: A SubmitterReport in REQUIRES_CONVENOR_INTERVENTION cannot proceed to
-    AWAITING_GRADING_REPORTS or any subsequent state until this resolution is recorded.
+    Redirect to the new resolve_risk_factors view.
+    This route is retained for URL compatibility but the feature has been superseded.
     """
     sr: SubmitterReport = SubmitterReport.query.get_or_404(submitter_report_id)
-    workflow: MarkingWorkflow = sr.workflow
-    event: MarkingEvent = workflow.event
-    pclass: ProjectClass = event.pclass
+    url = request.args.get("url", None)
+    text = request.args.get("text", "Submitter reports")
+    kwargs = {"record_id": sr.record_id, "text": text}
+    if url:
+        kwargs["url"] = url
+    return redirect(url_for("convenor.resolve_risk_factors", **kwargs))
+
+
+@convenor.route("/resolve-risk-factors/<int:record_id>", methods=["GET", "POST"])
+@roles_accepted("faculty", "admin", "root", "office", "convenor")
+def resolve_risk_factors(record_id):
+    """
+    Display and resolve risk factors for a SubmissionRecord.
+
+    GET:  Show a form listing all present risk factors with resolution checkboxes and annotation fields.
+    POST: Record resolution for each checked factor, then re-evaluate SubmitterReport lifecycle states.
+    """
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(record_id)
+    period: SubmissionPeriodRecord = record.period
+    pclass: ProjectClass = period.config.project_class
 
     if not validate_is_convenor(pclass, allow_roles=["office"]):
         return redirect(redirect_url())
 
     url = request.args.get(
         "url",
-        url_for("convenor.submitter_reports_inspector", workflow_id=workflow.id),
+        url_for("convenor.marking_events_inspector", pclass_id=pclass.id),
     )
-    text = request.args.get("text", "Submitter reports")
+    text = request.args.get("text", "Back")
 
-    form = ResolveTurnitinForm(request.form)
-
-    if form.validate_on_submit():
+    if request.method == "POST":
         try:
-            sr.turnitin_resolved = True
-            sr.turnitin_resolved_comment = form.comment.data
-            sr.turnitin_resolved_timestamp = datetime.now()
-            sr.turnitin_resolved_id = current_user.id
+            # Process each risk factor type: resolve if the corresponding checkbox is checked
+            for factor_type in SubmissionRecord.ALL_RISK_TYPES:
+                checked = request.form.get(f"resolve_{factor_type}") == "1"
+                if checked:
+                    annotation = request.form.get(f"annotation_{factor_type}", "").strip() or None
+                    record.resolve_risk_factor(factor_type, current_user, annotation)
 
             log_db_commit(
-                f"Convenor resolved Turnitin concern for SubmitterReport id={sr.id} "
-                f"(student: {sr.student.user.name}, workflow: {workflow.name})",
+                f"Convenor resolved risk factors for SubmissionRecord id={record_id} "
+                f"(student: {record.owner.student.user.name if record.owner else 'unknown'})",
                 project_classes=pclass,
             )
         except SQLAlchemyError as e:
             db.session.rollback()
-            current_app.logger.exception(
-                "SQLAlchemyError in resolve_turnitin_issue", exc_info=e
-            )
+            current_app.logger.exception("SQLAlchemyError in resolve_risk_factors", exc_info=e)
             flash("A database error occurred. Please try again.", "danger")
             return redirect(url)
 
-        # Re-evaluate the lifecycle state for all SubmitterReports on this submission record.
-        # advance_marking_workflow handles both pre-distribution (→ READY_TO_DISTRIBUTE) and
-        # mid-lifecycle (delegates to advance_submitter_report) Turnitin resolution cases.
+        # Re-evaluate SubmitterReport lifecycle states for this record
         celery = current_app.extensions["celery"]
         advance_wf = celery.tasks["app.tasks.markingevent.advance_marking_workflow"]
-        advance_wf.apply_async(args=[sr.record.id])
+        advance_wf.apply_async(args=[record_id])
 
-        flash("Turnitin resolution recorded successfully.", "success")
+        flash("Risk factor resolutions recorded successfully.", "success")
         return redirect(url)
 
+    # Prepare display items (all logic in Python, template is purely presentational)
+    display_items = record.risk_factor_display_items()
+
     return render_template_context(
-        "convenor/markingevent/resolve_turnitin.html",
-        form=form,
-        report=sr,
-        workflow=workflow,
-        event=event,
+        "convenor/markingevent/resolve_risk_factors.html",
+        record=record,
+        period=period,
         pclass=pclass,
+        display_items=display_items,
         url=url,
         text=text,
     )
@@ -1364,7 +1373,7 @@ def event_marking_workflows_inspector(event_id):
                 text="Marking workflows",
             )
 
-            # CTA for unresolved high similarity scores
+            # CTA for unresolved risk factors
             unresolved = (
                 db.session.query(SubmitterReport)
                 .join(
@@ -1372,8 +1381,7 @@ def event_marking_workflows_inspector(event_id):
                 )
                 .filter(
                     SubmitterReport.workflow_id == workflow.id,
-                    SubmissionRecord.turnitin_score >= 25,
-                    SubmitterReport.turnitin_resolved == False,  # noqa: E712
+                    SubmitterReport.workflow_state == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
                 )
                 .count()
             )
@@ -1382,15 +1390,15 @@ def event_marking_workflows_inspector(event_id):
                 actions.append(
                     ConvenorAction(
                         severity="warning",
-                        title=f"Turnitin review required: {workflow.name}",
+                        title=f"Risk factors require review: {workflow.name}",
                         description=(
                             f"{n} submitter report{'s' if n != 1 else ''} in this workflow "
-                            f"{'have' if n != 1 else 'has'} a Turnitin similarity score \u226525% "
+                            f"{'have' if n != 1 else 'has'} unresolved risk factors "
                             f"and require{'s' if n == 1 else ''} convenor review before marking "
                             f"can proceed."
                         ),
                         action_url=workflow_url,
-                        action_label="Review Turnitin scores",
+                        action_label="Review risk factors",
                     )
                 )
 
@@ -2841,9 +2849,11 @@ def calculate_conflation(event_id):
 
 def _propagate_grade_to_records(event: MarkingEvent, target_key: str, grade_field: str,
                                  generated_id_field: str, generated_ts_field: str,
+                                 event_id_field: str,
                                  pclass: ProjectClass) -> tuple[int, str | None]:
     """
     Copy the named target value from each ConflationReport to the given SubmissionRecord field.
+    Also records which MarkingEvent was the source of the grade in event_id_field.
 
     Returns (count_updated, error_message).  error_message is None on success.
     """
@@ -2861,6 +2871,7 @@ def _propagate_grade_to_records(event: MarkingEvent, target_key: str, grade_fiel
         setattr(record, grade_field, result[target_key])
         setattr(record, generated_id_field, current_user.id)
         setattr(record, generated_ts_field, now)
+        setattr(record, event_id_field, event.id)
         updated += 1
 
     return updated, None
@@ -2880,7 +2891,8 @@ def propagate_report_grade(event_id):
 
     try:
         count, err = _propagate_grade_to_records(
-            event, "report", "report_grade", "report_generated_id", "report_generated_timestamp", pclass
+            event, "report", "report_grade", "report_generated_id", "report_generated_timestamp",
+            "report_event_id", pclass
         )
         if err:
             flash(err, "error")
@@ -2914,7 +2926,8 @@ def propagate_supervision_grade(event_id):
 
     try:
         count, err = _propagate_grade_to_records(
-            event, "supervisor", "supervision_grade", "supervision_generated_id", "supervision_generated_timestamp", pclass
+            event, "supervisor", "supervision_grade", "supervision_generated_id", "supervision_generated_timestamp",
+            "supervision_event_id", pclass
         )
         if err:
             flash(err, "error")
@@ -2948,7 +2961,8 @@ def propagate_presentation_grade(event_id):
 
     try:
         count, err = _propagate_grade_to_records(
-            event, "presentation", "presentation_grade", "presentation_generated_id", "presentation_generated_timestamp", pclass
+            event, "presentation", "presentation_grade", "presentation_generated_id", "presentation_generated_timestamp",
+            "presentation_event_id", pclass
         )
         if err:
             flash(err, "error")

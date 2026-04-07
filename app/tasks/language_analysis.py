@@ -979,6 +979,18 @@ def _validate_feedback_response(data: dict) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def _dispatch_process_report(record_id: int) -> None:
+    """Fire-and-forget dispatch of process_report.process after language analysis completes."""
+    try:
+        celery = current_app.extensions["celery"]
+        task = celery.tasks["app.tasks.process_report.process"]
+        task.apply_async(args=[record_id])
+    except Exception as exc:
+        current_app.logger.exception(
+            f"Failed to dispatch process_report for record_id={record_id}", exc_info=exc
+        )
+
+
 def register_language_analysis_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -1570,7 +1582,8 @@ def register_language_analysis_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def finalize(self, record_id: int):
         """
-        Stage 5 (default queue): mark language analysis as complete.
+        Stage 5 (default queue): mark language analysis as complete, compute risk factors,
+        and trigger processed-report generation.
         """
         try:
             record: SubmissionRecord = (
@@ -1595,6 +1608,16 @@ def register_language_analysis_tasks(celery):
 
         record.language_analysis_complete = True
 
+        # Compute/refresh risk factors using current analysis data and project configuration.
+        try:
+            config = record.period.config if record.period else None
+            record.compute_risk_factors(config)
+        except Exception as exc:
+            # Non-fatal: log and continue — analysis results are still available.
+            current_app.logger.exception(
+                "Exception computing risk factors in language_analysis.finalize", exc_info=exc
+            )
+
         try:
             log_db_commit(
                 "Language analysis workflow completed",
@@ -1610,6 +1633,10 @@ def register_language_analysis_tasks(celery):
                 "SQLAlchemyError in language_analysis.finalize commit", exc_info=exc
             )
             raise self.retry()
+
+        # Trigger (re-)generation of the processed report now that LLM data is available.
+        if record.report is not None:
+            _dispatch_process_report(record_id)
 
     # -----------------------------------------------------------------------
 

@@ -2206,6 +2206,11 @@ def add_pclass():
                 advertise_research_group=form.advertise_research_group.data,
                 use_project_tags=form.use_project_tags.data,
                 force_tag_groups=form.force_tag_groups.data,
+                word_limit_enabled=form.word_limit_enabled.data,
+                word_limit=form.word_limit.data,
+                page_limit_enabled=form.page_limit_enabled.data,
+                page_limit=form.page_limit.data,
+                word_count_tolerance=(form.word_count_tolerance.data / 100.0) if form.word_count_tolerance.data is not None else 0.15,
                 card_text_noninitial=None,
                 card_text_normal=None,
                 card_text_optional=None,
@@ -2395,6 +2400,11 @@ def edit_pclass(id):
         pclass.CATS_presentation = form.CATS_presentation.data
         pclass.keep_hourly_popularity = form.keep_hourly_popularity.data
         pclass.keep_daily_popularity = form.keep_daily_popularity.data
+        pclass.word_limit_enabled = form.word_limit_enabled.data
+        pclass.word_limit = form.word_limit.data
+        pclass.page_limit_enabled = form.page_limit_enabled.data
+        pclass.page_limit = form.page_limit.data
+        pclass.word_count_tolerance = (form.word_count_tolerance.data / 100.0) if form.word_count_tolerance.data is not None else 0.15
         pclass.last_edit_id = current_user.id
         pclass.last_edit_timestamp = datetime.now()
 
@@ -2472,6 +2482,12 @@ def edit_pclass(id):
 
             if form.force_tag_groups.data is None:
                 form.force_tag_groups.data = []
+
+            # word_count_tolerance is stored as a fraction (e.g. 0.15) but displayed as a percentage
+            if pclass.word_count_tolerance is not None:
+                form.word_count_tolerance.data = float(pclass.word_count_tolerance) * 100.0
+            else:
+                form.word_count_tolerance.data = 15.0
 
     return render_template_context(
         "admin/edit_project_class.html",

@@ -630,6 +630,21 @@ def enter_turnitin_score(record_id):
             flash("A database error occurred. Please try again.", "danger")
             return redirect(url)
 
+        # Recompute risk factors now that the Turnitin score has changed.
+        record.compute_risk_factors(period.config)
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception(
+                "SQLAlchemyError committing risk factors in enter_turnitin_score", exc_info=e
+            )
+
+        # Re-evaluate all SubmitterReport lifecycle states for this record.
+        celery = current_app.extensions["celery"]
+        advance_wf = celery.tasks["app.tasks.markingevent.advance_marking_workflow"]
+        advance_wf.apply_async(args=[record_id])
+
         flash("Turnitin score recorded successfully.", "success")
         return redirect(url)
 

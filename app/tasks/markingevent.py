@@ -595,14 +595,42 @@ def register_markingevent_tasks(celery):
                     # to handle mid-lifecycle cases (MarkingReports already submitted/signed off).
                     advance_submitter_report(sr)
 
-                    # If advance_submitter_report did not change the state (no MarkingReports
-                    # submitted yet), the SR is still pre-distribution — move to READY_TO_DISTRIBUTE.
+                    # If advance_submitter_report did not change the state (not all MarkingReports
+                    # submitted yet), determine the correct state from MarkingReport data:
+                    # - any MarkingReport already distributed → AWAITING_GRADING_REPORTS
+                    # - nothing distributed yet → READY_TO_DISTRIBUTE
                     if (
                         sr.workflow_state
                         == SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
                     ):
-                        sr.workflow_state = SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                        reports = sr.marking_reports.all()
+                        if any(r.distributed for r in reports):
+                            sr.workflow_state = (
+                                SubmitterReportWorkflowStates.AWAITING_GRADING_REPORTS
+                            )
+                        else:
+                            sr.workflow_state = (
+                                SubmitterReportWorkflowStates.READY_TO_DISTRIBUTE
+                            )
 
+                    advanced += 1
+
+                elif (
+                    record.has_unresolved_risk_factors
+                    and sr.workflow_state
+                    not in (
+                        SubmitterReportWorkflowStates.NOT_READY,
+                        SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION,
+                        SubmitterReportWorkflowStates.COMPLETED,
+                    )
+                ):
+                    # Risk factors present but SR has already advanced past NOT_READY.
+                    # Enforce the invariant: move back to REQUIRES_CONVENOR_INTERVENTION.
+                    # COMPLETED SRs are intentionally excluded — completed records are not
+                    # reopened retroactively when new risk factors are detected.
+                    sr.workflow_state = (
+                        SubmitterReportWorkflowStates.REQUIRES_CONVENOR_INTERVENTION
+                    )
                     advanced += 1
 
             if advanced > 0:

@@ -1129,3 +1129,19 @@ def register_canvas_tasks(celery):
                 "SQLAlchemyError in fetch_turnitin_data_for_record", exc_info=e
             )
             raise self.retry()
+
+        # Recompute risk factors now that the Turnitin score has changed.
+        try:
+            record_config = record.period.config if record.period else None
+            record.compute_risk_factors(record_config)
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.exception(
+                "fetch_turnitin_data_for_record: error recomputing risk factors", exc_info=exc
+            )
+
+        # Re-evaluate all SubmitterReport lifecycle states for this record.
+        celery = current_app.extensions["celery"]
+        advance_wf = celery.tasks["app.tasks.markingevent.advance_marking_workflow"]
+        advance_wf.apply_async(args=[rid])

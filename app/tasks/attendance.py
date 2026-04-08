@@ -50,13 +50,17 @@ def register_attendance_tasks(celery):
 
         # check once: bail immediately on non-working days
         if today in holiday_calendar:
-            msg = {"msg": f"Today ({today}) is a UK holiday, skipping attendance prompts"}
+            msg = {
+                "msg": f"Today ({today}) is a UK holiday, skipping attendance prompts"
+            }
             print(msg["msg"])
             self.update_state(state=states.SUCCESS, meta=msg)
             return msg
 
         if not is_busday(today):
-            msg = {"msg": f"Today ({today}) is not a working day, skipping attendance prompts"}
+            msg = {
+                "msg": f"Today ({today}) is not a working day, skipping attendance prompts"
+            }
             print(msg["msg"])
             self.update_state(state=states.SUCCESS, meta=msg)
             return msg
@@ -119,9 +123,7 @@ def register_attendance_tasks(celery):
         try:
             events: List[SupervisionEvent] = (
                 db.session.query(SupervisionEvent)
-                .join(
-                    SubmissionRole, SubmissionRole.id == SupervisionEvent.owner_id
-                )
+                .join(SubmissionRole, SubmissionRole.id == SupervisionEvent.owner_id)
                 .join(
                     SubmissionRecord,
                     SubmissionRecord.id == SupervisionEvent.sub_record_id,
@@ -219,7 +221,6 @@ def register_attendance_tasks(celery):
             creator=config.project_class.convenor.user,
         )
         db.session.add(workflow)
-        db.session.flush()
 
         for event, target_time, delta_time in qualifying:
             record: SubmissionRecord = event.sub_record

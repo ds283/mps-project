@@ -1195,7 +1195,9 @@ class ScheduledTaskMixin:
     )
 
     tasks_available = [
-        ("app.tasks.email.prune_email_log", "Prune email log"),
+        ("app.tasks.email.prune_email_log_and_workflows", "Prune email log and workflows"),
+        ("app.tasks.email.prune_email_log", "Prune email log only"),
+        ("app.tasks.email.prune_email_workflows", "Prune email workflows only"),
         (
             "app.tasks.email.prune_email_template_labels",
             "Prune unused email template labels",

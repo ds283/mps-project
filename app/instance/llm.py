@@ -17,3 +17,7 @@ OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 # OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:8b")
 # OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:32b")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:70b")
+
+# Context window size (tokens) for the Ollama model.
+# 12288 has been confirmed to work reliably on the current hardware.
+OLLAMA_CONTEXT_SIZE = int(os.environ.get("OLLAMA_CONTEXT_SIZE", "12288"))

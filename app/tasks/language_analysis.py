@@ -625,6 +625,48 @@ _TRUNCATION_TAIL_WORDS = 6000
 _LLM_RETRY_ATTEMPTS = 3
 _LLM_RETRY_DELAY = 5  # seconds
 
+# ---------------------------------------------------------------------------
+# Context-window-aware chunking constants.
+#
+# Token estimates use 1.4 tokens/word — a conservative BPE approximation
+# for academic English prose.  All overhead figures are generous upper-bound
+# estimates to avoid exceeding the context window.
+# ---------------------------------------------------------------------------
+
+_TOKENS_PER_WORD = 1.4
+
+# Overhead tokens for the full single-pass assessment call:
+#   system prompt (~1 200) + structured response with 26 criteria (~2 000).
+_SINGLE_PASS_OVERHEAD_TOKENS = 3200
+
+# Overhead tokens for each map-phase (evidence extraction) chunk call:
+#   small system prompt (~400) + evidence array response (~400).
+_MAP_PASS_OVERHEAD_TOKENS = 800
+
+# Overhead tokens for the synthesis (reduce) pass:
+#   full system prompt (~1 200) + full response (~2 000) + safety margin.
+_SYNTHESIS_OVERHEAD_TOKENS = 3500
+
+# Minimum num_ctx to request for the synthesis pass even when OLLAMA_CONTEXT_SIZE
+# is set to a smaller value, to give the evidence summary enough room.
+_SYNTHESIS_MIN_CTX = 8192
+
+# Overhead tokens for the dedicated metadata extraction call:
+#   small system prompt (~250) + small schema response (~250).
+_METADATA_OVERHEAD_TOKENS = 500
+
+# Overhead tokens for a single feedback chunk call:
+#   small system prompt (~200) + feedback array response (~200).
+_FEEDBACK_OVERHEAD_TOKENS = 400
+
+# Maximum evidence entries retained per criterion code after map-phase
+# aggregation.  Minority-polarity entries are always kept (one each).
+_MAX_EVIDENCE_PER_CRITERION = 3
+
+# Excerpt character limit applied when the synthesis evidence text would
+# otherwise overflow the synthesis context window.
+_MAX_EXCERPT_CHARS = 150
+
 
 def _truncate_text(text: str) -> tuple[str, bool]:
     """
@@ -998,6 +1040,597 @@ def _validate_feedback_response(data: dict) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Shared LLM call helper.
+# ---------------------------------------------------------------------------
+
+
+def _call_llm(
+    client,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    schema: dict,
+    options: dict | None = None,
+    validate_fn=None,
+    label: str = "llm",
+) -> tuple[dict | None, str, Exception | None]:
+    """
+    Submit a prompt to the Ollama LLM with the standard retry logic.
+
+    Returns (parsed_result, last_accumulated_text, last_exception).
+    parsed_result is None if all attempts failed.
+    """
+    import ollama
+
+    accumulated = ""
+    last_exc: Exception | None = None
+    parsed_result: dict | None = None
+
+    for attempt in range(_LLM_RETRY_ATTEMPTS):
+        accumulated = ""
+        try:
+            kwargs: dict = dict(
+                model=model,
+                prompt=user_prompt,
+                system=system_prompt,
+                format=schema,
+                stream=True,
+            )
+            if options:
+                kwargs["options"] = options
+
+            stream = client.generate(**kwargs)
+            for chunk in stream:
+                if hasattr(chunk, "response"):
+                    accumulated += chunk.response
+                elif isinstance(chunk, dict):
+                    accumulated += chunk.get("response", "")
+
+            parsed = json.loads(accumulated)
+            if validate_fn is not None and not validate_fn(parsed):
+                raise ValueError(
+                    f"LLM response missing required keys; got: {list(parsed.keys())}"
+                )
+            parsed_result = parsed
+            last_exc = None
+            break
+
+        except ollama.ResponseError as exc:
+            last_exc = exc
+            status = getattr(exc, "status_code", 0)
+            if 400 <= status < 500:
+                current_app.logger.error(f"{label}: permanent HTTP {status} error: {exc}")
+                break
+            current_app.logger.warning(
+                f"{label}: transient HTTP error on attempt {attempt + 1}: {exc}"
+            )
+            if attempt < _LLM_RETRY_ATTEMPTS - 1:
+                time.sleep(_LLM_RETRY_DELAY)
+
+        except (json.JSONDecodeError, ValueError) as exc:
+            last_exc = exc
+            current_app.logger.warning(
+                f"{label}: JSON parse failure on attempt {attempt + 1}: {exc}"
+            )
+            if attempt < _LLM_RETRY_ATTEMPTS - 1:
+                time.sleep(_LLM_RETRY_DELAY)
+
+        except Exception as exc:
+            last_exc = exc
+            current_app.logger.warning(
+                f"{label}: transient error on attempt {attempt + 1}: {exc}"
+            )
+            if attempt < _LLM_RETRY_ATTEMPTS - 1:
+                time.sleep(_LLM_RETRY_DELAY)
+
+    return parsed_result, accumulated, last_exc
+
+
+# ---------------------------------------------------------------------------
+# Feedback deduplication helper.
+# ---------------------------------------------------------------------------
+
+
+def _deduplicate_feedback(items: list[str], max_items: int) -> list[str]:
+    """
+    Deduplicate feedback strings and return at most *max_items* entries.
+    Longer items are preferred as a proxy for specificity.
+    """
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        normalised = item.strip().lower()
+        if normalised not in seen:
+            seen.add(normalised)
+            unique.append(item.strip())
+    unique.sort(key=len, reverse=True)
+    return unique[:max_items]
+
+
+# ---------------------------------------------------------------------------
+# Regex patterns for metadata region location.
+# ---------------------------------------------------------------------------
+
+_PREFACE_HEADING_RE = re.compile(
+    r"^\s*(preface|personal\s+statement"
+    r"|declaration(?:\s+of\s+(?:originality|contribution))?"
+    r"|acknowledgements?(?:\s+and\s+contribution(?:\s+statement)?)?"
+    r"|contribution\s+statement|author.?s?\s+contribution"
+    r"|personal\s+contribution)\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+_AI_HEADING_RE = re.compile(
+    r"^\s*((?:use\s+of\s+)?(?:generative\s+)?ai(?:\s+tools?)?(?:\s+(?:statement|declaration|disclosure|policy|use))?"
+    r"|statement\s+on\s+(?:generative\s+)?ai(?:\s+use)?"
+    r"|declaration\s+on\s+(?:generative\s+)?ai(?:\s+use)?"
+    r"|chatgpt\s+(?:statement|use|policy)"
+    r"|large\s+language\s+model\s+(?:statement|use|policy))\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+_AI_KEYWORD_SENTENCE_RE = re.compile(
+    r"(?:[A-Z][^.!?\n]*)?"
+    r"(?:generative\s+ai|chatgpt|gpt-?\d*|large\s+language\s+model"
+    r"|github\s+copilot|claude\s+ai|gemini\s+ai|copilot\s+ai)"
+    r"[^.!?\n]*[.!?]",
+    re.IGNORECASE,
+)
+
+
+# ---------------------------------------------------------------------------
+# Metadata region extraction (regex-based location step).
+# ---------------------------------------------------------------------------
+
+
+def _extract_metadata_regions(text: str) -> str:
+    """
+    Locate candidate text regions for the dedicated metadata LLM call using regex.
+
+    Returns a condensed string containing:
+      - front matter up to the first chapter heading (or first 1 500 words),
+      - any paragraph block whose heading matches a preface pattern,
+      - any paragraph block whose heading matches an AI declaration pattern,
+      - fallback: sentences containing AI-related keywords if no heading was found.
+
+    This text is passed verbatim to the metadata LLM; it is never submitted to
+    the main assessment LLM.
+    """
+    paragraphs = [p for p in re.split(r"\n\s*\n", text) if p.strip()]
+
+    # Collect front matter: stop at "Chapter 1" / "Introduction" or after 1 500 words.
+    front_end_idx = len(paragraphs)
+    word_count = 0
+    for i, para in enumerate(paragraphs):
+        if re.match(
+            r"^\s*(chapter\s+1\b|1[.\s]\s*introduction\b|introduction\s*$)",
+            para,
+            re.IGNORECASE,
+        ):
+            front_end_idx = i
+            break
+        word_count += len(para.split())
+        front_end_idx = i + 1
+        if word_count >= 1500:
+            break
+
+    candidate_indices: set[int] = set(range(front_end_idx))
+
+    # Locate named preface and AI sections anywhere in the document.
+    for i, para in enumerate(paragraphs):
+        stripped = para.strip()
+        if not (_PREFACE_HEADING_RE.match(stripped) or _AI_HEADING_RE.match(stripped)):
+            continue
+        candidate_indices.add(i)
+        for j in range(i + 1, min(i + 25, len(paragraphs))):
+            body = paragraphs[j].strip()
+            # Stop when we reach what looks like the next section heading:
+            # a single short line without terminal punctuation.
+            is_next_heading = (
+                "\n" not in body
+                and len(body.split()) <= 10
+                and not body.endswith((".", ",", ";", ":", "?", "!"))
+            )
+            if is_next_heading and j > i + 1:
+                break
+            candidate_indices.add(j)
+
+    region_text = "\n\n".join(paragraphs[i] for i in sorted(candidate_indices))
+
+    # If no named AI section was found, append any AI-keyword sentences from the
+    # full document as a last-resort fallback.
+    ai_section_found = any(
+        _AI_HEADING_RE.match(paragraphs[i].strip()) for i in candidate_indices
+    )
+    if not ai_section_found:
+        ai_sentences = _AI_KEYWORD_SENTENCE_RE.findall(text)
+        if ai_sentences:
+            region_text += (
+                "\n\n---\n\nPossible AI use statements found elsewhere in document:\n"
+                + "\n".join(s.strip() for s in ai_sentences[:5])
+            )
+
+    return region_text
+
+
+# ---------------------------------------------------------------------------
+# Document chunking.
+# ---------------------------------------------------------------------------
+
+
+def _build_chunks(text: str, max_words: int) -> list[str]:
+    """
+    Split *text* into chunks of at most *max_words* words, breaking at paragraph
+    boundaries (double newlines) where possible.  Falls back to sentence
+    boundaries for paragraphs that individually exceed *max_words*.
+    """
+    paragraphs = [p for p in re.split(r"\n\s*\n", text) if p.strip()]
+    chunks: list[str] = []
+    current_paras: list[str] = []
+    current_words = 0
+
+    for para in paragraphs:
+        w = len(para.split())
+        if w > max_words:
+            # Oversized single paragraph — split at sentence boundaries.
+            if current_paras:
+                chunks.append("\n\n".join(current_paras))
+                current_paras, current_words = [], 0
+            sentences = re.split(r"(?<=[.!?])\s+", para)
+            for sent in sentences:
+                sw = len(sent.split())
+                if current_words + sw > max_words and current_paras:
+                    chunks.append("\n\n".join(current_paras))
+                    current_paras, current_words = [sent], sw
+                else:
+                    current_paras.append(sent)
+                    current_words += sw
+        elif current_words + w > max_words and current_paras:
+            chunks.append("\n\n".join(current_paras))
+            current_paras, current_words = [para], w
+        else:
+            current_paras.append(para)
+            current_words += w
+
+    if current_paras:
+        chunks.append("\n\n".join(current_paras))
+
+    return chunks
+
+
+# ---------------------------------------------------------------------------
+# Map-phase (chunk evidence extraction) helpers.
+# ---------------------------------------------------------------------------
+
+_LLM_CHUNK_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "evidence": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "criterion_code": {"type": "string"},
+                    "excerpt": {"type": "string"},
+                    "observation": {"type": "string"},
+                    "polarity": {
+                        "type": "string",
+                        "enum": ["supports", "undermines", "neutral"],
+                    },
+                },
+                "required": ["criterion_code", "excerpt", "observation", "polarity"],
+            },
+        },
+        "metadata_hits": {
+            "type": "object",
+            "properties": {
+                "stated_word_count_found": {"type": "boolean"},
+                "stated_word_count": {"type": ["integer", "null"]},
+                "genai_statement_found": {"type": "boolean"},
+                "genai_statement": {"type": "string"},
+                "preface_found": {"type": "boolean"},
+                "preface_precis": {"type": "string"},
+            },
+            "required": [
+                "stated_word_count_found",
+                "stated_word_count",
+                "genai_statement_found",
+                "genai_statement",
+                "preface_found",
+                "preface_precis",
+            ],
+        },
+    },
+    "required": ["evidence", "metadata_hits"],
+}
+
+
+def _build_chunk_system_prompt(chunk_idx: int, total_chunks: int) -> str:
+    """Compact system prompt for the map-phase evidence extraction call."""
+    criterion_lines = []
+    for band_idx, band in enumerate(GRADE_BANDS, start=1):
+        for crit_idx, criterion in enumerate(band["criteria"], start=1):
+            criterion_lines.append(f"  {band_idx}.{crit_idx}: {criterion}")
+    criterion_list = "\n".join(criterion_lines)
+
+    return f"""You are extracting evidence from a portion of a student project report.
+
+This is chunk {chunk_idx + 1} of {total_chunks}. Do NOT assess or classify the work overall.
+
+For each passage that is relevant to any of the criteria listed below, record one evidence entry:
+  - criterion_code: the numeric code from the list (e.g. "1.1", "3.4")
+  - excerpt: verbatim quote of at most 2 sentences from this chunk
+  - observation: one sentence explaining why the passage is relevant
+  - polarity: "supports" if the passage shows the criterion is met, "undermines" if it shows the criterion is not met, or "neutral"
+
+If no genuine evidence exists for a criterion in this chunk, do not record an entry for it. An empty evidence array is correct when the chunk contains no relevant passages.
+
+Also check metadata_hits for:
+  - A stated word count (e.g. "Word count: 12,345")
+  - A statement about generative AI use or non-use
+  - A preface or personal contribution statement
+
+## Criteria
+
+{criterion_list}"""
+
+
+def _build_chunk_user_prompt(chunk_text: str, chunk_idx: int, total_chunks: int) -> str:
+    return (
+        f"Please extract evidence from the following text "
+        f"(chunk {chunk_idx + 1} of {total_chunks}):\n\n---\n\n{chunk_text}\n\n---"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Metadata extraction helpers.
+# ---------------------------------------------------------------------------
+
+_LLM_METADATA_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "stated_word_count_found": {"type": "boolean"},
+        "stated_word_count": {"type": ["integer", "null"]},
+        "genai_statement_found": {"type": "boolean"},
+        "genai_statement": {"type": "string"},
+        "preface_found": {"type": "boolean"},
+        "preface_precis": {"type": "string"},
+    },
+    "required": [
+        "stated_word_count_found",
+        "stated_word_count",
+        "genai_statement_found",
+        "genai_statement",
+        "preface_found",
+        "preface_precis",
+    ],
+}
+
+
+def _build_metadata_system_prompt() -> str:
+    return """You are extracting structured metadata from a student project report.
+
+Your task is to identify and extract the following items, if present in the provided text:
+
+1. **Stated word count**: An explicit word count declared by the student (e.g. under a label such as "Word count:", "Total word count:", or similar). Record the integer value if found.
+
+2. **Generative AI statement**: Any statement about the student's use — or explicit non-use — of generative AI tools such as ChatGPT, GitHub Copilot, or similar. Copy the verbatim text of the statement, or its first sentence if it is very long. This is a personal declaration by the student, not a reference to AI in the domain of study.
+
+3. **Preface / personal contribution statement**: A section (typically headed "Preface", "Personal Statement", "Declaration of Contribution", or similar) describing the student's personal contribution to the project work. Provide a 1–3 sentence précis of what the student claims they personally did.
+
+Record items not found as: stated_word_count_found = false, stated_word_count = null, genai_statement_found = false, genai_statement = "", preface_found = false, preface_precis = ""."""
+
+
+def _build_metadata_user_prompt(candidate_text: str) -> str:
+    return (
+        f"Please extract metadata from the following document excerpt:\n\n"
+        f"---\n\n{candidate_text}\n\n---"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Map-phase evidence aggregation helpers.
+# ---------------------------------------------------------------------------
+
+# All valid criterion codes — used to filter out hallucinated codes from the LLM.
+_ALL_CRITERION_CODES: frozenset = frozenset(
+    f"{band_idx}.{crit_idx}"
+    for band_idx, band in enumerate(GRADE_BANDS, start=1)
+    for crit_idx in range(1, len(band["criteria"]) + 1)
+)
+
+
+def _merge_chunk_evidence(chunk_results: dict) -> dict:
+    """
+    Aggregate per-chunk evidence from the map phase.
+
+    Preponderance is preserved: if a criterion is overwhelmingly supported
+    (e.g. 6 'supports', 0 'undermines') that dominance is reflected in both
+    the retained excerpts and the count header written into the synthesis prompt.
+    The retention policy is:
+      - Keep at most _MAX_EVIDENCE_PER_CRITERION entries total per criterion.
+      - Always include at least one entry from every polarity that exists
+        (genuine minority evidence is informative).
+      - Fill remaining slots with entries from the dominant polarity.
+
+    Metadata is merged with OR semantics for booleans and first-found semantics
+    for string values (the first chunk that identifies a field wins).
+
+    Returns:
+        {
+          "criteria": {
+            code: {
+              "entries": [evidence_dict, ...],
+              "counts": {"supports": N, "undermines": N, "neutral": N,
+                         "chunks_with_evidence": N}
+            }
+          },
+          "metadata": { stated_word_count_found, stated_word_count,
+                         genai_statement_found, genai_statement,
+                         preface_found, preface_precis }
+        }
+    """
+    from collections import defaultdict
+
+    raw: dict[str, dict[str, list]] = defaultdict(
+        lambda: {"supports": [], "undermines": [], "neutral": []}
+    )
+    chunks_with_evidence: dict[str, set] = defaultdict(set)
+    metadata: dict = {
+        "stated_word_count_found": False,
+        "stated_word_count": None,
+        "genai_statement_found": False,
+        "genai_statement": "",
+        "preface_found": False,
+        "preface_precis": "",
+    }
+
+    for chunk_idx_str, chunk_data in chunk_results.items():
+        chunk_idx = int(chunk_idx_str)
+
+        # Merge metadata (OR / first-found).
+        hits = chunk_data.get("metadata_hits", {})
+        if hits.get("stated_word_count_found") and not metadata["stated_word_count_found"]:
+            metadata["stated_word_count_found"] = True
+            metadata["stated_word_count"] = hits.get("stated_word_count")
+        if hits.get("genai_statement_found") and not metadata["genai_statement_found"]:
+            metadata["genai_statement_found"] = True
+            metadata["genai_statement"] = hits.get("genai_statement", "")
+        if hits.get("preface_found") and not metadata["preface_found"]:
+            metadata["preface_found"] = True
+            metadata["preface_precis"] = hits.get("preface_precis", "")
+
+        # Accumulate evidence.
+        for entry in chunk_data.get("evidence", []):
+            code = entry.get("criterion_code", "")
+            polarity = entry.get("polarity", "neutral")
+            if code not in _ALL_CRITERION_CODES:
+                continue
+            if polarity not in ("supports", "undermines", "neutral"):
+                polarity = "neutral"
+            raw[code][polarity].append(entry)
+            chunks_with_evidence[code].add(chunk_idx)
+
+    # Apply retention policy.
+    criteria: dict = {}
+    for code, polarities in raw.items():
+        supports = polarities["supports"]
+        undermines = polarities["undermines"]
+        neutral = polarities["neutral"]
+
+        counts = {
+            "supports": len(supports),
+            "undermines": len(undermines),
+            "neutral": len(neutral),
+            "chunks_with_evidence": len(chunks_with_evidence[code]),
+        }
+
+        # Sort polarities by count descending to find dominant.
+        by_count = sorted(
+            [("supports", supports), ("undermines", undermines), ("neutral", neutral)],
+            key=lambda x: len(x[1]),
+            reverse=True,
+        )
+        dominant_name, dominant_entries = by_count[0]
+
+        # One entry from each minority polarity that actually exists.
+        minority: list[dict] = []
+        for _, entries in by_count[1:]:
+            if entries:
+                minority.append(entries[0])
+
+        # Fill remaining slots with dominant entries.
+        remaining = max(_MAX_EVIDENCE_PER_CRITERION - len(minority), 0)
+        retained = dominant_entries[:remaining] + minority
+
+        criteria[code] = {"entries": retained, "counts": counts}
+
+    return {"criteria": criteria, "metadata": metadata}
+
+
+# ---------------------------------------------------------------------------
+# Synthesis (reduce-phase) helpers.
+# ---------------------------------------------------------------------------
+
+
+def _build_synthesis_evidence_text(merged: dict, total_chunks: int) -> str:
+    """
+    Format aggregated chunk evidence as structured text for the synthesis prompt.
+    This replaces the document text in the synthesis user prompt.
+
+    Per-criterion count headers convey preponderance to the synthesis LLM so it
+    can distinguish criteria with overwhelming evidence from those that are
+    genuinely ambiguous.
+    """
+    criteria_data: dict = merged["criteria"]
+    metadata: dict = merged["metadata"]
+    chunk_word = "chunk" if total_chunks == 1 else "chunks"
+
+    lines = [f"## Extracted evidence ({total_chunks} {chunk_word})", ""]
+
+    for band_idx, band in enumerate(GRADE_BANDS, start=1):
+        lines.append(f"### Band {band_idx} — {band['band']}")
+        for crit_idx, criterion in enumerate(band["criteria"], start=1):
+            code = f"{band_idx}.{crit_idx}"
+            crit_data = criteria_data.get(code)
+            lines.append(f"\n**{code}** {criterion}")
+            if crit_data is None:
+                lines.append("  (No evidence found in any chunk)")
+                continue
+
+            counts = crit_data["counts"]
+            count_summary = (
+                f"{counts['supports']} supporting, "
+                f"{counts['undermines']} undermining, "
+                f"{counts['neutral']} neutral "
+                f"across {counts['chunks_with_evidence']} of {total_chunks} {chunk_word}"
+            )
+            lines.append(f"  Evidence count: {count_summary}")
+
+            for entry in crit_data["entries"]:
+                tag = entry["polarity"].upper()
+                excerpt = entry["excerpt"]
+                if len(excerpt) > _MAX_EXCERPT_CHARS:
+                    excerpt = excerpt[:_MAX_EXCERPT_CHARS] + "…"
+                lines.append(f'  [{tag}] "{excerpt}"')
+                lines.append(f"  {entry['observation']}")
+        lines.append("")
+
+    lines.append("## Document metadata")
+    if metadata["stated_word_count_found"]:
+        lines.append(f"- Stated word count: {metadata['stated_word_count']}")
+    else:
+        lines.append("- Stated word count: not found")
+
+    if metadata["genai_statement_found"]:
+        lines.append(f'- GenAI statement: "{metadata["genai_statement"]}"')
+    else:
+        lines.append("- GenAI statement: not found")
+
+    if metadata["preface_found"]:
+        lines.append(f'- Preface/personal contribution: "{metadata["preface_precis"]}"')
+    else:
+        lines.append("- Preface/personal contribution: not found")
+
+    return "\n".join(lines)
+
+
+def _build_synthesis_user_prompt(evidence_text: str) -> str:
+    return (
+        "The full report has been pre-read and relevant passages extracted by assessment criterion.\n"
+        "Use the evidence below to produce your final grade band assessment.\n\n"
+        "The evidence entries include counts of supporting and undermining passages per criterion. "
+        "Use these counts to judge preponderance, not just the individual quoted excerpts: "
+        "a criterion with 6 supporting and 0 undermining passages deserves 'Strong evidence', "
+        "not 'Partial evidence'.\n\n"
+        "For criteria with no evidence entries, use 'Not evident' with low confidence.\n\n"
+        "For the metadata fields (stated_word_count, genai_statement, preface), copy the values "
+        "recorded in the 'Document metadata' section verbatim into your response.\n\n"
+        f"{evidence_text}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Celery task registration.
 # ---------------------------------------------------------------------------
 
@@ -1301,11 +1934,30 @@ def register_language_analysis_tasks(celery):
     def submit_to_llm(self, record_id: int):
         """
         Stage 3 (llm_tasks queue): submit the extracted report text to an Ollama
-        LLM for grade-band assessment.  Retries up to three times on transient
-        errors; permanent failures are recorded in llm_analysis_failed.
+        LLM for grade-band assessment.
 
-        Records with llm_analysis_failed=True are not retried until an
-        administrator explicitly clears the flag.
+        Short documents that fit within the context window are submitted in a
+        single pass (unchanged behaviour).  Longer documents use a two-phase
+        map-reduce strategy:
+
+          Map phase — each chunk is submitted with _LLM_CHUNK_SCHEMA to
+                      extract per-criterion evidence fragments.  A dedicated
+                      metadata call (regex location + _LLM_METADATA_SCHEMA)
+                      extracts the GenAI statement and preface text from the
+                      identified front-matter regions.  All intermediate
+                      results are persisted to the JSON blob after each chunk
+                      so the task is safely resumable on Celery retry.
+
+          Reduce phase — _merge_chunk_evidence() aggregates the map results,
+                         preserving preponderance (evidence counts per criterion
+                         are passed to the synthesis LLM alongside excerpts).
+                         The synthesis call uses the full _LLM_RESPONSE_SCHEMA
+                         and produces output structurally identical to the
+                         single-pass result.
+
+        Retries up to _LLM_RETRY_ATTEMPTS times per LLM call; permanent
+        failures set llm_analysis_failed.  Records with llm_analysis_failed=True
+        are not retried until an administrator explicitly clears the flag.
         """
         self.update_state(state=states.STARTED, meta={"msg": "Submitting to LLM"})
 
@@ -1341,82 +1993,230 @@ def register_language_analysis_tasks(celery):
         main_text, _ = _split_text(raw_text)
         clean_text = _strip_math_lines(main_text)
 
-        document_text, was_truncated = _truncate_text(clean_text)
-        system_prompt = _build_system_prompt(was_truncated)
-        user_prompt = _build_user_prompt(document_text)
+        context_size: int = current_app.config.get("OLLAMA_CONTEXT_SIZE", 4096)
+        base_url: str = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        model: str = current_app.config.get("OLLAMA_MODEL", "llama3.1:70b")
 
-        base_url = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")
-        model = current_app.config.get("OLLAMA_MODEL", "llama3.1:70b")
+        import ollama
+
+        client = ollama.Client(host=base_url)
+
+        single_pass_word_budget = max(
+            int((context_size - _SINGLE_PASS_OVERHEAD_TOKENS) / _TOKENS_PER_WORD), 0
+        )
+        doc_words = len(clean_text.split())
+        errors: list = data.get("errors", [])
+        _t_llm = time.monotonic()
 
         accumulated = ""
         last_exc: Exception | None = None
         parsed_result: dict | None = None
 
-        import ollama
+        if doc_words <= single_pass_word_budget:
+            # ----------------------------------------------------------------
+            # Single-pass path: document fits within the context window.
+            # ----------------------------------------------------------------
+            document_text, was_truncated = _truncate_text(clean_text)
+            parsed_result, accumulated, last_exc = _call_llm(
+                client,
+                model,
+                _build_system_prompt(was_truncated),
+                _build_user_prompt(document_text),
+                _LLM_RESPONSE_SCHEMA,
+                options={"num_ctx": context_size},
+                validate_fn=_validate_llm_response,
+                label=f"submit_to_llm/single-pass (record #{record_id})",
+            )
 
-        client = ollama.Client(host=base_url)
-        _t_llm = time.monotonic()
+        else:
+            # ----------------------------------------------------------------
+            # Chunked map-reduce path: document exceeds single-pass budget.
+            # ----------------------------------------------------------------
+            chunk_word_budget = max(
+                int((context_size - _MAP_PASS_OVERHEAD_TOKENS) / _TOKENS_PER_WORD), 500
+            )
+            chunks = _build_chunks(clean_text, chunk_word_budget)
+            total_chunks = len(chunks)
+            current_app.logger.info(
+                f"language_analysis.submit_to_llm: record #{record_id} — "
+                f"{doc_words} words, {total_chunks} chunk(s) of ~{chunk_word_budget} words "
+                f"(context_size={context_size})"
+            )
 
-        for attempt in range(_LLM_RETRY_ATTEMPTS):
-            accumulated = ""
-            try:
-                stream = client.generate(
-                    model=model,
-                    prompt=user_prompt,
-                    system=system_prompt,
-                    format=_LLM_RESPONSE_SCHEMA,
-                    stream=True,
+            # -- Step 1: dedicated metadata extraction (regex → LLM) ------
+            metadata_result: dict | None = data.get("_llm_metadata")
+            if metadata_result is None:
+                candidate_text = _extract_metadata_regions(clean_text)
+                meta_parsed, _, meta_exc = _call_llm(
+                    client,
+                    model,
+                    _build_metadata_system_prompt(),
+                    _build_metadata_user_prompt(candidate_text),
+                    _LLM_METADATA_SCHEMA,
+                    options={"num_ctx": context_size},
+                    label=f"submit_to_llm/metadata (record #{record_id})",
                 )
-                for chunk in stream:
-                    # The ollama library returns objects with a .response attribute
-                    # (or dict-style access in older versions)
-                    if hasattr(chunk, "response"):
-                        accumulated += chunk.response
-                    elif isinstance(chunk, dict):
-                        accumulated += chunk.get("response", "")
-
-                # Attempt to parse and validate
-                parsed = json.loads(accumulated)
-                if not _validate_llm_response(parsed):
-                    raise ValueError(
-                        f"LLM response missing required keys; got: {list(parsed.keys())}"
+                if meta_parsed is not None:
+                    metadata_result = meta_parsed
+                else:
+                    # Non-fatal: map phase metadata_hits act as a fallback.
+                    current_app.logger.warning(
+                        f"language_analysis.submit_to_llm: metadata extraction failed "
+                        f"for record #{record_id}: {meta_exc}; "
+                        f"map-phase metadata_hits will be used instead"
                     )
-                parsed_result = parsed
-                last_exc = None
-                break  # success
-
-            except ollama.ResponseError as exc:
-                last_exc = exc
-                status = getattr(exc, "status_code", 0)
-                if 400 <= status < 500:
-                    # HTTP 4xx: permanent failure — do not retry
-                    current_app.logger.error(
-                        f"language_analysis.submit_to_llm: permanent HTTP {status} error for record #{record_id}: {exc}"
+                    metadata_result = {
+                        "stated_word_count_found": False,
+                        "stated_word_count": None,
+                        "genai_statement_found": False,
+                        "genai_statement": "",
+                        "preface_found": False,
+                        "preface_precis": "",
+                    }
+                data["_llm_metadata"] = metadata_result
+                record.set_language_analysis_data(data)
+                try:
+                    db.session.commit()
+                except SQLAlchemyError as exc:
+                    db.session.rollback()
+                    current_app.logger.exception(
+                        "SQLAlchemyError committing metadata result", exc_info=exc
                     )
+                    raise self.retry()
+
+            # -- Step 2: map phase (per-chunk evidence extraction) ---------
+            chunk_state = data.get("_llm_chunks", {})
+
+            # Reset persisted state if chunk topology changed between retries
+            # (e.g. OLLAMA_CONTEXT_SIZE was adjusted by an administrator).
+            if chunk_state.get("total_chunks") != total_chunks:
+                chunk_state = {
+                    "total_chunks": total_chunks,
+                    "chunk_word_budget": chunk_word_budget,
+                    "completed": [],
+                    "results": {},
+                }
+
+            completed_chunks: set[int] = set(chunk_state.get("completed", []))
+            chunk_results: dict = chunk_state.get("results", {})
+            chunk_failed = False
+            chunk_failure_reason = ""
+
+            for idx, chunk_text in enumerate(chunks):
+                if idx in completed_chunks:
+                    continue  # already persisted on a previous Celery attempt
+
+                chunk_parsed, accumulated, last_exc = _call_llm(
+                    client,
+                    model,
+                    _build_chunk_system_prompt(idx, total_chunks),
+                    _build_chunk_user_prompt(chunk_text, idx, total_chunks),
+                    _LLM_CHUNK_SCHEMA,
+                    options={"num_ctx": context_size},
+                    label=f"submit_to_llm/chunk {idx + 1}/{total_chunks} (record #{record_id})",
+                )
+
+                if chunk_parsed is None:
+                    chunk_failed = True
+                    chunk_failure_reason = f"chunk {idx + 1}/{total_chunks} failed: {last_exc}"
                     break
-                # Other HTTP errors: transient
-                if attempt < _LLM_RETRY_ATTEMPTS - 1:
-                    time.sleep(_LLM_RETRY_DELAY)
 
-            except (json.JSONDecodeError, ValueError) as exc:
-                last_exc = exc
-                current_app.logger.warning(
-                    f"language_analysis.submit_to_llm: JSON parse failure on attempt {attempt + 1}: {exc}"
+                chunk_results[str(idx)] = chunk_parsed
+                completed_chunks.add(idx)
+                chunk_state = {
+                    "total_chunks": total_chunks,
+                    "chunk_word_budget": chunk_word_budget,
+                    "completed": list(completed_chunks),
+                    "results": chunk_results,
+                }
+                data["_llm_chunks"] = chunk_state
+                record.set_language_analysis_data(data)
+                try:
+                    db.session.commit()
+                except SQLAlchemyError as exc:
+                    db.session.rollback()
+                    current_app.logger.exception(
+                        f"SQLAlchemyError committing chunk {idx + 1} result", exc_info=exc
+                    )
+                    raise self.retry()
+
+            if chunk_failed:
+                # Record failure and return; intermediate state is preserved in
+                # data["_llm_chunks"] so a subsequent re-trigger can resume.
+                elapsed = round(time.monotonic() - _t_llm, 1)
+                data.setdefault("timings", {})["llm_s"] = elapsed
+                record.llm_analysis_failed = True
+                record.llm_failure_reason = chunk_failure_reason
+                if accumulated:
+                    data["llm_raw_response"] = accumulated
+                errors.append({
+                    "stage": "llm_submission",
+                    "type": type(last_exc).__name__ if last_exc else "ChunkFailure",
+                    "message": chunk_failure_reason,
+                })
+                current_app.logger.error(
+                    f"language_analysis.submit_to_llm: {chunk_failure_reason} "
+                    f"for record #{record_id}"
                 )
-                if attempt < _LLM_RETRY_ATTEMPTS - 1:
-                    time.sleep(_LLM_RETRY_DELAY)
+                data["errors"] = errors
+                record.set_language_analysis_data(data)
+                try:
+                    db.session.commit()
+                except SQLAlchemyError as exc:
+                    db.session.rollback()
+                    current_app.logger.exception(
+                        "SQLAlchemyError committing chunk failure", exc_info=exc
+                    )
+                    raise self.retry()
+                return
 
-            except Exception as exc:
-                last_exc = exc
-                current_app.logger.warning(
-                    f"language_analysis.submit_to_llm: transient error on attempt {attempt + 1}: {exc}"
-                )
-                if attempt < _LLM_RETRY_ATTEMPTS - 1:
-                    time.sleep(_LLM_RETRY_DELAY)
+            # -- Step 3: synthesis (reduce phase) -------------------------
+            merged = _merge_chunk_evidence(chunk_results)
 
-        # Handle outcome
+            # Override aggregated metadata with the dedicated extraction result,
+            # which is more reliable (regex-located, purpose-built prompt).
+            merged["metadata"] = {
+                "stated_word_count_found": metadata_result.get("stated_word_count_found", False),
+                "stated_word_count": metadata_result.get("stated_word_count"),
+                "genai_statement_found": metadata_result.get("genai_statement_found", False),
+                "genai_statement": metadata_result.get("genai_statement", ""),
+                "preface_found": metadata_result.get("preface_found", False),
+                "preface_precis": metadata_result.get("preface_precis", ""),
+            }
+
+            evidence_text = _build_synthesis_evidence_text(merged, total_chunks)
+            synthesis_ctx = max(context_size, _SYNTHESIS_MIN_CTX)
+
+            parsed_result, accumulated, last_exc = _call_llm(
+                client,
+                model,
+                _build_system_prompt(False),
+                _build_synthesis_user_prompt(evidence_text),
+                _LLM_RESPONSE_SCHEMA,
+                options={"num_ctx": synthesis_ctx},
+                validate_fn=_validate_llm_response,
+                label=f"submit_to_llm/synthesis (record #{record_id})",
+            )
+
+            # Overwrite synthesis metadata fields with dedicated extraction result
+            # (the synthesis LLM copies them from the evidence text, but the
+            # dedicated call is the authoritative source).
+            if parsed_result is not None:
+                for field in (
+                    "stated_word_count_found",
+                    "stated_word_count",
+                    "genai_statement_found",
+                    "genai_statement",
+                    "preface_found",
+                    "preface_precis",
+                ):
+                    if field in metadata_result:
+                        parsed_result[field] = metadata_result[field]
+
+        # ----------------------------------------------------------------
+        # Common outcome handling (single-pass and chunked-synthesis paths).
+        # ----------------------------------------------------------------
         data.setdefault("timings", {})["llm_s"] = round(time.monotonic() - _t_llm, 1)
-        errors: list = data.get("errors", [])
 
         if parsed_result is not None:
             # Success: store result.
@@ -1430,14 +2230,14 @@ def register_language_analysis_tasks(celery):
                 for band_idx, band in enumerate(GRADE_BANDS, start=1)
                 for crit_idx, criterion in enumerate(band["criteria"], start=1)
             }
+            # Clean up intermediate chunking state.
+            data.pop("_llm_chunks", None)
+            data.pop("_llm_metadata", None)
         else:
-            # Failure after all retries
             failure_reason = str(last_exc) if last_exc else "Unknown error"
             record.llm_analysis_failed = True
             record.llm_failure_reason = failure_reason
-            data["llm_raw_response"] = (
-                accumulated  # preserve raw response for admin inspection
-            )
+            data["llm_raw_response"] = accumulated
             errors.append(
                 {
                     "stage": "llm_submission",
@@ -1446,7 +2246,8 @@ def register_language_analysis_tasks(celery):
                 }
             )
             current_app.logger.error(
-                f"language_analysis.submit_to_llm: LLM submission failed for record #{record_id}: {failure_reason}"
+                f"language_analysis.submit_to_llm: LLM submission failed for "
+                f"record #{record_id}: {failure_reason}"
             )
 
         data["errors"] = errors
@@ -1470,6 +2271,12 @@ def register_language_analysis_tasks(celery):
         LLM for formative feedback generation (positive feedback and improvement
         suggestions).  Runs after submit_to_llm in the chain so both tasks share
         the same _extracted_text without redundant downloads.
+
+        If the document exceeds the per-chunk feedback word budget, it is split
+        into chunks via _build_chunks() and each chunk is submitted independently.
+        Results from all successful chunks are merged using _deduplicate_feedback().
+        At least one chunk must succeed for feedback to be stored; partial success
+        (some chunks succeed, others fail) is accepted — the task is non-fatal.
 
         Failures are recorded in the JSON blob and in llm_feedback_failed on the
         record, but do not abort the chain — finalize() still runs so the rest of
@@ -1504,82 +2311,74 @@ def register_language_analysis_tasks(celery):
 
         main_text, _ = _split_text(raw_text)
         clean_text = _strip_math_lines(main_text)
-        document_text, was_truncated = _truncate_text(clean_text)
 
-        system_prompt = _build_feedback_system_prompt(was_truncated)
-        user_prompt = _build_feedback_user_prompt(document_text)
-
-        base_url = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")
-        model = current_app.config.get("OLLAMA_MODEL", "llama3.1:70b")
-
-        accumulated = ""
-        last_exc: Exception | None = None
-        parsed_result: dict | None = None
+        context_size: int = current_app.config.get("OLLAMA_CONTEXT_SIZE", 4096)
+        base_url: str = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        model: str = current_app.config.get("OLLAMA_MODEL", "llama3.1:70b")
 
         import ollama
 
         client = ollama.Client(host=base_url)
         _t_feedback = time.monotonic()
 
-        for attempt in range(_LLM_RETRY_ATTEMPTS):
-            accumulated = ""
-            try:
-                stream = client.generate(
-                    model=model,
-                    prompt=user_prompt,
-                    system=system_prompt,
-                    format=_LLM_FEEDBACK_RESPONSE_SCHEMA,
-                    stream=True,
-                )
-                for chunk in stream:
-                    if hasattr(chunk, "response"):
-                        accumulated += chunk.response
-                    elif isinstance(chunk, dict):
-                        accumulated += chunk.get("response", "")
+        # Determine chunk budget and split if necessary.
+        feedback_word_budget = max(
+            int((context_size - _FEEDBACK_OVERHEAD_TOKENS) / _TOKENS_PER_WORD), 500
+        )
+        doc_words = len(clean_text.split())
+        if doc_words <= feedback_word_budget:
+            chunk_texts = [clean_text]
+        else:
+            chunk_texts = _build_chunks(clean_text, feedback_word_budget)
+            if not chunk_texts:
+                chunk_texts = [clean_text]
+            current_app.logger.info(
+                f"language_analysis.submit_to_llm_feedback: record #{record_id} — "
+                f"{doc_words} words split into {len(chunk_texts)} feedback chunk(s)"
+            )
 
-                parsed = json.loads(accumulated)
-                if not _validate_feedback_response(parsed):
-                    raise ValueError(
-                        f"Feedback LLM response missing required keys; got: {list(parsed.keys())}"
-                    )
-                parsed_result = parsed
-                last_exc = None
-                break
+        feedback_results: list[dict] = []
+        last_exc: Exception | None = None
 
-            except ollama.ResponseError as exc:
-                last_exc = exc
-                status = getattr(exc, "status_code", 0)
-                if 400 <= status < 500:
-                    current_app.logger.error(
-                        f"language_analysis.submit_to_llm_feedback: permanent HTTP {status} error for record #{record_id}: {exc}"
-                    )
-                    break
-                if attempt < _LLM_RETRY_ATTEMPTS - 1:
-                    time.sleep(_LLM_RETRY_DELAY)
-
-            except (json.JSONDecodeError, ValueError) as exc:
-                last_exc = exc
+        for chunk_idx, chunk_text in enumerate(chunk_texts):
+            chunk_parsed, _, chunk_exc = _call_llm(
+                client,
+                model,
+                _build_feedback_system_prompt(False),
+                _build_feedback_user_prompt(chunk_text),
+                _LLM_FEEDBACK_RESPONSE_SCHEMA,
+                options={"num_ctx": context_size},
+                validate_fn=_validate_feedback_response,
+                label=(
+                    f"submit_to_llm_feedback/chunk {chunk_idx + 1}/{len(chunk_texts)} "
+                    f"(record #{record_id})"
+                ),
+            )
+            if chunk_parsed is not None:
+                feedback_results.append(chunk_parsed)
+            else:
+                last_exc = chunk_exc
                 current_app.logger.warning(
-                    f"language_analysis.submit_to_llm_feedback: JSON parse failure on attempt {attempt + 1}: {exc}"
+                    f"language_analysis.submit_to_llm_feedback: chunk {chunk_idx + 1}/"
+                    f"{len(chunk_texts)} failed for record #{record_id}: {chunk_exc}"
                 )
-                if attempt < _LLM_RETRY_ATTEMPTS - 1:
-                    time.sleep(_LLM_RETRY_DELAY)
-
-            except Exception as exc:
-                last_exc = exc
-                current_app.logger.warning(
-                    f"language_analysis.submit_to_llm_feedback: transient error on attempt {attempt + 1}: {exc}"
-                )
-                if attempt < _LLM_RETRY_ATTEMPTS - 1:
-                    time.sleep(_LLM_RETRY_DELAY)
 
         data.setdefault("timings", {})["llm_feedback_s"] = round(
             time.monotonic() - _t_feedback, 1
         )
         errors: list = data.get("errors", [])
 
-        if parsed_result is not None:
-            data["llm_feedback"] = parsed_result
+        if feedback_results:
+            # Merge all successful chunk results.
+            all_positive: list[str] = []
+            all_improvements: list[str] = []
+            for r in feedback_results:
+                all_positive.extend(r.get("positive_feedback", []))
+                all_improvements.extend(r.get("improvements", []))
+            data["llm_feedback"] = {
+                "positive_feedback": _deduplicate_feedback(all_positive, 3),
+                "improvements": _deduplicate_feedback(all_improvements, 3),
+            }
         else:
             failure_reason = str(last_exc) if last_exc else "Unknown error"
             record.llm_feedback_failed = True
@@ -1592,7 +2391,8 @@ def register_language_analysis_tasks(celery):
                 }
             )
             current_app.logger.error(
-                f"language_analysis.submit_to_llm_feedback: feedback generation failed for record #{record_id}: {failure_reason}"
+                f"language_analysis.submit_to_llm_feedback: all chunks failed for "
+                f"record #{record_id}: {failure_reason}"
             )
 
         data["errors"] = errors

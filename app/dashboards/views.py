@@ -698,7 +698,7 @@ def launch_period(period_id: int):
     except Exception as exc:
         flash("An error occurred while launching the analysis pipeline.", "error")
         current_app.logger.exception(
-            "LLM orchestration pipeline submission error", exc=exc
+            "LLM orchestration pipeline submission error", exc_info=exc
         )
         return redirect(redirect_url())
 
@@ -763,7 +763,7 @@ def launch_pclass(config_id: int):
     except Exception as exc:
         flash("An error occurred while launching the analysis pipeline.", "error")
         current_app.logger.exception(
-            "LLM orchestration pipeline submission error", exc=exc
+            "LLM orchestration pipeline submission error", exc_info=exc
         )
         return redirect(redirect_url())
 
@@ -814,7 +814,7 @@ def launch_cycle(year: int):
     except Exception as exc:
         flash("An error occurred while launching the analysis pipeline.", "error")
         current_app.logger.exception(
-            "LLM orchestration pipeline submission error", exc=exc
+            "LLM orchestration pipeline submission error", exc_info=exc
         )
         return redirect(redirect_url())
 
@@ -856,7 +856,7 @@ def launch_global():
     except Exception as exc:
         flash("An error occurred while launching the analysis pipeline.", "error")
         current_app.logger.exception(
-            "LLM orchestration pipeline submission error", exc=exc
+            "LLM orchestration pipeline submission error", exc_info=exc
         )
         return redirect(redirect_url())
 

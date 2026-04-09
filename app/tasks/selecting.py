@@ -62,7 +62,7 @@ def register_selecting_tasks(celery):
                     LiveProject.config_id == config_id,
                     LiveProject.owner_id == faculty_id,
                     ConfirmRequest.state == ConfirmRequest.REQUESTED,
-                    ConfirmRequest.viewed.is_not(True),
+                    ConfirmRequest.viewed.isnot(True),
                 )
                 .all()
             )

@@ -2020,8 +2020,8 @@ def dashboard():
             SubmissionRole.user_id == current_user.id,
             MarkingReport.distributed.is_(True),
             or_(
-                MarkingReport.report_submitted.is_not(True),
-                MarkingReport.feedback_submitted.is_not(True),
+                MarkingReport.report_submitted.isnot(True),
+                MarkingReport.feedback_submitted.isnot(True),
             ),
         )
         .all()

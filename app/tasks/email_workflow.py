@@ -546,7 +546,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
         stuck_items = (
             db.session.query(EmailWorkflowItem)
             .filter(
-                EmailWorkflowItem.celery_send_in_progress_task_id.is_not(None),
+                EmailWorkflowItem.celery_send_in_progress_task_id.isnot(None),
             )
             .all()
         )
@@ -660,7 +660,7 @@ def register_email_workflow_tasks(celery, mail: Mail):
                 db.session.query(EmailWorkflowItem)
                 .filter(
                     EmailWorkflowItem.workflow_id == workflow_id,
-                    EmailWorkflowItem.celery_send_in_progress_task_id.is_not(None),
+                    EmailWorkflowItem.celery_send_in_progress_task_id.isnot(None),
                 )
                 .all()
             )

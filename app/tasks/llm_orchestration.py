@@ -171,7 +171,7 @@ def _collect_record_ids(
     q = (
         db.session.query(SubmissionRecord.id)
         .filter(SubmissionRecord.period_id.in_(period_ids))
-        .filter(SubmissionRecord.report.is_not(None))  # noqa: E711
+        .filter(SubmissionRecord.report_id.isnot(None))
     )
     if skip_complete:
         q = q.filter(

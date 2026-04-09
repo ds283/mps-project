@@ -272,7 +272,7 @@ def ConvenorTasksMixinFactory(subclass):
                 or_(
                     subclass.defer_date.is_(None),
                     and_(
-                        subclass.defer_date.is_not(None),
+                        subclass.defer_date.isnot(None),
                         subclass.defer_date <= func.curdate(),
                     ),
                 ),
@@ -283,7 +283,7 @@ def ConvenorTasksMixinFactory(subclass):
             return self.tasks.filter(
                 ~subclass.complete,
                 ~subclass.dropped,
-                subclass.due_date.is_not(None),
+                subclass.due_date.isnot(None),
                 subclass.due_date < func.curdate(),
             )
 

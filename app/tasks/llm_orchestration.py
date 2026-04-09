@@ -244,7 +244,7 @@ def _recover_active_jobs() -> None:
         r = _get_orchestration_redis()
     except Exception as exc:
         current_app.logger.error(
-            f"llm_orchestration._recover_active_jobs: cannot connect to Redis: {exc}"
+            f"!! llm_orchestration._recover_active_jobs: cannot connect to Redis: {exc}"
         )
         return
 
@@ -256,16 +256,18 @@ def _recover_active_jobs() -> None:
         )
     except SQLAlchemyError as exc:
         current_app.logger.exception(
-            "llm_orchestration._recover_active_jobs: SQLAlchemyError loading active jobs",
+            "!! llm_orchestration._recover_active_jobs: SQLAlchemyError loading active jobs",
             exc_info=exc,
         )
         return
 
     if not active_jobs:
+        current_app.logger.info('** llm_orchestration._recover_active_jobs: no active jobs found')
         return
 
     needs_coordinator = False
     for job in active_jobs:
+        current_app.logger.info(f'** llm_orchestration._recover_active_jobs: recovering job {job.uuid} ({job.description})')
         # Move any inflight records back to the pending queue.
         recovered = 0
         try:
@@ -273,14 +275,18 @@ def _recover_active_jobs() -> None:
                 recovered += 1
         except Exception as exc:
             current_app.logger.warning(
-                f"llm_orchestration._recover_active_jobs: Redis error recovering "
+                f"!! llm_orchestration._recover_active_jobs: Redis error recovering "
                 f"inflight items for job {job.uuid}: {exc}"
             )
 
         if recovered:
             current_app.logger.info(
-                f"llm_orchestration._recover_active_jobs: re-queued {recovered} "
+                f"@@ llm_orchestration._recover_active_jobs: re-queued {recovered} "
                 f"inflight record(s) for job {job.uuid}"
+            )
+        else:
+            current_app.logger.info(
+                f"@@ llm_orchestration._recover_active_jobs: did not discover any inflight records for job {job.uuid}"
             )
 
         # Dispatch the coordinator if this job has pending work.
@@ -289,7 +295,7 @@ def _recover_active_jobs() -> None:
                 needs_coordinator = True
         except Exception as exc:
             current_app.logger.warning(
-                f"llm_orchestration._recover_active_jobs: Redis error checking queue "
+                f"!! llm_orchestration._recover_active_jobs: Redis error checking queue "
                 f"length for job {job.uuid}: {exc}"
             )
 
@@ -297,12 +303,14 @@ def _recover_active_jobs() -> None:
         try:
             _dispatch_global_coordinator()
             current_app.logger.info(
-                "llm_orchestration._recover_active_jobs: dispatched global coordinator"
+                "@@ llm_orchestration._recover_active_jobs: dispatched global coordinator"
             )
         except Exception as exc:
             current_app.logger.error(
-                f"llm_orchestration._recover_active_jobs: could not dispatch coordinator: {exc}"
+                f"!! llm_orchestration._recover_active_jobs: could not dispatch coordinator: {exc}"
             )
+    else:
+        current_app.logger.info(f"@@ llm_orchestration._recover_active_jobs: no pending work for job {job.uuid}")
 
 
 # ---------------------------------------------------------------------------

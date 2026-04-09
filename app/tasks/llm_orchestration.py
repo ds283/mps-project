@@ -193,6 +193,93 @@ def _populate_redis_queue(job: LLMOrchestrationJob, record_ids: List[int]) -> No
     pipe.execute()
 
 
+def _get_already_queued_record_ids(r, active_jobs: List[LLMOrchestrationJob]) -> set:
+    """
+    Return the set of SubmissionRecord IDs currently sitting in any active
+    job's Redis pending or inflight queue.
+    """
+    queued: set = set()
+    for job in active_jobs:
+        try:
+            for raw in r.lrange(job.redis_queue_key, 0, -1):
+                queued.add(int(raw))
+            for raw in r.lrange(job.redis_inflight_key, 0, -1):
+                queued.add(int(raw))
+        except Exception as exc:
+            current_app.logger.warning(
+                f"_get_already_queued_record_ids: Redis error reading job {job.uuid}: {exc}"
+            )
+    return queued
+
+
+def _filter_already_queued(record_ids: List[int], caller: str) -> List[int]:
+    """
+    Remove any record IDs already sitting in an active job's Redis pending or
+    inflight queue.  Returns the filtered list.  Falls back to the original
+    list on any error so that a Redis connectivity problem never blocks a
+    submission.
+    """
+    try:
+        active_jobs = (
+            db.session.query(LLMOrchestrationJob)
+            .filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES))
+            .all()
+        )
+        if not active_jobs:
+            return record_ids
+        r = _get_orchestration_redis()
+        already_queued = _get_already_queued_record_ids(r, active_jobs)
+        if not already_queued:
+            return record_ids
+        filtered = [rid for rid in record_ids if rid not in already_queued]
+        skipped = len(record_ids) - len(filtered)
+        if skipped:
+            current_app.logger.info(
+                f"{caller}: skipped {skipped} record(s) already queued in an active job"
+            )
+        return filtered
+    except Exception as exc:
+        current_app.logger.warning(
+            f"{caller}: could not check for already-queued records: {exc} "
+            f"— proceeding without deduplication"
+        )
+        return record_ids
+
+
+def _create_and_dispatch_job(
+    scope: str,
+    scope_id: Optional[int],
+    record_ids: List[int],
+    clear_existing: bool,
+    user: Optional[User],
+    description: str,
+    log_message: str,
+    **log_db_commit_kwargs,
+) -> LLMOrchestrationJob:
+    """
+    Build, persist, enqueue, and dispatch a single LLMOrchestrationJob.
+    Raises SQLAlchemyError (after rollback) on commit failure.
+    """
+    job = LLMOrchestrationJob.build(
+        scope=scope,
+        scope_id=scope_id,
+        total_count=len(record_ids),
+        clear_existing=clear_existing,
+        owner=user,
+        description=description,
+    )
+    db.session.add(job)
+    db.session.flush()
+    _populate_redis_queue(job, record_ids)
+    try:
+        log_db_commit(log_message, **log_db_commit_kwargs)
+    except SQLAlchemyError:
+        db.session.rollback()
+        raise
+    _dispatch_global_coordinator()
+    return job
+
+
 def _dispatch_global_coordinator() -> None:
     """Dispatch global_orchestration_step."""
     celery = current_app.extensions["celery"]
@@ -342,31 +429,19 @@ def launch_period_pipeline(
     if not record_ids:
         return None
 
-    description = f"Period: {period.display_name}"
-    job = LLMOrchestrationJob.build(
+    record_ids = _filter_already_queued(record_ids, "launch_period_pipeline")
+    if not record_ids:
+        return None
+
+    return _create_and_dispatch_job(
         scope=LLMOrchestrationJob.SCOPE_PERIOD,
         scope_id=period_id,
-        total_count=len(record_ids),
+        record_ids=record_ids,
         clear_existing=clear_existing,
-        owner=user,
-        description=description,
+        user=user,
+        description=f"Period: {period.display_name}",
+        log_message=f"Launched LLM orchestration job (period #{period_id}, {len(record_ids)} records, clear={clear_existing})",
     )
-    db.session.add(job)
-    db.session.flush()  # get job.id / job.uuid
-
-    _populate_redis_queue(job, record_ids)
-
-    try:
-        log_db_commit(
-            f"Launched LLM orchestration job (period #{period_id}, "
-            f"{len(record_ids)} records, clear={clear_existing})",
-        )
-    except SQLAlchemyError:
-        db.session.rollback()
-        raise
-
-    _dispatch_global_coordinator()
-    return job
 
 
 def launch_pclass_pipeline(
@@ -394,36 +469,24 @@ def launch_pclass_pipeline(
     if not record_ids:
         return None
 
+    record_ids = _filter_already_queued(record_ids, "launch_pclass_pipeline")
+    if not record_ids:
+        return None
+
     pclass_name = (
         config.project_class.abbreviation
         if config.project_class
         else str(pclass_config_id)
     )
-    description = f"Project class: {pclass_name} ({config.year}/{config.year + 1})"
-    job = LLMOrchestrationJob.build(
+    return _create_and_dispatch_job(
         scope=LLMOrchestrationJob.SCOPE_PCLASS,
         scope_id=pclass_config_id,
-        total_count=len(record_ids),
+        record_ids=record_ids,
         clear_existing=clear_existing,
-        owner=user,
-        description=description,
+        user=user,
+        description=f"Project class: {pclass_name} ({config.year}/{config.year + 1})",
+        log_message=f"Launched LLM orchestration job (pclass config #{pclass_config_id}, {len(record_ids)} records, clear={clear_existing})",
     )
-    db.session.add(job)
-    db.session.flush()
-
-    _populate_redis_queue(job, record_ids)
-
-    try:
-        log_db_commit(
-            f"Launched LLM orchestration job (pclass config #{pclass_config_id}, "
-            f"{len(record_ids)} records, clear={clear_existing})",
-        )
-    except SQLAlchemyError:
-        db.session.rollback()
-        raise
-
-    _dispatch_global_coordinator()
-    return job
 
 
 def launch_cycle_pipeline(
@@ -453,31 +516,19 @@ def launch_cycle_pipeline(
     if not record_ids:
         return None
 
-    description = f"Cycle: {year}/{year + 1}"
-    job = LLMOrchestrationJob.build(
+    record_ids = _filter_already_queued(record_ids, "launch_cycle_pipeline")
+    if not record_ids:
+        return None
+
+    return _create_and_dispatch_job(
         scope=LLMOrchestrationJob.SCOPE_CYCLE,
         scope_id=year,
-        total_count=len(record_ids),
+        record_ids=record_ids,
         clear_existing=clear_existing,
-        owner=user,
-        description=description,
+        user=user,
+        description=f"Cycle: {year}/{year + 1}",
+        log_message=f"Launched LLM orchestration job (cycle {year}, {len(record_ids)} records, clear={clear_existing})",
     )
-    db.session.add(job)
-    db.session.flush()
-
-    _populate_redis_queue(job, record_ids)
-
-    try:
-        log_db_commit(
-            f"Launched LLM orchestration job (cycle {year}, "
-            f"{len(record_ids)} records, clear={clear_existing})",
-        )
-    except SQLAlchemyError:
-        db.session.rollback()
-        raise
-
-    _dispatch_global_coordinator()
-    return job
 
 
 def launch_global_pipeline(
@@ -495,31 +546,19 @@ def launch_global_pipeline(
     if not record_ids:
         return None
 
-    description = "Global: all project classes and cycles"
-    job = LLMOrchestrationJob.build(
+    record_ids = _filter_already_queued(record_ids, "launch_global_pipeline")
+    if not record_ids:
+        return None
+
+    return _create_and_dispatch_job(
         scope=LLMOrchestrationJob.SCOPE_GLOBAL,
         scope_id=None,
-        total_count=len(record_ids),
+        record_ids=record_ids,
         clear_existing=clear_existing,
-        owner=user,
-        description=description,
+        user=user,
+        description="Global: all project classes and cycles",
+        log_message=f"Launched global LLM orchestration job ({len(record_ids)} records, clear={clear_existing})",
     )
-    db.session.add(job)
-    db.session.flush()
-
-    _populate_redis_queue(job, record_ids)
-
-    try:
-        log_db_commit(
-            f"Launched global LLM orchestration job "
-            f"({len(record_ids)} records, clear={clear_existing})",
-        )
-    except SQLAlchemyError:
-        db.session.rollback()
-        raise
-
-    _dispatch_global_coordinator()
-    return job
 
 
 def enqueue_single_record(
@@ -571,35 +610,22 @@ def enqueue_single_record(
         )
         return None
 
+    record_ids = _filter_already_queued([record_id], "enqueue_single_record")
+    if not record_ids:
+        return None
+
     description = f"Single record: {record.owner.student.user.name if record.owner and record.owner.student else f'#{record_id}'}"
-    job = LLMOrchestrationJob.build(
+    return _create_and_dispatch_job(
         scope=LLMOrchestrationJob.SCOPE_PERIOD,
         scope_id=period.id,
-        total_count=1,
+        record_ids=record_ids,
         clear_existing=clear_existing,
-        owner=user,
+        user=user,
         description=description,
+        log_message=f"Enqueued single-record LLM orchestration job (SubmissionRecord #{record_id}, clear={clear_existing})",
+        student=record.owner.student if record.owner else None,
+        project_classes=record.owner.config.project_class if record.owner and record.owner.config else None,
     )
-    db.session.add(job)
-    db.session.flush()
-
-    _populate_redis_queue(job, [record_id])
-
-    try:
-        log_db_commit(
-            f"Enqueued single-record LLM orchestration job "
-            f"(SubmissionRecord #{record_id}, clear={clear_existing})",
-            student=record.owner.student if record.owner else None,
-            project_classes=record.owner.config.project_class
-            if record.owner and record.owner.config
-            else None,
-        )
-    except SQLAlchemyError:
-        db.session.rollback()
-        raise
-
-    _dispatch_global_coordinator()
-    return job
 
 
 # ---------------------------------------------------------------------------

@@ -21,3 +21,7 @@ OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:70b")
 # Context window size (tokens) for the Ollama model.
 # 12288 has been confirmed to work reliably on the current hardware.
 OLLAMA_CONTEXT_SIZE = int(os.environ.get("OLLAMA_CONTEXT_SIZE", "12288"))
+
+# Batch size for submission of reports to the LLM pipeline for appraisal
+# For running on a desktop-scale Mac Studio, we can probably only process 1 at once
+OLLAMA_BATCH_SIZE = int(os.environ.get("OLLAMA_BATCH_SIZE", "1"))

@@ -144,6 +144,17 @@ class LLMOrchestrationJob(db.Model):
         return f"llm_queue:{self.uuid}"
 
     @property
+    def redis_inflight_key(self) -> str:
+        """Redis list key used to track record IDs currently being processed.
+
+        Records are atomically moved here from redis_queue_key via RPOPLPUSH
+        when the coordinator dispatches their analysis chain, and removed via
+        LREM when the chain completes or fails.  Items that remain here after
+        a worker crash are re-queued by the worker_ready recovery handler.
+        """
+        return f"llm_inflight:{self.uuid}"
+
+    @property
     def is_active(self) -> bool:
         """True while the job is pending or running (i.e. has not yet terminated)."""
         return self.status in self.ACTIVE_STATUSES

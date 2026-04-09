@@ -325,38 +325,10 @@ def launch_language_analysis(sid):
     if not is_deletable(record, message=True):
         return redirect(redirect_url())
 
-    celery = current_app.extensions["celery"]
-
-    t_extract = celery.tasks["app.tasks.language_analysis.download_and_extract"]
-    t_stats = celery.tasks["app.tasks.language_analysis.compute_statistics"]
-    t_llm = celery.tasks["app.tasks.language_analysis.submit_to_llm"]
-    t_feedback = celery.tasks["app.tasks.language_analysis.submit_to_llm_feedback"]
-    t_finalize = celery.tasks["app.tasks.language_analysis.finalize"]
-    t_error = celery.tasks["app.tasks.language_analysis.error_handler"]
-
-    work = chain(
-        t_extract.si(record.id).set(queue="llm_tasks"),
-        t_stats.si(record.id).set(queue="default"),
-        t_llm.si(record.id).set(queue="llm_tasks"),
-        t_feedback.si(record.id).set(queue="llm_tasks"),
-        t_finalize.si(record.id).set(queue="default"),
-    ).on_error(t_error.si(record.id, current_user.id).set(queue="default"))
-    work.apply_async()
-
-    # Reset / initialise state flags
-    record.language_analysis = None
-    record.language_analysis_started = True
-    record.language_analysis_complete = False
-    record.llm_analysis_failed = False
-    record.llm_failure_reason = None
-    record.llm_feedback_failed = False
-    record.llm_feedback_failure_reason = None
+    from ..tasks.llm_orchestration import enqueue_single_record
 
     try:
-        log_db_commit(
-            "Initiated language analysis workflow for submission record",
-            project_classes=record.owner.config.project_class,
-        )
+        enqueue_single_record(record.id, user=current_user, clear_existing=True)
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(

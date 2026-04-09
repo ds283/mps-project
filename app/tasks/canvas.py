@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from urllib.parse import urljoin
 
 import requests
-from celery import chain, group
+from celery import group
 from flask import current_app
 from nameparser import HumanName
 from sqlalchemy import func, or_
@@ -931,14 +931,13 @@ def register_canvas_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise
 
-        process = celery.tasks["app.tasks.process_report.process"]
-        finalize = celery.tasks["app.tasks.process_report.finalize"]
-        error = celery.tasks["app.tasks.process_report.error"]
+        # Enqueue the full LLM analysis pipeline through the orchestration
+        # system.  The processed report is generated at the end of the pipeline
+        # by language_analysis.finalize(), so there is no need to dispatch the
+        # process_report chain directly here.
+        from ..tasks.llm_orchestration import enqueue_single_record
 
-        work = chain(process.si(record.id), finalize.si(record.id)).on_error(
-            error.si(record.id, user_id)
-        )
-        work.apply_async()
+        enqueue_single_record(record.id, user=user, clear_existing=True)
 
         if user is not None:
             user.post_message(

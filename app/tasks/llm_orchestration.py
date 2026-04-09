@@ -11,36 +11,69 @@
 """
 Celery-based orchestration for bulk LLM pipeline submissions.
 
-Architecture (Option B — Redis-backed serial coordinator):
+Architecture (Global coordinator with reliable Redis queue):
 
-  When a convenor/admin triggers bulk analysis submission, a helper function
-  (e.g. ``launch_period_pipeline``) is called directly from the view.  It:
+  When any submission path triggers LLM analysis (bulk dashboard actions,
+  ad-hoc single-record submission, or Canvas pull_report), it calls one of
+  the launch_*_pipeline() helpers or enqueue_single_record().  These helpers:
 
-  1. Creates a ``LLMOrchestrationJob`` DB row to track progress.
-  2. Pushes the selected ``SubmissionRecord`` IDs into a Redis list keyed by
-     the job's UUID.
-  3. Dispatches the ``orchestration_step`` Celery task.
+  1. Create a LLMOrchestrationJob DB row to track progress.
+  2. Push the selected SubmissionRecord IDs into a Redis list keyed by the
+     job's UUID (the "pending queue").
+  3. Dispatch global_orchestration_step.
 
-  ``orchestration_step`` pops one record ID from the Redis list, resets the
-  record's analysis state, and launches its analysis chain
-  (download_and_extract → compute_statistics → submit_to_llm →
-   submit_to_llm_feedback → finalize → orchestration_record_done).
+  global_orchestration_step is the single coordinator for ALL active
+  LLMOrchestrationJob instances.  It:
 
-  On success, ``orchestration_record_done`` increments the job's
-  ``completed_count`` and re-dispatches ``orchestration_step`` for the next
-  record.  On failure, ``orchestration_record_error`` does the same after
-  resetting the record flags and incrementing ``failed_count``.
+  a. Loads every PENDING/RUNNING job from the DB.
+  b. Computes the number of currently in-flight records by summing the length
+     of each job's inflight Redis list (llm_inflight:{uuid}).
+  c. Fills available slots (up to OLLAMA_BATCH_SIZE) by round-robin across
+     active job queues, using RPOPLPUSH to atomically move each record ID from
+     the pending queue (llm_queue:{uuid}) to the inflight list
+     (llm_inflight:{uuid}).
+  d. Dispatches an analysis chain for each record.
 
-  This pattern serialises all LLM-queue tasks (only one analysis chain runs
-  at a time) without building a fragile chain-of-chains.  Scaling to a
-  batch_size > 1 requires only a trivial change to ``orchestration_step``.
+  Because a single coordinator manages all jobs, parallel submissions from
+  multiple LLMOrchestrationJob instances are serialised under the configured
+  batch limit — no per-job coordinator tasks, no hidden bypass paths.
+
+  Reliable queue (crash safety):
+
+  RPOPLPUSH moves record IDs atomically from the pending queue to the inflight
+  list.  If a Celery worker crashes mid-chain the record ID stays in the
+  inflight list and is not lost.  On worker restart the worker_ready signal
+  handler calls _recover_active_jobs(), which moves any inflight items back to
+  the pending queue before re-dispatching the coordinator.
+
+  Double-processing race (accepted limitation):
+
+  If worker A is processing record X (X is in llm_inflight:{uuid}) and worker
+  B restarts, the recovery handler on B sees X in the inflight list, moves it
+  back to the pending queue, and the coordinator dispatches a second chain for
+  X.  Both chains then run concurrently on workers A and B.
+
+  This is safe but wasteful:
+    - Both chains write to the same language_analysis JSON blob; the last
+      writer wins.  Both start from scratch and produce a complete, valid
+      result, so the final stored state is correct.
+    - completed_count is incremented twice.  The completion check therefore
+      uses >= rather than == and guards against marking an already-complete
+      job complete a second time.
+    - Two LLM calls are made for the same report, wasting server time.
+    - _dispatch_process_report() is called twice from finalize(); the second
+      run overwrites the first processed report, which is harmless.
+
+  This race can only occur after a worker crash and restart, which is rare in
+  practice.  The alternative (a per-record Redis lock) adds meaningful
+  complexity for negligible benefit.
 """
 
-from datetime import datetime
 from typing import List, Optional
 
 import redis as redis_lib
 from celery import chain
+from celery.signals import worker_ready
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -68,14 +101,14 @@ def _get_orchestration_redis() -> redis_lib.Redis:
     return redis_lib.Redis.from_url(url, decode_responses=False)
 
 
-def _cleanup_redis(job_uuid: str) -> None:
-    """Delete the Redis queue key for a job (best-effort)."""
+def _cleanup_redis(job: LLMOrchestrationJob) -> None:
+    """Delete both Redis keys for a job (best-effort)."""
     try:
         r = _get_orchestration_redis()
-        r.delete(f"llm_queue:{job_uuid}")
+        r.delete(job.redis_queue_key, job.redis_inflight_key)
     except Exception as exc:
         current_app.logger.warning(
-            f"llm_orchestration: could not clean up Redis queue for job {job_uuid}: {exc}"
+            f"llm_orchestration: could not clean up Redis keys for job {job.uuid}: {exc}"
         )
 
 
@@ -144,27 +177,131 @@ def _collect_record_ids(
 
 
 def _populate_redis_queue(job: LLMOrchestrationJob, record_ids: List[int]) -> None:
-    """Push *record_ids* into the job's Redis queue (left push → right pop = FIFO)."""
+    """Push *record_ids* into the job's Redis pending queue (left push → right pop = FIFO)."""
     if not record_ids:
         return
     r = _get_orchestration_redis()
     key = job.redis_queue_key
-    # Use a pipeline for efficiency
     pipe = r.pipeline()
     for rid in record_ids:
         pipe.lpush(key, rid)
     pipe.execute()
 
 
-def _dispatch_coordinator(job_uuid: str) -> None:
-    """Dispatch the orchestration_step task for the given job UUID."""
+def _dispatch_global_coordinator() -> None:
+    """Dispatch global_orchestration_step."""
     celery = current_app.extensions["celery"]
-    t_step = celery.tasks["app.tasks.llm_orchestration.orchestration_step"]
-    t_step.apply_async(args=[job_uuid], queue="default")
+    t = celery.tasks["app.tasks.llm_orchestration.global_orchestration_step"]
+    t.apply_async(queue="default")
+
+
+def _dispatch_analysis_chain(celery, job_uuid: str, record_id: int) -> None:
+    """Build and dispatch the full language-analysis chain for *record_id*."""
+    t_extract = celery.tasks["app.tasks.language_analysis.download_and_extract"]
+    t_stats = celery.tasks["app.tasks.language_analysis.compute_statistics"]
+    t_llm = celery.tasks["app.tasks.language_analysis.submit_to_llm"]
+    t_feedback = celery.tasks["app.tasks.language_analysis.submit_to_llm_feedback"]
+    t_finalize = celery.tasks["app.tasks.language_analysis.finalize"]
+    t_done = celery.tasks["app.tasks.llm_orchestration.orchestration_record_done"]
+    t_err = celery.tasks["app.tasks.llm_orchestration.orchestration_record_error"]
+
+    work = chain(
+        t_extract.si(record_id).set(queue="llm_tasks"),
+        t_stats.si(record_id).set(queue="default"),
+        t_llm.si(record_id).set(queue="llm_tasks"),
+        t_feedback.si(record_id).set(queue="llm_tasks"),
+        t_finalize.si(record_id).set(queue="default"),
+        t_done.si(job_uuid, record_id).set(queue="default"),
+    ).on_error(t_err.si(job_uuid, record_id).set(queue="default"))
+
+    work.apply_async()
+
+
+def _recover_active_jobs() -> None:
+    """
+    Called on worker startup to resume any jobs that were active when the
+    worker last stopped.
+
+    For each PENDING or RUNNING LLMOrchestrationJob:
+      - Any record IDs in the inflight list (llm_inflight:{uuid}) are moved
+        back to the pending queue (llm_queue:{uuid}) using RPOPLPUSH so they
+        will be re-processed.  See the module-level docstring for the
+        double-processing race condition that can arise when a record was
+        genuinely in-flight on another worker at the time of this recovery.
+      - If the pending queue (after re-queuing) is non-empty, the global
+        coordinator is dispatched once to resume processing.
+
+    Jobs whose pending and inflight queues are both empty but whose counters
+    have not yet reached total_count are left in RUNNING state; they will be
+    cleaned up when their last in-flight chain completes normally.
+    """
+    try:
+        r = _get_orchestration_redis()
+    except Exception as exc:
+        current_app.logger.error(
+            f"llm_orchestration._recover_active_jobs: cannot connect to Redis: {exc}"
+        )
+        return
+
+    try:
+        active_jobs: List[LLMOrchestrationJob] = (
+            db.session.query(LLMOrchestrationJob)
+            .filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES))
+            .all()
+        )
+    except SQLAlchemyError as exc:
+        current_app.logger.exception(
+            "llm_orchestration._recover_active_jobs: SQLAlchemyError loading active jobs",
+            exc_info=exc,
+        )
+        return
+
+    if not active_jobs:
+        return
+
+    needs_coordinator = False
+    for job in active_jobs:
+        # Move any inflight records back to the pending queue.
+        recovered = 0
+        try:
+            while r.rpoplpush(job.redis_inflight_key, job.redis_queue_key):
+                recovered += 1
+        except Exception as exc:
+            current_app.logger.warning(
+                f"llm_orchestration._recover_active_jobs: Redis error recovering "
+                f"inflight items for job {job.uuid}: {exc}"
+            )
+
+        if recovered:
+            current_app.logger.info(
+                f"llm_orchestration._recover_active_jobs: re-queued {recovered} "
+                f"inflight record(s) for job {job.uuid}"
+            )
+
+        # Dispatch the coordinator if this job has pending work.
+        try:
+            if r.llen(job.redis_queue_key) > 0:
+                needs_coordinator = True
+        except Exception as exc:
+            current_app.logger.warning(
+                f"llm_orchestration._recover_active_jobs: Redis error checking queue "
+                f"length for job {job.uuid}: {exc}"
+            )
+
+    if needs_coordinator:
+        try:
+            _dispatch_global_coordinator()
+            current_app.logger.info(
+                "llm_orchestration._recover_active_jobs: dispatched global coordinator"
+            )
+        except Exception as exc:
+            current_app.logger.error(
+                f"llm_orchestration._recover_active_jobs: could not dispatch coordinator: {exc}"
+            )
 
 
 # ---------------------------------------------------------------------------
-# Entry-point helpers (called from views)
+# Entry-point helpers (called from views and tasks)
 # ---------------------------------------------------------------------------
 
 
@@ -215,7 +352,7 @@ def launch_period_pipeline(
         db.session.rollback()
         raise
 
-    _dispatch_coordinator(job.uuid)
+    _dispatch_global_coordinator()
     return job
 
 
@@ -268,7 +405,7 @@ def launch_pclass_pipeline(
         db.session.rollback()
         raise
 
-    _dispatch_coordinator(job.uuid)
+    _dispatch_global_coordinator()
     return job
 
 
@@ -319,7 +456,7 @@ def launch_cycle_pipeline(
         db.session.rollback()
         raise
 
-    _dispatch_coordinator(job.uuid)
+    _dispatch_global_coordinator()
     return job
 
 
@@ -361,7 +498,85 @@ def launch_global_pipeline(
         db.session.rollback()
         raise
 
-    _dispatch_coordinator(job.uuid)
+    _dispatch_global_coordinator()
+    return job
+
+
+def enqueue_single_record(
+    record_id: int,
+    user: Optional[User] = None,
+    clear_existing: bool = False,
+) -> Optional[LLMOrchestrationJob]:
+    """
+    Create a single-record LLMOrchestrationJob and enqueue it through the
+    standard orchestration pipeline.
+
+    Used by ad-hoc submission paths (the per-record launch view and the Canvas
+    pull_report workflow) to ensure they are subject to the same batch-size
+    limit and fault-tolerance guarantees as bulk submissions.
+
+    *clear_existing=True* is appropriate when the caller has already confirmed
+    that the user intends to regenerate all analysis data for this record.
+
+    Returns the created LLMOrchestrationJob or None if the record cannot be
+    processed (not found, no report attached, or not eligible).
+    """
+    try:
+        record: SubmissionRecord = (
+            db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+        )
+    except SQLAlchemyError as exc:
+        current_app.logger.exception(
+            f"enqueue_single_record: SQLAlchemyError loading SubmissionRecord #{record_id}",
+            exc_info=exc,
+        )
+        return None
+
+    if record is None:
+        current_app.logger.error(
+            f"enqueue_single_record: SubmissionRecord #{record_id} not found"
+        )
+        return None
+
+    if record.report is None:
+        current_app.logger.warning(
+            f"enqueue_single_record: SubmissionRecord #{record_id} has no report — skipping"
+        )
+        return None
+
+    period = record.period
+    if period is None:
+        current_app.logger.error(
+            f"enqueue_single_record: SubmissionRecord #{record_id} has no associated period"
+        )
+        return None
+
+    description = f"Single record: {record.owner.student.user.name if record.owner and record.owner.student else f'#{record_id}'}"
+    job = LLMOrchestrationJob.build(
+        scope=LLMOrchestrationJob.SCOPE_PERIOD,
+        scope_id=period.id,
+        total_count=1,
+        clear_existing=clear_existing,
+        owner=user,
+        description=description,
+    )
+    db.session.add(job)
+    db.session.flush()
+
+    _populate_redis_queue(job, [record_id])
+
+    try:
+        log_db_commit(
+            f"Enqueued single-record LLM orchestration job "
+            f"(SubmissionRecord #{record_id}, clear={clear_existing})",
+            student=record.owner.student if record.owner else None,
+            project_classes=record.owner.config.project_class if record.owner and record.owner.config else None,
+        )
+    except SQLAlchemyError:
+        db.session.rollback()
+        raise
+
+    _dispatch_global_coordinator()
     return job
 
 
@@ -373,6 +588,25 @@ def launch_global_pipeline(
 def register_llm_orchestration_tasks(celery):
 
     # ------------------------------------------------------------------
+    # worker_ready signal: resume any active jobs after a restart.
+    # ------------------------------------------------------------------
+
+    # See the module-level docstring for a full description of the
+    # double-processing race condition that can occur here.
+    @worker_ready.connect
+    def on_worker_ready(sender, **kwargs):
+        """
+        On worker startup, re-queue any records that were in-flight when the
+        worker last stopped and dispatch the global coordinator if needed.
+        """
+        try:
+            _recover_active_jobs()
+        except Exception as exc:
+            current_app.logger.exception(
+                "llm_orchestration.on_worker_ready: recovery failed", exc_info=exc
+            )
+
+    # ------------------------------------------------------------------
     # orchestration_record_done
     # ------------------------------------------------------------------
 
@@ -380,15 +614,34 @@ def register_llm_orchestration_tasks(celery):
     def orchestration_record_done(self, job_uuid: str, record_id: int):
         """
         Success callback: called as the last step in a single SubmissionRecord's
-        analysis chain.  Increments the job's completed_count and triggers the
-        next coordinator step.
+        analysis chain.  Removes the record from the inflight list, increments
+        the job's completed_count, and triggers the global coordinator.
         """
+        # Remove from inflight list first (best-effort: don't let Redis errors
+        # block the counter update or the next coordinator dispatch).
+        try:
+            r = _get_orchestration_redis()
+            r.lrem(f"llm_inflight:{job_uuid}", 0, str(record_id).encode())
+        except Exception as exc:
+            current_app.logger.warning(
+                f"llm_orchestration.orchestration_record_done: Redis LREM failed "
+                f"for job {job_uuid} / record #{record_id}: {exc}"
+            )
+
         try:
             job: LLMOrchestrationJob = (
                 db.session.query(LLMOrchestrationJob).filter_by(uuid=job_uuid).first()
             )
             if job is not None:
                 job.increment_completed()
+                # Use >= (not ==) to correctly handle the double-processing race
+                # where a record may be counted twice after crash recovery.
+                # Guard against marking an already-complete job complete a second time.
+                if (
+                    (job.completed_count + job.failed_count) >= job.total_count
+                    and job.status == LLMOrchestrationJob.STATUS_RUNNING
+                ):
+                    job.mark_complete()
                 db.session.commit()
         except SQLAlchemyError as exc:
             db.session.rollback()
@@ -398,8 +651,7 @@ def register_llm_orchestration_tasks(celery):
                 exc_info=exc,
             )
 
-        # Always advance regardless of DB outcome
-        orchestration_step.apply_async(args=[job_uuid], queue="default")
+        _dispatch_global_coordinator()
 
     # ------------------------------------------------------------------
     # orchestration_record_error
@@ -409,9 +661,19 @@ def register_llm_orchestration_tasks(celery):
     def orchestration_record_error(self, job_uuid: str, record_id: int):
         """
         Error callback: called when a SubmissionRecord's analysis chain raises an
-        unhandled exception.  Resets the record's progress flags, increments the
-        job's failed_count, and triggers the next coordinator step.
+        unhandled exception.  Removes the record from the inflight list, resets
+        the record's progress flags, increments the job's failed_count, and
+        triggers the global coordinator.
         """
+        try:
+            r = _get_orchestration_redis()
+            r.lrem(f"llm_inflight:{job_uuid}", 0, str(record_id).encode())
+        except Exception as exc:
+            current_app.logger.warning(
+                f"llm_orchestration.orchestration_record_error: Redis LREM failed "
+                f"for job {job_uuid} / record #{record_id}: {exc}"
+            )
+
         try:
             record: SubmissionRecord = (
                 db.session.query(SubmissionRecord).filter_by(id=record_id).first()
@@ -437,6 +699,11 @@ def register_llm_orchestration_tasks(celery):
             )
             if job is not None:
                 job.increment_failed()
+                if (
+                    (job.completed_count + job.failed_count) >= job.total_count
+                    and job.status == LLMOrchestrationJob.STATUS_RUNNING
+                ):
+                    job.mark_complete()
 
             db.session.commit()
         except SQLAlchemyError as exc:
@@ -447,168 +714,197 @@ def register_llm_orchestration_tasks(celery):
                 exc_info=exc,
             )
 
-        # Always advance regardless of DB outcome
-        orchestration_step.apply_async(args=[job_uuid], queue="default")
+        _dispatch_global_coordinator()
 
     # ------------------------------------------------------------------
-    # orchestration_step  (main coordinator)
+    # global_orchestration_step  (single coordinator for all active jobs)
     # ------------------------------------------------------------------
 
     @celery.task(bind=True, default_retry_delay=30)
-    def orchestration_step(self, job_uuid: str):
+    def global_orchestration_step(self):
         """
-        Coordinator: pop one SubmissionRecord ID from the Redis queue and launch
-        its language-analysis chain.  When the queue is exhausted, mark the job
-        complete.  Each successful/failed completion triggers another call to
-        this task, preserving serial LLM execution.
+        Global coordinator: fill up to OLLAMA_BATCH_SIZE slots by popping
+        records from all active LLMOrchestrationJob queues (round-robin).
+
+        Replaces the former per-job orchestration_step.  Because there is a
+        single coordinator, parallel submissions from multiple
+        LLMOrchestrationJob instances are serialised under the configured
+        batch limit.
+
+        Records are atomically moved from the pending queue to the inflight
+        list via RPOPLPUSH; the inflight list is the source of truth for
+        in-flight count (sum of LLEN across all active jobs' inflight lists).
         """
-        # ------- load job -------
+        batch_size: int = current_app.config.get("OLLAMA_BATCH_SIZE", 1)
+
+        # ------- load active jobs -------
         try:
-            job: LLMOrchestrationJob = (
-                db.session.query(LLMOrchestrationJob).filter_by(uuid=job_uuid).first()
+            active_jobs: List[LLMOrchestrationJob] = (
+                db.session.query(LLMOrchestrationJob)
+                .filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES))
+                .all()
             )
         except SQLAlchemyError as exc:
             current_app.logger.exception(
-                f"llm_orchestration.orchestration_step: SQLAlchemyError loading "
-                f"job {job_uuid}",
+                "llm_orchestration.global_orchestration_step: SQLAlchemyError loading active jobs",
                 exc_info=exc,
             )
             raise self.retry()
 
-        if job is None:
-            current_app.logger.error(
-                f"llm_orchestration.orchestration_step: job {job_uuid} not found — stopping"
-            )
+        if not active_jobs:
             return
 
-        # Honour a manual cancellation
-        if job.status == LLMOrchestrationJob.STATUS_FAILED:
-            current_app.logger.info(
-                f"llm_orchestration.orchestration_step: job {job_uuid} cancelled — stopping"
-            )
-            _cleanup_redis(job_uuid)
-            return
-
-        # Mark running on the first invocation
-        if job.status == LLMOrchestrationJob.STATUS_PENDING:
-            job.mark_started()
-            try:
-                db.session.commit()
-            except SQLAlchemyError as exc:
-                db.session.rollback()
-                current_app.logger.exception(
-                    f"llm_orchestration.orchestration_step: SQLAlchemyError marking "
-                    f"job {job_uuid} as started",
-                    exc_info=exc,
-                )
-
-        # ------- pop next record -------
+        # ------- connect to Redis -------
         try:
             r = _get_orchestration_redis()
-            record_id_bytes = r.rpop(job.redis_queue_key)
         except Exception as exc:
             current_app.logger.exception(
-                f"llm_orchestration.orchestration_step: Redis error for job {job_uuid}",
+                "llm_orchestration.global_orchestration_step: Redis connection error",
                 exc_info=exc,
             )
             raise self.retry()
 
-        if record_id_bytes is None:
-            # Queue exhausted — job complete
+        # ------- check cancellations and transition PENDING → RUNNING -------
+        jobs_to_remove = []
+        for job in active_jobs:
+            if job.status == LLMOrchestrationJob.STATUS_FAILED:
+                # Manually cancelled by an administrator.
+                _cleanup_redis(job)
+                jobs_to_remove.append(job)
+            elif job.status == LLMOrchestrationJob.STATUS_PENDING:
+                job.mark_started()
+
+        for job in jobs_to_remove:
+            active_jobs.remove(job)
+
+        if active_jobs:
             try:
-                job.mark_complete()
                 db.session.commit()
             except SQLAlchemyError as exc:
                 db.session.rollback()
                 current_app.logger.exception(
-                    f"llm_orchestration.orchestration_step: SQLAlchemyError finalising "
-                    f"job {job_uuid}",
+                    "llm_orchestration.global_orchestration_step: SQLAlchemyError updating job statuses",
                     exc_info=exc,
                 )
+
+        if not active_jobs:
             return
 
-        record_id = int(record_id_bytes)
-
-        # ------- load and validate record -------
+        # ------- compute available slots -------
         try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-            )
-        except SQLAlchemyError as exc:
+            inflight = sum(r.llen(job.redis_inflight_key) for job in active_jobs)
+        except Exception as exc:
             current_app.logger.exception(
-                f"llm_orchestration.orchestration_step: SQLAlchemyError loading "
-                f"SubmissionRecord #{record_id}",
+                "llm_orchestration.global_orchestration_step: Redis error reading inflight counts",
                 exc_info=exc,
             )
-            try:
-                job.increment_failed()
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-            orchestration_step.apply_async(args=[job_uuid], queue="default")
+            raise self.retry()
+
+        available_slots = max(0, batch_size - inflight)
+        if available_slots == 0:
+            # All slots occupied; will be re-triggered when in-flight records complete.
             return
 
-        if record is None or record.report is None:
-            current_app.logger.warning(
-                f"llm_orchestration.orchestration_step: skipping SubmissionRecord #{record_id} "
-                f"(not found or no report)"
-            )
+        # ------- round-robin dispatch -------
+        dispatched = 0
+        # Loop at most len(active_jobs) times per slot to avoid an infinite loop
+        # when all queues are empty.
+        max_attempts = len(active_jobs) * available_slots + len(active_jobs)
+        attempts = 0
+        job_idx = 0
+
+        while dispatched < available_slots and attempts < max_attempts:
+            job = active_jobs[job_idx % len(active_jobs)]
+            job_idx += 1
+            attempts += 1
+
+            # Atomically move record ID from pending queue to inflight list.
             try:
-                job.increment_failed()
-                db.session.commit()
-            except Exception:
-                db.session.rollback()
-            orchestration_step.apply_async(args=[job_uuid], queue="default")
-            return
+                record_id_bytes = r.rpoplpush(job.redis_queue_key, job.redis_inflight_key)
+            except Exception as exc:
+                current_app.logger.exception(
+                    f"llm_orchestration.global_orchestration_step: Redis RPOPLPUSH error "
+                    f"for job {job.uuid}",
+                    exc_info=exc,
+                )
+                continue
 
-        # ------- optionally clear existing results -------
-        if job.clear_existing:
-            _clear_record_state(record)
+            if record_id_bytes is None:
+                continue  # this job's queue is empty; try the next
 
-        # ------- prepare record for (re-)submission -------
-        record.language_analysis_started = True
-        record.language_analysis_complete = False
-        record.llm_analysis_failed = False
-        record.llm_failure_reason = None
-        record.llm_feedback_failed = False
-        record.llm_feedback_failure_reason = None
+            record_id = int(record_id_bytes)
 
-        try:
-            db.session.commit()
-        except SQLAlchemyError as exc:
-            db.session.rollback()
-            current_app.logger.exception(
-                f"llm_orchestration.orchestration_step: SQLAlchemyError resetting "
-                f"SubmissionRecord #{record_id}",
-                exc_info=exc,
-            )
+            # ------- load and validate record -------
             try:
-                job.increment_failed()
+                record: SubmissionRecord = (
+                    db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+                )
+            except SQLAlchemyError as exc:
+                current_app.logger.exception(
+                    f"llm_orchestration.global_orchestration_step: SQLAlchemyError loading "
+                    f"SubmissionRecord #{record_id}",
+                    exc_info=exc,
+                )
+                r.lrem(job.redis_inflight_key, 0, record_id_bytes)
+                try:
+                    job.increment_failed()
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                dispatched += 1  # consumed a slot even on error to make progress
+                continue
+
+            if record is None or record.report is None:
+                current_app.logger.warning(
+                    f"llm_orchestration.global_orchestration_step: skipping "
+                    f"SubmissionRecord #{record_id} (not found or no report)"
+                )
+                r.lrem(job.redis_inflight_key, 0, record_id_bytes)
+                try:
+                    job.increment_failed()
+                    if (
+                        (job.completed_count + job.failed_count) >= job.total_count
+                        and job.status == LLMOrchestrationJob.STATUS_RUNNING
+                    ):
+                        job.mark_complete()
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                dispatched += 1
+                continue
+
+            # ------- optionally clear existing results -------
+            if job.clear_existing:
+                _clear_record_state(record)
+
+            # ------- prepare record for (re-)submission -------
+            record.language_analysis_started = True
+            record.language_analysis_complete = False
+            record.llm_analysis_failed = False
+            record.llm_failure_reason = None
+            record.llm_feedback_failed = False
+            record.llm_feedback_failure_reason = None
+
+            try:
                 db.session.commit()
-            except Exception:
+            except SQLAlchemyError as exc:
                 db.session.rollback()
-            orchestration_step.apply_async(args=[job_uuid], queue="default")
-            return
+                current_app.logger.exception(
+                    f"llm_orchestration.global_orchestration_step: SQLAlchemyError resetting "
+                    f"SubmissionRecord #{record_id}",
+                    exc_info=exc,
+                )
+                r.lrem(job.redis_inflight_key, 0, record_id_bytes)
+                try:
+                    job.increment_failed()
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                dispatched += 1
+                continue
 
-        # ------- build and dispatch the analysis chain -------
-        t_extract = celery.tasks["app.tasks.language_analysis.download_and_extract"]
-        t_stats = celery.tasks["app.tasks.language_analysis.compute_statistics"]
-        t_llm = celery.tasks["app.tasks.language_analysis.submit_to_llm"]
-        t_feedback = celery.tasks["app.tasks.language_analysis.submit_to_llm_feedback"]
-        t_finalize = celery.tasks["app.tasks.language_analysis.finalize"]
-        t_done = orchestration_record_done.si(job_uuid, record_id).set(queue="default")
-        t_err = orchestration_record_error.si(job_uuid, record_id).set(queue="default")
+            # ------- dispatch the analysis chain -------
+            _dispatch_analysis_chain(celery, job.uuid, record_id)
+            dispatched += 1
 
-        work = chain(
-            t_extract.si(record_id).set(queue="llm_tasks"),
-            t_stats.si(record_id).set(queue="default"),
-            t_llm.si(record_id).set(queue="llm_tasks"),
-            t_feedback.si(record_id).set(queue="llm_tasks"),
-            t_finalize.si(record_id).set(queue="default"),
-            t_done,
-        ).on_error(t_err)
-
-        work.apply_async()
-
-    # Return the three task objects so callers can reference them if needed
-    return orchestration_step, orchestration_record_done, orchestration_record_error
+    return global_orchestration_step, orchestration_record_done, orchestration_record_error

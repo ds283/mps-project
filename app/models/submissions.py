@@ -1133,6 +1133,12 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     # human-readable reason for feedback LLM failure, for display to administrators
     llm_feedback_failure_reason = db.Column(db.Text(), default=None)
 
+    # LLM pipeline provenance — captured at submission time so past runs can be
+    # evaluated if a larger model or larger context window becomes available later.
+    llm_model_name = db.Column(db.String(200, collation="utf8_bin"), nullable=True)
+    llm_context_size = db.Column(db.Integer(), nullable=True)
+    llm_num_chunks = db.Column(db.Integer(), nullable=True)
+
     # RISK FACTORS
     # JSON blob recording which risk conditions are present and whether each has been resolved.
     # Using a JSON blob allows new risk factor types to be added without schema changes.
@@ -2806,6 +2812,9 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 "llm_grade_s": timings.get("llm_s"),
                 "llm_feedback_s": timings.get("llm_feedback_s"),
             },
+            "llm_model_name": self.llm_model_name,
+            "llm_context_size": self.llm_context_size,
+            "llm_num_chunks": self.llm_num_chunks,
         }
 
     def risk_factor_display_items(self) -> list:

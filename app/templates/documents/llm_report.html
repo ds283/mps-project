@@ -377,11 +377,20 @@
             </div>
         </div>
 
-        {# Pipeline timings #}
+        {# LLM provenance and pipeline timings #}
         {% set t = metrics_data.timings %}
-        {% if t.extraction_s is not none or t.llm_grade_s is not none %}
+        {% if metrics_data.llm_model_name is not none or t.extraction_s is not none or t.llm_grade_s is not none %}
         <hr class="my-2">
         <div class="d-flex flex-wrap gap-3 small text-muted">
+            {% if metrics_data.llm_model_name is not none %}
+                <span><i class="fas fa-robot fa-fw"></i> Model: <strong class="text-body">{{ metrics_data.llm_model_name }}</strong></span>
+            {% endif %}
+            {% if metrics_data.llm_context_size is not none %}
+                <span><i class="fas fa-window-maximize fa-fw"></i> Context: <strong class="text-body">{{ "{:,}".format(metrics_data.llm_context_size) }}</strong> tokens</span>
+            {% endif %}
+            {% if metrics_data.llm_num_chunks is not none %}
+                <span><i class="fas fa-layer-group fa-fw"></i> Chunks: <strong class="text-body">{{ metrics_data.llm_num_chunks }}</strong></span>
+            {% endif %}
             {% if t.extraction_s is not none %}
                 <span><i class="fas fa-file-export fa-fw"></i> Extraction: {{ "%.1f"|format(t.extraction_s) }}s</span>
             {% endif %}

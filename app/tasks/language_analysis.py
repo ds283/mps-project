@@ -2011,6 +2011,7 @@ def register_language_analysis_tasks(celery):
         accumulated = ""
         last_exc: Exception | None = None
         parsed_result: dict | None = None
+        num_chunks = 1  # updated to actual chunk count on the chunked path
 
         if doc_words <= single_pass_word_budget:
             # ----------------------------------------------------------------
@@ -2037,6 +2038,7 @@ def register_language_analysis_tasks(celery):
             )
             chunks = _build_chunks(clean_text, chunk_word_budget)
             total_chunks = len(chunks)
+            num_chunks = total_chunks
             current_app.logger.info(
                 f"language_analysis.submit_to_llm: record #{record_id} — "
                 f"{doc_words} words, {total_chunks} chunk(s) of ~{chunk_word_budget} words "
@@ -2217,6 +2219,18 @@ def register_language_analysis_tasks(celery):
         # Common outcome handling (single-pass and chunked-synthesis paths).
         # ----------------------------------------------------------------
         data.setdefault("timings", {})["llm_s"] = round(time.monotonic() - _t_llm, 1)
+
+        # Store LLM provenance in the JSON blob and on the model columns so
+        # past runs can be compared if a larger model or wider context window
+        # is deployed later.
+        data["llm_meta"] = {
+            "model": model,
+            "context_size": context_size,
+            "num_chunks": num_chunks,
+        }
+        record.llm_model_name = model
+        record.llm_context_size = context_size
+        record.llm_num_chunks = num_chunks
 
         if parsed_result is not None:
             # Success: store result.

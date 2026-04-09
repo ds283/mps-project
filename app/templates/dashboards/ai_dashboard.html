@@ -131,15 +131,15 @@
     {% endif %}
 {% endmacro %}
 
-{% macro launch_buttons(submit_url, clear_url, level_label) %}
+{% macro launch_buttons(submit_url, clear_url, level_label, outline=false) %}
     <a href="{{ submit_url }}"
-       class="btn btn-sm btn-primary"
+       class="btn btn-sm {{ 'btn-outline-primary' if outline else 'btn-primary' }}"
        data-bs-toggle="tooltip"
        title="Submit reports without analysis results to the LLM pipeline">
         <i class="fas fa-robot me-1"></i>Submit missing
     </a>
     <a href="{{ clear_url }}"
-       class="btn btn-sm btn-danger"
+       class="btn btn-sm {{ 'btn-outline-danger' if outline else 'btn-danger' }}"
        data-bs-toggle="tooltip"
        title="Clear all existing results and resubmit every report for {{ level_label }}"
        onclick="return confirm('Clear ALL existing analysis results for {{ level_label }} and resubmit every report? This cannot be undone.')">
@@ -147,15 +147,15 @@
     </a>
 {% endmacro %}
 
-{% macro export_buttons(xlsx_url, csv_url) %}
+{% macro export_buttons(xlsx_url, csv_url, outline=false) %}
     <div class="btn-group btn-group-sm" role="group">
         <a href="{{ xlsx_url }}"
-           class="btn btn-secondary"
+           class="btn {{ 'btn-outline-secondary' if outline else 'btn-secondary' }}"
            data-bs-toggle="tooltip" title="Export as Excel workbook">
             <i class="fas fa-file-excel me-1"></i>Excel
         </a>
         <a href="{{ csv_url }}"
-           class="btn btn-secondary"
+           class="btn {{ 'btn-outline-secondary' if outline else 'btn-secondary' }}"
            data-bs-toggle="tooltip" title="Export as CSV">
             <i class="fas fa-file-csv me-1"></i>CSV
         </a>
@@ -364,14 +364,16 @@
                                 {{ launch_buttons(
                             url_for('dashboards.launch_cycle', year=section.year),
                             url_for('dashboards.clear_cycle', year=section.year),
-                            'cycle ' ~ section.label
+                            'cycle ' ~ section.label,
+                            outline=true
                         ) }}
                             </div>
                         {% endif %}
                         <div class="ms-2">
                             {{ export_buttons(
                         url_for('dashboards.export_cycle', year=section.year, fmt='xlsx'),
-                        url_for('dashboards.export_cycle', year=section.year, fmt='csv')
+                        url_for('dashboards.export_cycle', year=section.year, fmt='csv'),
+                        outline=true
                     ) }}
                         </div>
                     </div>

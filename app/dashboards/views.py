@@ -219,14 +219,14 @@ def _get_accessible_pclasses(tenant_id: Optional[int] = None) -> List[ProjectCla
 
 def _get_accessible_cycles(pclass_ids: List[int]) -> List[int]:
     """Return sorted list of academic years (MainConfig.year) that have
-    SubmissionPeriodRecords for the given project classes."""
+    SubmissionPeriodRecords containing at least one SubmissionRecord with an
+    uploaded report for the given project classes."""
     rows = (
         db.session.query(ProjectClassConfig.year)
         .filter(ProjectClassConfig.pclass_id.in_(pclass_ids))
-        .join(
-            SubmissionPeriodRecord,
-            SubmissionPeriodRecord.config_id == ProjectClassConfig.id,
-        )
+        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.config_id == ProjectClassConfig.id)
+        .join(SubmissionRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id)
+        .filter(SubmissionRecord.report_id.isnot(None))
         .distinct()
         .order_by(ProjectClassConfig.year.desc())
         .all()
@@ -600,7 +600,9 @@ def ai_dashboard():
             ).all()
 
             for period in periods:
-                records: List[SubmissionRecord] = period.submissions.all()
+                records: List[SubmissionRecord] = period.submissions.filter(
+                    SubmissionRecord.report_id.isnot(None)
+                ).all()
                 if not records:
                     continue
 
@@ -914,7 +916,10 @@ def _record_ids_for_period(period_id: int) -> List[int]:
     return [
         r[0]
         for r in db.session.query(SubmissionRecord.id)
-        .filter(SubmissionRecord.period_id == period_id)
+        .filter(
+            SubmissionRecord.period_id == period_id,
+            SubmissionRecord.report_id.isnot(None),
+        )
         .all()
     ]
 
@@ -931,7 +936,10 @@ def _record_ids_for_pclass_config(config_id: int) -> List[int]:
     return [
         r[0]
         for r in db.session.query(SubmissionRecord.id)
-        .filter(SubmissionRecord.period_id.in_(period_ids))
+        .filter(
+            SubmissionRecord.period_id.in_(period_ids),
+            SubmissionRecord.report_id.isnot(None),
+        )
         .all()
     ]
 
@@ -952,13 +960,21 @@ def _record_ids_for_cycle(year: int) -> List[int]:
     return [
         r[0]
         for r in db.session.query(SubmissionRecord.id)
-        .filter(SubmissionRecord.period_id.in_(period_ids))
+        .filter(
+            SubmissionRecord.period_id.in_(period_ids),
+            SubmissionRecord.report_id.isnot(None),
+        )
         .all()
     ]
 
 
 def _record_ids_global() -> List[int]:
-    return [r[0] for r in db.session.query(SubmissionRecord.id).all()]
+    return [
+        r[0]
+        for r in db.session.query(SubmissionRecord.id)
+        .filter(SubmissionRecord.report_id.isnot(None))
+        .all()
+    ]
 
 
 def _dispatch_export(

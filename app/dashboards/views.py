@@ -897,27 +897,34 @@ def clear_global():
 def active_jobs_status():
     """
     Return a JSON payload for the auto-reload poller.
-    ``just_finished`` is True if any previously-active job has now reached a
-    terminal state (i.e. the dashboard should reload to show updated data).
-    """
-    # Check whether any recently-finished jobs exist (finished in last 60 s)
-    from datetime import timedelta
 
+    Accepts an optional ``ids`` query parameter: a comma-separated list of
+    LLMOrchestrationJob UUIDs that were active when the page was rendered.
+    ``just_finished`` is True if any of those watched jobs have now reached a
+    terminal state.  Detection is timestamp-free — there is no window that can
+    expire.
+
+    ``active_count`` is the current count of active jobs, used by the client
+    to detect new jobs that appeared after the page was loaded.
+    """
     from flask import jsonify
 
-    now = __import__("datetime").datetime.now()
-    cutoff = now - timedelta(seconds=60)
+    raw_ids = request.args.get("ids", "")
+    watched_uuids = [uid.strip() for uid in raw_ids.split(",") if uid.strip()]
 
-    recently_finished = (
-        db.session.query(LLMOrchestrationJob)
-        .filter(
-            LLMOrchestrationJob.status.in_(
-                [LLMOrchestrationJob.STATUS_COMPLETE, LLMOrchestrationJob.STATUS_FAILED]
-            ),
-            LLMOrchestrationJob.finished_at >= cutoff,
+    if watched_uuids:
+        finished_count = (
+            db.session.query(LLMOrchestrationJob)
+            .filter(
+                LLMOrchestrationJob.uuid.in_(watched_uuids),
+                LLMOrchestrationJob.status.in_(
+                    [LLMOrchestrationJob.STATUS_COMPLETE, LLMOrchestrationJob.STATUS_FAILED]
+                ),
+            )
+            .count()
         )
-        .count()
-    )
+    else:
+        finished_count = 0
 
     active_count = (
         db.session.query(LLMOrchestrationJob)
@@ -925,9 +932,7 @@ def active_jobs_status():
         .count()
     )
 
-    return jsonify(
-        {"just_finished": recently_finished > 0, "active_count": active_count}
-    )
+    return jsonify({"just_finished": finished_count > 0, "active_count": active_count})
 
 
 # ---------------------------------------------------------------------------

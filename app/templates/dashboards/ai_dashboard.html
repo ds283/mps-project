@@ -20,24 +20,35 @@
     <script>
         // Auto-reload when an orchestration job completes
         (function () {
-            var _jobPoller = null;
+            // UUIDs of jobs active at page-render time — sent to the server on
+            // each poll so completion detection is timestamp-free.
+            var _watchedJobIds = {{ active_jobs | map(attribute='uuid') | list | tojson }};
+            var _initialActiveCount = {{ active_jobs | length }};
 
             function pollJobs() {
-                fetch('{{ url_for("dashboards.active_jobs_status") }}')
-                    .then(function (r) {
-                        return r.json();
-                    })
+                var url = '{{ url_for("dashboards.active_jobs_status") }}';
+                if (_watchedJobIds.length > 0) {
+                    url += '?ids=' + _watchedJobIds.join(',');
+                }
+                fetch(url)
+                    .then(function (r) { return r.json(); })
                     .then(function (data) {
+                        // A watched job has reached a terminal state.
                         if (data.just_finished) {
+                            window.location.reload();
+                            return;
+                        }
+                        // New jobs appeared after the page was loaded (e.g. launched
+                        // by another user).
+                        if (_initialActiveCount === 0 && data.active_count > 0) {
                             window.location.reload();
                         }
                     })
-                    .catch(function () { /* ignore network errors */
-                    });
+                    .catch(function () { /* ignore transient network errors */ });
             }
-            {% if active_jobs %}
-                _jobPoller = setInterval(pollJobs, 15000);
-            {% endif %}
+
+            // Always poll — jobs may appear after page load.
+            setInterval(pollJobs, 15000);
         })();
 
         // Update chevron direction when period subsections collapse/expand

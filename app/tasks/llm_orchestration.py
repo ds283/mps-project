@@ -826,6 +826,7 @@ def register_llm_orchestration_tasks(celery):
 
         # ------- check cancellations and transition PENDING → RUNNING -------
         jobs_to_remove = []
+        db_changed = False
         for job in active_jobs:
             if job.status == LLMOrchestrationJob.STATUS_FAILED:
                 # Manually cancelled by an administrator.
@@ -833,11 +834,30 @@ def register_llm_orchestration_tasks(celery):
                 jobs_to_remove.append(job)
             elif job.status == LLMOrchestrationJob.STATUS_PENDING:
                 job.mark_started()
+                db_changed = True
+                # Guard: all records may have already completed/failed before the
+                # coordinator committed PENDING→RUNNING.  Close the job immediately
+                # now that it is officially RUNNING.
+                if (job.completed_count + job.failed_count) >= job.total_count:
+                    job.mark_complete()
+                    jobs_to_remove.append(job)
+
+        # Defensive sweep: catch already-RUNNING jobs whose callbacks all raced past
+        # the STATUS_RUNNING guard in a prior coordinator cycle.
+        for job in active_jobs:
+            if (
+                job.status == LLMOrchestrationJob.STATUS_RUNNING
+                and job not in jobs_to_remove
+                and (job.completed_count + job.failed_count) >= job.total_count
+            ):
+                job.mark_complete()
+                db_changed = True
+                jobs_to_remove.append(job)
 
         for job in jobs_to_remove:
             active_jobs.remove(job)
 
-        if active_jobs:
+        if active_jobs or db_changed:
             try:
                 db.session.commit()
             except SQLAlchemyError as exc:

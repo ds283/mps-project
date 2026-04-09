@@ -141,8 +141,14 @@ def _pclass_has_reports_subq():
     """
     return (
         db.session.query(SubmissionRecord.id)
-        .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id)
-        .join(ProjectClassConfig, SubmissionPeriodRecord.config_id == ProjectClassConfig.id)
+        .join(
+            SubmissionPeriodRecord,
+            SubmissionRecord.period_id == SubmissionPeriodRecord.id,
+        )
+        .join(
+            ProjectClassConfig,
+            SubmissionPeriodRecord.config_id == ProjectClassConfig.id,
+        )
         .filter(
             ProjectClassConfig.pclass_id == ProjectClass.id,
             SubmissionRecord.report_id.isnot(None),
@@ -167,7 +173,10 @@ def _qualifying_pclass_ids_for(candidate_ids: List[int]) -> List[int]:
             ProjectClass.publish.is_(True),
         )
         .join(ProjectClassConfig, ProjectClassConfig.pclass_id == ProjectClass.id)
-        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.config_id == ProjectClassConfig.id)
+        .join(
+            SubmissionPeriodRecord,
+            SubmissionPeriodRecord.config_id == ProjectClassConfig.id,
+        )
         .join(SubmissionRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id)
         .filter(SubmissionRecord.report_id.isnot(None))
         .distinct()
@@ -190,12 +199,9 @@ def _get_accessible_pclasses(tenant_id: Optional[int] = None) -> List[ProjectCla
         or current_user.has_role("admin")
         or current_user.has_role("data_dashboard_AI")
     ):
-        q = (
-            db.session.query(ProjectClass)
-            .filter(
-                ProjectClass.publish.is_(True),
-                _pclass_has_reports_subq(),
-            )
+        q = db.session.query(ProjectClass).filter(
+            ProjectClass.publish.is_(True),
+            _pclass_has_reports_subq(),
         )
         if tenant_id is not None:
             q = q.filter(ProjectClass.tenant_id == tenant_id)
@@ -211,7 +217,9 @@ def _get_accessible_pclasses(tenant_id: Optional[int] = None) -> List[ProjectCla
                 if p.tenant_id == tenant_id
             ]
         qualifying_ids = set(_qualifying_pclass_ids_for(candidate_ids))
-        pcls = [p for p in current_user.faculty_data.convenor_list if p.id in qualifying_ids]
+        pcls = [
+            p for p in current_user.faculty_data.convenor_list if p.id in qualifying_ids
+        ]
         return sorted(pcls, key=lambda p: p.name)
 
     return []
@@ -224,7 +232,10 @@ def _get_accessible_cycles(pclass_ids: List[int]) -> List[int]:
     rows = (
         db.session.query(ProjectClassConfig.year)
         .filter(ProjectClassConfig.pclass_id.in_(pclass_ids))
-        .join(SubmissionPeriodRecord, SubmissionPeriodRecord.config_id == ProjectClassConfig.id)
+        .join(
+            SubmissionPeriodRecord,
+            SubmissionPeriodRecord.config_id == ProjectClassConfig.id,
+        )
         .join(SubmissionRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id)
         .filter(SubmissionRecord.report_id.isnot(None))
         .distinct()
@@ -686,6 +697,9 @@ def launch_period(period_id: int):
         )
     except Exception as exc:
         flash("An error occurred while launching the analysis pipeline.", "error")
+        current_app.logger.exception(
+            "LLM orchestration pipeline submission error", exc=exc
+        )
         return redirect(redirect_url())
 
     if job is None:
@@ -748,6 +762,9 @@ def launch_pclass(config_id: int):
         )
     except Exception as exc:
         flash("An error occurred while launching the analysis pipeline.", "error")
+        current_app.logger.exception(
+            "LLM orchestration pipeline submission error", exc=exc
+        )
         return redirect(redirect_url())
 
     if job is None:
@@ -796,6 +813,9 @@ def launch_cycle(year: int):
         job = launch_cycle_pipeline(year=year, clear_existing=False, user=current_user)
     except Exception as exc:
         flash("An error occurred while launching the analysis pipeline.", "error")
+        current_app.logger.exception(
+            "LLM orchestration pipeline submission error", exc=exc
+        )
         return redirect(redirect_url())
 
     if job is None:
@@ -835,6 +855,9 @@ def launch_global():
         job = launch_global_pipeline(clear_existing=False, user=current_user)
     except Exception as exc:
         flash("An error occurred while launching the analysis pipeline.", "error")
+        current_app.logger.exception(
+            "LLM orchestration pipeline submission error", exc=exc
+        )
         return redirect(redirect_url())
 
     if job is None:

@@ -39,6 +39,26 @@
                 _jobPoller = setInterval(pollJobs, 15000);
             {% endif %}
         })();
+
+        // Update chevron direction when period subsections collapse/expand
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.collapse[id^="period-collapse-"]').forEach(function (el) {
+                el.addEventListener('show.bs.collapse', function () {
+                    var header = document.querySelector('[data-bs-target="#' + el.id + '"]');
+                    if (header) {
+                        var icon = header.querySelector('.period-chevron');
+                        if (icon) { icon.classList.replace('fa-chevron-right', 'fa-chevron-down'); }
+                    }
+                });
+                el.addEventListener('hide.bs.collapse', function () {
+                    var header = document.querySelector('[data-bs-target="#' + el.id + '"]');
+                    if (header) {
+                        var icon = header.querySelector('.period-chevron');
+                        if (icon) { icon.classList.replace('fa-chevron-down', 'fa-chevron-right'); }
+                    }
+                });
+            });
+        });
     </script>
 {% endblock %}
 
@@ -380,11 +400,19 @@
                 <div class="card-body p-3">
 
                     {# ---- per-period subsections ---- #}
+                    {% set only_period = (section.period_subsections|length == 1) %}
                     {% for sub in section.period_subsections %}
+                        {% set collapse_id = "period-collapse-" ~ section.year ~ "-" ~ loop.index %}
                         <div class="card border mb-3">
-                            <div class="card-header d-flex align-items-center justify-content-between py-2 bg-light">
+                            <div class="card-header d-flex align-items-center justify-content-between py-2 bg-light"
+                                 style="cursor: pointer;"
+                                 data-bs-toggle="collapse"
+                                 data-bs-target="#{{ collapse_id }}"
+                                 aria-expanded="{{ 'true' if only_period else 'false' }}"
+                                 aria-controls="{{ collapse_id }}">
                                 <div class="d-flex align-items-center gap-2">
                         <span class="fw-semibold text-dark">
+                            <i class="fas fa-chevron-{{ 'down' if only_period else 'right' }} me-1 small period-chevron"></i>
                             {{ sub.pclass.abbreviation }}
                             <span class="text-muted mx-1">›</span>
                             {{ sub.period.display_name }}
@@ -393,7 +421,7 @@
                                         {{ coverage_badges(sub.agg) }}
                                     </div>
                                 </div>
-                                <div class="d-flex gap-2 flex-wrap align-items-center">
+                                <div class="d-flex gap-2 flex-wrap align-items-center" onclick="event.stopPropagation()">
                                     {% if sub.can_launch %}
                                         {{ launch_buttons(
                             url_for('dashboards.launch_period', period_id=sub.period.id),
@@ -429,16 +457,18 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="card-body p-3">
-                                {% if sub.agg.n_complete > 0 %}
-                                    {{ stats_table(sub.agg) }}
-                                    {{ histogram_grid(sub.histograms) }}
-                                {% else %}
-                                    <p class="text-muted fst-italic mb-0">
-                                        <i class="fas fa-exclamation-circle me-1"></i>
-                                        No completed analysis results for this period.
-                                    </p>
-                                {% endif %}
+                            <div class="collapse {{ 'show' if only_period else '' }}" id="{{ collapse_id }}">
+                                <div class="card-body p-3">
+                                    {% if sub.agg.n_complete > 0 %}
+                                        {{ stats_table(sub.agg) }}
+                                        {{ histogram_grid(sub.histograms) }}
+                                    {% else %}
+                                        <p class="text-muted fst-italic mb-0">
+                                            <i class="fas fa-exclamation-circle me-1"></i>
+                                            No completed analysis results for this period.
+                                        </p>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     {% endfor %}

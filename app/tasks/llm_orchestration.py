@@ -628,6 +628,43 @@ def enqueue_single_record(
     )
 
 
+def enqueue_record_list(
+    record_ids: List[int],
+    scope: str,
+    scope_id: Optional[int],
+    user: Optional[User] = None,
+    clear_existing: bool = False,
+    description: Optional[str] = None,
+) -> Optional[LLMOrchestrationJob]:
+    """
+    Create a single LLMOrchestrationJob for a caller-supplied list of
+    SubmissionRecord IDs and dispatch it through the standard orchestration
+    pipeline.
+
+    Records already queued in an active job are filtered out via
+    _filter_already_queued before the job is created, so the job's
+    total_count reflects only the records that will actually be processed.
+
+    Returns the created LLMOrchestrationJob, or None if the list is empty
+    (or becomes empty after deduplication).
+    """
+    if not record_ids:
+        return None
+    record_ids = _filter_already_queued(record_ids, "enqueue_record_list")
+    if not record_ids:
+        return None
+    desc = description or f"Batch submission: {len(record_ids)} records"
+    return _create_and_dispatch_job(
+        scope=scope,
+        scope_id=scope_id,
+        record_ids=record_ids,
+        clear_existing=clear_existing,
+        user=user,
+        description=desc,
+        log_message=f"Enqueued batch LLM orchestration job: {len(record_ids)} records (scope={scope}, scope_id={scope_id}, clear={clear_existing})",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Celery task registration
 # ---------------------------------------------------------------------------

@@ -749,7 +749,7 @@ def pull_all_reports_from_canvas(pid):
     celery = current_app.extensions["celery"]
 
     process = celery.tasks["app.tasks.canvas.pull_report"]
-    finalize = celery.tasks["app.tasks.canvas.pull_report_finalize"]
+    finalize_batch = celery.tasks["app.tasks.canvas.pull_report_finalize_batch"]
     error = celery.tasks["app.tasks.canvas.pull_report_error"]
     summary = celery.tasks["app.tasks.canvas.pull_all_reports_summary"]
 
@@ -771,13 +771,13 @@ def pull_all_reports_from_canvas(pid):
         [
             chain(
                 process.s(record.id, None),
-                finalize.s(record.id, None).on_error(
+                finalize_batch.s(record.id, None).on_error(
                     error.si(record.id, current_user.id)
                 ),
             )
             for record in available
         ],
-        summary.s(current_user.id),
+        summary.s(current_user.id, period.id),
     )
     work.apply_async()
 

@@ -68,6 +68,97 @@ def _URL_query(session: requests.Session, URL, **kwargs):
     return response_list
 
 
+def _finalize_report_attachment(data, rid, user_id, endpoint=None):
+    """
+    Shared helper for pull_report_finalize and pull_report_finalize_batch.
+
+    Attaches the downloaded asset to the SubmissionRecord, sets access
+    permissions, expires any existing processed report, and writes Turnitin
+    scores.  Commits via log_db_commit.
+
+    Returns record.id on success, or None if the asset_id in *data* is None
+    (indicating that pull_report could not obtain an asset).
+
+    Raises on DB errors or missing models so the calling Celery task can
+    handle retries / error propagation normally.
+    """
+    asset_id = data["asset_id"]
+    if asset_id is None:
+        return None
+
+    turnitin_outcome = data["turnitin_outcome"]
+    similarity_score = data["similarity_score"]
+    web_overlap = data["web_overlap"]
+    publication_overlap = data["publication_overlap"]
+    student_overlap = data["student_overlap"]
+
+    try:
+        record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=rid).first()
+        asset: SubmittedAsset = db.session.query(SubmittedAsset).filter_by(id=asset_id).first()
+    except SQLAlchemyError as e:
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        raise
+
+    if record is None:
+        msg = "Could not load SubmissionRecord instance from database"
+        current_app.logger.error(msg)
+        raise Exception(msg)
+
+    if asset is None:
+        msg = "Could not load SubmittedAsset model from database"
+        current_app.logger.error(msg)
+        raise Exception(msg)
+
+    # attach this asset as the uploaded report
+    record.report_id = asset.id
+
+    # uploading user has access
+    if user_id is not None:
+        asset.grant_user(user_id)
+
+    # users with appropriate roles have access
+    for role in record.roles:
+        asset.grant_user(role.user)
+
+    # student can download their own report
+    if record.owner is not None and record.owner.student is not None:
+        asset.grant_user(record.owner.student.user)
+
+    # set up list of roles that should have access, if they exist
+    asset.grant_roles(["office", "convenor", "moderator", "exam_board", "external_examiner"])
+
+    # remove processed report, if that has not already been done
+    if record.processed_report is not None:
+        expiry_date = datetime.now() + timedelta(days=30)
+        record.processed_report.expiry = expiry_date
+        record.processed_report_id = None
+
+    record.celery_started = True
+    record.celery_finished = None
+    record.timestamp = None
+    record.report_exemplar = False
+
+    record.turnitin_outcome = turnitin_outcome
+    record.turnitin_score = similarity_score
+    record.turnitin_web_overlap = web_overlap
+    record.turnitin_publication_overlap = publication_overlap
+    record.turnitin_student_overlap = student_overlap
+
+    try:
+        log_db_commit(
+            "Finalize pulled Canvas report: attach asset, set Turnitin scores, and queue processing",
+            user=user_id,
+            student=record.owner.student if record.owner is not None else None,
+            endpoint=endpoint,
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        raise
+
+    return record.id
+
+
 def register_canvas_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def canvas_user_checkin(self):
@@ -842,91 +933,17 @@ def register_canvas_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def pull_report_finalize(self, data, rid, user_id) -> bool:
-        asset_id = data["asset_id"]
-        if asset_id is None:
+        record_id = _finalize_report_attachment(data, rid, user_id, endpoint=self.name)
+        if record_id is None:
             return False
 
-        turnitin_outcome = data["turnitin_outcome"]
-        similarity_score = data["similarity_score"]
-        web_overlap = data["web_overlap"]
-        publication_overlap = data["publication_overlap"]
-        student_overlap = data["student_overlap"]
-
         user = None
-
-        try:
-            record: SubmissionRecord = (
-                db.session.query(SubmissionRecord).filter_by(id=rid).first()
-            )
-            asset: SubmittedAsset = (
-                db.session.query(SubmittedAsset).filter_by(id=asset_id).first()
-            )
-
-            if user_id is not None:
-                user: User = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError as e:
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise self.retry()
-
-        if record is None:
-            msg = "Could not load SubmissionRecord instance from database"
-            current_app.logger.error(msg)
-            raise Exception(msg)
-
-        if asset is None:
-            self.update_state(
-                state="FAILURE",
-                meta={"msg": "Could not load SubmittedAsset model from database"},
-            )
-
-        # attach this asset as the uploaded report
-        record.report_id = asset.id
-
-        # uploading user has access
         if user_id is not None:
-            asset.grant_user(user_id)
-
-        # users with appropriate roles have access
-        for role in record.roles:
-            asset.grant_user(role.user)
-
-        # student can download their own report
-        if record.owner is not None and record.owner.student is not None:
-            asset.grant_user(record.owner.student.user)
-
-        # set up list of roles that should have access, if they exist
-        asset.grant_roles(
-            ["office", "convenor", "moderator", "exam_board", "external_examiner"]
-        )
-
-        # remove processed report, if that has not already been done
-        if record.processed_report is not None:
-            expiry_date = datetime.now() + timedelta(days=30)
-            record.processed_report.expiry = expiry_date
-            record.processed_report_id = None
-
-        record.celery_started = True
-        record.celery_finished = None
-        record.timestamp = None
-        record.report_exemplar = False
-
-        record.turnitin_outcome = turnitin_outcome
-        record.turnitin_score = similarity_score
-        record.turnitin_web_overlap = web_overlap
-        record.turnitin_publication_overlap = publication_overlap
-        record.turnitin_student_overlap = student_overlap
-
-        try:
-            log_db_commit(
-                "Finalize pulled Canvas report: attach asset, set Turnitin scores, and queue processing",
-                user=user_id,
-                student=record.owner.student if record.owner is not None else None,
-                endpoint=self.name,
-            )
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-            raise
+            try:
+                user: User = db.session.query(User).filter_by(id=user_id).first()
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
 
         # Enqueue the full LLM analysis pipeline through the orchestration
         # system.  The processed report is generated at the end of the pipeline
@@ -934,18 +951,36 @@ def register_canvas_tasks(celery):
         # process_report chain directly here.
         from ..tasks.llm_orchestration import enqueue_single_record
 
-        enqueue_single_record(record.id, user=user, clear_existing=True)
+        enqueue_single_record(record_id, user=user, clear_existing=True)
 
         if user is not None:
+            try:
+                record: SubmissionRecord = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
+                name = record.owner.student.user.name if record and record.owner and record.owner.student else str(record_id)
+            except SQLAlchemyError:
+                name = str(record_id)
             user.post_message(
-                "Successfully pulled report from Canvas for submitter {name}".format(
-                    name=record.owner.student.user.name
-                ),
+                "Successfully pulled report from Canvas for submitter {name}".format(name=name),
                 "success",
                 autocommit=True,
             )
 
         return True
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def pull_report_finalize_batch(self, data, rid, user_id):
+        """
+        Batch variant of pull_report_finalize used by pull_all_reports_from_canvas.
+
+        Attaches the downloaded asset and sets metadata exactly as
+        pull_report_finalize does, but does NOT create an LLMOrchestrationJob.
+        Job creation is deferred to pull_all_reports_summary so that all
+        records pulled in the same batch share a single job instance.
+
+        Returns record.id on success, or None on failure, so the chord
+        callback can collect the set of successfully pulled record IDs.
+        """
+        return _finalize_report_attachment(data, rid, user_id, endpoint=self.name)
 
     @celery.task(bind=True, default_retry_delay=30)
     def pull_report_error(self, rid, user_id):
@@ -978,27 +1013,53 @@ def register_canvas_tasks(celery):
 
         raise RuntimeError("Errors occurred when pulling report from Canvas")
 
-    @celery.task(bind=True, defauly_retry_delay=30)
-    def pull_all_reports_summary(self, data, user_id):
+    @celery.task(bind=True, default_retry_delay=30)
+    def pull_all_reports_summary(self, data, user_id, period_id):
+        # data is a list of record.id (int) for successful pulls, or None for failures
+        record_ids = [r for r in data if r is not None]
+        fail = len(data) - len(record_ids)
+
         try:
             user: User = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        success = sum(1 if x is True else 0 for x in data)
-        fail = len(data) - success
-
         if user is None:
             msg = "Could not load User model from database"
             current_app.logger.error(msg)
             raise Exception(msg)
 
+        # Enqueue all successfully-pulled records under a single LLMOrchestrationJob
+        # so they can be managed together (paused, prioritised, monitored as a unit).
+        if record_ids:
+            from ..tasks.llm_orchestration import enqueue_record_list
+            from ..models import LLMOrchestrationJob
+
+            try:
+                period: SubmissionPeriodRecord = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+                if period is not None:
+                    label = period.name if period.name else "period {n}".format(n=period.submission_period)
+                    description = "Canvas batch pull: {label}".format(label=label)
+                else:
+                    description = "Canvas batch pull (period {pid})".format(pid=period_id)
+            except SQLAlchemyError:
+                description = "Canvas batch pull (period {pid})".format(pid=period_id)
+
+            enqueue_record_list(
+                record_ids=record_ids,
+                scope=LLMOrchestrationJob.SCOPE_PERIOD,
+                scope_id=period_id,
+                user=user,
+                clear_existing=True,
+                description=description,
+            )
+
         tag = "success" if fail == 0 else "danger"
 
         msg = ""
-        if success > 0:
-            msg = msg + "Successfully pulled {n} reports from Canvas.".format(n=success)
+        if record_ids:
+            msg = msg + "Successfully pulled {n} reports from Canvas.".format(n=len(record_ids))
 
         if fail > 0:
             if len(msg) > 0:

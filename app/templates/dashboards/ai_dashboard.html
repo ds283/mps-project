@@ -133,13 +133,13 @@
 
 {% macro launch_buttons(submit_url, clear_url, level_label) %}
     <a href="{{ submit_url }}"
-       class="btn btn-sm btn-outline-primary"
+       class="btn btn-sm btn-primary"
        data-bs-toggle="tooltip"
        title="Submit reports without analysis results to the LLM pipeline">
         <i class="fas fa-robot me-1"></i>Submit missing
     </a>
     <a href="{{ clear_url }}"
-       class="btn btn-sm btn-outline-danger"
+       class="btn btn-sm btn-danger"
        data-bs-toggle="tooltip"
        title="Clear all existing results and resubmit every report for {{ level_label }}"
        onclick="return confirm('Clear ALL existing analysis results for {{ level_label }} and resubmit every report? This cannot be undone.')">
@@ -150,12 +150,12 @@
 {% macro export_buttons(xlsx_url, csv_url) %}
     <div class="btn-group btn-group-sm" role="group">
         <a href="{{ xlsx_url }}"
-           class="btn btn-outline-secondary"
+           class="btn btn-secondary"
            data-bs-toggle="tooltip" title="Export as Excel workbook">
             <i class="fas fa-file-excel me-1"></i>Excel
         </a>
         <a href="{{ csv_url }}"
-           class="btn btn-outline-secondary"
+           class="btn btn-secondary"
            data-bs-toggle="tooltip" title="Export as CSV">
             <i class="fas fa-file-csv me-1"></i>CSV
         </a>

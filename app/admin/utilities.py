@@ -1329,29 +1329,28 @@ def upload_feedback_asset():
             asset_file = request.files["asset"]
 
             # AssetUploadManager will populate most fields later
-            with db.session.no_autoflush:
-                asset = SubmittedAsset(
-                    timestamp=datetime.now(),
-                    uploaded_id=current_user.id,
-                    expiry=None,
-                    target_name=form.label.data,
-                    license=form.license.data,
-                )
+            asset = SubmittedAsset(
+                timestamp=datetime.now(),
+                uploaded_id=current_user.id,
+                expiry=None,
+                target_name=form.label.data,
+                license=form.license.data,
+            )
+            db.session.add(asset)
 
-                object_store = current_app.config.get("OBJECT_STORAGE_PROJECT")
-                with AssetUploadManager(
-                    asset,
-                    data=asset_file.stream.read(),
-                    storage=object_store,
-                    audit_data=f"upload_feedback_asset",
-                    length=asset_file.content_length,
-                    mimetype=asset_file.content_type,
-                    validate_nonce=validate_nonce,
-                ) as upload_mgr:
-                    pass
+            object_store = current_app.config.get("OBJECT_STORAGE_PROJECT")
+            with AssetUploadManager(
+                asset,
+                data=asset_file.stream.read(),
+                storage=object_store,
+                audit_data=f"upload_feedback_asset",
+                length=asset_file.content_length,
+                mimetype=asset_file.content_type,
+                validate_nonce=validate_nonce,
+            ) as upload_mgr:
+                pass
 
             try:
-                db.session.add(asset)
                 db.session.flush()
             except SQLAlchemyError as e:
                 db.session.rollback()

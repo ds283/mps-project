@@ -1256,6 +1256,7 @@ def register_marking_tasks(celery):
                     target_name=target_name,
                     license=license,
                 )
+                db.session.add(new_asset)
 
                 object_store = current_app.config.get("OBJECT_STORAGE_FEEDBACK")
                 with open(pdf_mgr.path, "rb") as f:
@@ -1271,7 +1272,6 @@ def register_marking_tasks(celery):
                         pass
 
                 try:
-                    db.session.add(new_asset)
                     db.session.flush()
                 except SQLAlchemyError as e:
                     db.session.rollback()

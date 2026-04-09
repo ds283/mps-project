@@ -665,6 +665,7 @@ def register_process_report_tasks(celery):
                         target_name="processed-" + asset.target_name,
                         license=asset.license,
                     )
+                    db.session.add(new_asset)
 
                     object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
                     with open(output_path.path, "rb") as f:
@@ -680,7 +681,6 @@ def register_process_report_tasks(celery):
                             pass
 
                     try:
-                        db.session.add(new_asset)
                         db.session.flush()
                     except SQLAlchemyError as e:
                         db.session.rollback()

@@ -756,26 +756,26 @@ def register_canvas_tasks(celery):
         get_pdf_report = session.get(attachment["url"])
 
         # AssetUploadManager will populate most fields later
-        with db.session.no_autoflush:
-            asset = SubmittedAsset(
-                timestamp=datetime.now(),
-                uploaded_id=user_id,
-                expiry=None,
-                target_name=attachment["filename"],
-                license=default_report_license,
-            )
+        asset = SubmittedAsset(
+            timestamp=datetime.now(),
+            uploaded_id=user_id,
+            expiry=None,
+            target_name=attachment["filename"],
+            license=default_report_license,
+        )
+        db.session.add(asset)
 
-            object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
-            with AssetUploadManager(
-                asset,
-                data=get_pdf_report.content,
-                storage=object_store,
-                length=attachment["size"],
-                audit_data=f"canvas.pull_report (submission record #{rid})",
-                mimetype=attachment["content-type"],
-                validate_nonce=validate_nonce,
-            ) as upload_mgr:
-                pass
+        object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
+        with AssetUploadManager(
+            asset,
+            data=get_pdf_report.content,
+            storage=object_store,
+            length=attachment["size"],
+            audit_data=f"canvas.pull_report (submission record #{rid})",
+            mimetype=attachment["content-type"],
+            validate_nonce=validate_nonce,
+        ) as upload_mgr:
+            pass
 
         adapter = AssetCloudAdapter(
             asset,
@@ -813,7 +813,6 @@ def register_canvas_tasks(celery):
                         turnitin_outcome = turnitin_data["state"]
 
         try:
-            db.session.add(asset)
             db.session.flush()
             log_db_commit(
                 "Save downloaded Canvas submission asset to database",

@@ -2393,6 +2393,10 @@ def register_language_analysis_tasks(celery):
                 "positive_feedback": _deduplicate_feedback(all_positive, 3),
                 "improvements": _deduplicate_feedback(all_improvements, 3),
             }
+            # Explicitly mark success (False = ran and succeeded).  This completes the
+            # three-way semantics: None = not yet run, False = succeeded, True = failed.
+            record.llm_feedback_failed = False
+            record.llm_feedback_failure_reason = None
         else:
             failure_reason = str(last_exc) if last_exc else "Unknown error"
             record.llm_feedback_failed = True

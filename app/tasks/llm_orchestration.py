@@ -71,11 +71,12 @@ Architecture (Global coordinator with reliable Redis queue):
 
 from typing import List, Optional
 
-import redis as redis_lib
 from celery import chain
 from celery.signals import worker_ready
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
+
+import redis as redis_lib
 
 from ..database import db
 from ..models import (
@@ -87,7 +88,6 @@ from ..models import (
 )
 from ..shared.workflow_logging import log_db_commit
 
-
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
@@ -97,7 +97,9 @@ def _get_orchestration_redis() -> redis_lib.Redis:
     """Return a Redis client connected to the orchestration Redis database."""
     url = current_app.config.get("ORCHESTRATION_REDIS_URL")
     if not url:
-        raise RuntimeError("ORCHESTRATION_REDIS_URL is not set in the Flask configuration")
+        raise RuntimeError(
+            "ORCHESTRATION_REDIS_URL is not set in the Flask configuration"
+        )
     return redis_lib.Redis.from_url(url, decode_responses=False)
 
 
@@ -122,7 +124,7 @@ def _clear_record_state(record: SubmissionRecord) -> None:
     record.language_analysis_complete = False
     record.llm_analysis_failed = False
     record.llm_failure_reason = None
-    record.llm_feedback_failed = False
+    record.llm_feedback_failed = None  # None = feedback not yet attempted on this run
     record.llm_feedback_failure_reason = None
     record.risk_factors = None
 
@@ -134,7 +136,10 @@ def _clear_record_state(record: SubmissionRecord) -> None:
         try:
             object_store = current_app.config.get("OBJECT_STORAGE_ASSETS")
             if object_store is not None:
-                object_store.delete(old_asset.unique_name, audit_data="llm_orchestration._clear_record_state")
+                object_store.delete(
+                    old_asset.unique_name,
+                    audit_data="llm_orchestration._clear_record_state",
+                )
         except Exception as exc:
             current_app.logger.warning(
                 f"llm_orchestration: could not delete processed report asset "
@@ -166,7 +171,7 @@ def _collect_record_ids(
     q = (
         db.session.query(SubmissionRecord.id)
         .filter(SubmissionRecord.period_id.in_(period_ids))
-        .filter(SubmissionRecord.report != None)  # noqa: E711
+        .filter(SubmissionRecord.report.is_not(None))  # noqa: E711
     )
     if skip_complete:
         q = q.filter(
@@ -381,7 +386,11 @@ def launch_pclass_pipeline(
     if not record_ids:
         return None
 
-    pclass_name = config.project_class.abbreviation if config.project_class else str(pclass_config_id)
+    pclass_name = (
+        config.project_class.abbreviation
+        if config.project_class
+        else str(pclass_config_id)
+    )
     description = f"Project class: {pclass_name} ({config.year}/{config.year + 1})"
     job = LLMOrchestrationJob.build(
         scope=LLMOrchestrationJob.SCOPE_PCLASS,
@@ -421,7 +430,10 @@ def launch_cycle_pipeline(
         row[0]
         for row in (
             db.session.query(SubmissionPeriodRecord.id)
-            .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
+            .join(
+                ProjectClassConfig,
+                ProjectClassConfig.id == SubmissionPeriodRecord.config_id,
+            )
             .filter(ProjectClassConfig.year == year)
             .all()
         )
@@ -570,7 +582,9 @@ def enqueue_single_record(
             f"Enqueued single-record LLM orchestration job "
             f"(SubmissionRecord #{record_id}, clear={clear_existing})",
             student=record.owner.student if record.owner else None,
-            project_classes=record.owner.config.project_class if record.owner and record.owner.config else None,
+            project_classes=record.owner.config.project_class
+            if record.owner and record.owner.config
+            else None,
         )
     except SQLAlchemyError:
         db.session.rollback()
@@ -741,7 +755,9 @@ def register_llm_orchestration_tasks(celery):
         try:
             active_jobs: List[LLMOrchestrationJob] = (
                 db.session.query(LLMOrchestrationJob)
-                .filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES))
+                .filter(
+                    LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES)
+                )
                 .all()
             )
         except SQLAlchemyError as exc:
@@ -820,7 +836,9 @@ def register_llm_orchestration_tasks(celery):
 
             # Atomically move record ID from pending queue to inflight list.
             try:
-                record_id_bytes = r.rpoplpush(job.redis_queue_key, job.redis_inflight_key)
+                record_id_bytes = r.rpoplpush(
+                    job.redis_queue_key, job.redis_inflight_key
+                )
             except Exception as exc:
                 current_app.logger.exception(
                     f"llm_orchestration.global_orchestration_step: Redis RPOPLPUSH error "
@@ -882,7 +900,7 @@ def register_llm_orchestration_tasks(celery):
             record.language_analysis_complete = False
             record.llm_analysis_failed = False
             record.llm_failure_reason = None
-            record.llm_feedback_failed = False
+            record.llm_feedback_failed = None  # None = feedback not yet attempted on this run
             record.llm_feedback_failure_reason = None
 
             try:
@@ -907,4 +925,8 @@ def register_llm_orchestration_tasks(celery):
             _dispatch_analysis_chain(celery, job.uuid, record_id)
             dispatched += 1
 
-    return global_orchestration_step, orchestration_record_done, orchestration_record_error
+    return (
+        global_orchestration_step,
+        orchestration_record_done,
+        orchestration_record_error,
+    )

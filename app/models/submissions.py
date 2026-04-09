@@ -1114,21 +1114,24 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     language_analysis = db.Column(db.Text(length=16777215), default=None)
 
     # has the language analysis workflow been started?
-    language_analysis_started = db.Column(db.Boolean(), default=False)
+    language_analysis_started = db.Column(db.Boolean(), nullable=False, default=False)
 
     # has the language analysis workflow completed successfully?
-    language_analysis_complete = db.Column(db.Boolean(), default=False)
+    language_analysis_complete = db.Column(db.Boolean(), nullable=False, default=False)
 
     # did the LLM submission step fail? Separate boolean so the UI can query it directly without
     # parsing the JSON blob. Only set for LLM inference / JSON parsing failures; not for
     # statistical computation errors, which are recorded in language_analysis['errors'].
-    llm_analysis_failed = db.Column(db.Boolean(), default=False)
+    llm_analysis_failed = db.Column(db.Boolean(), nullable=False, default=False)
 
     # human-readable reason for LLM failure, for display to administrators
     llm_failure_reason = db.Column(db.Text(), default=None)
 
     # did the feedback LLM step fail?
-    llm_feedback_failed = db.Column(db.Boolean(), default=False)
+    # Three-way semantics: None = feedback not yet attempted, False = feedback ran and
+    # succeeded (at least one chunk), True = feedback ran and all chunks failed
+    # (blocked until an administrator clears the flag to permit retry).
+    llm_feedback_failed = db.Column(db.Boolean(), nullable=True, default=None)
 
     # human-readable reason for feedback LLM failure, for display to administrators
     llm_feedback_failure_reason = db.Column(db.Text(), default=None)

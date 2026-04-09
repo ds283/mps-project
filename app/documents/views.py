@@ -357,7 +357,7 @@ def clear_language_analysis(sid):
     record.language_analysis_complete = False
     record.llm_analysis_failed = False
     record.llm_failure_reason = None
-    record.llm_feedback_failed = False
+    record.llm_feedback_failed = None  # None = feedback not yet attempted on this run
     record.llm_feedback_failure_reason = None
     record.risk_factors = None
 

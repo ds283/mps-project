@@ -40,7 +40,6 @@ from ..models import (
 from ..models.model_mixins import SubmissionRoleTypesMixin
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
-from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import (
     redirect_url,
@@ -504,7 +503,6 @@ def upload_period_attachment(pid):
                 audit_data=f"upload_period_attachment (period id #{pid})",
                 length=attachment_file.content_length,
                 mimetype=attachment_file.content_type,
-                validate_nonce=validate_nonce,
             ) as upload_mgr:
                 pass
 

@@ -72,7 +72,6 @@ from ..shared.backup import (
 from ..shared.context.global_context import render_template_context
 from ..shared.email_templates import clone_email_template
 from ..shared.forms.queries import ScheduleSessionQuery
-from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import (
     home_dashboard,
@@ -670,7 +669,6 @@ def upload_schedule(schedule_id):
                         storage=object_store,
                         audit_data=f"upload_schedule (schedule id #{schedule_id})",
                         length=sol_file.content_length,
-                        validate_nonce=validate_nonce,
                     ) as upload_mgr:
                         pass
 
@@ -775,7 +773,6 @@ def upload_match(match_id):
                         storage=object_store,
                         audit_data=f"upload_match (match id #{match_id})",
                         length=sol_file.content_length,
-                        validate_nonce=validate_nonce,
                     ) as upload_mgr:
                         pass
 
@@ -1346,7 +1343,6 @@ def upload_feedback_asset():
                 audit_data=f"upload_feedback_asset",
                 length=asset_file.content_length,
                 mimetype=asset_file.content_type,
-                validate_nonce=validate_nonce,
             ) as upload_mgr:
                 pass
 

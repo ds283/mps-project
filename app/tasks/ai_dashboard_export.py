@@ -38,7 +38,6 @@ from ..models import (
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.excel import _normalize_excel_sheet_name
 from ..shared.scratch import ScratchFileManager
-from ..shared.security import validate_nonce
 from .thumbnails import dispatch_thumbnail_task
 
 # ---------------------------------------------------------------------------
@@ -243,7 +242,6 @@ def register_ai_dashboard_export_tasks(celery):
                             "application/vnd.openxmlformats-officedocument"
                             ".spreadsheetml.sheet"
                         ),
-                        validate_nonce=validate_nonce,
                     ):
                         pass
 
@@ -342,7 +340,6 @@ def register_ai_dashboard_export_tasks(celery):
                         audit_data="ai_dashboard_export.export_ai_dashboard_csv",
                         length=size,
                         mimetype="text/csv",
-                        validate_nonce=validate_nonce,
                     ):
                         pass
 

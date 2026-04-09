@@ -57,7 +57,6 @@ from ..models import (
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.excel import _normalize_excel_sheet_name
 from ..shared.scratch import ScratchFileManager
-from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
 from ..shared.utils import get_current_year
@@ -3647,7 +3646,6 @@ def _write_LP_file(record: MatchingAttempt, prob, user):
                 audit_data=f"matching._write_LP_file (matching attempt #{record.id})",
                 length=size,
                 mimetype="text/plain",
-                validate_nonce=validate_nonce,
             ) as upload_mgr:
                 pass
 
@@ -4385,9 +4383,7 @@ def register_matching_tasks(celery):
                         object_store,
                         audit_data=f"matching.duplicate.copy_asset (matching id #{id})",
                     )
-                    new_key, put_result = old_storage.duplicate(
-                        validate_nonce=validate_nonce
-                    )
+                    new_key, put_result = old_storage.duplicate()
 
                     new_base64_nonce = None
                     if "nonce" in put_result:
@@ -4971,7 +4967,6 @@ def register_matching_tasks(celery):
                     audit_data=f"matching._export_matching_as_excel (matching attempt #{record.id})",
                     length=size,
                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    validate_nonce=validate_nonce,
                 ) as upload_mgr:
                     pass
 

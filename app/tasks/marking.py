@@ -57,7 +57,6 @@ from ..shared.asset_tools import (
     AssetUploadManager,
 )
 from ..shared.scratch import ScratchFileManager, ScratchGroupManager
-from ..shared.security import validate_nonce
 from ..shared.workflow_logging import log_db_commit
 from .shared.utils import report_error, report_info
 from .thumbnails import dispatch_thumbnail_task
@@ -1267,7 +1266,6 @@ def register_marking_tasks(celery):
                         audit_data=f"generate_feedback_report ({config.abbreviation}, {student.name})",
                         length=pdf_mgr.path.stat().st_size,
                         mimetype="application/pdf",
-                        validate_nonce=validate_nonce,
                     ) as upload_mgr:
                         pass
 

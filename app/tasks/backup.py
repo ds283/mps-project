@@ -46,7 +46,6 @@ from ..shared.backup import (
 from ..shared.cloud_object_store import ObjectStore
 from ..shared.formatters import format_size
 from ..shared.scratch import ScratchFileManager
-from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count
 from ..shared.workflow_logging import log_db_commit
 
@@ -189,7 +188,6 @@ def register_backup_tasks(celery):
                         length=this_archive_size,
                         mimetype="application/gzip",
                         size_attr="archive_size",
-                        validate_nonce=validate_nonce,
                     ) as upload_mgr:
                         pass
 

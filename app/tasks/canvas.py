@@ -34,7 +34,6 @@ from ..models import (
     User,
 )
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
-from ..shared.security import validate_nonce
 from ..shared.utils import get_main_config
 from ..shared.workflow_logging import log_db_commit
 from .thumbnails import dispatch_thumbnail_task
@@ -773,7 +772,6 @@ def register_canvas_tasks(celery):
             length=attachment["size"],
             audit_data=f"canvas.pull_report (submission record #{rid})",
             mimetype=attachment["content-type"],
-            validate_nonce=validate_nonce,
         ) as upload_mgr:
             pass
 

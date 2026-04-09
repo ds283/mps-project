@@ -73,7 +73,6 @@ from ..models.submissions import SubmissionRoleTypesMixin
 from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
 from ..shared.forms.forms import SelectSubmissionRecordFormFactory
-from ..shared.security import validate_nonce
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 from ..shared.workflow_logging import log_db_commit
@@ -593,7 +592,6 @@ def upload_submitter_report(sid):
                 audit_data=f"upload_submitter_report (submission record id #{sid})",
                 length=report_file.content_length,
                 mimetype=report_file.content_type,
-                validate_nonce=validate_nonce,
             ) as upload_mgr:
                 pass
 
@@ -1171,7 +1169,6 @@ def upload_submitter_attachment(sid):
                 audit_data=f"upload_submitter_attachment (submission record id #{sid})",
                 length=attachment_file.content_length,
                 mimetype=attachment_file.content_type,
-                validate_nonce=validate_nonce,
             ) as upload_mgr:
                 pass
 

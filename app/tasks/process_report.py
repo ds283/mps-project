@@ -27,7 +27,6 @@ from ..models import (
     GeneratedAsset,
     StudentData,
 )
-from ..shared.security import validate_nonce
 from ..shared.workflow_logging import log_db_commit
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.scratch import ScratchFileManager
@@ -676,7 +675,6 @@ def register_process_report_tasks(celery):
                             audit_data=f"process_report.process #2 (record id #{record_id})",
                             length=output_path.path.stat().st_size,
                             mimetype=asset.mimetype,
-                            validate_nonce=validate_nonce,
                         ) as upload_mgr:
                             pass
 

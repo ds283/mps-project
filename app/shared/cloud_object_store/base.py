@@ -298,7 +298,6 @@ class ObjectStore:
         audit_data: str,
         data: BytesLike,
         mimetype: Optional[str] = None,
-        validate_nonce=None,
         no_encryption=False,
         no_compress=False,
     ) -> Mapping:
@@ -313,18 +312,7 @@ class ObjectStore:
 
         nonce = None
         if self._encryption_pipeline is not None and not no_encryption:
-            attempts = 0
-            while nonce is None:
-                if attempts > 100:
-                    raise RuntimeError(
-                        "ObjectStore: failed to find acceptable nonce after 100 attempts"
-                    )
-
-                nonce = self._encryption_pipeline.make_nonce()
-                if not validate_nonce(nonce):
-                    attempts += 1
-                    nonce = None
-
+            nonce = self._encryption_pipeline.make_nonce()
             put_data: bytes = self._encryption_pipeline.encrypt(nonce, compress_data)
             encrypted_size = len(put_data)
         else:

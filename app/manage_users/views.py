@@ -56,7 +56,6 @@ from ..shared.asset_tools import AssetUploadManager
 from ..shared.context.global_context import render_template_context
 from ..shared.workflow_logging import log_db_commit
 from ..shared.conversions import is_boolean, is_integer
-from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import func
 from ..shared.utils import (
     get_current_year,
@@ -962,7 +961,6 @@ def batch_create_students():
                     storage=object_store,
                     audit_data=f"batch_create_students",
                     length=batch_file.content_length,
-                    validate_nonce=validate_nonce,
                 ) as upload_mgr:
                     pass
 
@@ -1071,7 +1069,6 @@ def batch_create_faculty():
                     storage=object_store,
                     audit_data=f"batch_create_faculty",
                     length=batch_file.content_length,
-                    validate_nonce=validate_nonce,
                 ) as upload_mgr:
                     pass
 

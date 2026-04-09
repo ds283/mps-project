@@ -87,7 +87,7 @@ class AssetCloudAdapter:
         delete(self):
             Deletes the asset from the object store.
 
-        duplicate(self, validate_nonce) -> (str, bytes):
+        duplicate(self) -> (str, bytes):
             Creates a duplicate of the asset in the object store with a new key and nonce.
 
         download_to_scratch(self) -> AssetCloudScratchContextManager:
@@ -188,7 +188,7 @@ class AssetCloudAdapter:
     def delete(self):
         self._storage.delete(self._key, audit_data=self._audit_data)
 
-    def duplicate(self, validate_nonce):
+    def duplicate(self):
         new_key = str(uuid4())
         put_result = {}
 
@@ -210,7 +210,6 @@ class AssetCloudAdapter:
                 audit_data=self._audit_data,
                 data=data,
                 mimetype=meta.mimetype,
-                validate_nonce=validate_nonce,
             )
 
         return new_key, put_result
@@ -272,7 +271,6 @@ class AssetUploadManager:
     :param encryption_attr: The attribute name to store the asset encryption type in the asset object.
     :param nonce_attr: The attribute name to store the asset nonce in the asset object.
     :param comment: A comment to be associated with the asset.
-    :param validate_nonce: A flag indicating whether to validate the nonce during encryption.
     """
 
     def __init__(
@@ -293,7 +291,6 @@ class AssetUploadManager:
         encrypted_size_attr: str = "encrypted_size",
         compressed_size_attr: str = "compressed_size",
         comment: str = None,
-        validate_nonce=None,
     ):
         self._asset = asset
 
@@ -340,7 +337,6 @@ class AssetUploadManager:
             audit_data=self._audit_data,
             data=data,
             mimetype=mimetype,
-            validate_nonce=validate_nonce,
         )
         nonce: Optional[bytes] = None
         if "nonce" in put_result:

@@ -54,7 +54,6 @@ from ..models import (
 from ..models.emails import encode_email_payload
 from ..shared.asset_tools import AssetCloudAdapter, AssetUploadManager
 from ..shared.scratch import ScratchFileManager
-from ..shared.security import validate_nonce
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
 from ..shared.workflow_logging import log_db_commit
@@ -1414,7 +1413,6 @@ def _write_LP_file(record: ScheduleAttempt, prob, user):
                 audit_data=f"scheduling._write_LP_file (schedule attempt #{record.id})",
                 length=size,
                 mimetype="text/plain",
-                validate_nonce=validate_nonce,
             ) as upload_mgr:
                 pass
 
@@ -2106,9 +2104,7 @@ def register_scheduling_tasks(celery):
                         object_store,
                         audit_data=f"scheduling.duplicate.copy_asset (schedule id #{id})",
                     )
-                    new_key, put_result = old_storage.duplicate(
-                        validate_nonce=validate_nonce
-                    )
+                    new_key, put_result = old_storage.duplicate()
 
                     new_base64_nonce = None
                     if "nonce" in put_result:

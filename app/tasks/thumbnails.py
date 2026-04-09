@@ -201,7 +201,6 @@ def register_thumbnail_tasks(celery):
                 storage=thumbnails_store,
                 audit_data=f"generate_thumbnails small: {asset_type} id #{asset_id}",
                 mimetype="image/jpeg",
-                validate_nonce=None,
             ):
                 pass
 
@@ -213,7 +212,6 @@ def register_thumbnail_tasks(celery):
                 storage=thumbnails_store,
                 audit_data=f"generate_thumbnails medium: {asset_type} id #{asset_id}",
                 mimetype="image/jpeg",
-                validate_nonce=None,
             ):
                 pass
 

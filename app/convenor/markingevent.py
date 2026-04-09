@@ -53,7 +53,6 @@ from ..shared.forms.wtf_validators import (
     make_unique_marking_workflow_key_in_event,
     make_valid_marking_targets,
 )
-from ..shared.security import validate_nonce
 from ..shared.utils import redirect_url
 from ..shared.validators import validate_is_convenor
 from ..shared.workflow_logging import log_db_commit
@@ -595,7 +594,6 @@ def enter_turnitin_score(record_id):
                         audit_data=f"enter_turnitin_score: similarity report upload (record id #{record.id})",
                         length=similarity_file.content_length,
                         mimetype=similarity_file.content_type,
-                        validate_nonce=validate_nonce,
                     ):
                         pass
 

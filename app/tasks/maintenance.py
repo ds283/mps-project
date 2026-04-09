@@ -60,7 +60,6 @@ from ..shared.asset_tools import (
     AssetUploadManager,
 )
 from ..shared.cloud_object_store import ObjectStore
-from ..shared.security import validate_nonce
 from ..shared.utils import get_count, get_current_year
 from ..shared.workflow_logging import log_db_commit
 from .thumbnails import dispatch_thumbnail_task
@@ -1068,7 +1067,6 @@ def register_maintenance_tasks(celery):
                             mimetype=asset.mimetype
                             if hasattr(asset, "mimetype")
                             else None,
-                            validate_nonce=validate_nonce,
                         ) as upload_mgr:
                             pass
 
@@ -1147,7 +1145,6 @@ def register_maintenance_tasks(celery):
                             length=record.archive_size,
                             size_attr="archive_size",
                             mimetype="application/gzip",
-                            validate_nonce=validate_nonce,
                         ) as upload_mgr:
                             pass
 

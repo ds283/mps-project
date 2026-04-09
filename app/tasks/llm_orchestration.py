@@ -615,18 +615,28 @@ def register_llm_orchestration_tasks(celery):
 
     # See the module-level docstring for a full description of the
     # double-processing race condition that can occur here.
-    @worker_ready.connect
+    flask_app = celery.flask_app
+
+    # weak=False is required: on_worker_ready is a local function with no
+    # module-level reference, so the default weak reference would be garbage
+    # collected before worker_ready fires, silently dropping the handler.
+    @worker_ready.connect(weak=False)
     def on_worker_ready(sender, **kwargs):
         """
         On worker startup, re-queue any records that were in-flight when the
         worker last stopped and dispatch the global coordinator if needed.
+
+        Uses an explicit app context via celery.flask_app rather than
+        current_app, because worker_ready may fire in a thread or forked
+        context where the app context pushed in celery_node.py is not visible.
         """
-        try:
-            _recover_active_jobs()
-        except Exception as exc:
-            current_app.logger.exception(
-                "llm_orchestration.on_worker_ready: recovery failed", exc_info=exc
-            )
+        with flask_app.app_context():
+            try:
+                _recover_active_jobs()
+            except Exception as exc:
+                flask_app.logger.exception(
+                    "llm_orchestration.on_worker_ready: recovery failed", exc_info=exc
+                )
 
     # ------------------------------------------------------------------
     # orchestration_record_done

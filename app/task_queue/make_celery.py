@@ -41,6 +41,11 @@ def make_celery(app):
 
     celery.config_from_object(celery_config)
 
+    # Store a back-reference to the Flask app so that signal handlers (e.g.
+    # worker_ready) can open an explicit app context without relying on
+    # current_app, which may not be accessible from the signal's thread/context.
+    celery.flask_app = app
+
     class ContextTask(celery.Task):
         abstract = True
 

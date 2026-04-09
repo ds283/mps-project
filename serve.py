@@ -96,7 +96,8 @@ with app.app_context():
     #     db.session.commit()
     #     import_attendance_data(app, initdb_module)
 
-    ensure_roles(app)
+    # ensure_roles(app)
+
     reconcile_background_tasks(app)
 
 

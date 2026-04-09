@@ -1111,7 +1111,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
 
     # JSON blob storing all language analysis results: metrics, flags, patterns, llm_result, errors.
     # Uses Text rather than a native JSON column, consistent with the existing project pattern.
-    language_analysis = db.Column(db.Text(), default=None)
+    language_analysis = db.Column(db.Text(length=16777215), default=None)
 
     # has the language analysis workflow been started?
     language_analysis_started = db.Column(db.Boolean(), default=False)

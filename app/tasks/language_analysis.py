@@ -15,6 +15,7 @@ import unicodedata
 from datetime import datetime
 
 import numpy as np
+from billiard.exceptions import SoftTimeLimitExceeded
 from celery import states
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
@@ -1107,6 +1108,9 @@ def _call_llm(
             if attempt < _LLM_RETRY_ATTEMPTS - 1:
                 time.sleep(_LLM_RETRY_DELAY)
 
+        except SoftTimeLimitExceeded:
+            raise  # must not be swallowed — propagate so the task fails cleanly
+
         except (json.JSONDecodeError, ValueError) as exc:
             last_exc = exc
             current_app.logger.warning(
@@ -1930,7 +1934,7 @@ def register_language_analysis_tasks(celery):
 
     # -----------------------------------------------------------------------
 
-    @celery.task(bind=True, default_retry_delay=30)
+    @celery.task(bind=True, default_retry_delay=30, soft_time_limit=7200, time_limit=7260)
     def submit_to_llm(self, record_id: int):
         """
         Stage 3 (llm_tasks queue): submit the extracted report text to an Ollama
@@ -2000,6 +2004,13 @@ def register_language_analysis_tasks(celery):
         import ollama
 
         client = ollama.Client(host=base_url)
+
+        # Release the DB connection back to the pool before the long-running LLM call.
+        # The connection can sit idle for 5-10+ minutes during LLM inference, which
+        # may exceed the MySQL server-side wait_timeout and leave it stale.  All
+        # required data has already been read into local Python variables above.
+        # The record will be reloaded from the DB before each subsequent write.
+        db.session.close()
 
         single_pass_word_budget = max(
             int((context_size - _SINGLE_PASS_OVERHEAD_TOKENS) / _TOKENS_PER_WORD), 0
@@ -2076,6 +2087,9 @@ def register_language_analysis_tasks(celery):
                         "preface_precis": "",
                     }
                 data["_llm_metadata"] = metadata_result
+                record = db.session.get(SubmissionRecord, record_id)
+                if record is None:
+                    raise Exception(f"submit_to_llm: SubmissionRecord #{record_id} not found on reload (metadata)")
                 record.set_language_analysis_data(data)
                 try:
                     db.session.commit()
@@ -2085,6 +2099,7 @@ def register_language_analysis_tasks(celery):
                         "SQLAlchemyError committing metadata result", exc_info=exc
                     )
                     raise self.retry()
+                db.session.close()
 
             # -- Step 2: map phase (per-chunk evidence extraction) ---------
             chunk_state = data.get("_llm_chunks", {})
@@ -2132,6 +2147,9 @@ def register_language_analysis_tasks(celery):
                     "results": chunk_results,
                 }
                 data["_llm_chunks"] = chunk_state
+                record = db.session.get(SubmissionRecord, record_id)
+                if record is None:
+                    raise Exception(f"submit_to_llm: SubmissionRecord #{record_id} not found on reload (chunk {idx + 1})")
                 record.set_language_analysis_data(data)
                 try:
                     db.session.commit()
@@ -2141,12 +2159,17 @@ def register_language_analysis_tasks(celery):
                         f"SQLAlchemyError committing chunk {idx + 1} result", exc_info=exc
                     )
                     raise self.retry()
+                db.session.close()
 
             if chunk_failed:
                 # Record failure and return; intermediate state is preserved in
                 # data["_llm_chunks"] so a subsequent re-trigger can resume.
                 elapsed = round(time.monotonic() - _t_llm, 1)
                 data.setdefault("timings", {})["llm_s"] = elapsed
+                # Reload record — the session was closed after the last successful chunk commit.
+                record = db.session.get(SubmissionRecord, record_id)
+                if record is None:
+                    raise Exception(f"submit_to_llm: SubmissionRecord #{record_id} not found on reload (chunk failure)")
                 record.llm_analysis_failed = True
                 record.llm_failure_reason = chunk_failure_reason
                 if accumulated:
@@ -2228,6 +2251,11 @@ def register_language_analysis_tasks(celery):
             "context_size": context_size,
             "num_chunks": num_chunks,
         }
+        # Reload the record with a fresh DB connection before writing results.
+        # The session was closed before the LLM call to prevent connection staleness.
+        record = db.session.get(SubmissionRecord, record_id)
+        if record is None:
+            raise Exception(f"submit_to_llm: SubmissionRecord #{record_id} not found on final reload")
         record.llm_model_name = model
         record.llm_context_size = context_size
         record.llm_num_chunks = num_chunks
@@ -2278,7 +2306,7 @@ def register_language_analysis_tasks(celery):
 
     # -----------------------------------------------------------------------
 
-    @celery.task(bind=True, default_retry_delay=30)
+    @celery.task(bind=True, default_retry_delay=30, soft_time_limit=7200, time_limit=7260)
     def submit_to_llm_feedback(self, record_id: int):
         """
         Stage 4 (llm_tasks queue): submit the extracted report text to an Ollama
@@ -2333,6 +2361,11 @@ def register_language_analysis_tasks(celery):
         import ollama
 
         client = ollama.Client(host=base_url)
+
+        # Release the DB connection before the long-running LLM call (same rationale
+        # as submit_to_llm).  The record will be reloaded before the final write.
+        db.session.close()
+
         _t_feedback = time.monotonic()
 
         # Determine chunk budget and split if necessary.
@@ -2381,6 +2414,11 @@ def register_language_analysis_tasks(celery):
             time.monotonic() - _t_feedback, 1
         )
         errors: list = data.get("errors", [])
+
+        # Reload the record with a fresh DB connection before writing results.
+        record = db.session.get(SubmissionRecord, record_id)
+        if record is None:
+            raise Exception(f"submit_to_llm_feedback: SubmissionRecord #{record_id} not found on reload")
 
         if feedback_results:
             # Merge all successful chunk results.

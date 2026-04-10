@@ -19,6 +19,7 @@ from app.database import db
 from app.task_queue.background_task import reconcile_background_tasks
 from initdb import (
     cleanup_orphaned_live_marking_schemes,
+    ensure_llm_watchdog_schedule,
     ensure_roles,
     import_attendance_data,
     import_examiner_data,
@@ -97,6 +98,8 @@ with app.app_context():
     #     import_attendance_data(app, initdb_module)
 
     # ensure_roles(app)
+
+    ensure_llm_watchdog_schedule(app)
 
     reconcile_background_tasks(app)
 

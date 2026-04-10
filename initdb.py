@@ -59,6 +59,7 @@ from app.models import (
     Tenant,
     User,
 )
+from app.models.scheduler import DatabaseSchedulerEntry, IntervalSchedule
 from app.shared.cloud_object_store import ObjectMeta, ObjectStore
 from app.shared.conversions import is_integer
 from app.shared.scratch import ScratchFileManager
@@ -2067,3 +2068,48 @@ def ensure_roles(app) -> None:
                 app.logger.exception("SQLAlchemyError in ensure_roles", exc_info=e)
         else:
             print("** ensure_roles: all required roles already present")
+
+
+def ensure_llm_watchdog_schedule(app) -> None:
+    """
+    Idempotently create a DatabaseSchedulerEntry for the LLM orchestration watchdog task.
+
+    The watchdog calls _recover_active_jobs() on a 30-minute interval, providing
+    automatic recovery from stalled LLMOrchestrationJob instances without requiring
+    a manual Celery worker restart.  Safe to call on every startup.
+    """
+    _WATCHDOG_NAME = "llm-orchestration-watchdog"
+    _WATCHDOG_TASK = "app.tasks.llm_orchestration.llm_watchdog"
+    _INTERVAL_EVERY = 30
+    _INTERVAL_PERIOD = "minutes"
+
+    with app.app_context():
+        existing = db.session.query(DatabaseSchedulerEntry).filter_by(name=_WATCHDOG_NAME).first()
+        if existing is not None:
+            print(f"** ensure_llm_watchdog_schedule: entry '{_WATCHDOG_NAME}' already present")
+            return
+
+        interval = (
+            db.session.query(IntervalSchedule)
+            .filter_by(every=_INTERVAL_EVERY, period=_INTERVAL_PERIOD)
+            .first()
+        )
+        if interval is None:
+            interval = IntervalSchedule(every=_INTERVAL_EVERY, period=_INTERVAL_PERIOD)
+            db.session.add(interval)
+            db.session.flush()
+
+        entry = DatabaseSchedulerEntry(
+            name=_WATCHDOG_NAME,
+            task=_WATCHDOG_TASK,
+            interval_id=interval.id,
+            enabled=True,
+            queue="default",
+        )
+        db.session.add(entry)
+        try:
+            db.session.commit()
+            print(f"** ensure_llm_watchdog_schedule: created Beat entry '{_WATCHDOG_NAME}' (every {_INTERVAL_EVERY} {_INTERVAL_PERIOD})")
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            app.logger.exception("SQLAlchemyError in ensure_llm_watchdog_schedule", exc_info=e)

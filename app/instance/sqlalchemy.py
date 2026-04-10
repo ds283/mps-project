@@ -16,3 +16,12 @@ SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
 SQLACHEMY_AES_KEY = os.environ.get("SQLALCHEMY_AES_KEY")
 
 SQLALCHEMY_TRACK_MODIFICATIONS = False  # suppress notifications on database changes
+
+# Connection pool settings.
+# pool_pre_ping verifies connections before use, catching stale connections that the
+# MySQL server has closed server-side.  pool_recycle discards pool connections older
+# than 1 hour so they are never reused after the MySQL wait_timeout expires.
+SQLALCHEMY_ENGINE_OPTIONS = {
+    "pool_pre_ping": True,
+    "pool_recycle": 3600,
+}

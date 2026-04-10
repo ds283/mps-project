@@ -2888,9 +2888,9 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         au = data.get(self.RISK_AI_USE, {})
         if au.get("present", False):
             elevated = au.get("elevated_metrics", [])
-            metric_labels = {"mattr": "MATTR", "mtld": "MTLD", "burstiness": "Burstiness"}
+            metric_labels = {"mattr": "MATTR", "mtld": "MTLD", "burstiness": "Burstiness", "sentence_cv": "Sentence-length CV"}
             summary = []
-            for m in ("mattr", "mtld", "burstiness"):
+            for m in ("mattr", "mtld", "burstiness", "sentence_cv"):
                 flag = flags.get(f"{m}_flag", "ok")
                 val = metrics.get(m)
                 label_str = metric_labels.get(m, m)

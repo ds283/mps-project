@@ -143,38 +143,74 @@
     {% endif %}
 {% endmacro %}
 
-{% macro coverage_badges(agg) %}
-    <span class="badge bg-secondary me-1">{{ agg.n_total }} report{% if agg.n_total != 1 %}s{% endif %}</span>
-    {% if agg.n_missing > 0 %}
-        <span class="badge bg-danger me-1">
-            <i class="fas fa-exclamation-triangle me-1"></i>{{ agg.n_missing }} missing analysis
+{% macro status_actions_panel(agg, submit_url, clear_url, clear_errors_url, resubmit_errors_url, level_label, can_launch) %}
+    {# ---- stats badges row ---- #}
+    <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+        <span class="badge bg-secondary px-2 py-1">
+            {{ agg.n_total }} report{% if agg.n_total != 1 %}s{% endif %}
         </span>
-    {% else %}
-        <span class="badge bg-success me-1">
-            <i class="fas fa-check me-1"></i>All analysed
-        </span>
+        {% if agg.n_missing == 0 %}
+            <span class="badge bg-success px-2 py-1">
+                <i class="fas fa-check me-1"></i>All analysed
+            </span>
+        {% else %}
+            <span class="badge bg-warning text-dark px-2 py-1">
+                <i class="fas fa-clock me-1"></i>{{ agg.n_missing }} missing analysis
+            </span>
+        {% endif %}
+        {% if agg.n_ai_flagged > 0 %}
+            <span class="badge bg-warning text-dark px-2 py-1">
+                <i class="fas fa-robot me-1"></i>{{ agg.n_ai_flagged }} AI risk flag{% if agg.n_ai_flagged != 1 %}s{% endif %}
+            </span>
+        {% endif %}
+        {% if agg.n_analysis_failed > 0 %}
+            <span class="badge bg-danger px-2 py-1">
+                <i class="fas fa-times-circle me-1"></i>{{ agg.n_analysis_failed }} analysis error{% if agg.n_analysis_failed != 1 %}s{% endif %}
+            </span>
+        {% endif %}
+        {% if agg.n_feedback_failed > 0 %}
+            <span class="badge bg-danger px-2 py-1">
+                <i class="fas fa-comment-slash me-1"></i>{{ agg.n_feedback_failed }} feedback error{% if agg.n_feedback_failed != 1 %}s{% endif %}
+            </span>
+        {% endif %}
+    </div>
+    {# ---- action buttons row (launch-capable users only) ---- #}
+    {% if can_launch %}
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <div class="btn-group btn-group-sm" role="group">
+                <a href="{{ submit_url }}"
+                   class="btn btn-outline-primary"
+                   data-bs-toggle="tooltip"
+                   title="Submit reports without analysis results to the LLM pipeline">
+                    <i class="fas fa-robot me-1"></i>Submit missing
+                </a>
+                <a href="{{ clear_url }}"
+                   class="btn btn-outline-danger"
+                   data-bs-toggle="tooltip"
+                   title="Clear all existing results and resubmit every report for {{ level_label }}"
+                   onclick="return confirm('Clear ALL existing analysis results for {{ level_label }} and resubmit every report? This cannot be undone.')">
+                    <i class="fas fa-sync-alt me-1"></i>Clear &amp; resubmit all
+                </a>
+            </div>
+            {% if agg.n_analysis_failed > 0 or agg.n_feedback_failed > 0 %}
+                <div class="btn-group btn-group-sm" role="group">
+                    <a href="{{ clear_errors_url }}"
+                       class="btn btn-secondary"
+                       data-bs-toggle="tooltip"
+                       title="Clear error flags on failed records without resubmitting">
+                        <i class="fas fa-eraser me-1"></i>Clear errors
+                    </a>
+                    <a href="{{ resubmit_errors_url }}"
+                       class="btn btn-outline-danger"
+                       data-bs-toggle="tooltip"
+                       title="Clear and resubmit only the records with error flags"
+                       onclick="return confirm('Clear error records for {{ level_label }} and resubmit for re-analysis?')">
+                        <i class="fas fa-redo me-1"></i>Clear &amp; resubmit errors
+                    </a>
+                </div>
+            {% endif %}
+        </div>
     {% endif %}
-    {% if agg.n_ai_flagged > 0 %}
-        <span class="badge bg-warning text-dark me-1">
-            <i class="fas fa-robot me-1"></i>{{ agg.n_ai_flagged }} AI risk flag{% if agg.n_ai_flagged != 1 %}s{% endif %}
-        </span>
-    {% endif %}
-{% endmacro %}
-
-{% macro launch_buttons(submit_url, clear_url, level_label, outline=true) %}
-    <a href="{{ submit_url }}"
-       class="btn btn-sm {{ 'btn-outline-primary' if outline else 'btn-primary' }}"
-       data-bs-toggle="tooltip"
-       title="Submit reports without analysis results to the LLM pipeline">
-        <i class="fas fa-robot me-1"></i>Submit missing
-    </a>
-    <a href="{{ clear_url }}"
-       class="btn btn-sm {{ 'btn-outline-danger' if outline else 'btn-danger' }}"
-       data-bs-toggle="tooltip"
-       title="Clear all existing results and resubmit every report for {{ level_label }}"
-       onclick="return confirm('Clear ALL existing analysis results for {{ level_label }} and resubmit every report? This cannot be undone.')">
-        <i class="fas fa-sync-alt me-1"></i>Clear &amp; resubmit
-    </a>
 {% endmacro %}
 
 {% macro export_buttons(xlsx_url, csv_url, outline=true) %}
@@ -350,16 +386,8 @@
                         </a>
                     </div>
 
-                    {# global-level actions #}
+                    {# global-level export #}
                     <div class="col-auto ms-auto d-flex gap-2 align-items-end flex-wrap">
-                        {% if can_launch_global %}
-                            <span class="text-muted small me-1">Global:</span>
-                            {{ launch_buttons(
-                        url_for('dashboards.launch_global'),
-                        url_for('dashboards.clear_global'),
-                        'all records globally'
-                    ) }}
-                        {% endif %}
                         {{ export_buttons(
                         url_for('dashboards.export_global', fmt='xlsx'),
                         url_for('dashboards.export_global', fmt='csv')
@@ -369,6 +397,47 @@
                 </form>
             </div>
         </div>
+
+        {# ---- global admin actions (admin/root only) ---- #}
+        {% if can_launch_global and sections %}
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body py-2">
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <span class="text-muted small fw-semibold me-1">Global actions:</span>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a href="{{ url_for('dashboards.launch_global') }}"
+                               class="btn btn-outline-primary"
+                               data-bs-toggle="tooltip"
+                               title="Submit all reports without analysis results to the LLM pipeline">
+                                <i class="fas fa-robot me-1"></i>Submit all missing
+                            </a>
+                            <a href="{{ url_for('dashboards.clear_global') }}"
+                               class="btn btn-outline-danger"
+                               data-bs-toggle="tooltip"
+                               title="Clear all existing results and resubmit every report globally"
+                               onclick="return confirm('Clear ALL existing analysis results globally and resubmit every report? This cannot be undone.')">
+                                <i class="fas fa-sync-alt me-1"></i>Clear &amp; resubmit all
+                            </a>
+                        </div>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a href="{{ url_for('dashboards.clear_errors_global') }}"
+                               class="btn btn-secondary"
+                               data-bs-toggle="tooltip"
+                               title="Clear error flags on all failed records globally (without resubmitting)">
+                                <i class="fas fa-eraser me-1"></i>Clear all errors
+                            </a>
+                            <a href="{{ url_for('dashboards.resubmit_errors_global') }}"
+                               class="btn btn-outline-danger"
+                               data-bs-toggle="tooltip"
+                               title="Clear and resubmit all records with error flags globally"
+                               onclick="return confirm('Clear all error records globally and resubmit for re-analysis?')">
+                                <i class="fas fa-redo me-1"></i>Clear &amp; resubmit all errors
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
 
         {# ---- no data state ---- #}
         {% if not sections %}
@@ -387,28 +456,26 @@
                         <i class="fas fa-calendar-alt fa-fw"></i>
                         <h5 class="mb-0 fw-semibold">Academic year {{ section.label }}</h5>
                     </div>
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        {{ coverage_badges(section.cycle_agg) }}
-                        {% if section.can_launch_cycle %}
-                            <div class="d-flex gap-2 ms-2">
-                                {{ launch_buttons(
-                            url_for('dashboards.launch_cycle', year=section.year),
-                            url_for('dashboards.clear_cycle', year=section.year),
-                            'cycle ' ~ section.label,
-                            outline=false
-                        ) }}
-                            </div>
-                        {% endif %}
-                        <div class="ms-2">
-                            {{ export_buttons(
+                    <div class="ms-2">
+                        {{ export_buttons(
                         url_for('dashboards.export_cycle', year=section.year, fmt='xlsx'),
                         url_for('dashboards.export_cycle', year=section.year, fmt='csv'),
                         outline=false
                     ) }}
-                        </div>
                     </div>
                 </div>
                 <div class="card-body p-3">
+
+                    {# ---- cycle-level status and actions ---- #}
+                    {{ status_actions_panel(
+                        section.cycle_agg,
+                        url_for('dashboards.launch_cycle', year=section.year),
+                        url_for('dashboards.clear_cycle', year=section.year),
+                        url_for('dashboards.clear_errors_cycle', year=section.year),
+                        url_for('dashboards.resubmit_errors_cycle', year=section.year),
+                        'cycle ' ~ section.label,
+                        section.can_launch_cycle
+                    ) }}
 
                     {# ---- per-period subsections ---- #}
                     {% set only_period = (section.period_subsections|length == 1) %}
@@ -421,26 +488,13 @@
                                  data-bs-target="#{{ collapse_id }}"
                                  aria-expanded="{{ 'true' if only_period else 'false' }}"
                                  aria-controls="{{ collapse_id }}">
-                                <div class="d-flex align-items-center gap-2">
-                        <span class="fw-semibold text-dark">
-                            <i class="fas fa-chevron-{{ 'down' if only_period else 'right' }} me-1 small period-chevron"></i>
-                            {{ sub.pclass.abbreviation }}
-                            <span class="text-muted mx-1">›</span>
-                            {{ sub.period.display_name }}
-                        </span>
-                                    <div class="ms-2">
-                                        {{ coverage_badges(sub.agg) }}
-                                    </div>
-                                </div>
+                                <span class="fw-semibold text-dark">
+                                    <i class="fas fa-chevron-{{ 'down' if only_period else 'right' }} me-1 small period-chevron"></i>
+                                    {{ sub.pclass.abbreviation }}
+                                    <span class="text-muted mx-1">›</span>
+                                    {{ sub.period.display_name }}
+                                </span>
                                 <div class="d-flex gap-2 flex-wrap align-items-center" onclick="event.stopPropagation()">
-                                    {% if sub.can_launch %}
-                                        {{ launch_buttons(
-                            url_for('dashboards.launch_period', period_id=sub.period.id),
-                            url_for('dashboards.clear_period', period_id=sub.period.id),
-                            sub.period.display_name
-                        ) }}
-                                    {% endif %}
-                                    <div class="vr mx-1 d-none d-md-block"></div>
                                     <span class="text-muted small d-none d-md-inline">Export:</span>
                                     {{ export_buttons(
                             url_for('dashboards.export_period', period_id=sub.period.id, fmt='xlsx'),
@@ -470,6 +524,15 @@
                             </div>
                             <div class="collapse {{ 'show' if only_period else '' }}" id="{{ collapse_id }}">
                                 <div class="card-body p-3">
+                                    {{ status_actions_panel(
+                                        sub.agg,
+                                        url_for('dashboards.launch_period', period_id=sub.period.id),
+                                        url_for('dashboards.clear_period', period_id=sub.period.id),
+                                        url_for('dashboards.clear_errors_period', period_id=sub.period.id),
+                                        url_for('dashboards.resubmit_errors_period', period_id=sub.period.id),
+                                        sub.period.display_name,
+                                        sub.can_launch
+                                    ) }}
                                     {% if sub.agg.n_complete > 0 %}
                                         {{ stats_table(sub.agg) }}
                                         {{ histogram_grid(sub.histograms) }}
@@ -487,15 +550,23 @@
                     {# ---- cycle summary ---- #}
                     {% if section.period_subsections|length > 1 %}
                         <div class="card border border-primary mt-3">
-                            <div class="card-header bg-primary bg-opacity-10 border-primary d-flex align-items-center justify-content-between py-2">
-                    <span class="fw-semibold text-primary">
-                        <i class="fas fa-layer-group me-1"></i>
-                        Cycle summary — {{ section.label }}
-                        <span class="text-muted fw-normal small ms-1">(all selected periods combined)</span>
-                    </span>
-                                <div class="ms-2">{{ coverage_badges(section.cycle_agg) }}</div>
+                            <div class="card-header bg-primary bg-opacity-10 border-primary py-2">
+                                <span class="fw-semibold text-primary">
+                                    <i class="fas fa-layer-group me-1"></i>
+                                    Cycle summary — {{ section.label }}
+                                    <span class="text-muted fw-normal small ms-1">(all selected periods combined)</span>
+                                </span>
                             </div>
                             <div class="card-body p-3">
+                                {{ status_actions_panel(
+                                    section.cycle_agg,
+                                    url_for('dashboards.launch_cycle', year=section.year),
+                                    url_for('dashboards.clear_cycle', year=section.year),
+                                    url_for('dashboards.clear_errors_cycle', year=section.year),
+                                    url_for('dashboards.resubmit_errors_cycle', year=section.year),
+                                    'cycle ' ~ section.label,
+                                    section.can_launch_cycle
+                                ) }}
                                 {% if section.cycle_agg.n_complete > 0 %}
                                     {{ stats_table(section.cycle_agg) }}
                                     {{ histogram_grid(section.cycle_histograms) }}

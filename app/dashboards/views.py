@@ -30,8 +30,13 @@ from ..models import (
 )
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
+from ..shared.workflow_logging import log_db_commit
 from ..tasks.llm_orchestration import (
+    _collect_error_record_ids,
     launch_cycle_pipeline,
+    launch_error_cycle_pipeline,
+    launch_error_global_pipeline,
+    launch_error_period_pipeline,
     launch_global_pipeline,
     launch_pclass_pipeline,
     launch_period_pipeline,
@@ -268,8 +273,15 @@ def _aggregate_records(records: List[SubmissionRecord]) -> Dict:
     }
     n_missing = 0
     n_ai_flagged = 0
+    n_analysis_failed = 0
+    n_feedback_failed = 0
 
     for record in records:
+        if record.llm_analysis_failed:
+            n_analysis_failed += 1
+        if record.llm_feedback_failed:
+            n_feedback_failed += 1
+
         if not record.language_analysis_complete:
             n_missing += 1
             continue
@@ -324,6 +336,8 @@ def _aggregate_records(records: List[SubmissionRecord]) -> Dict:
         "n_missing": n_missing,
         "n_complete": len(records) - n_missing,
         "n_ai_flagged": n_ai_flagged,
+        "n_analysis_failed": n_analysis_failed,
+        "n_feedback_failed": n_feedback_failed,
     }
     for key in metric_values:
         result[key] = _stats(metric_values[key])
@@ -884,6 +898,175 @@ def clear_global():
             f"Cleared existing results and queued {job.total_count} report(s) for re-analysis.",
             "success",
         )
+    return redirect(redirect_url())
+
+
+# ---------------------------------------------------------------------------
+# Error-flag management routes  (clear only / clear + resubmit)
+# ---------------------------------------------------------------------------
+
+
+def _clear_error_flags_for_records(record_ids: List[int]) -> int:
+    """
+    Clear LLM error flags on the given SubmissionRecord IDs in a single bulk
+    UPDATE.  Returns the number of rows updated.  Does NOT commit.
+    """
+    if not record_ids:
+        return 0
+    count = (
+        db.session.query(SubmissionRecord)
+        .filter(SubmissionRecord.id.in_(record_ids))
+        .update(
+            {
+                SubmissionRecord.llm_analysis_failed: False,
+                SubmissionRecord.llm_failure_reason: None,
+                SubmissionRecord.llm_feedback_failed: None,
+                SubmissionRecord.llm_feedback_failure_reason: None,
+            },
+            synchronize_session="fetch",
+        )
+    )
+    return count
+
+
+@dashboards.route("/ai/clear_errors_period/<int:period_id>")
+@roles_accepted("faculty", "admin", "root")
+def clear_errors_period(period_id: int):
+    """Clear LLM error flags for records in one SubmissionPeriodRecord (no resubmit)."""
+    period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
+    pclass = period.config.project_class if period.config else None
+
+    if not _can_launch_orchestration(pclass):
+        flash("You do not have permission to manage analysis tasks for this period.", "error")
+        return redirect(redirect_url())
+
+    record_ids = _collect_error_record_ids([period_id])
+    if not record_ids:
+        flash("No records with error flags were found for this period.", "info")
+        return redirect(redirect_url())
+
+    count = _clear_error_flags_for_records(record_ids)
+    try:
+        log_db_commit(
+            f"Cleared LLM error flags on {count} record(s) for period #{period_id} (no resubmit)"
+        )
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash("An error occurred while clearing error flags.", "error")
+        return redirect(redirect_url())
+
+    flash(f"Cleared error flags on {count} record(s). Use 'Submit missing' to requeue.", "success")
+    return redirect(redirect_url())
+
+
+@dashboards.route("/ai/resubmit_errors_period/<int:period_id>")
+@roles_accepted("faculty", "admin", "root")
+def resubmit_errors_period(period_id: int):
+    """Clear error records and resubmit them for one SubmissionPeriodRecord."""
+    period: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(period_id)
+    pclass = period.config.project_class if period.config else None
+
+    if not _can_launch_orchestration(pclass):
+        flash("You do not have permission to launch analysis tasks for this period.", "error")
+        return redirect(redirect_url())
+
+    try:
+        job = launch_error_period_pipeline(period_id=period_id, user=current_user)
+    except Exception as exc:
+        flash("An error occurred while launching re-analysis for error records.", "error")
+        current_app.logger.exception("LLM error resubmit failed", exc_info=exc)
+        return redirect(redirect_url())
+
+    if job is None:
+        flash("No records with error flags were found for this period.", "info")
+    else:
+        flash(f"Cleared and queued {job.total_count} error record(s) for re-analysis.", "success")
+    return redirect(redirect_url())
+
+
+@dashboards.route("/ai/clear_errors_cycle/<int:year>")
+@roles_accepted("admin", "root")
+def clear_errors_cycle(year: int):
+    """Clear LLM error flags for an entire academic cycle (no resubmit)."""
+    period_ids = [
+        row[0]
+        for row in db.session.query(SubmissionPeriodRecord.id)
+        .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id)
+        .filter(ProjectClassConfig.year == year)
+        .all()
+    ]
+    record_ids = _collect_error_record_ids(period_ids) if period_ids else []
+    if not record_ids:
+        flash("No records with error flags were found for this cycle.", "info")
+        return redirect(redirect_url())
+
+    count = _clear_error_flags_for_records(record_ids)
+    try:
+        log_db_commit(f"Cleared LLM error flags on {count} record(s) for cycle {year} (no resubmit)")
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash("An error occurred while clearing error flags.", "error")
+        return redirect(redirect_url())
+
+    flash(f"Cleared error flags on {count} record(s). Use 'Submit missing' to requeue.", "success")
+    return redirect(redirect_url())
+
+
+@dashboards.route("/ai/resubmit_errors_cycle/<int:year>")
+@roles_accepted("admin", "root")
+def resubmit_errors_cycle(year: int):
+    """Clear error records and resubmit them for an entire academic cycle."""
+    try:
+        job = launch_error_cycle_pipeline(year=year, user=current_user)
+    except Exception as exc:
+        flash("An error occurred while launching re-analysis for error records.", "error")
+        current_app.logger.exception("LLM error resubmit failed", exc_info=exc)
+        return redirect(redirect_url())
+
+    if job is None:
+        flash("No records with error flags were found for this cycle.", "info")
+    else:
+        flash(f"Cleared and queued {job.total_count} error record(s) for re-analysis.", "success")
+    return redirect(redirect_url())
+
+
+@dashboards.route("/ai/clear_errors_global")
+@roles_accepted("admin", "root")
+def clear_errors_global():
+    """Clear LLM error flags globally (no resubmit)."""
+    period_ids = [row[0] for row in db.session.query(SubmissionPeriodRecord.id).all()]
+    record_ids = _collect_error_record_ids(period_ids) if period_ids else []
+    if not record_ids:
+        flash("No records with error flags were found.", "info")
+        return redirect(redirect_url())
+
+    count = _clear_error_flags_for_records(record_ids)
+    try:
+        log_db_commit(f"Cleared LLM error flags on {count} record(s) globally (no resubmit)")
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash("An error occurred while clearing error flags.", "error")
+        return redirect(redirect_url())
+
+    flash(f"Cleared error flags on {count} record(s). Use 'Submit missing' to requeue.", "success")
+    return redirect(redirect_url())
+
+
+@dashboards.route("/ai/resubmit_errors_global")
+@roles_accepted("admin", "root")
+def resubmit_errors_global():
+    """Clear all error records globally and resubmit them."""
+    try:
+        job = launch_error_global_pipeline(user=current_user)
+    except Exception as exc:
+        flash("An error occurred while launching re-analysis for error records.", "error")
+        current_app.logger.exception("LLM error resubmit failed", exc_info=exc)
+        return redirect(redirect_url())
+
+    if job is None:
+        flash("No records with error flags were found.", "info")
+    else:
+        flash(f"Cleared and queued {job.total_count} error record(s) for re-analysis.", "success")
     return redirect(redirect_url())
 
 

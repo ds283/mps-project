@@ -157,6 +157,29 @@ def _reset_record_flags_only(record: SubmissionRecord) -> None:
     record.language_analysis_complete = False
 
 
+def _collect_error_record_ids(period_ids: List[int]) -> List[int]:
+    """
+    Return a list of SubmissionRecord IDs from the given periods that have at
+    least one LLM error flag set (``llm_analysis_failed`` or
+    ``llm_feedback_failed``).
+    """
+    return [
+        row[0]
+        for row in (
+            db.session.query(SubmissionRecord.id)
+            .filter(SubmissionRecord.period_id.in_(period_ids))
+            .filter(SubmissionRecord.report_id.isnot(None))
+            .filter(
+                db.or_(
+                    SubmissionRecord.llm_analysis_failed.is_(True),
+                    SubmissionRecord.llm_feedback_failed.is_(True),
+                )
+            )
+            .all()
+        )
+    ]
+
+
 def _collect_record_ids(
     period_ids: List[int],
     skip_complete: bool,
@@ -558,6 +581,117 @@ def launch_global_pipeline(
         user=user,
         description="Global: all project classes and cycles",
         log_message=f"Launched global LLM orchestration job ({len(record_ids)} records, clear={clear_existing})",
+    )
+
+
+def launch_error_period_pipeline(
+    period_id: int,
+    user: Optional[User] = None,
+) -> Optional[LLMOrchestrationJob]:
+    """
+    Create a bulk LLM orchestration job covering only records in the given
+    ``SubmissionPeriodRecord`` that have an LLM error flag set.  Each matched
+    record is fully reset before being requeued (equivalent to ``clear_existing=True``).
+
+    Returns the created ``LLMOrchestrationJob`` or None if no error records exist.
+    """
+    period: SubmissionPeriodRecord = (
+        db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
+    )
+    if period is None:
+        current_app.logger.error(
+            f"launch_error_period_pipeline: SubmissionPeriodRecord #{period_id} not found"
+        )
+        return None
+
+    record_ids = _collect_error_record_ids([period_id])
+    if not record_ids:
+        return None
+
+    record_ids = _filter_already_queued(record_ids, "launch_error_period_pipeline")
+    if not record_ids:
+        return None
+
+    return _create_and_dispatch_job(
+        scope=LLMOrchestrationJob.SCOPE_PERIOD,
+        scope_id=period_id,
+        record_ids=record_ids,
+        clear_existing=True,
+        user=user,
+        description=f"Period (errors only): {period.display_name}",
+        log_message=f"Launched LLM orchestration job for error records (period #{period_id}, {len(record_ids)} records)",
+    )
+
+
+def launch_error_cycle_pipeline(
+    year: int,
+    user: Optional[User] = None,
+) -> Optional[LLMOrchestrationJob]:
+    """
+    Create a bulk LLM orchestration job covering only records in the given
+    academic cycle that have an LLM error flag set.
+    """
+    period_ids = [
+        row[0]
+        for row in (
+            db.session.query(SubmissionPeriodRecord.id)
+            .join(
+                ProjectClassConfig,
+                ProjectClassConfig.id == SubmissionPeriodRecord.config_id,
+            )
+            .filter(ProjectClassConfig.year == year)
+            .all()
+        )
+    ]
+    if not period_ids:
+        return None
+
+    record_ids = _collect_error_record_ids(period_ids)
+    if not record_ids:
+        return None
+
+    record_ids = _filter_already_queued(record_ids, "launch_error_cycle_pipeline")
+    if not record_ids:
+        return None
+
+    return _create_and_dispatch_job(
+        scope=LLMOrchestrationJob.SCOPE_CYCLE,
+        scope_id=year,
+        record_ids=record_ids,
+        clear_existing=True,
+        user=user,
+        description=f"Cycle (errors only): {year}/{year + 1}",
+        log_message=f"Launched LLM orchestration job for error records (cycle {year}, {len(record_ids)} records)",
+    )
+
+
+def launch_error_global_pipeline(
+    user: Optional[User] = None,
+) -> Optional[LLMOrchestrationJob]:
+    """
+    Create a bulk LLM orchestration job covering every SubmissionRecord in the
+    database that has an LLM error flag set.
+    """
+    period_ids = [row[0] for row in db.session.query(SubmissionPeriodRecord.id).all()]
+    if not period_ids:
+        return None
+
+    record_ids = _collect_error_record_ids(period_ids)
+    if not record_ids:
+        return None
+
+    record_ids = _filter_already_queued(record_ids, "launch_error_global_pipeline")
+    if not record_ids:
+        return None
+
+    return _create_and_dispatch_job(
+        scope=LLMOrchestrationJob.SCOPE_GLOBAL,
+        scope_id=None,
+        record_ids=record_ids,
+        clear_existing=True,
+        user=user,
+        description="Global (errors only): all project classes and cycles",
+        log_message=f"Launched global LLM orchestration job for error records ({len(record_ids)} records)",
     )
 
 

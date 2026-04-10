@@ -1026,8 +1026,38 @@ def register_llm_orchestration_tasks(celery):
             _dispatch_analysis_chain(celery, job.uuid, record_id)
             dispatched += 1
 
+    # ------------------------------------------------------------------
+    # llm_watchdog
+    # ------------------------------------------------------------------
+
+    @celery.task(bind=True, default_retry_delay=60)
+    def llm_watchdog(self):
+        """
+        Periodic watchdog: recover any stalled LLMOrchestrationJob instances.
+
+        Calls _recover_active_jobs(), which moves any records that are stuck in the
+        inflight Redis list back to the pending queue and re-dispatches the global
+        coordinator.  Intended to run every ~30 minutes via the DatabaseScheduler
+        Beat schedule, providing automatic recovery without requiring a manual
+        worker restart.
+
+        Accepts the double-processing race documented in the module-level docstring:
+        if a record is genuinely in-flight at the time the watchdog fires, it is
+        re-queued and may be processed twice.  This is safe but wasteful; the last
+        writer wins and orchestration_record_done's >= total_count guard prevents
+        double-completion.
+        """
+        try:
+            _recover_active_jobs()
+        except Exception as exc:
+            current_app.logger.exception(
+                "llm_orchestration.llm_watchdog: recovery failed", exc_info=exc
+            )
+            raise self.retry()
+
     return (
         global_orchestration_step,
         orchestration_record_done,
         orchestration_record_error,
+        llm_watchdog,
     )

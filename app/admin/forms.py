@@ -1281,6 +1281,10 @@ class ScheduledTaskMixin:
             "Thumbnail maintenance — check for missing/lost thumbnails",
         ),
         ("celery.backend_cleanup", "Periodic Celery backend cleanup"),
+        (
+            "app.tasks.llm_orchestration.llm_watchdog",
+            "LLM orchestration watchdog — recover stalled analysis jobs",
+        ),
     ]
 
     task = SelectField("Task", choices=tasks_available)

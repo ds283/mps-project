@@ -430,9 +430,9 @@ _submitter_report_feedback = """
 _submitter_report_risk_factors = """
 {% set rec = report.record %}
 {% if rec is not none %}
-    {% set rf = rec.risk_factors_ui_summary() %}
-    {% if rf.has_any_present %}
-        <div class="d-flex flex-column gap-1">
+    <div class="d-flex flex-column gap-1">
+        {% set rf = rec.risk_factors_ui_summary() %}
+        {% if rf.has_any_present %}
             {% for factor in rf.factors %}
                 {% if factor.resolved %}
                     <span class="badge bg-success" data-bs-toggle="tooltip" title="Resolved{% if factor.resolved_by_name %} by {{ factor.resolved_by_name }}{% endif %}">
@@ -453,10 +453,19 @@ _submitter_report_risk_factors = """
                     <i class="fas fa-gavel fa-fw"></i> Resolve&hellip;
                 </a>
             {% endif %}
-        </div>
-    {% else %}
-        <span class="badge bg-success"><i class="fas fa-check-circle fa-fw"></i> No risk factors</span>
-    {% endif %}
+        {% else %}
+            <span class="badge bg-success"><i class="fas fa-check-circle fa-fw"></i> No risk factors</span>
+        {% endif %}
+        {% if rec.language_analysis_complete %}
+            <a href="{{ url_for('documents.llm_report',
+                       record_id=rec.id,
+                       url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id),
+                       text='Submitter reports') }}"
+               class="btn btn-xs btn-outline-secondary mt-1">
+                <i class="fas fa-chart-bar fa-fw"></i> LLM report
+            </a>
+        {% endif %}
+    </div>
 {% else %}
     <span class="badge bg-light text-muted border">No data</span>
 {% endif %}

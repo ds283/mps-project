@@ -94,6 +94,11 @@ class LLMOrchestrationJob(db.Model):
     # Whether existing analysis results were cleared before re-submission.
     clear_existing = db.Column(db.Boolean(), nullable=False, default=False)
 
+    # Whether this job is paused (no new records dispatched until resumed).
+    # In-flight records continue to completion; only the round-robin dispatch
+    # skips this job while paused is True.
+    paused = db.Column(db.Boolean(), nullable=False, default=False)
+
     # Progress counters.  updated atomically by the coordinator task.
     total_count = db.Column(db.Integer(), nullable=False, default=0)
     completed_count = db.Column(db.Integer(), nullable=False, default=0)
@@ -131,6 +136,7 @@ class LLMOrchestrationJob(db.Model):
             status=cls.STATUS_PENDING,
             completed_count=0,
             failed_count=0,
+            paused=False,
         )
         return job
 
@@ -220,6 +226,32 @@ class LLMOrchestrationJob(db.Model):
 
     def increment_failed(self) -> None:
         self.failed_count = (self.failed_count or 0) + 1
+
+    def pause(self) -> None:
+        """Mark this job as paused (no new records will be dispatched)."""
+        self.paused = True
+
+    def resume(self) -> None:
+        """Clear the paused flag so the coordinator will dispatch records again."""
+        self.paused = False
+
+    @property
+    def avg_seconds_per_record(self) -> Optional[float]:
+        """
+        Average wall-clock seconds per record for completed jobs.
+
+        Returns None if the job is still running, has no timing data, or
+        has processed zero records.
+        """
+        if self.status != self.STATUS_COMPLETE:
+            return None
+        done = (self.completed_count or 0) + (self.failed_count or 0)
+        if done == 0:
+            return None
+        elapsed = self.elapsed_seconds
+        if elapsed is None:
+            return None
+        return elapsed / done
 
     @property
     def elapsed_seconds(self) -> Optional[float]:

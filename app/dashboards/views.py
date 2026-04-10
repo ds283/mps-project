@@ -33,6 +33,8 @@ from ..shared.utils import redirect_url
 from ..shared.workflow_logging import log_db_commit
 from ..tasks.llm_orchestration import (
     _collect_error_record_ids,
+    _dispatch_global_coordinator,
+    is_pipeline_paused,
     launch_cycle_pipeline,
     launch_error_cycle_pipeline,
     launch_error_global_pipeline,
@@ -40,6 +42,7 @@ from ..tasks.llm_orchestration import (
     launch_global_pipeline,
     launch_pclass_pipeline,
     launch_period_pipeline,
+    set_pipeline_paused,
 )
 from . import dashboards
 
@@ -599,6 +602,30 @@ def ai_dashboard():
         .all()
     )
 
+    # ---- global pause state -----------------------------------------------
+    pipeline_paused: bool = is_pipeline_paused()
+
+    # ---- rolling average: seconds per record across recent completed jobs --
+    recent_completed: List[LLMOrchestrationJob] = (
+        db.session.query(LLMOrchestrationJob)
+        .filter(
+            LLMOrchestrationJob.status == LLMOrchestrationJob.STATUS_COMPLETE,
+            LLMOrchestrationJob.started_at.isnot(None),
+            LLMOrchestrationJob.finished_at.isnot(None),
+            LLMOrchestrationJob.total_count > 0,
+        )
+        .order_by(LLMOrchestrationJob.finished_at.desc())
+        .limit(20)
+        .all()
+    )
+    _total_seconds = sum(
+        (j.finished_at - j.started_at).total_seconds() for j in recent_completed
+    )
+    _total_records = sum(j.total_count for j in recent_completed)
+    avg_seconds_per_record: Optional[float] = (
+        _total_seconds / _total_records if _total_records > 0 else None
+    )
+
     # ---- build per-cycle sections ------------------------------------------
     # Pre-build a lookup: pclass_id → ProjectClass
     pclass_map = {p.id for p in accessible_pclasses}
@@ -679,6 +706,8 @@ def ai_dashboard():
         sort_order=sort_order,
         sections=sections,
         active_jobs=active_jobs,
+        pipeline_paused=pipeline_paused,
+        avg_seconds_per_record=avg_seconds_per_record,
         metric_configs=METRIC_CONFIGS,
         histogram_threshold=HISTOGRAM_THRESHOLD,
         can_launch_global=current_user.has_role("root")
@@ -1116,6 +1145,117 @@ def active_jobs_status():
     )
 
     return jsonify({"just_finished": finished_count > 0, "active_count": active_count})
+
+
+# ---------------------------------------------------------------------------
+# Pipeline pause / resume routes
+# ---------------------------------------------------------------------------
+
+
+@dashboards.route("/ai/pause_pipeline")
+@roles_accepted("admin", "root")
+def pause_pipeline():
+    """Globally pause the analysis pipeline (no new records dispatched)."""
+    try:
+        set_pipeline_paused(True)
+    except Exception as exc:
+        current_app.logger.exception("pause_pipeline: could not set pause flag", exc_info=exc)
+        flash("Could not pause the pipeline — Redis may be unavailable.", "error")
+        return redirect(redirect_url())
+    flash(
+        "Analysis pipeline paused. Records currently in-flight will complete normally; "
+        "no new records will be dispatched until the pipeline is resumed.",
+        "success",
+    )
+    return redirect(redirect_url())
+
+
+@dashboards.route("/ai/resume_pipeline")
+@roles_accepted("admin", "root")
+def resume_pipeline():
+    """Clear the global pipeline pause flag and re-trigger the coordinator."""
+    try:
+        set_pipeline_paused(False)
+    except Exception as exc:
+        current_app.logger.exception("resume_pipeline: could not clear pause flag", exc_info=exc)
+        flash("Could not resume the pipeline — Redis may be unavailable.", "error")
+        return redirect(redirect_url())
+    try:
+        _dispatch_global_coordinator()
+    except Exception as exc:
+        current_app.logger.warning(
+            f"resume_pipeline: could not dispatch coordinator after resume: {exc}"
+        )
+    flash("Analysis pipeline resumed.", "success")
+    return redirect(redirect_url())
+
+
+@dashboards.route("/ai/pause_job/<uuid>")
+@roles_accepted("faculty", "admin", "root")
+def pause_job(uuid: str):
+    """Pause a single LLMOrchestrationJob (owner or root/admin only)."""
+    job: LLMOrchestrationJob = (
+        db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
+    )
+    if not (
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or (job.owner_id is not None and job.owner_id == current_user.id)
+    ):
+        flash("You do not have permission to pause this job.", "error")
+        return redirect(redirect_url())
+    if not job.is_active:
+        flash("This job has already finished.", "info")
+        return redirect(redirect_url())
+    job.pause()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("pause_job: SQLAlchemyError", exc_info=exc)
+        flash("Could not pause the job — please try again.", "error")
+        return redirect(redirect_url())
+    flash(
+        "Job paused. Records currently in-flight will complete; "
+        "no further records from this job will be dispatched until it is resumed.",
+        "success",
+    )
+    return redirect(redirect_url())
+
+
+@dashboards.route("/ai/resume_job/<uuid>")
+@roles_accepted("faculty", "admin", "root")
+def resume_job(uuid: str):
+    """Resume a paused LLMOrchestrationJob (owner or root/admin only)."""
+    job: LLMOrchestrationJob = (
+        db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
+    )
+    if not (
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or (job.owner_id is not None and job.owner_id == current_user.id)
+    ):
+        flash("You do not have permission to resume this job.", "error")
+        return redirect(redirect_url())
+    if not job.is_active:
+        flash("This job has already finished.", "info")
+        return redirect(redirect_url())
+    job.resume()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("resume_job: SQLAlchemyError", exc_info=exc)
+        flash("Could not resume the job — please try again.", "error")
+        return redirect(redirect_url())
+    try:
+        _dispatch_global_coordinator()
+    except Exception as exc:
+        current_app.logger.warning(
+            f"resume_job: could not dispatch coordinator after resume: {exc}"
+        )
+    flash("Job resumed.", "success")
+    return redirect(redirect_url())
 
 
 # ---------------------------------------------------------------------------

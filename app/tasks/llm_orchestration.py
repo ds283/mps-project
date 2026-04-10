@@ -89,6 +89,15 @@ from ..models import (
 from ..shared.workflow_logging import log_db_commit
 
 # ---------------------------------------------------------------------------
+# Global pause state key
+# ---------------------------------------------------------------------------
+
+# Redis key used to signal a global pipeline pause.  The coordinator checks
+# for the presence of this key before dispatching new records.  The key is
+# set/deleted by set_pipeline_paused() and can be called from views.
+REDIS_GLOBAL_PAUSE_KEY = "llm_pipeline_paused"
+
+# ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
 
@@ -112,6 +121,29 @@ def _cleanup_redis(job: LLMOrchestrationJob) -> None:
         current_app.logger.warning(
             f"llm_orchestration: could not clean up Redis keys for job {job.uuid}: {exc}"
         )
+
+
+def set_pipeline_paused(paused: bool) -> None:
+    """Set or clear the global pipeline pause flag in Redis.
+
+    When the flag is set the coordinator will still perform status housekeeping
+    (PENDING→RUNNING transitions, completion detection) but will not dispatch
+    any new records to the analysis chain.
+    """
+    r = _get_orchestration_redis()
+    if paused:
+        r.set(REDIS_GLOBAL_PAUSE_KEY, "1")
+    else:
+        r.delete(REDIS_GLOBAL_PAUSE_KEY)
+
+
+def is_pipeline_paused() -> bool:
+    """Return True if the global pipeline pause flag is currently set in Redis."""
+    try:
+        r = _get_orchestration_redis()
+        return bool(r.exists(REDIS_GLOBAL_PAUSE_KEY))
+    except Exception:
+        return False
 
 
 def _clear_record_state(record: SubmissionRecord) -> None:
@@ -1041,7 +1073,35 @@ def register_llm_orchestration_tasks(celery):
         if not active_jobs:
             return
 
+        # ------- check global pause flag -------
+        try:
+            globally_paused = bool(r.exists(REDIS_GLOBAL_PAUSE_KEY))
+        except Exception as exc:
+            current_app.logger.warning(
+                f"llm_orchestration.global_orchestration_step: Redis error checking global pause: {exc}"
+                " — proceeding as unpaused"
+            )
+            globally_paused = False
+
+        if globally_paused:
+            current_app.logger.info(
+                "llm_orchestration.global_orchestration_step: globally paused — skipping dispatch"
+            )
+            return
+
+        # ------- filter per-job pause state -------
+        # Inflight counts include paused jobs (their in-flight records are still running).
+        # Only unpaused jobs are eligible for new dispatches.
+        dispatchable_jobs = [j for j in active_jobs if not j.paused]
+        if not dispatchable_jobs:
+            current_app.logger.info(
+                "llm_orchestration.global_orchestration_step: all active jobs are paused — skipping dispatch"
+            )
+            return
+
         # ------- compute available slots -------
+        # Sum inflight across ALL active jobs (paused and unpaused) since paused
+        # jobs may still have records running from before they were paused.
         try:
             inflight = sum(r.llen(job.redis_inflight_key) for job in active_jobs)
         except Exception as exc:
@@ -1058,14 +1118,14 @@ def register_llm_orchestration_tasks(celery):
 
         # ------- round-robin dispatch -------
         dispatched = 0
-        # Loop at most len(active_jobs) times per slot to avoid an infinite loop
+        # Loop at most len(dispatchable_jobs) times per slot to avoid an infinite loop
         # when all queues are empty.
-        max_attempts = len(active_jobs) * available_slots + len(active_jobs)
+        max_attempts = len(dispatchable_jobs) * available_slots + len(dispatchable_jobs)
         attempts = 0
         job_idx = 0
 
         while dispatched < available_slots and attempts < max_attempts:
-            job = active_jobs[job_idx % len(active_jobs)]
+            job = dispatchable_jobs[job_idx % len(dispatchable_jobs)]
             job_idx += 1
             attempts += 1
 

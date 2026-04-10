@@ -145,76 +145,80 @@
 
 {% macro status_actions_panel(agg, submit_url, clear_url, clear_errors_url, resubmit_errors_url, level_label, can_launch) %}
     {# ---- stats badges row ---- #}
-    <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-        <span class="badge bg-secondary px-2 py-1">
-            {{ agg.n_total }} report{% if agg.n_total != 1 %}s{% endif %}
-        </span>
-        {% if agg.n_missing == 0 %}
-            <span class="badge bg-success px-2 py-1">
-                <i class="fas fa-check me-1"></i>All analysed
+    <div class="d-flex flex-row flex-wrap justify-content-between gap-2 align-items-center mb-2">
+        <div class="d-flex flex-row flex-wrap justify-content-start gap-2 align-items-center small">
+            <span class="text-secondary">
+                <i class="fas fa-file-alt me-1"></i>{{ agg.n_total }} report{% if agg.n_total != 1 %}s{% endif %}
             </span>
+            {% if agg.n_missing == 0 %}
+                <span class="text-success">
+                    <i class="fas fa-check-circle me-1"></i>All analysed
+                </span>
+            {% else %}
+                <span class="text-danger">
+                    <i class="fas fa-clock me-1"></i>{{ agg.n_missing }} missing analysis
+                </span>
+            {% endif %}
+            {% if agg.n_ai_flagged > 0 %}
+                <span class="text-danger">
+                    <i class="fas fa-robot me-1"></i>{{ agg.n_ai_flagged }} AI risk flag{% if agg.n_ai_flagged != 1 %}s{% endif %}
+                </span>
+            {% endif %}
+            {% if agg.n_analysis_failed > 0 %}
+                <span class="text-danger">
+                    <i class="fas fa-times-circle me-1"></i>{{ agg.n_analysis_failed }} analysis error{% if agg.n_analysis_failed != 1 %}s{% endif %}
+                </span>
+            {% endif %}
+            {% if agg.n_feedback_failed > 0 %}
+                <span class="text-danger">
+                    <i class="fas fa-comment-slash me-1"></i>{{ agg.n_feedback_failed }} feedback error{% if agg.n_feedback_failed != 1 %}s{% endif %}
+                </span>
+            {% endif %}
+        </div>
+        {% if can_launch %}
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                <div class="btn-group btn-group-xs" role="group">
+                    <a href="{{ submit_url }}"
+                       class="btn btn-outline-primary"
+                       data-bs-toggle="tooltip"
+                       title="Submit reports without analysis results">
+                        <i class="fas fa-robot me-1"></i>Submit missing
+                    </a>
+                    <a href="{{ clear_url }}"
+                       class="btn btn-outline-danger"
+                       data-bs-toggle="tooltip"
+                       title="Clear existing results and resubmit all reports for {{ level_label }}"
+                       onclick="return confirm('Clear ALL existing analysis results for {{ level_label }} and resubmit every report? This cannot be undone.')">
+                        <i class="fas fa-sync-alt me-1"></i>Clear all &amp; resubmit
+                    </a>
+                </div>
+                {% if agg.n_analysis_failed > 0 or agg.n_feedback_failed > 0 %}
+                    <div class="btn-group btn-group-xs" role="group">
+                        <a href="{{ clear_errors_url }}"
+                           class="btn btn-secondary"
+                           data-bs-toggle="tooltip"
+                           title="Clear error flags on failed records, do not resubmit">
+                            <i class="fas fa-eraser me-1"></i>Clear errors
+                        </a>
+                        <a href="{{ resubmit_errors_url }}"
+                           class="btn btn-outline-danger"
+                           data-bs-toggle="tooltip"
+                           title="Clear and resubmit only records with error flags"
+                           onclick="return confirm('Clear error records for {{ level_label }} and resubmit for re-analysis?')">
+                            <i class="fas fa-redo me-1"></i>Clear errors &amp; resubmit
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
         {% else %}
-            <span class="badge bg-warning text-dark px-2 py-1">
-                <i class="fas fa-clock me-1"></i>{{ agg.n_missing }} missing analysis
-            </span>
-        {% endif %}
-        {% if agg.n_ai_flagged > 0 %}
-            <span class="badge bg-warning text-dark px-2 py-1">
-                <i class="fas fa-robot me-1"></i>{{ agg.n_ai_flagged }} AI risk flag{% if agg.n_ai_flagged != 1 %}s{% endif %}
-            </span>
-        {% endif %}
-        {% if agg.n_analysis_failed > 0 %}
-            <span class="badge bg-danger px-2 py-1">
-                <i class="fas fa-times-circle me-1"></i>{{ agg.n_analysis_failed }} analysis error{% if agg.n_analysis_failed != 1 %}s{% endif %}
-            </span>
-        {% endif %}
-        {% if agg.n_feedback_failed > 0 %}
-            <span class="badge bg-danger px-2 py-1">
-                <i class="fas fa-comment-slash me-1"></i>{{ agg.n_feedback_failed }} feedback error{% if agg.n_feedback_failed != 1 %}s{% endif %}
-            </span>
+            <div></div>
         {% endif %}
     </div>
     {# ---- action buttons row (launch-capable users only) ---- #}
-    {% if can_launch %}
-        <div class="d-flex flex-wrap gap-2 align-items-center">
-            <div class="btn-group btn-group-sm" role="group">
-                <a href="{{ submit_url }}"
-                   class="btn btn-outline-primary"
-                   data-bs-toggle="tooltip"
-                   title="Submit reports without analysis results to the LLM pipeline">
-                    <i class="fas fa-robot me-1"></i>Submit missing
-                </a>
-                <a href="{{ clear_url }}"
-                   class="btn btn-outline-danger"
-                   data-bs-toggle="tooltip"
-                   title="Clear all existing results and resubmit every report for {{ level_label }}"
-                   onclick="return confirm('Clear ALL existing analysis results for {{ level_label }} and resubmit every report? This cannot be undone.')">
-                    <i class="fas fa-sync-alt me-1"></i>Clear &amp; resubmit all
-                </a>
-            </div>
-            {% if agg.n_analysis_failed > 0 or agg.n_feedback_failed > 0 %}
-                <div class="btn-group btn-group-sm" role="group">
-                    <a href="{{ clear_errors_url }}"
-                       class="btn btn-secondary"
-                       data-bs-toggle="tooltip"
-                       title="Clear error flags on failed records without resubmitting">
-                        <i class="fas fa-eraser me-1"></i>Clear errors
-                    </a>
-                    <a href="{{ resubmit_errors_url }}"
-                       class="btn btn-outline-danger"
-                       data-bs-toggle="tooltip"
-                       title="Clear and resubmit only the records with error flags"
-                       onclick="return confirm('Clear error records for {{ level_label }} and resubmit for re-analysis?')">
-                        <i class="fas fa-redo me-1"></i>Clear &amp; resubmit errors
-                    </a>
-                </div>
-            {% endif %}
-        </div>
-    {% endif %}
 {% endmacro %}
 
 {% macro export_buttons(xlsx_url, csv_url, outline=true) %}
-    <div class="btn-group btn-group-sm" role="group">
+    <div class="btn-group btn-group-xs" role="group">
         <a href="{{ xlsx_url }}"
            class="btn {{ 'btn-outline-secondary' if outline else 'btn-secondary' }}"
            data-bs-toggle="tooltip" title="Export as Excel workbook">
@@ -252,11 +256,39 @@
         {# ---- active orchestration jobs panel ---- #}
         {% if active_jobs %}
             <div class="card border-primary mb-4">
-                <div class="card-header bg-primary text-white d-flex align-items-center gap-2">
+                <div class="card-header bg-primary text-white d-flex align-items-center gap-2 flex-wrap">
                     <i class="fas fa-tasks fa-fw"></i>
                     <strong>Active analysis pipeline jobs</strong>
+                    {% if pipeline_paused %}
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-pause me-1"></i>Pipeline paused
+                        </span>
+                    {% endif %}
+                    {% if avg_seconds_per_record is not none %}
+                        {% set avg_min = (avg_seconds_per_record // 60)|int %}
+                        {% set avg_sec = (avg_seconds_per_record % 60)|round|int %}
+                        <span class="text-white-50 small">
+                            Avg
+                            {% if avg_min > 0 %}{{ avg_min }}m {% endif %}{{ avg_sec }}s / report
+                        </span>
+                    {% endif %}
                     <span class="badge bg-light text-dark ms-auto">{{ active_jobs|length }} job
                         {% if active_jobs|length != 1 %}s{% endif %}</span>
+                    {% if is_root or is_admin %}
+                        {% if pipeline_paused %}
+                            <a href="{{ url_for('dashboards.resume_pipeline') }}"
+                               class="btn btn-xs btn-success"
+                               title="Resume pipeline — start dispatching new records again">
+                                <i class="fas fa-play me-1"></i>Resume
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('dashboards.pause_pipeline') }}"
+                               class="btn btn-xs btn-warning"
+                               title="Pause pipeline — stop dispatching new records (in-flight records complete normally)">
+                                <i class="fas fa-pause me-1"></i>Pause
+                            </a>
+                        {% endif %}
+                    {% endif %}
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -269,11 +301,15 @@
                                 <th class="text-end">Done</th>
                                 <th class="text-end">Failed</th>
                                 <th class="text-end">Total</th>
-                                <th>Started</th>
+                                <th>Submitted</th>
+                                <th>Dispatched</th>
+                                <th class="text-end">Avg</th>
+                                <th></th>
                             </tr>
                             </thead>
                             <tbody>
                             {% for job in active_jobs %}
+                                {% set bar_colour = 'secondary' if job.paused else job.status_colour %}
                                 <tr>
                                     <td>
                                         {{ job.description or job.scope_label }}
@@ -283,10 +319,15 @@
                                     </td>
                                     <td>
                                         <span class="badge bg-{{ job.status_colour }}">{{ job.status_label }}</span>
+                                        {% if job.paused %}
+                                            <span class="badge bg-secondary ms-1">
+                                                <i class="fas fa-pause me-1"></i>Paused
+                                            </span>
+                                        {% endif %}
                                     </td>
                                     <td class="text-end" style="min-width:120px">
                                         <div class="progress" style="height:8px; min-width:80px">
-                                            <div class="progress-bar bg-{{ job.status_colour }}"
+                                            <div class="progress-bar bg-{{ bar_colour }}"
                                                  role="progressbar"
                                                  style="width:{{ job.progress_pct }}%"
                                                  aria-valuenow="{{ job.progress_pct }}"
@@ -299,8 +340,39 @@
                                     <td class="text-end {% if job.failed_count > 0 %}text-danger fw-semibold{% else %}text-muted{% endif %}">{{ job.failed_count }}</td>
                                     <td class="text-end text-muted">{{ job.total_count }}</td>
                                     <td class="text-muted small">
-                                        {% if job.started_at %}{{ job.started_at.strftime('%d %b %Y %H:%M') }}{% else %}
-                                            —{% endif %}
+                                        {% if job.created_at %}{{ job.created_at.strftime('%d %b %H:%M') }}{% else %}—{% endif %}
+                                    </td>
+                                    <td class="text-muted small">
+                                        {% if job.started_at %}{{ job.started_at.strftime('%d %b %H:%M') }}{% else %}—{% endif %}
+                                    </td>
+                                    <td class="text-end text-muted small">
+                                        {# Per-job rolling rate based on elapsed time and records processed so far #}
+                                        {% set done = job.completed_count + job.failed_count %}
+                                        {% if job.elapsed_seconds and done > 0 %}
+                                            {% set rate = job.elapsed_seconds / done %}
+                                            {% set r_min = (rate // 60)|int %}
+                                            {% set r_sec = (rate % 60)|round|int %}
+                                            {% if r_min > 0 %}{{ r_min }}m {% endif %}{{ r_sec }}s
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if job.is_active and (is_root or is_admin or job.owner_id == current_user.id) %}
+                                            {% if job.paused %}
+                                                <a href="{{ url_for('dashboards.resume_job', uuid=job.uuid) }}"
+                                                   class="btn btn-xs btn-outline-success py-0 px-1"
+                                                   title="Resume this job">
+                                                    <i class="fas fa-play"></i>
+                                                </a>
+                                            {% else %}
+                                                <a href="{{ url_for('dashboards.pause_job', uuid=job.uuid) }}"
+                                                   class="btn btn-xs btn-outline-secondary py-0 px-1"
+                                                   title="Pause this job">
+                                                    <i class="fas fa-pause"></i>
+                                                </a>
+                                            {% endif %}
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -404,26 +476,26 @@
                 <div class="card-body py-2">
                     <div class="d-flex flex-wrap gap-2 align-items-center">
                         <span class="text-muted small fw-semibold me-1">Global actions:</span>
-                        <div class="btn-group btn-group-sm" role="group">
+                        <div class="btn-group btn-group-xs" role="group">
                             <a href="{{ url_for('dashboards.launch_global') }}"
                                class="btn btn-outline-primary"
                                data-bs-toggle="tooltip"
-                               title="Submit all reports without analysis results to the LLM pipeline">
-                                <i class="fas fa-robot me-1"></i>Submit all missing
+                               title="Submit all reports without analysis results">
+                                <i class="fas fa-robot me-1"></i>Submit missing
                             </a>
                             <a href="{{ url_for('dashboards.clear_global') }}"
                                class="btn btn-outline-danger"
                                data-bs-toggle="tooltip"
-                               title="Clear all existing results and resubmit every report globally"
+                               title="Clear existing results and resubmit all reports"
                                onclick="return confirm('Clear ALL existing analysis results globally and resubmit every report? This cannot be undone.')">
-                                <i class="fas fa-sync-alt me-1"></i>Clear &amp; resubmit all
+                                <i class="fas fa-sync-alt me-1"></i>Clear all &amp; resubmit
                             </a>
                         </div>
-                        <div class="btn-group btn-group-sm" role="group">
+                        <div class="btn-group btn-group-xs" role="group">
                             <a href="{{ url_for('dashboards.clear_errors_global') }}"
-                               class="btn btn-secondary"
+                               class="btn btn-outline-secondary"
                                data-bs-toggle="tooltip"
-                               title="Clear error flags on all failed records globally (without resubmitting)">
+                               title="Clear error flags on all failed records, do not resubmit">
                                 <i class="fas fa-eraser me-1"></i>Clear all errors
                             </a>
                             <a href="{{ url_for('dashboards.resubmit_errors_global') }}"
@@ -431,7 +503,7 @@
                                data-bs-toggle="tooltip"
                                title="Clear and resubmit all records with error flags globally"
                                onclick="return confirm('Clear all error records globally and resubmit for re-analysis?')">
-                                <i class="fas fa-redo me-1"></i>Clear &amp; resubmit all errors
+                                <i class="fas fa-redo me-1"></i>Clear all errors &amp; resubmit
                             </a>
                         </div>
                     </div>
@@ -501,7 +573,7 @@
                             url_for('dashboards.export_period', period_id=sub.period.id, fmt='csv')
                         ) }}
                                     <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                        <button class="btn btn-xs btn-outline-secondary dropdown-toggle"
                                                 type="button" data-bs-toggle="dropdown">
                                             <i class="fas fa-file-download me-1"></i>Project class
                                         </button>

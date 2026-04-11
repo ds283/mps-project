@@ -336,6 +336,12 @@
                                 <i class="fas fa-pause me-1"></i>Pause
                             </a>
                         {% endif %}
+                        <a href="{{ url_for('dashboards.cancel_pipeline') }}"
+                           class="btn btn-xs btn-danger"
+                           title="Cancel all active jobs — discard all queued records"
+                           onclick="return confirm('Cancel ALL active pipeline jobs? Queued records will be discarded. This cannot be undone.')">
+                            <i class="fas fa-times me-1"></i>Cancel all
+                        </a>
                     {% endif %}
                 </div>
                 <div class="card-body p-0">
@@ -421,6 +427,12 @@
                                                     <i class="fas fa-pause"></i>
                                                 </a>
                                             {% endif %}
+                                            <a href="{{ url_for('dashboards.cancel_job', uuid=job.uuid) }}"
+                                               class="btn btn-xs btn-outline-danger py-0 px-1"
+                                               title="Cancel this job"
+                                               onclick="return confirm('Cancel this job? Any queued reports will no longer be submitted for LLM analysis.')">
+                                                <i class="fas fa-times"></i>
+                                            </a>
                                         {% endif %}
                                     </td>
                                 </tr>

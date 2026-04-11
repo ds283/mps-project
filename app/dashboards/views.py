@@ -33,6 +33,7 @@ from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
 from ..shared.workflow_logging import log_db_commit
 from ..tasks.llm_orchestration import (
+    _cleanup_redis,
     _collect_error_record_ids,
     _dispatch_global_coordinator,
     is_pipeline_paused,
@@ -1286,6 +1287,82 @@ def resume_job(uuid: str):
             f"resume_job: could not dispatch coordinator after resume: {exc}"
         )
     flash("Job resumed.", "success")
+    return redirect(redirect_url())
+
+
+@dashboards.route("/ai/cancel_job/<uuid>")
+@roles_accepted("faculty", "admin", "root")
+def cancel_job(uuid: str):
+    """Cancel a single LLMOrchestrationJob (owner or root/admin only).
+
+    Sets STATUS_FAILED immediately and deletes both Redis queue keys so no
+    further records are dispatched.  In-flight records complete normally —
+    their done/error callbacks increment counters but the job is already
+    terminal so no further dispatch occurs.
+    """
+    job: LLMOrchestrationJob = (
+        db.session.query(LLMOrchestrationJob).filter_by(uuid=uuid).first_or_404()
+    )
+    if not (
+        current_user.has_role("root")
+        or current_user.has_role("admin")
+        or (job.owner_id is not None and job.owner_id == current_user.id)
+    ):
+        flash("You do not have permission to cancel this job.", "error")
+        return redirect(redirect_url())
+    if not job.is_active:
+        flash("This job has already finished.", "info")
+        return redirect(redirect_url())
+    job.mark_failed()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("cancel_job: SQLAlchemyError", exc_info=exc)
+        flash("Could not cancel the job — please try again.", "error")
+        return redirect(redirect_url())
+    _cleanup_redis(job)
+    flash(
+        "Job cancelled. Queued records have been discarded; "
+        "any in-flight records will complete harmlessly.",
+        "success",
+    )
+    return redirect(redirect_url())
+
+
+@dashboards.route("/ai/cancel_pipeline")
+@roles_accepted("admin", "root")
+def cancel_pipeline():
+    """Cancel all active LLMOrchestrationJobs globally (admin/root only).
+
+    Marks every PENDING/RUNNING job as FAILED and deletes their Redis queues.
+    In-flight records continue to completion; queued records are discarded.
+    """
+    active_jobs = (
+        db.session.query(LLMOrchestrationJob)
+        .filter(LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES))
+        .all()
+    )
+    if not active_jobs:
+        flash("No active jobs to cancel.", "info")
+        return redirect(redirect_url())
+    for job in active_jobs:
+        job.mark_failed()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        current_app.logger.exception("cancel_pipeline: SQLAlchemyError", exc_info=exc)
+        flash("Could not cancel the pipeline — please try again.", "error")
+        return redirect(redirect_url())
+    for job in active_jobs:
+        _cleanup_redis(job)
+    n = len(active_jobs)
+    flash(
+        f"Pipeline cancelled: {n} job{'s' if n != 1 else ''} terminated. "
+        "Any in-flight records will complete harmlessly.",
+        "success",
+    )
     return redirect(redirect_url())
 
 

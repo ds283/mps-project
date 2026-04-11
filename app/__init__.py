@@ -216,10 +216,10 @@ def create_app():
     app.logger.info("-- creating MongoDB session for Flask-Sessionstore")
     app.config["SESSION_MONGODB"] = MongoClient(host=app.config["SESSION_MONGO_URL"])
 
-    # we have two proxies -- we're behind both waitress and nginx
+    # one trusted reverse proxy (nginx); set PROXYFIX_FOR=1 in production
     proxyfix_for = app.config.get("PROXYFIX_FOR", 0)
     app.logger.info(f"-- patching Werkzeug to allow for {proxyfix_for}-level proxying")
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxyfix_for)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxyfix_for, x_proto=proxyfix_for)
 
     if app.config.get("PROFILE_MEMORY", False):
         app.wsgi_app = Dozer(app.wsgi_app)

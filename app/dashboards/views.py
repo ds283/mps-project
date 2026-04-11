@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -621,7 +622,9 @@ def ai_dashboard():
     _total_seconds = sum(
         (j.finished_at - j.started_at).total_seconds() for j in recent_completed
     )
-    _total_records = sum(j.total_count for j in recent_completed)
+    _total_records = sum(
+        (j.completed_count or 0) + (j.failed_count or 0) for j in recent_completed
+    )
     avg_seconds_per_record: Optional[float] = (
         _total_seconds / _total_records if _total_records > 0 else None
     )
@@ -1118,11 +1121,18 @@ def active_jobs_status():
 
     ``active_count`` is the current count of active jobs, used by the client
     to detect new jobs that appeared after the page was loaded.
+
+    ``jobs`` maps each still-active watched UUID to its current progress
+    counters, allowing the client to update the table cells in-place without
+    a full page reload.
     """
     from flask import jsonify
 
     raw_ids = request.args.get("ids", "")
     watched_uuids = [uid.strip() for uid in raw_ids.split(",") if uid.strip()]
+
+    now = datetime.now()
+    jobs_data: Dict[str, dict] = {}
 
     if watched_uuids:
         finished_count = (
@@ -1135,6 +1145,25 @@ def active_jobs_status():
             )
             .count()
         )
+        # Fetch live progress for each still-active watched job
+        active_watched = (
+            db.session.query(LLMOrchestrationJob)
+            .filter(
+                LLMOrchestrationJob.uuid.in_(watched_uuids),
+                LLMOrchestrationJob.status.in_(LLMOrchestrationJob.ACTIVE_STATUSES),
+            )
+            .all()
+        )
+        for job in active_watched:
+            elapsed = (
+                (now - job.started_at).total_seconds() if job.started_at is not None else None
+            )
+            jobs_data[job.uuid] = {
+                "completed": job.completed_count or 0,
+                "failed": job.failed_count or 0,
+                "total": job.total_count or 0,
+                "elapsed_seconds": elapsed,
+            }
     else:
         finished_count = 0
 
@@ -1144,7 +1173,9 @@ def active_jobs_status():
         .count()
     )
 
-    return jsonify({"just_finished": finished_count > 0, "active_count": active_count})
+    return jsonify(
+        {"just_finished": finished_count > 0, "active_count": active_count, "jobs": jobs_data}
+    )
 
 
 # ---------------------------------------------------------------------------

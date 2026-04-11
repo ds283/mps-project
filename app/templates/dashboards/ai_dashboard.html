@@ -18,12 +18,53 @@
         {% endfor %}
     {% endfor %}
     <script>
-        // Auto-reload when an orchestration job completes
+        // Poll active orchestration jobs: update progress cells in-place and
+        // reload the page when a job reaches a terminal state or new jobs appear.
         (function () {
             // UUIDs of jobs active at page-render time — sent to the server on
             // each poll so completion detection is timestamp-free.
             var _watchedJobIds = {{ active_jobs | map(attribute='uuid') | list | tojson }};
             var _initialActiveCount = {{ active_jobs | length }};
+
+            function fmtRate(elapsedSeconds, done) {
+                if (!elapsedSeconds || done <= 0) return '—';
+                var rate = elapsedSeconds / done;
+                var r_min = Math.floor(rate / 60);
+                var r_sec = Math.round(rate % 60);
+                return (r_min > 0 ? r_min + 'm ' : '') + r_sec + 's';
+            }
+
+            function updateJobRow(uuid, job) {
+                var row = document.querySelector('tr[data-job-uuid="' + uuid + '"]');
+                if (!row) return;
+
+                var total = job.total || 0;
+                var done = (job.completed || 0) + (job.failed || 0);
+                var pct = total > 0 ? Math.min(100, Math.floor(done * 100 / total)) : 0;
+
+                var bar = row.querySelector('[data-cell="progress-bar"]');
+                if (bar) {
+                    bar.style.width = pct + '%';
+                    bar.setAttribute('aria-valuenow', pct);
+                }
+                var pctLabel = row.querySelector('[data-cell="progress-pct"]');
+                if (pctLabel) pctLabel.textContent = pct + '%';
+
+                var compCell = row.querySelector('[data-cell="completed"]');
+                if (compCell) compCell.textContent = job.completed || 0;
+
+                var failCell = row.querySelector('[data-cell="failed"]');
+                if (failCell) {
+                    failCell.textContent = job.failed || 0;
+                    if ((job.failed || 0) > 0) {
+                        failCell.classList.remove('text-muted');
+                        failCell.classList.add('text-danger', 'fw-semibold');
+                    }
+                }
+
+                var rateCell = row.querySelector('[data-cell="rate"]');
+                if (rateCell) rateCell.textContent = fmtRate(job.elapsed_seconds, done);
+            }
 
             function pollJobs() {
                 var url = '{{ url_for("dashboards.active_jobs_status") }}';
@@ -33,22 +74,29 @@
                 fetch(url)
                     .then(function (r) { return r.json(); })
                     .then(function (data) {
-                        // A watched job has reached a terminal state.
+                        // A watched job has reached a terminal state — full reload.
                         if (data.just_finished) {
                             window.location.reload();
                             return;
                         }
-                        // New jobs appeared after the page was loaded (e.g. launched
-                        // by another user).
+                        // New jobs appeared after the page was loaded.
                         if (_initialActiveCount === 0 && data.active_count > 0) {
                             window.location.reload();
+                            return;
+                        }
+                        // Update progress cells in-place for still-running jobs.
+                        if (data.jobs) {
+                            Object.keys(data.jobs).forEach(function (uuid) {
+                                updateJobRow(uuid, data.jobs[uuid]);
+                            });
                         }
                     })
                     .catch(function () { /* ignore transient network errors */ });
             }
 
-            // Always poll — jobs may appear after page load.
-            setInterval(pollJobs, 15000);
+            // Poll every 60 s — typical job takes ~10 min, so this gives ~10
+            // updates per job without unnecessary server load.
+            setInterval(pollJobs, 60000);
         })();
 
         // Update chevron direction when period subsections collapse/expand
@@ -310,7 +358,7 @@
                             <tbody>
                             {% for job in active_jobs %}
                                 {% set bar_colour = 'secondary' if job.paused else job.status_colour %}
-                                <tr>
+                                <tr data-job-uuid="{{ job.uuid }}">
                                     <td>
                                         {{ job.description or job.scope_label }}
                                         {% if job.clear_existing %}
@@ -328,16 +376,17 @@
                                     <td class="text-end" style="min-width:120px">
                                         <div class="progress" style="height:8px; min-width:80px">
                                             <div class="progress-bar bg-{{ bar_colour }}"
+                                                 data-cell="progress-bar"
                                                  role="progressbar"
                                                  style="width:{{ job.progress_pct }}%"
                                                  aria-valuenow="{{ job.progress_pct }}"
                                                  aria-valuemin="0" aria-valuemax="100">
                                             </div>
                                         </div>
-                                        <small class="text-muted">{{ job.progress_pct }}%</small>
+                                        <small class="text-muted" data-cell="progress-pct">{{ job.progress_pct }}%</small>
                                     </td>
-                                    <td class="text-end text-success fw-semibold">{{ job.completed_count }}</td>
-                                    <td class="text-end {% if job.failed_count > 0 %}text-danger fw-semibold{% else %}text-muted{% endif %}">{{ job.failed_count }}</td>
+                                    <td class="text-end text-success fw-semibold" data-cell="completed">{{ job.completed_count }}</td>
+                                    <td class="text-end {% if job.failed_count > 0 %}text-danger fw-semibold{% else %}text-muted{% endif %}" data-cell="failed">{{ job.failed_count }}</td>
                                     <td class="text-end text-muted">{{ job.total_count }}</td>
                                     <td class="text-muted small">
                                         {% if job.created_at %}{{ job.created_at.strftime('%d %b %H:%M') }}{% else %}—{% endif %}
@@ -345,7 +394,7 @@
                                     <td class="text-muted small">
                                         {% if job.started_at %}{{ job.started_at.strftime('%d %b %H:%M') }}{% else %}—{% endif %}
                                     </td>
-                                    <td class="text-end text-muted small">
+                                    <td class="text-end text-muted small" data-cell="rate">
                                         {# Per-job rolling rate based on elapsed time and records processed so far #}
                                         {% set done = job.completed_count + job.failed_count %}
                                         {% if job.elapsed_seconds and done > 0 %}

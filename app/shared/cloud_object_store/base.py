@@ -143,6 +143,11 @@ class Driver:
             "The get_url() method should be implemented by concrete Driver instances"
         )
 
+    def ping(self) -> None:
+        raise NotImplementedError(
+            "The ping() method should be implemented by concrete Driver instances"
+        )
+
 
 class ObjectStore:
     def __init__(self, uri: PathLike, database_key: int, data: Dict):
@@ -433,3 +438,6 @@ class ObjectStore:
             )
 
         return url
+
+    def ping(self) -> None:
+        self._driver.ping()

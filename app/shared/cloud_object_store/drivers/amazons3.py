@@ -176,3 +176,9 @@ class AmazonS3CloudStorageDriver:
         if self._endpoint_url is not None:
             return f"{self._endpoint_url}/{self._bucket_name}/{str(key)}"
         return f"https://{self._bucket_name}.s3.amazonaws.com/{str(key)}"
+
+    def ping(self) -> None:
+        try:
+            self._storage.head_bucket(Bucket=self._bucket_name)
+        except ClientError as e:
+            raise RuntimeError(f"Cannot access S3 bucket '{self._bucket_name}': {e}")

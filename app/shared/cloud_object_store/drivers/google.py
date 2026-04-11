@@ -114,3 +114,9 @@ class GoogleCloudStorageDriver:
     def get_url(self, key: Path) -> str:
         blob: Blob = self._bucket.blob(str(key))
         return blob.public_url
+
+    def ping(self) -> None:
+        try:
+            self._storage.get_bucket(self._bucket_name)
+        except Exception as e:
+            raise RuntimeError(f"Cannot access GCS bucket '{self._bucket_name}': {e}")

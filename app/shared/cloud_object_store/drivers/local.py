@@ -153,3 +153,7 @@ class LocalFileSystemDriver:
         raise NotImplementedError(
             "The get_url() method is not supported for the LocalFileSystem driver"
         )
+
+    def ping(self) -> None:
+        if not self._root.exists() or not self._root.is_dir():
+            raise RuntimeError(f"Local storage root '{self._root}' is not accessible")

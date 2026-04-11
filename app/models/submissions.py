@@ -2799,6 +2799,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             "filler_count": patterns.get("filler_total"),
             "em_dash_count": patterns.get("em_dash_count"),
             "measured_word_count": measured_words,
+            "appendix_word_count": metrics.get("appendix_word_count"),
             "stated_word_count": stated_words,
             "discrepancy_pct": wc_discrepancy.get("discrepancy_pct"),
             "tolerance_pct": wc_discrepancy.get("tolerance_pct"),

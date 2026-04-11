@@ -249,16 +249,60 @@ _BIBLIO_HEADING = re.compile(
 )
 
 # Caption line pattern (figure or table captions, used to exclude word count).
+# Handles simple (Figure 1), chapter-relative (Figure 3.1), and appendix (Figure A.1)
+# numbering styles.
 _CAPTION_LINE = re.compile(
-    r"^\s*(figure|fig\.|table)\s+\d+",
+    r"^\s*(?:figure|fig\.|table)\s+(?:[A-Z]\.)?\d+(?:\.\d+)?",
     re.IGNORECASE | re.MULTILINE,
 )
 
-# Numbered bibliography entry: [N] or N.
-_NUMBERED_ENTRY = re.compile(r"^\s*(\[\d+\]|\d+\.)\s+\S", re.MULTILINE)
+# Figure/table reference label patterns.
+#
+# group(1) — canonical label key: "1", "3.1", "A.1"
+# group(2) — optional subfigure suffix letter ("a", "b") — NOT included in the key.
+#
+# (?:[A-Z]\.)? with IGNORECASE matches appendix-letter prefixes ("A.", "B.") but not
+# digit characters, so "3." in "3.1" is never mistaken for a prefix.
+_FIG_REF = re.compile(
+    r"\b(?:figure|fig\.)\s+((?:[A-Z]\.)?\d+(?:\.\d+)?)([a-z])?",
+    re.IGNORECASE,
+)
+_TAB_REF = re.compile(
+    r"\btable\s+((?:[A-Z]\.)?\d+(?:\.\d+)?)([a-z])?",
+    re.IGNORECASE,
+)
+
+# Numbered bibliography entry: [N] or N. followed by an uppercase letter.
+# \d{1,3} rejects large numbers (page ranges, ISSN fragments) that can appear at
+# line-starts after PDF text wrapping.  Requiring [A-Z] after the whitespace rules
+# out "3313.\n  issn:…" continuations; real entries always start with an author
+# surname or institution name (uppercase).
+_NUMBERED_ENTRY = re.compile(r"^\s*(\[\d{1,3}\]|\d{1,3}\.)\s+[A-Z]", re.MULTILINE)
 
 # Numbered citation in main text: [N] or [N, M, ...]
 _NUMBERED_CITATION = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
+
+# Appendix section heading.  Matches "Appendix", "Appendix A", "APPENDIX B",
+# "Appendix A: Title", "Appendix B — Extra Data", etc. on their own line.
+#
+# Design notes:
+#   (?im)          — inline IGNORECASE + MULTILINE flags
+#   (?-i:[A-Z])    — uppercase letter only (IGNORECASE disabled for this group)
+#                    so "Appendix a" or "appendix contents" do NOT match
+#   [ \t]+         — space/tab only (not \s) so the optional group cannot
+#                    span a newline and consume the next line
+#   (?:[:\t \-\.].*)?  — optional subtitle text following the letter label
+_APPENDIX_HEADING = re.compile(
+    r"(?im)^\s*appendix(?:[ \t]+(?-i:[A-Z])(?:[:\t \-\.].*)?)?$"
+)
+
+# Author-year reference entry signals.
+# A year in parentheses is the minimal marker of an author-year bibliography entry.
+_REF_YEAR = re.compile(r"\(\d{4}[a-z]?\)")
+# arXiv identifier — near-certain evidence that a line belongs to the reference list.
+_ARXIV_ID = re.compile(r"\barXiv:\d{4}\.\d{4,5}\b", re.IGNORECASE)
+# DOI — also strong evidence of a reference list line.
+_DOI = re.compile(r"\bdoi:\s*10\.\d{4,}", re.IGNORECASE)
 
 
 def _split_text(text: str) -> tuple[str, str]:
@@ -276,6 +320,75 @@ def _split_text(text: str) -> tuple[str, str]:
         match = matches[-1]
         return text[: match.start()], text[match.start() :]
     return text, ""
+
+
+# Minimum fraction of pre_core that must precede an appendix heading for it
+# to be treated as a genuine section heading rather than a TOC entry or an
+# early cross-reference such as "see Appendix A for details".
+_MIN_APPENDIX_FRACTION = 0.25
+
+
+def _split_document(raw_text: str) -> tuple[str, str, str]:
+    """
+    Split raw extracted text into three named regions::
+
+        (_core, _references, _appendices)
+
+    Any region may be an empty string if not detected.  The function is the
+    single authoritative entry point for all document splitting; downstream
+    code should call this instead of ``_split_text`` directly.
+
+    Algorithm
+    ---------
+    Step 1.  Locate the last bibliography heading → pre_core, pre_biblio
+             (via ``_split_text``).
+
+    Step 2a. Search *pre_biblio* for an appendix heading (type B report:
+             core → references → appendices).  If found::
+
+               _core        = pre_core
+               _references  = pre_biblio up to appendix heading
+               _appendices  = pre_biblio from appendix heading onwards
+
+    Step 2b. Otherwise search *pre_core* for an appendix heading (type A
+             report: core → appendices → references).  The heading must
+             appear after ``_MIN_APPENDIX_FRACTION`` of pre_core to exclude
+             TOC entries and early cross-references.  The first qualifying
+             match marks the start of the appendix section::
+
+               _core        = pre_core up to appendix heading
+               _references  = pre_biblio
+               _appendices  = pre_core from appendix heading onwards
+
+    Step 2c. No appendix heading found anywhere::
+
+               _core        = pre_core
+               _references  = pre_biblio
+               _appendices  = ""
+    """
+    pre_core, pre_biblio = _split_text(raw_text)
+
+    # Step 2a — type B: appendix follows reference list
+    app_match = _APPENDIX_HEADING.search(pre_biblio)
+    if app_match:
+        return (
+            pre_core,
+            pre_biblio[: app_match.start()],
+            pre_biblio[app_match.start() :],
+        )
+
+    # Step 2b — type A: appendix precedes reference list
+    min_pos = int(len(pre_core) * _MIN_APPENDIX_FRACTION)
+    for match in _APPENDIX_HEADING.finditer(pre_core):
+        if match.start() > min_pos:
+            return (
+                pre_core[: match.start()],
+                pre_biblio,
+                pre_core[match.start() :],
+            )
+
+    # Step 2c — no appendices detected
+    return pre_core, pre_biblio, ""
 
 
 # ---------------------------------------------------------------------------
@@ -363,21 +476,55 @@ def _count_bibliography(biblio_text: str) -> tuple[int, list[str]]:
     Handles:
     - Numbered entries starting with [N] or N.
     - Falls back to a heuristic line count for author-year styles.
+
+    For the heuristic fallback the text is first truncated at any appendix
+    heading (appendices frequently follow the reference list and would
+    otherwise inflate the count).  Lines are then filtered to those that
+    carry strong signals of an author-year entry: a year in parentheses,
+    an arXiv identifier, or a DOI.  If fewer than three such candidate
+    lines are found the simple total-line count is used as a fallback to
+    avoid under-counting documents whose format is unusual.
     """
+    # Trim at the first appendix heading so appendix content is not counted.
+    app_match = _APPENDIX_HEADING.search(biblio_text)
+    if app_match:
+        biblio_text = biblio_text[: app_match.start()]
+
     numbered = _NUMBERED_ENTRY.findall(biblio_text)
     if numbered:
         # Strip to just the bracket/dot keys for cross-referencing
         keys = [k.strip().strip(".").strip("[]") for k in numbered]
-        return len(keys), keys
-    # Heuristic: count non-blank lines after the heading as rough entry count
+        # Validate: a genuine numbered bibliography must start near 1.
+        # If the minimum numeric key is large (e.g. 82 from a wrapped page-range
+        # "p.\n82. TITLE") treat the whole match as a false positive and fall through
+        # to the author-year heuristic.
+        try:
+            if min(int(k) for k in keys) <= 5:
+                return len(keys), keys
+        except ValueError:
+            return len(keys), keys  # non-integer keys — trust the match
+
+    # Heuristic: count non-blank lines after the heading as a rough entry count.
     lines = [ln.strip() for ln in biblio_text.splitlines() if ln.strip()]
-    # Skip the heading line itself
-    entry_lines = [
+    # Skip the heading line itself.
+    body_lines = [
         ln
         for ln in lines[1:]
         if ln and not ln.lower().startswith(("ref", "biblio", "works"))
     ]
-    return len(entry_lines), []
+
+    # Stage 1: prefer lines that look like author-year reference entries.
+    # Signals: year in parentheses, arXiv identifier, or a DOI.
+    entry_candidates = [
+        ln
+        for ln in body_lines
+        if _REF_YEAR.search(ln) or _ARXIV_ID.search(ln) or _DOI.search(ln)
+    ]
+
+    # Stage 2: if too few candidates found, fall back to the total line count.
+    if len(entry_candidates) >= 3:
+        return len(entry_candidates), []
+    return len(body_lines), []
 
 
 def _check_uncited(main_text: str, keys: list[str]) -> list[str]:
@@ -399,35 +546,42 @@ def _check_figure_table_refs(text: str) -> tuple[list[str], list[str]]:
     """
     Return (uncaptioned_figures, uncaptioned_tables): labels that appear in
     captions but are not mentioned anywhere in the main body text.
+
+    Labels are normalised to their canonical form before deduplication:
+    - Chapter-relative numbers: "Figure 3.1", "Figure 4.5" → keys "3.1", "4.5"
+    - Appendix figures:         "Figure A.1", "Figure B.3" → keys "A.1", "B.3"
+    - Subfigure panels:         "Figure 3.1a", "Figure 3.1b" → key "3.1"
+      (panel letters are stripped; panels are not counted as separate figures)
     """
-    # Collect all figure and table labels from captions
-    fig_labels: dict[str, str] = {}  # "N" -> "Figure N"
+    fig_labels: dict[str, str] = {}  # key -> display string, e.g. "3.1" -> "Figure 3.1"
     tab_labels: dict[str, str] = {}
 
-    for m in re.finditer(r"\b(figure|fig\.)\s+(\d+)", text, re.IGNORECASE):
-        n = m.group(2)
+    # _FIG_REF group(1) = canonical key; group(2) = optional subfigure suffix (ignored).
+    for m in _FIG_REF.finditer(text):
+        n = m.group(1)
         if n not in fig_labels:
             fig_labels[n] = f"Figure {n}"
 
-    for m in re.finditer(r"\btable\s+(\d+)", text, re.IGNORECASE):
+    for m in _TAB_REF.finditer(text):
         n = m.group(1)
         if n not in tab_labels:
             tab_labels[n] = f"Table {n}"
 
-    # Check which labels appear only once (the caption itself) — a label
-    # mentioned more than once is likely also cited in the text.
-    def _cited(label_text: str, pattern: str) -> bool:
+    # A label is considered cited if it appears more than once in the text.
+    # The citation pattern accepts an optional trailing subfigure suffix so that
+    # "Figure 3.1a" counts as a citation of key "3.1".
+    def _cited(pattern: str) -> bool:
         return len(re.findall(pattern, text, re.IGNORECASE)) > 1
 
     uncaptioned_figs = [
         label
         for n, label in fig_labels.items()
-        if not _cited(label, rf"\b(?:figure|fig\.)\s+{re.escape(n)}\b")
+        if not _cited(rf"\b(?:figure|fig\.)\s+{re.escape(n)}[a-z]?\b")
     ]
     uncaptioned_tabs = [
         label
         for n, label in tab_labels.items()
-        if not _cited(label, rf"\btable\s+{re.escape(n)}\b")
+        if not _cited(rf"\btable\s+{re.escape(n)}[a-z]?\b")
     ]
 
     return uncaptioned_figs, uncaptioned_tabs
@@ -1791,21 +1945,37 @@ def register_language_analysis_tasks(celery):
         references_info: dict = {}
         patterns_info: dict = {}
 
-        # --- split into main text and bibliography ---------------------------
-        main_text, biblio_text = _split_text(raw_text)
-        # Strip math-extraction noise for metrics sensitive to vocabulary content.
-        # See _strip_math_lines() for full rationale and threshold choice.
-        clean_main_text = _strip_math_lines(main_text)
+        # --- split into core, references, and appendices ---------------------
+        # _split_document() implements the priority-ordered 3-way split:
+        #   _core       — main body text (no references, no appendices)
+        #   _references — bibliography / reference list
+        #   _appendices — appendix sections (may be empty)
+        _core, _references, _appendices = _split_document(raw_text)
 
-        # print(f"CLEANED MAIN TEXT = {clean_main_text}")
-        # print(f"BIBLIOGRAPHY = {biblio_text}")
+        # Strip math-extraction noise from the core body text.  Appendix text
+        # is also stripped separately for appendix word counting.
+        # See _strip_math_lines() for full rationale and threshold choice.
+        clean_core_text = _strip_math_lines(_core)
+
+        # Content text for figure/table detection: core + appendices (not refs).
+        _content_text = _core + ("\n\n" + _appendices if _appendices else "")
+
+        # Stripped content text for lexical diversity and sentence-structure metrics.
+        # Appendices are included because they are the student's own writing, consistent
+        # with the text submitted to the LLM.  Word count stays core-only (see above).
+        clean_content_text = _strip_math_lines(_content_text)
 
         _t_counting = time.monotonic()
 
-        # --- word count -------------------------------------------------------
+        # --- word count (core body only — appendices excluded) ---------------
         try:
-            wc = _word_count(clean_main_text)
+            wc = _word_count(clean_core_text)
             metrics["word_count"] = wc
+            # Appendix word count stored separately so the UI can surface both.
+            if _appendices:
+                appendix_wc = _word_count(_strip_math_lines(_appendices))
+                if appendix_wc > 0:
+                    metrics["appendix_word_count"] = appendix_wc
         except Exception as exc:
             errors.append(
                 {"stage": "word_count", "type": type(exc).__name__, "message": str(exc)}
@@ -1814,10 +1984,10 @@ def register_language_analysis_tasks(celery):
 
         # --- bibliography count and citation check ----------------------------
         try:
-            ref_count, ref_keys = _count_bibliography(biblio_text)
+            ref_count, ref_keys = _count_bibliography(_references)
             metrics["reference_count"] = ref_count
 
-            uncited = _check_uncited(main_text, ref_keys)
+            uncited = _check_uncited(_core, ref_keys)
             references_info["uncited"] = uncited
         except Exception as exc:
             errors.append(
@@ -1828,12 +1998,10 @@ def register_language_analysis_tasks(celery):
 
         # --- figure and table cross-reference check --------------------------
         try:
-            uncaptioned_figs, uncaptioned_tabs = _check_figure_table_refs(raw_text)
-            # Count distinct labels found
-            fig_labels = set(
-                re.findall(r"\b(?:figure|fig\.)\s+\d+", raw_text, re.IGNORECASE)
-            )
-            tab_labels = set(re.findall(r"\btable\s+\d+", raw_text, re.IGNORECASE))
+            uncaptioned_figs, uncaptioned_tabs = _check_figure_table_refs(_content_text)
+            # Count distinct canonical labels (e.g. "3.1", "A.1") in core + appendices.
+            fig_labels = {m.group(1) for m in _FIG_REF.finditer(_content_text)}
+            tab_labels = {m.group(1) for m in _TAB_REF.finditer(_content_text)}
             metrics["figure_count"] = len(fig_labels)
             metrics["table_count"] = len(tab_labels)
             references_info["uncaptioned_figures"] = uncaptioned_figs
@@ -1857,7 +2025,7 @@ def register_language_analysis_tasks(celery):
 
         # --- MATTR and MTLD --------------------------------------------------
         try:
-            mattr, mtld = _compute_mattr_mtld(clean_main_text)
+            mattr, mtld = _compute_mattr_mtld(clean_content_text)
             metrics["mattr"] = mattr
             metrics["mtld"] = mtld
         except Exception as exc:
@@ -1881,7 +2049,7 @@ def register_language_analysis_tasks(celery):
 
         # --- sentence CV -----------------------------------------------------
         try:
-            metrics["sentence_cv"] = _compute_sentence_cv(clean_main_text)
+            metrics["sentence_cv"] = _compute_sentence_cv(clean_content_text)
         except Exception as exc:
             errors.append(
                 {"stage": "sentence_cv", "type": type(exc).__name__, "message": str(exc)}
@@ -1990,12 +2158,14 @@ def register_language_analysis_tasks(celery):
         data = record.language_analysis_data
         raw_text: str = data.get("_extracted_text", "")
 
-        # Strip math-extraction noise before submission: garbled equation
-        # fragments convey nothing useful to the LLM and waste context tokens.
-        # The prose surrounding equations — which carries the scientific
-        # reasoning the LLM needs to assess — is preserved intact.
-        main_text, _ = _split_text(raw_text)
-        clean_text = _strip_math_lines(main_text)
+        # Build the text for grade-band assessment: core body + appendices.
+        # The reference list is excluded (bibliographic entries are noise for
+        # the LLM assessor).  Math-extraction artefacts are stripped so that
+        # equation fragments do not waste context tokens.
+        _core, _references, _appendices = _split_document(raw_text)
+        clean_text = _strip_math_lines(_core)
+        if _appendices:
+            clean_text = clean_text + "\n\n" + _strip_math_lines(_appendices)
 
         context_size: int = current_app.config.get("OLLAMA_CONTEXT_SIZE", 4096)
         base_url: str = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -2351,8 +2521,18 @@ def register_language_analysis_tasks(celery):
         data = record.language_analysis_data
         raw_text: str = data.get("_extracted_text", "")
 
-        main_text, _ = _split_text(raw_text)
-        clean_text = _strip_math_lines(main_text)
+        # Build submission text using the 3-tier strategy:
+        #   Tier 1: core + appendices if they fit within the context window.
+        #   Tier 2: core only (appendix stripped) if that fits.
+        #   Tier 3: core chunked if it still exceeds the budget.
+        # The reference list is never submitted (same rationale as submit_to_llm).
+        _core, _, _appendices = _split_document(raw_text)
+        clean_core = _strip_math_lines(_core)
+        clean_full = (
+            clean_core + "\n\n" + _strip_math_lines(_appendices)
+            if _appendices
+            else clean_core
+        )
 
         context_size: int = current_app.config.get("OLLAMA_CONTEXT_SIZE", 4096)
         base_url: str = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -2368,20 +2548,31 @@ def register_language_analysis_tasks(celery):
 
         _t_feedback = time.monotonic()
 
-        # Determine chunk budget and split if necessary.
         feedback_word_budget = max(
             int((context_size - _FEEDBACK_OVERHEAD_TOKENS) / _TOKENS_PER_WORD), 500
         )
-        doc_words = len(clean_text.split())
-        if doc_words <= feedback_word_budget:
-            chunk_texts = [clean_text]
-        else:
-            chunk_texts = _build_chunks(clean_text, feedback_word_budget)
-            if not chunk_texts:
-                chunk_texts = [clean_text]
+        full_words = len(clean_full.split())
+        core_words = len(clean_core.split())
+
+        if full_words <= feedback_word_budget:
+            # Tier 1: core + appendices fits within the context window.
+            chunk_texts = [clean_full]
+        elif core_words <= feedback_word_budget:
+            # Tier 2: appendix stripped; core fits without chunking.
+            chunk_texts = [clean_core]
             current_app.logger.info(
                 f"language_analysis.submit_to_llm_feedback: record #{record_id} — "
-                f"{doc_words} words split into {len(chunk_texts)} feedback chunk(s)"
+                f"appendix excluded to fit context window ({full_words} → {core_words} words)"
+            )
+        else:
+            # Tier 3: core still exceeds budget; chunk it.
+            chunk_texts = _build_chunks(clean_core, feedback_word_budget)
+            if not chunk_texts:
+                chunk_texts = [clean_core]
+            current_app.logger.info(
+                f"language_analysis.submit_to_llm_feedback: record #{record_id} — "
+                f"{core_words} core words split into {len(chunk_texts)} chunk(s) "
+                f"(full_words={full_words})"
             )
 
         feedback_results: list[dict] = []

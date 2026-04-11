@@ -512,6 +512,9 @@
                             {% if metrics.get('word_count') is not none %}
                                 <span class="small text-muted">Words: <strong>{{ metrics['word_count'] | int }}</strong></span>
                             {% endif %}
+                            {% if metrics.get('appendix_word_count') is not none %}
+                                <span class="small text-muted">Appendix: <strong>{{ metrics['appendix_word_count'] | int }}</strong></span>
+                            {% endif %}
                             {% if metrics.get('figure_count') is not none %}
                                 <span class="small text-muted">Figures: <strong>{{ metrics['figure_count'] | int }}</strong></span>
                             {% endif %}

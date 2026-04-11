@@ -264,9 +264,15 @@
         <h6 class="text-muted small text-uppercase mt-3 mb-2">Word count</h6>
         <div class="row g-2 small mb-1">
             <div class="col-auto">
-                <span class="text-muted">Measured (from text):</span>
+                <span class="text-muted">Measured (main text):</span>
                 <strong class="ms-1">{{ metrics_data.measured_word_count | int }}</strong>
             </div>
+            {% if metrics_data.appendix_word_count is not none %}
+            <div class="col-auto">
+                <span class="text-muted">Appendix words:</span>
+                <strong class="ms-1">{{ metrics_data.appendix_word_count | int }}</strong>
+            </div>
+            {% endif %}
             {% if metrics_data.stated_word_count is not none %}
             <div class="col-auto">
                 <span class="text-muted">Student-reported:</span>

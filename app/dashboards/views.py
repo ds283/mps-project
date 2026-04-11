@@ -1295,17 +1295,18 @@ def _record_ids_for_pclass_config(config_id: int) -> List[int]:
     ]
 
 
-def _record_ids_for_cycle(year: int) -> List[int]:
-    period_ids = [
-        r[0]
-        for r in db.session.query(SubmissionPeriodRecord.id)
+def _record_ids_for_cycle(year: int, pclass_ids: Optional[List[int]] = None) -> List[int]:
+    q = (
+        db.session.query(SubmissionPeriodRecord.id)
         .join(
             ProjectClassConfig,
             ProjectClassConfig.id == SubmissionPeriodRecord.config_id,
         )
         .filter(ProjectClassConfig.year == year)
-        .all()
-    ]
+    )
+    if pclass_ids:
+        q = q.filter(ProjectClassConfig.pclass_id.in_(pclass_ids))
+    period_ids = [r[0] for r in q.all()]
     if not period_ids:
         return []
     return [
@@ -1319,7 +1320,27 @@ def _record_ids_for_cycle(year: int) -> List[int]:
     ]
 
 
-def _record_ids_global() -> List[int]:
+def _record_ids_global(
+    pclass_ids: Optional[List[int]] = None, years: Optional[List[int]] = None
+) -> List[int]:
+    if pclass_ids or years:
+        q = (
+            db.session.query(SubmissionRecord.id)
+            .join(
+                SubmissionPeriodRecord,
+                SubmissionPeriodRecord.id == SubmissionRecord.period_id,
+            )
+            .join(
+                ProjectClassConfig,
+                ProjectClassConfig.id == SubmissionPeriodRecord.config_id,
+            )
+            .filter(SubmissionRecord.report_id.isnot(None))
+        )
+        if pclass_ids:
+            q = q.filter(ProjectClassConfig.pclass_id.in_(pclass_ids))
+        if years:
+            q = q.filter(ProjectClassConfig.year.in_(years))
+        return [r[0] for r in q.all()]
     return [
         r[0]
         for r in db.session.query(SubmissionRecord.id)
@@ -1427,7 +1448,12 @@ def export_cycle(year: int):
         flash("You do not have permission to export cycle-level data.", "error")
         return redirect(redirect_url())
 
-    record_ids = _record_ids_for_cycle(year)
+    try:
+        pclass_ids = [int(x) for x in request.args.getlist("pclass_id")] or None
+    except (ValueError, TypeError):
+        pclass_ids = None
+
+    record_ids = _record_ids_for_cycle(year, pclass_ids=pclass_ids)
     stem = f"AI_Dashboard_Cycle_{year}"
     desc = f"AI dashboard export — cycle {year}/{year + 1}"
     if _dispatch_export(fmt, record_ids, stem, desc):
@@ -1445,7 +1471,18 @@ def export_cycle(year: int):
 def export_global():
     """Queue a global export of all records."""
     fmt = request.args.get("fmt", "xlsx")
-    record_ids = _record_ids_global()
+
+    try:
+        pclass_ids = [int(x) for x in request.args.getlist("pclass_id")] or None
+    except (ValueError, TypeError):
+        pclass_ids = None
+
+    try:
+        years = [int(x) for x in request.args.getlist("year")] or None
+    except (ValueError, TypeError):
+        years = None
+
+    record_ids = _record_ids_global(pclass_ids=pclass_ids, years=years)
     stem = "AI_Dashboard_Global"
     desc = "AI dashboard export — all records"
     if _dispatch_export(fmt, record_ids, stem, desc):

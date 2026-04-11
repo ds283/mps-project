@@ -458,11 +458,11 @@
                         </a>
                     </div>
 
-                    {# global-level export #}
+                    {# global-level export — passes current pclass and year filters #}
                     <div class="col-auto ms-auto d-flex gap-2 align-items-end flex-wrap">
                         {{ export_buttons(
-                        url_for('dashboards.export_global', fmt='xlsx'),
-                        url_for('dashboards.export_global', fmt='csv')
+                        url_for('dashboards.export_global', fmt='xlsx', pclass_id=selected_pclass_ids, year=selected_years),
+                        url_for('dashboards.export_global', fmt='csv', pclass_id=selected_pclass_ids, year=selected_years)
                     ) }}
                     </div>
 
@@ -530,8 +530,8 @@
                     </div>
                     <div class="ms-2">
                         {{ export_buttons(
-                        url_for('dashboards.export_cycle', year=section.year, fmt='xlsx'),
-                        url_for('dashboards.export_cycle', year=section.year, fmt='csv'),
+                        url_for('dashboards.export_cycle', year=section.year, fmt='xlsx', pclass_id=selected_pclass_ids),
+                        url_for('dashboards.export_cycle', year=section.year, fmt='csv', pclass_id=selected_pclass_ids),
                         outline=false
                     ) }}
                     </div>

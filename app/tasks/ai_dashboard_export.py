@@ -66,6 +66,11 @@ _COLUMNS = [
     "Supervision Grade (%)",
     "Report Grade (%)",
     "Presentation Grade (%)",
+    "Stated Word Count",
+    "LLM Grade Band",
+    "LLM Analysis Failed",
+    "LLM Feedback Failed",
+    "Report Grade Band",
 ]
 
 # ---------------------------------------------------------------------------
@@ -84,6 +89,25 @@ _EXPORT_READY_TMPL = """
 # ---------------------------------------------------------------------------
 
 
+def _grade_band(grade) -> str:
+    """Map a numeric report grade to a UK degree classification band."""
+    if grade is None:
+        return ""
+    try:
+        g = float(grade)
+    except (TypeError, ValueError):
+        return ""
+    if g >= 70:
+        return "1st class"
+    if g >= 60:
+        return "2.1 class"
+    if g >= 50:
+        return "2.2 class"
+    if g >= 40:
+        return "3rd class"
+    return "Fail"
+
+
 def _build_row(record: SubmissionRecord) -> dict:
     """Extract a flat dict of export fields from one SubmissionRecord."""
     period = record.period
@@ -97,6 +121,7 @@ def _build_row(record: SubmissionRecord) -> dict:
     la = record.language_analysis_data
     metrics = la.get("metrics", {})
     flags = la.get("flags", {})
+    llm_result = la.get("llm_result", {})
 
     def _float(val):
         if val is None:
@@ -135,6 +160,11 @@ def _build_row(record: SubmissionRecord) -> dict:
         "Supervision Grade (%)": _float(record.supervision_grade),
         "Report Grade (%)": _float(record.report_grade),
         "Presentation Grade (%)": _float(record.presentation_grade),
+        "Stated Word Count": llm_result.get("stated_word_count"),
+        "LLM Grade Band": llm_result.get("classification", ""),
+        "LLM Analysis Failed": record.llm_analysis_failed,
+        "LLM Feedback Failed": record.llm_feedback_failed,
+        "Report Grade Band": _grade_band(record.report_grade),
     }
 
 

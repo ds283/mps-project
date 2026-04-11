@@ -18,19 +18,8 @@ from app import create_app
 from app.database import db
 from app.task_queue.background_task import reconcile_background_tasks
 from initdb import (
-    cleanup_orphaned_live_marking_schemes,
-    ensure_llm_watchdog_schedule,
-    ensure_roles,
-    import_attendance_data,
-    import_examiner_data,
-    import_supervisor_data,
     initial_populate_database,
-    migrate_period_attachment_roles,
-    migrate_schedule_submission_roles,
-    migrate_submission_attachment_roles,
-    migrate_to_marking_events,
     populate_CATS_limits,
-    populate_email_templates,
 )
 
 
@@ -96,10 +85,6 @@ with app.app_context():
     # if getattr(initdb_module, "INITDB_ATTENDANCE_IMPORT", None) is not None:
     #     db.session.commit()
     #     import_attendance_data(app, initdb_module)
-
-    # ensure_roles(app)
-
-    ensure_llm_watchdog_schedule(app)
 
     reconcile_background_tasks(app)
 

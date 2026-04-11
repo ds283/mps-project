@@ -992,6 +992,39 @@ def _SubmissionRecord_is_valid(sid):
     return is_valid, errors, warnings
 
 
+def estimate_reading_time(word_count: int, figure_count: int = 0, table_count: int = 0) -> str:
+    """
+    Estimate reading time for a scientific document and return a human-readable string.
+
+    Formula
+    -------
+    * Base rate: 120 words per minute (slower than the general adult average, to account
+      for the higher density of scientific writing).
+    * Visual elements (figures + tables combined):
+        - First 10 items: 1 minute each — readers are expected to study these carefully.
+        - Items 11 and beyond: 20 seconds each — a very large number of visuals suggests
+          they have summary/reference value and the reader can skim most of them.
+    * Complex formulae are NOT accounted for here because doing so would require access
+      to the LaTeX source. Add this term if formula detection is implemented in the pipeline.
+
+    Result is rounded to the nearest whole minute for a clean display value.
+    """
+    base_seconds = (word_count / 120.0) * 60.0
+
+    total_visuals = (figure_count or 0) + (table_count or 0)
+    first_ten = min(total_visuals, 10)
+    remainder = max(0, total_visuals - 10)
+    visual_seconds = first_ten * 60.0 + remainder * 20.0
+
+    total_seconds = base_seconds + visual_seconds
+    total_minutes = round(total_seconds / 60.0)
+    if total_minutes < 1:
+        total_minutes = 1  # always show at least 1 minute
+
+    unit = "minute" if total_minutes == 1 else "minutes"
+    return f"{total_minutes} {unit}"
+
+
 class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     """
     Collect details for a student submission
@@ -1141,6 +1174,10 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
     llm_model_name = db.Column(db.String(200, collation="utf8_bin"), nullable=True)
     llm_context_size = db.Column(db.Integer(), nullable=True)
     llm_num_chunks = db.Column(db.Integer(), nullable=True)
+
+    # Number of times the student's name was automatically redacted from the submitted PDF
+    # during report processing. None means the report has not yet been processed (or was not a PDF).
+    report_redaction_count = db.Column(db.Integer(), nullable=True, default=None)
 
     # RISK FACTORS
     # JSON blob recording which risk conditions are present and whether each has been resolved.
@@ -2790,6 +2827,14 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         rf = self.risk_factors_data
         wc_discrepancy = rf.get(self.RISK_WORD_COUNT_DISCREPANCY, {})
 
+        reading_time = None
+        if measured_words is not None:
+            reading_time = estimate_reading_time(
+                word_count=int(measured_words),
+                figure_count=int(metrics.get("figure_count") or 0),
+                table_count=int(metrics.get("table_count") or 0),
+            )
+
         return {
             "mattr": metric_entry(mattr, MATTR_NOTE_LOW_THRESHOLD, "mattr_flag"),
             "mtld": metric_entry(mtld, MTLD_NOTE_THRESHOLD, "mtld_flag"),
@@ -2803,6 +2848,7 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
             "stated_word_count": stated_words,
             "discrepancy_pct": wc_discrepancy.get("discrepancy_pct"),
             "tolerance_pct": wc_discrepancy.get("tolerance_pct"),
+            "reading_time": reading_time,
             "reference_count": metrics.get("reference_count"),
             "uncited_refs": refs.get("uncited", []),
             "figure_count": metrics.get("figure_count"),

@@ -290,6 +290,12 @@
             </div>
             {% endif %}
             {% endif %}
+            {% if metrics_data.reading_time is not none %}
+            <div class="col-auto">
+                <span class="text-muted">Est. reading time:</span>
+                <strong class="ms-1">{{ metrics_data.reading_time }}</strong>
+            </div>
+            {% endif %}
         </div>
         {% set rf_wcd = rf_items | selectattr('key', 'equalto', 'word_count_discrepancy') | first | default(none) %}
         {% if rf_wcd and rf_wcd.present %}
@@ -411,6 +417,9 @@
             {% endif %}
             {% if t.llm_feedback_s is not none %}
                 <span><i class="fas fa-comment fa-fw"></i> Feedback LLM: {{ "%.1f"|format(t.llm_feedback_s) }}s</span>
+            {% endif %}
+            {% if record.report_redaction_count is not none %}
+                <span><i class="fas fa-eraser fa-fw"></i> Name redactions: <strong class="text-body">{{ record.report_redaction_count }}</strong></span>
             {% endif %}
         </div>
         {% endif %}

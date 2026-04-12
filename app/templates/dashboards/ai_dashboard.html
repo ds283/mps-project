@@ -72,7 +72,9 @@
                     url += '?ids=' + _watchedJobIds.join(',');
                 }
                 fetch(url)
-                    .then(function (r) { return r.json(); })
+                    .then(function (r) {
+                        return r.json();
+                    })
                     .then(function (data) {
                         // A watched job has reached a terminal state — full reload.
                         if (data.just_finished) {
@@ -91,7 +93,8 @@
                             });
                         }
                     })
-                    .catch(function () { /* ignore transient network errors */ });
+                    .catch(function () { /* ignore transient network errors */
+                    });
             }
 
             // Poll every 60 s — typical job takes ~10 min, so this gives ~10
@@ -106,14 +109,18 @@
                     var header = document.querySelector('[data-bs-target="#' + el.id + '"]');
                     if (header) {
                         var icon = header.querySelector('.period-chevron');
-                        if (icon) { icon.classList.replace('fa-chevron-right', 'fa-chevron-down'); }
+                        if (icon) {
+                            icon.classList.replace('fa-chevron-right', 'fa-chevron-down');
+                        }
                     }
                 });
                 el.addEventListener('hide.bs.collapse', function () {
                     var header = document.querySelector('[data-bs-target="#' + el.id + '"]');
                     if (header) {
                         var icon = header.querySelector('.period-chevron');
-                        if (icon) { icon.classList.replace('fa-chevron-down', 'fa-chevron-right'); }
+                        if (icon) {
+                            icon.classList.replace('fa-chevron-down', 'fa-chevron-right');
+                        }
                     }
                 });
             });
@@ -202,24 +209,31 @@
                 <span class="text-success">
                     <i class="fas fa-check-circle me-1"></i>All analysed
                 </span>
+            {% elif agg.n_missing == 1 %}
+                <span class="text-danger">
+                    <i class="fas fa-clock me-1"></i>1 missing analysis
+                </span>
             {% else %}
                 <span class="text-danger">
-                    <i class="fas fa-clock me-1"></i>{{ agg.n_missing }} missing analysis
+                    <i class="fas fa-clock me-1"></i>{{ agg.n_missing }} missing analyses
                 </span>
             {% endif %}
             {% if agg.n_ai_flagged > 0 %}
                 <span class="text-danger">
-                    <i class="fas fa-robot me-1"></i>{{ agg.n_ai_flagged }} AI risk flag{% if agg.n_ai_flagged != 1 %}s{% endif %}
+                    <i class="fas fa-robot me-1"></i>{{ agg.n_ai_flagged }} AI risk flag
+                    {%- if agg.n_ai_flagged != 1 -%}s{% endif %}
                 </span>
             {% endif %}
             {% if agg.n_analysis_failed > 0 %}
                 <span class="text-danger">
-                    <i class="fas fa-times-circle me-1"></i>{{ agg.n_analysis_failed }} analysis error{% if agg.n_analysis_failed != 1 %}s{% endif %}
+                    <i class="fas fa-times-circle me-1"></i>{{ agg.n_analysis_failed }} analysis error
+                    {%- if agg.n_analysis_failed != 1 -%}s{%- endif -%}
                 </span>
             {% endif %}
             {% if agg.n_feedback_failed > 0 %}
                 <span class="text-danger">
-                    <i class="fas fa-comment-slash me-1"></i>{{ agg.n_feedback_failed }} feedback error{% if agg.n_feedback_failed != 1 %}s{% endif %}
+                    <i class="fas fa-comment-slash me-1"></i>{{ agg.n_feedback_failed }} feedback error
+                    {%- if agg.n_feedback_failed != 1 -%}s{%- endif -%}
                 </span>
             {% endif %}
         </div>
@@ -321,7 +335,7 @@
                         </span>
                     {% endif %}
                     <span class="badge bg-light text-dark ms-auto">{{ active_jobs|length }} job
-                        {% if active_jobs|length != 1 %}s{% endif %}</span>
+                        {%- if active_jobs|length != 1 -%}s{%- endif -%}</span>
                     {% if is_root or is_admin %}
                         {% if pipeline_paused %}
                             <a href="{{ url_for('dashboards.resume_pipeline') }}"
@@ -368,7 +382,7 @@
                                     <td>
                                         {{ job.description or job.scope_label }}
                                         {% if job.clear_existing %}
-                                            <span class="badge bg-warning text-dark ms-1 small">clear &amp; resubmit</span>
+                                            <span class="badge bg-warning text-dark ms-1 small">Clear &amp; resubmit</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -389,16 +403,21 @@
                                                  aria-valuemin="0" aria-valuemax="100">
                                             </div>
                                         </div>
-                                        <small class="text-muted" data-cell="progress-pct">{{ job.progress_pct }}%</small>
+                                        <small class="text-muted"
+                                               data-cell="progress-pct">{{ job.progress_pct }}%</small>
                                     </td>
-                                    <td class="text-end text-success fw-semibold" data-cell="completed">{{ job.completed_count }}</td>
-                                    <td class="text-end {% if job.failed_count > 0 %}text-danger fw-semibold{% else %}text-muted{% endif %}" data-cell="failed">{{ job.failed_count }}</td>
+                                    <td class="text-end text-success fw-semibold"
+                                        data-cell="completed">{{ job.completed_count }}</td>
+                                    <td class="text-end {% if job.failed_count > 0 %}text-danger fw-semibold{% else %}text-muted{% endif %}"
+                                        data-cell="failed">{{ job.failed_count }}</td>
                                     <td class="text-end text-muted">{{ job.total_count }}</td>
                                     <td class="text-muted small">
-                                        {% if job.created_at %}{{ job.created_at.strftime('%d %b %H:%M') }}{% else %}—{% endif %}
+                                        {% if job.created_at %}{{ job.created_at.strftime('%d %b %H:%M') }}{% else %}
+                                            —{% endif %}
                                     </td>
                                     <td class="text-muted small">
-                                        {% if job.started_at %}{{ job.started_at.strftime('%d %b %H:%M') }}{% else %}—{% endif %}
+                                        {% if job.started_at %}{{ job.started_at.strftime('%d %b %H:%M') }}{% else %}
+                                            —{% endif %}
                                     </td>
                                     <td class="text-end text-muted small" data-cell="rate">
                                         {# Per-job rolling rate based on elapsed time and records processed so far #}
@@ -627,7 +646,8 @@
                                     <span class="text-muted mx-1">›</span>
                                     {{ sub.period.display_name }}
                                 </span>
-                                <div class="d-flex gap-2 flex-wrap align-items-center" onclick="event.stopPropagation()">
+                                <div class="d-flex gap-2 flex-wrap align-items-center"
+                                     onclick="event.stopPropagation()">
                                     <span class="text-muted small d-none d-md-inline">Export:</span>
                                     {{ export_buttons(
                             url_for('dashboards.export_period', period_id=sub.period.id, fmt='xlsx'),

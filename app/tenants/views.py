@@ -19,13 +19,13 @@ from .. import ajax
 from ..admin.forms import EditEmailTemplateForm
 from ..admin.utilities import create_new_email_template_labels
 from ..database import db
-from ..models import EmailTemplate, Tenant
+from ..models import EmailTemplate, ProjectClass, ProjectClassConfig, Tenant
 from ..shared.context.global_context import render_template_context
 from ..shared.utils import redirect_url
 from ..tools import ServerSideSQLHandler
 from ..tools.ServerSideProcessing import FakeQuery, ServerSideInMemoryHandler
 from . import tenants
-from .forms import AddTenantForm, EditTenantForm
+from .forms import AddTenantForm, CalibrateAIConcernFormFactory, EditTenantForm, RecalculateAIConcernFormFactory
 from ..shared.email_templates import clone_email_template
 from ..shared.workflow_logging import log_db_commit
 
@@ -529,4 +529,167 @@ def view_default_template(tenant_id, template_type):
         type_name=type_name,
         url=url,
         title="View default email template",
+    )
+
+
+# AI concern calibration
+# ======================================================================================================================
+
+
+def _get_available_years(tenant_id: int) -> list[int]:
+    """Return sorted list of distinct ProjectClassConfig.year values for a tenant."""
+    rows = (
+        db.session.query(ProjectClassConfig.year)
+        .join(ProjectClass, ProjectClassConfig.pclass_id == ProjectClass.id)
+        .filter(ProjectClass.tenant_id == tenant_id)
+        .distinct()
+        .order_by(ProjectClassConfig.year)
+        .all()
+    )
+    return [r[0] for r in rows if r[0] is not None]
+
+
+@tenants.route("/calibrate_ai_concern/<int:tenant_id>", methods=["GET", "POST"])
+@roles_required("root")
+def calibrate_ai_concern(tenant_id):
+    """
+    View and update the Mahalanobis AI-concern calibration for a tenant.
+
+    GET  — show current calibration status and a form to re-run calibration.
+    POST — run calibration on the selected project classes and years, then
+           redirect back (recalculation of existing submissions is a separate step).
+    """
+    from ..shared.ai_calibration import CALIBRATION_MIN_SAMPLES, compute_calibration
+
+    tenant: Tenant = Tenant.query.get_or_404(tenant_id)
+
+    available_years = _get_available_years(tenant_id)
+    year_choices = [(y, str(y)) for y in available_years]
+    pre_llm_default = [y for y in available_years if y <= 2022]
+
+    FormClass = CalibrateAIConcernFormFactory(tenant_id)
+    form = FormClass(request.form)
+    form.years.choices = year_choices
+
+    if form.validate_on_submit():
+        pclass_ids = [p.id for p in form.project_classes.data] if form.project_classes.data else None
+        years = [int(y) for y in form.years.data] if form.years.data else None
+
+        try:
+            cal_data = compute_calibration(tenant_id, pclass_ids=pclass_ids, years=years)
+            tenant.set_ai_calibration_data(cal_data)
+            db.session.commit()
+            flash(
+                f"AI concern calibration updated successfully using {cal_data['n_samples']} samples.",
+                "success",
+            )
+        except ValueError as exc:
+            flash(str(exc), "error")
+        except SQLAlchemyError as exc:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError saving AI calibration", exc_info=exc)
+            flash(
+                "A database error occurred while saving the calibration. Please contact an administrator.",
+                "error",
+            )
+
+        return redirect(url_for("tenants.calibrate_ai_concern", tenant_id=tenant_id))
+
+    # Pre-select all project classes and pre-LLM years on GET.
+    if request.method == "GET":
+        all_pclasses = ProjectClass.query.filter_by(tenant_id=tenant_id).all()
+        form.project_classes.data = all_pclasses
+        form.years.data = pre_llm_default
+
+    cal = tenant.ai_calibration_data
+
+    # Compute eigenvalues of Sigma_inv for display (informational).
+    eigenvalues = None
+    if cal is not None:
+        try:
+            import numpy as np
+            sigma_inv = np.array(cal["sigma_inv"])
+            eigenvalues = sorted(np.linalg.eigvalsh(sigma_inv).tolist(), reverse=True)
+        except Exception:
+            eigenvalues = None
+
+    # Resolve project class names for included IDs.
+    included_pclass_names = []
+    if cal is not None and cal.get("included_pclass_ids"):
+        pcs = ProjectClass.query.filter(ProjectClass.id.in_(cal["included_pclass_ids"])).all()
+        included_pclass_names = [p.name for p in pcs]
+
+    return render_template_context(
+        "tenants/calibrate_ai_concern.html",
+        tenant=tenant,
+        form=form,
+        calibration=cal,
+        included_pclass_names=included_pclass_names,
+        eigenvalues=eigenvalues,
+        min_samples=CALIBRATION_MIN_SAMPLES,
+        url=url_for("tenants.edit_tenants"),
+        text="Tenant list",
+    )
+
+
+@tenants.route("/recalculate_ai_concern/<int:tenant_id>", methods=["GET", "POST"])
+@roles_required("root")
+def recalculate_ai_concern(tenant_id):
+    """
+    Launch a background Celery task that re-evaluates the Mahalanobis AI-concern
+    flag on existing completed SubmissionRecords for a tenant.
+
+    This is intentionally separate from calibration: calibration updates the
+    centroid, recalculation propagates that centroid to stored results.
+    """
+    tenant: Tenant = Tenant.query.get_or_404(tenant_id)
+
+    if tenant.ai_calibration_data is None:
+        flash(
+            "This tenant has no calibration data yet. Please run the AI calibration step first.",
+            "warning",
+        )
+        return redirect(url_for("tenants.calibrate_ai_concern", tenant_id=tenant_id))
+
+    available_years = _get_available_years(tenant_id)
+    year_choices = [(y, str(y)) for y in available_years]
+
+    FormClass = RecalculateAIConcernFormFactory(tenant_id)
+    form = FormClass(request.form)
+    form.years.choices = year_choices
+
+    if form.validate_on_submit():
+        from ..task_queue import register_task
+
+        pclass_ids = [p.id for p in form.project_classes.data] if form.project_classes.data else None
+        years = [int(y) for y in form.years.data] if form.years.data else None
+
+        task_id = register_task(
+            f"Recalculate AI concern — {tenant.name}",
+            owner=current_user,
+            description="Re-evaluate Mahalanobis AI concern flags for existing submissions.",
+        )
+        if task_id is not None:
+            celery = current_app.extensions["celery"]
+            t = celery.tasks["app.tasks.language_analysis.recalculate_ai_concern"]
+            t.apply_async(args=[task_id, tenant_id, pclass_ids, years], queue="default")
+            flash(
+                "Recalculation task has been launched. It will run in the background.",
+                "success",
+            )
+        return redirect(url_for("tenants.calibrate_ai_concern", tenant_id=tenant_id))
+
+    # Pre-select all project classes and all years on GET.
+    if request.method == "GET":
+        all_pclasses = ProjectClass.query.filter_by(tenant_id=tenant_id).all()
+        form.project_classes.data = all_pclasses
+        form.years.data = available_years
+
+    return render_template_context(
+        "tenants/recalculate_ai_concern.html",
+        tenant=tenant,
+        form=form,
+        calibration=tenant.ai_calibration_data,
+        url=url_for("tenants.calibrate_ai_concern", tenant_id=tenant_id),
+        text="AI calibration",
     )

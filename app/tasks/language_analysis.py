@@ -21,8 +21,10 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import SubmissionRecord
+from ..models import ProjectClass, ProjectClassConfig, SubmissionPeriodRecord, SubmissionRecord, TaskRecord, Tenant
 from ..shared.asset_tools import AssetCloudAdapter
+from ..shared.ai_calibration import mahalanobis_distance
+from ..task_queue import progress_update
 from ..shared.llm_thresholds import (
     classify_burstiness,
     classify_mattr,
@@ -714,26 +716,82 @@ def _count_patterns(text: str) -> dict:
     }
 
 
-def _ai_concern_flag(mattr_flag: str, mtld_flag: str, burst_flag: str, cv_flag: str) -> str:
+def _ai_concern_flag(
+    mattr: float | None,
+    mtld: float | None,
+    sentence_cv: float | None,
+    calibration: dict | None,
+) -> dict:
     """
-    Compute overall AI concern classification from four metric flags.
+    Classify the overall AI concern level using the Mahalanobis distance from
+    the pre-LLM centroid in (MATTR, MTLD, sentence_CV) space.
 
-    Each flag is one of 'ok', 'note', 'strong', or 'unknown'.
+    Background
+    ----------
+    Let x = (MATTR, MTLD, sentence_CV) and let μ, Σ be the mean vector and
+    covariance matrix estimated from a set of pre-LLM submissions (years
+    2019/20–2021/22 by default).  The squared Mahalanobis distance
 
-    Rules:
-    - 'low'    : 0–1 metrics in "note" or above, none "strong"
-    - 'medium' : 2 metrics "note" or above, OR 1 metric "strong"
-    - 'high'   : 2+ metrics "strong", OR 3+ metrics "note" or above
+        D² = (x − μ)ᵀ Σ⁻¹ (x − μ)
+
+    follows a chi²(df=3) distribution under the null hypothesis that the
+    submission was drawn from the same pre-LLM population.  We therefore
+    classify using survival-function (upper-tail) p-value thresholds:
+
+        p > 0.05          → "low"    (D² < chi²_0.95(3) ≈ 7.815, σ < 2.80)
+        0.01 < p ≤ 0.05   → "medium" (D² ≥ chi²_0.95(3), σ ≥ 2.80)
+        p ≤ 0.01          → "high"   (D² ≥ chi²_0.99(3) ≈ 11.345, σ ≥ 3.37)
+
+    The chi² thresholds are derived at runtime from scipy.stats.chi2.isf so
+    the source of the cut-off values is transparent and not hard-coded.
+
+    Because MATTR and MTLD are strongly correlated the empirical covariance
+    matrix is often ill-conditioned; the calibration module inverts it via the
+    Moore-Penrose pseudoinverse (numpy.linalg.pinv), which is robust to this.
+
+    Graceful degradation
+    --------------------
+    Returns concern="uncalibrated" (with sigma=None, p_value=None) when:
+      - calibration is None (tenant has not yet run the calibration step), or
+      - any of the three required metric values is None (report too short for
+        reliable measurement).
+
+    Returns
+    -------
+    dict with keys:
+        "concern"  : "low" | "medium" | "high" | "uncalibrated"
+        "sigma"    : float | None  — Mahalanobis sigma (= sqrt(D²))
+        "p_value"  : float | None  — P(chi²(3) > D²)
     """
-    flags = [mattr_flag, mtld_flag, burst_flag, cv_flag]
-    outside = sum(1 for f in flags if f in ("note", "strong"))
-    strong_count = sum(1 for f in flags if f == "strong")
+    from scipy.stats import chi2 as _chi2
 
-    if strong_count >= 2 or outside >= 3:
-        return "high"
-    if strong_count >= 1 or outside >= 2:
-        return "medium"
-    return "low"
+    _UNCALIBRATED = {"concern": "uncalibrated", "sigma": None, "p_value": None}
+
+    if calibration is None or mattr is None or mtld is None or sentence_cv is None:
+        return _UNCALIBRATED
+
+    try:
+        sigma, p_value = mahalanobis_distance(mattr, mtld, sentence_cv, calibration)
+    except Exception:
+        return _UNCALIBRATED
+
+    # Derive thresholds from the chi²(df=3) distribution at the desired
+    # significance levels.  isf(q, df) = inverse survival function = the value
+    # x such that P(chi²(df) > x) = q.
+    #
+    #   isf(0.05, 3) ≈ 7.815  →  sqrt ≈ 2.795  (commonly quoted as 2.80)
+    #   isf(0.01, 3) ≈ 11.345 →  sqrt ≈ 3.368  (commonly quoted as 3.37)
+    _SIGMA_MEDIUM = float(_chi2.isf(0.05, df=3) ** 0.5)  # p < 0.05 threshold
+    _SIGMA_HIGH = float(_chi2.isf(0.01, df=3) ** 0.5)    # p < 0.01 threshold
+
+    if sigma >= _SIGMA_HIGH:
+        concern = "high"
+    elif sigma >= _SIGMA_MEDIUM:
+        concern = "medium"
+    else:
+        concern = "low"
+
+    return {"concern": concern, "sigma": sigma, "p_value": p_value}
 
 
 # ---------------------------------------------------------------------------
@@ -2069,14 +2127,31 @@ def register_language_analysis_tasks(celery):
         mtld_flag = classify_mtld(metrics.get("mtld"))
         burst_flag = classify_burstiness(metrics.get("burstiness"))
         cv_flag = classify_sentence_cv(metrics.get("sentence_cv"))
-        ai_concern = _ai_concern_flag(mattr_flag, mtld_flag, burst_flag, cv_flag)
+
+        # Fetch calibration data from the tenant associated with this project class.
+        calibration: dict | None = None
+        try:
+            pclass = record.period.config.project_class
+            tenant = pclass.tenant if pclass else None
+            calibration = tenant.ai_calibration_data if tenant else None
+        except Exception:
+            calibration = None
+
+        ai_result = _ai_concern_flag(
+            metrics.get("mattr"),
+            metrics.get("mtld"),
+            metrics.get("sentence_cv"),
+            calibration,
+        )
 
         flags = {
             "mattr_flag": mattr_flag,
             "mtld_flag": mtld_flag,
             "burstiness_flag": burst_flag,
             "sentence_cv_flag": cv_flag,
-            "ai_concern": ai_concern,
+            "ai_concern": ai_result["concern"],
+            "mahalanobis_sigma": ai_result["sigma"],
+            "mahalanobis_pvalue": ai_result["p_value"],
         }
 
         # --- persist ---------------------------------------------------------
@@ -2768,3 +2843,140 @@ def register_language_analysis_tasks(celery):
                 "SQLAlchemyError in language_analysis.error_handler commit",
                 exc_info=exc,
             )
+
+    # ---------------------------------------------------------------------------
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def recalculate_ai_concern(self, task_id: str, tenant_id: int, pclass_ids=None, years=None):
+        """
+        Re-evaluate the Mahalanobis-based AI concern flag for all completed
+        SubmissionRecords belonging to *tenant_id*, optionally filtered to
+        specific project class IDs and/or academic years.
+
+        This task is launched after the tenant's AI calibration has been updated,
+        so that existing submissions reflect the new centroid without needing a
+        full re-run of the language analysis pipeline.
+
+        For each eligible record the task:
+          1. Loads the language_analysis JSON blob.
+          2. Fetches the tenant's current calibration data.
+          3. Re-evaluates _ai_concern_flag() for the stored (MATTR, MTLD, CV) values.
+          4. Updates the flags sub-dict (ai_concern, mahalanobis_sigma, mahalanobis_pvalue).
+          5. Re-runs compute_risk_factors() to keep the risk_factors blob in sync.
+          6. Commits.
+        """
+        self.update_state(state="STARTED", meta={"msg": "Preparing AI concern recalculation"})
+        progress_update(task_id, TaskRecord.RUNNING, 5, "Querying submissions…")
+
+        # Fetch tenant and its calibration.
+        try:
+            tenant: Tenant = db.session.query(Tenant).filter_by(id=tenant_id).first()
+        except SQLAlchemyError as exc:
+            current_app.logger.exception("recalculate_ai_concern: DB error loading tenant", exc_info=exc)
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Database error loading tenant", autocommit=True)
+            return
+
+        if tenant is None:
+            msg = f"recalculate_ai_concern: Tenant #{tenant_id} not found"
+            current_app.logger.error(msg)
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Tenant not found", autocommit=True)
+            return
+
+        calibration = tenant.ai_calibration_data
+        if calibration is None:
+            msg = "recalculate_ai_concern: tenant has no calibration data — aborting"
+            current_app.logger.warning(msg)
+            progress_update(task_id, TaskRecord.FAILURE, 100, "No calibration data available", autocommit=True)
+            return
+
+        # Build query for target records.
+        try:
+            q = (
+                db.session.query(SubmissionRecord)
+                .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id)
+                .join(ProjectClassConfig, SubmissionPeriodRecord.config_id == ProjectClassConfig.id)
+                .join(ProjectClass, ProjectClassConfig.pclass_id == ProjectClass.id)
+                .filter(ProjectClass.tenant_id == tenant_id)
+                .filter(SubmissionRecord.language_analysis_complete == True)  # noqa: E712
+            )
+            if pclass_ids:
+                q = q.filter(ProjectClass.id.in_(pclass_ids))
+            if years:
+                q = q.filter(ProjectClassConfig.year.in_(years))
+
+            records = q.all()
+        except SQLAlchemyError as exc:
+            current_app.logger.exception("recalculate_ai_concern: DB error querying records", exc_info=exc)
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Database error querying records", autocommit=True)
+            return
+
+        total = len(records)
+        progress_update(task_id, TaskRecord.RUNNING, 10, f"Recalculating AI concern for {total} submission(s)…")
+
+        updated = 0
+        for i, record in enumerate(records, start=1):
+            try:
+                la = record.language_analysis_data
+                metrics = la.get("metrics", {})
+                flags = la.get("flags", {})
+
+                ai_result = _ai_concern_flag(
+                    metrics.get("mattr"),
+                    metrics.get("mtld"),
+                    metrics.get("sentence_cv"),
+                    calibration,
+                )
+
+                flags["ai_concern"] = ai_result["concern"]
+                flags["mahalanobis_sigma"] = ai_result["sigma"]
+                flags["mahalanobis_pvalue"] = ai_result["p_value"]
+                la["flags"] = flags
+                record.set_language_analysis_data(la)
+
+                # Re-compute risk factors to keep them in sync with the new concern level.
+                try:
+                    config = record.period.config if record.period else None
+                    record.compute_risk_factors(config)
+                except Exception as exc:
+                    current_app.logger.warning(
+                        f"recalculate_ai_concern: could not recompute risk factors for record #{record.id}: {exc}"
+                    )
+
+                updated += 1
+
+                # Commit in batches of 50 to bound memory and reduce lock contention.
+                if updated % 50 == 0:
+                    try:
+                        db.session.commit()
+                    except SQLAlchemyError as exc:
+                        db.session.rollback()
+                        current_app.logger.exception(
+                            "recalculate_ai_concern: DB error during batch commit", exc_info=exc
+                        )
+
+                pct = 10 + int(85 * i / total)
+                progress_update(task_id, TaskRecord.RUNNING, pct, f"Processed {i}/{total}…")
+
+            except Exception as exc:
+                current_app.logger.warning(
+                    f"recalculate_ai_concern: error processing record #{record.id}: {exc}"
+                )
+
+        # Final commit for any remaining records.
+        try:
+            db.session.commit()
+        except SQLAlchemyError as exc:
+            db.session.rollback()
+            current_app.logger.exception("recalculate_ai_concern: final commit error", exc_info=exc)
+            progress_update(task_id, TaskRecord.FAILURE, 100, "Database error on final commit", autocommit=True)
+            return
+
+        progress_update(
+            task_id,
+            TaskRecord.SUCCESS,
+            100,
+            f"AI concern recalculated for {updated} submission(s).",
+            autocommit=True,
+        )
+
+    return recalculate_ai_concern

@@ -431,6 +431,7 @@ _submitter_report_risk_factors = """
 {% set rec = report.record %}
 {% if rec is not none %}
     <div class="d-flex flex-column gap-1">
+        {# ── Risk factor badges ── #}
         {% set rf = rec.risk_factors_ui_summary() %}
         {% if rf.has_any_present %}
             {% for factor in rf.factors %}
@@ -456,7 +457,66 @@ _submitter_report_risk_factors = """
         {% else %}
             <span class="badge bg-success"><i class="fas fa-check-circle fa-fw"></i> No risk factors</span>
         {% endif %}
+
+        {# ── Language metrics summary (shown when analysis is complete) ── #}
         {% if rec.language_analysis_complete %}
+            {% set la = rec.language_analysis_data %}
+            {% set metrics = la.get('metrics', {}) %}
+            {% set flags = la.get('flags', {}) %}
+            {% set concern = flags.get('ai_concern', 'low') %}
+            {% set sigma = flags.get('mahalanobis_sigma') %}
+            {% set pval = flags.get('mahalanobis_pvalue') %}
+
+            <hr class="my-1" style="border-color: rgba(0,0,0,.1);">
+
+            {# Per-metric flags: MATTR, MTLD, CV (burstiness omitted for space) #}
+            <div class="d-flex flex-wrap gap-1" style="font-size:0.75em;">
+                {% for key, label in [('mattr', 'MATTR'), ('mtld', 'MTLD'), ('sentence_cv', 'CV')] %}
+                    {% set val = metrics.get(key) %}
+                    {% set flag = flags.get(key ~ '_flag', 'ok') %}
+                    {% if val is not none %}
+                        <span class="text-muted">{{ label }}:
+                            <strong>
+                                {% if key == 'mtld' %}{{ "%.1f"|format(val) }}
+                                {% else %}{{ "%.3f"|format(val) }}{% endif %}
+                            </strong>
+                            {% if flag == 'strong' %}
+                                <span class="badge bg-danger" style="font-size:0.75em">!</span>
+                            {% elif flag == 'note' %}
+                                <span class="badge bg-warning text-dark" style="font-size:0.75em">~</span>
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            {# AI concern row with sigma and p-value #}
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-1" style="font-size:0.78em;">
+                {% if concern == 'high' %}
+                    <span class="badge bg-danger">High concern</span>
+                {% elif concern == 'medium' %}
+                    <span class="badge bg-warning text-dark">Medium concern</span>
+                {% elif concern == 'uncalibrated' %}
+                    <span class="badge bg-secondary"
+                          data-bs-toggle="tooltip"
+                          title="AI concern system not yet calibrated for this tenant.">
+                        Not calibrated
+                    </span>
+                {% else %}
+                    <span class="badge bg-success">Low concern</span>
+                {% endif %}
+                {% if sigma is not none %}
+                    <span class="text-muted">σ&nbsp;=&nbsp;<strong>{{ "%.2f"|format(sigma) }}</strong></span>
+                {% endif %}
+                {% if pval is not none %}
+                    <span class="text-muted">p&nbsp;=&nbsp;<strong>
+                        {% if pval >= 0.001 %}{{ "%.3f"|format(pval) }}
+                        {% elif pval >= 0.0001 %}{{ "%.1e"|format(pval) }}
+                        {% else %}&lt;0.0001{% endif %}
+                    </strong></span>
+                {% endif %}
+            </div>
+
             <a href="{{ url_for('documents.llm_report',
                        record_id=rec.id,
                        url=url_for('convenor.submitter_reports_inspector', workflow_id=report.workflow_id),

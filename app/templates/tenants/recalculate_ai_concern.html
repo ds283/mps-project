@@ -1,0 +1,67 @@
+{% extends "base_app.html" %}
+
+{% import "bootstrap/form.html" as wtf %}
+
+{% block title %}Recalculate AI concern – {{ tenant.name }}{% endblock %}
+
+{% block bodyblock %}
+<div class="d-flex align-items-center mt-3 mb-3 gap-2">
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url }}">
+        <i class="fas fa-arrow-left fa-fw"></i> {{ text }}
+    </a>
+    <h4 class="mb-0">
+        <i class="fas fa-sync fa-fw me-1"></i> Recalculate AI concern
+        <span class="text-muted fw-normal fs-6 ms-2">{{ tenant.name }}</span>
+    </h4>
+</div>
+
+{# ── CURRENT CALIBRATION SUMMARY ── #}
+{% if calibration %}
+<div class="alert alert-secondary small py-2 mb-3">
+    <i class="fas fa-ruler-combined fa-fw me-1"></i>
+    Using calibration from
+    <strong>{{ calibration.calibrated_at[:19].replace("T", " ") if calibration.calibrated_at else "unknown date" }}</strong>
+    &nbsp;|&nbsp; {{ calibration.n_samples }} samples
+    &nbsp;|&nbsp; Years:
+    {% for yr in calibration.included_years %}{{ yr }}{% if not loop.last %}, {% endif %}{% endfor %}
+</div>
+{% endif %}
+
+<div class="card border-primary mb-3">
+    <div class="card-header bg-primary text-white">
+        <i class="fas fa-redo fa-fw me-1"></i>
+        <strong>Select scope for recalculation</strong>
+    </div>
+    <div class="card-body">
+        <p class="small text-muted mb-3">
+            Select which project classes and academic years to re-evaluate.
+            For each matching completed submission the AI concern flag,
+            Mahalanobis sigma, and p-value will be updated in place using
+            the current calibration. The task runs in the background.
+        </p>
+        <form action="{{ request.path }}" method="POST" name="recalculate_form">
+            {{ form.hidden_tag() }}
+
+            <div class="mb-3">
+                {{ wtf.render_field(form.project_classes,
+                    class="select2-widget",
+                    data_theme="bootstrap-5",
+                    data_selection_css_class="select2-small",
+                    data_dropdown_css_class="select2-small") }}
+            </div>
+
+            <div class="mb-3">
+                {{ wtf.render_field(form.years,
+                    class="select2-widget",
+                    data_theme="bootstrap-5",
+                    data_selection_css_class="select2-small",
+                    data_dropdown_css_class="select2-small") }}
+            </div>
+
+            <div class="mt-3">
+                {{ wtf.render_field(form.submit, button_map={'submit': 'primary'}) }}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

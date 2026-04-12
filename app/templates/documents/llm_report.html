@@ -242,6 +242,53 @@
             {% endfor %}
         {% endif %}
 
+        {# AI concern — Mahalanobis distance classification #}
+        <h6 class="text-muted small text-uppercase mt-3 mb-2">AI concern (Mahalanobis distance)</h6>
+        {% set concern = metrics_data.ai_concern %}
+        {% set sigma = metrics_data.mahalanobis_sigma %}
+        {% set pval = metrics_data.mahalanobis_pvalue %}
+        <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+            {% if concern == 'high' %}
+                <span class="badge bg-danger fs-6 px-3 py-2">High concern</span>
+            {% elif concern == 'medium' %}
+                <span class="badge bg-warning text-dark fs-6 px-3 py-2">Medium concern</span>
+            {% elif concern == 'low' %}
+                <span class="badge bg-success fs-6 px-3 py-2">Low concern</span>
+            {% else %}
+                <span class="badge bg-secondary fs-6 px-3 py-2"
+                      data-bs-toggle="tooltip"
+                      title="The AI concern system has not yet been calibrated for this tenant. An administrator must run the calibration step before concern levels can be reported.">
+                    Not calibrated
+                </span>
+            {% endif %}
+            {% if sigma is not none %}
+                <span class="small text-muted">
+                    <span class="text-muted">σ&nbsp;=</span>
+                    <strong class="ms-1">{{ "%.2f"|format(sigma) }}</strong>
+                </span>
+                {% if pval is not none %}
+                    <span class="small text-muted">
+                        <span class="text-muted">p&nbsp;=</span>
+                        <strong class="ms-1">
+                            {# Format p-value to 3 significant figures #}
+                            {% if pval >= 0.001 %}
+                                {{ "%.3f"|format(pval) }}
+                            {% elif pval >= 0.0001 %}
+                                {{ "%.2e"|format(pval) }}
+                            {% else %}
+                                &lt;0.0001
+                            {% endif %}
+                        </strong>
+                    </span>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% if concern == 'uncalibrated' or concern is none %}
+            <div class="small text-muted fst-italic mb-2">
+                AI concern classification requires calibration data. Contact an administrator to run the calibration step for this tenant.
+            </div>
+        {% endif %}
+
         {# AI-indicator patterns #}
         {% if metrics_data.hedging_count is not none or metrics_data.filler_count is not none or metrics_data.em_dash_count is not none %}
         <div class="row g-3 mt-1 mb-1">

@@ -573,13 +573,29 @@
                                 </span>
                             {% endif %}
                             {% set concern = flags.get('ai_concern', 'low') %}
+                            {% set sigma = flags.get('mahalanobis_sigma') %}
+                            {% set pval = flags.get('mahalanobis_pvalue') %}
                             <span class="small">AI concern:
                                 {% if concern == 'high' %}
                                     <span class="badge bg-danger">High</span>
                                 {% elif concern == 'medium' %}
                                     <span class="badge bg-warning text-dark">Medium</span>
+                                {% elif concern == 'uncalibrated' %}
+                                    <span class="badge bg-secondary"
+                                          data-bs-toggle="tooltip"
+                                          title="AI concern system not yet calibrated for this tenant.">Not calibrated</span>
                                 {% else %}
-                                    <span class="badge bg-secondary">Low</span>
+                                    <span class="badge bg-success">Low</span>
+                                {% endif %}
+                                {% if sigma is not none %}
+                                    <span class="text-muted ms-1">σ&nbsp;=&nbsp;<strong>{{ "%.2f"|format(sigma) }}</strong></span>
+                                {% endif %}
+                                {% if pval is not none %}
+                                    <span class="text-muted ms-1">p&nbsp;=&nbsp;<strong>
+                                        {% if pval >= 0.001 %}{{ "%.3f"|format(pval) }}
+                                        {% elif pval >= 0.0001 %}{{ "%.2e"|format(pval) }}
+                                        {% else %}&lt;0.0001{% endif %}
+                                    </strong></span>
                                 {% endif %}
                             </span>
                         </div>

@@ -2835,11 +2835,18 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
                 table_count=int(metrics.get("table_count") or 0),
             )
 
+        ai_concern = flags.get("ai_concern", "low")
+        mahalanobis_sigma = flags.get("mahalanobis_sigma")
+        mahalanobis_pvalue = flags.get("mahalanobis_pvalue")
+
         return {
             "mattr": metric_entry(mattr, MATTR_NOTE_LOW_THRESHOLD, "mattr_flag"),
             "mtld": metric_entry(mtld, MTLD_NOTE_THRESHOLD, "mtld_flag"),
             "burstiness": metric_entry(burstiness, BURSTINESS_NOTE_LOW, "burstiness_flag"),
             "sentence_cv": metric_entry(sentence_cv, SENT_CV_NOTE_LOW, "sentence_cv_flag"),
+            "ai_concern": ai_concern,
+            "mahalanobis_sigma": mahalanobis_sigma,
+            "mahalanobis_pvalue": mahalanobis_pvalue,
             "hedging_count": patterns.get("hedging_total"),
             "filler_count": patterns.get("filler_total"),
             "em_dash_count": patterns.get("em_dash_count"),
@@ -3064,15 +3071,29 @@ class SubmissionRecord(db.Model, SubmissionFeedbackStatesMixin):
         new_data[self.RISK_AI_COMPLIANCE] = genai_factor
 
         # --- AI USE METRICS ---
-        # Elevated if 2+ of {mattr_flag, mtld_flag, burstiness_flag, sentence_cv_flag} are "note" or "strong"
+        # The overall AI concern level is based on the Mahalanobis distance from
+        # the pre-LLM centroid in (MATTR, MTLD, sentence_CV) space (see
+        # _ai_concern_flag() in app/tasks/language_analysis.py for the full
+        # derivation).  When the tenant has not yet been calibrated the concern
+        # level is "uncalibrated" and we treat it as no flag raised.
+        #
+        # The per-metric elevated_metrics list is kept for informational display
+        # alongside the Mahalanobis result.
         elevated_thresholds = {"note", "strong"}
         elevated_metrics = [
             m
             for m in ("mattr", "mtld", "burstiness", "sentence_cv")
             if flags.get(f"{m}_flag", "ok") in elevated_thresholds
         ]
-        ai_use_present = len(elevated_metrics) >= 2
-        ai_use_factor = {"present": ai_use_present, "elevated_metrics": elevated_metrics}
+        ai_concern = flags.get("ai_concern", "low")
+        ai_use_present = ai_concern in ("medium", "high")
+        ai_use_factor = {
+            "present": ai_use_present,
+            "elevated_metrics": elevated_metrics,
+            "ai_concern": ai_concern,
+            "mahalanobis_sigma": flags.get("mahalanobis_sigma"),
+            "mahalanobis_pvalue": flags.get("mahalanobis_pvalue"),
+        }
         if ai_use_present:
             ai_use_factor = _carry_resolution(self.RISK_AI_USE, ai_use_factor)
         else:

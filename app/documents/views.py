@@ -1680,13 +1680,13 @@ def _build_lexical_gauge(metrics_data) -> tuple:
         flag_col = _flag_color.get(flag, "#6c757d")
 
         p = figure(
-            width=480,
             height=80,
+            min_width=300,
             x_range=(low, high),
             y_range=(-1, 1),
             toolbar_location=None,
         )
-        p.sizing_mode = "fixed"
+        p.sizing_mode = "stretch_width"
         p.background_fill_color = None
         p.border_fill_color = None
         p.outline_line_color = None
@@ -1838,13 +1838,13 @@ def _build_lexical_gauge(metrics_data) -> tuple:
         flag_col = _flag_color.get(flag, "#6c757d")
 
         p = figure(
-            width=480,
             height=90,
+            min_width=300,
             x_range=(low, high),
             y_range=(-1, 1),
             toolbar_location=None,
         )
-        p.sizing_mode = "fixed"
+        p.sizing_mode = "stretch_width"
         p.background_fill_color = None
         p.border_fill_color = None
         p.outline_line_color = None
@@ -1988,7 +1988,7 @@ def _build_lexical_gauge(metrics_data) -> tuple:
     if not figs:
         return None, None
 
-    layout = column(*figs, sizing_mode="fixed", spacing=8)
+    layout = column(*figs, sizing_mode="stretch_width", spacing=8)
     script, div = components(layout)
     return div, script
 
@@ -2016,13 +2016,13 @@ def _build_document_length_gauge(la_metrics: dict, config) -> tuple:
         display_val = min(float(measured), high)
 
         p = figure(
-            width=480,
             height=55,
+            min_width=300,
             x_range=(0, high),
             y_range=(-1, 1),
             toolbar_location=None,
         )
-        p.sizing_mode = "fixed"
+        p.sizing_mode = "stretch_width"
         p.background_fill_color = None
         p.border_fill_color = None
         p.outline_line_color = None
@@ -2173,7 +2173,7 @@ def _build_document_length_gauge(la_metrics: dict, config) -> tuple:
     if not figs:
         return None, None
 
-    layout = column(*figs, sizing_mode="fixed", spacing=8)
+    layout = column(*figs, sizing_mode="stretch_width", spacing=8)
     script, div = components(layout)
     return div, script
 

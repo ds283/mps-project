@@ -1,4 +1,7 @@
 admin_passwords.pwd
+arxiv_analysis_venv/
+arxiv_pdf_cache/
+arxiv_control_results.xlsx
 docker-compose.yml
 /instance
 /nginx

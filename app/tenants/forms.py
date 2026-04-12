@@ -11,7 +11,7 @@
 from flask_security.forms import Form
 from wtforms import BooleanField, SelectMultipleField, StringField, SubmitField
 from wtforms.validators import InputRequired, Length
-from wtforms_sqlalchemy.fields import QuerySelectMultipleField
+from wtforms_alchemy.fields import QuerySelectMultipleField
 
 from ..models import DEFAULT_STRING_LENGTH, ProjectClass
 from ..shared.forms.mixins import SaveChangesMixin

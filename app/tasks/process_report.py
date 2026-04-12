@@ -337,11 +337,17 @@ def _coverpage_redaction_notice(page, w, ytop, count):
     notice_colour = (0.95, 0.92, 0.80)  # pale amber
 
     _inst = "instance" if count == 1 else "instances"
+    _werewas = "was" if count == 1 else "were"
     notice_text = (
-        f"(i)  Name redacted: {count} {_inst} of the student's name were automatically "
-        "redacted from the submitted document. Redacted text appears as solid black rectangles."
+        f"Name redacted: {count} {_inst} of the student's name {_werewas} automatically "
+        "redacted from the submitted document. Redacted text appears as a solid black rectangle."
     )
-    box_height = _vertical_margin + 2 * (_text_label_size + 2) + _vertical_margin + 2 * _box_inner_padding
+    box_height = (
+        _vertical_margin
+        + 2 * (_text_label_size + 2)
+        + _vertical_margin
+        + 2 * _box_inner_padding
+    )
     ytop += _vertical_margin
     r = fitz.Rect(xmargin, ytop, xmargin + rwidth, ytop + box_height)
     r_text = fitz.Rect(
@@ -619,14 +625,14 @@ def _coverpage_llm_metrics(page, record: "SubmissionRecord", w, ytop):
     if genai_found:
         if genai_precis:
             ai_box_text = (
-                "(!)  AI COMPLIANCE STATEMENT\n\n"
+                "AI COMPLIANCE STATEMENT\n\n"
                 "The following AI compliance statement was identified in this submission. "
                 "You do not need to take specific action, but please review it carefully.\n\n"
                 '"{precis}"'.format(precis=genai_precis)
             )
         else:
             ai_box_text = (
-                "(!)  AI COMPLIANCE STATEMENT\n\n"
+                "AI COMPLIANCE STATEMENT\n\n"
                 "An AI compliance statement was identified in this submission. "
                 "You do not need to take specific action, but please review it carefully."
             )
@@ -640,7 +646,10 @@ def _coverpage_llm_metrics(page, record: "SubmissionRecord", w, ytop):
     # Estimate height: 4 lines for detected case, 1 for not-detected
     ai_box_lines = 5 if genai_found else 1
     ai_box_height = (
-        _vertical_margin + ai_box_lines * (_text_label_size + 2) + _vertical_margin + 2 * _box_inner_padding
+        _vertical_margin
+        + ai_box_lines * (_text_label_size + 2)
+        + _vertical_margin
+        + 2 * _box_inner_padding
     )
     r_ai = fitz.Rect(xmargin, ytop, xmargin + rwidth, ytop + ai_box_height)
     r_ai_text = fitz.Rect(
@@ -716,7 +725,9 @@ def register_process_report_tasks(celery):
         with ScratchFileManager() as output_path:
             with input_storage.download_to_scratch() as input_path:
                 try:
-                    redaction_count = _process_report(input_path.path, output_path.path, record)
+                    redaction_count = _process_report(
+                        input_path.path, output_path.path, record
+                    )
                 except ValueError as e:
                     # document was not a PDF
                     record.processed_report = None

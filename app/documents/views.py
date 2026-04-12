@@ -413,6 +413,7 @@ def clear_llm_failure(sid):
 
     record.llm_analysis_failed = False
     record.llm_failure_reason = None
+    record.language_analysis_started = False
 
     try:
         log_db_commit(

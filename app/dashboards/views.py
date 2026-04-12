@@ -277,6 +277,7 @@ def _aggregate_records(records: List[SubmissionRecord]) -> Dict:
         "page_count": [],
     }
     n_missing = 0
+    n_stuck = 0
     n_ai_flagged = 0
     n_analysis_failed = 0
     n_feedback_failed = 0
@@ -289,6 +290,12 @@ def _aggregate_records(records: List[SubmissionRecord]) -> Dict:
 
         if not record.language_analysis_complete:
             n_missing += 1
+            if (
+                record.language_analysis_started
+                and not record.llm_analysis_failed
+                and not record.llm_feedback_failed
+            ):
+                n_stuck += 1
             continue
 
         la = record.language_analysis_data
@@ -339,6 +346,7 @@ def _aggregate_records(records: List[SubmissionRecord]) -> Dict:
     result = {
         "n_total": len(records),
         "n_missing": n_missing,
+        "n_stuck": n_stuck,
         "n_complete": len(records) - n_missing,
         "n_ai_flagged": n_ai_flagged,
         "n_analysis_failed": n_analysis_failed,
@@ -951,6 +959,7 @@ def _clear_error_flags_for_records(record_ids: List[int]) -> int:
         .filter(SubmissionRecord.id.in_(record_ids))
         .update(
             {
+                SubmissionRecord.language_analysis_started: False,
                 SubmissionRecord.llm_analysis_failed: False,
                 SubmissionRecord.llm_failure_reason: None,
                 SubmissionRecord.llm_feedback_failed: None,

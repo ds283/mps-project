@@ -219,9 +219,16 @@ def _collect_record_ids(
     """
     Return a list of SubmissionRecord IDs from the given periods.
 
-    If *skip_complete* is True, only records where both
-    ``language_analysis_started`` and ``language_analysis_complete`` are
-    False are included (i.e. records that have not yet been submitted).
+    If *skip_complete* is True, only records that are not yet complete and
+    have no error flags are included.  This covers both records that have
+    never been started and records that are "stuck" — where a worker died
+    after ``language_analysis_started`` was set but before the analysis
+    could finish or record a failure.  Records that do have error flags are
+    handled separately by the error-resubmit pipeline.
+
+    The caller should subsequently pass the result through
+    ``_filter_already_queued()`` to avoid double-queuing records that are
+    genuinely still in-flight in a Redis queue.
     """
     q = (
         db.session.query(SubmissionRecord.id)
@@ -230,8 +237,9 @@ def _collect_record_ids(
     )
     if skip_complete:
         q = q.filter(
-            SubmissionRecord.language_analysis_started.is_(False),
             SubmissionRecord.language_analysis_complete.is_(False),
+            SubmissionRecord.llm_analysis_failed.isnot(True),
+            SubmissionRecord.llm_feedback_failed.isnot(True),
         )
     return [row[0] for row in q.all()]
 

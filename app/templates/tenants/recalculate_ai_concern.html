@@ -1,6 +1,26 @@
 {% extends "base_app.html" %}
 
 {% import "bootstrap/form.html" as wtf %}
+{% from "select2.html" import import_select2 %}
+
+{% block scripts %}
+    {{ super() }}
+    {{ import_select2() }}
+    <script>
+        $(document).ready(function () {
+            $('#project_classes').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+            });
+            $('#years').select2({
+                theme: 'bootstrap-5',
+                selectionCssClass: 'select2--small',
+                dropdownCssClass: 'select2--small',
+            });
+        });
+    </script>
+{% endblock %}
 
 {% block title %}Recalculate AI concern – {{ tenant.name }}{% endblock %}
 
@@ -43,19 +63,11 @@
             {{ form.hidden_tag() }}
 
             <div class="mb-3">
-                {{ wtf.render_field(form.project_classes,
-                    class="select2-widget",
-                    data_theme="bootstrap-5",
-                    data_selection_css_class="select2-small",
-                    data_dropdown_css_class="select2-small") }}
+                {{ wtf.render_field(form.project_classes) }}
             </div>
 
             <div class="mb-3">
-                {{ wtf.render_field(form.years,
-                    class="select2-widget",
-                    data_theme="bootstrap-5",
-                    data_selection_css_class="select2-small",
-                    data_dropdown_css_class="select2-small") }}
+                {{ wtf.render_field(form.years) }}
             </div>
 
             <div class="mt-3">

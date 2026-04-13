@@ -1811,8 +1811,8 @@ def _build_lexical_gauge(metrics_data) -> tuple:
                            x_offset=2, y_offset=0, background_fill_alpha=0))
 
         # Value marker
-        p.circle(x=[display_val], y=[0], size=14,
-                 fill_color=flag_col, line_color="white", line_width=1.5)
+        p.scatter(x=[display_val], y=[0], size=14,
+                  fill_color=flag_col, line_color="white", line_width=1.5)
 
         # Current value label above marker
         p.add_layout(Label(x=display_val, y=0.5, x_units="data", y_units="data",
@@ -1912,8 +1912,8 @@ def _build_lexical_gauge(metrics_data) -> tuple:
                            x_offset=2, y_offset=0, background_fill_alpha=0))
 
         # Value marker
-        p.circle(x=[display_val], y=[0], size=14,
-                 fill_color=flag_col, line_color="white", line_width=1.5)
+        p.scatter(x=[display_val], y=[0], size=14,
+                  fill_color=flag_col, line_color="white", line_width=1.5)
 
         # Current value label above marker
         p.add_layout(Label(x=display_val, y=0.5, x_units="data", y_units="data",
@@ -2071,7 +2071,7 @@ def _build_document_length_gauge(la_metrics: dict, config) -> tuple:
         )
 
         # Value marker
-        p.circle(
+        p.scatter(
             x=[display_val],
             y=[0],
             size=14,
